@@ -10,13 +10,13 @@
         2. `static` - static assets for the docs
         3. `versioned_docs` - contains `.md` files which contain versioned info (more on this in **versioning** section)
         4. `versioned_sidebars` - configuration file for sidebar in resulting docs build which link to a particular docs version
-        5. `createVersion`, `initVersions` - shell scripts for creating versioned docs
+        5. `createVersion`, `initVersions` - shell scripts for creating versioned docs (more on this in **versioning** section)
         6. `sidebars.json` - here we define the contents of sidebar menu
         7. `siteConfig.js` - config for the docusaurus build
         8. `versions.json` - contains an array of versions being used in that particular docs folder 
 3. You can ignore the docker files
 
-## Modification and seeing your changes
+## Modifying and seeing your changes
 
 1. Install the npm deps in the folder you are going to work e.g for **auth-react**: `cd auth-react/website && npm i -d`
 2. run `./buildDocs FOLDER_NAME` from the root of docs repo.
@@ -25,8 +25,86 @@
 5. To build the docs for all folders, first install npm deps for each and then run `./buildAllDocs` from the root of the repo
 
 ## Versioning
-TODO
 
+Each documentation folder contains these two scripts inside it's website folder which are used to create versioned docs:
+
+- `initVersions`: initializes docusaurus versioning in the documentation project, remember to replace the contents of versions.js with the following code:
+
+```js
+/**
+ * Copyright (c) 2017-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+const React = require("react");
+
+const CompLibrary = require("../../core/CompLibrary");
+
+const Container = CompLibrary.Container;
+
+const CWD = process.cwd();
+
+const versions = require(`${CWD}/versions.json`);
+
+function Versions(props) {
+  const { config: siteConfig } = props;
+  const latestVersion = versions[0];
+  return (
+    <div className="docMainWrapper wrapper">
+      <Container className="mainContainer versionsContainer">
+        <div className="post">
+          <header className="postHeader">
+            <h1>{siteConfig.title} Versions</h1>
+          </header>
+          <h3 id="latest">Current version (Stable)</h3>
+          <table className="versions">
+            <tbody>
+              <tr>
+                <th>{latestVersion}</th>
+                <td>
+                  <a
+                    href={`${siteConfig.baseUrl}${siteConfig.docsUrl}/${
+                      props.language ? props.language + "/" : ""
+                      }installation`}>
+                    Documentation
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          {versions.length > 1 && <h3 id="archive">Past Versions</h3>}
+          <table className="versions">
+            <tbody>
+              {versions.map(
+                version =>
+                  version !== latestVersion && (
+                    <tr>
+                      <th>{version}</th>
+                      <td>
+                        <a
+                          href={`${siteConfig.baseUrl}${siteConfig.docsUrl}/${
+                            props.language ? props.language + "/" : ""
+                            }${version}/installation`}>
+                          Documentation
+                        </a>
+                      </td>
+                    </tr>
+                  ),
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Container>
+    </div>
+  );
+}
+
+module.exports = Versions;
+```
+
+- `createVersion`: creates a new version in the documentation project. Note that any changes after you create a version will not be reflected in that version. The script has additional information
 ## Code snippets
 
-- For other cosmetics modification, bugs etc please create an issue on github
+- For other cosmetic modifications, bugs etc please [create an issue on github](https://github.com/supertokens/docs/issues)
