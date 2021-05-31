@@ -31,15 +31,15 @@ This function will return the config object used to configure supertokens-auth-r
 import ThirdPartyReact, {Google, Facebook} from 'supertokens-auth-react/recipe/thirdparty'
 import SessionReact from 'supertokens-auth-react/recipe/session'
 
-let appInfo = {
+const appInfo = {
   // learn more about this on https://supertokens.io/docs/thirdparty/appinfo
   appName: 'SuperTokens Demo App', // TODO: Your app name
   websiteDomain: "http://localhost:3000", // TODO: Add your website domain
   apiDomain: "http://localhost:3000", // TODO: should be equal to `websiteDomain` in case using the `api` folder for APIs
-  apiBasePath: "/api/auth/", // /api/auth/* will be where APIs like sign out, sign in will be exposed 
+  apiBasePath: "/api/auth/", // /api/auth/* will be where APIs like sign out, sign in will be exposed
 }
 
-export let frontendConfig = () => {
+export const frontendConfig = () => {
   return {
     appInfo,
     recipeList: [
@@ -71,7 +71,7 @@ This function will return the config object used to configure supertokens-node:
 import ThirdPartyNode, {Google, Facebook} from 'supertokens-node/recipe/thirdparty'
 import SessionNode from 'supertokens-node/recipe/session'
 
-export let backendConfig = () => {
+export const backendConfig = () => {
   return {
     supertokens: {
       connectionURI: 'https://try.supertokens.io',
