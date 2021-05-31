@@ -25,6 +25,7 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 2. run `./buildDocs FOLDER_NAME` from the root of docs repo e.g if you are modifying `auth-react` docs run `./buildDocs auth-react`
 3. Run the local server which resides in `docs_dev_server`: `cd docs_dev_server/app` followed by `npm run start`. This will start the server on `http://localhost:9001/`
 4. Every time you make changes to a particular docs folder you have to run `./buildDocs FOLDER_NAME` from the root of docs repo and reload the browser page to see your changes.
-5. To build docs for all the folders run `./buildAllDocs` from the root of the repo.
+5. **NOTE**: If you are working on the latest version of any docs, you will need to suffix the docs name in url with `/next/` to see your changes. For example, if you are working on `community` docs and made changes to the `introduction` page, then you will need to visit: `http://localhost:9001/docs/community/next/introduction` instead of `http://localhost:9001/docs/community/introduction` to see your changes.
+6. To build docs for all the folders run `./buildAllDocs` from the root of the repo.
 
 - For other cosmetic modifications, bugs etc please [create an issue on github](https://github.com/supertokens/docs/issues)
