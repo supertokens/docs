@@ -1,0 +1,17 @@
+---
+id: list
+title: List
+hide_title: true
+---
+
+# List command
+
+```bash
+supertokens list [options]
+```
+List information about all currently running SuperTokens instances.
+
+### Options
+- ```--help```
+    - Help for this command.
+    - Example: ```supertokens list --help```

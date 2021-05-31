@@ -1,0 +1,10 @@
+---
+id: email_already_exists_error
+title: EMAIL_ALREADY_EXISTS_ERROR
+hide_title: true
+---
+
+# ``EMAIL_ALREADY_EXISTS_ERROR``
+**Type** : ``{type: EMAIL_ALREADY_EXISTS_ERROR, message: string}``
+- The ``message`` string inside contains the error message
+- The ``EMAIL_ALREADY_EXISTS_ERROR`` is thrown when trying to sign up with an email that is already taken.

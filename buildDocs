@@ -1,0 +1,190 @@
+#!/bin/bash
+
+function add_space_to_code_highlight() {
+    if [ -z "$(ls -A $1)" ]; then
+        return
+    fi
+    for i in $(find $1 -name "*.md"); do
+
+        if [ -z "$(cat $i | grep '__HIGHLIGHT__[^ ]')" ] &&
+            [ -z "$(cat $i | grep '__HIGHLIGHT_PHRASE__[^ ]')" ] &&
+            [ -z "$(cat $i | grep '[^ ]__END_HIGHLIGHT_PHRASE__')" ] &&
+            [ -z "$(cat $i | grep '[^ ]__END_HIGHLIGHT__')" ]; then
+            continue=1
+        else
+            node ../static/scripts/addSpacesToCodeHighlighting.js $i
+        fi
+    done
+}
+
+function copy_docs_pages_id_needed() {
+    if [ -z "$(ls -A $1)" ]; then
+        return
+    fi
+    for i in $(find $1 -name "*.md"); do
+
+        if [ -z "$(cat $i | grep '<!-- COPY DOCS -->')" ]; then
+            continue=1
+        else
+            node ../static/scripts/copyDocs.js $i
+        fi
+    done
+}
+
+RED='\033[0;31m'
+NC='\033[0m' # No color
+YELLOW='\033[33m'
+GREEN='\033[32m'
+
+docs_name=""
+target="docs_server"
+
+while getopts ":hg" opt; do
+    case ${opt} in
+    h)
+        echo "Usage:"
+        echo "To build for local docs server run ./buildDocs community"
+        echo "To build for main website run ./buildDocs -g community"
+        exit 0
+        ;;
+    g)
+        target="supertokens_backend"
+        ;;
+    \?)
+        echo "Invalid Option: -$OPTARG" 1>&2
+        echo "Usage:"
+        echo "To build for local docs server run ./buildDocs community"
+        echo "To build for main website run ./buildDocs -g community"
+        exit 1
+        ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+docs_name=$1
+shift
+
+if [ "$target" = "docs_server" ]; then
+    currentDir=$(pwd)
+    for d in *; do
+        dirName=$(basename $d)
+        if [ "$dirName" != "$docs_name" ]; then
+            continue
+        fi
+        echo -e "${GREEN}Building documentation for $dirName${NC}\n"
+        if [[ -d "$d" && ! -L "$d" ]]; then
+            if [ -z "$(ls -A $d)" ]; then
+                echo -e "${YELLOW}$d is an empty directory, skipping this folder${NC}"
+            else
+
+                # we add spaces on the right and left of the code highlighting thing for each of the md files in case there is no space
+                cd $d
+
+                add_space_to_code_highlight ./docs
+                add_space_to_code_highlight ./website/versioned_docs
+
+                copy_docs_pages_id_needed ./docs
+                copy_docs_pages_id_needed ./website/versioned_docs
+
+                # enter directory/website
+                cd "./website"
+                # run npm build to build the docusaurus project
+                npm run build
+                # remove unwanted files
+                rm -rf build/test-site/index.html
+                rm -rf build/test-site/sitemap.xml
+
+                # navigate back
+                cd $currentDir
+
+                # Check if folder exists
+                if [ ! -d docs_dev_server/app/docs/$dirName ]; then
+                    # folder does not exist, probably a new docs project and the folder hasnt been created before running this
+                    echo -e "${YELLOW}creating directory docs_dev_server/app/docs/$dirName since it does not exist${NC}"
+                    mkdir -p docs_dev_server/app/docs/$dirName
+                fi
+                # remove current content
+                rm -rf docs_dev_server/app/docs/$dirName/*
+                # copy everything inside the build directory
+                cp -r $dirName/website/build/test-site/* docs_dev_server/app/docs/$dirName/
+                # Move the contents inside the docs folder created by docusaurus outside
+                mv docs_dev_server/app/docs/$dirName/docs/* docs_dev_server/app/docs/$dirName/
+                # remove the docs folder created by docusaurus
+                rm -rf docs_dev_server/app/docs/$dirName/docs
+            fi
+        fi
+        echo -e "${GREEN}Done building for $dirName${NC}\n\n"
+    done
+
+    echo "-----------Copying common documentation assets-----------\n"
+    rm -rf docs_dev_server/app/docs/static
+    mkdir -p docs_dev_server/app/docs/
+    cp -r ./static docs_dev_server/app/docs/
+fi
+
+if [ "$target" = "supertokens_backend" ]; then
+    cd ..
+    currentDir=$(pwd)
+    for d in ./docs/*; do
+        dirName=$(basename $d)
+        if [ "$dirName" != "$docs_name" ]; then
+            continue
+        fi
+        echo -e "${GREEN}Building documentation for $dirName${NC}\n"
+        if [[ -d "$d" && ! -L "$d" ]]; then
+            if [ -z "$(ls -A $d)" ]; then
+                echo -e "${YELLOW}$d is an empty directory, skipping this folder${NC}"
+            else
+
+                # we add spaces on the right and left of the code highlighting thing for each of the md files in case there is no space
+                cd $d
+
+                add_space_to_code_highlight ./docs
+                add_space_to_code_highlight ./website/versioned_docs
+
+                copy_docs_pages_id_needed ./docs
+                copy_docs_pages_id_needed ./website/versioned_docs
+
+                # enter director/website
+                cd "./website"
+                # run npm build to build the docusaurus project
+                npm run build
+                # remove unwanted files
+                rm -rf build/test-site/index.html
+                rm -rf build/test-site/sitemap.xml
+                # navigate back
+                cd $currentDir
+                # Check if folder exists
+                if [ ! -d supertokens-backend-website/app/docs/$dirName ]; then
+                    # folder does not exist, probably a new docs project and the folder hasnt been created before running this
+                    echo -e "${YELLOW}creating directory supertokens-backend-website/app/docs/$dirName since it does not exist${NC}"
+                    mkdir supertokens-backend-website/app/docs/$dirName
+                fi
+                # remove current content
+                rm -rf supertokens-backend-website/app/docs/$dirName/*
+                # copy everything inside the build directory
+                cp -r ./docs/$dirName/website/build/test-site/* supertokens-backend-website/app/docs/$dirName/
+                # Move the contents inside the docs folder created by docusaurus outside
+                mv supertokens-backend-website/app/docs/$dirName/docs/* supertokens-backend-website/app/docs/$dirName/
+                # remove the docs folder created by docusaurus
+                rm -rf supertokens-backend-website/app/docs/$dirName/docs
+            fi
+        fi
+        echo -e "${GREEN}Done building for $dirName${NC}\n\n"
+    done
+
+    echo "-----------Copying common documentation assets-----------\n"
+    rm -rf supertokens-backend-website/app/docs/static
+    cp -r ./docs/static supertokens-backend-website/app/docs/static
+
+    echo "-----------Copying common website assets-----------\n"
+    rm -rf supertokens-backend-website/app/website/static/assets
+    rm -rf supertokens-backend-website/app/website/static/style
+    rm -rf supertokens-backend-website/app/website/index.html
+    rm -rf supertokens-backend-website/app/website/prod.robots.txt
+    rm -rf supertokens-backend-website/app/website/dev.robots.txt
+    rm -rf supertokens-backend-website/app/website/sitemap.xml
+    rm -rf supertokens-backend-website/app/website/static/drift.js
+
+    cp -r ./website/* supertokens-backend-website/app/website/
+fi
