@@ -7,7 +7,7 @@ hide_title: true
 # Introduction
 
 ## We offer the following functionality:
-- ✅ Sign-up / Sign-in with email ID and password
+- ✅ Sign-in / Sign-up with email ID and password
 - ✅ Forgot password flow using email
 - ✅ Secure session management
 - ✅ Email verification
