@@ -1,5 +1,8 @@
 # Contributing
 
+We’re glad that you are interested in contributing to SuperTokens 🎉
+We welcome contributions of all kinds (discussions, bug fixes, features, design changes, videos, articles) and from anyone 👩‍💻🤚🏿🤚🏽🤚🏻🤚🏼🤚🏾👨‍💻.
+
 ## Folder structure
 
 1. The documentation for each recipe and sdk lives in it's own folder e.g `auth-react` for auth-react sdk.
