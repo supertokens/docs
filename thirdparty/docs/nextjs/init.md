@@ -57,6 +57,38 @@ export const frontendConfig = () => {
 }
 
 ```
+<!--/config/supertokensConfig.ts-->
+```ts
+
+import ThirdPartyReact, {Google, Facebook} from 'supertokens-auth-react/recipe/thirdparty'
+import SessionReact from 'supertokens-auth-react/recipe/session'
+
+const appInfo = {
+  // learn more about this on https://supertokens.io/docs/thirdparty/appinfo
+  appName: 'SuperTokens Demo App', // TODO: Your app name
+  websiteDomain: "http://localhost:3000", // TODO: Add your website domain
+  apiDomain: "http://localhost:3000", // TODO: should be equal to `websiteDomain` in case using the `api` folder for APIs
+  apiBasePath: "/api/auth/", // /api/auth/* will be where APIs like sign out, sign in will be exposed
+}
+
+export const frontendConfig = () => {
+  return {
+    appInfo,
+    recipeList: [
+      ThirdPartyReact.init({
+        signInAndUpFeature: {
+          providers: [
+            Google.init(),
+            Facebook.init(),
+          ],
+        },
+      }),
+      SessionReact.init(),
+    ],
+  }
+}
+
+```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ## 4) Create a backend config function
@@ -67,6 +99,40 @@ This function will return the config object used to configure supertokens-node:
 <!--DOCUSAURUS_CODE_TABS-->
 <!--/config/supertokensConfig.js-->
 ```js
+
+import ThirdPartyNode, {Google, Facebook} from 'supertokens-node/recipe/thirdparty'
+import SessionNode from 'supertokens-node/recipe/session'
+
+export const backendConfig = () => {
+  return {
+    supertokens: {
+      connectionURI: 'https://try.supertokens.io',
+    },
+    appInfo,
+    recipeList: [
+      ThirdPartyNode.init({
+        signInAndUpFeature: {
+          providers: [
+            Google({
+              clientSecret: "TODO ADD SECRET",
+              clientId: "TODO ADD SECRET",
+            }),
+            Facebook({
+              clientSecret: "TODO ADD SECRET",
+              clientId: "TODO ADD SECRET",
+            }),
+          ],
+        }
+      }),
+      SessionNode.init(),
+    ],
+    isInServerlessEnv: true,
+  }
+}
+
+```
+<!--/config/supertokensConfig.ts-->
+```ts
 
 import ThirdPartyNode, {Google, Facebook} from 'supertokens-node/recipe/thirdparty'
 import SessionNode from 'supertokens-node/recipe/session'
@@ -133,6 +199,31 @@ if (typeof window !== 'undefined') {
 }
 
 function MyApp({ Component, pageProps }) {
+  return <Component {...pageProps} />
+}
+
+export default MyApp
+```
+
+<!--/pages/_app.tsx-->
+
+```js
+
+import '../styles/globals.css'
+import React from 'react'
+import { AppProps } from 'next/app'
+import SuperTokensReact from 'supertokens-auth-react'
+import SuperTokensNode from 'supertokens-node'
+
+import * as SuperTokensConfig from '../config/supertokensConfig'
+
+if (typeof window !== 'undefined') {
+  SuperTokensReact.init(SuperTokensConfig.frontendConfig())
+} else {
+  SuperTokensNode.init(SuperTokensConfig.backendConfig())
+}
+
+function MyApp({ Component, pageProps }: AppProps) {
   return <Component {...pageProps} />
 }
 
