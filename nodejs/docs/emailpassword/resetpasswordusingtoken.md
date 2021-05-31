@@ -1,0 +1,22 @@
+---
+id: resetpasswordusingtoken
+title: resetPasswordUsingToken
+hide_title: true
+---
+
+# ``resetPasswordUsingToken(token, newPassword)``
+
+### Parameters
+- ``token``
+  - type: ``string``
+- ``newPassword``
+  - type: ``string``
+
+
+
+### Returns
+- ``Promise<void>``
+
+### Throws
+- [GENERAL_ERROR](./../errors/general_error)
+- [RESET_PASSWORD_INVALID_TOKEN_ERROR](./errors/reset_password_invalid_token_error)
