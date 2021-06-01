@@ -649,6 +649,76 @@ function changeDiscordLinkTextOnDesktop() {
     handleWindowChange(mediaQuery);
 }
 
+function getTagFromUrl() {
+    let tagName = ""
+
+    if (window.location.pathname.startsWith("/docs/") &&  window.location.pathname.split("/").length >= 3) {
+        tagName = window.location.pathname.split("/")[2] 
+    }
+
+    return tagName
+}
+
+function getVersionFromUrl() {
+    let version = ""
+    let docsearchMetaTag = document.getElementsByName("docsearch:version")[0]
+
+    if (docsearchMetaTag) {
+        version = docsearchMetaTag.getAttribute('content')
+    }
+
+    return version
+}
+
+function addAlgoliaSearch() {
+
+    if (window.screen.width <= 735) {
+        // Mobile
+        return
+    }
+
+    let tag = getTagFromUrl()
+    let version = getVersionFromUrl()
+
+    let docSearchInput = document.createElement("input");
+    docSearchInput.type = "search";
+    docSearchInput.className = "docsearch-input";
+    docSearchInput.id = "docsearch-input";
+    docSearchInput.placeholder = "Search";
+
+    let docSearchCssLink = document.createElement("link");
+    docSearchCssLink.rel = "stylesheet";
+    docSearchCssLink.href = "https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css"
+
+    let docSearchLibrary = document.createElement("script");
+    docSearchLibrary.type = "text/javascript"
+    docSearchLibrary.src = "https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js";
+
+    let docSearchScript = document.createElement("script");
+    docSearchScript.type = "text/javascript"
+    docSearchScript.text = `docsearch({
+        apiKey: '0eeffc534667153c420f239cc6c7f4fb',
+        indexName: 'supertokens',
+        inputSelector: '.docsearch-input',
+        algoliaOptions: {
+            'facetFilters': ["tags:${tag}", "version:${version}"]
+          },
+        enhancedSearchInput: true,
+        debug: true
+        });`;
+
+    document.head.appendChild(docSearchCssLink);
+    let header = document.getElementsByTagName("header")[0]
+    header.appendChild(docSearchInput);
+
+
+    document.body.appendChild(docSearchLibrary);
+
+    docSearchLibrary.addEventListener('load', () => {
+        document.body.appendChild(docSearchScript);
+    })
+}
+
 /**
  * This file does not need to wait for DOMContentLoaded because it only gets added after it has loaded
  */
@@ -691,6 +761,7 @@ addAntcsScript()
 addHeaderAnalytics()
 addRecipeNameToHeader()
 changeDiscordLinkTextOnDesktop()
+addAlgoliaSearch()
 // NO MORE RENDERING AFTER THIS POINT, ONLY PERFORM CALCULATIONS
 
 document.body.style.display = "block";
