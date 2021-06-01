@@ -652,8 +652,8 @@ function changeDiscordLinkTextOnDesktop() {
 function getTagFromUrl() {
     let tagName = ""
 
-    if (window.location.pathname.startsWith("/docs/") &&  window.location.pathname.split("/").length >= 3) {
-        tagName = window.location.pathname.split("/")[2] 
+    if (window.location.pathname.startsWith("/docs/") && window.location.pathname.split("/").length >= 3) {
+        tagName = window.location.pathname.split("/")[2]
     }
 
     return tagName
