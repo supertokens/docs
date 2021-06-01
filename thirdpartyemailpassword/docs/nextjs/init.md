@@ -31,15 +31,47 @@ This function will return the config object used to configure supertokens-auth-r
 import ThirdPartyEmailPasswordReact, {Google, Facebook} from 'supertokens-auth-react/recipe/thirdpartyemailpassword'
 import SessionReact from 'supertokens-auth-react/recipe/session'
 
-let appInfo = {
+const appInfo = {
   // learn more about this on https://supertokens.io/docs/thirdpartyemailpassword/appinfo
   appName: 'SuperTokens Demo App', // TODO: Your app name
   websiteDomain: "http://localhost:3000", // TODO: Add your website domain
   apiDomain: "http://localhost:3000", // TODO: should be equal to `websiteDomain` in case using the `api` folder for APIs
-  apiBasePath: "/api/auth/", // /api/auth/* will be where APIs like sign out, sign in will be exposed 
+  apiBasePath: "/api/auth/", // /api/auth/* will be where APIs like sign out, sign in will be exposed
 }
 
-export let frontendConfig = () => {
+export const frontendConfig = () => {
+  return {
+    appInfo,
+    recipeList: [
+      ThirdPartyEmailPasswordReact.init({
+        signInAndUpFeature: {
+          providers: [
+            Google.init(),
+            Facebook.init(),
+          ],
+        },
+      }),
+      SessionReact.init(),
+    ],
+  }
+}
+
+```
+<!--/config/supertokensConfig.ts-->
+```js
+
+import ThirdPartyEmailPasswordReact, {Google, Facebook} from 'supertokens-auth-react/recipe/thirdpartyemailpassword'
+import SessionReact from 'supertokens-auth-react/recipe/session'
+
+const appInfo = {
+  // learn more about this on https://supertokens.io/docs/thirdpartyemailpassword/appinfo
+  appName: 'SuperTokens Demo App', // TODO: Your app name
+  websiteDomain: "http://localhost:3000", // TODO: Add your website domain
+  apiDomain: "http://localhost:3000", // TODO: should be equal to `websiteDomain` in case using the `api` folder for APIs
+  apiBasePath: "/api/auth/", // /api/auth/* will be where APIs like sign out, sign in will be exposed
+}
+
+export const frontendConfig = () => {
   return {
     appInfo,
     recipeList: [
@@ -71,7 +103,39 @@ This function will return the config object used to configure supertokens-node:
 import ThirdPartyEmailPasswordNode, {Google, Facebook} from 'supertokens-node/recipe/thirdpartyemailpassword'
 import SessionNode from 'supertokens-node/recipe/session'
 
-export let backendConfig = () => {
+export const backendConfig = () => {
+  return {
+    supertokens: {
+      connectionURI: 'https://try.supertokens.io',
+    },
+    appInfo,
+    recipeList: [
+      ThirdPartyEmailPasswordNode.init({
+        providers: [
+          Google({
+            clientSecret: "TODO ADD SECRET",
+            clientId: "TODO ADD SECRET",
+          }),
+          Facebook({
+            clientSecret: "TODO ADD SECRET",
+            clientId: "TODO ADD SECRET",
+          }),
+        ],
+      }),
+      SessionNode.init(),
+    ],
+    isInServerlessEnv: true,
+  }
+}
+
+```
+<!--/config/supertokensConfig.ts-->
+```js
+
+import ThirdPartyEmailPasswordNode, {Google, Facebook} from 'supertokens-node/recipe/thirdpartyemailpassword'
+import SessionNode from 'supertokens-node/recipe/session'
+
+export const backendConfig = () => {
   return {
     supertokens: {
       connectionURI: 'https://try.supertokens.io',
@@ -131,6 +195,31 @@ if (typeof window !== 'undefined') {
 }
 
 function MyApp({ Component, pageProps }) {
+  return <Component {...pageProps} />
+}
+
+export default MyApp
+```
+
+<!--/pages/_app.ts-->
+
+```js
+
+import '../styles/globals.css'
+import React from 'react'
+import { AppProps } from 'next/app'
+import SuperTokensReact from 'supertokens-auth-react'
+import SuperTokensNode from 'supertokens-node'
+
+import * as SuperTokensConfig from '../config/supertokensConfig'
+
+if (typeof window !== 'undefined') {
+  SuperTokensReact.init(SuperTokensConfig.frontendConfig())
+} else {
+  SuperTokensNode.init(SuperTokensConfig.backendConfig())
+}
+
+function MyApp({ Component, pageProps }: AppProps) {
   return <Component {...pageProps} />
 }
 
