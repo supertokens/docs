@@ -43,6 +43,8 @@ __HIGHLIGHT__    -e POSTGRESQL_USER="username" \
     -d supertokens/supertokens-postgresql
 ```
 
+- You can also provide the table schema by providing the `POSTGRESQL_TABLE_SCHEMA` option.
+
 <!--Without Docker-->
 ```yaml
 # You need to add the following to the config.yaml file.
@@ -62,6 +64,8 @@ postgresql_port: "5432"
 
 postgresql_database_name: "supertokens"
 ```
+
+- You can also provide the table schema by providing the `postgresql_table_schema` option.
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
