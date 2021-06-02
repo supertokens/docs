@@ -702,9 +702,7 @@ function addAlgoliaSearch() {
         inputSelector: '.docsearch-input',
         algoliaOptions: {
             'facetFilters': ["tags:${tag}", "version:${version}"]
-          },
-        enhancedSearchInput: true,
-        debug: true
+          }
         });`;
 
     document.head.appendChild(docSearchCssLink);
