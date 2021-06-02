@@ -672,7 +672,7 @@ function getVersionFromUrl() {
 
 function addAlgoliaSearch() {
 
-    if (window.screen.width <= 735) {
+    if (window.screen.width <= 1250) {
         // Mobile
         return
     }
