@@ -1,7 +1,8 @@
 ---
-id: api-reference
+id: version-7.2.X-api-reference
 title: API Reference
 hide_title: true
+original_id: api-reference
 ---
 
 # API Reference

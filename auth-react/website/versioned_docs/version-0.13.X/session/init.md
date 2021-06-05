@@ -85,3 +85,7 @@ SuperTokens.init({
     - Type: ```boolean```
     - Default: ```false```
     - Set this to `true` if your frontend can be used in an iframe. Remember that this means you will have to use `https` for your website domain while in development.
+- ```cookieDomain``` (Optional)
+    - Type: ```string```
+    - Default: ```undefined```
+    - This value can be used to enable session management across multiple API sub domains.
