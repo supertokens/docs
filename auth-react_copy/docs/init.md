@@ -1,23 +1,26 @@
 ---
-sidebar_position: 1
-slug: /
+id: init
+title: Init
+hide_title: true
 ---
 
 # Call the `init` function
 
 In your `App.js` file, import SuperTokens and call the `init` function.
 
-```js {3-7}
+```js
 import SuperTokens from "supertokens-auth-react";
 
 SuperTokens.init({
  	appInfo: {
-        appName: "YOUR APP NAME", // Example: "SuperTokens",
+__HIGHLIGHT__        appName: "YOUR APP NAME", // Example: "SuperTokens",
         apiDomain: "YOUR API DOMAIN", // Example: "https://api.supertokens.io",
         websiteDomain: "YOUR WEBSITE DOMAIN" // Example: "https://supertokens.io"
-	},
+	}, __END_HIGHLIGHT__
 });
 ```
+
+Make sure to replace all the above configurations values with yours.
 
 ### App Info values
 
@@ -54,6 +57,10 @@ SuperTokens.init({
     - Example: `apiGatewayPath: "/dev"`
     - Optional
 
-:::info
+
+<div class="specialNote" style="margin-bottom: 40px">
 If you try to refresh your website, you might see the following error "Please provide at least one recipe to the supertokens.init function call" in your console. Make sure to read about the email password following section.
-:::
+</div>
+
+
+To setup routing for SuperTokens, please refer to the [starter guide](/docs/emailpassword/quick-setup/frontend#3-setup-routes).
