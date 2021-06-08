@@ -55,6 +55,25 @@ The syntax for styling is the same as <a href="https://www.w3schools.com/react/r
 
 Using this same technique, you can fully customize your widgets.
 
+### Using media queries
+
+You may want to have different CSS for different viewports. This can be achieved via media queries like this:
+<!--DOCUSAURUS_CODE_TABS-->
+<!--ReactJS-->
+```js
+style: {
+    headerTitle: {
+        border: '3px',
+        borderColor: "#000000",
+        borderStyle: "solid"
+__HIGHLIGHT__        "@media (max-width: 440px)": {
+            border: "5px",
+        }, __END_HIGHLIGHT__
+    }
+}
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 ## Email Verification
 
 ### Send verify email screen 
