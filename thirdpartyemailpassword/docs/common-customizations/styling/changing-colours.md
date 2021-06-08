@@ -77,7 +77,7 @@ You will see that the styles were applied to Sign-up too if you click on the "Si
 <img width="400px" src="/docs/static/assets/emailpassword/primary.png" />
 
 - **success**: 
-    - Description: This value represents the error color used on success events.
+    - Description: This value represents the color used on success events.
     - Default: ```"#41a700"``` (green)
     - Example: ```success: "#41a700"```
 

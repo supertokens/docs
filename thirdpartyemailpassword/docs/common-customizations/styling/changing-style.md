@@ -57,8 +57,6 @@ The syntax for styling is the same as <a href="https://www.w3schools.com/react/r
 
 Using this same technique, you can fully customize your widgets.
 
-Check out the React <a href="../../../auth-react/emailpassword/config/sign-up#signupform-config-values" target="_blank">reference API</a> for a full list of classes that you can overwrite.
-
 ## Reset Password Using Token
 
 ### Send password reset email form
