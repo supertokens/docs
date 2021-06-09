@@ -4,14 +4,14 @@ title: getSession
 hide_title: true
 ---
 
-# ``getSession(req, res, doAntiCsrfCheck)``
+# ``getSession(req, res, options)``
 ### Parameters
 - ``req`` 
   - type: ``Express.Request``
 - ``res`` 
   - type: ``Express.Response``
-- ``doAntiCsrfCheck`` (Optional)
-  - type: ``boolean``
+- ``options`` (Optional)
+  - type: ``{antiCsrfCheck?: boolean, sessionRequired?: boolean}``
 
 ### Returns
 - ``Promise<Session>``
