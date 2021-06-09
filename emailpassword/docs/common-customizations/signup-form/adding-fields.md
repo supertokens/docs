@@ -110,17 +110,28 @@ SuperTokens.init({
                   id: "country",
                   optional: true
                 }],
-__HIGHLIGHT__                handleCustomFormFieldsPostSignUp: async (user, formFields) => {
-                    let {id, email} = user;
-                    /* formFields is [
-                        {id: "name", value: "..."},
-                        {id: "age", value: ...},
-                        {id: "country", value: "..." or "" if not provided}
-                       ] 
-                    */
-                    // TODO: Sanitize form fields and store in your DB.
-                } __END_HIGHLIGHT__
-            } 
+            },
+__HIGHLIGHT__            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signUpPOST: async (formFields, options) => {
+                            let response = await originalImplementation.signUpPOST(formFields, options);
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+                                /* formFields is [
+                                    {id: "name", value: "..."},
+                                    {id: "age", value: ...},
+                                    {id: "country", value: "..." or "" if not provided}
+                                ] 
+                                */
+                                // TODO: Sanitize form fields and store in your DB.
+                            }
+                            return response;
+                        }
+                    }
+                }
+            } __END_HIGHLIGHT__
         }),
         Session.init({...})
     ]

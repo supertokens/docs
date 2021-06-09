@@ -84,7 +84,7 @@ __HIGHLIGHT__                formFields: [{
 
 SuperTokens does not store those custom fields on successful signup. 
 
-Instead, you should use the `handlePostSignUp` callback to handle those values yourselves.
+Instead, you should override signInUpPOST api of the ThirdPartyEmailPassword recipe to handle those values yourselves.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
@@ -103,17 +103,38 @@ SuperTokens.init({
                   id: "country",
                   optional: true
                 }],
-__HIGHLIGHT__                handlePostSignUp: async (user, context) => {
-                    let {id, email} = user;
-                    if (context.loginType === "emailpassword") {
-                        let formFields = context.formFields;
-                        // TODO...
-                    } else {
-                        let thirdPartyAuthCodeResponse = context.thirdPartyAuthCodeResponse;
-                        /* thirdPartyAuthCodeResponse is the response from the third party login provider that contains the access / refresh tokens sent by them..*/
+            }
+__HIGHLIGHT__            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUpPOST: async (input) => {
+                            let response = await originalImplementation.signInUpPOST(input);
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+                                let context = response.type;
+                                // The value of context depends on which login type (emailpassword/thirdparty) the user used to sign-up
+                                let newUser = response.createdNewUser;
+                                // newUser is a boolean value, if true, then the user has signed up, else they have signed in.
+                                if (context === "emailpassword") {
+                                    let formFields = input.formFields;
+                                    /* formFields is [
+                                        {id: "name", value: "..."},
+                                        {id: "age", value: ...},
+                                        {id: "country", value: "..." or "" if not provided}
+                                    ] 
+                                    */
+                                    // TODO: Sanitize form fields and store in your DB.
+                                } else {
+                                    let thirdPartyAuthCodeResponse = response.authCodeResponse;
+                                    // thirdPartyAuthCodeResponse here will be the response from the provider POST /token API
+                                }
+                            }
+                            return response;
+                        }
                     }
-                } __END_HIGHLIGHT__
-            } 
+                }
+            } __END_HIGHLIGHT__
         }),
         Session.init({...})
     ]
