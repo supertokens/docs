@@ -13,7 +13,10 @@ module.exports = {
     navbar: {
       logo: {
         alt: 'SuperTokens logo',
-        src: 'img/logotemp.png',
+        src: 'img/logoWithName.png',
+        srcDark: 'img/logoWithNameLight.png', // Default to `logo.src`.
+        href: 'https://supertokens.io/', // Default to `siteConfig.baseUrl`.
+        target: '_self', // By default, this value is calculated based on the `href` attribute (the external link will open in a new tab, all others in the current one).
       },
       items: [
         {
