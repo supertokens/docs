@@ -18,6 +18,33 @@ const nonDocsProxyOptions = {
 };
 const nonDocsProxy = createProxyMiddleware(nonDocsProxyOptions);
 
+app.get("/docs/auth-react*", async function(req, res, next) {
+    let filePath = req.path;
+    let paths = req.path.split("/");
+    let lastElem = paths[paths.length - 1];
+    if (lastElem === "") {
+        filePath = req.path.substring(0, req.path.length - 1);
+        paths = req.path.split("/");
+        lastElem = paths[paths.length - 1];
+    }
+    if (!lastElem.includes(".")) {
+        try {
+            filePath = "docs/auth-react/index.html"
+            // This should throw error if file does not exsist
+            await assertFileExists(filePath);
+            const htmlFileContent = await readFileContent(filePath);
+            res.set("Content-Type", "text/html");
+            return res.send(htmlFileContent);
+        } catch (error) {
+            return next(error)
+        }
+    }
+    return res.sendFile(filePath, {
+        root: process.env.PROJECT_DIR,
+        maxAge: 3600
+    });
+})
+
 app.get("/docs/*", async function(req, res, next) {
     if (req.path === "/docs/") {
         return next();

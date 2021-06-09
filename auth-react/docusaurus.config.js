@@ -3,7 +3,7 @@ module.exports = {
   title: 'SuperTokens',
   tagline: 'Open Source User Auth',
   url: 'https://supertokens.io',
-  baseUrl: '/',
+  baseUrl: '/docs/auth-react/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.ico', // TODO: get a favicon for the site
@@ -13,7 +13,7 @@ module.exports = {
     navbar: {
       logo: {
         alt: 'SuperTokens logo',
-        src: 'img/logoWithNameLight.png',
+        src: 'img/logotemp.png',
       },
       items: [
         {
@@ -64,7 +64,7 @@ module.exports = {
           items: [
             {
               label: 'Blog',
-              to: '/blog',
+              to: 'https://supertokens.io/blog',
             },
             {
               label: 'GitHub',
