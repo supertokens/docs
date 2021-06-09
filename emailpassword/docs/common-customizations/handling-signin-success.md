@@ -81,7 +81,7 @@ Please refer to the <a href="/docs/auth-react/emailpassword/callbacks#onhandleev
 
 ## 3) Handling sign in event on the backend
 
-### `handlePostSignIn`
+For this, you'll have to override signInPOST api of the EmailPassword recipe.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
@@ -93,12 +93,21 @@ SuperTokens.init({
     supertokens: {...},
     recipeList: [
         EmailPassword.init({
-            signInFeature: {
-__HIGHLIGHT__                handlePostSignIn: async (user) => {
-                    let {id, email} = user;
-                    // TODO:
-                } __END_HIGHLIGHT__
-            } 
+__HIGHLIGHT__            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInPOST: async (formFields, options) => {
+                            let response = await originalImplementation.signInPOST(formFields, options);
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+                                // TODO: post sign in logic
+                            }
+                            return response;
+                        }
+                    }
+                }
+            } __END_HIGHLIGHT__
         }),
         Session.init({...})
     ]

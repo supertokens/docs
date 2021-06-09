@@ -79,7 +79,7 @@ Please refer to the <a href="/docs/auth-react/emailpassword/callbacks#onhandleev
 
 ## 3) Handling sign up event on the backend
 
-### `handlePostSignUp`
+For this, you'll have to override signInUpPOST api of the ThirdPartyEmailPassword recipe.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
@@ -90,18 +90,27 @@ SuperTokens.init({
     supertokens: {...},
     recipeList: [
         ThirdPartyEmailPassword.init({
-            signUpFeature: {
-__HIGHLIGHT__                handlePostSignUp: async (user, context) => {
-                    let {id, email} = user;
-                    // The value of context depends on which login type (emailpassword/thirdparty) the user used to sign-up
-
-                    // If emailpassword, context contains { loginType, formFields }.
-                    // Sanitize formFields and store in your DB.
-
-                    // If thirdparty, context contains { loginType, thirdPartyAuthCodeResponse }. 
-                    // thirdPartyAuthCodeResponse is the response from the provider POST /token API.
-                } __END_HIGHLIGHT__
-            } 
+            __HIGHLIGHT__            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUpPOST: async (input) => {
+                            let response = await originalImplementation.signInUpPOST(input);
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+                                let context = response.type;
+                                // The value of context depends on which login type (emailpassword/thirdparty) the user used to sign-up
+                                let newUser = response.createdNewUser;
+                                // newUser is a boolean value, if true, then the user has signed up, else they have signed in.
+                                let thirdPartyAuthCodeResponse = response.authCodeResponse;
+                                // if context is thirdparty, thirdPartyAuthCodeResponse here will be the response from the provider POST /token API, else undefined
+                                // TODO: post sign in up logic
+                            }
+                            return response;
+                        }
+                    }
+                }
+            } __END_HIGHLIGHT__
         }),
         Session.init({...})
     ]

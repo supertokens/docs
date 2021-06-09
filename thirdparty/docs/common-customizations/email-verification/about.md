@@ -40,32 +40,6 @@ After they have clicked on the email, they will see this screen:
 
 <img width="700px" src="/docs/static/assets/emailpassword/email-verification-successful.png" />
 
-## Doing operations post email verification
-
-We have defined a callback in the backend SDK which will be called after a successful email verification. You can define the callback for tasks like analytics, sending a user a welcome email, notifying an internal dashboard etc..
-
-<!--DOCUSAURUS_CODE_TABS-->
-<!--NodeJS--> 
-```js
-
-SuperTokens.init({
-    appInfo: {...},
-    recipeList: [
-        ThirdParty.init({
-            emailVerificationFeature: {
-__HIGHLIGHT__                handlePostEmailVerification: (user) => {
-                    let {id, email} = user;
-                    // this is called when this user verifies their email.
-                } __END_HIGHLIGHT__
-            }
-        }),
-
-        Session.init()
-    ]
-});
-```
-<!--END_DOCUSAURUS_CODE_TABS-->
-
 <div class="specialNote" style="margin-bottom: 40px">
 Note that if you are already using SuperTokens in production and turn on email verification, your users will be redirected to the email verification screen next time they use your application.
 </div>
