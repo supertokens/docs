@@ -1,15 +1,15 @@
 ---
-id: handling-signup-success
-title: Post sign up callbacks
+id: handling-signinup-success
+title: Post signin / signup callbacks
 hide_title: true
 ---
 
-# Post sign up callbacks
+# Post signin / signup callbacks
 
-There are three customizations that can be done post sign up:
+There are three customizations that can be done post sign in:
 1) Redirecting the user to a specific URL
-2) Handling the sign up event on the frontend (for example for analytics)
-3) Handling the sign up event on the backend (for example for storing extra user info)
+2) Handling the sign in / up event on the frontend (for example for analytics)
+3) Handling the sign in / up event on the backend (for example for analytics)
 
 ## 1)  Redirecting the user to a specific URL
 
@@ -30,6 +30,7 @@ __HIGHLIGHT__           getRedirectionURL: (context) {
     ]
 });
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 The user will be redirected to the provided URL on:
@@ -38,12 +39,11 @@ The user will be redirected to the provided URL on:
 - Successful email verification.
 - If the user is already logged in.
 
-
 Please refer to the <a href="/docs/auth-react/emailpassword/callbacks#getredirectionurl" target="_blank">auth-react reference API</a> for more information on `getRedirectionURL` hook.
 
-## 2) Handling sign up event on the frontend
+## 2) Handling signin / signup event on the frontend
 
-This method allows you to fire events immediately after a successful sign up. For example to send analytics events post sign up.
+This method allows you to fire events immediately after a successful sign in / up. For example to send analytics events post sign in / up.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--ReactJS-->
@@ -71,18 +71,19 @@ __HIGHLIGHT__            onHandleEvent: async (context) => {
     ]
 });
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Please refer to the <a href="/docs/auth-react/emailpassword/callbacks#onhandleevent" target="_blank">auth-react reference API</a> for more information on `onHandleEvent` hook.
 
 
-
-## 3) Handling sign up event on the backend
+## 3) Handling signin / signup event on the backend
 
 For this, you'll have to override signInUpPOST api of the ThirdPartyEmailPassword recipe.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
+
 ```js
 // backend
 SuperTokens.init({
@@ -90,7 +91,7 @@ SuperTokens.init({
     supertokens: {...},
     recipeList: [
         ThirdPartyEmailPassword.init({
-            __HIGHLIGHT__            override: {
+__HIGHLIGHT__            override: {
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
@@ -104,7 +105,11 @@ SuperTokens.init({
                                 // newUser is a boolean value, if true, then the user has signed up, else they have signed in.
                                 let thirdPartyAuthCodeResponse = response.authCodeResponse;
                                 // if context is thirdparty, thirdPartyAuthCodeResponse here will be the response from the provider POST /token API, else undefined
-                                // TODO: post sign in up logic
+                                if (newUser) {
+                                    // TODO: sign up logic
+                                } else {
+                                    // TODO: sign in logic
+                                }
                             }
                             return response;
                         }
@@ -116,4 +121,5 @@ SuperTokens.init({
     ]
 });
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->

@@ -118,6 +118,13 @@ __HIGHLIGHT__            override: {
                                 // newUser is a boolean value, if true, then the user has signed up, else they have signed in.
                                 if (context === "emailpassword") {
                                     let formFields = input.formFields;
+                                    /* formFields is [
+                                        {id: "name", value: "..."},
+                                        {id: "age", value: ...},
+                                        {id: "country", value: "..." or "" if not provided}
+                                    ] 
+                                    */
+                                    // TODO: Sanitize form fields and store in your DB.
                                 } else {
                                     let thirdPartyAuthCodeResponse = response.authCodeResponse;
                                     // thirdPartyAuthCodeResponse here will be the response from the provider POST /token API

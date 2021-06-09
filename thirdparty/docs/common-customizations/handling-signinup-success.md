@@ -41,7 +41,7 @@ The user will be redirected to the provided URL on:
 Please refer to the <a href="/docs/auth-react/thirdparty/callbacks#getredirectionurl" target="_blank">auth-react reference API</a> for more information on `getRedirectionURL` hook.
 
 
-## 2) Handling sign in event on the frontend
+## 2) Handling signin / signup event on the frontend
 
 This method allows you to fire events immediately after a successful sign in / up. For example to send analytics events post sign in / up.
 
@@ -75,7 +75,7 @@ __HIGHLIGHT__            onHandleEvent: async (context) => {
 
 Please refer to the <a href="/docs/auth-react/thirdparty/callbacks#onhandleevent" target="_blank">auth-react reference API</a> for more information on `onHandleEvent` hook.
 
-## 3) Handling sign in event on the backend
+## 3) Handling signin / signup event on the backend
 
 For this, you'll have to override signInUpPOST api of the ThirdParty recipe.
 
