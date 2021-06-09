@@ -13,12 +13,6 @@ Session.init({
     cookieSameSite?: "strict" | "lax" | "none",
     sessionExpiredStatusCode?: number,
     cookieDomain?: string,
-    sessionRefreshFeature?: {
-        disableDefaultImplementation?: boolean,
-    },
-    signOutFeature?: {
-        disableDefaultImplementation?: boolean
-    },
     errorHandlers?: ErrorHandlers,
     antiCsrf?: "NONE" | "VIA_CUSTOM_HEADER" | "VIA_TOKEN"
 })
@@ -38,14 +32,6 @@ Session.init({
   - ``cookieDomain`` (Optional)
     - type: ``string``
     - description:  The domain from which the cookies will be created
-  - ``sessionRefreshFeature``
-    - ``disableDefaultImplementation`` (Optional)
-      - type: ``boolean``
-      - description: Disables the default refresh API
-  - ``signOutFeature``
-    - ``disableDefaultImplementation`` (Optional)
-      - type: ``boolean``
-      - description: Disable the default logout API
   - ``errorHandlers`` (Optional)
     - type: ``ErrorHandlers``
     - description: You can override the default SuperTokens error handler and define your own custom error handler.
