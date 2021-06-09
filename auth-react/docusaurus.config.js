@@ -82,6 +82,7 @@ module.exports = {
       {
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
+          routeBasePath: '/', // https://docusaurus.io/docs/docs-introduction#docs-only-mode, https://docusaurus.io/docs/presets
           // Please change this to your repo.
           editUrl:
             'https://github.com/supertokens/docs/tree/master/auth-react/docs',
