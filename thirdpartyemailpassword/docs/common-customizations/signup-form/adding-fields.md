@@ -82,65 +82,7 @@ __HIGHLIGHT__                formFields: [{
 
 ### Handle form fields on successful Sign-up
 
-SuperTokens does not store those custom fields on successful signup. 
-
-Instead, you should override signInUpPOST api of the ThirdPartyEmailPassword recipe to handle those values yourselves.
-
-<!--DOCUSAURUS_CODE_TABS-->
-<!--NodeJS-->
-```js
-SuperTokens.init({
-    appInfo: {...},
-    supertokens: {...},
-    recipeList: [
-        ThirdPartyEmailPassword.init({
-            signUpFeature: {
-                formFields: [{
-                  id: "name"
-                }, {
-                  id: "age"
-                }, {
-                  id: "country",
-                  optional: true
-                }],
-            }
-__HIGHLIGHT__            override: {
-                apis: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        signInUpPOST: async (input) => {
-                            let response = await originalImplementation.signInUpPOST(input);
-                            if (response.status === "OK") {
-                                let { id, email } = response.user;
-                                let context = response.type;
-                                // The value of context depends on which login type (emailpassword/thirdparty) the user used to sign-up
-                                let newUser = response.createdNewUser;
-                                // newUser is a boolean value, if true, then the user has signed up, else they have signed in.
-                                if (context === "emailpassword") {
-                                    let formFields = input.formFields;
-                                    /* formFields is [
-                                        {id: "name", value: "..."},
-                                        {id: "age", value: ...},
-                                        {id: "country", value: "..." or "" if not provided}
-                                    ] 
-                                    */
-                                    // TODO: Sanitize form fields and store in your DB.
-                                } else {
-                                    let thirdPartyAuthCodeResponse = response.authCodeResponse;
-                                    // thirdPartyAuthCodeResponse here will be the response from the provider POST /token API
-                                }
-                            }
-                            return response;
-                        }
-                    }
-                }
-            } __END_HIGHLIGHT__
-        }),
-        Session.init({...})
-    ]
-});
-```
-<!--END_DOCUSAURUS_CODE_TABS-->
+Have a look at [this section](../handling-signinup-success#3-handling-signin-signup-event-on-the-backend) that talks about post sign up callback.
 
 <div class="specialNote" style="margin-bottom: 40px">
 Please note that Supertokens is not applying any processing to those custom fields. That means you should sanitize all the fields.

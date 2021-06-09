@@ -99,16 +99,20 @@ __HIGHLIGHT__            override: {
                             let response = await originalImplementation.signInUpPOST(input);
                             if (response.status === "OK") {
                                 let { id, email } = response.user;
-                                let context = response.type;
-                                // The value of context depends on which login type (emailpassword/thirdparty) the user used to sign-up
-                                let newUser = response.createdNewUser;
-                                // newUser is a boolean value, if true, then the user has signed up, else they have signed in.
-                                let thirdPartyAuthCodeResponse = response.authCodeResponse;
-                                // if context is thirdparty, thirdPartyAuthCodeResponse here will be the response from the provider POST /token API, else undefined
-                                if (newUser) {
-                                    // TODO: sign up logic
+
+                                if (response.type === "thirdparty") {
+                                    // this is the response from the OAuth 2 provider that contains their tokens or user info.
+                                    let thirdPartyAuthCodeResponse = response.authCodeResponse;
+                                }
+                                if (input.type === "emailpassword") {
+                                    // these are the input form fields values that the user used while signing up / in
+                                    let formFields = input.formFields;
+                                }
+
+                                if (response.createdNewUser) {
+                                    // TODO: post sign up logic
                                 } else {
-                                    // TODO: sign in logic
+                                    // TODO: post sign in logic
                                 }
                             }
                             return response;

@@ -95,11 +95,15 @@ __HIGHLIGHT__            override: {
                             let response = await originalImplementation.signInUpPOST(provider, code, redirectURI, options);
                             if (response.status === "OK") {
                                 let { id, email } = response.user;
-                                let newUser = response.createdNewUser;
-                                // newUser is a boolean value, if true, then the user has signed up, else they have signed in.
-                                let thirdPartyAuthCodeResponse = response.authCodeResponse;
+                                
                                 // thirdPartyAuthCodeResponse is the response from the provider POST /token API.
-                                // TODO: post sign in up logic
+                                let thirdPartyAuthCodeResponse = response.authCodeResponse;
+                                
+                                if (response.createdNewUser) {
+                                    // TODO: post sign up logic
+                                } else {
+                                    // TODO: post sign in logic
+                                }
                             }
                             return response;
                         }

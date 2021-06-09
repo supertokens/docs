@@ -88,61 +88,10 @@ __HIGHLIGHT__                formFields: [{
 
 ### Handle form fields on successful Sign-up
 
-Supertokens does not store those custom fields on successful signup. 
+Have a look at [this section](../handling-signup-success#3-handling-sign-up-event-on-the-backend) that talks about post sign up callback.
 
-Instead, you should use the `handleCustomFormFieldsPostSignUp` callback to handle those values yourselves.
-
-<!--DOCUSAURUS_CODE_TABS-->
-<!--NodeJS-->
-
-```js
-SuperTokens.init({
-    appInfo: {...},
-    supertokens: {...},
-    recipeList: [
-        EmailPassword.init({
-            signUpFeature: {
-                formFields: [{
-                  id: "name"
-                }, {
-                  id: "age"
-                }, {
-                  id: "country",
-                  optional: true
-                }],
-            },
-__HIGHLIGHT__            override: {
-                apis: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        signUpPOST: async (formFields, options) => {
-                            let response = await originalImplementation.signUpPOST(formFields, options);
-                            if (response.status === "OK") {
-                                let { id, email } = response.user;
-                                /* formFields is [
-                                    {id: "name", value: "..."},
-                                    {id: "age", value: ...},
-                                    {id: "country", value: "..." or "" if not provided}
-                                ] 
-                                */
-                                // TODO: Sanitize form fields and store in your DB.
-                            }
-                            return response;
-                        }
-                    }
-                }
-            } __END_HIGHLIGHT__
-        }),
-        Session.init({...})
-    ]
-});
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
 
 <div class="specialNote" style="margin-bottom: 40px">
 Please note that Supertokens is not applying any processing to those custom fields. That means you should sanitize all the fields.
 </div>
-
-Please refer to the <a href="../../../nodejs/emailpassword/default-apis" target="_blank">NodeJS reference API</a> for more information on `handleCustomFormFieldsPostSignUp` input types.
 
