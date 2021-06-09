@@ -97,10 +97,11 @@ __HIGHLIGHT__            override: {
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signUpPOST: async (formFields, options) => {
-                            let response = await originalImplementation.signUpPOST(formFields, options);
+                        signUpPOST: async (input) => {
+                            let response = await originalImplementation.signUpPOST(input);
                             if (response.status === "OK") {
                                 let { id, email } = response.user;
+                                let formFields = input.formFields;
                                 // TODO: post sign up logic
                             }
                             return response;

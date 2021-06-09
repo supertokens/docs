@@ -91,8 +91,8 @@ __HIGHLIGHT__            override: {
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signInUpPOST: async (provider, code, redirectURI, options) => {
-                            let response = await originalImplementation.signInUpPOST(provider, code, redirectURI, options);
+                        signInUpPOST: async (input) => {
+                            let response = await originalImplementation.signInUpPOST(input);
                             if (response.status === "OK") {
                                 let { id, email } = response.user;
                                 

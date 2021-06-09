@@ -21,8 +21,8 @@ __HIGHLIGHT__                override: {
                         apis: (originalImplementation) => {
                             return {
                                 ...originalImplementation,
-                                verifyEmailPOST: async (token, options) => {
-                                    let response = await originalImplementation.verifyEmailPOST(token, options);
+                                verifyEmailPOST: async (input) => {
+                                    let response = await originalImplementation.verifyEmailPOST(input);
                                     if (response.status === "OK") {
                                         let { id, email } = response.user;
                                         // TODO: post email verification logic
