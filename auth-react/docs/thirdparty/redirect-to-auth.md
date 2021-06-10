@@ -6,17 +6,20 @@ hide_title: true
 
 # RedirectToAuth reference API
 
-The `redirectToAuth` method simply redirect the user to authentication page UI.
+The `redirectToAuth` method simply redirect the user to sign-in/sign-up page UI.
 
 Example: 
 
 ```js
 import { redirectToAuth } from "supertokens-auth-react/recipe/thirdparty";
 
-redirectToAuth();
+redirectToAuth({show?: "signin" | "signup", redirectBack?: boolean});
 ```
 
 - **redirectToAuth**: 
-    - Description: `redirectToAuth` will redirect the user to authentication page UI.
+    - Description: `redirectToAuth` will redirect the user to sign-in/sign-up page UI.
+    - Parameters:
+        - `show` (Optional): Allowed values are `"signin"` and `"signout"`
+        - `redirectBack` (Optional): If `true`, will redirect the user to the current page. It is `false` by default
     - Output:
         - `void`
