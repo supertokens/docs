@@ -1,4 +1,6 @@
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
+const path = require('path')
+
 module.exports = {
   title: 'SuperTokens',
   tagline: 'Open Source User Auth',
@@ -102,4 +104,5 @@ module.exports = {
       },
     ],
   ],
+  plugins: [path.resolve(__dirname, 'supertokens-docs-plugin')],
 };
