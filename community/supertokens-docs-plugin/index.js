@@ -70,9 +70,8 @@ module.exports = function(context, opts) {
         // },
 
         injectHtmlTags() {
-            console.log(
-                process.env
-            );
+            // console.log( process.env);
+
             return {
                 postBodyTags: [
                     {
@@ -92,7 +91,7 @@ module.exports = function(context, opts) {
                     {
                         tagName: "script",
                         attributes: {
-                            src: "http://localhost:9001/static/bundle.js", // only for supertokens team when changing antcs code
+                            src: "http://localhost:9001/static/antcs.js", // only for supertokens team when changing antcs code
                             // src: "/static/antcs.js",
                             type: "text/javascript"
                         }
