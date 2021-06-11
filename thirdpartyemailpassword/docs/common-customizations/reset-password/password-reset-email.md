@@ -1,10 +1,10 @@
 ---
 id: password-reset-email
-title: Reset Password Email
+title: Customising the reset password email
 hide_title: true
 ---
 
-# Reset password email 📨
+# Customising the reset password email 📨
 
 ## The default email
 - From: no-reply@supertokens.io, but the user will see your app name
