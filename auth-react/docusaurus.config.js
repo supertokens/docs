@@ -4,7 +4,7 @@ module.exports = {
   tagline: 'Open Source User Auth',
   url: 'https://supertokens.io',
   baseUrl: '/docs/auth-react/',
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.ico', // TODO: get a favicon for the site
   organizationName: 'supertokens', // Usually your GitHub org/user name.
