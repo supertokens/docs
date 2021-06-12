@@ -1,7 +1,8 @@
 ---
-id: to-st
+id: version-3.4.X-to-st
 title: Migrating to SuperTokens
 hide_title: true
+original_id: to-st
 ---
 
 # Migrating to SuperTokens

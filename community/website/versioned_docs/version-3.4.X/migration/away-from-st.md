@@ -1,7 +1,8 @@
 ---
-id: away-from-st
+id: version-3.4.X-away-from-st
 title: Migrating away from SuperTokens
 hide_title: true
+original_id: away-from-st
 ---
 
 # Migrating away from SuperTokens
