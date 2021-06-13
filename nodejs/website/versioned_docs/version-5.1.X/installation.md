@@ -1,7 +1,8 @@
 ---
-id: installation
+id: version-5.1.X-installation
 title: Installation
 hide_title: true
+original_id: installation
 ---
 
 # NodeJS driver Installation
