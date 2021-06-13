@@ -20,7 +20,7 @@ SuperTokens.init({
     appInfo: {...},
     recipeList: [
         ThirdParty.init({
-__HIGHLIGHT__           getRedirectionURL: (context) {
+__HIGHLIGHT__           getRedirectionURL: async (context) => {
                 if (context.action === "SUCCESS") {
                     return context.redirectToPath === undefined ? "/dashboard" : context.redirectToPath;
                 }
