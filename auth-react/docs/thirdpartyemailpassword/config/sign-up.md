@@ -50,22 +50,6 @@ SuperTokens.init({
     - Description: Link to your terms and conditions
     - Example: ```termsAndConditionsLink: "https://supertokens.io/legal/terms-and-conditions"```
 
-- **style**: 
-    - Description: An object to overwrite the Sign up form styles. Please refer to the <a href="/docs/thirdpartyemailpassword/common-customizations/styling/changing-colours" target="_blank">common customizations guide</a> for more information about how to update the sign up form style.
-    - Example: 
-        -
-        ```js
-            style: {
-                container: {
-                    marginLeft: "10px",
-                    (...)
-                },
-                link: {
-                    color: "orange"
-                }
-                (...)
-            }
-        ```
 
 - **formFields**: 
     - Description: Array that lets you overwrite the default email/password fields labels, placeholder and validation methods, as well as defining new fields.
