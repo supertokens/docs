@@ -1,8 +1,14 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom'; 
 
-// Default implementation, that you can customize
 function Root({children}) {
-  console.log('from root');
+  const location = useLocation();
+
+  React.useEffect(() => {
+    // TODO: send page view events here
+    console.log(location);
+  }, [location]);
+
   return <>{children}</>;
 }
 
