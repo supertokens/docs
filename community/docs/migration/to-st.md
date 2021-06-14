@@ -74,6 +74,8 @@ supertokens.init({
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+There are a few more function that can be overrided, but those need not be in most cases. To learn more about overriding functions, please visit the docs for the recipe that you want to use.
+
 </div>
 
 <div class="additionalInformation" text="If you CAN migrate all existing users into db tables managed by SuperTokens">
