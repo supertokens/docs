@@ -78,8 +78,6 @@ __HIGHLIGHT__            onHandleEvent: async (context) => {
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Please refer to the <a href="/docs/auth-react/thirdparty/callbacks#onhandleevent" target="_blank">auth-react reference API</a> for more information on `onHandleEvent` hook.
-
 ## 3) Handling signin / signup event on the backend
 
 For this, you'll have to override signInUpPOST api of the ThirdParty recipe.
