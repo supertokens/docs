@@ -22,7 +22,11 @@ SuperTokens.init({
         ThirdParty.init({
 __HIGHLIGHT__           getRedirectionURL: async (context) => {
                 if (context.action === "SUCCESS") {
-                    return context.redirectToPath === undefined ? "/dashboard" : context.redirectToPath;
+                    if (context.redirectToPath !== undefined) {
+                        // we are navigating back to where the user was before they authenticated
+                        return context.redirectToPath;
+                    }
+                    return "/dashboard";
                 }
                 return undefined;
             } __END_HIGHLIGHT__
@@ -39,7 +43,7 @@ The user will be redirected to the provided URL on:
 - If the user is already logged in.
 
 
-Please refer to the <a href="/docs/auth-react/thirdparty/callbacks#getredirectionurl" target="_blank">auth-react reference API</a> for more information on `getRedirectionURL` hook.
+Please refer to [this page](../advanced-customizations/frontend-hooks/redirection-callback) for more information on `getRedirectionURL` hook.
 
 
 ## 2) Handling signin / signup event on the frontend
