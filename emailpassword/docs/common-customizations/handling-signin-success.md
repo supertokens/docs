@@ -25,6 +25,7 @@ __HIGHLIGHT__           getRedirectionURL: async (context) => {
                 if (context.action === "SUCCESS") {
                     return context.redirectToPath === undefined ? "/dashboard" : context.redirectToPath;
                 }
+                return undefined;
             } __END_HIGHLIGHT__
         }),
         Session.init()
