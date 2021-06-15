@@ -14,9 +14,11 @@ This function is called before any API call is being made to your backend from o
 ThirdParty.init({
     preAPIHook: async (context) => {
         let url = context.url;
-        let action = context.action;
+        
+        // is the fetch config object that contains the header, body etc..
         let requestInit = context.requestInit;
 
+        let action = context.action;
         if (action === "GET_AUTHORISATION_URL") {
 
         } else if (action === "IS_EMAIL_VERIFIED") {

@@ -14,9 +14,11 @@ This function is called before any API call is being made to your backend from o
 ThirdPartyEmailPassword.init({
     preAPIHook: async (context) => {
         let url = context.url;
-        let action = context.action;
+        
+        // is the fetch config object that contains the header, body etc..
         let requestInit = context.requestInit;
 
+        let action = context.action;
         if (action === "EMAIL_EXISTS") {
 
         } else if (action === "GET_AUTHORISATION_URL") {
