@@ -19,6 +19,8 @@ This section will guide you on overriding our default behaviour to achieve custo
 
 - **Override APIs**: This will allow you to override the behaviour of any of the backend APIs our SDK exposes. It can be used for post / pre API callbacks or handling custom API input / output that deviate from our API specifications.
 
+- **Frontend Hooks**: This allows you to change the request (body, headers, url etc) that is sent to your server, handle events fired by various user actions, and control how a recipe redirects a user.
+
 ## Example use cases
 Using a combination of these, it should be possible to implement functionality that we don't provide out of the box:
 - Adding reCAPTCHA to the login UI
