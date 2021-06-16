@@ -15,5 +15,5 @@ hide_title: true
 - ``Promise<string>`` on submitting a valid user ID.
 
 ### Throws
-- [EMAIL_ALREADY_VERIFIED_ERROR](./errors/email_already_verified_error)
-- [UNKNOWN_USER_ID_ERROR](./errors/unknown_user_id_error)
+- In case the email is already verified.
+- If the user ID is unknown

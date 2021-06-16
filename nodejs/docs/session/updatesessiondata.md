@@ -12,5 +12,4 @@ hide_title: true
   - type: ``any``
 
 ### Throws
-- [UNAUTHORISED](./errorhandler/unauthorised)
-- [GENERAL_ERROR](./../errors/general_error)
+- Unauthorised error if the `sessionHandle` doesn't exist

@@ -24,6 +24,10 @@ EmailPassword.init({
     emailVerificationFeature: {
         getEmailVerificationURL?: (user: User) => Promise<string>,
         createAndSendCustomEmail?: (user: User, emailVerificationURLWithToken: string) => Promise<void>
+    },
+    override?: {
+      apis?: function,
+      functions?: function
     }
 })
         
@@ -42,9 +46,6 @@ EmailPassword.init({
       - ``optional`` (Optional)
         - type: ``boolean``
         - description: Set the custom field to be optional or not.
-      - ``handleCustomFormFieldsPostSignUp`` (Optional)
-        - type: ``(user: User, formFields: { id: string; value: any }[]) => Promise<void>``
-        - description: Callback for handling custom form fields after user has been created.
   - ``resetPasswordUsingTokenFeature``
     - ``getResetPasswordURL`` (Optional)
       - type: ``(user: User) => Promise<string>;``
@@ -59,9 +60,9 @@ EmailPassword.init({
     - ``createAndSendCustomEmail`` (Optional)
       - type: ``(user: User, emailVerificationURLWithToken: string) => Promise<void>`` 
       - description: Callback for creating and sending custom emails for email verification.
-
-### Throws
-- [GENERAL_ERROR](./../errors/general_error)
+  - `override`
+    - type: `object of function`
+    - description: Use this feature to override how this recipe behaves
 
 ### Additional Information
 - The ``User`` object mentioned above is a reference to this [User](https://github.com/supertokens/core-driver-interface/wiki#user) object

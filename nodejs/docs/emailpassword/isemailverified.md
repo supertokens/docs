@@ -15,4 +15,4 @@ hide_title: true
 - ``Promise<boolean>`` on submitting a valid user ID.
 
 ### Throws
-- [UNKNOWN_USER_ID_ERROR](./errors/unknown_user_id_error)
+- In case the userID is unknown

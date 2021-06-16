@@ -13,5 +13,4 @@ hide_title: true
 - ``Promise<any>`` returns jwt payload as provided by the user earlier.
 
 ### Throws
-- [UNAUTHORISED](./errorhandler/unauthorised)
-- [GENERAL_ERROR](./../errors/general_error)  
+- If the `sessionHandle` does not exist

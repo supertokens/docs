@@ -13,6 +13,3 @@ hide_title: true
 - ``Promise<boolean>`` 
   - ``true`` if session was deleted from the database
   - ``false`` in case there was nothing to delete.
-
-### Throws
-- [GENERAL_ERROR](./../errors/general_error)

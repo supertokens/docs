@@ -13,4 +13,4 @@ hide_title: true
 - ``Promise<any>`` returns session data as provided by the user earlier.
 
 ### Throws
-- [UNAUTHORISED](./errorhandler/unauthorised)  
+- If the `sessionHandle` does not exist

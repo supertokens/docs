@@ -18,5 +18,4 @@ hide_title: true
 - ``Promise<void>``
 
 ### Throws
-- [GENERAL_ERROR](./../errors/general_error)
-- [RESET_PASSWORD_INVALID_TOKEN_ERROR](./errors/reset_password_invalid_token_error)
+- If the password reset token is invalid

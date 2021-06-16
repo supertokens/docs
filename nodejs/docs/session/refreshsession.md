@@ -15,4 +15,4 @@ hide_title: true
 - ``Promise<Session>``  on successful session refresh.
 
 ### Throws
-- [UNAUTHORISED](./errorhandler/unauthorised)
+- An unauthorised error a session doesn't exist

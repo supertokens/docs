@@ -11,6 +11,3 @@ hide_title: true
 
 ### Returns
 - ``Promise<String[]>``  on submitting a valid userId.
-
-### Throws
-- [GENERAL_ERROR](./../errors/general_error)

@@ -15,4 +15,4 @@ hide_title: true
 - ``Promise<any>`` on submitting a valid token.
 
 ### Throws
-- [EMAIL_VERIFICATION_INVALID_TOKEN_ERROR](./errors/email_verification_invalid_token_error)
+- If the email verification token used is invalid

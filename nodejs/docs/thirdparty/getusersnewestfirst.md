@@ -17,9 +17,6 @@ hide_title: true
 ### Returns
 - `Promise<{ users: User[], nextPaginationToken?: string | undefined }>`. Returns a list of [users](https://github.com/supertokens/core-driver-interface/wiki#third-party-user) sorted by newest first.
 
-### Throws 
-- [GENERAL_ERROR](./../errors/general_error)
-
 
 ### Additional Information:
 - If the `nextPaginationToken` is `undefined`, then there are no more `users` to loop through.

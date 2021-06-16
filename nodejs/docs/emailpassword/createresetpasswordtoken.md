@@ -15,5 +15,4 @@ hide_title: true
 - ``Promise<string>`` on submitting a valid user ID.
 
 ### Throws
-- [GENERAL_ERROR](./../errors/general_error)
-- [UNKNOWN_USER_ID_ERROR](./errors/unknown_user_id_error)
+- If the user ID is unknown

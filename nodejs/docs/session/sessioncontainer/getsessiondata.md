@@ -10,5 +10,4 @@ hide_title: true
 ### Returns
 - ``Promise<object>`` 
 ### Throws 
-- [GENERAL_ERROR](./../../errors/general_error)
-- [UNAUTHORISED](./../errorhandler/unauthorised)
+- If the session has expired

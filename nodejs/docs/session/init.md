@@ -14,7 +14,11 @@ Session.init({
     sessionExpiredStatusCode?: number,
     cookieDomain?: string,
     errorHandlers?: ErrorHandlers,
-    antiCsrf?: "NONE" | "VIA_CUSTOM_HEADER" | "VIA_TOKEN"
+    antiCsrf?: "NONE" | "VIA_CUSTOM_HEADER" | "VIA_TOKEN",
+    override?: {
+      functions?: function,
+      apis?: function
+    }
 })
 ```
 
@@ -38,3 +42,6 @@ Session.init({
   - ``antiCsrf`` (Optional)
     - type: `"NONE" | "VIA_CUSTOM_HEADER" | "VIA_TOKEN"`
     - description: See [this page](/docs/session/common-customizations/sessions/anti-csrf)
+  - `override` (Optional)
+    - type: `object of function`
+    - description: Use this feature to override how this recipe behaves
