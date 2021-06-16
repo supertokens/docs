@@ -52,7 +52,9 @@ __HIGHLIGHT__    override: {
 
                     // or call the default behaviour as show below
                     return originalImplementation.doesSessionExist(input);
-                }
+                },
+                // ...
+                // TODO: override more functions
             }
         }
     } __END_HIGHLIGHT__

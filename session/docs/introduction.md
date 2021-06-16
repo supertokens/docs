@@ -10,7 +10,7 @@ hide_title: true
 - ✅ Read / Add / Edit user roles in your APIs and the frontend
 - ✅ Protect website routes that need authentication
 - ✅ Sign out feature
-- ✅ Ban / Unban users and revoke sessions
+- ✅ Ban / Unba users and revoke sessions
 
 ## Security benefits
 

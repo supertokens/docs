@@ -9,7 +9,7 @@ hide_title: true
 ## Use the override config: [API Reference](/docs/auth-react/thirdpartyemailpassword/override/functions)
 
 <!--DOCUSAURUS_CODE_TABS-->
-<!--ReactJS-->
+<!--NodeJS-->
 ```js
 SuperTokens.init({
     appInfo: {...},
@@ -26,7 +26,7 @@ __HIGHLIGHT__            override: {
                             return originalImplementation.signInAndUp(input);
                         },
                         // ...
-                        // TODO: override thirdpartyemailpassword functions here
+                        // TODO: override more functions
                     }
                 },
                 emailVerification: {
