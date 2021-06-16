@@ -1,7 +1,8 @@
 ---
-id: migration
-title: Migration from old version
+id: version-8.0.X-graphql
+title: Usage with GraphQL
 hide_title: true
+original_id: graphql
 ---
 
 Redirecting...

@@ -25,7 +25,11 @@ ThirdPartyEmailPassword.init({
     emailVerificationFeature: {
         getEmailVerificationURL?: (user: User) => Promise<string>,
         createAndSendCustomEmail?: (user: User, emailVerificationURLWithToken: string) => Promise<void>,
-    }
+    },
+    override?: {
+      functions?: function,
+      apis?: function
+    },
 })
         
 ```
@@ -68,9 +72,9 @@ ThirdPartyEmailPassword.init({
     - ``createAndSendCustomEmail`` (Optional)
       - type: ``(user: User, emailVerificationURLWithToken: string) => Promise<void>`` 
       - description: Callback for creating and sending custom emails for email verification.
-
-### Throws
-- [GENERAL_ERROR](./../errors/general_error)
+  - `override`
+    - type: `object of function`
+    - description: Use this feature to override how this recipe behaves
 
 ### Additional Information
 - The ``User`` object mentioned above is a reference to this [User](https://github.com/supertokens/core-driver-interface/wiki#third-party-email-password-user) object

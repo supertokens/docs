@@ -12,6 +12,3 @@ hide_title: true
 
 ### Returns
 - `Promise<boolean>`, on submitting a valid user ID.
-
-### Throws 
-- [GENERAL_ERROR](./../errors/general_error)

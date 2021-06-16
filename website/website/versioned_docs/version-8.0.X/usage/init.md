@@ -1,7 +1,8 @@
 ---
-id: init
+id: version-8.0.X-init
 title: Initialisation
 hide_title: true
+original_id: init
 ---
 
 # Initialisation

@@ -11,5 +11,5 @@ hide_title: true
 This library provides a convenient way for your Node APIs to query the SuperTokens core http service.
 
 ```bash
-npm i -s supertokens-node@~5.1.0
+npm i -s supertokens-node@^6.0.0
 ```

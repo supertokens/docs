@@ -16,5 +16,4 @@ hide_title: true
 - ``Promise<User>`` on successfull sign in. To know about the ``User`` object click [here](https://github.com/supertokens/core-driver-interface/wiki#userr)
 
 ### Throws
-- [GENERAL_ERROR](./../errors/general_error)
-- [WRONG_CREDENTIALS_ERROR](./errors/wrong_credentials_error)
+- If the email & password combination is incorrect.

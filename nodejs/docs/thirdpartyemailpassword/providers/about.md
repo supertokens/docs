@@ -6,4 +6,4 @@ hide_title: true
 
 # Providers
 
-Information about supported third party providers can be found [here](./../../thirdparty/providers/about)
+Information about supported third party providers can be found [here](./../../thirdparty/providers/google)
