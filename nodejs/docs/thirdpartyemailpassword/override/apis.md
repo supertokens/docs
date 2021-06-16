@@ -6,6 +6,17 @@ hide_title: true
 
 ```js
 APIInterface {
+    /* 
+    * Called to get the authorisation URL for the thirdparty sign-up/sign-in flow
+    * 
+    * @method: GET
+    * 
+    * @params: set it to undefined to disable the API.
+    *          provider
+    *          options: see ThirdPartyAPIOptions below
+    * 
+    * @returns: "OK" and url on success
+    */
     authorisationUrlGET:
         | undefined
         | ((input: {
@@ -16,6 +27,17 @@ APIInterface {
               url: string;
           }>);
 
+    /* 
+    * Called before sign up to know if a user is already created for the given email address
+    * 
+    * @method: GET
+    * 
+    * @params: set it to undefined to disable the API.
+    *          email
+    *          options: see EmailPasswordAPIOptions below
+    * 
+    * @returns: "OK" and boolean value true if email already exists else false
+    */
     emailExistsGET:
         | undefined
         | ((input: {
@@ -26,6 +48,19 @@ APIInterface {
               exists: boolean;
           }>);
 
+    /* 
+    * Called when a password reset token needs to be generated for the user.
+    * The default implementation calls the recipe function `createAndSendCustomEmail`
+    * to send the the reset token mail.
+    * 
+    * @method: POST
+    * 
+    * @params: set it to undefined to disable the API.
+    *          formFields will have email
+    *          options: see EmailPasswordAPIOptions below
+    * 
+    * @returns: "OK": on successfully generating the password reset token
+    */
     generatePasswordResetTokenPOST:
         | undefined
         | ((input: {
@@ -38,6 +73,20 @@ APIInterface {
               status: "OK";
           }>);
 
+    /* 
+    * Called to verify the password reset token and update the password
+    * of the user
+    * 
+    * @method: POST
+    * 
+    * @params: set it to undefined to disable the API.
+    *          formFields will have the new updated password
+    *          token is the password reset token
+    *          options: see EmailPasswordAPIOptions below
+    * 
+    * @returns: "OK": on successfully verifying reset token and updating user's password
+    *           "RESET_PASSWORD_INVALID_TOKEN_ERROR": if password reset token is invalid
+    */
     passwordResetPOST:
         | undefined
         | ((input: {
@@ -51,6 +100,103 @@ APIInterface {
               status: "OK" | "RESET_PASSWORD_INVALID_TOKEN_ERROR";
           }>);
 
+    /* 
+    * Called to sign-up a new user or sign-in an existing user either using emailpassword flow or using thirdparty flow.
+    * 
+    * @method: POST
+    * 
+    * @params: set it to undefined to disable the API.
+    *          the input will be dependent on whether the flow is dependent on "emailpassword" recipe
+    *          or "thirdparty" recipe. check the SignInUpAPIInput type below for more info.
+    * 
+    * @returns: "OK": on successfully signing up or signing in the user
+    *           "EMAIL_ALREADY_EXISTS_ERROR": if a user account already exists for the given email
+    *           "WRONG_CREDENTIALS_ERROR": if password is invalid or no account info found for the given email
+    *           "NO_EMAIL_GIVEN_BY_PROVIDER": if thirdparty provider used in the API doesn't return email of the user
+    *           "FIELD_ERROR": if there is any field error during thirdparty signup/signin flow
+    */
     signInUpPOST: undefined | ((input: SignInUpAPIInput) => Promise<SignInUpAPIOutput>);
+}
+```
+
+## Supporting Types
+```ts
+interface ThirdPartyAPIOptions {
+    recipeImplementation: RecipeInterface;
+    config: TypeNormalisedInput;
+    recipeId: string;
+    isInServerlessEnv: boolean;
+    providers: TypeProvider[];
+    req: Request;
+    res: Response;
+    next: NextFunction;
+}
+
+interface APIOptions {
+    recipeImplementation: RecipeInterface;
+    config: TypeNormalisedInput;
+    recipeId: string;
+    isInServerlessEnv: boolean;
+    req: Request;
+    res: Response;
+    next: NextFunction;
+}
+
+interface User {
+    id: string;
+    timeJoined: number;
+    email: string;
+    thirdParty?: {
+        id: string;
+        userId: string;
+    };
+}
+
+type SignInUpAPIInput =
+    | {
+          type: "emailpassword";
+          isSignIn: boolean;
+          formFields: {
+              id: string;
+              value: string;
+          }[];
+          options: EmailPasswordAPIOptions;
+      }
+    | {
+          type: "thirdparty";
+          provider: TypeProvider;
+          code: string;
+          redirectURI: string;
+          options: ThirdPartyAPIOptions;
+      };
+
+type SignInUpAPIOutput =
+    | {
+          type: "emailpassword";
+          status: "OK";
+          user: User;
+          createdNewUser: boolean;
+      }
+    | {
+          type: "emailpassword";
+          status: "WRONG_CREDENTIALS_ERROR" | "EMAIL_ALREADY_EXISTS_ERROR";
+      }
+    | {
+          type: "thirdparty";
+          status: "OK";
+          createdNewUser: boolean;
+          user: User;
+          authCodeResponse: any;
+      }
+    | { type: "thirdparty"; status: "NO_EMAIL_GIVEN_BY_PROVIDER" }
+    | {
+          type: "thirdparty";
+          status: "FIELD_ERROR";
+          error: string;
+      };
+
+interface TypeProvider {
+    id: string;
+    get: (redirectURI: string | undefined, authCodeFromRequest: string | undefined) => Promise<TypeProviderGetResponse>;
 }
 ```

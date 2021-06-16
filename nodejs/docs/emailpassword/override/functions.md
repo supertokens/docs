@@ -12,14 +12,8 @@ interface RecipeInterface {
     * @params: email
     *          password
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK"
-    *               user: User
-    *           }: on successfully signing up the user
-    *           {
-    *               status: "EMAIL_ALREADY_EXISTS_ERROR"
-    *           }: on successfully signing up the user
+    * @returns: "OK": on successfully signing up the user
+    *           "EMAIL_ALREADY_EXISTS_ERROR": if the email is already been used
     */
     signUp(input: {
         email: string;
@@ -32,14 +26,8 @@ interface RecipeInterface {
     * @params: email
     *          password
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK"
-    *               user: User
-    *           }: on successfully verifying email and password
-    *           {
-    *               status: "WRONG_CREDENTIALS_ERROR"
-    *           }: if password is invalid or no account info found for the given email
+    * @returns: "OK": on successfully verifying email and password
+    *           "WRONG_CREDENTIALS_ERROR": if password is invalid or no account info found for the given email
     */
     signIn(input: {
         email: string;
@@ -51,8 +39,7 @@ interface RecipeInterface {
     * 
     * @params: userId
     * 
-    * @returns: Promise
-    *           User: if a user is found for the given userId, else undefined
+    * @returns: user object if a user is found for the given userId, else undefined
     */
     getUserById(input: { userId: string }): Promise<User | undefined>;
 
@@ -61,8 +48,7 @@ interface RecipeInterface {
     * 
     * @params: email
     * 
-    * @returns: Promise
-    *           User: if a user is found for the given email, else undefined
+    * @returns: user object if a user is found for the given email, else undefined
     */
     getUserByEmail(input: { email: string }): Promise<User | undefined>;
 
@@ -71,14 +57,8 @@ interface RecipeInterface {
     * 
     * @params: userId
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK"
-    *               token: string
-    *           }: on successfully generating reset password token
-    *           {
-    *               status: "UNKNOWN_USER_ID"
-    *           }: if no user found for the given userId
+    * @returns: "OK": on successfully generating reset password token
+    *           "UNKNOWN_USER_ID": if no user found for the given userId
     */
     createResetPasswordToken(input: {
         userId: string;
@@ -90,13 +70,8 @@ interface RecipeInterface {
     * @params: token is the password reset token
     *          newPassword is the updated password
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK"
-    *           }: on successfully updating user's password
-    *           {
-    *               status: "RESET_PASSWORD_INVALID_TOKEN_ERROR"
-    *           }: if password reset token is invalid
+    * @returns: "OK": on successfully updating user's password
+    *           "RESET_PASSWORD_INVALID_TOKEN_ERROR": if password reset token is invalid
     */
     resetPasswordUsingToken(input: {
         token: string;
@@ -107,13 +82,9 @@ interface RecipeInterface {
     * Called to get list of users in ascending order based on their timeJoined
     * 
     * @params: limit (optional) is the number
-    *          nextPaginationToken is the pagination token
+    *          nextPaginationToken (optional) is the pagination token
     * 
-    * @returns: Promise
-    *           {
-    *               users: Users[],
-    *               nextPaginationToken?: string
-    *           }
+    * @returns: See the type definition below
     */
     getUsersOldestFirst(input: {
         limit?: number;
@@ -127,13 +98,9 @@ interface RecipeInterface {
     * Called to get list of users in descending order based on their timeJoined
     * 
     * @params: limit (optional) is the number
-    *          nextPaginationToken is the pagination token
+    *          nextPaginationToken (optional) is the pagination token
     * 
-    * @returns: Promise
-    *           {
-    *               users: Users[],
-    *               nextPaginationToken?: string
-    *           }
+    * @returns: See the type definition below
     */
     getUsersNewestFirst(input: {
         limit?: number;
@@ -145,8 +112,6 @@ interface RecipeInterface {
 
     /* 
     * Called to get total count of the user
-    * 
-    * @returns: Promise<number>
     */
     getUserCount(): Promise<number>;
 }

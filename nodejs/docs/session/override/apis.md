@@ -13,14 +13,8 @@ interface APIInterface {
     * 
     * @method: POST
     * 
-    * @params: set it to undefined to dsiable the API.
-    *          options will contain the functions related to the recipe,
-    *          recipeId, a request object, a response object, a next
-    *          function, the config provided by the user when calling the init function of this recipe
-    *          and a boolean stating whether the function is being called in a serverless enviroment.
-    *          See APIOptions below
-    * 
-    * @returns: Promise
+    * @params: set it to undefined to disable the API.
+    *          options: see APIOptions below
     */
     refreshPOST: undefined | (input: { options: APIOptions }) => Promise<void>;
 
@@ -29,15 +23,10 @@ interface APIInterface {
     * 
     * @method: POST
     * 
-    * @params: set it to undefined to dsiable the API.
-    *          options will contain the functions related to the recipe,
-    *          recipeId, a request object, a response object, a next
-    *          function, the config provided by the user when calling the init function of this recipe
-    *          and a boolean stating whether the function is being called in a serverless enviroment.
-    *          See APIOptions below
+    * @params: set it to undefined to disable the API.
+    *          options: see APIOptions below
     * 
-    * @returns: Promise
-    *           {status: "OK"}: on successfully logging out the user
+    * @returns: "OK" on successfully logging out the user
     */
     signOutPOST:
         | undefined
@@ -52,15 +41,9 @@ interface APIInterface {
     * exists or not for the API call. The default implementation will add a session object to request
     * if a active session is found in the request.
     * 
-    * @params: options will contain the functions related to the recipe,
-    *          recipeId, a request object, a response object, a next
-    *          function, the config provided by the user when calling the init function of this recipe
-    *          and a boolean stating whether the function is being called in a serverless enviroment.
-    *          See APIOptions below
-    *          verifySessionOptions will contain two boolean values: to enable/disable
+    * @params: options: see APIOptions below
+    *          verifySessionOptions: contain two boolean values: one to enable/disable
     *          anti-csrf check and another to state if session requirement is optional
-    * 
-    * @returns: Promise
     */
     verifySession(input: {
         verifySessionOptions: VerifySessionOptions | undefined;

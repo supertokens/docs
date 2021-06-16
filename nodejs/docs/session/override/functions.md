@@ -55,7 +55,7 @@ interface RecipeInterface {
     * 
     * @params: userId (string value)
     * 
-    * @returns: All the revoked session handles (Array<string>)
+    * @returns: All the revoked session handles
     */
     revokeAllSessionsForUser(input: { userId: string }): Promise<string[]>;
 
@@ -64,7 +64,7 @@ interface RecipeInterface {
     * 
     * @params: userId (string value)
     * 
-    * @returns: All the session handles (Array<string>)
+    * @returns: All the session handles
     */
     getAllSessionHandlesForUser(input: { userId: string }): Promise<string[]>;
 
@@ -82,7 +82,7 @@ interface RecipeInterface {
     * 
     * @params: sessionHandles related to the sessions you want to revoke
     * 
-    * @returns: All the revoked session handles (Array<string>)
+    * @returns: All the revoked session handles
     */
     revokeMultipleSessions(input: { sessionHandles: string[] }): Promise<string[]>;
 
@@ -100,8 +100,6 @@ interface RecipeInterface {
     * 
     * @params: sessionHandle
     *          newSessionData
-    * 
-    * @returns: Promise
     */
     updateSessionData(input: { sessionHandle: string; newSessionData: any }): Promise<void>;
 
@@ -119,22 +117,16 @@ interface RecipeInterface {
     * 
     * @params: sessionHandle
     *          newJWTPayload
-    * 
-    * @returns: Promise
     */
     updateJWTPayload(input: { sessionHandle: string; newJWTPayload: any }): Promise<void>;
 
     /* 
     * Called to get access token life time in milli-seconds(ms).
-    * 
-    * @returns: number
     */
     getAccessTokenLifeTimeMS(): Promise<number>;
 
     /* 
     * Called to get refresh token life time in milli-seconds(ms).
-    * 
-    * @returns: number
     */
     getRefreshTokenLifeTimeMS(): Promise<number>;
 }

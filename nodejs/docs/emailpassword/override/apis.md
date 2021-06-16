@@ -7,23 +7,15 @@ hide_title: true
 ```js
 interface APIInterface {
     /* 
-    * Called before sign up to know if an user is already created for the given email address
+    * Called before sign up to know if a user is already created for the given email address
     * 
     * @method: GET
     * 
-    * @params: set it to undefined to dsiable the API.
+    * @params: set it to undefined to disable the API.
     *          email
-    *          options will contain the functions related to the recipe,
-    *          recipeId, a request object, a response object, a next
-    *          function, the config provided by the user when calling the init function of this recipe
-    *          and a boolean stating whether the function is being called in a serverless enviroment.
-    *          See APIOptions below
+    *          options: see APIOptions below
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK";
-    *               exists: boolean;
-    *           }: exists boolean will be true if email already exists else false
+    * @returns: "OK" and boolean value true if email already exists else false
     */
     emailExistsGET:
         | undefined
@@ -42,18 +34,11 @@ interface APIInterface {
     * 
     * @method: POST
     * 
-    * @params: set it to undefined to dsiable the API.
+    * @params: set it to undefined to disable the API.
     *          formFields will have email
-    *          options will contain the functions related to the recipe,
-    *          recipeId, a request object, a response object, a next
-    *          function, the config provided by the user when calling the init function of this recipe
-    *          and a boolean stating whether the function is being called in a serverless enviroment.
-    *          See APIOptions below
+    *          options: see APIOptions below
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK"
-    *           }: on successfully generating the password reset token
+    * @returns: "OK": on successfully generating the password reset token
     */
     generatePasswordResetTokenPOST:
         | undefined
@@ -73,22 +58,13 @@ interface APIInterface {
     * 
     * @method: POST
     * 
-    * @params: set it to undefined to dsiable the API.
+    * @params: set it to undefined to disable the API.
     *          formFields will have the new updated password
     *          token is the password reset token
-    *          options will contain the functions related to the recipe,
-    *          recipeId, a request object, a response object, a next
-    *          function, the config provided by the user when calling the init function of this recipe
-    *          and a boolean stating whether the function is being called in a serverless enviroment.
-    *          See APIOptions below
+    *          options: see APIOptions below
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK"
-    *           }: on successfully verifying reset token and updating user's password
-    *           {
-    *               status: "RESET_PASSWORD_INVALID_TOKEN_ERROR"
-    *           }: if password reset token is invalid
+    * @returns: "OK": on successfully verifying reset token and updating user's password
+    *           "RESET_PASSWORD_INVALID_TOKEN_ERROR": if password reset token is invalid
     */
     passwordResetPOST:
         | undefined
@@ -109,22 +85,12 @@ interface APIInterface {
     * 
     * @method: POST
     * 
-    * @params: set it to undefined to dsiable the API.
+    * @params: set it to undefined to disable the API.
     *          formFields will have the email and the password
-    *          options will contain the functions related to the recipe,
-    *          recipeId, a request object, a response object, a next
-    *          function, the config provided by the user when calling the init function of this recipe
-    *          and a boolean stating whether the function is being called in a serverless enviroment.
-    *          See APIOptions below
+    *          options: see APIOptions below
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK"
-    *               user: User
-    *           }: on successfully verifying email and password
-    *           {
-    *               status: "WRONG_CREDENTIALS_ERROR"
-    *           }: if password is invalid or no account info found for the given email
+    * @returns: "OK" and user object: on successfully verifying email and password
+    *           "WRONG_CREDENTIALS_ERROR": if password is invalid or no account info found for the given email
     */
     signInPOST:
         | undefined
@@ -149,22 +115,12 @@ interface APIInterface {
     * 
     * @method: POST
     * 
-    * @params: set it to undefined to dsiable the API.
+    * @params: set it to undefined to disable the API.
     *          formFields will have the email and the password
-    *          options will contain the functions related to the recipe,
-    *          recipeId, a request object, a response object, a next
-    *          function, the config provided by the user when calling the init function of this recipe
-    *          and a boolean stating whether the function is being called in a serverless enviroment.
-    *          See APIOptions below
+    *          options: see APIOptions below
     * 
-    * @returns: Promise
-    *           {
-    *               status: "OK"
-    *               user: User
-    *           }: on successfully signing up the user
-    *           {
-    *               status: "EMAIL_ALREADY_EXISTS_ERROR"
-    *           }: if an user account already exists for the given email
+    * @returns: "OK" and user object: on successfully signing up the user
+    *           "EMAIL_ALREADY_EXISTS_ERROR": if a user account already exists for the given email
     */
     signUpPOST:
         | undefined

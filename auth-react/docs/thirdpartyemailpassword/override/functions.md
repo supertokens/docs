@@ -17,7 +17,7 @@ interface RecipeInterface {
     * 
     * @returns: "OK" on success, 
     *           "RESET_PASSWORD_INVALID_TOKEN_ERROR" in case of an invalid token
-    *           "FIELD_ERROR" in case of an in valid password format.
+    *           "FIELD_ERROR" in case of an invalid password format.
     */
     submitNewPassword: (input: {
         formFields: {
@@ -47,7 +47,7 @@ interface RecipeInterface {
     *          config is the config provided by the user when calling the init function of this recipe
     * 
     * @returns: "OK" on success, 
-    *           "FIELD_ERROR" in case of an in valid email format.
+    *           "FIELD_ERROR" in case of an invalid email format.
     */
     sendPasswordResetEmail: (input: {
         formFields: {
