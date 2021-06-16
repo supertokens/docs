@@ -17,6 +17,7 @@ __HIGHLIGHT__        appName: "YOUR APP NAME", // Example: "SuperTokens",
         apiDomain: "YOUR API DOMAIN", // Example: "https://api.supertokens.io",
         websiteDomain: "YOUR WEBSITE DOMAIN" // Example: "https://supertokens.io"
 	}, __END_HIGHLIGHT__
+    recipeList: [/* TODO */]
 });
 ```
 
@@ -56,11 +57,3 @@ Make sure to replace all the above configurations values with yours.
     - Default: `""`
     - Example: `apiGatewayPath: "/dev"`
     - Optional
-
-
-<div class="specialNote" style="margin-bottom: 40px">
-If you try to refresh your website, you might see the following error "Please provide at least one recipe to the supertokens.init function call" in your console. Make sure to read about the email password following section.
-</div>
-
-
-To setup routing for SuperTokens, please refer to the [starter guide](/docs/emailpassword/quick-setup/frontend#3-setup-routes).
