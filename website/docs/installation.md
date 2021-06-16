@@ -13,7 +13,7 @@ This library provides a wrapper around ```fetch``` or ```axios``` to automatical
 ## Using ```npm```
 
 ```bash
-npm i --save supertokens-website@^7.2.0
+npm i --save supertokens-website@^8.0.0
 ```
 
 
@@ -21,5 +21,5 @@ npm i --save supertokens-website@^7.2.0
 Put the following anywhere in your ```<head>``` tag
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/supertokens/supertokens-website@7.2/bundle/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/supertokens/supertokens-website@8.0/bundle/bundle.js"></script>
 ```
