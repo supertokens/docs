@@ -27,9 +27,9 @@ EmailPassword.init({
 
         } else if (action === "SEND_VERIFY_EMAIL") {
 
-        } else if (action === "SIGN_IN") {
+        } else if (action === "EMAIL_PASSWORD_SIGN_IN") {
 
-        } else if (action === "SIGN_UP") {
+        } else if (action === "EMAIL_PASSWORD_SIGN_UP") {
 
         } else if (action === "SUBMIT_NEW_PASSWORD") {
 

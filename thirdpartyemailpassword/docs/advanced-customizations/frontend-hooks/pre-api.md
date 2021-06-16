@@ -29,9 +29,15 @@ ThirdPartyEmailPassword.init({
 
         } else if (action === "SEND_VERIFY_EMAIL") {
 
-        } else if (action === "SIGN_IN") {
+        } else if (action === "EMAIL_PASSWORD_SIGN_IN") {
 
-        } else if (action === "SIGN_UP") {
+        } else if (action === "EMAIL_PASSWORD_SIGN_UP") {
+
+        } else if (action === "THIRD_PARTY_SIGN_IN_UP") {
+            // Note: this could either be sign in or sign up.
+            // we don't know that at the time of the API call
+            // since all we have is the authorisation code from
+            // the social provider
 
         } else if (action === "SUBMIT_NEW_PASSWORD") {
 
