@@ -27,7 +27,7 @@ __HIGHLIGHT__            override: {
                             return await originalImplementation.signInUpPOST(input);
                         },
                         // ...
-                        // TODO: override thirdparty apis here
+                        // TODO: override more apis
                     }
                 },
                 emailVerificationFeature: {
@@ -41,7 +41,7 @@ __HIGHLIGHT__            override: {
                                 return await originalImplementationEmailVerification.verifyEmailPOST(input);
                             },
                             // ...
-                            // TODO: override emailverification apis here
+                            // TODO: override more apis
                         }
                     }
                 }
@@ -52,6 +52,6 @@ __HIGHLIGHT__            override: {
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-- `originalImplementation` and `originalImplementationEmailVerification` are objects that contains apis that have the original implementaion for this and the email verification recipe. They can be used in your apis as a way to use the SuperTokens' default behaviour.
-- In the above code snippet, we override the `signInUpPOST` api of this recipe. This api will be used to handle the signInUp API route when a user either sign-up or sign-in.
-- Likewise, we override the `verifyEmailPOST` api for the email verification recipe.
+- `originalImplementation` and `originalImplementationEmailVerification` are objects that contains apis that have the original implementation for this and the email verification recipe. They can be used in your custom apis as a way to use the SuperTokens' default behaviour.
+- In the above code snippet, we override the `signInUpPOST` api of this recipe. This api will be used to handle the signInUp API route when a user either signs up or signs in.
+- Likewise, we override the `verifyEmailPOST` api from the email verification recipe.

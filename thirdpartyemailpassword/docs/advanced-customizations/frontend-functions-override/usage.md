@@ -26,7 +26,7 @@ __HIGHLIGHT__            override: {
                             return originalImplementation.signInAndUp(input);
                         },
                         // ...
-                        // TODO: override thirdpartyemailpassword functions here
+                        // TODO: override more functions
                     }
                 },
                 emailVerification: {

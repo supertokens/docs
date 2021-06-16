@@ -9,13 +9,10 @@ hide_title: true
 
 # About APIs override
 
-Overriding of the apis will allow you to change the behaviour of the apis that are used by the backend APIs exposed via our SDK such as:
-- Verifying email
-- Reseting password
-- Refreshing a session
-- Signing out
-- And more...
+Overriding of the apis will allow you to take full control of what happens when our frontend widgets call your backend.
 
-### Some common use cases:
-- You want to disable the default api implementation.
-- You want to send some analytics event or send a welcome email when a user signs up.
+> For most cases that involve modifying the default behaviour (without changing the input / output specification), you want to checkout [backend functions override](../backend-functions-override/about) instead.
+
+### Example use cases:
+- Post API callback for sending analytics or saving info in your db.
+- Changing the input / output specification of the API to meet your requirements.

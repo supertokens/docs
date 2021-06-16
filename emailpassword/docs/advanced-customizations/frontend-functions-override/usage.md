@@ -26,7 +26,7 @@ __HIGHLIGHT__            override: {
                             return originalImplementation.signIn(input);
                         },
                         // ...
-                        // TODO: override thirdpartyemailpassword functions here
+                        // TODO: override more functions
                     }
                 },
                 emailVerification: {
@@ -40,7 +40,7 @@ __HIGHLIGHT__            override: {
                                 return originalImplementationEmailVerification.isEmailVerified(input);
                             },
                             // ...
-                            // TODO: override emailverification functions here
+                            // TODO: override more functions
                         }
                     }
                 }
