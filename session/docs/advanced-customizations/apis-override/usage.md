@@ -20,11 +20,11 @@ __HIGHLIGHT__            override: {
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        refreshPOST: async (input) => {
+                        signOutPOST: async (input) => {
                             // TODO: some custom logic
 
                             // or call the default behaviour as show below
-                            return await originalImplementation.refreshPOST(input);
+                            return await originalImplementation.signOutPOST(input);
                         },
                         // ...
                         // TODO: override more apis
@@ -38,4 +38,4 @@ __HIGHLIGHT__            override: {
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 - `originalImplementation` is the object that contains apis that have the original implementation for this recipe. It can be used in your apis as a way to use the SuperTokens' default behaviour.
-- In the above code snippet, we override the `refreshPOST` api of this recipe. This api will be used to handle the refreshPost API route where a session is refreshed.
+- In the above code snippet, we override the `signOutPOST` api of this recipe.

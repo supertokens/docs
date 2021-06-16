@@ -9,7 +9,7 @@ hide_title: true
 ## Use the override config: [API Reference](/docs/nodejs/thirdparty/override/apis)
 
 <!--DOCUSAURUS_CODE_TABS-->
-<!--ReactJS-->
+<!--NodeJS-->
 ```js
 SuperTokens.init({
     appInfo: {...},
