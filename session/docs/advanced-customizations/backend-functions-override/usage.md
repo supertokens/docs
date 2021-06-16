@@ -27,7 +27,7 @@ __HIGHLIGHT__            override: {
                             return await originalImplementation.createNewSession(input);
                         },
                         // ...
-                        // TODO: override session functions here
+                        // TODO: override more functions
                     }
                 }
             } __END_HIGHLIGHT__
@@ -38,4 +38,4 @@ __HIGHLIGHT__            override: {
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 - `originalImplementation` is the object that contains functions that have the original implementaion for this recipe. It can be used in your functions as a way to use the SuperTokens' default behaviour.
-- In the above code snippet, we override the `createNewSession` function of this recipe.
+- In the above code snippet, we override the `createNewSession` function of this recipe. This can be used to (for example) modifying the session payload when a new session is created.

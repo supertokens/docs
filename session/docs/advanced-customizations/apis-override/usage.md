@@ -27,7 +27,7 @@ __HIGHLIGHT__            override: {
                             return await originalImplementation.refreshPOST(input);
                         },
                         // ...
-                        // TODO: override session apis here
+                        // TODO: override more apis
                     }
                 }
             } __END_HIGHLIGHT__
@@ -37,5 +37,5 @@ __HIGHLIGHT__            override: {
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-- `originalImplementation` is the object that contains apis that have the original implementaion for this recipe. It can be used in your apis as a way to use the SuperTokens' default behaviour.
-- In the above code snippet, we override the `refreshPOST` api of this recipe. This api will be used to handle the refreshPost API route where a session is refreshed using a refresh token.
+- `originalImplementation` is the object that contains apis that have the original implementation for this recipe. It can be used in your apis as a way to use the SuperTokens' default behaviour.
+- In the above code snippet, we override the `refreshPOST` api of this recipe. This api will be used to handle the refreshPost API route where a session is refreshed.
