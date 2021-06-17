@@ -18,4 +18,4 @@ Use component override if you want to:
 - adjust the placement of component within app layout
 - enhance component's behaviour, by using CAPTCHA to reset email, for instance
 
-Read more about usage in [usage guide](/docs/auth-react/docs/thirdpartyemailpassword/override/components).
+Read more about usage in [usage guide](./usage).
