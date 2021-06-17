@@ -8,13 +8,14 @@ hide_title: true
 
 ## If you are using login
 - **If you are self hosting it**:
+   - You can use our `override` feature (as mentioned in [this page](./to-st) > For login migration > "If you CANNOT migrate..." section
    - In the database, the users table contains important information like the userId, their email and their password hash. The password hash is created using a standard `bcrypt` algorithm with the number of rounds embedded in the hash itself. So it should not be a problem to verify / change them yourself.
    - The password reset tokens in the database is a hash of the actual token sent via the email, so you could continue to verify the existing tokens if any.
    - In case you are moving to another service that provides authentication, then you will need to follow their migration guide. From their point of view, it's as if you are using an in house auth system (since you control the data and we are open source).
 
 - **If you are using our managed service**:
    - The points highlighted above apply here as well.
-   - Please [contact us](mailto:team@supertokens.io) so that we can verify your identity and give you access to the database instance (PostgreSQL) we use to run your SuperTokens setup.
+   - Please [contact us](mailto:team@supertokens.io) so that we can verify your identity and give you access to all the information your database instance (in exported form).
 
 ## If you are using sessions
 - **If you are OK with logging all users out**:

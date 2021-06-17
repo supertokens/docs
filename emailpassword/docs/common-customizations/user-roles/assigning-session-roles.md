@@ -4,6 +4,9 @@ title: Assigning roles to a session
 hide_title: true
 ---
 
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/docs/common-customizations/user-roles/assigning-session-roles.md -->
+
 # Assigning roles to a session
 
 This can be done at two points in time:
@@ -18,24 +21,33 @@ We can set a JWT payload to store the user's role by overriding the `setJwtPaylo
 <!--NodeJS-->
 ```js
 let SuperTokens = require("supertokens-node");
-let EmailPassword = require("supertokens-node/recipe/emailpassword");
+let Session = require("supertokens-node/recipe/session);
 
 SuperTokens.init({
     SuperTokens: {...},
     appInfo: {...},
     recipeList: [
-        EmailPassword.init({
-__HIGHLIGHT__            sessionFeature: {
-               setJwtPayload: async (user, context, action) => {
-                    // This is called post sign in and sign up
-                    let {email, id} = user;
+        Session.init({
+__HIGHLIGHT__            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async (input) => {
+                            let userId = input.userId;
 
-                    let role = "admin"; // TODO: fetch based on user
+                            let role = "admin"; // TODO: fetch role based on userId
 
-                    return { role }
-               }
-            } __END_HIGHLIGHT__
-        }),
+                            input.jwtPayload = {
+                                ...input.jwtPayload,
+                                role
+                            };
+
+                            return originalImplementation.createNewSession(input);
+                        },
+                    };
+                },
+            }, __END_HIGHLIGHT__
+        })
     ]
 });
 ```

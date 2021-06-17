@@ -82,44 +82,7 @@ __HIGHLIGHT__                formFields: [{
 
 ### Handle form fields on successful Sign-up
 
-SuperTokens does not store those custom fields on successful signup. 
-
-Instead, you should use the `handlePostSignUp` callback to handle those values yourselves.
-
-<!--DOCUSAURUS_CODE_TABS-->
-<!--NodeJS-->
-```js
-SuperTokens.init({
-    appInfo: {...},
-    supertokens: {...},
-    recipeList: [
-        ThirdPartyEmailPassword.init({
-            signUpFeature: {
-                formFields: [{
-                  id: "name"
-                }, {
-                  id: "age"
-                }, {
-                  id: "country",
-                  optional: true
-                }],
-__HIGHLIGHT__                handlePostSignUp: async (user, context) => {
-                    let {id, email} = user;
-                    if (context.loginType === "emailpassword") {
-                        let formFields = context.formFields;
-                        // TODO...
-                    } else {
-                        let thirdPartyAuthCodeResponse = context.thirdPartyAuthCodeResponse;
-                        /* thirdPartyAuthCodeResponse is the response from the third party login provider that contains the access / refresh tokens sent by them..*/
-                    }
-                } __END_HIGHLIGHT__
-            } 
-        }),
-        Session.init({...})
-    ]
-});
-```
-<!--END_DOCUSAURUS_CODE_TABS-->
+Have a look at [this section](../handling-signinup-success#3-handling-signin-signup-event-on-the-backend) that talks about post sign up callback.
 
 <div class="specialNote" style="margin-bottom: 40px">
 Please note that Supertokens is not applying any processing to those custom fields. That means you should sanitize all the fields.

@@ -20,8 +20,5 @@ hide_title: true
 ### Returns
 - ``Promise<Session>``  on successful creation of a session.
 
-### Throws
-- [GENERAL_ERROR](./../errors/general_error)
-
 ### Additional information
 - Creates a new access, a new refresh and a new idRefresh token for this session. These are set in the cookies and header of the res object.

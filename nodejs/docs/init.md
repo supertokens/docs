@@ -12,7 +12,7 @@ In your `index.js`, you need to call the Supertokens.init function with the foll
 let Supertokens = require("supertokens-node");
 
 Supertokens.init({
-    supertokens: {
+    supertokens?: {
         connectionURI: string,
         apiKey?: string
     };
@@ -32,7 +32,7 @@ Supertokens.init({
 
 ### Parameters
 - ``config``
-  - `supertokens`
+  - `supertokens` (Optional)
     - `connectionURI`
       - type: `string`
       - description: The url link to supertokens core. If you are using Supertokens Saas service, you can find the connectionURI on your app's dashboard.
@@ -64,6 +64,3 @@ Supertokens.init({
   - ``recipeList``
     - type: ``array of RecipeListFunction``
     - description: list of Recipes you want to use. You need to pass atleast one Recipe to ths array. For more info on Recipes, checkout this [link](https://supertokens.io/docs/community/recipes)
-
-### Throws
-- [GENERAL_ERROR](./errors/general_error)

@@ -13,6 +13,4 @@ hide_title: true
 
 ### Returns
 - ``Promise<User>`` on submitting a valid user ID. To know about the ``User`` object click [here](https://github.com/supertokens/core-driver-interface/wiki#user)
-
-### Throws
-- [GENERAL_ERROR](./../errors/general_error)
+- `Promise<undefined>` in case the userId doesn't exist

@@ -8,7 +8,7 @@ hide_title: true
 
 <div class="divider"></div>
 
-## ```init({apiDomain, apiBasePath?, sessionExpiredStatusCode?, sessionScope?, refreshAPICustomHeaders?, signoutAPICustomHeaders?, autoAddCredentials?, isInIframe?, cookieDomain?})```
+## ```init({apiDomain, apiBasePath?, sessionExpiredStatusCode?, sessionScope?, autoAddCredentials?, isInIframe?, cookieDomain?, override?, onHandleEvent?, preAPIHook?})```
 #### Parameters
 - ```apiDomain```
     - Type: ```string```
@@ -21,17 +21,9 @@ hide_title: true
     - Default: ```401```
     - HTTP status code that indicates session expiry - as sent by your APIs.
 - ```sessionScope``` (Optional)
-    - Type: ```{scope: string, authDomain: string}```
+    - Type: ```string```
     - Default: `undefined`.
-    - Set this if you want to share a session across sub domains. For example, if users login via `example.com` and are redirected to a subdomain like `xyz.example.com`, then the value of this should be `{scope: ".example.com", authDomain: "https://example.com"}`.
-- ```refreshAPICustomHeaders``` (Optional)
-    - Type: ```object```
-    - Default: ```{}```
-    - If your refresh API requires any custom headers (for example a version number), then you can provide that in this object. An example is: ```{api-version: "0"}```
-- ```signoutAPICustomHeaders``` (Optional)
-    - Type: ```object```
-    - Default: ```{}```
-    - If your sign-out API requires any custom headers (for example a version number), then you can provide that in this object. An example is: ```{api-version: "0"}```
+    - Set this if you want to share a session across sub domains. For example, if users login via `example.com` and are redirected to a subdomain like `xyz.example.com`, then the value of this should be `".example.com"`.
 - ```autoAddCredentials``` (Optional)
     - Type: ```boolean```
     - Default ```true```
@@ -44,6 +36,18 @@ hide_title: true
     - Type: ```string```
     - Default: ```undefined```
     - This value can be used to enable session management across multiple API sub domains.
+- ```override``` (Optional)
+    - Type: ```object```
+    - Default: ```undefined```
+    - Use this to override the default behavior of how sessions is managed on the frontend.
+- ```onHandleEvent``` (Optional)
+    - Type: ```function```
+    - Default: ```undefined```
+    - Define this callback to handle events that are fired from this SDK
+- ```preAPIHook``` (Optional)
+    - Type: ```function```
+    - Default: ```undefined```
+    - Define this callback to modify requests that are sent to your backend API
 
 #### Returns
 - ```void```

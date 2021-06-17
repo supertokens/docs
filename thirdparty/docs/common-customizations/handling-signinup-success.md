@@ -22,8 +22,13 @@ SuperTokens.init({
         ThirdParty.init({
 __HIGHLIGHT__           getRedirectionURL: async (context) => {
                 if (context.action === "SUCCESS") {
-                    return context.redirectToPath === undefined ? "/dashboard" : context.redirectToPath;
+                    if (context.redirectToPath !== undefined) {
+                        // we are navigating back to where the user was before they authenticated
+                        return context.redirectToPath;
+                    }
+                    return "/dashboard";
                 }
+                return undefined;
             } __END_HIGHLIGHT__
         }),
         Session.init()
@@ -38,10 +43,10 @@ The user will be redirected to the provided URL on:
 - If the user is already logged in.
 
 
-Please refer to the <a href="/docs/auth-react/thirdparty/callbacks#getredirectionurl" target="_blank">auth-react reference API</a> for more information on `getRedirectionURL` hook.
+Please refer to [this page](../advanced-customizations/frontend-hooks/redirection-callback) for more information on `getRedirectionURL` hook.
 
 
-## 2) Handling sign in event on the frontend
+## 2) Handling signin / signup event on the frontend
 
 This method allows you to fire events immediately after a successful sign in / up. For example to send analytics events post sign in / up.
 
@@ -73,11 +78,9 @@ __HIGHLIGHT__            onHandleEvent: async (context) => {
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Please refer to the <a href="/docs/auth-react/thirdparty/callbacks#onhandleevent" target="_blank">auth-react reference API</a> for more information on `onHandleEvent` hook.
+## 3) Handling signin / signup event on the backend
 
-## 3) Handling sign in event on the backend
-
-### `handlePostSignUpIn`
+For this, you'll have to override signInUpPOST api of the ThirdParty recipe.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS--> 
@@ -87,13 +90,29 @@ SuperTokens.init({
     supertokens: {...},
     recipeList: [
         ThirdParty.init({
-            signInAndUpFeature: {
-__HIGHLIGHT__                handlePostSignUpIn: async (user, thirdPartyAuthCodeResponse, newUser) => {
-                    let {id, email} = user;
-                    // thirdPartyAuthCodeResponse is the response from the provider POST /token API.
-                    // newUser is a boolean value, if true, then the user has signed up, else they have signed in.
-                } __END_HIGHLIGHT__
-            } 
+__HIGHLIGHT__            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUpPOST: async (input) => {
+                            let response = await originalImplementation.signInUpPOST(input);
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+                                
+                                // thirdPartyAuthCodeResponse is the response from the provider POST /token API.
+                                let thirdPartyAuthCodeResponse = response.authCodeResponse;
+                                
+                                if (response.createdNewUser) {
+                                    // TODO: post sign up logic
+                                } else {
+                                    // TODO: post sign in logic
+                                }
+                            }
+                            return response;
+                        }
+                    }
+                }
+            } __END_HIGHLIGHT__
         }),
         Session.init({...})
     ]

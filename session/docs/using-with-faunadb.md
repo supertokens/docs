@@ -14,50 +14,50 @@ SuperTokens provides an integration with FaunaDB that allows you to:
 - Securely refresh the session and Fauna user token automatically
 - Automatically revoke the Fauna user token when the session associated with that user is revoked.
 
-> This integration is only available for NodeJS as of now. If you would like additional tech stack support, please [open an issue on our Github](https://github.com/supertokens/supertokens-core/issues).
-
 ## Integration
 
 ### 1️⃣ Complete the [Quick setup guide](/docs/session/quick-setup/frontend)
 - Make sure you have completed the frontend, backend and SuperTokens core setup.
 
-### 2️⃣ Change import statements on the backend
-Replace ALL `require("supertokens-node/recipe/session")` with
-```js
-require("supertokens-node/recipe/session/faunadb")
-```
+### 2️⃣ Use the `override` config in `Session.init()`
 
-### 3️⃣ Add FaunaDB options to the `Session.init()` function
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
 ```js
 let supertokens = require("supertokens-node");
-__HIGHLIGHT__ let Session = require("supertokens-node/recipe/session/faunadb"); __END_HIGHLIGHT__
+let Session = require("supertokens-node/recipe/session"); 
+__HIGHLIGHT__ let { RecipeImplementation } = require("supertokens-node/recipe/session/faunadb"); __END_HIGHLIGHT__
 
 supertokens.init({
     supertokens: {...},
     appInfo: {...},
     recipeList: [
-__HIGHLIGHT__        Session.init({
-            faunadbClient: new faunadb.Client({
-                secret: "...",
-                // ...
-            }),
-            userCollectionName: "COLLECTION NAME",
-            accessFaunadbTokenFromFrontend: false
-        }) __END_HIGHLIGHT__
+        Session.init({
+            ...
+__HIGHLIGHT__            override: {
+                functions: (originalImplementation) => {
+                    return new RecipeImplementation(originalImplementation, {
+                        userCollectionName: "users",
+                        accessFaunadbTokenFromFrontend: true,
+                        faunaDBClient: new faunadb.Client({
+                            secret: "<SECRET>",
+                        }),
+                    });
+                },
+            }, __END_HIGHLIGHT__
+        }),
     ]
 });
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### 4️⃣ Creating a new session
+### 3️⃣ Creating a new session
 On login, you would want to create a new session using the "FaunaDB reference ID" of the logged in user.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
 ```js
-let Session = require("supertokens-node/recipe/session/faunadb");
+let Session = require("supertokens-node/recipe/session");
 
 app.post("/login", async function (req, res) {
     // check for user credentials..
@@ -69,13 +69,13 @@ __HIGHLIGHT__    let userId = "<FAUNADB REFERENCE ID>";
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### 5️⃣ Retrieve the Fauna user token in any API
+### 4️⃣ Retrieve the Fauna user token in any API
 After session verification, you can use the [`session.getFaunadbToken()`](/docs/nodejs/session/sessioncontainer/getfaunadbtoken) function in the API
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
 ```js
-let Session = require("supertokens-node/recipe/session/faunadb");
+let Session = require("supertokens-node/recipe/session");
 
 app.post("/like-comment", Session.verifySession(), function (req, res) {
     let userId = req.session.getUserId();
@@ -86,9 +86,13 @@ __HIGHLIGHT__    let faunaToken = await req.session.getFaunadbToken(); __END_HIG
     res.send(userId);
 });
 ```
+
+> If using TypeScript, the type of `req.session` is `SessionContainer`, imported like `import {SessionContainer} from "supertokens-node/recipe/session/faunadb"`
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### 6️⃣ Retrieve the Fauna user token on the frontend
+
+### 5️⃣ Retrieve the Fauna user token on the frontend
 
 > In order to do this, you will need to set `accessFaunadbTokenFromFrontend` to `true` when calling `Session.init` on the backend.
 

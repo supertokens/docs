@@ -11,6 +11,3 @@ hide_title: true
 
 ### Returns
 - ``Promise<String[]>`` array of revoked session handles.
-
-### Throws
-- [GENERAL_ERROR](./../errors/general_error)

@@ -38,23 +38,6 @@ SuperTokens.init({
 
 # `signInForm` Config values
 
-- **style**: 
-    - Description: An object to overwrite the Sign up form styles. Please refer to the <a href="/docs/thirdpartyemailpassword/common-customizations/styling/changing-style" target="_blank">common customizations guide</a> on how to update the sign in form style.
-    - Example: 
-        -
-        ```js
-            style: {
-                container: {
-                    marginLeft: "10px",
-                    (...)
-                },
-                link: {
-                    color: "orange"
-                }
-                (...)
-            }
-        ```
-
 
 - **formFields**: 
     - Description: This is an array that lets you overwrite the default email/password fields labels, placeholder and validation methods.

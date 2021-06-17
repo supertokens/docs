@@ -6,7 +6,7 @@ hide_title: true
 
 # Initialisation
 
-### The init function: [API Reference](../api-reference#init-apidomain-apibasepath-sessionexpiredstatuscode-sessionscope-refreshapicustomheaders-autoaddcredentials)
+### The init function: [API Reference](../api-reference)
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Via NPM-->

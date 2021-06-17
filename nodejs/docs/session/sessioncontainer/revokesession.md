@@ -11,6 +11,3 @@ hide_title: true
 
 ### Returns
 - ``Promise<void>``
-
-### Throws
-- [GENERAL_ERROR](./../../errors/general_error)

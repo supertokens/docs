@@ -1,10 +1,13 @@
 ---
 id: new-session
-title: Storing session data
+title: Storing data in a session
 hide_title: true
 ---
 
-# Storing session data
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/docs/common-customizations/sessions/new-session.md -->
+
+# Storing data in a session
 
 > A session is created automatically when the user signs in or signs up.
 
@@ -22,34 +25,43 @@ A session can hold two types of data:
     - The default value is `{}`
 
 
-The default values can be changed by configuring `setJwtPayload` and `setSessionData` in the `sessionFeature` attribute when initializing the recipe:
+The default values can be changed by overriding the `createNewSession` function in the `Session` recipe:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
 ```js
 let SuperTokens = require("supertokens-node");
-let ThirdParty = require("supertokens-node/recipe/thirdparty");
+let Session = require("supertokens-node/recipe/session);
 
 SuperTokens.init({
     SuperTokens: {...},
     appInfo: {...},
     recipeList: [
-__HIGHLIGHT__        ThirdParty.init({
-            sessionFeature: {
-               setJwtPayload: async (user, oauthResponse, action) => {
-                   // The value of "action" is "signin" | "signup"
-                   // The value of oauthResponse is the response form the OAuth provider
-                   // after exchanging the authorisation code
-                   return { someKey: "someValue" }
-               },
-               setSessionData: async (user, oauthResponse, action) => {
-                   // The value of "action" is "signin" | "signup"
-                   // The value of oauthResponse is the response form the OAuth provider
-                   // after exchanging the authorisation code
-                   return { someKey: "someValue" }
-               }
-            } __END_HIGHLIGHT__
-        }),
+        ...
+        Session.init({
+__HIGHLIGHT__            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async (input) => {
+                            let userId = input.userId;
+
+                            input.jwtPayload = {
+                                ...input.jwtPayload,
+                                someKey: "someValue",
+                            };
+
+                            input.sessionData = {
+                                ...input.sessionData,
+                                someKey: "someValue",
+                            };
+
+                            return originalImplementation.createNewSession(input);
+                        },
+                    };
+                },
+            }, __END_HIGHLIGHT__
+        })
     ]
 });
 ```

@@ -1,0 +1,103 @@
+---
+id: version-6.0.X-functions
+title: Overriding Functions
+original_id: functions
+---
+
+```js
+interface RecipeInterface {
+    /* 
+    * Called to get user info based on userId
+    * 
+    * @params: userId
+    * 
+    * @returns: user object if a user is found for the given userId, else undefined
+    */
+    getUserById(input: { userId: string }): Promise<User | undefined>;
+
+    /* 
+    * Called to get user info based on thirdparty info
+    * 
+    * @params: thirdPartyId: third party provider id, e.g. "google"
+    *          thirdPartyUserId: userId that was given by the third party provider
+    * 
+    * @returns: user object if a user is found for the given userId, else undefined
+    */
+    getUserByThirdPartyInfo(input: { thirdPartyId: string; thirdPartyUserId: string }): Promise<User | undefined>;
+
+    /* 
+    * Called to get list of users in ascending order based on their timeJoined
+    * 
+    * @params: limit (optional) is the number
+    *          nextPaginationToken (optional) is the pagination token
+    * 
+    * @returns: See the type definition below
+    */
+    getUsersOldestFirst(input: {
+        limit?: number;
+        nextPaginationToken?: string;
+    }): Promise<{
+        users: User[];
+        nextPaginationToken?: string;
+    }>;
+
+    /* 
+    * Called to get list of users in descending order based on their timeJoined
+    * 
+    * @params: limit (optional) is the number
+    *          nextPaginationToken (optional) is the pagination token
+    * 
+    * @returns: See the type definition below
+    */
+    getUsersNewestFirst(input: {
+        limit?: number;
+        nextPaginationToken?: string;
+    }): Promise<{
+        users: User[];
+        nextPaginationToken?: string;
+    }>;
+
+    /* 
+    * Called to get total count of the user
+    */
+    getUserCount(): Promise<number>;
+
+    /* 
+    * Called to sign-up/sign-in a user
+    * 
+    * @params: email: an object containing email id and boolean stating if email is verified or not
+    *          thirdPartyId: third party provider id, e.g. "google"
+    *          thirdPartyUserId: userId that was given by the third party provider
+    * 
+    * @returns: "OK": on successfully signing up the user
+    *           "FIELD_ERROR": error in passing thridparty fields
+    */
+    signInUp(input: {
+        thirdPartyId: string;
+        thirdPartyUserId: string;
+        email: {
+            id: string;
+            isVerified: boolean;
+        };
+    }): Promise<
+        | { status: "OK"; createdNewUser: boolean; user: User }
+        | {
+              status: "FIELD_ERROR";
+              error: string;
+          }
+    >;
+}
+```
+
+## Supporting Types
+```ts
+interface User {
+    id: string;
+    timeJoined: number;
+    email: string;
+    thirdParty?: {
+        id: string;
+        userId: string;
+    };
+}
+```

@@ -4,18 +4,18 @@ title: getSession
 hide_title: true
 ---
 
-# ``getSession(req, res, doAntiCsrfCheck)``
+# ``getSession(req, res, options)``
 ### Parameters
 - ``req`` 
   - type: ``Express.Request``
 - ``res`` 
   - type: ``Express.Response``
-- ``doAntiCsrfCheck`` (Optional)
-  - type: ``boolean``
+- ``options`` (Optional)
+  - type: ``{antiCsrfCheck?: boolean, sessionRequired?: boolean}``
 
 ### Returns
 - ``Promise<Session>``
 
 ### Throws
-- [UNAUTHORISED](./errorhandler/unauthorised)
-- [TRY_REFRESH_TOKEN](./errorhandler/tryrefreshtoken)
+- If the session does not exist and `sessionRequired` is not `false`
+- If the access token has expired, we need to try the refresh token.

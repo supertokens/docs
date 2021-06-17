@@ -22,9 +22,14 @@ SuperTokens.init({
     recipeList: [
         EmailPassword.init({
 __HIGHLIGHT__           getRedirectionURL: async (context) => {
-                if (context.action === "SUCCESS") {
-                    return context.redirectToPath === undefined ? "/dashboard" : context.redirectToPath;
+                if (context.action === "SUCCESS" && context.isNewUser) {
+                    if (context.redirectToPath !== undefined) {
+                        // we are navigating back to where the user was before they authenticated
+                        return context.redirectToPath;
+                    }
+                    return "/dashboard";
                 }
+                return undefined;
             } __END_HIGHLIGHT__
         }),
         Session.init()
@@ -40,7 +45,7 @@ The user will be redirected to the provided URL on:
 - Successful email verification.
 - If the user is already logged in.
 
-Please refer to the <a href="/docs/auth-react/emailpassword/callbacks#getredirectionurl" target="_blank">auth-react reference API</a> for more information on `getRedirectionURL` hook.
+Please refer to [this page](../advanced-customizations/frontend-hooks/redirection-callback) for more information on `getRedirectionURL` hook.
 
 ## 2) Handling sign up event on the frontend
 
@@ -76,12 +81,9 @@ __HIGHLIGHT__            onHandleEvent: async (context) => {
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Please refer to the <a href="/docs/auth-react/emailpassword/callbacks#onhandleevent" target="_blank">auth-react reference API</a> for more information on `onHandleEvent` hook.
-
-
 ## 3) Handling sign up event on the backend
 
-### `handlePostSignUp`
+For this, you'll have to override signUpPOST api of the EmailPassword recipe.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--NodeJS-->
@@ -93,12 +95,22 @@ SuperTokens.init({
     supertokens: {...},
     recipeList: [
         EmailPassword.init({
-            signUpFeature: {
-__HIGHLIGHT__                handlePostSignUp: async (user, formFields) => {
-                    let {id, email} = user;
-                    // TODO: Sanitize form fields and store in your DB.
-                } __END_HIGHLIGHT__
-            } 
+__HIGHLIGHT__            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signUpPOST: async (input) => {
+                            let response = await originalImplementation.signUpPOST(input);
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+                                let formFields = input.formFields;
+                                // TODO: post sign up logic
+                            }
+                            return response;
+                        }
+                    }
+                }
+            } __END_HIGHLIGHT__
         }),
         Session.init({...})
     ]

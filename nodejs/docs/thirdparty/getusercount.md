@@ -8,6 +8,3 @@ hide_title: true
 
 ### Returns
 - `Promise<number>` number of users in your app.
-
-### Throws 
-- [GENERAL_ERROR](./../errors/general_error)

@@ -13,14 +13,12 @@ Session.init({
     cookieSameSite?: "strict" | "lax" | "none",
     sessionExpiredStatusCode?: number,
     cookieDomain?: string,
-    sessionRefreshFeature?: {
-        disableDefaultImplementation?: boolean,
-    },
-    signOutFeature?: {
-        disableDefaultImplementation?: boolean
-    },
     errorHandlers?: ErrorHandlers,
-    antiCsrf?: "NONE" | "VIA_CUSTOM_HEADER" | "VIA_TOKEN"
+    antiCsrf?: "NONE" | "VIA_CUSTOM_HEADER" | "VIA_TOKEN",
+    override?: {
+      functions?: function,
+      apis?: function
+    }
 })
 ```
 
@@ -38,17 +36,12 @@ Session.init({
   - ``cookieDomain`` (Optional)
     - type: ``string``
     - description:  The domain from which the cookies will be created
-  - ``sessionRefreshFeature``
-    - ``disableDefaultImplementation`` (Optional)
-      - type: ``boolean``
-      - description: Disables the default refresh API
-  - ``signOutFeature``
-    - ``disableDefaultImplementation`` (Optional)
-      - type: ``boolean``
-      - description: Disable the default logout API
   - ``errorHandlers`` (Optional)
     - type: ``ErrorHandlers``
     - description: You can override the default SuperTokens error handler and define your own custom error handler.
   - ``antiCsrf`` (Optional)
     - type: `"NONE" | "VIA_CUSTOM_HEADER" | "VIA_TOKEN"`
     - description: See [this page](/docs/session/common-customizations/sessions/anti-csrf)
+  - `override` (Optional)
+    - type: `object of function`
+    - description: Use this feature to override how this recipe behaves

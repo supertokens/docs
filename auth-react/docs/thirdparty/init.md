@@ -87,18 +87,3 @@ Description: The `signInAndUpFeature` allows to configure third party providers.
 
 - **verifyEmailLinkClickedScreen**:
     - Description: The `verifyEmailLinkClickedScreen` configuration allows you to update styles. More information in the corresponding [email verification section](./config/email-verification#verifyemaillinkclickedscreen-config-values)
-
-
-## Hooks
-
-### preAPIHooks
-
-Description: This async method can be used to update the request object sent to your API regarding authentication. See [callbacks documentation](./callbacks#preapihooks) for more information.
-
-### getRedirectionURL
-
-Description: This async method can be used to update the redirection rules for specific paths. See [callbacks documentation](./callbacks#getredirectionurl) for more information.
-
-### onHandleEvent
-
-Description: This method can be used to store analytics to your system on key events happening during authentication. See [callbacks documentation](./callbacks#onhandleevent) for more information.

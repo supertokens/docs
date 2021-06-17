@@ -13,12 +13,13 @@ Example:
 ```js
 import { redirectToAuth } from "supertokens-auth-react/recipe/emailpassword";
 
-redirectToAuth("signin");
+redirectToAuth({show?: "signin" | "signup", redirectBack?: boolean});
 ```
 
 - **redirectToAuth**: 
     - Description: `redirectToAuth` will redirect the user to sign-in/sign-up page UI.
     - Parameters:
         - `show` (Optional): Allowed values are `"signin"` and `"signout"`
+        - `redirectBack` (Optional): If `true`, will redirect the user to the current page. It is `false` by default
     - Output:
         - `void`
