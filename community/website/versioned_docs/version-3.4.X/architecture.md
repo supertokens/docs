@@ -1,7 +1,8 @@
 ---
-id: architecture
+id: version-3.4.X-architecture
 title: Architecture & Java
 hide_title: true
+original_id: architecture
 ---
 
 # Application architecture
