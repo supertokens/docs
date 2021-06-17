@@ -13,6 +13,8 @@ hide_title: true
 
 The available overridable components are listed below in the code snippet.
 
+<!--DOCUSAURUS_CODE_TABS-->
+<!--ReactJS-->
 ```tsx
 EmailPassword.init({
     overrides: {
@@ -43,6 +45,7 @@ EmailPassword.init({
     }
 });
 ```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 ### 🔍 Finding which component to override
 To do that, you should use React Developer Tools extension which provides a component tree inspector.
@@ -55,6 +58,8 @@ In this inspector look for components specified above.
 2. Ensure that's the component you want to override
 3. Provide an override function
 
+<!--DOCUSAURUS_CODE_TABS-->
+<!--ReactJS-->
 ```tsx
 EmailPassword.init({
     ...,
@@ -67,6 +72,7 @@ EmailPassword.init({
     }
 })
 ```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 ### 🖋️ The definition of override function
 Override function is a React Component factory function. It will receive original component
