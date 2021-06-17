@@ -30,7 +30,11 @@ ThirdPartyEmailPassword.init({
                     </div>
                 );
             },
-
+        },
+        emailVerification: {
+            components: {
+                // Please refer to Overriding email verification components below
+            }
         }
     }
 });
@@ -92,3 +96,28 @@ const overrideFn = (OriginalComponent) => (originalProps) => {
     )
 }
 ```
+
+### 📧 Overriding email verification components
+You can also override components related to email verification.
+To do that, nest the override configuration like:
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--ReactJS-->
+```tsx
+ThirdPartyEmailPassword.init({
+    override: {
+        emailVerification: {
+            components: {
+                EmailVerificationSendVerifyEmail: (OriginalComponent) => (originalProps) => {
+                    return <div>
+                        <OriginalComponent {...originalProps} />
+                    <div>
+                }
+            }
+        }
+    }
+})
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+For the full list refer to [auth-react EmailVerification override docs](/docs/auth-react/docs/emailverification/override/components).
