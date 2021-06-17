@@ -55,6 +55,19 @@ In this inspector look for components specified above.
 2. Ensure that's the component you want to override
 3. Provide an override function
 
+```tsx
+EmailPassword.init({
+    ...,
+    override: {
+        components: {
+            EmailPasswordSignIn: (OriginalComponent) => (originalProps) => {
+                return <CustomComponent {...originalProps} />
+            }
+        }
+    }
+})
+```
+
 ### 🖋️ The definition of override function
 Override function is a React Component factory function. It will receive original component
 as a parameter, in case you want to render it. It should return a React Component, which will receive
