@@ -6,13 +6,12 @@ hide_title: true
 
 # How to use
 
-1. Go to a place where you configure `EmailPassword` recipe.
-2. Component overrides can be configured at `overrides.components` config object path.
+1. Go to a place where you run `EmailPassword.init(...)` to configure the recipe.
+2. Component overrides can be configured at `override.components` config object path.
 3. Pick component that you'd like to override by its key.
 4. At component's key supply a function that returns React component.
 
-The available overridable components are listed below in the code snippet.
-
+### Example
 <!--DOCUSAURUS_CODE_TABS-->
 <!--ReactJS-->
 ```tsx
@@ -31,15 +30,6 @@ EmailPassword.init({
                     </div>
                 );
             },
-            EmailPasswordSignInFooter: ...,
-            EmailPasswordSignInForm: ...,
-            EmailPasswordSignInHeader: ...,
-            EmailPasswordSignUp: ...,
-            EmailPasswordSignUpFooter: ...,
-            EmailPasswordSignUpForm: ...,
-            EmailPasswordSignUpHeader: ...,
-            EmailPasswordResetPasswordEmail: ...,
-            EmailPasswordSubmitNewPassword: ...,
 
         }
     }
@@ -47,7 +37,11 @@ EmailPassword.init({
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### 🔍 Finding which component to override
+### Which component I can override?
+For the full list of components available for override in `EmailPassword` recipe, refer to
+[auth-react EmailPassword override docs](/docs/auth-react/docs/emailpassword/override/components).
+
+### 🔍 Finding which component will be overridden
 To do that, you should use React Developer Tools extension which provides a component tree inspector.
 In this inspector look for components specified above.
 
@@ -67,14 +61,14 @@ EmailPassword.init({
         components: {
             EmailPasswordSignIn: (OriginalComponent) => (originalProps) => {
                 return <CustomComponent {...originalProps} />
-            }
+            },
         }
     }
 })
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### 🖋️ The definition of override function
+### 🖋️ The signature of override function
 Override function is a React Component factory function. It will receive original component
 as a parameter, in case you want to render it. It should return a React Component, which will receive
 original props.
