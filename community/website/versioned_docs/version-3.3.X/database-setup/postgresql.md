@@ -115,13 +115,13 @@ CREATE TABLE IF NOT EXISTS emailpassword_pswd_reset_tokens (
 CREATE INDEX emailpassword_password_reset_token_expiry_index ON emailpassword_pswd_reset_tokens(token_expiry);
 
 CREATE TABLE IF NOT EXISTS emailverification_verified_emails (
-    user_id CHAR(36) NOT NULL,
+    user_id VARCHAR(128) NOT NULL,
     email VARCHAR(256),
     PRIMARY KEY (user_id, email)
 );
 
 CREATE TABLE IF NOT EXISTS emailverification_tokens (
-    user_id CHAR(36) NOT NULL,
+    user_id VARCHAR(128) NOT NULL,
     email VARCHAR(256),
     token VARCHAR(128) NOT NULL UNIQUE,
     token_expiry BIGINT NOT NULL,
