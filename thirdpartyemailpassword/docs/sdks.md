@@ -1,6 +1,6 @@
 ---
 id: sdks
-title: SDKs API Reference
+title: SDK Reference
 hide_title: true
 ---
 
