@@ -1,8 +1,10 @@
 ---
 id: getusersoldestfirst
-title: getUsersOldestFirst
+title: g̶e̶t̶U̶s̶e̶r̶s̶O̶l̶d̶e̶s̶t̶F̶i̶r̶s̶t̶
 hide_title: true
 ---
+
+> This function is deprecated. Please use supertokens.getUsersOldestFirst instead if you are using core version >= 3.5
 
 # ``getUsersOldestFirst(limit, nextPaginationToken)``
 
