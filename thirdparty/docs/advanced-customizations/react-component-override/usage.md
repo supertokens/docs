@@ -16,7 +16,7 @@ hide_title: true
 <!--ReactJS-->
 ```tsx
 ThirdParty.init({
-    overrides: {
+    override: {
         components: {
             /**
              * In this case, the <ThirdPartySignUpFooter> will render the original component

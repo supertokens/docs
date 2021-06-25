@@ -16,7 +16,7 @@ hide_title: true
 <!--ReactJS-->
 ```tsx
 EmailPassword.init({
-    overrides: {
+    override: {
         components: {
             /**
              * In this case, the <EmailPasswordSignIn> will render the original component
