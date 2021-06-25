@@ -82,6 +82,15 @@ CREATE TABLE IF NOT EXISTS key_value (
     PRIMARY KEY(name)
 );
 
+CREATE TABLE IF NOT EXISTS all_auth_recipe_users(
+    user_id CHAR(36) NOT NULL,
+    recipe_id VARCHAR(128) NOT NULL,
+    time_joined BIGINT NOT NULL,
+    PRIMARY KEY (user_id)
+);
+
+CREATE INDEX all_auth_recipe_users_pagination_index ON all_auth_recipe_users (time_joined DESC, user_id DESC);
+
 CREATE TABLE IF NOT EXISTS session_info (
     session_handle VARCHAR(255) NOT NULL,
     user_id VARCHAR(128) NOT NULL,
@@ -100,8 +109,6 @@ CREATE TABLE IF NOT EXISTS emailpassword_users (
     time_joined BIGINT NOT NULL,
     PRIMARY KEY (user_id)
 );
-
-CREATE INDEX emailpassword_user_pagination_index ON emailpassword_users(time_joined DESC, user_id DESC);
 
 CREATE TABLE IF NOT EXISTS emailpassword_pswd_reset_tokens (
     user_id CHAR(36) NOT NULL,
@@ -137,8 +144,6 @@ CREATE TABLE IF NOT EXISTS thirdparty_users (
     time_joined BIGINT NOT NULL,
     PRIMARY KEY (third_party_id, third_party_user_id)
 );
-
-CREATE INDEX thirdparty_users_pagination_index ON thirdparty_users(time_joined DESC, user_id DESC);
 ```
 You also have the option to rename these tables if you want. You can do so by passing relevant configs to the core via the docker env variables or the `config.yaml` file.
 
