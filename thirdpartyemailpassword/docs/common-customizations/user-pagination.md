@@ -76,7 +76,7 @@ let {users, nextPaginationToken} = await Supertokens.getUsersOldestFirst({
 - If the `nextPaginationToken` is `undefined`, then there are no more users to loop through.
 - If there are no users in your app, then `nextPaginationToken` will be `undefined` and `users` will be an empty array
 
-- Each element in the `users` array is according to the output of the core API as shown [here](TODO:).
+- Each element in the `users` array is according to the output of the core API as shown [here](https://app.swaggerhub.com/apis/supertokens/CDI/2.8.0#/Core/getUsers).
 
 ## Get the number of users in your app
 <!--DOCUSAURUS_CODE_TABS-->
