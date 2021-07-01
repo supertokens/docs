@@ -35,4 +35,4 @@ __HIGHLIGHT__        return (
        jwtPayload: any /*JSON object set on the backend*/
    }
    ```
-- `ThirdPartyAuth` will update the session, because it uses `SessionAuth` underneath. Read more about session updates in [SessionAuth guide](/docs/auth-react/docs/session/session-auth).
+- `ThirdPartyAuth` will update the session, because it uses `SessionAuth` underneath. Read more about session updates in [SessionAuth guide](../session/session-auth).

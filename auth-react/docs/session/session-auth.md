@@ -26,20 +26,19 @@ type SessionContextType = {
 #### How do I read `SessionContext` in my component?
 Wrap the component in `SessionAuth` with no parameters.
 ```js
-import SuperTokens from "supertokens-auth-react";
 const App = () => {
 __HIGHLIGHT__    return (
         <SessionAuth>
             <Dashboard />
         </SessionAuth>
     ); __END_HIGHLIGHT__
-}
+};
 
 const Dashboard = () => {
     const { doesSessionExist, userId, jwtPayload } = useContext(SessionContext);
 
-    return <>dashboard contents</>
-}
+    return <>dashboard contents</>;
+};
 ```
 
 ## Detailed usage
@@ -103,9 +102,13 @@ It's possible to combine it with previous `requireAuth` and `redirectToLogin` pr
 Example:
 ```tsx
 const App = () => {
-    return (<SessionAuth>
-        <NormalComponent />
-        <SessionAuth requireAuth={true} redirectToLogin={() => { /* redirect */ }} />
-    </SessionAuth>);
+    return (
+        <SessionAuth>
+            <NormalComponent />
+            <SessionAuth requireAuth={true} redirectToLogin={() => { /* redirect */ }}>
+                <ProtectedComponent />
+            </SessionAuth>
+        </SessionAuth>
+    );
 }
 ```
