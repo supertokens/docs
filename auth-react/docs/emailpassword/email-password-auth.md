@@ -33,3 +33,4 @@ __HIGHLIGHT__        return (
        jwtPayload: any /*JSON object set on the backend*/
    }
    ```
+- `EmailPasswordAuth` will update the session, because it uses `SessionAuth` underneath. Read more about session updates in [SessionAuth guide](/docs/auth-react/docs/session/session-auth).

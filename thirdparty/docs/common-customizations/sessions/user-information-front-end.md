@@ -49,6 +49,7 @@ render() {
 }
 ```
 
+You can read more about `ThirdPartyAuth` in [its API guide](/docs/auth-react/docs/thirdparty/third-party-auth)
 
 ## Without React context 
 ```js

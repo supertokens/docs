@@ -49,6 +49,7 @@ render() {
 }
 ```
 
+You can read more about `SessionAuth` in [SessionAuth guide](/docs/auth-react/docs/session/session-auth)
 
 ## Without React context 
 ```js

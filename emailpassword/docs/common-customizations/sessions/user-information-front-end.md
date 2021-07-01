@@ -49,6 +49,7 @@ render() {
 }
 ```
 
+You can read more about `EmailPasswordAuth` in [its API guide](/docs/auth-react/docs/emailpassword/email-password-auth)
 
 ## Without React context 
 ```js

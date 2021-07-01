@@ -49,6 +49,7 @@ render() {
 }
 ```
 
+You can read more about `ThirdPartyEmailPasswordAuth` in [its API guide](/docs/auth-react/docs/thirdpartyemailpassword/third-party-email-password-auth)
 
 ## Without React context 
 ```js
