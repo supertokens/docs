@@ -22,4 +22,4 @@ const App = () => {
 }
 ```
 
-Read more about `ThirdPartyAuth` and `requireAuth` in [its API reference](/docs/auth-react/docs/thirdparty/third-party-auth).
+Read more about `ThirdPartyAuth` in [its API reference](/docs/auth-react/docs/thirdparty/third-party-auth).

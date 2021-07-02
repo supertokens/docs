@@ -22,4 +22,4 @@ const App = () => {
 }
 ```
 
-Read more about `EmailPasswordAuth` and `requireAuth` in [its API reference](/docs/auth-react/docs/emailpassword/email-password-auth).
+Read more about `EmailPasswordAuth` in [its API reference](/docs/auth-react/docs/emailpassword/email-password-auth).
