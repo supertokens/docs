@@ -40,6 +40,6 @@ const App = () => {
 };
 ```
 
-If you don't specify the `onSessionExpired`, it will be handled by `redirectToLogin` by default.
+If you don't specify the `onSessionExpired`, the default behaviour is redirecting the user to where they might sign in.
 
 Read more about `ThirdPartyAuth` and `onSessionExpired` in [its API reference](/docs/auth-react/docs/thirdparty/third-party-auth).
