@@ -717,49 +717,64 @@ function addAlgoliaSearch() {
     })
 }
 
-/**
- * This file does not need to wait for DOMContentLoaded because it only gets added after it has loaded
- */
-
-// Change href of logo in the top right to home. Do this first
-changeLogoHref();
-// Modify all links to remove extra /docs
-// Modify <a> tags if needed, for example versions link in the header
-parseAndModifyLinksIfNeeded();
-// Replace all sidebars with text SIDEBAR_REPLACE_DOC with a link to their first child
-replaceSidebarSingleChildCategories();
-// Replace title in top nav for mobile where text includes SIDEBAR_REPLACE_DOC
-modifyTopNavTitleForMobile();
-// add page footer
-addFooter();
-// render all note blocks
-renderSpecialNotes();
-// render all additional information blocks
-renderAdditionalInformationItems();
-// Render all hoverable text elements
-renderHoverables();
-// Changes the text and UI of the previous and next buttons on each markdown file
-modifyPrevNextButtons();
-// Hides the previous next buttons for some pages, remove the function call to start showing them
-// hidePrevNextButtonsIfNeeded();
-
-// add copy button to code snippets
-addCopyButtonToCodeSnippets();
-
-// Modifies the UI and functionality of all nested navigation items in the sidebar
-modifySubNavGroups();
-// Adds the feedback buttons to the bottom of the page asking the user if the page was helpful
-// addFeedbackButtons();
-// Adds the github folded icon button to the header
-if (!window.location.pathname.includes("/pro/")) {
-    addGithubToHeader();
+function shouldRedirectToMainDocs() {
+    if (window.location.pathname.includes("/docs/community/2.") ||
+        window.location.pathname.includes("/docs/community/1.") ||
+        window.location.pathname.includes("/docs/community/0.")) {
+        return true;
+    }
+    return false;
 }
-addChatWidget()
-addAntcsScript()
-addHeaderAnalytics()
-addRecipeNameToHeader()
-changeDiscordLinkTextOnDesktop()
-addAlgoliaSearch()
-// NO MORE RENDERING AFTER THIS POINT, ONLY PERFORM CALCULATIONS
 
-document.body.style.display = "block";
+if (shouldRedirectToMainDocs()) {
+    window.location.href = "/docs/community/introduction";
+} else {
+
+    /**
+     * This file does not need to wait for DOMContentLoaded because it only gets added after it has loaded
+     */
+
+    // Change href of logo in the top right to home. Do this first
+    changeLogoHref();
+    // Modify all links to remove extra /docs
+    // Modify <a> tags if needed, for example versions link in the header
+    parseAndModifyLinksIfNeeded();
+    // Replace all sidebars with text SIDEBAR_REPLACE_DOC with a link to their first child
+    replaceSidebarSingleChildCategories();
+    // Replace title in top nav for mobile where text includes SIDEBAR_REPLACE_DOC
+    modifyTopNavTitleForMobile();
+    // add page footer
+    addFooter();
+    // render all note blocks
+    renderSpecialNotes();
+    // render all additional information blocks
+    renderAdditionalInformationItems();
+    // Render all hoverable text elements
+    renderHoverables();
+    // Changes the text and UI of the previous and next buttons on each markdown file
+    modifyPrevNextButtons();
+    // Hides the previous next buttons for some pages, remove the function call to start showing them
+    // hidePrevNextButtonsIfNeeded();
+
+    // add copy button to code snippets
+    addCopyButtonToCodeSnippets();
+
+    // Modifies the UI and functionality of all nested navigation items in the sidebar
+    modifySubNavGroups();
+    // Adds the feedback buttons to the bottom of the page asking the user if the page was helpful
+    // addFeedbackButtons();
+    // Adds the github folded icon button to the header
+    if (!window.location.pathname.includes("/pro/")) {
+        addGithubToHeader();
+    }
+
+    addChatWidget()
+    addAntcsScript()
+    addHeaderAnalytics()
+    addRecipeNameToHeader()
+    changeDiscordLinkTextOnDesktop()
+    addAlgoliaSearch()
+    // NO MORE RENDERING AFTER THIS POINT, ONLY PERFORM CALCULATIONS
+
+    document.body.style.display = "block";
+}

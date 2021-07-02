@@ -32,8 +32,7 @@ function Versions(props) {
                 <th>{latestVersion}</th>
                 <td>
                   <a
-                    href={`${siteConfig.baseUrl}${siteConfig.docsUrl}/${
-                      props.language ? props.language + "/" : ""
+                    href={`${siteConfig.baseUrl}${siteConfig.docsUrl}/${props.language ? props.language + "/" : ""
                       }getting-started/installation`}>
                     Documentation
                   </a>
@@ -46,13 +45,13 @@ function Versions(props) {
             <tbody>
               {versions.map(
                 version =>
-                  version !== latestVersion && (
+                  version !== latestVersion && !version.startsWith("0.") &&
+                  !version.startsWith("1.") && !version.startsWith("2.") && (
                     <tr>
                       <th>{version}</th>
                       <td>
                         <a
-                          href={`${siteConfig.baseUrl}${siteConfig.docsUrl}/${
-                            props.language ? props.language + "/" : ""
+                          href={`${siteConfig.baseUrl}${siteConfig.docsUrl}/${props.language ? props.language + "/" : ""
                             }${version}/getting-started/installation`}>
                           Documentation
                         </a>
