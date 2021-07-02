@@ -16,8 +16,14 @@ original_id: introduction
 
 
 # Supported tech stacks 🙌
-We integrate with your frontend, backend API and database. See how we [fit into your application](./architecture).
+### On the backend:
+- **NodeJS**: We support all current functionality (signup, manage auth tokens, social login etc).
+- **GoLang** and **Python** based frameworks (Flask, FastAPI and Django) are currently in development and will be launched early August, 2021.
+- **PHP** and **Java** based frameworks (Laravel, Spring Boot) are currently not supported. 
 
-- **NodeJS + ReactJS**: We support login + session management. Head over to the [Getting Started page](/docs/community/recipes)
-- **NodeJS + Vanilla JS**: We support session management only. Head over to the [Session Management docs](/docs/session/introduction)
-- For any other tech stack combination, please visit the [older docs](/docs/community/2.5.X/getting-started/installation).
+For unsupported frameworks (such as Laravel and Spring), please submit your request on the [product roadmap page](/product-roadmap). Alternatively, you can build and contribute these SDKs with our help. Reach out to us on [Discord](/discord).
+
+### On the frontend:
+- **ReactJS**: We support all current functionality (signup, manage auth tokens, social login etc).
+- **Vanilla JS**, **Angular**, **Vue** and others: We provide session management only and you would have to build the frontend UI for login.
+- **Mobile app**: We currently do not support any mobile app framework.
