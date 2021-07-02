@@ -36,3 +36,19 @@ __HIGHLIGHT__        return (
    }
    ```
 - `ThirdPartyAuth` will update the session, because it uses `SessionAuth` underneath. Read more about session updates in [SessionAuth guide](../session/session-auth).
+
+## Handle session expiry
+If you pass function to `onSessionExpired` prop, it will be called whenever session expires. This will also prevent
+children from receiving `SessionContext` update, so that you can preserve the UI for authenticated user to improve UX.
+
+Example:
+```tsx
+const App = () => {
+    return (
+        <ThirdPartyAuth onSessionExpired={notifyUserAndDisplayPopup}>
+            {/* MyComponent won't have context updated when session expires */}
+            <MyComponent />
+        </ThirdPartyAuth >
+    )
+}
+```
