@@ -11,7 +11,7 @@ There are two scenarios in which session is removed:
 
 This is used to respond to first scenario, **when session expires**.
 
-## Using `SessionAuth` component
+## Using `EmailPasswordAuth` component
 When you use `EmailPasswordAuth` to provide `SessionContext` to your components,
 you can pass function in `onSessionExpired` prop. This function will be called when session expires.
 
