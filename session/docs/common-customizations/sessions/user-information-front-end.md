@@ -49,7 +49,15 @@ render() {
 }
 ```
 
-You can read more about `SessionAuth` in [SessionAuth guide](/docs/auth-react/docs/session/session-auth)
+### Automatic context updates
+`SessionContext` will be updated for `SessionAuth` children whenever any of the following events happens:
+- App is loaded or reloaded
+- User signs in
+- User signs out
+- Session expires
+- Session is refreshed
+
+The only exception is when you use `onSessionExpired`, which is explained in [Handling session expiry](./handling-session-expiry).
 
 ## Without React context 
 ```js

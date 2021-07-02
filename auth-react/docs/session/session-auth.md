@@ -77,10 +77,9 @@ const App = () => {
 };
 ```
 
-### Act on session expired
+### Respond to session expiry
 If you pass function as `onSessionExpired` prop, it will be called whenever session expires.
-**When session expires this will prevent `SessionContext` from updating**. This means you can still display the UI for authenticated user. Once you're done,
-you should redirect back to login screen.
+**When session expires this will prevent `SessionContext` from updating**. This means you can still display the UI for authenticated user.
 
 Example:
 ```tsx
