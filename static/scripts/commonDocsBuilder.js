@@ -718,11 +718,19 @@ function addAlgoliaSearch() {
 }
 
 function shouldRedirectToMainDocs() {
-    if (window.location.pathname.includes("/docs/community/2.") ||
-        window.location.pathname.includes("/docs/community/1.") ||
-        window.location.pathname.includes("/docs/community/0.")) {
-        return true;
+
+    let paths = [
+        "/docs/community/2.", "/docs/community/1.", "/docs/community/0.",
+        "/docs/android/", "/docs/auth0/", "/docs/fastapi/", "/docs/flask/",
+        "/docs/go/", "/docs/ios/", "/docs/javalin/", "/docs/laravel/", "/docs/react-native/"
+    ]
+
+    for (let i = 0; i < paths.length; i++) {
+        if (window.location.pathname.includes(paths[i])) {
+            return true;
+        }
     }
+
     return false;
 }
 
