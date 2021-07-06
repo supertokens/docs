@@ -20,6 +20,11 @@ Session.init({
             // NOTE: This is an undeterministic event
         } else if (context.action === "UNAUTHORISED") {
             // called when the session has expired
+        } else if (context.action === "SESSION_CREATED") {
+            // Called when session is created.
+            //
+            // It means that if session previously existed
+            // and it only gets refreshed, this event will not be fired
         }
     }
 })
