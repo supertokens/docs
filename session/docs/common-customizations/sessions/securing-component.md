@@ -1,10 +1,10 @@
 ---
 id: securing-component
-title: Securing component
+title: Securing a website route / component
 hide_title: true
 ---
 
-# Securing a component
+# Securing a website route / component
 You may want to prevent rendering of some part of UI, or a route, when
 there's no session.
 

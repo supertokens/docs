@@ -48,19 +48,6 @@ render() {
      );
 }
 ```
-
-### Automatic context updates
-`SessionContext` will be updated for `EmailPasswordAuth` children whenever any of the following events happens:
-- App is loaded or reloaded
-- User signs in
-- User signs out
-- Session expires
-- Session is refreshed
-
-The only exception is when you use `onSessionExpired`, which is explained in [Handling session expiry](./handling-session-expiry).
-
-You can read more about `EmailPasswordAuth` in [its API guide](/docs/auth-react/docs/emailpassword/email-password-auth)
-
 ## Without React context 
 ```js
 import Session from 'supertokens-auth-react/recipe/session';

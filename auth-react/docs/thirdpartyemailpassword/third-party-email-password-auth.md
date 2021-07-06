@@ -39,8 +39,7 @@ __HIGHLIGHT__        return (
 - `ThirdPartyEmailPasswordAuth` will update the session, because it uses `SessionAuth` underneath. Read more about session updates in [SessionAuth guide](../session/session-auth).
 
 ## Handle session expiry
-If you pass function to `onSessionExpired` prop, it will be called whenever session expires. This will also prevent
-children from receiving `SessionContext` update, so that you can preserve the UI for authenticated user to improve UX.
+If you pass a function to `onSessionExpired` prop, it will be called whenever the session expires. This will also prevent children from receiving `SessionContext` update, so that you can preserve the UI for authenticated user.
 
 Example:
 ```tsx

@@ -18,28 +18,13 @@ you can pass function in `onSessionExpired` prop. This function will be called w
 ```tsx
 const App = () => {
     return (
-        <SessionAuth onSessionExpired={onSessionExpired}>
+        <SessionAuth onSessionExpired={showSessionExpiredPopup}>
             <MyComponent />
         </SessionAuth>
     );
 }
 ```
 
-### Preserving the UI on session expiry
-By passing `onSessionExpired` you are preventing the update to `SessionContext` that `MyComponent` would receive
-when session expires. This allows you to handle session expiry while still displaying UI for authenticated user to improve UX.
-
-Example:
-```tsx
-const App = () => {
-    return (
-        <SessionAuth onSessionExpired={displayLoginPopup}>
-            <MyComponent />
-        </SessionAuth>
-    );
-};
-```
-
-If you don't specify the `onSessionExpired`, it will be handled by `redirectToLogin` by default.
+> You will need to either reload the current page or redirect the user to the sign in page if you provide this callback.
 
 Read more about `SessionAuth` and `onSessionExpired` in [its API reference](/docs/auth-react/docs/session/session-auth).
