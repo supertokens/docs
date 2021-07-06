@@ -1,10 +1,10 @@
 ---
-id: embed-in-page
-title: Embed in a page
+id: embed-sign-in-form
+title: Embed Sign In form
 hide_title: true
 ---
 
-# Embed in a page 📑
+# Embed Sign In form in a page 📑
 
 Two steps to achieving this:
 - First we disable the full page default implementation
