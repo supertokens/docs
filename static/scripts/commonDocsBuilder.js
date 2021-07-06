@@ -720,9 +720,7 @@ function addAlgoliaSearch() {
 function shouldRedirectToMainDocs() {
 
     let paths = [
-        "/docs/community/2.", "/docs/community/1.", "/docs/community/0.",
-        "/docs/android/", "/docs/auth0/", "/docs/fastapi/", "/docs/flask/",
-        "/docs/go/", "/docs/ios/", "/docs/javalin/", "/docs/laravel/", "/docs/react-native/"
+        "/docs/community/2.", "/docs/community/1.", "/docs/community/0."
     ]
 
     for (let i = 0; i < paths.length; i++) {
