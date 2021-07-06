@@ -1,5 +1,5 @@
 ---
-id: embed-in-page
+id: embed-sign-up-form
 title: Embed Sign Up form
 hide_title: true
 ---
