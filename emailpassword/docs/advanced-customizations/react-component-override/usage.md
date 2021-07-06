@@ -9,7 +9,7 @@ hide_title: true
 1. Go to a place where you run `EmailPassword.init(...)` to configure the recipe.
 2. Component overrides can be configured at `override.components` config object path.
 3. Pick component that you'd like to override by its key.
-4. At component's key supply a function that returns React component.
+4. At component's key supply a React component that would receive original props and default component
 
 ### Example
 <!--DOCUSAURUS_CODE_TABS-->
@@ -22,11 +22,11 @@ EmailPassword.init({
              * In this case, the <EmailPasswordSignIn> will render the original component
              * wrapped in div with octocat picture above it.
              */
-            EmailPasswordSignIn: (OriginalComponent) => (originalProps) => {
+            EmailPasswordSignIn: ({ DefaultComponent, ...props }) => {
                 return (
                     <div>
                         <img src="octocat.jpg" />
-                        <OriginalComponent {...props} />
+                        <DefaultComponent {...props} />
                     </div>
                 );
             },
@@ -63,8 +63,8 @@ EmailPassword.init({
     ...,
     override: {
         components: {
-            EmailPasswordSignIn: (OriginalComponent) => (originalProps) => {
-                return <CustomComponent {...originalProps} />
+            EmailPasswordSignIn: ({ DefaultComponent, ...props }) => {
+                return <DefaultComponent {...props} />
             },
         }
     }
@@ -78,7 +78,7 @@ as a parameter, in case you want to render it. It should return a React Componen
 original props.
 
 ```tsx
-const overrideFn = (OriginalComponent) => React.Component<OriginalProps>
+const overrideFn = React.Component<OriginalProps & { DefaultComponent: /* default component type */ }>
 ```
 
 ### 📽️ How do I render the original component
@@ -87,11 +87,11 @@ you can render it. To do this, simply use it in JSX. Don't forget to supply orig
 by spreading them.
 
 ```tsx
-const overrideFn = (OriginalComponent) => (originalProps) => {
+const overrideFn = ({ DefaultComponent, ...props }) => {
     return (
         <>
             <h1>I'm a header that you added above original component</h1>
-            <OriginalComponent {...originalProps} />
+            <DefaultComponent {...props} />
         </>
     )
 }
@@ -108,9 +108,9 @@ EmailPassword.init({
     override: {
         emailVerification: {
             components: {
-                EmailVerificationSendVerifyEmail: (OriginalComponent) => (originalProps) => {
+                EmailVerificationSendVerifyEmail: ({ DefaultComponent, ...props }) => {
                     return <div>
-                        <OriginalComponent {...originalProps} />
+                        <DefaultComponent {...props} />
                     <div>
                 }
             }
