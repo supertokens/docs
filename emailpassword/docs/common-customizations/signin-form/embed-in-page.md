@@ -4,6 +4,9 @@ title: Embed in a page
 hide_title: true
 ---
 
-# Embed in a page 📑
+Redirecting...
 
-Please refer to the [Sign Up Form > Embed in a page](../signup-form/embed-in-page) section.
+<script>
+window.location.href = "/docs/emailpassword/common-customizations/embed-sign-in";
+</script>
+
