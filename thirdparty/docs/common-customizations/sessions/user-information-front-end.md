@@ -49,7 +49,6 @@ render() {
 }
 ```
 
-
 ## Without React context 
 ```js
 import Session from 'supertokens-auth-react/recipe/session';

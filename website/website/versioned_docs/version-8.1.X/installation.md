@@ -1,7 +1,8 @@
 ---
-id: installation
+id: version-8.1.X-installation
 title: Installation
 hide_title: true
+original_id: installation
 ---
 
 # Website SDK Installation

@@ -1,7 +1,8 @@
 ---
-id: third-party-email-password-auth
+id: version-0.15.X-third-party-email-password-auth
 title: ThirdPartyEmailPassword Auth wrapper
 hide_title: true
+original_id: third-party-email-password-auth
 ---
 
 # ThirdPartyEmailPassword Auth wrapper

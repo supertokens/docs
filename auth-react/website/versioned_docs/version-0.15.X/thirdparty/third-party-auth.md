@@ -1,7 +1,8 @@
 ---
-id: third-party-auth
+id: version-0.15.X-third-party-auth
 title: Third Party Auth wrapper
 hide_title: true
+original_id: third-party-auth
 ---
 
 # Third Party Auth wrapper

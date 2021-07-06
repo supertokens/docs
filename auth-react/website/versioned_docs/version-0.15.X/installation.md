@@ -1,6 +1,7 @@
 ---
-id: installation
+id: version-0.15.X-installation
 title: Installation
+original_id: installation
 ---
 
 > Note: This docs is only for reference, and not a step by step guide for how to implement SuperTokens. For a guide, please see the [Getting started section](/docs/community/recipes).

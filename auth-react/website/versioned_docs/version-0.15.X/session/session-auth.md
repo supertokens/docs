@@ -1,7 +1,8 @@
 ---
-id: session-auth
+id: version-0.15.X-session-auth
 title: Session Auth wrapper
 hide_title: true
+original_id: session-auth
 ---
 
 # Session Auth wrapper

@@ -1,7 +1,8 @@
 ---
-id: email-password-auth
+id: version-0.15.X-email-password-auth
 title: Email Password Auth wrapper
 hide_title: true
+original_id: email-password-auth
 ---
 
 # Email Password Auth wrapper
