@@ -30,4 +30,4 @@ __HIGHLIGHT__      await signOut(); __END_HIGHLIGHT__
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 - We do not provide any UI for a Sign-out button
-- On success, calling the `signOut` function will redirect the user to the login page if being used inside the [`<ThirdPartyEmailPasswordAuth>` component](./sessions/securing-component) and without `requireAuth={false}`, else you will need to redirect the user manually.
+- On success, the `signOut` function does not redirect the user to another page.
