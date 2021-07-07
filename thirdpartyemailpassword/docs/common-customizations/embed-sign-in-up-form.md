@@ -1,10 +1,10 @@
 ---
-id: embed-in-page
-title: Embed Sign In And Up in a page
+id: embed-sign-in-up-form
+title: Embed Sign In / Up form in a page
 hide_title: true
 ---
 
-# Embed Sign In And Up in a page 📑
+# Embed Sign In / Up form in a page 📑
 
 Two steps to achieving this:
 - First we disable the full page default implementation
@@ -14,12 +14,12 @@ Two steps to achieving this:
 ## Step 1: Disable default implementation 🔐
 
 <!--DOCUSAURUS_CODE_TABS-->
-<!--ReactJS--> 
+<!--ReactJS-->
 ```js
 SuperTokens.init({
     appInfo: {...},
     recipeList: [
-        ThirdParty.init({
+        ThirdPartyEmailPassword.init({
             signInAndUpFeature: {
 __HIGHLIGHT__                disableDefaultImplementation: true, __END_HIGHLIGHT__
                 (...)
@@ -38,12 +38,11 @@ If you navigate to `/auth`, you should not see the widget anymore.
 
 For example if you would like to add the Sign-up / Sign-in widget at the very end of a landing page, before the footer, simply import the `SignInAndUp` component and render it:
 
-
 <!--DOCUSAURUS_CODE_TABS-->
-<!--ReactJS--> 
+<!--ReactJS-->
 ```js
 
-__HIGHLIGHT__ import {SignInAndUp} from 'supertokens-auth-react/recipe/thirdparty'; __END_HIGHLIGHT__
+__HIGHLIGHT__ import {SignInAndUp} from 'supertokens-auth-react/recipe/thirdpartyemailpassword'; __END_HIGHLIGHT__
 
 class MyLandingPage extends React.Component {
     render() {

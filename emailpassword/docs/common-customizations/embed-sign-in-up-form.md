@@ -1,10 +1,10 @@
 ---
-id: embed-sign-in-form
-title: Embed Sign In form
+id: embed-sign-in-up-form
+title: Embed Sign In / Up form in a page
 hide_title: true
 ---
 
-# Embed Sign In form in a page 📑
+# Embed Sign In / Up form in a page 📑
 
 Two steps to achieving this:
 - First we disable the full page default implementation
@@ -15,11 +15,12 @@ Two steps to achieving this:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--ReactJS-->
+
 ```js
 SuperTokens.init({
     appInfo: {...},
     recipeList: [
-        ThirdPartyEmailPassword.init({
+        EmailPassword.init({
             signInAndUpFeature: {
 __HIGHLIGHT__                disableDefaultImplementation: true, __END_HIGHLIGHT__
                 (...)
@@ -30,6 +31,7 @@ __HIGHLIGHT__                disableDefaultImplementation: true, __END_HIGHLIGHT
     ]
 });
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 If you navigate to `/auth`, you should not see the widget anymore.
@@ -40,9 +42,10 @@ For example if you would like to add the Sign-up / Sign-in widget at the very en
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--ReactJS-->
+
 ```js
 
-__HIGHLIGHT__ import {SignInAndUp} from 'supertokens-auth-react/recipe/thirdpartyemailpassword'; __END_HIGHLIGHT__
+__HIGHLIGHT__ import {SignInAndUp} from 'supertokens-auth-react/recipe/emailpassword'; __END_HIGHLIGHT__
 
 class MyLandingPage extends React.Component {
     render() {
@@ -61,4 +64,5 @@ class MyLandingPage extends React.Component {
     }
 }
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->

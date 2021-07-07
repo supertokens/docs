@@ -6,5 +6,5 @@ hide_title: true
 Redirecting...
 
 <script>
-window.location.href = "/docs/thirdpartyemailpassword/common-customizations/embed-sign-up-form"
+window.location.href = "/docs/thirdpartyemailpassword/common-customizations/embed-sign-in-up-form"
 </script>
