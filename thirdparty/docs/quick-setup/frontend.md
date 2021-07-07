@@ -48,9 +48,9 @@ SuperTokens.init({
         ThirdParty.init({
             signInAndUpFeature: {
                 providers: [
-                    Github.init()
-                    Google.init()
-                    Facebook.init()
+                    Github.init(),
+                    Google.init(),
+                    Facebook.init(),
                 ]
             }
         }),

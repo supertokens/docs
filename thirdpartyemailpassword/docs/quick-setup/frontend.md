@@ -46,9 +46,9 @@ SuperTokens.init({
         ThirdPartyEmailPassword.init({
             signInAndUpFeature: {
                 providers: [
-                    Github.init()
-                    Google.init()
-                    Facebook.init()
+                    Github.init(),
+                    Google.init(),
+                    Facebook.init(),
                 ]
             }
         }),
