@@ -90,4 +90,4 @@ SuperTokens.init({
 
 **Make sure that the above configurations for "CLIENT_SECRET" are stored in your environment variables and not directly in your javascript files for security reasons.**
 
-More information about customizing third party configs can be found [here](/docs/nodejs/thirdparty/providers/about)
+More information about customizing third party configs can be found [here](/docs/nodejs/thirdparty/providers/google)
