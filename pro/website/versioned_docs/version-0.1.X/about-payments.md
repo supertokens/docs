@@ -6,7 +6,7 @@ original_id: about-payments
 ---
 
 # About Payments
-To continue using the pro version past the [trial period](./about-license-keys#trial-pro-license), you need to start a subscription. You can do so via the [dashboard](/dashboard). 
+To continue using the pro version past the [trial period](./about-license-keys#trial-pro-license), you need to start a subscription. You can do so via the [dashboard](/dashboard-saas). 
 
 As of now, we accept payments only in USD and INR. For Indian customers, we accept only credit cards. To enquire about support for other currencies or alternate methods of payment, please [contact us](mailto:team@supertokens.io).
 

@@ -23,7 +23,7 @@ supertokens start dev [options]
 supertokens start production [options]
 ```
 - By default, cookies here will have the `secure` flag. This means, you will need `https` by default.
-- To know about the date of expiration of your license key, please visit your [SuperTokens dashboard](/dashboard).
+- To know about the date of expiration of your license key, please visit your [SuperTokens dashboard](/dashboard-saas).
 
 ### Options
 - ```--with-space```

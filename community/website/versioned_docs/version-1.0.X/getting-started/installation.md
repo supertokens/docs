@@ -13,7 +13,7 @@ To get started with SuperTokens, you first need to install and run the SuperToke
 - Sign up by visiting [this page](/signup)
 - The sign up form asks you to choose a database - this is where your app's session data will be stored.
 
-### 2) Go to your [dashboard](/dashboard) to download SuperTokens core
+### 2) Go to your [dashboard](/dashboard-saas) to download SuperTokens core
 - For the listed app, select for which platform / OS and which version of SuperTokens you would like to download.
 - You can also change the default app name.
 - Click on the download button. This will start a zip download

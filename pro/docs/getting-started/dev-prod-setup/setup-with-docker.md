@@ -6,7 +6,7 @@ hide_title: true
 
 # Setup on premises with Docker
 
-### 1) Go to your [dashboard](/dashboard) to get the docker pull command
+### 1) Go to your [dashboard](/dashboard-saas) to get the docker pull command
 Copy the docker pull command and run it on your computer. This will download the docker image for the selected version and database. You will also need the license key displayed on your dashboard.
 
 ### 2) See Docker README.md and start the Docker container

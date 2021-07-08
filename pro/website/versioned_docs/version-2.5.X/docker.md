@@ -7,4 +7,4 @@ original_id: docker
 
 <div id="supertokens-docker-compatibility"></div>
 
-> You will need a license key to run this docker image. Please visit your [dashboard](/dashboard) to get one.
+> You will need a license key to run this docker image. Please visit your [dashboard](/dashboard-saas) to get one.

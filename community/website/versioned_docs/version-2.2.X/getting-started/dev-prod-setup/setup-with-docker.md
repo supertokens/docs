@@ -7,7 +7,7 @@ original_id: setup-with-docker
 
 # Setup for dev / production with Docker
 
-### 1) Go to your [dashboard](/dashboard) to get the docker image and license key ID
+### 1) Go to your [dashboard](/dashboard-saas) to get the docker image and license key ID
 - In the listed app, choose "Yes" for the question "Use docker?"
 - Copy the docker pull command and run it on your computer. This will download the docker image for the selected version
 - Copy the license key id. You will require to pass this as an environment variable in the `docker run` command.

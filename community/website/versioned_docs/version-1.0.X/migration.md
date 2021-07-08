@@ -14,7 +14,7 @@ There has been an architectural changes to how SuperTokens works. The new setup 
 
 ### 1) Sign up and install the SuperTokens http service (core)
 - Sign up [here](/signup)
-- Download the SuperTokens zip from your [dashboard](/dashboard)
+- Download the SuperTokens zip from your [dashboard](/dashboard-saas)
 
 ### 2) Install and configure the SuperTokens core
 - See the [installation instructions](./getting-started/installation#3-install-supertokens)

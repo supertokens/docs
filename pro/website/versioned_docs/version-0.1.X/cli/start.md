@@ -23,7 +23,7 @@ supertokens start dev [options]
 supertokens start production [options]
 ```
 - <b><font class="proFeatureText">You can start an unlimited number of parallel instances in this mode as long as you have a non-expired Pro or Pro trial license key.</font></b>
-- To know about the date of expiration of your license key, please visit your [SuperTokens dashboard](/dashboard).
+- To know about the date of expiration of your license key, please visit your [SuperTokens dashboard](/dashboard-saas).
 
 ### Options
 - ```--with-space```

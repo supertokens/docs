@@ -6,7 +6,7 @@ hide_title: true
 
 # Core configurations
 
-> If using our managed service, you can change these config values via our [dashboard](/dashboard).
+> If using our managed service, you can change these config values via our [dashboard](/dashboard-saas).
 
 ### Config file location
 The ```config.yaml``` file is located in the SuperTokens installation directory. By default, this location is:
