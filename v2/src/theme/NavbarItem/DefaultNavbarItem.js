@@ -31,7 +31,7 @@ function NavLink({
   const normalizedHref = useBaseUrl(href, {
     forcePrependBaseUrl: true,
   });
-  const isExternalLink = label && href && !isInternalUrl(href) && href !== "https://supertokens.io/blog";
+  const isExternalLink = label && href && !isInternalUrl(href);
   const isDropdownLink = activeClassName === dropdownLinkActiveClass;
   return (
     <Link

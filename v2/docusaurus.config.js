@@ -16,7 +16,8 @@ module.exports = {
     navbar: {
       logo: {
         src: 'img/logoWithNameLight.svg',
-        href: "https://supertokens.io"
+        href: "/",
+        target: "_blank"
       },
       items: [
         {
@@ -40,9 +41,10 @@ module.exports = {
           docsPluginId: 'change_me',
         },
         {
-          href: 'https://supertokens.io/blog',
+          href: '/blog',
           label: 'Blog',
           position: 'right',
+          target: "_blank"
         },
         {
           href: 'https://supertokens.io/discord',
