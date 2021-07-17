@@ -7,8 +7,10 @@ module.exports = {
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'throw',
   favicon: 'img/favicon.ico',
+  trailingSlash: false,
   themeConfig: {
     colorMode: {
+      defaultMode: "dark",
       disableSwitch: true,
     },
     navbar: {
