@@ -8,6 +8,13 @@ module.exports = {
   onBrokenMarkdownLinks: 'throw',
   favicon: 'img/favicon.ico',
   trailingSlash: false,
+  scripts: [
+    // for footer
+    "/scripts/docsScript.js"
+  ],
+  stylesheets: [
+    "https://fonts.googleapis.com/css?family=Rubik:300,400,500,700&amp;display=swap"
+  ],
   themeConfig: {
     colorMode: {
       defaultMode: "dark",
