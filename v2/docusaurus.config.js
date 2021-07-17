@@ -73,7 +73,7 @@ module.exports = {
           routeBasePath: 'docs/community',
           sidebarPath: require.resolve('./community/sidebars.js'),
           showLastUpdateTime: true,
-          editUrl: 'https://github.com/supertokens/docs/community/',
+          editUrl: 'https://github.com/supertokens/docs/v2/community/',
         },
         theme: {
           // this is applied to all docs.. not just the community one.
@@ -91,7 +91,7 @@ module.exports = {
         routeBasePath: 'docs/change_me',
         sidebarPath: require.resolve('./change_me/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/change_me/',
+        editUrl: 'https://github.com/supertokens/docs/v2/change_me/',
       },
     ],
   ],
