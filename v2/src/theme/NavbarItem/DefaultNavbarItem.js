@@ -4,12 +4,12 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React, {useState, useRef, useEffect} from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import {useLocation} from '@docusaurus/router';
-import {isSamePath} from '@docusaurus/theme-common';
+import { useLocation } from '@docusaurus/router';
+import { isSamePath } from '@docusaurus/theme-common';
 import IconExternalLink from '@theme/IconExternalLink';
 import isInternalUrl from '@docusaurus/isInternalUrl';
 const dropdownLinkActiveClass = 'dropdown__link--active';
@@ -31,27 +31,27 @@ function NavLink({
   const normalizedHref = useBaseUrl(href, {
     forcePrependBaseUrl: true,
   });
-  const isExternalLink = label && href && !isInternalUrl(href);
+  const isExternalLink = label && href && !isInternalUrl(href) && href !== "https://supertokens.io/blog";
   const isDropdownLink = activeClassName === dropdownLinkActiveClass;
   return (
     <Link
       {...(href
         ? {
-            href: prependBaseUrlToHref ? normalizedHref : href,
-          }
+          href: prependBaseUrlToHref ? normalizedHref : href,
+        }
         : {
-            isNavLink: true,
-            activeClassName,
-            to: toUrl,
-            ...(activeBasePath || activeBaseRegex
-              ? {
-                  isActive: (_match, location) =>
-                    activeBaseRegex
-                      ? new RegExp(activeBaseRegex).test(location.pathname)
-                      : location.pathname.startsWith(activeBaseUrl),
-                }
-              : null),
-          })}
+          isNavLink: true,
+          activeClassName,
+          to: toUrl,
+          ...(activeBasePath || activeBaseRegex
+            ? {
+              isActive: (_match, location) =>
+                activeBaseRegex
+                  ? new RegExp(activeBaseRegex).test(location.pathname)
+                  : location.pathname.startsWith(activeBaseUrl),
+            }
+            : null),
+        })}
       {...props}>
       {isExternalLink ? (
         <span>
@@ -70,7 +70,7 @@ function NavLink({
   );
 }
 
-function NavItemDesktop({items, position, className, ...props}) {
+function NavItemDesktop({ items, position, className, ...props }) {
   const dropdownRef = useRef(null);
   const dropdownMenuRef = useRef(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -125,7 +125,7 @@ function NavItemDesktop({items, position, className, ...props}) {
         {props.children ?? props.label}
       </NavLink>
       <ul ref={dropdownMenuRef} className="dropdown__menu">
-        {items.map(({className: childItemClassName, ...childItemProps}, i) => (
+        {items.map(({ className: childItemClassName, ...childItemProps }, i) => (
           <li key={i}>
             <NavLink
               onKeyDown={(e) => {
@@ -158,7 +158,7 @@ function NavItemMobile({
   ...props
 }) {
   const menuListRef = useRef(null);
-  const {pathname} = useLocation();
+  const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(
     () => !items?.some((item) => isSamePath(item.to, pathname)) ?? true,
   );
@@ -204,7 +204,7 @@ function NavItemMobile({
         style={{
           height: !collapsed ? menuListHeight : undefined,
         }}>
-        {items.map(({className: childItemClassName, ...childItemProps}, i) => (
+        {items.map(({ className: childItemClassName, ...childItemProps }, i) => (
           <li className="menu__list-item" key={i}>
             <NavLink
               activeClassName="menu__link--active"
@@ -219,7 +219,7 @@ function NavItemMobile({
   );
 }
 
-function DefaultNavbarItem({mobile = false, ...props}) {
+function DefaultNavbarItem({ mobile = false, ...props }) {
   const Comp = mobile ? NavItemMobile : NavItemDesktop;
   return <Comp {...props} />;
 }

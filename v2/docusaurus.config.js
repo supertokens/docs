@@ -13,7 +13,8 @@ module.exports = {
     },
     navbar: {
       logo: {
-        src: 'img/logoWithNameLight.svg'
+        src: 'img/logoWithNameLight.svg',
+        href: "https://supertokens.io"
       },
       items: [
         {
@@ -37,12 +38,12 @@ module.exports = {
           docsPluginId: 'change_me',
         },
         {
-          href: '/blog',
+          href: 'https://supertokens.io/blog',
           label: 'Blog',
           position: 'right',
         },
         {
-          href: '/discord',
+          href: 'https://supertokens.io/discord',
           label: 'Ask Questions',
           position: 'right',
         },
@@ -52,47 +53,6 @@ module.exports = {
           position: 'right',
         },
       ],
-    },
-    footer: {
-      style: 'dark',
-      links: [
-        {
-          title: 'Docs',
-          items: [
-            {
-              label: 'Tutorial',
-              to: '/docs/community/intro',
-            },
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
-            {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-            },
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'Twitter',
-              href: 'https://twitter.com/docusaurus',
-            },
-          ],
-        },
-        {
-          title: 'More',
-          items: [
-            {
-              label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
-            },
-          ],
-        },
-      ],
-      copyright: `Copyright © ${new Date().getFullYear()} SuperTokens, Inc.`,
     },
     prism: {
       theme: require('prism-react-renderer/themes/dracula'),
