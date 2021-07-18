@@ -7,7 +7,7 @@ module.exports = function myPlugin(context, options) {
             if (process.env.MODE !== "production") {
                 return {};
             }
-            console.log("ADDING REACT BUNDLE FOR FOOTER AND ANALYTICS");
+            console.log("ADDING supertokens.io REACT BUNDLE");
             return {
                 postBodyTags: [
                     {

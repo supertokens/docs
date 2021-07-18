@@ -96,6 +96,14 @@ module.exports = {
       }
     ],
     [
+      // loads the supertokens.io react bundle for footer and analytics etc..
+      "./src/plugins/copyDocs",
+      {
+        // used for copying docs content via the <-COPY DOCS-> directive
+        id: "copy-docs",
+      }
+    ],
+    [
       '@docusaurus/plugin-content-docs',
       {
         id: 'change_me',
