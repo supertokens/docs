@@ -1,0 +1,12 @@
+---
+sidebar_position: 5
+id: compatibility-table
+title: SDK Compatibility Table
+hide_title: true
+---
+
+:::important
+This page helps you find the right version of an SDK / core given your tech stack. If you are just starting out, **you do NOT need to use this page**, and instead, please visit the "Getting Started" section
+:::
+
+<div id="supertokens-compatibility-chart"></div>

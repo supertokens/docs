@@ -1,0 +1,35 @@
+---
+sidebar_position: 6
+id: sdks
+title: SDK Reference
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./community/sdks.md -->
+
+# SDK Reference
+
+:::important
+- This section is only for detailed SDK reference. This section will NOT provide a step by step guide.
+- For a step by step guide to implementing SuperTokens, please [pick a recipe](/docs/community/recipes) and follow the setup instructions in there.
+:::
+
+
+## NodeJS (All features supported)
+
+See the [supertokens-node reference documentation](/docs/nodejs/installation) for more information.
+
+## ReactJS (All features supported)
+
+See the [supertokens-auth-react reference documentation](/docs/auth-react/installation) for more information.
+
+## Vanilla JS (Only supports session management - i.e. no login UI)
+
+If you want to only implement session management with SuperTokens, then you can use any frontend framework (React, Vue, Angular etc..) along with our [supertokens-website](/docs/website/installation) SDK.
+
+## Other frameworks
+- For other frontend frameworks / mobile apps, you can build your own UI that talks to your backend APIs exposed via our SDK.
+- For other backend frameworks, you can build your own APIs that use the SuperTokens Core. 
+
+Visit the [API reference page](./apis) for more information.
