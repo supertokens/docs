@@ -22,7 +22,7 @@ You should directly interact with the APIs if:
 Please make sure that you have seen the [architecture page](/docs/community/architecture).
 
 ## Core driver interface
-### [Open API Spec](https://app.swaggerhub.com/apis/supertokens/CDI)
+### [See Open API Spec Here](https://app.swaggerhub.com/apis/supertokens/CDI)
 This is the API spec used by the backend SDK to query the SuperTokens Core.
 
 To know which version you should see:
@@ -33,7 +33,7 @@ To know which version you should see:
 - In there, you will see an array of `X.Y` values, pick the latest one, and see the API spec for that.
 
 ## Frontend driver interface
-### [Open API Spec](https://app.swaggerhub.com/apis/supertokens/FDI)
+### [See Open API Spec Here](https://app.swaggerhub.com/apis/supertokens/FDI)
 This is the API spec used by the frontend SDK to query the backend SDK APIs.
 
 To know which version you should see:
