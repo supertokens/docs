@@ -1,5 +1,4 @@
 ---
-sidebar_position: 7
 id: apis
 title: API Reference
 hide_title: true

@@ -1,5 +1,4 @@
 ---
-sidebar_position: 5
 id: compatibility-table
 title: SDK Compatibility Table
 hide_title: true

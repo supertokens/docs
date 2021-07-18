@@ -1,5 +1,4 @@
 ---
-sidebar_position: 3
 id: recipes
 title: Getting Started / Recipes
 hide_title: true

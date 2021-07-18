@@ -1,5 +1,4 @@
 ---
-sidebar_position: 6
 id: sdks
 title: SDK Reference
 hide_title: true

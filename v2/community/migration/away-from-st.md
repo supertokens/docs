@@ -1,5 +1,4 @@
 ---
-sidebar_position: 2
 id: away-from-st
 title: Migrating away from SuperTokens
 hide_title: true
