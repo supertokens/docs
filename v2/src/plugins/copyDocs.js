@@ -7,7 +7,6 @@ module.exports = function (context, opts) {
         name: 'copy-docs',
 
         async loadContent() {
-            console.log("RUNNING COPY DOCS...");
             return new Promise((res, rej) => {
                 walk(__dirname + "/../../", async (err, results) => {
                     if (err) {
