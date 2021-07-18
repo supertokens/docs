@@ -17,3 +17,10 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 4. Makes changes to the `.md` or `.mdx` files, and see the changes on your browser instantly.
 5. Issue a PR to our repo.
 6. **NOTE**: If you are working on a docs that has versioning, you will need to suffix the docs name in url with `/next/` to see your changes. For example, if you are working on `community` docs and made changes to the `introduction` page, then you will need to visit: `http://localhost:3000/docs/community/next/introduction` instead of `http://localhost:3000/docs/community/introduction` to see your changes.
+
+## Building for deployment
+- This only works if have access to the `supertokens-backend-website` and `main-website` repo.
+- Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
+- To build all docs, run the `./buildAllDocs` command.
+- To only build `v2` docs, go into `v2` and run `npm run build`. If this throws an error and you still want to finish building it, then run `npm run build-ignore-errors`.
+- To build non `v2` docs, run `./buildDocs <folder name>` command.
