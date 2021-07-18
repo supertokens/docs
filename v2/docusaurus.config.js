@@ -8,10 +8,6 @@ module.exports = {
   onBrokenMarkdownLinks: 'throw',
   favicon: 'img/favicon.ico',
   trailingSlash: false,
-  scripts: [
-    // for footer
-    "/scripts/docsScript.js"
-  ],
   stylesheets: [
     "https://fonts.googleapis.com/css?family=Rubik:300,400,500,700&amp;display=swap"
   ],
@@ -93,6 +89,13 @@ module.exports = {
   ],
   plugins: [
     [
+      // loads the supertokens.io react bundle for footer and analytics etc..
+      "./src/plugins/reactBundle",
+      {
+        id: "react-bundle",
+      }
+    ],
+    [
       '@docusaurus/plugin-content-docs',
       {
         id: 'change_me',
@@ -102,6 +105,6 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
       },
-    ],
+    ]
   ],
 };
