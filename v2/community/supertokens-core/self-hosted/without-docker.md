@@ -10,7 +10,7 @@ hide_title: true
 # Self-hosted without Docker
 
 ### 1) Install SuperTokens 🛠️
-Go to the [open source download page](/use-oss), scroll to the "Download the binary" section, choose your backend framework and database, and download the SuperTokens zip file for your OS. Once downloaded, extract the zip and run the install commands.
+Go to the [open source download page](https://supertokens.io/use-oss), scroll to the "Download the binary" section, choose your backend framework and database, and download the SuperTokens zip file for your OS. Once downloaded, extract the zip and run the install commands.
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Linux-->

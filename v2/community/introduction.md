@@ -19,7 +19,7 @@ hide_title: true
 - **GoLang** and **Python** based frameworks (Flask, FastAPI and Django) are currently in development and will be launched early August, 2021.
 - **PHP** and **Java** based frameworks (Laravel, Spring Boot) are currently not supported. 
 
-For unsupported frameworks (such as Laravel and Spring), please submit your request on the [product roadmap page](/product-roadmap). Alternatively, you can build and contribute these SDKs with our help. Reach out to us on [Discord](/discord).
+For unsupported frameworks (such as Laravel and Spring), please submit your request on the [product roadmap page](https://supertokens.io/product-roadmap). Alternatively, you can build and contribute these SDKs with our help. Reach out to us on [Discord](https://supertokens.io/discord).
 
 ### On the frontend:
 - **ReactJS**: We support all current functionality (signup, manage auth tokens, social login etc).

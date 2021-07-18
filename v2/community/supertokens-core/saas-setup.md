@@ -10,7 +10,7 @@ hide_title: true
 # Managed Service
 
 ## Creating a development environment ✨
-- First, please [sign up](/signup)
+- First, please [sign up](https://supertokens.io/auth)
 - Select a region and follow the guided steps until you see a dashboard like:
    <img width="500px" src="/docs/static/assets/emailpassword/saas-dev.png" />
 
