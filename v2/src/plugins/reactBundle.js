@@ -29,6 +29,13 @@ module.exports = function myPlugin(context, options) {
                             src: "/static/antcs.js",
                             type: "text/javascript"
                         }
+                    },
+                    {
+                        tagName: "script",
+                        attributes: {
+                            src: "/static/drift.js",
+                            type: "text/javascript"
+                        }
                     }
                 ]
             };
