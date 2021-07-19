@@ -20,8 +20,7 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 
 ## Changing SEO meta tags
 1. This is normally done via google sheets.
-2. But if there is a meta tag that has the current URL (like og:url or twitter:url), then you need to add that in the node process backend as a tag that should NOT be removed from the html, and should be removed from the meta data fetched from google sheets.
-3. Then you need to go to v2 > src > themes > Layout > index.js and add the custom meta tag.
+2. But for docusaurus v2, you need to go to v2 > src > themes > Layout > index.js and add the custom meta tags there.
 
 ## Building for deployment
 - This only works if have access to the `supertokens-backend-website` and `main-website` repo.
