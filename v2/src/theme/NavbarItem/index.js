@@ -80,4 +80,4 @@ export default function NavbarItem({ type, ...props }) {
   return <NavbarItemComponent {...newProps} />;
 }
 
-const DO_NOT_SHOW_GITHUB_BUTTON = ["emailpassword"];
+const DO_NOT_SHOW_GITHUB_BUTTON = ["emailpassword", "thirdparty", "thirdpartyemailpassword", "session"];

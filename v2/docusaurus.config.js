@@ -117,6 +117,39 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'thirdparty',
+        path: 'thirdparty',
+        routeBasePath: 'docs/thirdparty',
+        sidebarPath: require.resolve('./thirdparty/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/v2/',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'thirdpartyemailpassword',
+        path: 'thirdpartyemailpassword',
+        routeBasePath: 'docs/thirdpartyemailpassword',
+        sidebarPath: require.resolve('./thirdpartyemailpassword/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/v2/',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'session',
+        path: 'session',
+        routeBasePath: 'docs/session',
+        sidebarPath: require.resolve('./session/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/v2/',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'change_me',
         path: 'change_me',
         routeBasePath: 'docs/change_me',
