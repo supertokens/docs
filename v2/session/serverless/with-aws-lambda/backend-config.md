@@ -1,0 +1,53 @@
+---
+id: backend-config
+title: 2. Backend config
+hide_title: true
+---
+
+# 2. Backend config
+
+## 1) Install supertokens package
+```bash
+npm i supertokens-node
+```
+
+## 2) Create a configuration file (`config.js`)
+- Create a `config.js` file in the root directory of your project.
+- An example of this file can be found [here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-aws-lambda/backend/config.js).
+
+
+## 3) Create a backend config function
+This function will return the config object used to configure `supertokens-node`:
+- All configuration options can be found [here](/docs/nodejs/session/init).
+- You will need to replace the `supertokens` object's `connectionURI` with the location of your core. You may also need to add an `apiKey`.
+- Notice the `apiGatewayPath` property in the `appInfo` config. The value of this should be the same as what you set on the frontend.
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--config.js-->
+```js
+
+let Session = reqiure('supertokens-node/recipe/session')
+
+function getBackendConfig() {
+  return {
+    supertokens: {
+      connectionURI: 'https://try.supertokens.io',
+    },
+    appInfo: {
+      // learn more about this on https://supertokens.io/docs/session/appinfo
+      appName: "YOUR APP NAME", // Example: "SuperTokens",
+      apiDomain: "YOUR API DOMAIN", // This should be same as the domain name of your API Gateway. Example:  https://0ktsu4mmb6.execute-api.us-east-1.amazonaws.com
+      websiteDomain: "YOUR WEBSITE DOMAIN", // Example: "http://localhost:8080",
+      apiGatewayPath: "/dev" // same as what's set on the frontend config
+    },
+    recipeList: [
+      Session.init(),
+    ],
+    isInServerlessEnv: true,
+  }
+}
+
+module.exports.getBackendConfig = getBackendConfig;
+
+```
+<!--END_DOCUSAURUS_CODE_TABS-->

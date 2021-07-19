@@ -1,0 +1,94 @@
+---
+id: setting-up-backend
+title: 3. Adding auth APIs
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/nextjs/setting-up-backend.md -->
+
+# 3. Adding auth APIs
+
+We will add all the backend APIs for auth on `/api/auth`. This can be changed by setting the `apiBasePath` property in the `appInfo` object in the `supertokensConfig.js` file. For the rest of this page, we will assume you are using `/api/auth`.
+
+## 1) Create the `pages/api/auth/[[...path]].js` page
+- Be sure to create the `auth` folder in the `pages/api/` folder.
+- `[[...path]].js` will use the middleware exposed by `supertokens-node` which exposes all the APIs like sign in, sign up etc..
+- An example of this can be found [here](https://github.com/supertokens/next.js/blob/canary/examples/with-supertokens/pages/api/auth/%5B%5B...path%5D%5D.js).
+
+## 2) Add the supertokens middleware:
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--pages/api/auth/[[...path]].js-->
+```js
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import supertokens from 'supertokens-node'
+import * as SuperTokensConfig from '../../../config/supertokensConfig'
+import NextCors from "nextjs-cors";
+
+supertokens.init(SuperTokensConfig.backendConfig())
+
+export default async function superTokens(req, res) {
+
+  // NOTE: We need CORS only if we are querying the APIs from a different origin
+  await NextCors(req, res, {
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+    origin: "TODO",
+    credentials: true,
+    allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+  });
+
+  await superTokensNextWrapper(
+    async (next) => {
+      await supertokens.middleware()(req, res, next)
+    },
+    req,
+    res
+  )
+  if (!res.writableEnded) {
+    res.status(404).send('Not found')
+  }
+}
+```
+<!--pages/api/auth/[[...path]].ts-->
+```js
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { NextApiRequest, NextApiResponse } from 'next'
+import supertokens from 'supertokens-node'
+import * as SuperTokensConfig from '../../../config/supertokensConfig'
+import NextCors from "nextjs-cors";
+
+supertokens.init(SuperTokensConfig.backendConfig())
+
+export default async function superTokens(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+
+  // NOTE: We need CORS only if we are querying the APIs from a different origin
+  await NextCors(req, res, {
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+    origin: "TODO",
+    credentials: true,
+    allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+  });
+
+  await superTokensNextWrapper(
+    async (next) => {
+      await supertokens.middleware()(req, res, next)
+    },
+    req,
+    res
+  )
+  if (!res.writableEnded) {
+    res.status(404).send('Not found')
+  }
+}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+- Notice that we called `supertokens.init` above as well. This is because this is run in a serverless function and before using any supertokens-node function, we must call the `supertokens.init` function.
+
+## 3) Use the login widget
+If you are now able to sign in or sign up, this means the backend setup is done correctly! If not, please feel free to ask questions on [Discord](https://supertokens.io/discord)
