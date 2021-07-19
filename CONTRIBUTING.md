@@ -18,6 +18,11 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 5. Issue a PR to our repo.
 6. **NOTE**: If you are working on a docs that has versioning, you will need to suffix the docs name in url with `/next/` to see your changes. For example, if you are working on `community` docs and made changes to the `introduction` page, then you will need to visit: `http://localhost:3000/docs/community/next/introduction` instead of `http://localhost:3000/docs/community/introduction` to see your changes.
 
+## Changing SEO meta tags
+1. This is normally done via google sheets.
+2. But if there is a meta tag that has the current URL (like og:url or twitter:url), then you need to add that in the node process backend as a tag that should NOT be removed from the html, and should be removed from the meta data fetched from google sheets.
+3. Then you need to go to v2 > src > themes > Layout > index.js and add the custom meta tag.
+
 ## Building for deployment
 - This only works if have access to the `supertokens-backend-website` and `main-website` repo.
 - Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
