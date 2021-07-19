@@ -36,7 +36,7 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
             plugins: [],
             drivers: [],
             frontends: [],
-            selectedPlugin: "",
+            selectedPlugin: "postgresql",
             selectedDriver: "",
             selectedFrontend: "",
             compatibilityData: {
@@ -79,14 +79,6 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
                     Select a backend SDK
                 </div>
 
-                <div
-                    style={{
-                        marginTop: "20px",
-                        fontSize: "14px",
-                    }}>
-                    The library that helps your API communicate with the SuperTokens service (For example: supertokens-node).
-                </div>
-
                 <select
                     onChange={this.onDriverSelected}
                     value={this.state.selectedDriver}>
@@ -112,7 +104,7 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
                 className="compatibility-select-container">
                 <div
                     className="compatibility-select-title">
-                    Select a plugin
+                    Select a database
                 </div>
 
                 <div
@@ -120,7 +112,7 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
                         marginTop: "20px",
                         fontSize: "14px",
                     }}>
-                    The module that SuperTokens core uses to store data in the database (For example: mysql).
+                    If using our managed service, please select PostgreSQL
                 </div>
 
                 <select
@@ -149,14 +141,6 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
                 <div
                     className="compatibility-select-title">
                     Select a frontend SDK
-                </div>
-
-                <div
-                    style={{
-                        marginTop: "20px",
-                        fontSize: "14px",
-                    }}>
-                    The library you use in your app/website (For example: supertokens-ios).
                 </div>
 
                 <select
@@ -240,7 +224,7 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
                 className="compatibility-table-section-container">
                 <div
                     className="compatibility-table">
-                    {this.getTableHeader("SuperTokens core version", `${displayName} SDK version`, "", "")}
+                    {this.getTableHeader("supertokens-core", `${displayName}`, "", "")}
                     {
                         Object.keys(this.state.compatibilityData.coreToDriver).map((key, index) => {
                             let current = this.state.compatibilityData.coreToDriver[key];
@@ -379,7 +363,7 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
                 className="compatibility-table-section-container">
                 <div
                     className="compatibility-table">
-                    {this.getTableHeader(`${sdkDisplayName} SDK version`, `${displayName} SDK version`, "", "")}
+                    {this.getTableHeader(`${sdkDisplayName}`, `${displayName}`, "", "")}
                     {
                         Object.keys(this.state.compatibilityData.driverToFrontend).map((key, index) => {
                             let current = this.state.compatibilityData.driverToFrontend[key];
@@ -443,8 +427,8 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
         return (
             <div
                 style={{ width: "100%" }}>
-                {this.getCoreToPlugin()}
-                {this.getDivider()}
+                {/* {this.getCoreToPlugin()} */}
+                {/* {this.getDivider()} */}
                 {this.getCoreToDriver()}
                 {this.getDivider()}
                 {this.getDriverToFrontend()}
@@ -526,17 +510,8 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
             <div
                 id="compatibility-root">
                 {this.getFrameworkDropdown()}
-                {this.getDatabaseDropdown()}
+                {/* {this.getDatabaseDropdown()} */}
                 {this.getFrontendDropdown()}
-
-                <div
-                    style={{
-                        fontSize: "14px",
-                        marginTop: "20px",
-                    }}>
-                    Run the <code style={{ fontWeight: 500 }}>supertokens --version</code> command to list your current SuperTokens <span style={{ fontWeight: 500 }}>plugin name</span>, <span style={{ fontWeight: 500 }}>plugin version</span> and <span style={{ fontWeight: 500 }}>core version</span>
-                </div>
-
 
                 {
                     this.state.shouldShowCompatibility &&
