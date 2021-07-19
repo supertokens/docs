@@ -41,6 +41,16 @@ module.exports = {
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
+          docsPluginId: 'nodejs',
+        },
+        {
+          type: 'docsVersionDropdown',
+          //// Optional
+          position: 'left',
+          // Add additional dropdown items at the beginning/end of the dropdown.
+          dropdownItemsBefore: [],
+          // Do not add the link active class when browsing docs.
+          dropdownActiveClassDisabled: true,
           docsPluginId: 'change_me',
         },
         {
@@ -143,6 +153,17 @@ module.exports = {
         path: 'session',
         routeBasePath: 'docs/session',
         sidebarPath: require.resolve('./session/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/v2/',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'nodejs',
+        path: 'nodejs',
+        routeBasePath: 'docs/nodejs',
+        sidebarPath: require.resolve('./nodejs/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
       },

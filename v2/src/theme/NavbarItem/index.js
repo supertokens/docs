@@ -72,6 +72,11 @@ export default function NavbarItem({ type, ...props }) {
       return null;
     }
     let toReplace = currDocs === "community" ? "core" : currDocs;
+
+    if (toReplace === "nodejs") {
+      toReplace = "node";
+    }
+
     newProps = {
       ...props,
       href: props.href.replace("to_replace", toReplace),
