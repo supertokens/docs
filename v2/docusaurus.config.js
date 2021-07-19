@@ -106,6 +106,17 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'emailpassword',
+        path: 'emailpassword',
+        routeBasePath: 'docs/emailpassword',
+        sidebarPath: require.resolve('./emailpassword/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/v2/',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'change_me',
         path: 'change_me',
         routeBasePath: 'docs/change_me',
