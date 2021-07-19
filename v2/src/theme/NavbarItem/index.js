@@ -63,6 +63,22 @@ export default function NavbarItem({ type, ...props }) {
     if (versions.length === 1) {
       return null;
     }
+
+    if (LINK_TO_OLDER_VERSIONS.filter(i => i === currDocs).length === 1) {
+      newProps = {
+        ...newProps,
+        dropdownItemsAfter: [
+          ...newProps.dropdownItemsAfter,
+          {
+            isNavLink: true,
+            label: "Older versions",
+            to: `https://supertokens.io/docs/${currDocs}/versions`,
+            isActive: () => { },
+            onClick: () => { }
+          }
+        ]
+      }
+    }
   }
 
 
@@ -95,3 +111,5 @@ export default function NavbarItem({ type, ...props }) {
 }
 
 const DO_NOT_SHOW_GITHUB_BUTTON = ["emailpassword", "thirdparty", "thirdpartyemailpassword", "session"];
+
+const LINK_TO_OLDER_VERSIONS = ["nodejs"];
