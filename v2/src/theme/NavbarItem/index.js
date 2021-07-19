@@ -28,6 +28,8 @@ const NavbarItemComponents = {
   doc: () =>
     // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
     require('@theme/NavbarItem/DocNavbarItem').default,
+
+  recipeLabel: () => require("./RecipeLabelItem").default,
 };
 
 const getNavbarItemComponent = (type = 'default') => {
@@ -73,6 +75,13 @@ export default function NavbarItem({ type, ...props }) {
     newProps = {
       ...props,
       href: props.href.replace("to_replace", toReplace),
+    }
+  }
+
+  // show recipe label only if the current docs matches the label
+  if (type === "recipeLabel") {
+    if (props.docsPluginId !== currDocs) {
+      return null;
     }
   }
 
