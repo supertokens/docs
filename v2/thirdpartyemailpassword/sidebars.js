@@ -38,7 +38,7 @@ module.exports = {
         "common-customizations/sign-out",
         {
           type: 'category',
-          label: 'SignUp Form',
+          label: 'Sign Up Form',
           items: [
             "common-customizations/signup-form/about",
             "common-customizations/signup-form/adding-fields",
@@ -51,7 +51,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "SignIn Form",
+          label: "Sign In Form",
           items: [
             "common-customizations/signin-form/about",
             "common-customizations/signin-form/field-validators",
