@@ -28,7 +28,11 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
    - For backend language: `backendsdk`
    - For nodeJS framework: `nodejs-framework`
    - For frontend languages: `frontendsdk`
-- If there are custom wrapper components made for a type of code tab, please use that. You can find them in v2 > src > components > tabs folder. 
+- If there are custom wrapper components made for a type of code tab, please use that. You can find them in v2 > src > components > tabs folder:
+   - For backend: `import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"`
+   - For nodejs framework: `import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs"`
+   - For frontend: `import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"`
+- In recipe docs, we must always use code tabs that display all options. In case there is a missing child, we will show a not supported message under that.
 - Sometimes the context of the code being displayed is specific for a framework. For example, in the auth-react SDK, we will only want to show ReactJS code. In this case, you do not want to use code tabs, and instead, want to use code title.
 
 ### Heading guide
