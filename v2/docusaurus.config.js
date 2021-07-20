@@ -51,6 +51,26 @@ module.exports = {
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
+          docsPluginId: 'auth-react',
+        },
+        {
+          type: 'docsVersionDropdown',
+          //// Optional
+          position: 'left',
+          // Add additional dropdown items at the beginning/end of the dropdown.
+          dropdownItemsBefore: [],
+          // Do not add the link active class when browsing docs.
+          dropdownActiveClassDisabled: true,
+          docsPluginId: 'website',
+        },
+        {
+          type: 'docsVersionDropdown',
+          //// Optional
+          position: 'left',
+          // Add additional dropdown items at the beginning/end of the dropdown.
+          dropdownItemsBefore: [],
+          // Do not add the link active class when browsing docs.
+          dropdownActiveClassDisabled: true,
           docsPluginId: 'change_me',
         },
         {
@@ -164,6 +184,28 @@ module.exports = {
         path: 'nodejs',
         routeBasePath: 'docs/nodejs',
         sidebarPath: require.resolve('./nodejs/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/v2/',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'auth-react',
+        path: 'auth-react',
+        routeBasePath: 'docs/auth-react',
+        sidebarPath: require.resolve('./auth-react/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/v2/',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'website',
+        path: 'website',
+        routeBasePath: 'docs/website',
+        sidebarPath: require.resolve('./website/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
       },

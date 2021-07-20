@@ -112,4 +112,4 @@ export default function NavbarItem({ type, ...props }) {
 
 const DO_NOT_SHOW_GITHUB_BUTTON = ["emailpassword", "thirdparty", "thirdpartyemailpassword", "session"];
 
-const LINK_TO_OLDER_VERSIONS = ["nodejs"];
+const LINK_TO_OLDER_VERSIONS = ["nodejs", "auth-react", "website"];
