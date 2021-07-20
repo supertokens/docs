@@ -22,6 +22,32 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 1. This is normally done via google sheets.
 2. But for docusaurus v2, you need to go to v2 > src > themes > Layout > index.js and add the custom meta tags there.
 
+## Writing guide
+### Code tabs
+- Depending on the options you want to show in the tabs / sub tab, please use the correct `groupId` so that tab selections are synced. Some `groupIds`:
+   - For backend language: `backendsdk`
+   - For nodeJS framework: `nodejs-framework`
+   - For frontend languages: `frontendsdk`
+- If there are custom wrapper components made for a type of code tab, please use that. You can find them in v2 > src > components > tabs folder. 
+- Sometimes the context of the code being displayed is specific for a framework. For example, in the auth-react SDK, we will only want to show ReactJS code. In this case, you do not want to use code tabs, and instead, want to use code title.
+
+### Heading guide
+- The main title of the page (if present) should be the only element in H1.
+- The other parts of the page should be divided such that users can see their sections in the correct heirarchy to the right of the page.
+- In some pages (in the sdk level docs), the page starts with a code snippet (for function signature). Those should start with H2
+
+### Showing an important / caution / danger / note message:
+- Docusaurus has several adornments that can help with this. You can find this list in v2 > change_me > introduction.mdx
+
+### Building custom react components:
+- These should go in v2 > src > components > <some-folder>
+
+### Linking to other parts of supertokens.io site:
+- For non docs links, you need to use `https://supertokens.io/*`. Otherwise the build process will fail (cause of broken link). This also adds a limitation that those links can be seen / tested only in production.
+
+### Creating a new docs:
+- Please see v2 > HOW_TO_NEW_DOCS.md
+
 ## Building for deployment
 - This only works if have access to the `supertokens-backend-website` and `main-website` repo.
 - Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.

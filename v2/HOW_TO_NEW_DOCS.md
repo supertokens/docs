@@ -6,3 +6,12 @@
 - If the github icon is not to be shown in the docs, modify `DO_NOT_SHOW_GITHUB_BUTTON` in `src/theme/NavbarItem/index.js`
 - If creating a new recipe, to add the recipe label in the nav bar, edit `RECIPE_LABELS` in src > theme > Navbar > index.js to add info about the new recipe.
 - If the new doc needs to be linked with older versions of the docs, then add it to the `LINK_TO_OLDER_VERSIONS` in `src/theme/NavbarItem/index.js`
+
+## Post creation
+- If you are copying docs from an existing docusaurus v1 project, then:
+   - Go into the new docs folder and run `for file in $(find . -name '*.md'); do mv $file $(echo "$file" | sed 's|.md|.mdx|g'); done`. This will change all `.md` to `.mdx`.
+   - Do a global replace in the new docs project to fix all `COPY DOCS` paths.
+      - The path should be valid
+      - They should point to `.mdx` files and not `.md`
+   - Edit the sidebar.json file
+   - Fix any other build errors.
