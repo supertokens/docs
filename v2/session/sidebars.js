@@ -22,6 +22,7 @@ module.exports = {
           items: [
             "quick-setup/database-setup/mysql",
             "quick-setup/database-setup/postgresql",
+            "quick-setup/database-setup/mongodb",
             "quick-setup/database-setup/rename-database-tables"
           ],
         }
