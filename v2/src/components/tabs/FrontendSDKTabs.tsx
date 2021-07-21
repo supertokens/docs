@@ -35,7 +35,7 @@ function DefaultVanillaJSTabItem() {
                                 </path>
                             </svg>
                         </span>
-                        caution
+                        not supported
                     </h5>
                 </div>
                 <div className="admonition-content">
