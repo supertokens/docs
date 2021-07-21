@@ -84,7 +84,6 @@ module.exports = {
       type: 'category',
       label: 'Thirdparty',
       items: [
-        "thirdparty/about",
         "thirdparty/init",
         {
           type: 'category',
