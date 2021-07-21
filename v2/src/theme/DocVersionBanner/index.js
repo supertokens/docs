@@ -8,10 +8,10 @@ import React from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Link from '@docusaurus/Link';
 import Translate from '@docusaurus/Translate';
-import {useActivePlugin, useDocVersionSuggestions} from '@theme/hooks/useDocs';
-import {useDocsPreferredVersion} from '@docusaurus/theme-common';
+import { useActivePlugin, useDocVersionSuggestions } from '@theme/hooks/useDocs';
+import { useDocsPreferredVersion } from '@docusaurus/theme-common';
 
-function UnreleasedVersionLabel({siteTitle, versionMetadata}) {
+function UnreleasedVersionLabel({ siteTitle, versionMetadata }) {
   return (
     <Translate
       id="theme.docs.versions.unreleasedVersionLabel"
@@ -21,13 +21,13 @@ function UnreleasedVersionLabel({siteTitle, versionMetadata}) {
         versionLabel: <b>{versionMetadata.label}</b>,
       }}>
       {
-        'This is unreleased documentation for {siteTitle} {versionLabel} version.'
+        'You are viewing the documentation of an unreleased version of this SDK.'
       }
     </Translate>
   );
 }
 
-function UnmaintainedVersionLabel({siteTitle, versionMetadata}) {
+function UnmaintainedVersionLabel({ siteTitle, versionMetadata }) {
   return (
     <Translate
       id="theme.docs.versions.unmaintainedVersionLabel"
@@ -37,7 +37,7 @@ function UnmaintainedVersionLabel({siteTitle, versionMetadata}) {
         versionLabel: <b>{versionMetadata.label}</b>,
       }}>
       {
-        'This is documentation for {siteTitle} {versionLabel}, which is no longer actively maintained.'
+        'You are viewing the documentation of an older version of this SDK.'
       }
     </Translate>
   );
@@ -54,7 +54,7 @@ function BannerLabel(props) {
   return <BannerLabelComponent {...props} />;
 }
 
-function LatestVersionSuggestionLabel({versionLabel, to, onClick}) {
+function LatestVersionSuggestionLabel({ versionLabel, to, onClick }) {
   return (
     <Translate
       id="theme.docs.versions.latestVersionSuggestionLabel"
@@ -80,18 +80,18 @@ function LatestVersionSuggestionLabel({versionLabel, to, onClick}) {
   );
 }
 
-function DocVersionBannerEnabled({versionMetadata}) {
+function DocVersionBannerEnabled({ versionMetadata }) {
   const {
-    siteConfig: {title: siteTitle},
+    siteConfig: { title: siteTitle },
   } = useDocusaurusContext();
-  const {pluginId} = useActivePlugin({
+  const { pluginId } = useActivePlugin({
     failfast: true,
   });
 
   const getVersionMainDoc = (version) =>
     version.docs.find((doc) => doc.id === version.mainDocId);
 
-  const {savePreferredVersionName} = useDocsPreferredVersion(pluginId);
+  const { savePreferredVersionName } = useDocsPreferredVersion(pluginId);
   const {
     latestDocSuggestion,
     latestVersionSuggestion,
@@ -116,7 +116,7 @@ function DocVersionBannerEnabled({versionMetadata}) {
   );
 }
 
-function DocVersionBanner({versionMetadata}) {
+function DocVersionBanner({ versionMetadata }) {
   if (versionMetadata.banner === 'none') {
     return <></>;
   } else {
