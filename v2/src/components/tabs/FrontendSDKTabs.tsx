@@ -14,17 +14,3 @@ export default function FrontendSDKTabs(props) {
         </Tabs>
     );
 }
-
-export function FrontendRoutingTabs(props) {
-    return (
-        <Tabs
-            groupId="frontendrouting"
-            defaultValue="with-react-router-dom"
-            values={[
-                { label: 'With react-router-dom', value: 'with-react-router-dom' },
-                { label: 'With custom routing', value: 'with-custom-routing' },
-            ]}>
-            {props.children}
-        </Tabs>
-    );
-}
