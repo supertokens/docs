@@ -41,7 +41,7 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 - In some pages (in the sdk level docs), the page starts with a code snippet (for function signature). Those should start with H2
 
 ### Showing an important / caution / danger / note message:
-- Docusaurus has several adornments that can help with this. You can find this list in v2 > change_me > introduction.mdx
+- Docusaurus has several admonitions that can help with this. You can find this list in v2 > change_me > introduction.mdx
 
 ### Building custom react components:
 - These should go in v2 > src > components > <some-folder>
