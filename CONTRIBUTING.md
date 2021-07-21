@@ -52,6 +52,14 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 ### Creating a new docs:
 - Please see v2 > HOW_TO_NEW_DOCS.md
 
+## Swizzling components:
+- Docusaurus allows "swizzling" of their components so that they can be modified as per our needs. Once a component is swizzled, it's placed in the v2 > src > theme folder, and can be edited freely.
+- To swizzle a component:
+   - Open `docusaurus.config.js` and comment out `"./src/plugins/reactBundle"` and `"./src/plugins/copyDocs"` plugins fully.
+   - Run the swizzle command: `npx docusaurus swizzle --danger "@docusaurus/theme-classic" "TODO: COMPONENT_NAME"`
+   - Uncomment the two plugins that have been commented.
+- To know a list of components that can be swizzled, run `npx docusaurus swizzle --danger "@docusaurus/theme-classic" "App"`
+
 ## Building for deployment
 - This only works if have access to the `supertokens-backend-website` and `main-website` repo.
 - Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
