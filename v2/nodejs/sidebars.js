@@ -6,7 +6,6 @@ module.exports = {
       type: 'category',
       label: 'Emailpassword',
       items: [
-        "emailpassword/about",
         "emailpassword/init",
         "emailpassword/signup",
         "emailpassword/signin",
