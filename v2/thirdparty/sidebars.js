@@ -39,7 +39,6 @@ module.exports = {
           type: 'category',
           label: 'Sign In And Up',
           items: [
-            "common-customizations/sign-in-and-up/about",
             "common-customizations/sign-in-and-up/built-in-providers",
             "common-customizations/sign-in-and-up/custom-providers",
             "common-customizations/sign-in-and-up/toc-privacypolicy"
