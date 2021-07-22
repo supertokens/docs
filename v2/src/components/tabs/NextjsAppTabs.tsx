@@ -8,7 +8,7 @@ export default function NextjsAppTabs(props) {
             defaultValue="app-js"
             values={[
                 { label: '/pages/_app.js', value: 'app-js' },
-                { label: '/pages/_app.ts.ts', value: 'app-ts' },
+                { label: '/pages/_app.ts', value: 'app-ts' },
             ]}>
             {props.children}
         </Tabs>
