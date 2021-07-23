@@ -50,7 +50,6 @@ module.exports = {
           type: "category",
           label: "Sign In Form",
           items: [
-            "common-customizations/signin-form/about",
             "common-customizations/signin-form/field-validators",
             "common-customizations/signin-form/password-managers"
           ]
