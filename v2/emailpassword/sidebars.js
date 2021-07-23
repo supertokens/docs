@@ -40,7 +40,6 @@ module.exports = {
           type: 'category',
           label: 'Sign Up Form',
           items: [
-            "common-customizations/signup-form/about",
             "common-customizations/signup-form/adding-fields",
             "common-customizations/signup-form/field-validators",
             "common-customizations/signup-form/toc-privacypolicy",
@@ -51,7 +50,6 @@ module.exports = {
           type: "category",
           label: "Sign In Form",
           items: [
-            "common-customizations/signin-form/about",
             "common-customizations/signin-form/field-validators",
             "common-customizations/signin-form/password-managers"
           ]

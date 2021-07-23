@@ -28,6 +28,7 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
    - For backend language: `backendsdk`
    - For nodeJS framework: `nodejs-framework`
    - For frontend languages: `frontendsdk`
+   - For multiple file types: `file-type`
 - If there are custom wrapper components made for a type of code tab, please use that. You can find them in v2 > src > components > tabs folder:
    - For backend: `import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"`
    - For nodejs framework: `import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs"`
