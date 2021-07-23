@@ -23,6 +23,10 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 2. But for docusaurus v2, you need to go to v2 > src > themes > Layout > index.js and add the custom meta tags there.
 
 ## Writing guide
+### Code snippets
+- Always use ` ```tsx ` or ` ```jsx` instead of ` ```ts ` or ` ```js` so that HTML is rendered nicely as well.
+- All code should be copy pasted from a working "playground" for that SDK. For example, in `supertokens-node`, we have `/test/with-typescript/index.ts` file which can be used to write any code using the SDK and whenever writing code in docs for nodeJS, you should first write it in the playground, make sure it's correct, and the copy / paste that in the docs.
+
 ### Code tabs
 - Depending on the options you want to show in the tabs / sub tab, please use the correct `groupId` so that tab selections are synced. Some `groupIds`:
    - For backend language: `backendsdk`
