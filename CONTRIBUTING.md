@@ -56,7 +56,7 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 ## Swizzling components:
 - Docusaurus allows "swizzling" of their components so that they can be modified as per our needs. Once a component is swizzled, it's placed in the v2 > src > theme folder, and can be edited freely.
 - To swizzle a component:
-   - Open `docusaurus.config.js` and comment out `"./src/plugins/reactBundle"` and `"./src/plugins/copyDocs"` plugins fully.
+   - Open `docusaurus.config.js` and comment out all the custom plugins like: `"./src/plugins/reactBundle"` and `"./src/plugins/copyDocs"`.
    - Run the swizzle command: `npx docusaurus swizzle --danger "@docusaurus/theme-classic" "TODO: COMPONENT_NAME"`
    - Uncomment the two plugins that have been commented.
 - To know a list of components that can be swizzled, run `npx docusaurus swizzle --danger "@docusaurus/theme-classic" "App"`
