@@ -92,7 +92,7 @@ module.exports = {
       ],
     },
     prism: {
-      theme: require('prism-react-renderer/themes/oceanicNext'),
+      theme: require('prism-react-renderer/themes/vsDark'),
     },
     algolia: {
       apiKey: '0eeffc534667153c420f239cc6c7f4fb',
