@@ -29,7 +29,7 @@ This function will return the config object used to configure `supertokens-node`
 ```js
 
 let EmailPassword = require('supertokens-node/recipe/emailpassword');
-let Session = reqiure('supertokens-node/recipe/session')
+let Session = require('supertokens-node/recipe/session')
 
 function getBackendConfig() {
   return {
