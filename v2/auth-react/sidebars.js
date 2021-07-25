@@ -4,7 +4,7 @@ module.exports = {
     "init",
     {
       type: 'category',
-      label: 'Email Password',
+      label: 'EmailPassword',
       items: [
         "emailpassword/init",
         {
@@ -32,7 +32,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Third Party',
+      label: 'ThirdParty',
       items: [
         "thirdparty/init",
         {
@@ -58,7 +58,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Third Party Email Password',
+      label: 'ThirdPartyEmailPassword',
       items: [
         "thirdpartyemailpassword/init",
         {
