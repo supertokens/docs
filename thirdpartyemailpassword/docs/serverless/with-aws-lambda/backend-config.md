@@ -28,7 +28,7 @@ This function will return the config object used to configure `supertokens-node`
 ```js
 
 let ThirdPartyEmailPassword = require('supertokens-node/recipe/thirdpartyemailpassword');
-let Session = reqiure('supertokens-node/recipe/session')
+let Session = require('supertokens-node/recipe/session')
 
 function getBackendConfig() {
   return {
