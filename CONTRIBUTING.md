@@ -57,6 +57,12 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 ### Creating a new docs:
 - Please see v2 > HOW_TO_NEW_DOCS.md
 
+### Using Copy docs plugin
+- This is a custom plugin in which one `.mdx` file's content can be copied into another by providing the location of one in another.
+- A file that uses `<!-- COPY DOCS -->` is utilising this plugin.
+- This should be used across recipe docs, when the content of the page is exactly the same across docs.
+- An example of this can be found `v2 > community > database-setup > mysql.mdx`.
+
 ## Swizzling components:
 - Docusaurus allows "swizzling" of their components so that they can be modified as per our needs. Once a component is swizzled, it's placed in the v2 > src > theme folder, and can be edited freely.
 - To swizzle a component:
