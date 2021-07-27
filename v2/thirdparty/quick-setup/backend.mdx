@@ -1,0 +1,188 @@
+---
+id: backend
+title: Backend
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+
+# NodeJS Setup (5 mins)
+
+:::important
+- For framework specific implementation (like Next.js), please skip this section and go directly to the section with the name of your framework. 
+- For serverless deployment, please see the "Serverless Deployment" section instead
+:::
+
+### An example implementation can be [found here](https://github.com/supertokens/supertokens-demo-react/blob/thirdparty/api-server.js).
+
+## 1️) Install
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```bash
+npm i -s supertokens-node
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+## 2️) Call the `init` function
+
+At the top of your `index.js` file, add the following code.
+
+:::important
+- Please make sure to replace all the `appInfo` configurations values with yours.
+- To learn more about filling in `appInfo`, please visit [the appInfo page](../appinfo)
+:::
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+let supertokens = require("supertokens-node");
+let Session = require("supertokens-node/recipe/session");
+let ThirdParty = require("supertokens-node/recipe/thirdparty");
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "https://try.supertokens.io",
+    },
+    appInfo: {
+        // learn more about this on https://supertokens.io/docs/thirdparty/appinfo
+        appName: "YOUR APP NAME", // Example: "SuperTokens",
+        apiDomain: "YOUR API DOMAIN", // Example: "https://api.supertokens.io",
+        websiteDomain: "YOUR WEBSITE DOMAIN" // Example: "https://supertokens.io"
+    },
+    recipeList: [
+        ThirdParty.init({
+            signInAndUpFeature: {
+                providers: [
+                    ThirdParty.Google({
+                        clientSecret: "GOOGLE_CLIENT_SECRET",
+                        clientId: "GOOGLE_CLIENT_ID"
+                    }),
+                    ThirdParty.Github({
+                        clientSecret: "GITHUB_CLIENT_SECRET",
+                        clientId: "GITHUB_CLIENT_ID"
+                    }),
+                    ThirdParty.Facebook({
+                        clientSecret: "FACEBOOK_CLIENT_SECRET",
+                        clientId: "FACEBOOK_CLIENT_ID"
+                    })
+                ]
+            }
+        }),
+        Session.init() // initializes session features
+    ]
+});
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+Please refer to the corresponding documentations to get your client ids and client secrets for each of the below providers:
+- [Google](https://developers.google.com/identity/sign-in/web/sign-in#create_authorization_credentials), (callback URL is `{websiteDomain}/auth/callback/google`)
+- [Github](https://docs.github.com/en/developers/apps/creating-an-oauth-app), (callback URL is `{websiteDomain}/auth/callback/github`)
+- [Facebook](https://developers.facebook.com/docs/development/create-an-app), (callback URL is `{websiteDomain}/auth/callback/facebook`)
+
+In general, the callback URL is `{websiteDomain}{websiteBasePath}/callback/{id}` where `id` is the unique id for the auth provider, and `websiteBasePath` by default is `/auth`.
+
+:::tip Security
+Make sure that the above configurations for `"CLIENT_SECRET"` are stored in your environment variables and not directly in your javascript files for security reasons.
+:::
+
+We used `https://try.supertokens.io` as the `connectionURI` above. This is a Core that we are hosting for the demo app. 
+
+You can continue to use this for as long as you like, but once you are more committed to using SuperTokens, you will need to run a Core dedicated for your app.
+
+## 3️) Add the SuperTokens middleware & CORS setup
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+Add the `middleware` **BEFORE all your routes**.
+
+```jsx
+let cors = require("cors");
+let supertokens = require("supertokens-node");
+
+supertokens.init({...}) // from step 2
+
+let app = express();
+
+// ...other middlewares
+app.use(cors({
+    origin: websiteUrl,
+    // highlight-start
+    allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+    // highlight-end 
+}));
+
+// highlight-next-line
+app.use(supertokens.middleware()); 
+
+// ...your API routes
+```
+</TabItem>
+</BackendSDKTabs>
+
+This `middleware` adds a few APIs (see all the APIs [here](https://app.swaggerhub.com/apis/supertokens/FDI)):
+- `POST /auth/signinup`: For signing up a user with email & password
+
+`/auth/` is a base path that [can be changed](../common-customizations/changing-base-path/api-base-path) if you want. 
+
+:::tip security
+Please carefully set your CORS rules. It is **very important to explicitly set a list of allowed origins**, if your app allows for it.
+:::
+
+## 4️) Add the SuperTokens error handler
+Add the `errorHandler` **AFTER all your routes**, but **BEFORE your error handler**
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+// ...your API routes
+
+//highlight-next-line
+app.use(supertokens.errorHandler())
+
+// your own error handler
+app.use((err, req, res, next) => {...});
+
+```
+</TabItem>
+</BackendSDKTabs>
+
+## 5️) Test if sign up is setup correctly
+- Go to the `/auth` route of your website
+- Try to sign up.
+- If after signing up, you are redirected to `/`, everything is setup correctly 😁
+- If not, you can always ask for help via [Github issues](https://github.com/supertokens/supertokens-core/issues) or via [our Discord](https://supertokens.io/discord)
+
+## 6️) Add session verification
+For your APIs that require a user to be logged in, use the `verifySession` middleware:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+let Session = require("supertokens-node/recipe/session");
+// highlight-start
+app.post("/like-comment", Session.verifySession(), (req, res) => {
+    let userId = req.session.getUserId();
+// highlight-end 
+    //....
+});
+```
+</TabItem>
+</BackendSDKTabs>
+
+---------------
+
+## Minimum setup completed 🎉🥳
+Congratulations! You now have a fully functional login and session system!
+
+The next steps is to setup your SuperTokens core instance.

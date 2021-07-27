@@ -1,0 +1,148 @@
+---
+id: using-with-faunadb
+title: Using with FaunaDB
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Using with FaunaDB
+
+:::important
+This integration only works if you have stored your users in FaunaDB. So, in case you are using Auth0, Okta, or store your users outside of FaunaDB, you will need to [wait for our integration](https://github.com/supertokens/supertokens-core/issues/122) to support it.
+:::
+
+SuperTokens provides an integration with FaunaDB that allows you to:
+- Create a Fauna token for a user who just logged in
+- Access the Fauna user token on your frontend client and backend APIs, so that you can query FaunaDB from anywhere
+- Securely refresh the session and Fauna user token automatically
+- Automatically revoke the Fauna user token when the session associated with that user is revoked.
+
+## Integration
+
+### 1️) Complete the [Quick setup guide](/docs/session/quick-setup/frontend)
+Make sure you have completed the frontend, backend and SuperTokens core setup.
+
+### 2️) Use the `override` config in `Session.init()`
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+let supertokens = require("supertokens-node");
+let Session = require("supertokens-node/recipe/session"); 
+// highlight-next-line
+let { RecipeImplementation } = require("supertokens-node/recipe/session/faunadb");
+
+supertokens.init({
+    supertokens: {...},
+    appInfo: {...},
+    recipeList: [
+        Session.init({
+            ...
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return new RecipeImplementation(originalImplementation, {
+                        userCollectionName: "users",
+                        accessFaunadbTokenFromFrontend: true,
+                        faunaDBClient: new faunadb.Client({
+                            secret: "<SECRET>",
+                        }),
+                    });
+                },
+            },
+            // highlight-end
+        }),
+    ]
+});
+```
+</TabItem>
+</BackendSDKTabs>
+
+### 3️) Creating a new session
+On login, you would want to create a new session using the "FaunaDB reference ID" of the logged in user.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+let Session = require("supertokens-node/recipe/session");
+
+app.post("/login", async function (req, res) {
+    // check for user credentials..
+
+    // highlight-start
+    let userId = "<FAUNADB REFERENCE ID>";
+    await Session.createNewSession(res, userId);
+    // highlight-end
+    res.send("logged in");
+});
+```
+</TabItem>
+</BackendSDKTabs>
+
+### 4️) Retrieve the Fauna user token in any API
+After session verification, you can use the `session.getFaunadbToken()` function in the API
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+let Session = require("supertokens-node/recipe/session");
+
+app.post("/like-comment", Session.verifySession(), function (req, res) {
+    let userId = req.session.getUserId();
+    // highlight-next-line
+    let faunaToken = await req.session.getFaunadbToken();
+
+    // query FaunaDB on behalf of the currently logged in user.
+    
+    res.send(userId);
+});
+```
+
+:::note
+If using TypeScript, the type of `req.session` is `SessionContainer`, imported like `import {SessionContainer} from "supertokens-node/recipe/session/faunadb"`
+:::
+</TabItem>
+</BackendSDKTabs>
+
+
+### 5️) Retrieve the Fauna user token on the frontend
+
+:::important
+In order to do this, you will need to set `accessFaunadbTokenFromFrontend` to `true` when calling `Session.init` on the backend.
+:::
+
+Then on the frontend, once a user logs in, you can retrieve the JWT payload and use the key `"faunadbToken"` to read the token. Here is an example
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```jsx
+
+import Session from 'supertokens-auth-react/recipe/session';
+
+let jwtPayload = await Session.getJWTPayloadSecurely();
+let faunadbToken = jwtPayload["faunadbToken"];
+
+// query FaunaDB...
+```
+</TabItem>
+<TabItem value="vanillajs">
+
+```jsx
+
+import SuperTokens from 'supertokens-website';
+
+let jwtPayload = await SuperTokens.getJWTPayloadSecurely();
+let faunadbToken = jwtPayload["faunadbToken"];
+
+// query FaunaDB...
+```
+
+</TabItem>
+</FrontendSDKTabs>
