@@ -77,3 +77,10 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 - To build all docs, run the `./buildAllDocs` command.
 - To only build `v2` docs, go into `v2` and run `npm run build`. If this throws an error and you still want to finish building it, then run `npm run build-ignore-errors`.
 - To build non `v2` docs, run `./buildDocs <folder name>` command.
+
+### Fixing broken links
+While building, we may get broken links errors. There are different types:
+- External links: Make sure to give the full path to these links
+- Links to `supertokens.io`, but non docs pages: These links should be `https://supertokens.io/...`
+- Internal docs links: These need to be fixed since it's most likely due to a writing error.
+- `COPY DOCS` related links: Sometimes the source doc's structure may not match the destination doc. For example, the core docs in v2 > community folder are being shown in the recipes, but not in the community docs, and the pages it links to exist in the recipe docs, but not in the community docs. To fix this, we create dummy pages in the community docs like found here: `v2 > community > common-customizations > core > api-keys.mdx`
