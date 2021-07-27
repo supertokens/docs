@@ -108,7 +108,7 @@ module.exports = {
           routeBasePath: 'docs/community',
           sidebarPath: require.resolve('./community/sidebars.js'),
           showLastUpdateTime: true,
-          editUrl: 'https://github.com/supertokens/docs/v2/',
+          editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         },
         theme: {
           // this is applied to all docs.. not just the community one.
@@ -141,7 +141,7 @@ module.exports = {
         routeBasePath: 'docs/emailpassword',
         sidebarPath: require.resolve('./emailpassword/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/v2/',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
       },
     ],
     [
@@ -152,7 +152,7 @@ module.exports = {
         routeBasePath: 'docs/thirdparty',
         sidebarPath: require.resolve('./thirdparty/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/v2/',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
       },
     ],
     [
@@ -163,7 +163,7 @@ module.exports = {
         routeBasePath: 'docs/thirdpartyemailpassword',
         sidebarPath: require.resolve('./thirdpartyemailpassword/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/v2/',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
       },
     ],
     [
@@ -174,7 +174,7 @@ module.exports = {
         routeBasePath: 'docs/session',
         sidebarPath: require.resolve('./session/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/v2/',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
       },
     ],
     [
@@ -185,7 +185,7 @@ module.exports = {
         routeBasePath: 'docs/nodejs',
         sidebarPath: require.resolve('./nodejs/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/v2/',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
       },
     ],
     [
@@ -196,7 +196,7 @@ module.exports = {
         routeBasePath: 'docs/auth-react',
         sidebarPath: require.resolve('./auth-react/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/v2/',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
       },
     ],
     [
@@ -207,7 +207,7 @@ module.exports = {
         routeBasePath: 'docs/website',
         sidebarPath: require.resolve('./website/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/v2/',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
       },
     ],
     [
@@ -218,7 +218,7 @@ module.exports = {
         routeBasePath: 'docs/change_me',
         sidebarPath: require.resolve('./change_me/sidebars.js'),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/v2/',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
       },
     ]
   ],
