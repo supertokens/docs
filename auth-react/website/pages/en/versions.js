@@ -25,21 +25,6 @@ function Versions(props) {
           <header className="postHeader">
             <h1>{siteConfig.title} Versions</h1>
           </header>
-          <h3 id="latest">Current version (Stable)</h3>
-          <table className="versions">
-            <tbody>
-              <tr>
-                <th>{latestVersion}</th>
-                <td>
-                  <a
-                    href={`${siteConfig.baseUrl}${siteConfig.docsUrl}/${props.language ? props.language + "/" : ""
-                      }installation`}>
-                    Documentation
-                  </a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
           {versions.length > 1 && <h3 id="archive">Past Versions</h3>}
           <table className="versions">
             <tbody>
