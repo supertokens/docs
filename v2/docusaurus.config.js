@@ -17,8 +17,8 @@ module.exports = {
   title: 'SuperTokens Docs',
   url: 'https://supertokens.io/',
   baseUrl: '/',
-  onBrokenLinks: isDryRun ? 'warn' : 'throw',
-  onBrokenMarkdownLinks: isDryRun ? 'warn' : 'throw',
+  onBrokenLinks: isDryRun ? 'throw' : 'warn',
+  onBrokenMarkdownLinks: isDryRun ? 'throw' : 'warn',
   favicon: 'img/favicon.ico',
   trailingSlash: false,
   stylesheets: [

@@ -63,12 +63,6 @@ async function editFileWIthVariables(file) {
                         return reject(err);
                     }
 
-                    await new Promise((res, rej) => {
-                        setTimeout(() => {
-                            res()
-                        }, 10000)
-                    })
-
                     return resolve();
                 });
             }
