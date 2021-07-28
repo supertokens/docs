@@ -109,6 +109,9 @@ module.exports = {
           sidebarPath: require.resolve('./community/sidebars.js'),
           showLastUpdateTime: true,
           editUrl: 'https://github.com/supertokens/docs/v2/',
+          remarkPlugins: [
+            require("./src/plugins/markdownVariables"),
+          ],
         },
         theme: {
           // this is applied to all docs.. not just the community one.
@@ -142,6 +145,9 @@ module.exports = {
         sidebarPath: require.resolve('./emailpassword/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
+        remarkPlugins: [
+          require("./src/plugins/markdownVariables"),
+        ],
       },
     ],
     [
@@ -153,6 +159,9 @@ module.exports = {
         sidebarPath: require.resolve('./thirdparty/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
+        remarkPlugins: [
+          require("./src/plugins/markdownVariables"),
+        ],
       },
     ],
     [
@@ -164,6 +173,9 @@ module.exports = {
         sidebarPath: require.resolve('./thirdpartyemailpassword/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
+        beforeDefaultRemarkPlugins: [
+          require("./src/plugins/markdownVariables"),
+        ],
       },
     ],
     [
@@ -175,6 +187,9 @@ module.exports = {
         sidebarPath: require.resolve('./session/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
+        remarkPlugins: [
+          require("./src/plugins/markdownVariables"),
+        ],
       },
     ],
     [
@@ -186,6 +201,9 @@ module.exports = {
         sidebarPath: require.resolve('./nodejs/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
+        remarkPlugins: [
+          require("./src/plugins/markdownVariables"),
+        ],
       },
     ],
     [
@@ -197,6 +215,9 @@ module.exports = {
         sidebarPath: require.resolve('./auth-react/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
+        remarkPlugins: [
+          require("./src/plugins/markdownVariables"),
+        ],
       },
     ],
     [
@@ -208,6 +229,9 @@ module.exports = {
         sidebarPath: require.resolve('./website/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
+        remarkPlugins: [
+          require("./src/plugins/markdownVariables"),
+        ],
       },
     ],
     [
@@ -219,6 +243,9 @@ module.exports = {
         sidebarPath: require.resolve('./change_me/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
+        remarkPlugins: [
+          require("./src/plugins/markdownVariables"),
+        ],
       },
     ]
   ],
