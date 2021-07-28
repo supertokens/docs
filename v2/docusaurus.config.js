@@ -1,11 +1,24 @@
 
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
+
+let isDryRun = process.env.DRY_RUN === "true";
+let dryRunPlugins = isDryRun ? [
+  [
+    "./src/plugins/dryrun/editMarkdownWithVariables",
+    {
+      id: "edit-markdown-variables",
+    }
+  ]
+] : [];
+
+let remarkPlugins = isDryRun ? [] : [require("./src/plugins/markdownVariables"),]
+
 module.exports = {
   title: 'SuperTokens Docs',
   url: 'https://supertokens.io/',
   baseUrl: '/',
-  onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'throw',
+  onBrokenLinks: isDryRun ? 'warn' : 'throw',
+  onBrokenMarkdownLinks: isDryRun ? 'warn' : 'throw',
   favicon: 'img/favicon.ico',
   trailingSlash: false,
   stylesheets: [
@@ -109,9 +122,7 @@ module.exports = {
           sidebarPath: require.resolve('./community/sidebars.js'),
           showLastUpdateTime: true,
           editUrl: 'https://github.com/supertokens/docs/v2/',
-          remarkPlugins: [
-            require("./src/plugins/markdownVariables"),
-          ],
+          remarkPlugins: remarkPlugins,
         },
         theme: {
           // this is applied to all docs.. not just the community one.
@@ -121,6 +132,7 @@ module.exports = {
     ],
   ],
   plugins: [
+    ...dryRunPlugins,
     [
       // loads the supertokens.io react bundle for footer and analytics etc..
       "./src/plugins/reactBundle",
@@ -145,9 +157,7 @@ module.exports = {
         sidebarPath: require.resolve('./emailpassword/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
-        remarkPlugins: [
-          require("./src/plugins/markdownVariables"),
-        ],
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -159,9 +169,7 @@ module.exports = {
         sidebarPath: require.resolve('./thirdparty/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
-        remarkPlugins: [
-          require("./src/plugins/markdownVariables"),
-        ],
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -173,9 +181,7 @@ module.exports = {
         sidebarPath: require.resolve('./thirdpartyemailpassword/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
-        beforeDefaultRemarkPlugins: [
-          require("./src/plugins/markdownVariables"),
-        ],
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -187,9 +193,7 @@ module.exports = {
         sidebarPath: require.resolve('./session/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
-        remarkPlugins: [
-          require("./src/plugins/markdownVariables"),
-        ],
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -201,9 +205,7 @@ module.exports = {
         sidebarPath: require.resolve('./nodejs/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
-        remarkPlugins: [
-          require("./src/plugins/markdownVariables"),
-        ],
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -215,9 +217,7 @@ module.exports = {
         sidebarPath: require.resolve('./auth-react/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
-        remarkPlugins: [
-          require("./src/plugins/markdownVariables"),
-        ],
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -229,9 +229,7 @@ module.exports = {
         sidebarPath: require.resolve('./website/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
-        remarkPlugins: [
-          require("./src/plugins/markdownVariables"),
-        ],
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -243,9 +241,7 @@ module.exports = {
         sidebarPath: require.resolve('./change_me/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/v2/',
-        remarkPlugins: [
-          require("./src/plugins/markdownVariables"),
-        ],
+        remarkPlugins: remarkPlugins,
       },
     ]
   ],
