@@ -1,3 +1,5 @@
+let configuredVariables = require("./markdownVariables.json");
+
 module.exports = () => {
     // Copied from Stack Overflow
     function getIndicesOf(searchStr, str, caseSensitive) {
@@ -21,20 +23,10 @@ module.exports = () => {
         // A child will either have a value or more children
         // If it has a value, check if it is using a variable. If it is then replace otherwise skip
         if (child.value && child.value.includes("^{")) {
-            console.log("Markdown variables ran");
-            var valueCopy = child.value;
-            // Find all occurences of ^{ to find starting points of all variables used in the file
-            var indices = getIndicesOf("^{", valueCopy);
-            // Sort by descending, this helps when replacing later because you replace last instance first and dont need to worry about indices changing
-            indices.sort((a, b) => b - a);
-            indices.forEach(index => {
-                // Find the end index of the var declaration starting from current index
-                let endIndexRange = valueCopy.substring(index, valueCopy.length).indexOf("}");
-                let fullVariableDeclaration = valueCopy.substring(index, index + endIndexRange + 1);
-                let variableName = fullVariableDeclaration.replace("^{", "").replace("}", "").trim();
-                if (exportedVariables[variableName]) {
-                    valueCopy = valueCopy.substring(0, index) + exportedVariables[variableName] + valueCopy.substring(index + endIndexRange + 1);
-                }
+
+            // For each entry in the variables object replace all occurences of that variable in the value string
+            Object.keys(exportedVariables).forEach(key => {
+                valueCopy = valueCopy.split(`^{${key}}`).join(`${exportedVariables[key]}`)
             });
 
             child.value = valueCopy;
@@ -51,35 +43,31 @@ module.exports = () => {
     }
 
     return (data, file) => {
+
+        var recipeName = file.split("/v2/")[1].split("/")[0]
+        var fileSplit = file.split("/");
+        var fileName = fileSplit[fileSplit.length - 1].replace(".mdx", "").replace(".md", "");
+
+        let configObjectForRecipe = configuredVariables[recipeName];
+
+        // If there is no config entry for the recipe, exit early
+        if (!configObjectForRecipe) {
+            return data;
+        }
+
+        let configObjectForFile = configObjectForRecipe[fileName];
+
+        // If the config entry for recipe has no entry for the file name, exit early
+        if (!configObjectForFile) {
+            return data;
+        }
+
         var dataCopy = data;
+
         if (dataCopy.children.length) {
-            var exportedData = {};
-            dataCopy.children.forEach(child => {
-                // Check if the markdown file has a valid export declaration, if it does parse it
-                if (child.type === "export" && child.value.includes("pluginVariableData")) {
-                    let exportString = child.value;
-
-                    exportString.split("\n").forEach(splitValue => {
-                        // Remove unwanted characters
-                        splitValue = splitValue.replace("\\n", "");
-                        splitValue = splitValue.replace(/["']/g, "");
-
-                        // Remove trailing comma if present
-                        if (splitValue.charAt(splitValue.length - 1) === ",") {
-                            splitValue = splitValue.substring(0, splitValue.length - 1);
-                        }
-
-                        // Extract key value pairs and store in exported data
-                        if (splitValue.includes(":")) {
-                            let keyValPair = splitValue.split(":");
-                            exportedData[keyValPair[0].trim()] = keyValPair[1].trim();
-                        }
-                    });
-                }
-            });
 
             dataCopy.children = dataCopy.children.map(child => {
-                return getModifiedChild(child, exportedData);
+                return getModifiedChild(child, configObjectForFile);
             })
 
             return dataCopy;
