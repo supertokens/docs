@@ -8,6 +8,7 @@ module.exports = {
         "architecture/overview",
         "architecture/recipes",
         "architecture/fdi",
+        "architecture/cdi",
       ],
     },
   ],
