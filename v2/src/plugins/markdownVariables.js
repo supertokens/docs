@@ -23,12 +23,15 @@ module.exports = () => {
         // A child will either have a value or more children
         // If it has a value, check if it is using a variable. If it is then replace otherwise skip
         if (child.value) {
+            var valueCopy = child.value;
 
+            console.log("Value before: ", valueCopy);
             // For each entry in the variables object replace all occurences of that variable in the value string
             Object.keys(exportedVariables).forEach(key => {
-                console.log("Tried replacing for key: ", key);
                 valueCopy = valueCopy.split(`^{${key}}`).join(`${exportedVariables[key]}`)
             });
+
+            console.log("Value after: ", valueCopy);
 
             child.value = valueCopy;
         }
