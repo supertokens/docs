@@ -45,6 +45,8 @@ module.exports = () => {
             return data;
         }
 
+        console.log(file.path);
+
         var dataCopy = data;
 
         if (dataCopy.children.length) {
