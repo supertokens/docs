@@ -22,10 +22,11 @@ module.exports = () => {
     function getModifiedChild(child, exportedVariables) {
         // A child will either have a value or more children
         // If it has a value, check if it is using a variable. If it is then replace otherwise skip
-        if (child.value && child.value.includes("^{")) {
+        if (child.value) {
 
             // For each entry in the variables object replace all occurences of that variable in the value string
             Object.keys(exportedVariables).forEach(key => {
+                console.log("Tried replacing for key: ", key);
                 valueCopy = valueCopy.split(`^{${key}}`).join(`${exportedVariables[key]}`)
             });
 
@@ -62,6 +63,8 @@ module.exports = () => {
             return data;
         }
 
+        console.log("Recipe Name: ", recipeName, " | File name: ", fileName);
+        console.log("Config for file", configObjectForFile);
         var dataCopy = data;
 
         if (dataCopy.children.length) {
