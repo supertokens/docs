@@ -1,5 +1,14 @@
 module.exports = {
   sidebar: [
-    "introduction"
+    "introduction",
+    {
+      type: 'category',
+      label: 'Architecture',
+      items: [
+        "architecture/overview",
+        "architecture/recipes",
+        "architecture/fdi",
+      ],
+    },
   ],
 };
