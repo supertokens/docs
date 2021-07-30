@@ -44,8 +44,8 @@ module.exports = () => {
 
     return (data, file) => {
 
-        var recipeName = file.split("/v2/")[1].split("/")[0]
-        var fileSplit = file.split("/");
+        var recipeName = file.path.split("/v2/")[1].split("/")[0]
+        var fileSplit = file.path.split("/");
         var fileName = fileSplit[fileSplit.length - 1].replace(".mdx", "").replace(".md", "");
 
         let configObjectForRecipe = configuredVariables[recipeName];
