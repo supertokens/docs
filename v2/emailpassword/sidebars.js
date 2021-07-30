@@ -51,9 +51,9 @@ module.exports = {
           label: "Sign In Form",
           items: [
             "common-customizations/signin-form/field-validators",
-            "common-customizations/signin-form/password-managers"
           ]
         },
+        "common-customizations/password-managers",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/handling-signup-success",
         "common-customizations/handling-signin-success",
