@@ -1,23 +1,6 @@
 let configuredVariables = require("./markdownVariables.json");
 
 module.exports = () => {
-    // Copied from Stack Overflow
-    function getIndicesOf(searchStr, str, caseSensitive) {
-        var searchStrLen = searchStr.length;
-        if (searchStrLen == 0) {
-            return [];
-        }
-        var startIndex = 0, index, indices = [];
-        if (!caseSensitive) {
-            str = str.toLowerCase();
-            searchStr = searchStr.toLowerCase();
-        }
-        while ((index = str.indexOf(searchStr, startIndex)) > -1) {
-            indices.push(index);
-            startIndex = index + searchStrLen;
-        }
-        return indices;
-    }
 
     function getModifiedChild(child, exportedVariables) {
         // A child will either have a value or more children
@@ -27,9 +10,7 @@ module.exports = () => {
 
             // For each entry in the variables object replace all occurences of that variable in the value string
             Object.keys(exportedVariables).forEach(key => {
-                console.log("Value before: ", valueCopy);
                 valueCopy = valueCopy.split(`^{${key}}`).join(`${exportedVariables[key]}`)
-                console.log("Value after: ", valueCopy);
             });
 
             child.value = valueCopy;
@@ -46,7 +27,6 @@ module.exports = () => {
     }
 
     return (data, file) => {
-
         var recipeName = file.path.split("/v2/")[1].split("/")[0]
         var fileSplit = file.path.split("/");
         var fileName = fileSplit[fileSplit.length - 1].replace(".mdx", "").replace(".md", "");
@@ -65,8 +45,6 @@ module.exports = () => {
             return data;
         }
 
-        console.log("Recipe Name: ", recipeName, " | File name: ", fileName);
-        console.log("Config for file", configObjectForFile);
         var dataCopy = data;
 
         if (dataCopy.children.length) {
