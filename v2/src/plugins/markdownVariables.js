@@ -25,13 +25,12 @@ module.exports = () => {
         if (child.value) {
             var valueCopy = child.value;
 
-            console.log("Value before: ", valueCopy);
             // For each entry in the variables object replace all occurences of that variable in the value string
             Object.keys(exportedVariables).forEach(key => {
+                console.log("Value before: ", valueCopy);
                 valueCopy = valueCopy.split(`^{${key}}`).join(`${exportedVariables[key]}`)
+                console.log("Value after: ", valueCopy);
             });
-
-            console.log("Value after: ", valueCopy);
 
             child.value = valueCopy;
         }
