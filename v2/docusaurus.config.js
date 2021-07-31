@@ -236,6 +236,7 @@ module.exports = {
         sidebarPath: require.resolve('./contribute/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
