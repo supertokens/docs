@@ -44,6 +44,17 @@ module.exports = () => {
             child.value = valueCopy;
         }
 
+        // Some elements (for example titles in code blocks) appear under 'meta'
+        if (child.meta) {
+            var metaCopy = child.meta;
+
+            Object.keys(exportedVariables).forEach(key => {
+                metaCopy = metaCopy.split(`^{${key}}`).join(`${exportedVariables[key]}`)
+            });
+
+            child.meta = metaCopy;
+        }
+
         // If it has children then repeat recursively
         if (child.children) {
             child.children = child.children.map(subChild => {
