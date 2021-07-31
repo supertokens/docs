@@ -28,5 +28,22 @@ module.exports = {
         },
       ],
     },
+    {
+      type: 'category',
+      label: 'Recipe Design',
+      items: [
+        "recipe-design/about",
+        "recipe-design/frontend",
+        "recipe-design/backend",
+        {
+          type: 'category',
+          label: 'Core',
+          items: [
+            "recipe-design/core/table",
+            "recipe-design/core/core-logic",
+          ],
+        },
+      ],
+    },
   ],
 };
