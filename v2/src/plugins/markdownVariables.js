@@ -3,7 +3,18 @@ let configuredVariables = require("./markdownVariables.json");
 module.exports = () => {
 
     function getModifiedChild(child, exportedVariables) {
-        // A child will either have a value or more children
+        // A child will either have a value properties or more children
+
+        // Links have 'url's instead of 'value'
+        if (child.url) {
+            var urlCopy = child.url;
+            Object.keys(exportedVariables).forEach(key => {
+                urlCopy = urlCopy.split(`^{${key}}`).join(`${exportedVariables[key]}`)
+            });
+
+            child.url = urlCopy;
+        }
+
         // If it has a value, check if it is using a variable. If it is then replace otherwise skip
         if (child.value) {
             var valueCopy = child.value;
@@ -45,12 +56,9 @@ module.exports = () => {
             return data;
         }
 
-        console.log(file.path);
-
         var dataCopy = data;
 
         if (dataCopy.children.length) {
-
             dataCopy.children = dataCopy.children.map(child => {
                 return getModifiedChild(child, configObjectForFile);
             })

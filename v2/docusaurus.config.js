@@ -1,24 +1,16 @@
 
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
 
-let isDryRun = process.env.DRY_RUN === "true";
-let dryRunPlugins = isDryRun ? [
-  [
-    "./src/plugins/dryrun/editMarkdownWithVariables",
-    {
-      id: "edit-markdown-variables",
-    }
-  ]
-] : [];
-
-let remarkPlugins = isDryRun ? [] : [require("./src/plugins/markdownVariables"),]
+let remarkPlugins = [
+  require("./src/plugins/markdownVariables"),
+];
 
 module.exports = {
   title: 'SuperTokens Docs',
   url: 'https://supertokens.io/',
   baseUrl: '/',
-  onBrokenLinks: isDryRun ? 'throw' : 'warn',
-  onBrokenMarkdownLinks: isDryRun ? 'throw' : 'warn',
+  onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'throw',
   favicon: 'img/favicon.ico',
   trailingSlash: false,
   stylesheets: [
@@ -132,7 +124,6 @@ module.exports = {
     ],
   ],
   plugins: [
-    ...dryRunPlugins,
     [
       // loads the supertokens.io react bundle for footer and analytics etc..
       "./src/plugins/reactBundle",
