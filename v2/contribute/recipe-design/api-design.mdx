@@ -7,12 +7,77 @@ hide_title: true
 # API Design
 
 :::info
-- This applies to CDI and FDI specs.
-- We do not 100% follow the REST API spec. There are some good reasons for those as we will see below.
+This applies to [CDI](https://app.swaggerhub.com/apis/supertokens/CDI) and [FDI](https://app.swaggerhub.com/apis/supertokens/FDI) specs.
 :::
 
 ## Common rules between CDI and FDI
+- 1) All input / output will be of type `application/json`
+- 2) There are two types of errors in an API:
+   - a) Expected errors: These are errors like a user trying to sign in with wrong credentials, or an existing email trying to sign up. Essentially, any error that comprises of a logical, but expected error comes in here.
+
+   These errors will return a http status code `200`.
+   - b) Unexpected errors: These are errors like API not found (`404`), or the server / db going down (`500`), or the API key supplied (to the core) is incorrect / missing (`401`).
+
+   These errors yield a non `200` response.
+
+- 3) Due to above rule, the response from each API has a "status" field in it and it only applies to responses with status code `200`.
+
+   If everything goes as expected in the API, the value of `status` is `"OK"` - like `{status: "OK"}`.
+
+   On the other hand, if there is an expected error, then the value should reflect that - for example: `{status: "EMAIL_ALREADY_EXISTS_ERROR}` is returned when someone tries to sign up with an exisitng email.
+
+   Notice that in case of expected errors, the status value ends with `_ERROR`.
+
+- 4) We should try and minimise the number of expected error types across all recipes.
+
+- 5) Allowed HTTP methods are `GET, POST, PUT`. We expect a body for all except for `GET`. For `POST, PUT`, we ignore query params.
+
+   We do not allow `DELETE` since it's unclear if the request params should be in the body or as query params. Instead, we use `*/*/remove POST`. For example, if we are creating a delete user API, it will be `*/user/remove POST`.
+
+- 6) Recipes can have the same path. We can know which recipe a request is targeting by reading the request's `rid` header. For example, if the request if for the `session` recipe, then the value of the `rid` header for that recipe will be `session`.
+
+:::important
+If adding a new API in swagger, and the path is the same as another API, you can add an empty character (this: `⠀`) to the end of the path to make it different, yet not visible to the user.
+:::
+
+- 7) Sometimes input or output to an API may require multiple types. Here, we design the API such that there is a common field in the input / output (across all types) which tells the API / consumer what type it is. For example, we can have an output type as:
+   ```json
+   {
+       status: "OK",
+       type: "emailpassword",
+       email: string,
+       userId: string
+   } | {
+       status: "OK",
+       type: "thirdparty",
+       email: string,
+       userId: string,
+       thirdPartyInfo: {
+           id: string, userId: string
+       }
+   }
+   ```
+
+   As you can see, the consumer of the above can know which type it is based on the `type` field in the object.
+
+- 8) The path should reflect clearly what the intended cause of the API is. For example, if we are deleting a single user, the path can be `*/user/remove POST`. However, for deleting multiple (including just one) users, the path should be `*/users/remove POST`
+
+- 9) We have to try and minimise the number of APIs. For example, if there is a way to get a user's info via email or userId, we don't need to have two APIs for this, but one API like `*/user GET` which takes either the email (`*/user?email=...`) or the userId (`*/user?userId=...`).
+
+- 10) An API can have custom headers other than what's specified in this doc. For example, the session related APIs make use of cookies and a couple of other custom header values to work. We want to minimise this of course, as it complicates things.
+
+- 11) We are not allowed to have variables in the path. So for example, we do not do `/user/:id GET` where `:id` is the user ID of the user whose info we want to get. Instead, the id would come as a query param: `/user?id=... GET`. The reason for this is that it adds additional complexity to how our SDKs / core would integrate with the respective web frameworks.
 
 ## Rules specific to CDI
 
+- 1) There will be an input header called `cdi-version`. This can be used by the coreto run different logic based on the CDI versions it supports. **This is compulsory.**
+
+- 2) There may be an `api-key` header value in case the user has set an API key. This is required for most APIs in case the user has set it (in the core), else the core should throw `401` error. On the other hand, if the user has not set it (in the core), an API that expects the `api-key` header should still run even if there is no such header in the request.
+
+- 3) All APIs that are specific to a recipe should be prefixed with `/recipe/*`. Others that are common across all recipes (like get user count, or delete a user), should not have any such prefix.
+
 ## Rules specific to FDI
+
+- 1) There might be an input header called `fdi-version`. This can be used by the backend SDK to run different logic based on the FDI versions it supports. **This is optional.**
+
+- 2) The prefix for these APIs is the `apiBasePath` value that the user has defined in their config. By default, it is `/auth/`
