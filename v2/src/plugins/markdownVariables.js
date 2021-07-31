@@ -4,8 +4,8 @@
  * This plugin only modifies the markdown content passed to the HTML parser, it does not modify the markdown file itself
  * 
  * The plugin does the following:
- * - For the given file, it extracts the recipe name and file name from its path
- * - Checks if the config file for variables has an entry for the recipe name and then looks for an entry for the file name. Exits early if either is missing
+ * - For the given file, it extracts the recipe name from its path
+ * - Checks if the config file for variables has an entry for the recipe name, exits early if none exists
  * - It iterates through the children of the current file (each markdown/HTML element is recieved as a child)
  *      - If the child has a value/url property: Modifies the property by replacing all occurences of ^{variableName} syntax for every key of the config object
  *      - If the child has more children it loops through and repeats these steps recursively
@@ -13,6 +13,9 @@
  * 
  * NOTE: There may be markdown elements that do not have a direct 'value' property [For example links have 'url'],
  * in such a case this script will need to be modified to accomodate using variables for that element.
+ * 
+ * NOTE: Changes to this file require restarting the docusaurus process, hot reload wont reflect the changes.
+ * This is because of how docusaurus handles its cache for plugins
  */
 
 let configuredVariables = require("./markdownVariables.json");
@@ -67,8 +70,6 @@ module.exports = () => {
 
     return (data, file) => {
         var recipeName = file.path.split("/v2/")[1].split("/")[0]
-        var fileSplit = file.path.split("/");
-        var fileName = fileSplit[fileSplit.length - 1].replace(".mdx", "").replace(".md", "");
 
         let configObjectForRecipe = configuredVariables[recipeName];
 
@@ -77,18 +78,11 @@ module.exports = () => {
             return data;
         }
 
-        let configObjectForFile = configObjectForRecipe[fileName];
-
-        // If the config entry for recipe has no entry for the file name, exit early
-        if (!configObjectForFile) {
-            return data;
-        }
-
         var dataCopy = data;
 
         if (dataCopy.children.length) {
             dataCopy.children = dataCopy.children.map(child => {
-                return getModifiedChild(child, configObjectForFile);
+                return getModifiedChild(child, configObjectForRecipe);
             })
 
             return dataCopy;
