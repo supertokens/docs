@@ -46,5 +46,18 @@ module.exports = {
         "recipe-design/api-design",
       ],
     },
+    {
+      type: 'category',
+      label: 'Module architecture',
+      items: [
+        {
+          type: 'category',
+          label: 'Frontend',
+          items: [
+            "module-architecture/frontend/overview",
+          ],
+        },
+      ],
+    },
   ],
 };
