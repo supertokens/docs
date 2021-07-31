@@ -97,9 +97,7 @@ In such cases being able to configure and use variables can save a lot of time. 
 ```json
 {
    "recipeName": {
-      "file-name": {
-         "variableName": "variable value"
-      }
+      "variableName": "variable value"
    }
 }
 ```
@@ -109,9 +107,7 @@ For example in order to make changes to `v2/thirdpartyemailpassword/common-custo
 ```json
 {
    "thirdpartyemailpassword": {
-      "sign-out": {
-         ...
-      }
+      ...
    }
 }
 ```
