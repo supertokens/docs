@@ -1,9 +1,26 @@
+/**
+ * This script runs as part of the Rehype plugins docusaurus uses to convert markdown to html.
+ * This plugin intercepts the markdown content and modifies it before the content is parsed into HTML.
+ * This plugin only modifies the markdown content passed to the HTML parser, it does not modify the markdown file itself
+ * 
+ * The plugin does the following:
+ * - For the given file, it extracts the recipe name and file name from its path
+ * - Checks if the config file for variables has an entry for the recipe name and then looks for an entry for the file name. Exits early if either is missing
+ * - It iterates through the children of the current file (each markdown/HTML element is recieved as a child)
+ *      - If the child has a value/url property: Modifies the property by replacing all occurences of ^{variableName} syntax for every key of the config object
+ *      - If the child has more children it loops through and repeats these steps recursively
+ * - After processing is done, it returns the modified data
+ * 
+ * NOTE: There may be markdown elements that do not have a direct 'value' property [For example links have 'url'],
+ * in such a case this script will need to be modified to accomodate using variables for that element.
+ */
+
 let configuredVariables = require("./markdownVariables.json");
 
 module.exports = () => {
 
     function getModifiedChild(child, exportedVariables) {
-        // A child will either have a value properties or more children
+        // A child will either have value properties or more children
 
         // Links have 'url's instead of 'value'
         if (child.url) {
@@ -27,7 +44,7 @@ module.exports = () => {
             child.value = valueCopy;
         }
 
-        // If it has children then modify all children
+        // If it has children then repeat recursively
         if (child.children) {
             child.children = child.children.map(subChild => {
                 return getModifiedChild(subChild, exportedVariables);
@@ -65,5 +82,8 @@ module.exports = () => {
 
             return dataCopy;
         }
+
+        // Returning nothing is the equivalent of returning the default data, this is just a precaution
+        return data;
     }
 }
