@@ -9,6 +9,16 @@ module.exports = {
         "architecture/recipes",
         {
           type: 'category',
+          label: 'Modules',
+          items: [
+            "architecture/modules/frontend",
+            "architecture/modules/backend",
+            "architecture/modules/core",
+            "architecture/modules/db-plugin",
+          ],
+        },
+        {
+          type: 'category',
           label: 'Interfaces',
           items: [
             "architecture/interfaces/fdi",
