@@ -30,6 +30,19 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'SDK & Core code architecture',
+      items: [
+        {
+          type: 'category',
+          label: 'Frontend',
+          items: [
+            "module-architecture/frontend/overview",
+          ],
+        },
+      ],
+    },
+    {
+      type: 'category',
       label: 'Recipe Design',
       items: [
         "recipe-design/about",
@@ -44,19 +57,6 @@ module.exports = {
           ],
         },
         "recipe-design/api-design",
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Module architecture',
-      items: [
-        {
-          type: 'category',
-          label: 'Frontend',
-          items: [
-            "module-architecture/frontend/overview",
-          ],
-        },
       ],
     },
   ],
