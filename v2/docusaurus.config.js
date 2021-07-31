@@ -230,6 +230,17 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'contribute',
+        path: 'contribute',
+        routeBasePath: 'docs/contribute',
+        sidebarPath: require.resolve('./contribute/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'change_me',
         path: 'change_me',
         routeBasePath: 'docs/change_me',
