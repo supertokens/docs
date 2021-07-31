@@ -1,6 +1,10 @@
 
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
 
+/**
+ * Remark plugins intercept markdown content before they are parsed into HTML
+ * Read more here: https://github.com/remarkjs/remark/blob/main/doc/plugins.md
+ */
 let remarkPlugins = [
   require("./src/plugins/markdownVariables"),
 ];

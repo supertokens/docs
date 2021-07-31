@@ -1,5 +1,5 @@
 /**
- * This script runs as part of the Rehype plugins docusaurus uses to convert markdown to html.
+ * This script runs as part of the Remark plugins docusaurus uses to convert markdown to html.
  * This plugin intercepts the markdown content and modifies it before the content is parsed into HTML.
  * This plugin only modifies the markdown content passed to the HTML parser, it does not modify the markdown file itself
  * 
