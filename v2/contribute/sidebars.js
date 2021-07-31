@@ -43,6 +43,7 @@ module.exports = {
             "recipe-design/core/core-logic",
           ],
         },
+        "recipe-design/api-design",
       ],
     },
   ],
