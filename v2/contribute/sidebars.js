@@ -7,8 +7,15 @@ module.exports = {
       items: [
         "architecture/overview",
         "architecture/recipes",
-        "architecture/fdi",
-        "architecture/cdi",
+        {
+          type: 'category',
+          label: 'Interfaces',
+          items: [
+            "architecture/interfaces/fdi",
+            "architecture/interfaces/cdi",
+            "architecture/interfaces/plugin-interface",
+          ],
+        },
       ],
     },
   ],
