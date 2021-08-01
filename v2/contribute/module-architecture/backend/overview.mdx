@@ -100,12 +100,6 @@ As seen, these usually just use the underlying recipe implementation instance. T
 
 All the functions also get an input using which they can access the actual request / response (abstract class) so that they can set and read headers / cookies if their logic requires that (For example, see the [session recipe's API implementation](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/api/implementation.ts))
 
-TODO:
-
-<!-- 
-
-
-
 ### Overriding the recipe implementation
 We allow users to override the default recipe implementation so that they can customise the behaviour of the SDK as per their auth requirements.
 
@@ -135,40 +129,10 @@ supertokens.init({
 
 Here, the `originalImplementation` is an instance of the recipe implementation of that recipe. However, it is typed as the recipe interface. This allows composability of recipe interfaces - for example, one implementation of the recipe interface can add feature X, and another can add feature Y. The user can use both and get X and Y!
 
-### Feature React components
-These are logical components that have no UI. Their job is to use the recipe implementation (either the default one or overriden one) to prepare props in a way that the theme components can use them.
+### Overriding the API implementation
+We allow users to override the default API implementation so that they can customise the behaviour of the APIs as per their auth requirements.
 
-An example of this can be found [here](https://github.com/supertokens/supertokens-auth-react/blob/master/lib/ts/recipe/emailpassword/components/features/signInAndUp/index.tsx).
-
-### Wrapper React components
-These are higher order react components that use a recipe to provide some functionality. For example, the [`SessionAuth` component](https://github.com/supertokens/supertokens-auth-react/blob/master/lib/ts/recipe/session/sessionAuth.tsx) uses the session recipe to provide a react context to its children. This context can then be read by them to get information about the session (in a very simple way).
-
-### Theme React components
-These are mostly UI only components, receiving props from the feature components. They may have some logic, but it would mostly be for the purpose of driving the UI it displays.
-
-Therefore, a complete UI widget comprises of:
-```jsx
-<FeatureComponent>
-    <ThemeComponent />
-</FeatureComponent>
-```
-
-### Overriding the theme react components
-Just like recipe functions override, the user can override named components in the theme component tree. This allows users to customise the UX / UI of the widgets shown. The level of granuality that they can override depends on how many and which components we allow them to override.
-
-For example, if a theme component is:
-```jsx
-<EmailPasswordSignInContainer>
-    <EmailPasswordHeader />
-    <FormContainer />
-    <EmailPasswordFooter />
-</EmailPasswordSignInContainer>
-```
-
-And we allow users to override `EmailPasswordSignInContainer`, `EmailPasswordHeader` and `EmailPasswordSignInContainer`, then the only way they can change `FormContainer` is by overrifing `EmailPasswordSignInContainer`.
-
-The way they can override is:
-
+They can do so by providing the implementation of the following function during the `init` call for that recipe:
 ```tsx
 // an example of how they would override the 
 // signUp function of the emailpassword recipe impl
@@ -176,63 +140,53 @@ supertokens.init({
     recipeList: [
         EmailPassword.init({
             override {
-                components: {
-                    EmailPasswordFooter: ({OriginalComponent, ...props}) => {
-                        return (
-                            <>
-                            <SomeCustomComponent />
-                            <OriginalComponent />
-                            </>
-                        );
+                apis: (originalImplementation: APIInterface): APIInterface => {
+                    return {
+                        ...originalImplementation,
+                        signUpPOST: (input) => {
+                            // some custom logic
+                            // OR
+                            return originalImplementation.signUpPOST(input);
+                        }
                     }
-                }
+                };
             }
         });
     ]
 });
 ```
 
-Here the `OriginalComponent` is the original `EmailPasswordFooter` component which the user may or may not decide to use.
+Here, the `originalImplementation` is an instance of the API implementation of that recipe. However, it is typed as the API interface. This allows composability of API interfaces - for example, one implementation of the recipe interface can add feature X, and another can add feature Y. The user can use both and get X and Y!
+
+Sometimes, one may want to override an API such that they want to declare the route themselves and handle the API completely. They can do this by setting a function to `undefined` (in NodeJS for example). So in the above example, they can do that by setting `signUpPOST: undefined` and then creating their own route to handle the API request.
 
 ### User facing functions
-These are functions that are meant for users to use. They usually reside in the `index.ts` file of a recipe or the whole lib.
+These are functions that are meant for users to use (in their API or elsewhere). They usually reside in the `index.ts` file of a recipe or the whole lib.
 
 Examples of functions are:
-- `Session.doesSessionExist()`
-- `EmailPassword.isEmailVerified()`
+- `Session.createNewSession(...)`
+- `EmailPassword.signIn(...)`
 
-These functions usually just call the recipe's underlying (one or several) recipe implementation's function.
+These functions usually just call the recipe's underlying (one or several) recipe implementation's function. They can even use multiple recipes in them. For example, the `EmailPassword.deleteUser(...)` function would use the `Session` and the `EmailPassword` recipe implementations.
 
 Some of them, like the `isEmailVerified` can use a recipe's sub recipe. In this case, `EmailPassword.isEmailVerified()` uses the emailverification recipe that is created inside the emailpassword recipe. This is done because from the user's point of view, they are not directly aware of the emailverification recipe since they only did EmailPassword.init.
 
 There are also some functions that are not tied to a recipe like:
 - `supertokens.init`
-- `supertokens.canHandleRoute`
+- `supertokens.middleware`
 
-## Styling
-For the supertokens-auth-react SDK, we use the [@emotion/react](https://emotion.sh/docs/introduction#react) library which allows us to:
-- Write CSS in JS
-- Allows the user to provide a JS object which can override our default CSS
-- Create randomised class names so that our CSS doesn't conflict with the user's CSS (but the other way around is possible).
+## Querying the core
+For our recipes to work, they need to query the core which exposes the CDI APIs. This querying happens in a round robin fashion and if a failure occurs, the querier automatically retries the next core location (if provided).
 
-The user provided JS object (to override our CSS), is exposed to all the theme components via the style context object (usin the react context feature).
+For us to know where the cores are located, the user passes the `connectionUri` and its `apiKey` when calling `supertokens.init`.
 
-Finally, we use a shadow DOM so that the user's CSS doesn't interfere with our CSS - however, this also prevents password managers from working in our forms. So we give users the ability to disable this (across all our components).
+When querying the core, we need to know which CDI version to add to the header. This is done by querying the core (`/apiversion GET`), and finding the maximum value in the returned array which the backend SDK is also compatible with. This value is then stored in memory for all requests.
 
-## Querying the backend
-For our recipes to work, they need to query the users backend which exposes the FDI APIs (via our backend SDK). This querying happens using `fetch`, inside the recipe implementation functions.
-
-For us to know where the user's backend is (which domain and path), the user provides us with an `appInfo` object during initialisation that contains the `apiDomain` and `apiBasePath` values.
-
-## User facing hook functions
-Each recipe has three hook functions:
-- `onHandleEvent`: A user can give this function to get events for user actions. For example, if the end user signs in, a corresponding event is fired using this function.
-- `preAPIHook`: A user can give this function to change the request that is sent to the backend. They can use this to add custom headers / change the path / add custom params etc..
-- `getRedirectionURL`: This can be used to change how routing works in a recipe. As an example, if one wants to change where the end user goes post login, they can provide this callback.
+You can find an an implementation of the querier [here](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/querier.ts).
 
 ## Export paths
 The import statements we expose are very important.
 
-For example, the place where all the ts files are built in the supertokens-auth-react SDK is `/lib/build/*`. Therefore, by default, the user would have to use `import ... from "supertokens-auth-react/lib/build/recipe/..."` which is ugly. 
+For example, the place where all the ts files are built in the supertokens-node SDK is `/lib/build/*`. Therefore, by default, the user would have to use `import ... from "supertokens-node/lib/build/recipe/..."` which is ugly. 
 
-So we have extra files in the lib which allow users to import like `import ... from "supertokens-auth-react/recipe/..."`. As an example, you can see how this is achieved [here](https://github.com/supertokens/supertokens-auth-react/tree/master/recipe). The files in this folder don't have any recipe logic - they simply import / export the actual recipe `index.ts` files. -->
+So we have extra files in the lib which allow users to import like `import ... from "supertokens-node/recipe/..."`. As an example, you can see how this is achieved [here](https://github.com/supertokens/supertokens-node/tree/master/recipe). The files in this folder don't have any recipe logic - they simply import / export the actual recipe `index.ts` files.
