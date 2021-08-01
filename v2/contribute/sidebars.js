@@ -37,6 +37,9 @@ module.exports = {
           label: 'Frontend',
           items: [
             "module-architecture/frontend/overview",
+            "module-architecture/frontend/session-interception",
+            "module-architecture/frontend/recipe-base-class",
+            "module-architecture/frontend/super-recipe",
           ],
         },
       ],
