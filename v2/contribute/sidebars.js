@@ -54,6 +54,17 @@ module.exports = {
             "module-architecture/backend/setting-header-cookies",
           ],
         },
+        {
+          type: 'category',
+          label: 'Core',
+          items: [
+            "module-architecture/core/overview",
+            "module-architecture/core/transactions",
+            "module-architecture/core/plugin-interface",
+            "module-architecture/core/testing",
+            "module-architecture/core/cli-and-installer",
+          ],
+        },
       ],
     },
     {
