@@ -50,6 +50,7 @@ module.exports = {
             "module-architecture/backend/overview",
             "module-architecture/backend/recipe-structure",
             "module-architecture/backend/super-recipe",
+            "module-architecture/backend/session-verification",
             "module-architecture/backend/setting-header-cookies",
           ],
         },
