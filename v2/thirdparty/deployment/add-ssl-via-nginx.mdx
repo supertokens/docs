@@ -1,0 +1,119 @@
+---
+id: add-ssl-via-nginx
+title: Add SSL via NGINX
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/deployment/add-ssl-via-nginx.mdx -->
+
+
+# How to add SSL via NGINX
+
+## 1. Setup
+This guide assumes you have
+- Setup your app with SuperTokens following this [guide](../quick-setup/video-tutorial)
+- You have installed NGINX on your Ubuntu server.
+
+## 2. Reverse Proxy your App with NGINX
+- Our app is currently being served on `localhost:3000`.
+
+<img width="500px" src="/img/default-screen-nginx.png" />
+
+
+We can start by editing the NGINX default site config by running the following command in terminal:
+
+```bash
+sudo nano /etc/nginx/sites-available/default
+```
+
+In the config you want to scroll down to the `server` directive.
+
+By default it should look like this:
+
+```text title="/etc/nginx/sites-available/default"
+server {
+  listen       80;
+  server_name  localhost;
+
+  ...
+}
+```
+
+We can now configure the `server` directive by adding the `location` directive with the following values:
+
+```text title="/etc/nginx/sites-available/default"
+server {
+    listen       80;
+    server_name  localhost;
+
+    // highlight-start
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+  // highlight-end
+}
+```
+
+The `location` directive tells NGINX what to do with the incoming request, `proxy_pass` will point the redirect to `localhost:3000`  
+
+You can now test and restart NGINX by running the following command:
+
+```bash
+nginx -t && service nginx restart
+```
+Navigate to `http://localhost:80` and check if it points to your app.
+
+## 3. Setting up SSL
+
+- We now need to obtain a digital certificate to enable a secure connection with a users browser.
+
+- We are going to be using a self signed certificates since we are developing locally, but, you can-  also use a certificate autorities like [Let's Encrypt](https://letsencrypt.org/) to generate valid vertificates.
+
+- Run the following command to generate a self signed certificate using OpenSSL:
+
+ ```bash
+ openssl req -x509 -nodes newkey rsa:2048 -keyout /etc/nginx/ssl/server.key -out /etc/nginx/ssl/server.crt
+ ```
+
+- You can set the values `ssl_certificate` and `ssl_certificate_key` in the NGINX config to specify the locations of the newly generated certificates.
+
+```text title="/etc/nginx/sites-available/default"
+server {
+    listen       80;
+    listen       443 ssl;
+    server_name  localhost;
+
+    // highlight-start
+    ssl_certificate  /etc/nginx/ssl/server.crt;
+    ssl_certificate_key /etc/nginx/ssl/server.key;
+    // highlight-end
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+}
+
+```
+:::important
+If you decide to use self signed certificates, browsers will show a warning that the “Certificate is not Trusted”. Make sure to use a valid certificate in production.
+<img width="500px" src="/img/no-access-nginx.png" />
+:::
+
+Run the test and resetart commands to test and apply your changes:
+
+```bash
+nginx -t && service nginx restart
+```
+
+You can navigate to `https://localhost:80` and your connection will be secure.

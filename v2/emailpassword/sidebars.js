@@ -217,6 +217,13 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Deployment',
+      items: [
+        "deployment/add-ssl-via-nginx"
+      ]
+    },
+    {
+      type: 'category',
       label: 'NextJS',
       items: [
         "nextjs/about",
