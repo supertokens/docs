@@ -58,6 +58,7 @@ module.exports = {
         "session/updatesessiondata",
         "session/getjwtpayload",
         "session/updatejwtpayload",
+        "session/getSessionInformation",
         {
           type: 'category',
           label: 'SessionContainer',
