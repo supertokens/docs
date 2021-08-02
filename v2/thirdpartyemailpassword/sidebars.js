@@ -55,9 +55,9 @@ module.exports = {
             "common-customizations/signin-form/field-validators",
             "common-customizations/signin-form/built-in-providers",
             "common-customizations/signin-form/custom-providers",
-            "common-customizations/signin-form/password-managers"
           ]
         },
+        "common-customizations/password-managers",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/handling-signinup-success",
         {
