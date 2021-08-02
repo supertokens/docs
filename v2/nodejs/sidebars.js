@@ -68,7 +68,9 @@ module.exports = {
             "session/sessioncontainer/updatesessiondata",
             "session/sessioncontainer/getjwtpayload",
             "session/sessioncontainer/updatejwtpayload",
-            "session/sessioncontainer/revokesession"
+            "session/sessioncontainer/revokesession",
+            "session/sessioncontainer/getTimeCreated",
+            "session/sessioncontainer/getExpiry",
           ],
         },
         {
