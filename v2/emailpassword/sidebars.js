@@ -149,6 +149,7 @@ module.exports = {
             "common-customizations/core/api-keys",
             "common-customizations/core/performance",
             "common-customizations/core/logging",
+            "common-customizations/core/add-ssl-via-nginx",
             {
               type: "category",
               label: "CLI",
