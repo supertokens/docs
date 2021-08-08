@@ -1,7 +1,7 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 
-export default function NodeJSFrameworkSubTabs(props) {
+export default function NodeJSFrameworkSubTabsNonServerless(props) {
     return (
         <Tabs
             isSubTab={true}
@@ -11,7 +11,6 @@ export default function NodeJSFrameworkSubTabs(props) {
                 { label: 'Express', value: 'express' },
                 { label: 'Hapi', value: 'hapi' },
                 { label: 'Fastify', value: 'fastify' },
-                { label: 'AWS Lambda', value: 'awsLambda' },
                 { label: 'Koa', value: 'koa' },
                 { label: 'Loopback', value: 'loopback' },
             ]}>
