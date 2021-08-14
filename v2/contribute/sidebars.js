@@ -87,5 +87,13 @@ module.exports = {
         "recipe-design/api-design",
       ],
     },
+    {
+      type: 'category',
+      label: 'Development workflow',
+      items: [
+        "dev-workflow/setting-up-dev-env",
+        "dev-workflow/project-management"
+      ],
+    },
   ],
 };
