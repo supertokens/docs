@@ -62,6 +62,7 @@ module.exports = {
             "module-architecture/core/overview",
             "module-architecture/core/transactions",
             "module-architecture/core/plugin-interface",
+            "module-architecture/core/db-plugins",
             "module-architecture/core/testing",
             "module-architecture/core/cli-and-installer",
           ],
