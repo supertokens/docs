@@ -110,7 +110,6 @@ module.exports = {
             "common-customizations/sessions/anti-csrf",
             "common-customizations/sessions/same-site-cookie",
             "common-customizations/sessions/jwt-signing-key-rotation",
-            "common-customizations/sessions/access-token-blacklisting",
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling"
           ]
