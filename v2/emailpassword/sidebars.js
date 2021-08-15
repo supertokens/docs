@@ -74,7 +74,9 @@ module.exports = {
           items: [
             "common-customizations/reset-password/about",
             "common-customizations/reset-password/password-reset-email",
-            "common-customizations/reset-password/embed-in-page"
+            "common-customizations/reset-password/embed-in-page",
+            "common-customizations/reset-password/post-reset-password"
+
           ]
         },
         {
