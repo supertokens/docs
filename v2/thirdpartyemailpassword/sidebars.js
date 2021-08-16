@@ -60,6 +60,7 @@ module.exports = {
         "common-customizations/password-managers",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/handling-signinup-success",
+        "common-customizations/account-linking",
         {
           type: "category",
           label: "User Roles",

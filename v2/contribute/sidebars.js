@@ -52,6 +52,18 @@ module.exports = {
             "module-architecture/backend/super-recipe",
             "module-architecture/backend/session-verification",
             "module-architecture/backend/setting-header-cookies",
+            "module-architecture/backend/user-deletion",
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Core',
+          items: [
+            "module-architecture/core/overview",
+            "module-architecture/core/transactions",
+            "module-architecture/core/plugin-interface",
+            "module-architecture/core/testing",
+            "module-architecture/core/cli-and-installer",
           ],
         },
       ],
