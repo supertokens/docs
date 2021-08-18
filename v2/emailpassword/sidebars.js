@@ -95,7 +95,14 @@ module.exports = {
           items: [
             "common-customizations/sessions/about",
             "common-customizations/sessions/new-session",
-            "common-customizations/sessions/session-verification",
+            {
+              type: "category",
+              label: "Session Verification in API",
+              items: [
+                "common-customizations/sessions/session-verification-in-api/verify-session",
+                "common-customizations/sessions/session-verification-in-api/get-session"
+              ]
+            },
             "common-customizations/sessions/revoke-session",
             "common-customizations/sessions/change-session-timeout",
             "common-customizations/sessions/checking-session-front-end",
