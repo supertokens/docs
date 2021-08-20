@@ -92,7 +92,8 @@ module.exports = {
       label: 'Development workflow',
       items: [
         "dev-workflow/setting-up-dev-env",
-        "dev-workflow/project-management"
+        "dev-workflow/project-management",
+        "dev-workflow/git-organised"
       ],
     },
   ],
