@@ -26,19 +26,85 @@ The following operations happen when the core is started:
 - Mark this process as started (so that the CLI can know that this is running).
 
 ## User configuration
-TODO:
+User config is given via a `config.yaml` which is to be located in core's installation directory.
+
+On bootup, this config file is loaded and checked for errors (like ranges of values). If there is an error, of if the file is missing, then the core doesn't start.
+
+There is also a `devConfig.yaml` file which is used when running the core during development / testing.
+
+The overall config file is made up of two config files:
+- One from the supertokens-core's config.yaml file: This contains all the configs specific to the core's setting.
+- Other from supertokens-DB_NAME-plugin's config.yaml file: This contains all the configs specific to the database's setting - like the db connection info.
+
+When running using docker, the configs can be passed as env vars in the `docker run` command as well. Those are then copied into the config file when the docker image starts and the core service reads from the config file as usual.
+
+Some configs are in the core, whilst most others are in the backend / frontend SDKs. We aim to put the configs in the backend / frontend SDKs whenever possible, since that is easier for users to set. However sometimes, (like if a cronjob in the core is accessing a config value), it would need to be in the core's config.yaml.
 
 ## Webserver
-TODO:
+We use an embedded apache tomcat server. The code for this can be seen [here](https://github.com/supertokens/supertokens-core/blob/master/src/main/java/io/supertokens/webserver/Webserver.java).
+
+Each API we make extends a base class - [WebserverAPI.java](https://github.com/supertokens/supertokens-core/blob/master/src/main/java/io/supertokens/webserver/WebserverAPI.java) which takes care of some checks like:
+- CDI version compatibility
+- API key check
+- Logging success / failure
+
+Finally, each recipe has their own directory of APIs in [here](https://github.com/supertokens/supertokens-core/tree/master/src/main/java/io/supertokens/webserver/api).
 
 ## Cronjobs
-TODO:
+Cronjobs are background processes that run every specific interval of time. They are started during bootup using the [Cronjobs.java](https://github.com/supertokens/supertokens-core/blob/master/src/main/java/io/supertokens/cronjobs/Cronjobs.java) singleton class.
+
+When implementing a cronjob, you need to specify:
+- The initial wait time
+- The interval time between cronjob runs
+- The body of the cronjob
+
+[This is an example](https://github.com/supertokens/supertokens-core/blob/master/src/main/java/io/supertokens/cronjobs/deleteExpiredSessions/DeleteExpiredSessions.java) cronjob that clears expired sessions.
+
+Any exceptions thrown from a cronjob are logged, and then ignored.
 
 ## Recipes
-TODO:
+Each recipe has their own folder in the root of the `io.supertokens` package. For example, [this is the emailpassword recipe folder](https://github.com/supertokens/supertokens-core/tree/master/src/main/java/io/supertokens/emailpassword).
+
+In the folder, we define everything (except for the APIs) that a recipe needs:
+- Exceptions
+- Enums
+- Constants
+- Functions (these are usually found in the file whose name matches the recipe ID). They are a set of functions that can be used to create the APIs that are exposed by this recipe. An example of this is [EmailPassword.java](https://github.com/supertokens/supertokens-core/blob/master/src/main/java/io/supertokens/emailpassword/EmailPassword.java).
+- Classes to hold information (like [this one](https://github.com/supertokens/supertokens-core/blob/master/src/main/java/io/supertokens/emailpassword/User.java))
+
+APIs for each recipe are defined in [`/webserver/api/` folder](https://github.com/supertokens/supertokens-core/tree/master/src/main/java/io/supertokens/webserver/api).
+
+Recipes need to interact with some storage, and that is done via the `StorageLayer` abstraction.
 
 ## Storage Layer
-TODO:
+There are two types of storages:
+- SQL
+- NO_SQL
 
-## In memory db
-TODO:
+Not all recipes support both, but all support SQL
+
+The [StorageLayer.java](https://github.com/supertokens/supertokens-core/blob/master/src/main/java/io/supertokens/storageLayer/StorageLayer.java) class exposes functions which return an instance of each type of recipe storage. For example, we have:
+- `SessionStorage`: Which is an interface designed for querying the dbs based on the APIs of the session recipe. These functions are used in the main session recipe logic in [session/Session.java](https://github.com/supertokens/supertokens-core/blob/master/src/main/java/io/supertokens/session/Session.java).
+- `EmailPasswordStorage`: This is an interface designed for querying the dbs based on the APIs of the emailpassword recipe..
+
+## Plugin interface
+This is a [separate java project](https://github.com/supertokens/supertokens-plugin-interface) which defines interfaces that are used by the core to interact with various databases - like mysql, postgres, mongdb, sqlite.
+
+It has a set of interfaces per recipe (used by the corresponding recipe in the core.):
+- An interface that is shared by sql and no sql dbs: [Example](https://github.com/supertokens/supertokens-plugin-interface/blob/master/src/main/java/io/supertokens/pluginInterface/session/SessionStorage.java)
+- An interface that is to be implmented only by sql dbs: Contains functions that are required to be called in a db transaction. [Example](https://github.com/supertokens/supertokens-plugin-interface/blob/master/src/main/java/io/supertokens/pluginInterface/session/sqlStorage/SessionSQLStorage.java)
+- An interface that is to be implmented only by no sql dbs. [Example](https://github.com/supertokens/supertokens-plugin-interface/blob/master/src/main/java/io/supertokens/pluginInterface/session/noSqlStorage/SessionNoSQLStorage_1.java).
+
+It has several classes to support the interface. For example, a function in an interface must return a `User` object. That class is defined alongside the interface in this project.
+
+:::important
+- This project should not depend on any external library (outside of what's provided in the JRE), nor should it depend on the core or the db plugins.
+- Instead, the core and the db plugins depend on this project.
+:::
+
+## DB plugins
+These are separate java projects (one per database) that implement the plugin interface. An example of this is the [MySQL plugin](https://github.com/supertokens/supertokens-mysql-plugin) project.
+
+They are responsible for creating and maintaining a connection pool to the underyling db, providing a way to implement transactions (if SQL), and to implement all the functions in the plugin interface.
+
+There is also an in memory db in the core itself (using sqlite) [here](https://github.com/supertokens/supertokens-core/tree/master/src/main/java/io/supertokens/inmemorydb). The code structure of this is very similar to that of other plugins which are separate java projects.
