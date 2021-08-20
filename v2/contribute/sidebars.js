@@ -96,5 +96,16 @@ module.exports = {
         "dev-workflow/git-organised"
       ],
     },
+    {
+      type: 'category',
+      label: 'Code style',
+      items: [
+        "code-style/general",
+        "code-style/type-thinking",
+        "code-style/typescript",
+        "code-style/react",
+        "code-style/java"
+      ],
+    },
   ],
 };
