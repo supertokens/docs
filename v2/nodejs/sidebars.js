@@ -15,6 +15,7 @@ module.exports = {
         "emailpassword/getusersoldestfirst",
         "emailpassword/getusersnewestfirst",
         "emailpassword/getusercount",
+        "emailpassword/updateemailorpassword",
         {
           type: 'category',
           label: 'Override',
