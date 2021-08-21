@@ -98,6 +98,7 @@ module.exports = {
         },
         "thirdparty/signinup",
         "thirdparty/getuserbyid",
+        "thirdparty/getusersbyemail",
         "thirdparty/getuserbythirdpartyinfo",
         "thirdparty/getusersoldestfirst",
         "thirdparty/getusersnewestfirst",
