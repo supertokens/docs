@@ -33,6 +33,8 @@ module.exports = {
         "emailverification/createemailverificationtoken",
         "emailverification/verifyemailusingtoken",
         "emailverification/isemailverified",
+        "emailverification/revokeemailverificationtokens",
+        "emailverification/unverifyemail",
         {
           type: 'category',
           label: 'Override',
