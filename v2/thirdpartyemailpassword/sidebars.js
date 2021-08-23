@@ -55,11 +55,12 @@ module.exports = {
             "common-customizations/signin-form/field-validators",
             "common-customizations/signin-form/built-in-providers",
             "common-customizations/signin-form/custom-providers",
-            "common-customizations/signin-form/password-managers"
           ]
         },
+        "common-customizations/password-managers",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/handling-signinup-success",
+        "common-customizations/account-linking",
         {
           type: "category",
           label: "User Roles",
@@ -143,6 +144,7 @@ module.exports = {
             "common-customizations/core/api-keys",
             "common-customizations/core/performance",
             "common-customizations/core/logging",
+            "common-customizations/core/add-ssl-via-nginx",
             {
               type: "category",
               label: "CLI",

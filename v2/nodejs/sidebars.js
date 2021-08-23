@@ -18,6 +18,7 @@ module.exports = {
         "emailpassword/getusersoldestfirst",
         "emailpassword/getusersnewestfirst",
         "emailpassword/getusercount",
+        "emailpassword/updateemailorpassword",
         {
           type: 'category',
           label: 'Override',
@@ -35,6 +36,8 @@ module.exports = {
         "emailverification/createemailverificationtoken",
         "emailverification/verifyemailusingtoken",
         "emailverification/isemailverified",
+        "emailverification/revokeemailverificationtokens",
+        "emailverification/unverifyemail",
         {
           type: 'category',
           label: 'Override',
@@ -61,6 +64,7 @@ module.exports = {
         "session/updatesessiondata",
         "session/getjwtpayload",
         "session/updatejwtpayload",
+        "session/getSessionInformation",
         {
           type: 'category',
           label: 'SessionContainer',
@@ -70,7 +74,9 @@ module.exports = {
             "session/sessioncontainer/updatesessiondata",
             "session/sessioncontainer/getjwtpayload",
             "session/sessioncontainer/updatejwtpayload",
-            "session/sessioncontainer/revokesession"
+            "session/sessioncontainer/revokesession",
+            "session/sessioncontainer/getTimeCreated",
+            "session/sessioncontainer/getExpiry",
           ],
         },
         {
@@ -101,6 +107,7 @@ module.exports = {
         },
         "thirdparty/signinup",
         "thirdparty/getuserbyid",
+        "thirdparty/getusersbyemail",
         "thirdparty/getuserbythirdpartyinfo",
         "thirdparty/getusersoldestfirst",
         "thirdparty/getusersnewestfirst",

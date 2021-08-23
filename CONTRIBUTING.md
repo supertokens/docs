@@ -84,3 +84,40 @@ While building, we may get broken links errors. There are different types:
 - Links to `supertokens.io`, but non docs pages: These links should be `https://supertokens.io/...`
 - Internal docs links: These need to be fixed since it's most likely due to a writing error.
 - `COPY DOCS` related links: Sometimes the source doc's structure may not match the destination doc. For example, the core docs in v2 > community folder are being shown in the recipes, but not in the community docs, and the pages it links to exist in the recipe docs, but not in the community docs. To fix this, we create dummy pages in the community docs like found here: `v2 > community > common-customizations > core > api-keys.mdx`
+
+### Using variables in markdown files
+There may be cases where you want to use variables in markdown files, for example:
+- Multiple files have the same content except for things like import statements, class names etc
+- Repetitive elements that would normally require changing multiple lines in the same file
+
+In such cases being able to configure and use variables can save a lot of time. In order to use variables you need to:
+
+- Declare the variables in the `v2/src/plugins/markdownVariables.json` files. To declare a variable you need to use the following structure 
+
+```json
+{
+   "recipeName": {
+      "variableName": "variable value"
+   }
+}
+```
+
+For example in order to make changes to `v2/thirdpartyemailpassword/common-customizations/sign-out.mdx` the structure would look like
+
+```json
+{
+   "thirdpartyemailpassword": {
+      ...
+   }
+}
+```
+
+- Use variables in the markdown file using the `^{variableName}` syntax. For example to use a variable in an import statement you could use
+
+```javascript
+import { signOut } from "supertokens-auth-react/recipe/^{recipeImportName}";
+```
+
+When the documentation pages are built, the variable will be replaced with the value in the JSON value. You can also use this in combination with plugins like the Copy Docs plugin explained above.
+
+NOTE: The variable values are only used in the final HTML output, the markdown files themselves are not modified.

@@ -46,6 +46,7 @@ module.exports = {
         },
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/handling-signinup-success",
+        "common-customizations/account-linking",
         {
           type: "category",
           label: "User Roles",
@@ -120,6 +121,7 @@ module.exports = {
             "common-customizations/core/api-keys",
             "common-customizations/core/performance",
             "common-customizations/core/logging",
+            "common-customizations/core/add-ssl-via-nginx",
             {
               type: "category",
               label: "CLI",

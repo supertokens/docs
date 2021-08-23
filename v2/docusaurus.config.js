@@ -1,5 +1,14 @@
 
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
+
+/**
+ * Remark plugins intercept markdown content before they are parsed into HTML
+ * Read more here: https://github.com/remarkjs/remark/blob/main/doc/plugins.md
+ */
+let remarkPlugins = [
+  require("./src/plugins/markdownVariables"),
+];
+
 module.exports = {
   title: 'SuperTokens Docs',
   url: 'https://supertokens.io/',
@@ -109,6 +118,7 @@ module.exports = {
           sidebarPath: require.resolve('./community/sidebars.js'),
           showLastUpdateTime: true,
           editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+          remarkPlugins: remarkPlugins,
         },
         theme: {
           // this is applied to all docs.. not just the community one.
@@ -142,6 +152,7 @@ module.exports = {
         sidebarPath: require.resolve('./emailpassword/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -153,6 +164,7 @@ module.exports = {
         sidebarPath: require.resolve('./thirdparty/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -164,6 +176,7 @@ module.exports = {
         sidebarPath: require.resolve('./thirdpartyemailpassword/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -175,6 +188,7 @@ module.exports = {
         sidebarPath: require.resolve('./session/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -186,6 +200,7 @@ module.exports = {
         sidebarPath: require.resolve('./nodejs/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -197,6 +212,7 @@ module.exports = {
         sidebarPath: require.resolve('./auth-react/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -208,6 +224,19 @@ module.exports = {
         sidebarPath: require.resolve('./website/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'contribute',
+        path: 'contribute',
+        routeBasePath: 'docs/contribute',
+        sidebarPath: require.resolve('./contribute/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ],
     [
@@ -219,6 +248,7 @@ module.exports = {
         sidebarPath: require.resolve('./change_me/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
       },
     ]
   ],

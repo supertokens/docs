@@ -9,11 +9,22 @@ function Hello() {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    height: '50vh',
                     fontSize: '20px',
                 }}>
                 <p>
-                    <a href="/docs/community/introduction">Click here</a> to see the docs
+                    <a href="/docs/community/introduction">Click here</a> to see the user docs
+                </p>
+            </div>
+
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    fontSize: '20px',
+                }}>
+                <p>
+                    <a href="/docs/contribute/introduction">Click here</a> to see the contributing docs
                 </p>
             </div>
         </Layout>
