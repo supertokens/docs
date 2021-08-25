@@ -14,10 +14,8 @@ module.exports = {
         "emailpassword/signin",
         "emailpassword/getuserbyid",
         "emailpassword/getuserbyemail",
+        "emailpassword/createresetpasswordtoken",
         "emailpassword/resetpasswordusingtoken",
-        "emailpassword/getusersoldestfirst",
-        "emailpassword/getusersnewestfirst",
-        "emailpassword/getusercount",
         "emailpassword/updateemailorpassword",
         {
           type: 'category',
@@ -109,9 +107,6 @@ module.exports = {
         "thirdparty/getuserbyid",
         "thirdparty/getusersbyemail",
         "thirdparty/getuserbythirdpartyinfo",
-        "thirdparty/getusersoldestfirst",
-        "thirdparty/getusersnewestfirst",
-        "thirdparty/getusercount",
         {
           type: 'category',
           label: 'Override',
