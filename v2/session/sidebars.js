@@ -35,7 +35,14 @@ module.exports = {
       label: 'Common customizations',
       items: [
         "common-customizations/sessions/new-session",
-        "common-customizations/sessions/session-verification",
+        {
+          type: "category",
+          label: "Session Verification in API",
+          items: [
+            "common-customizations/sessions/session-verification-in-api/verify-session",
+            "common-customizations/sessions/session-verification-in-api/get-session"
+          ]
+        },
         "common-customizations/sign-out",
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/change-session-timeout",
@@ -63,7 +70,6 @@ module.exports = {
         "common-customizations/sessions/anti-csrf",
         "common-customizations/sessions/same-site-cookie",
         "common-customizations/sessions/jwt-signing-key-rotation",
-        "common-customizations/sessions/access-token-blacklisting",
         "common-customizations/sessions/in-iframe",
         "common-customizations/sessions/error-handling",
         {
