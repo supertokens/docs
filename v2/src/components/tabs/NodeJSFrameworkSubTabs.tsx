@@ -11,9 +11,9 @@ export default function NodeJSFrameworkSubTabs(props) {
                 { label: 'Express', value: 'express' },
                 { label: 'Hapi', value: 'hapi' },
                 { label: 'Fastify', value: 'fastify' },
-                { label: 'AWS Lambda', value: 'awsLambda' },
                 { label: 'Koa', value: 'koa' },
                 { label: 'Loopback', value: 'loopback' },
+                { label: 'AWS Lambda', value: 'awsLambda' },
             ]}>
             {props.children}
         </Tabs>
