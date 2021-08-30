@@ -68,3 +68,128 @@ SuperTokens.init({
 - `originalImplementation` and `originalImplementationEmailVerification` are objects that contain apis that have the original implementation for this and the email verification recipe. They can be used in your custom apis as a way to use the SuperTokens' default behaviour.
 - In the above code snippet, we override the `signInUpPOST` api of this recipe. This api will be used to handle the signInUp API route when a user either signs up or signs in.
 - Likewise, we override the `verifyEmailPOST` api from the email verification recipe.
+
+
+## Method 2: Modify the API code
+
+If you need to change the implementation of the API at the code level you should use this method.
+
+:::important
+In this example we will be overriding the signInUp API.
+:::
+
+### Step 1: Copy the API code from the SDK.
+
+We first need to find the implementation for the signInUpPOST this can be found [here](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/thirdparty/api/implementation.ts#L38).
+
+Now in the override config instead of calling the original implementation like we did in [Method 1](#method-1-use-the-override-config) we can paste the signInUpPost code we copied earlier.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+SuperTokens.init({
+    appInfo: {...},
+    supertokens: {...},
+    recipeList: [
+        ThirdParty.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        signInUpPOST: async (input) => {
+
+                            // we add the default implementation code we copied from the SDK and add custom logic.
+                            let newSignInUpPost = async ({ provider, code, redirectURI, options }) => {
+                                
+                                let userInfo;
+                                let accessTokenAPIResponse: any;
+                                let providerInfo = await provider.get(redirectURI, code);
+                                accessTokenAPIResponse = await axios.default({
+                                    method: "post",
+                                    url: providerInfo.accessTokenAPI.url,
+                                    data: qs.stringify(providerInfo.accessTokenAPI.params),
+                                    headers: {
+                                        "content-type": "application/x-www-form-urlencoded",
+                                        accept: "application/json", // few providers like github don't send back json response by default
+                                    },
+                                });
+                                userInfo = await providerInfo.getProfileInfo(accessTokenAPIResponse.data);
+
+                                let emailInfo = userInfo.email;
+                                if (emailInfo === undefined) {
+                                    return {
+                                        status: "NO_EMAIL_GIVEN_BY_PROVIDER",
+                                    };
+                                }
+                                let response = await options.recipeImplementation.signInUp({
+                                    thirdPartyId: provider.id,
+                                    thirdPartyUserId: userInfo.id,
+                                    email: emailInfo,
+                                });
+
+                                if (response.status === "FIELD_ERROR") {
+                                    return response;
+                                }
+
+                                // we set the email as verified if already verified by the OAuth provider.
+                                // This block was added because of https://github.com/supertokens/supertokens-core/issues/295
+                                if (emailInfo.isVerified) {
+                                    const tokenResponse = await options.emailVerificationRecipeImplementation.createEmailVerificationToken({
+                                        userId: response.user.id,
+                                        email: response.user.email,
+                                    });
+
+                                    if (tokenResponse.status === "OK") {
+                                        await options.emailVerificationRecipeImplementation.verifyEmailUsingToken({
+                                            token: tokenResponse.token,
+                                        });
+                                    }
+                                }
+
+                                let action = response.createdNewUser ? "signup" : "signin";
+                                let jwtPayloadPromise = options.config.sessionFeature.setJwtPayload(
+                                    response.user,
+                                    accessTokenAPIResponse.data,
+                                    action
+                                );
+                                let sessionDataPromise = options.config.sessionFeature.setSessionData(
+                                    response.user,
+                                    accessTokenAPIResponse.data,
+                                    action
+                                );
+
+                                let jwtPayload = await jwtPayloadPromise;
+                                let sessionData = await sessionDataPromise;
+
+                                await Session.createNewSession(options.res, response.user.id, jwtPayload, sessionData);
+                                return {
+                                    status: "OK",
+                                    createdNewUser: response.createdNewUser,
+                                    user: response.user,
+                                    authCodeResponse: accessTokenAPIResponse.data,
+                                };
+                            }
+
+                            // we call the modified function
+                            let response = await signInUpPost(input);
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+
+                            }
+
+                            return response;
+                        },
+                        
+                    }
+                },
+            }
+            // highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+</BackendSDKTabs>
