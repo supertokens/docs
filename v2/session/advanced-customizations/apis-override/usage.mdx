@@ -9,7 +9,9 @@ import TabItem from '@theme/TabItem';
 
 # How to use
 
-## Use the override config
+## Method 1: Use the override config:
+
+If you would like to change the input or ouput specifications for an API or would like to send analytics, you should use this method.
 
 :::info
 See all the [functions that can be overrided here](/docs/nodejs/session/override/apis)
@@ -52,3 +54,81 @@ SuperTokens.init({
 
 - `originalImplementation` is the object that contains apis that have the original implementation for this recipe. It can be used in your apis as a way to use the SuperTokens' default behaviour.
 - In the above code snippet, we override the `signOutPOST` api of this recipe.
+
+## Method 2: Modify the API code
+
+If you need to change the implementation of the API at the code level you should use this method.
+
+:::important
+In this example we will be overriding the signOut API.
+:::
+
+### Step 1: Copy the API code from the SDK.
+
+We first need to find the implementation for the signOutPOST this can be found [here](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/api/implementation.ts#L48).
+
+### Step 2: Add the API code in the override config.
+
+Now in the override config instead of calling the original implementation like we did in [Method 1](#method-1-use-the-override-config) we can paste the signOutPOST code we copied earlier and modify it.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+SuperTokens.init({
+    appInfo: {...},
+    supertokens: {...},
+    recipeList: [
+        Session.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        // here we are only overriding the function that signs out a user
+                        signOutPOST: async (input) => {
+                            
+                            let newSignOutPost = async ({ options }) => {
+                                let session;
+                                try {
+                                    session = await options.recipeImplementation.getSession({ req: options.req, res: options.res });
+                                } catch (err) {
+                                    if (STError.isErrorFromSuperTokens(err) && err.type === STError.UNAUTHORISED) {
+                                        // The session is expired / does not exist anyway. So we return OK
+                                        return {
+                                            status: "OK",
+                                        };
+                                    }
+                                    throw err;
+                                }
+
+                                if (session === undefined) {
+                                    throw new Error("Session is undefined. Should not come here.");
+                                }
+
+                                await session.revokeSession();
+
+                                return {
+                                    status: "OK",
+                                };
+                            }
+
+                            let response = await newSignOutPost(input);
+
+                            if( response.status === "OK"){
+                                // TODO: custom logic
+                            }
+
+                            return response;
+                        },
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+</BackendSDKTabs>
