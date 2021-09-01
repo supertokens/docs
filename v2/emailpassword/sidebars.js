@@ -220,7 +220,15 @@ module.exports = {
             "advanced-customizations/frontend-hooks/handle-event",
             "advanced-customizations/frontend-hooks/redirection-callback"
           ],
-        }
+        },
+        {
+          type: 'category',
+          label: 'Localstorage example',
+          items: [
+            "advanced-customizations/localstorage-example/about",
+            "advanced-customizations/localstorage-example/guide"
+          ],
+        },
 
       ],
     },

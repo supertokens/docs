@@ -140,7 +140,15 @@ module.exports = {
             "advanced-customizations/frontend-hooks/pre-api",
             "advanced-customizations/frontend-hooks/handle-event"
           ],
-        }
+        },
+        {
+          type: 'category',
+          label: 'Localstorage example',
+          items: [
+            "advanced-customizations/localstorage-example/about",
+            "advanced-customizations/localstorage-example/guide"
+          ],
+        },
       ],
     },
     "using-with-faunadb",
