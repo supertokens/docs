@@ -7,9 +7,9 @@ hide_title: true
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import TabItem from '@theme/TabItem';
 
-# How to use
+## Method 1: Pre / Post API logic change:
 
-## Use the override config
+If you would like to change something per or post our API logic, then use this method.
 
 :::info
 See all the [functions that can be overrided here](/docs/nodejs/thirdparty/override/apis)
@@ -80,21 +80,22 @@ SuperTokens.init({
 - Likewise, we override the `verifyEmailPOST` api from the email verification recipe.
 
 
-## Method 2: Modify the API code
+## Method 2: Change API logic by copy / paste:
 
-If you need to change the implementation of the API at the code level you should use this method.
+If you need to change our implementation of the API logic you should use this method.
 
-:::important
-In this example we will be overriding the signInUp API.
-:::
+In this example we will be overriding the sign in and up API.
 
 ### Step 1: Copy the API code from the SDK.
 
-We first need to find the implementation for signInUpPOST, this can be found [here](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/thirdparty/api/implementation.ts#L38).
+You first need to find the implementation for the API you would like to change in the backend SDK.
+- All the APIs you can override can be found [here](/docs/nodejs/thirdparty/override/apis), copy the name of the function you would like to override.
+- You can find the API code for this recipe [here](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/thirdparty/api/implementation.ts).
+- In this example we want to override the `signInUpPOST` API, so we can search for a function with that name in the page mentioned above and copy the code.
 
 ### Step 2: Add the API code in the override config.
 
-Now in the override config instead of calling the original implementation like we did in [Method 1](#method-1-use-the-override-config) we can paste the signInUpPOST code we copied earlier and modify it.
+Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `signInUpPOST` code we copied earlier and modify it.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -113,86 +114,73 @@ SuperTokens.init({
 
                         signInUpPOST: async (input) => {
 
-                            // we add the default implementation code we copied from the SDK and add custom logic.
-                            let newSignInUpPost = async ({ provider, code, redirectURI, options }) => {
-                                
-                                let userInfo;
-                                let accessTokenAPIResponse: any;
-                                let providerInfo = await provider.get(redirectURI, code);
-                                accessTokenAPIResponse = await axios.default({
-                                    method: "post",
-                                    url: providerInfo.accessTokenAPI.url,
-                                    data: qs.stringify(providerInfo.accessTokenAPI.params),
-                                    headers: {
-                                        "content-type": "application/x-www-form-urlencoded",
-                                        accept: "application/json", // few providers like github don't send back json response by default
-                                    },
-                                });
-                                userInfo = await providerInfo.getProfileInfo(accessTokenAPIResponse.data);
+                            let userInfo;
+                            let accessTokenAPIResponse: any;
+                            let providerInfo = await provider.get(redirectURI, code);
+                            accessTokenAPIResponse = await axios.default({
+                                method: "post",
+                                url: providerInfo.accessTokenAPI.url,
+                                data: qs.stringify(providerInfo.accessTokenAPI.params),
+                                headers: {
+                                    "content-type": "application/x-www-form-urlencoded",
+                                    accept: "application/json", // few providers like github don't send back json response by default
+                                },
+                            });
+                            userInfo = await providerInfo.getProfileInfo(accessTokenAPIResponse.data);
 
-                                let emailInfo = userInfo.email;
-                                if (emailInfo === undefined) {
-                                    return {
-                                        status: "NO_EMAIL_GIVEN_BY_PROVIDER",
-                                    };
-                                }
-                                let response = await options.recipeImplementation.signInUp({
-                                    thirdPartyId: provider.id,
-                                    thirdPartyUserId: userInfo.id,
-                                    email: emailInfo,
-                                });
-
-                                if (response.status === "FIELD_ERROR") {
-                                    return response;
-                                }
-
-                                // we set the email as verified if already verified by the OAuth provider.
-                                // This block was added because of https://github.com/supertokens/supertokens-core/issues/295
-                                if (emailInfo.isVerified) {
-                                    const tokenResponse = await options.emailVerificationRecipeImplementation.createEmailVerificationToken({
-                                        userId: response.user.id,
-                                        email: response.user.email,
-                                    });
-
-                                    if (tokenResponse.status === "OK") {
-                                        await options.emailVerificationRecipeImplementation.verifyEmailUsingToken({
-                                            token: tokenResponse.token,
-                                        });
-                                    }
-                                }
-
-                                let action = response.createdNewUser ? "signup" : "signin";
-                                let jwtPayloadPromise = options.config.sessionFeature.setJwtPayload(
-                                    response.user,
-                                    accessTokenAPIResponse.data,
-                                    action
-                                );
-                                let sessionDataPromise = options.config.sessionFeature.setSessionData(
-                                    response.user,
-                                    accessTokenAPIResponse.data,
-                                    action
-                                );
-
-                                let jwtPayload = await jwtPayloadPromise;
-                                let sessionData = await sessionDataPromise;
-
-                                await Session.createNewSession(options.res, response.user.id, jwtPayload, sessionData);
+                            let emailInfo = userInfo.email;
+                            if (emailInfo === undefined) {
                                 return {
-                                    status: "OK",
-                                    createdNewUser: response.createdNewUser,
-                                    user: response.user,
-                                    authCodeResponse: accessTokenAPIResponse.data,
+                                    status: "NO_EMAIL_GIVEN_BY_PROVIDER",
                                 };
                             }
+                            let response = await options.recipeImplementation.signInUp({
+                                thirdPartyId: provider.id,
+                                thirdPartyUserId: userInfo.id,
+                                email: emailInfo,
+                            });
 
-                            // we call the modified function
-                            let response = await newSignInUpPost(input);
-                            if (response.status === "OK") {
-                                let { id, email } = response.user;
-
+                            if (response.status === "FIELD_ERROR") {
+                                return response;
                             }
 
-                            return response;
+                            // we set the email as verified if already verified by the OAuth provider.
+                            // This block was added because of https://github.com/supertokens/supertokens-core/issues/295
+                            if (emailInfo.isVerified) {
+                                const tokenResponse = await options.emailVerificationRecipeImplementation.createEmailVerificationToken({
+                                    userId: response.user.id,
+                                    email: response.user.email,
+                                });
+
+                                if (tokenResponse.status === "OK") {
+                                    await options.emailVerificationRecipeImplementation.verifyEmailUsingToken({
+                                        token: tokenResponse.token,
+                                    });
+                                }
+                            }
+
+                            let action = response.createdNewUser ? "signup" : "signin";
+                            let jwtPayloadPromise = options.config.sessionFeature.setJwtPayload(
+                                response.user,
+                                accessTokenAPIResponse.data,
+                                action
+                            );
+                            let sessionDataPromise = options.config.sessionFeature.setSessionData(
+                                response.user,
+                                accessTokenAPIResponse.data,
+                                action
+                            );
+
+                            let jwtPayload = await jwtPayloadPromise;
+                            let sessionData = await sessionDataPromise;
+
+                            await Session.createNewSession(options.res, response.user.id, jwtPayload, sessionData);
+                            return {
+                                status: "OK",
+                                createdNewUser: response.createdNewUser,
+                                user: response.user,
+                                authCodeResponse: accessTokenAPIResponse.data,
+                            };
                         },
                         
                     }
@@ -205,3 +193,5 @@ SuperTokens.init({
 ```
 </TabItem>
 </BackendSDKTabs>
+
+You can now freely modify any step in the API.
