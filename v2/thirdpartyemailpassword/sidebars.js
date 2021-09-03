@@ -217,13 +217,18 @@ module.exports = {
         },
         {
           type: 'category',
-          label: 'Localstorage example',
+          label: 'Examples',
           items: [
-            "advanced-customizations/localstorage-example/about",
-            "advanced-customizations/localstorage-example/guide"
+            {
+              type: 'category',
+              label: 'Using localstorage instead of cookies',
+              items: [
+                "advanced-customizations/examples/localstorage/about",
+                "advanced-customizations/examples/localstorage/guide"
+              ],
+            },
           ],
         },
-
       ],
     },
     {

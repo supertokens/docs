@@ -8,236 +8,42 @@ import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
 import TabItem from '@theme/TabItem';
 
 <!-- COPY DOCS -->
+<!-- ./session/advanced-customizations/examples/localstorage/guide.mdx -->
 
 # Step-by-step guide
 
+In this guide we'll modify an [example application](https://github.com/supertokens/supertokens-demo-react/tree/emailpassword/) to use localstorage instead of cookies.
+You can find the modified application [here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-localstorage/)
+
 ## Backend
+
+On the backend we need to modify the `api-server.js` to allow and make use of our custom cookie.
+You can find the result [here](https://github.com/supertokens/supertokens-auth-react/blob/localstorage-example/examples/with-localstorage/api-server.js).
 
 ### 1. Allow the custom header on requests
 First, we need to allow the frontend to send the `st-cookie` header we chose to transfer the tokens.
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
-
-```jsx
-app.use(
-    cors({
-        origin: websiteDomain,
-        //highlight-start
-        allowedHeaders: ["content-type", "st-cookie", ...supertokens.getAllCORSHeaders()],
-        //highlight-end
-        methods: ["GET", "PUT", "POST", "DELETE"],
-        credentials: true,
-    })
-);
-```
-</TabItem>
-</BackendSDKTabs>
+We can do this by adding it to `allowedHeaders` in the cors config, as seen [here])(https://github.com/supertokens/supertokens-auth-react/blob/localstorage-example/examples/with-localstorage/api-server.js#L125).
 
 ### 2. Adding a helper
 Then, we need to add a helper function that will handle copying the `Set-Cookie` header into our custom header and also add that header
 to the `access-control-expose-headers` list so that the frontend can access it on CORS requests.
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
-
-```jsx
-function updateHeaders(res) {
-    if (!res.headersSent) {
-        const cookies = res.getHeader("Set-Cookie");
-        if (cookies) {
-            // We need to copy the Set-Cookie header into another one, since Set-Cookie is not accessible on the frontend
-            res.setHeader("st-cookie", cookies);
-            // We need to make the new header accessible to the frontend
-            res.setHeader(
-                "access-control-expose-headers",
-                `st-cookie, ${res.getHeader("access-control-expose-headers")}`
-            );
-
-            // This is not strictly necessary
-            res.removeHeader("Set-Cookie");
-        }
-    }
-}
-```
-</TabItem>
-</BackendSDKTabs>
+You can find the implementation [here](https://github.com/supertokens/supertokens-auth-react/blob/localstorage-example/examples/with-localstorage/api-server.js#L14-L30).
 
 ### 3. Send the tokens using a custom header
 
 Finally, we need to override most of the functions and APIs of the `Session` recipe to have them use the header enabled in the first step and to 
 use the helper function defined in the second step to send tokens to the frontend.
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
-
-```jsx
-supertokens.init({
-    supertokens: {...},
-    appInfo: {...},
-    recipeList: [
-        ...,
-        //highlight-start
-        Session.init({
-            // CSRF protection is not necessary in this case, because there are no cookies that would be automatically sent
-            antiCsrf: "NONE",
-            override: {
-                functions: (origImpl) => {
-                    return {
-                        ...origImpl,
-
-                        createNewSession: async (input) => {
-                            const session = await origImpl.createNewSession(input);
-
-                            updateHeaders(session.res);
-
-                            return session;
-                        },
-
-                        refreshSession: async (input) => {
-                            const session = await origImpl.refreshSession(input);
-
-                            updateHeaders(session.res);
-
-                            return session;
-                        },
-
-                        getSession: async (input) => {
-                            const stCookies = input.req.headers["st-cookie"];
-
-                            if (stCookies) {
-                                input.req.headers["cookie"] = input.req.headers["st-cookie"];
-                            }
-                            const res = origImpl.getSession(input);
-
-                            updateHeaders(input.res);
-
-                            return res;
-                        },
-                    };
-                },
-
-                apis: (origImpl) => {
-                    return {
-                        ...origImpl,
-
-                        signOutPOST: async (input) => {
-                            await origImpl.signOutPOST(input);
-
-                            updateHeaders(input.options.res);
-                        },
-
-                        verifySession: async (input) => {
-                            const stCookies = input.options.req.headers["st-cookie"];
-
-                            if (stCookies) {
-                                input.options.req.headers["cookie"] = input.options.req.headers["st-cookie"];
-                            }
-
-                            await origImpl.verifySession(input);
-
-                            updateHeaders(input.options.res);
-                        },
-
-                        refreshPOST: async (input) => {
-                            const stCookies = input.options.req.headers["st-cookie"];
-
-                            if (stCookies) {
-                                input.options.req.headers["cookie"] = input.options.req.headers["st-cookie"];
-                            }
-
-                            await origImpl.refreshPOST(input);
-
-                            updateHeaders(input.options.res);
-                        },
-                    };
-                },
-            },
-        }),
-        //highlight-end
-    ],
-});
-```
-</TabItem>
-</BackendSDKTabs>
+You can find the modified session recipe [here](https://github.com/supertokens/supertokens-auth-react/blob/localstorage-example/examples/with-localstorage/api-server.js#L43-L116)
 
 ## Frontend
+On the frontend we need to modify our SuperTokens configuration and patch the global fetch function to add our custom header. 
+You can find the modified `App.js` [here](https://github.com/supertokens/supertokens-auth-react/blob/localstorage-example/examples/with-localstorage/src/App.js).
 
 ### 1. Adding a helper to store cookies
 First, we need to add a helper function that will process the custom header and store the cookies in the proper format.
-
-<FrontendSDKTabs>
-<TabItem value="reactjs">
-
-```jsx
-function setCookiesInLocalstorage(respCookies) {
-    if (respCookies) {
-        // Split and parse cookies received
-        const respCookieMap = parseSetCookieString(splitCookiesString(respCookies), { decodeValues: false, map: true });
-
-        // Check if we have anything stored already
-        const localstorageCookies = localStorage.getItem("st-cookie");
-        if (localstorageCookies !== null) {
-            // Split and parse cookies we have in stored previously
-            const splitStoredCookies = localstorageCookies.split("; ").map((cookie) => cookie.split("="));
-
-            for (const [name, value] of splitStoredCookies) {
-                // Keep old cookies if they weren't overwritten
-                if (respCookieMap[name] === undefined) {
-                    respCookieMap[name] = { name, value };
-                }
-            }
-        }
-
-        // Save the combined cookies in a the format of a Cookie header
-        // Please keep in mind that these have no expiration and lack many of the things done automatically for cookies
-        // Many of these features can be implemented, but they are out of scope for this example
-        localStorage.setItem(
-            "st-cookie",
-            Object.values(respCookieMap)
-                .map((cookie) => `${cookie.name}=${cookie.value}`)
-                .join("; ")
-        );
-    }
-}
-```
-</TabItem>
-<TabItem value="vanillajs">
-
-```jsx
-function setCookiesInLocalstorage(respCookies) {
-    if (respCookies) {
-        // Split and parse cookies received
-        const respCookieMap = parseSetCookieString(splitCookiesString(respCookies), { decodeValues: false, map: true });
-
-        // Check if we have anything stored already
-        const localstorageCookies = localStorage.getItem("st-cookie");
-        if (localstorageCookies !== null) {
-            // Split and parse cookies we have in stored previously
-            const splitStoredCookies = localstorageCookies.split("; ").map((cookie) => cookie.split("="));
-
-            for (const [name, value] of splitStoredCookies) {
-                // Keep old cookies if they weren't overwritten
-                if (respCookieMap[name] === undefined) {
-                    respCookieMap[name] = { name, value };
-                }
-            }
-        }
-
-        // Save the combined cookies in a the format of a Cookie header
-        // Please keep in mind that these have no expiration and lack many of the things done automatically for cookies
-        // Many of these features can be implemented, but they are out of scope for this example
-        localStorage.setItem(
-            "st-cookie",
-            Object.values(respCookieMap)
-                .map((cookie) => `${cookie.name}=${cookie.value}`)
-                .join("; ")
-        );
-    }
-}
-```
-</TabItem>
-</FrontendSDKTabs>
+A simple implementation can be found [here](https://github.com/supertokens/supertokens-auth-react/blob/localstorage-example/examples/with-localstorage/src/App.js#L126-L155).
+Please keep in mind, that this isn't an equivalent replacement for cookies, there are a lot of features we didn't implement in the example. These could be done,
+but our recommendation is to use cookies if at all possible.
 
 ### 2. Replace global fetch
 Then, we need to replace the global fetch to make use of the custom header.
