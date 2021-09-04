@@ -13,7 +13,8 @@ export default function NodeJSFrameworkSubTabs(props) {
                 { label: 'Fastify', value: 'fastify' },
                 { label: 'Koa', value: 'koa' },
                 { label: 'Loopback', value: 'loopback' },
-                { label: 'AWS Lambda', value: 'awsLambda' },
+                { label: 'AWS Lambda / Netlify', value: 'awsLambda' },
+                { label: 'Next.js', value: 'nextjs' },
             ]}>
             {props.children}
         </Tabs>
