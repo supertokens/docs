@@ -26,88 +26,34 @@ let { getBackendConfig } = require("../../config/supertokensConfig");
 supertokens.init(getBackendConfig())
 ```
 
-
-## 3) Create an express app using `serverless-http` library
-- It's easiest to use SuperTokens within the context of an express app. So we use `serverless-http` to achieve that.
-- There are no performance downsides to doing this. In fact, it will allow you to use any other express middleware too!
-- Remember to add the supertokens error handler.
-- CORS is only needed if you are hosting your frontend using a separate domain (if your website domain is different that your API's domain).
-
+## 3) Use session verification with your API handler
+We use the `verifySession()` middleware to verify a session.
 
 ```jsx title="netlify/functions/user.js"
-const express = require("express");
-const serverless = require("serverless-http");
 let supertokens = require("supertokens-node");
+let { verifySession } = require("supertokens-node/recipe/session/framework/awsLambda");
+let middy = require("@middy/core");
+let cors = require("@middy/http-cors");
 let { getBackendConfig } = require("../../config/supertokensConfig");
 
 supertokens.init(getBackendConfig());
 
-const app = express();
+const handler = async (event, _) => {
+    return {
+        body: JSON.stringify({
+            sessionHandle: event.session.getHandle(),
+            userId: event.session.getUserId(),
+            jwtPayload: event.session.getJWTPayload(),
+        }),
+    };
+};
 
-//highlight-start
-// CORS is only needed if you are hosting your frontend using
-// a separate domain.
-app.use(cors({
-    origin: websiteUrl,
-    allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
-    credentials: true,
-}));
-
-// TODO: YOUR APIS COME HERE
-
-app.use(supertokens.errorHandler());
-//highlight-end
-
-app.use((err, req, res, next) => {
-    res.status(500).send(
-        "Something went wrong"
-    );
-});
-
-module.exports.handler = serverless(app);
-```
-
-
-## 4) Add session verification to your API
-We use the `Session.verifySession()` middleware to verify a session.
-
-```jsx title="netlify/functions/user.js"
-const express = require("express");
-const serverless = require("serverless-http");
-let supertokens = require("supertokens-node");
-let { getBackendConfig } = require("../../config/supertokensConfig");
-let Session = require("supertokens-node/recipe/session");
-
-supertokens.init(getBackendConfig());
-
-const app = express();
-
-// CORS is only needed if you are hosting your frontend using
-// a separate domain.
-app.use(cors({
-    origin: websiteUrl,
-    allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
-    credentials: true,
-}));
-
-// highlight-start
-app.get("/.netlify/functions/user", Session.verifySession(), async (req, res) => {
-    let session = req.session;
-    res.send({
-        sessionHandle: session.getHandle(),
-        userId: session.getUserId(),
-        jwtPayload: session.getJWTPayload()
-    });
-});
-// highlight-end
-
-app.use(supertokens.errorHandler());
-
-app.use((err, req, res, next) => {
-    res.status(500).send(
-        "Something went wrong"
-    );
-});
-
-module.exports.handler = serverless(app);
+module.exports.handler = middy(verifySession(handler)).use(
+    cors({
+        origin: getBackendConfig().appInfo.websiteDomain,
+        credentials: true,
+        headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+        methods: "OPTIONS,POST,GET,PUT,DELETE",
+    })
+);
 ```
