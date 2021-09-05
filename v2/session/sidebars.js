@@ -140,7 +140,21 @@ module.exports = {
             "advanced-customizations/frontend-hooks/pre-api",
             "advanced-customizations/frontend-hooks/handle-event"
           ],
-        }
+        },
+        {
+          type: 'category',
+          label: 'Examples',
+          items: [
+            {
+              type: 'category',
+              label: 'Using localstorage instead of cookies',
+              items: [
+                "advanced-customizations/examples/localstorage/about",
+                "advanced-customizations/examples/localstorage/guide"
+              ],
+            },
+          ],
+        },
       ],
     },
     "using-with-faunadb",
