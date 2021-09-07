@@ -7,7 +7,7 @@ export default function NodeJSFrameworkSubTabsServerless(props) {
     return (
         <Tabs
             isSubTab={true}
-            groupId="nodejs-framework"
+            groupId="nodejs-framework-serverless"
             defaultValue="express"
             values={[
                 { label: 'Express', value: 'express' },
