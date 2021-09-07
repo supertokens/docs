@@ -214,8 +214,21 @@ module.exports = {
             "advanced-customizations/frontend-hooks/handle-event",
             "advanced-customizations/frontend-hooks/redirection-callback"
           ],
-        }
-
+        },
+        {
+          type: 'category',
+          label: 'Examples',
+          items: [
+            {
+              type: 'category',
+              label: 'Using localstorage instead of cookies',
+              items: [
+                "advanced-customizations/examples/localstorage/about",
+                "advanced-customizations/examples/localstorage/guide"
+              ],
+            },
+          ],
+        },
       ],
     },
     {

@@ -9,7 +9,9 @@ import TabItem from '@theme/TabItem';
 
 # How to use
 
-## Use the override config
+## Method 1: Pre / Post API logic change:
+
+If you would like to change something pre or post our API logic, then use this method.
 
 :::info
 See all the [functions that can be overrided here](/docs/nodejs/session/override/apis)
@@ -56,3 +58,76 @@ SuperTokens.init({
 
 - `originalImplementation` is the object that contains apis that have the original implementation for this recipe. It can be used in your apis as a way to use the SuperTokens' default behaviour.
 - In the above code snippet, we override the `signOutPOST` api of this recipe.
+
+## Method 2: Change API logic by copy / paste:
+
+If you need to change our implementation of the API logic you should use this method.
+
+In this example we will be overriding the sign out API.
+
+
+### Step 1: Copy the API code from the SDK.
+
+You first need to find the implementation for the API you would like to change in the backend SDK.
+- All the APIs you can override can be found [here](/docs/nodejs/session/override/apis), copy the name of the function you would like to override.
+- You can find the API code for this recipe [here](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/api/implementation.ts).
+- In this example we want to override the `signOutPOST` API, so we can search for a function with that name in the page mentioned above and copy the code.
+
+### Step 2: Add the API code to the `override` config.
+
+Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `signOutPOST` code we copied earlier and modify it.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+let STError = require("supertokens-node/recipe/session").Error;
+
+SuperTokens.init({
+    appInfo: {...},
+    supertokens: {...},
+    recipeList: [
+        Session.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        
+                        signOutPOST: async (input) => {
+
+                            let session;
+                            try {
+                                session = await options.recipeImplementation.getSession({ req: options.req, res: options.res });
+                            } catch (err) {
+                                if (STError.isErrorFromSuperTokens(err) && err.type === STError.UNAUTHORISED) {
+                                    // The session is expired / does not exist anyway. So we return OK
+                                    return {
+                                        status: "OK",
+                                    };
+                                }
+                                throw err;
+                            }
+
+                            if (session === undefined) {
+                                throw new Error("Session is undefined. Should not come here.");
+                            }
+
+                            await session.revokeSession();
+
+                            return {
+                                status: "OK",
+                            };
+                        },
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+</BackendSDKTabs>
+
+You can now freely modify any step in the API.

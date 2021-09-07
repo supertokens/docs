@@ -104,7 +104,8 @@ module.exports = {
         "code-style/type-thinking",
         "code-style/typescript",
         "code-style/react",
-        "code-style/java"
+        "code-style/java",
+        "code-style/go"
       ],
     },
   ],
