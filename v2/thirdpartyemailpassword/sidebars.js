@@ -44,6 +44,7 @@ module.exports = {
             "common-customizations/signup-form/changing-field-labels",
             "common-customizations/signup-form/field-validators",
             "common-customizations/signup-form/built-in-providers",
+            "common-customizations/signup-form/changing-oauth-scopes",
             "common-customizations/signup-form/custom-providers",
             "common-customizations/signup-form/toc-privacypolicy",
             "common-customizations/signup-form/default-to-sign-up"
