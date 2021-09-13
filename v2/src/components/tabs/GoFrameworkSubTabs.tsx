@@ -13,7 +13,6 @@ export default function GoFrameworkSubTabs(props) {
                 { label: 'Gin', value: 'gin' },
                 { label: 'Chi', value: 'chi' },
                 { label: 'Mux', value: 'mux' },
-                { label: 'Twirp', value: 'twirp' },
             ]}>
             {props.children}
         </Tabs>
