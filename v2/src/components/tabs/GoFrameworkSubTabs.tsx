@@ -9,9 +9,9 @@ export default function GoFrameworkSubTabs(props) {
             groupId="go-framework"
             defaultValue="http"
             values={[
+                { label: 'Chi', value: 'chi' },
                 { label: 'net/http', value: 'http' },
                 { label: 'Gin', value: 'gin' },
-                { label: 'Chi', value: 'chi' },
                 { label: 'Mux', value: 'mux' },
             ]}>
             {props.children}
