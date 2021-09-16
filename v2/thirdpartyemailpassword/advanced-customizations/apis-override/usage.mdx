@@ -14,12 +14,12 @@ import TabItem from '@theme/TabItem';
 
 If you would like to change something pre or post our API logic, then use this method.
 
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
 :::info
 See all the [functions that can be overrided here](/docs/nodejs/thirdpartyemailpassword/override/apis)
 :::
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
 
 ```jsx
 SuperTokens.init({
@@ -74,6 +74,62 @@ SuperTokens.init({
 });
 ```
 </TabItem>
+<TabItem value="go">
+
+:::info
+See all the [functions that can be overrided here](/docs/go/thirdpartyemailpassword/override/apis)
+:::
+
+```go
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+				//highlight-start
+				Override: &tpepmodels.OverrideStruct{
+					APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
+
+						//First we copy the original impl
+						newImplementation := originalImplementation
+
+						// Then we override the functions we want to
+						newImplementation.SignInUpPOST = func(input tpepmodels.SignInUpAPIInput) (tpepmodels.SignInUpAPIOutput, error) {
+							// TODO: some custom logic
+
+							// or call the default behaviour as show below
+							return originalImplementation.SignInUpPOST(input)
+						}
+
+						// TODO: Override more APIs
+
+						return newImplementation
+					},
+					EmailVerificationFeature: &evmodels.OverrideStruct{
+						APIs: func(originalImplementationEmailVerification evmodels.APIInterface) evmodels.APIInterface {
+							//First we copy the original impl
+							newImplementation := originalImplementationEmailVerification
+
+							// Then we override the functions we want to
+							newImplementation.VerifyEmailPOST = func(token string, options evmodels.APIOptions) (evmodels.VerifyEmailUsingTokenResponse, error) {
+								// TODO: some custom logic
+
+								// or call the default behaviour as show below
+								return originalImplementationEmailVerification.VerifyEmailPOST(token, options)
+							}
+
+							// TODO: Override more functions
+
+							return newImplementation
+						},
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
+```
+</TabItem>
 </BackendSDKTabs>
 
 - `originalImplementation` and `originalImplementationEmailVerification` are objects that contain APIs that have the original implementation for this and the email verification recipe. They can be used in your custom apis as a way to use the SuperTokens' default behaviour.
@@ -90,6 +146,9 @@ In this example we will be overriding the password reset API.
 Note that the ThirdPartyEmailPassword recipe APIs will use EmailPassword and ThirdParty recipe API implementations.
 :::
 
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
 ### Step 1: Copy the API code from the SDK.
 
 You first need to find the implementation for the API you would like to change in the backend SDK.
@@ -100,9 +159,6 @@ You first need to find the implementation for the API you would like to change i
 
 ### Step 2: Add the API code in the override config.
 Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `passwordResetPOST`  code we copied earlier and modify it.
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
 
 ```jsx
 SuperTokens.init({
@@ -131,6 +187,58 @@ SuperTokens.init({
         })
     ]
 });
+```
+</TabItem>
+<TabItem value="go">
+
+### Step 1: Copy the API code from the SDK.
+
+You first need to find the implementation for the API you would like to change in the backend SDK.
+- All the APIs you can override can be found [here](/docs/go/thirdpartyemailpassword/override/apis), copy the name of the function you would like to override.
+- You can find the API code for this recipe [here](https://github.com/supertokens/supertokens-golang/blob/master/recipe/thirdpartyemailpassword/api/implementation.go).
+- In this example we want to override the `PasswordResetPOST` API, so we can search for a function with that name in the page mentioned above.
+- Since this API uses EmailPassword recipe's `PasswordResetPOST` API, make sure to copy the code from [here](https://github.com/supertokens/supertokens-golang/blob/master/recipe/emailpassword/api/implementation.go#L58)
+
+### Step 2: Add the API code in the override config.
+Now in the `Override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `PasswordResetPOST`  code we copied earlier and modify it.
+
+```go
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+				//highlight-start
+				Override: &tpepmodels.OverrideStruct{
+					APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
+
+						//First we copy the original impl
+						newImplementation := originalImplementation
+
+						// Then we override the functions we want to
+						newImplementation.PasswordResetPOST = func(formFields []epmodels.TypeFormField, token string, options epmodels.APIOptions) (epmodels.ResetPasswordUsingTokenResponse, error) {
+							var newPassword string
+							for _, formField := range formFields {
+								if formField.ID == "password" {
+									newPassword = formField.Value
+								}
+							}
+
+							response, err := options.RecipeImplementation.ResetPasswordUsingToken(token, newPassword)
+							if err != nil {
+								return epmodels.ResetPasswordUsingTokenResponse{}, err
+							}
+
+							return response, nil
+						}
+
+						return newImplementation
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
 ```
 </TabItem>
 </BackendSDKTabs>
