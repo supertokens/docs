@@ -17,6 +17,7 @@ export default function NodeJSFrameworkSubTabsServerless(props) {
                 { label: 'Loopback', value: 'loopback' },
                 { label: 'Serverless', value: 'serverless' },
                 { label: 'Next.js', value: 'nextjs' },
+                { label: 'Nest.js', value: 'nestjs' },
             ]}>
             {childContainsTabItemWithValue("serverless", props.children) ? null : DefaultServerlessTabItem()}
             {childContainsTabItemWithValue("nextjs", props.children) ? null : DefaultNextjsTabItem()}
