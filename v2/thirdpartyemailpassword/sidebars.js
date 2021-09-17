@@ -41,8 +41,10 @@ module.exports = {
           label: 'Sign Up Form',
           items: [
             "common-customizations/signup-form/adding-fields",
+            "common-customizations/signup-form/changing-field-labels",
             "common-customizations/signup-form/field-validators",
             "common-customizations/signup-form/built-in-providers",
+            "common-customizations/signup-form/changing-oauth-scopes",
             "common-customizations/signup-form/custom-providers",
             "common-customizations/signup-form/toc-privacypolicy",
             "common-customizations/signup-form/default-to-sign-up"
@@ -52,6 +54,7 @@ module.exports = {
           type: "category",
           label: "Sign In Form",
           items: [
+            "common-customizations/signin-form/changing-field-labels",
             "common-customizations/signin-form/field-validators",
             "common-customizations/signin-form/built-in-providers",
             "common-customizations/signin-form/custom-providers",
