@@ -1,10 +1,10 @@
 module.exports = {
   sidebar: [
-    "installation"
-    // "init",
-    // "getusercount",
-    // "getusersnewestfirst",
-    // "getusersoldestfirst",
+    "installation",
+    "init",
+    "getusercount",
+    "getusersnewestfirst",
+    "getusersoldestfirst",
     // {
     //   type: 'category',
     //   label: 'Emailpassword',
