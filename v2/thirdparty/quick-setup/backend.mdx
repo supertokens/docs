@@ -7,15 +7,23 @@ hide_title: true
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import TabItem from '@theme/TabItem';
 import NodeJSFrameworkSubTabsServerless from "/src/components/tabs/NodeJSFrameworkSubTabsServerless"
+import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
 
-# NodeJS Setup (5 mins)
+# Backend Integration (5 mins)
 
-:::important
-- For framework specific implementation (like Next.js), please skip this section and go directly to the section with the name of your framework. 
-- For serverless deployment, please see the "Serverless Deployment" section instead
-:::
+## Example
+<BackendSDKTabs>
+<TabItem value="nodejs">
 
-### An example implementation can be [found here](https://github.com/supertokens/supertokens-demo-react/blob/thirdparty/api-server.js).
+An example implementation can be [found here](https://github.com/supertokens/supertokens-demo-react/blob/thirdparty/api-server.js).
+
+</TabItem>
+<TabItem value="go">
+
+Examples can be found [here](https://github.com/supertokens/supertokens-golang/tree/master/examples)
+
+</TabItem>
+</BackendSDKTabs>
 
 ## 1️) Install
 
@@ -27,11 +35,18 @@ npm i -s supertokens-node
 ```
 
 </TabItem>
+<TabItem value="go">
+
+```bash
+go get github.com/supertokens/supertokens-golang
+```
+
+</TabItem>
 </BackendSDKTabs>
 
 ## 2️) Call the `init` function
 
-At the top of your `index.js` file, add the following code.
+Initialise SuperTokens on server startup.
 
 :::important
 - Please make sure to replace all the `appInfo` configurations values with yours.
@@ -41,6 +56,7 @@ At the top of your `index.js` file, add the following code.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
+
 <NodeJSFrameworkSubTabsServerless>
 <TabItem value="express">
 
@@ -258,6 +274,55 @@ supertokens.init({
 </TabItem>
 </NodeJSFrameworkSubTabsServerless>
 </TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	err := supertokens.Init(supertokens.TypeInput{
+		Supertokens: &supertokens.ConnectionInfo{
+			ConnectionURI: "https://try.supertokens.io",
+		},
+		AppInfo: supertokens.AppInfo{
+			AppName:       "YOUR APP NAME",       // Example: "SuperTokens"
+			APIDomain:     "YOUR API DOMAIN",     // Example: "https://api.supertokens.io",
+			WebsiteDomain: "YOUR WEBSITE DOMAIN", // Example: "https://supertokens.io"
+		},
+		RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{
+				SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
+					Providers: []tpmodels.TypeProvider{
+						thirdparty.Google(tpmodels.GoogleConfig{
+							ClientID:     "GOOGLE_CLIENT_ID",
+							ClientSecret: "GOOGLE_CLIENT_SECRET",
+						}),
+						thirdparty.Github(tpmodels.GithubConfig{
+							ClientID:     "GITHUB_CLIENT_ID",
+							ClientSecret: "GITHUB_CLIENT_SECRET",
+						}),
+						thirdparty.Facebook(tpmodels.FacebookConfig{
+							ClientID:     "FACEBOOK_CLIENT_ID",
+							ClientSecret: "FACEBOOK_CLIENT_SECRET",
+						}),
+					},
+				},
+			}),
+			session.Init(nil), // initializes session features
+		},
+	})
+
+	if err != nil {
+		panic(err.Error())
+	}
+}
+```
+</TabItem>
 </BackendSDKTabs>
 
 Please refer to the corresponding documentations to get your client ids and client secrets for each of the below providers:
@@ -460,11 +525,180 @@ This `middleware` adds a few APIs (see all the APIs [here](https://app.swaggerhu
 </TabItem>
 </NodeJSFrameworkSubTabsServerless>
 </TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+Use the `supertokens.Middleware` and the `supertokens.GetAllCORSHeaders()` functions as shown below.
+
+```go
+import (
+	"net/http"
+	"strings"
+
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+    // SuperTokens init...
+
+    //highlight-start
+	http.ListenAndServe("SERVER ADDRESS", corsMiddleware(
+		supertokens.Middleware(http.HandlerFunc(func(rw http.ResponseWriter,
+    //highlight-end
+        r *http.Request) {
+			// TODO: Handle your APIs..
+
+		}))))
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, r *http.Request) {
+		response.Header().Set("Access-Control-Allow-Origin", "YOUR WEBSITE DOMAIN")
+		response.Header().Set("Access-Control-Allow-Credentials", "true")
+		if r.Method == "OPTIONS" {
+			// we add content-type + other headers used by SuperTokens
+			response.Header().Set("Access-Control-Allow-Headers",
+				strings.Join(append([]string{"Content-Type"},
+                //highlight-start
+					supertokens.GetAllCORSHeaders()...), ","))
+                //highlight-end
+			response.Header().Set("Access-Control-Allow-Methods", "*")
+			response.Write([]byte(""))
+		} else {
+			next.ServeHTTP(response, r)
+		}
+	})
+}
+```
+
+</TabItem>
+<TabItem value="gin">
+
+Use the `supertokens.Middleware` and the `supertokens.GetAllCORSHeaders()` functions as shown below.
+
+```go
+import (
+	"net/http"
+	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+    // SuperTokens init...
+
+	router := gin.New()
+
+	// CORS
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"YOUR WEBSITE DOMAIN"},
+		AllowMethods: []string{"GET", "POST", "DELETE", "PUT", "OPTIONS"},
+		AllowHeaders: append([]string{"content-type"},
+        // highlight-next-line
+			supertokens.GetAllCORSHeaders()...),
+		AllowCredentials: true,
+	}))
+
+	// Adding the SuperTokens middleware
+    // highlight-start
+	router.Use(func(c *gin.Context) {
+		supertokens.Middleware(http.HandlerFunc(
+			func(rw http.ResponseWriter, r *http.Request) {
+				c.Next()
+			})).ServeHTTP(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	})
+    // highlight-end
+
+	// TODO: Add APIs and start server
+}
+```
+
+</TabItem>
+<TabItem value="chi">
+
+Use the `supertokens.Middleware` and the `supertokens.GetAllCORSHeaders()` functions as shown below.
+
+```go
+import (
+	"github.com/go-chi/chi"
+	"github.com/go-chi/cors"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+    // SuperTokens init...
+    
+	r := chi.NewRouter()
+
+	// CORS
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"YOUR WEBSITE DOMAIN"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: append([]string{"Content-Type"},
+			//highlight-next-line
+			supertokens.GetAllCORSHeaders()...),
+		AllowCredentials: true,
+	}))
+
+	// SuperTokens Middleware
+	//highlight-next-line
+	r.Use(supertokens.Middleware)
+
+	// TODO: Add APIs and start server
+}
+```
+</TabItem>
+<TabItem value="mux">
+
+Use the `supertokens.Middleware` and the `supertokens.GetAllCORSHeaders()` functions as shown below.
+
+```go
+import (
+	"net/http"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	// SuperTokens init...
+
+	// TODO: Add APIs
+
+	router := mux.NewRouter()
+
+	// Adding handlers.CORS(options)(supertokens.Middleware(router)))
+	//highlight-start
+	http.ListenAndServe("SERVER ADDRESS", handlers.CORS(
+		handlers.AllowedHeaders(append([]string{"Content-Type"},
+			supertokens.GetAllCORSHeaders()...)),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}),
+		handlers.AllowedOrigins([]string{"YOUR WEBSITE DOMAIN"}),
+		handlers.AllowCredentials(),
+	)(supertokens.Middleware(router)))
+	//highlight-end
+}
+```
+</TabItem>
+</GoFrameworkSubTabs>
+
+This `Middleware` adds a few APIs (see all the APIs [here](https://app.swaggerhub.com/apis/supertokens/FDI)):
+- `POST /auth/signinup`: For signing up/signing in a user using a thirdparty provider.
+
+`/auth/` is a base path that [can be changed](../common-customizations/changing-base-path/api-base-path) if you want. 
+
+</TabItem>
 </BackendSDKTabs>
 
 
 :::tip security
-Please carefully set your CORS rules. It is **very important to explicitly set a list of allowed origins**, if your app allows for it.
+Please carefully set your CORS rules. It is **very important to explicitly set a list of allowed origins**. When adding origins make sure to add the full website URL. For example, if the domain is `example.com` make sure the value set is `https://example.com` (against the `Access-Control-Allow-Origin header`).
 :::
 
 ## 4️) Add the SuperTokens error handler
@@ -520,10 +754,17 @@ No additional `errorHandler` is required.
 </TabItem>
 </NodeJSFrameworkSubTabsServerless>
 </TabItem>
+<TabItem value="go">
+
+:::info
+You can skip this step
+:::
+
+</TabItem>
 </BackendSDKTabs>
 
 ## 5️) Test if sign up is setup correctly
-- Go to the `/auth` route of your website
+- Go to the `/auth` route of your **website**
 - Try to sign up.
 - If after signing up, you are redirected to `/`, everything is setup correctly 😁
 - If not, you can always ask for help via [Github issues](https://github.com/supertokens/supertokens-core/issues) or via [our Discord](https://supertokens.io/discord)
@@ -622,6 +863,155 @@ class LikeComment {
 
 </TabItem>
 </NodeJSFrameworkSubTabsServerless>
+</TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	http.ListenAndServe("SERVER ADDRESS", corsMiddleware(
+		supertokens.Middleware(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			// Handle your APIs..
+			if r.URL.Path == "/sessioninfo" {
+				// Calling the API with session verification
+				//highlight-next-line
+				session.VerifySession(nil, sessioninfo).ServeHTTP(rw, r)
+				return
+			}
+		}))))
+}
+
+// This is the API handler.
+func sessioninfo(w http.ResponseWriter, r *http.Request) {
+    // Fetching the session object and reading the userID
+    //highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	userId := sessionContainer.GetUserID()
+    //highlight-end
+
+	// TODO: API logic..
+}
+```
+</TabItem>
+<TabItem value="gin">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
+
+func main() {
+	router := gin.New()
+
+	//highlight-next-line
+	router.GET("/sessioninfo", verifySession(nil), sessioninfo)
+}
+
+// Wrap session.VerifySession to work with Gin
+//highlight-start
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+//highlight-end
+
+// This is the API handler.
+func sessioninfo(c *gin.Context) {
+	// Fetching the session object and reading the userID
+	//highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(c.Request.Context())
+	userId := sessionContainer.GetUserID()
+	//highlight-end
+
+	// TODO: API logic..
+}
+
+```
+
+</TabItem>
+<TabItem value="chi">
+
+```go
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	//highlight-next-line
+	r.Get("/sessioninfo", session.VerifySession(nil, sessioninfo))
+}
+
+// This is the API handler.
+func sessioninfo(w http.ResponseWriter, r *http.Request) {
+	// Fetching the session object and reading the userID
+	//highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	userId := sessionContainer.GetUserID()
+	//highlight-end
+
+	// TODO: API logic..
+}
+```
+
+</TabItem>
+<TabItem value="mux">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	//highlight-start
+	router.HandleFunc("/sessioninfo", 
+        session.VerifySession(nil, sessioninfo))
+            .Methods(http.MethodGet)
+    //highlight-end
+}
+
+// This is the API handler.
+func sessioninfo(w http.ResponseWriter, r *http.Request) {
+	// Fetching the session object and reading the userID
+	//highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	userId := sessionContainer.GetUserID()
+	//highlight-end
+
+	// TODO: API logic..
+}
+```
+
+</TabItem>
+</GoFrameworkSubTabs>
 </TabItem>
 </BackendSDKTabs>
 
