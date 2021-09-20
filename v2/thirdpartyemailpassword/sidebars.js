@@ -235,7 +235,7 @@ module.exports = {
       type: 'category',
       label: 'NextJS',
       customProps: {
-        logoUrl: 'https://assets.vercel.com/image/upload/v1607554385/repositories/next-js/next-logo.png'
+        logoUrl: '/img/logos/next-logo.png'
       },
       items: [
         "nextjs/about",
@@ -258,7 +258,7 @@ module.exports = {
       type: 'category',
       label: 'NestJS',
       customProps: {
-        logoUrl: 'https://nestjs.com/img/logo-small.svg'
+        logoUrl: '/img/logos/nest-logo.svg'
       },
       items: [
         "nestjs/guide",
