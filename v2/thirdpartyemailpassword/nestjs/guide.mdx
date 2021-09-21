@@ -1,0 +1,323 @@
+---
+id: guide
+title: Guide
+hide_title: true
+---
+
+# Guide
+
+## Overview
+
+Integrating SuperTokens into a NestJS backend is a bit different than the quick setup guide shows. We will add a few things:
+- A module to initialize the SDK
+- A middleware to add the authorization endpoints
+- A global error handler to pass SuperTokens related errors to the SDK
+- A guard to protect your API endpoints
+- A parameter decorator to access the session in your code
+
+We will cover each of these in the following few sections. Then, you can do the rest of the customizations by following the "Common customizations" section.
+
+Please look [here](https://docs.nestjs.com/first-steps) to see how to get started with your NestJS backend.
+
+## 1️) Installing SuperTokens
+
+```bash
+npm i -s supertokens-node
+```
+
+## 2) Adding a new module and initializing SuperTokens
+
+:::important
+- Please make sure to replace all the `appInfo` configurations values with yours.
+- To learn more about filling in `appInfo`, please visit [the appInfo page](../appinfo)
+- If you would like to configure a specific path for you APIs, you can do so by setting the `apiBasePath` value in the config. For example, if your API path is `www.example.com/api` then you can set the value of `apiBasePath` to `/api`.
+:::
+
+You can scaffold a module using the nest CLI by running this in the root folder of the application:
+```bash
+nest g module auth
+```
+The result should be a new `auth` folder with `auth.module.ts` in it. We should convert this into a [dynamic module](https://docs.nestjs.com/modules#dynamic-modules) to make sure that we only initialize SuperTokens once. As a bonus, you can set parts of the SuperTokens configuration in the App module. Centralizing settings like this can be helpful for things like setting separate connection URI for testing.
+
+```ts
+import { DynamicModule, Module } from "@nestjs/common";
+
+import supertokens from 'supertokens-node';
+import Session from 'supertokens-node/recipe/session';
+import EmailPassword from 'supertokens-node/recipe/emailpassword';
+
+@Module({
+  providers: [],
+  exports: [],
+  controllers: [],
+})
+export class AuthModule {
+  static forRoot({ connectionURI, apiKey }): DynamicModule {
+    supertokens.init({
+      supertokens: {
+        connectionURI,
+        apiKey,
+      },
+      appInfo: {
+        // learn more about this on https://supertokens.io/docs/thirdpartyemailpassword/appinfo
+        appName: "YOUR APP NAME", // Example: "SuperTokens",
+        apiDomain: "YOUR API DOMAIN", // Example: "https://api.supertokens.io",
+        websiteDomain: "YOUR WEBSITE DOMAIN" // Example: "https://supertokens.io"
+      },
+      recipeList: [
+        ThirdPartyEmailPassword.init({
+            providers: [
+                Google({
+                    clientSecret: "GOOGLE_CLIENT_SECRET",
+                    clientId: "GOOGLE_CLIENT_ID"
+                }),
+                Github({
+                    clientSecret: "GITHUB_CLIENT_SECRET",
+                    clientId: "GITHUB_CLIENT_ID"
+                }),
+                Facebook({
+                    clientSecret: "FACEBOOK_CLIENT_SECRET",
+                    clientId: "FACEBOOK_CLIENT_ID"
+                })
+            ]
+        }),
+        Session.init(),
+      ],
+    });
+
+    return {
+      providers: [],
+      exports: [],
+      imports: [],
+      module: AuthModule,
+    };
+  }
+}
+```
+
+### Adding the module to the application
+
+You need to update the `App` module to use the new dynamic module by importing the result of `forRoot` instead of the class itself.
+
+```ts
+...
+import { AuthModule } from './auth/auth.module';
+
+@Module({
+  imports: [
+    //highlight-start
+    AuthModule.forRoot({
+      connectionURI: "https://try.supertokens.io",
+    }),
+    //highlight-end
+  ],
+  controllers: [...],
+  providers: [...],
+})
+export class AppModule {}
+```
+
+## 3) Setting up the middleware
+
+### The middleware file
+
+You can scaffold the middleware by running `nest g middleware auth auth` in the application's root folder.
+The result should be in the auth module, called `auth.middleware.ts`. Next, we need to edit this to use the middleware from supertokens.
+
+```ts
+import { Injectable, NestMiddleware } from "@nestjs/common";
+import { middleware } from 'supertokens-node/framework/express';
+
+@Injectable()
+export class AuthMiddleware implements NestMiddleware {
+  supertokensMiddleware: any;
+
+  constructor() {
+    this.supertokensMiddleware = middleware();
+  }
+
+  use(req: Request, res: any, next: () => void) {
+    return this.supertokensMiddleware(req, res, next);
+  }
+}
+```
+
+### Registering the middleware
+
+We need to edit the module file to register the middleware. You can achieve this by implementing a `configure` method in the `AuthModule` class.
+
+```ts
+import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import { AuthMiddleware } from "./auth.middleware";
+...
+
+export class AuthModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AuthMiddleware).forRoutes('*');
+  }
+  ...
+}
+```
+
+## 4) Update CORS settings
+
+You should enable and update your CORS settings in `main.ts`:
+
+```ts
+...
+import supertokens from 'supertokens-node';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  //highlight-start
+  app.enableCors({
+    origin: ['http://localhost:3001'],
+    allowedHeaders: ['content-type', ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+  });
+  //highlight-end
+
+  await app.listen(3000);
+}
+
+bootstrap()
+```
+
+## 5) Add the SuperTokens error handler
+
+We add the SuperTokens error handler through a NestJS exception filter.
+
+### Exception filter
+
+You can scaffold the exception filter using the CLI by: `nest g filter auth auth`. This will result in a new `auth.filter.ts` file next to the auth module. We need to edit this to add our error handler.
+
+```ts
+import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
+import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
+
+import { Error, errorHandler } from 'supertokens-node';
+
+@Catch(Error)
+export class SupertokensExceptionFilter implements ExceptionFilter {
+  handler: ErrorRequestHandler;
+
+  constructor() {
+    this.handler = errorHandler();
+  }
+
+  catch(exception: Error, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+
+    this.handler(
+      exception,
+      ctx.getRequest<Request>(),
+      ctx.getResponse<Response>(),
+      ctx.getNext<NextFunction>(),
+    );
+  }
+}
+```
+
+### Registering the filter
+
+We need to add this filter as a global exception filter. You can do this in `main.ts`, right after the updated cors settings.
+
+```ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+import supertokens from 'supertokens-node';
+import { SupertokensExceptionFilter } from './auth.filter';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin: ['http://localhost:3001'],
+    allowedHeaders: ['content-type', ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+  });
+
+  //highlight-start
+  app.useGlobalFilters(new SupertokensExceptionFilter());
+  //highlight-end
+
+  await app.listen(3000);
+}
+
+bootstrap();
+```
+
+## 5) Add session verification guard
+
+Now that the library is set up, you can add a guard to protect your API. You can scaffold this `nest g guard auth auth`. This results in `auth.guard.ts` that we can edit to implement session verification.
+
+```ts
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+
+import { verifySession } from 'supertokens-node/recipe/session/framework/express';
+
+@Injectable()
+export class AuthGuard implements CanActivate {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const ctx = context.switchToHttp();
+
+    let err = undefined;
+    await verifySession()(
+      ctx.getRequest(),
+      ctx.getResponse(),
+      (res) => {
+        err = res;
+      },
+    );
+
+    if (err !== undefined) {
+      throw err;
+    }
+
+    return true;
+  }
+}
+```
+
+## 6) Add a parameter decorator
+
+Now you can add a parameter decorator to access the already verified session in your APIs. You can generate an empty decorator by running `nest g decorator session auth`. Edit `session.decorator.ts` to return the session attached to the request:
+
+```ts
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+
+export const Session = createParamDecorator(
+  (data: unknown, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.session;
+  },
+);
+```
+
+## 7) Combine the decorator and the guard to authenticate users
+
+You can add a protected method into a controller (e.g.: `App.controller.ts`) that receives the verified session as a parameter by:
+
+```ts
+...
+import { AuthGuard } from './auth/auth.guard';
+import { Session } from './auth/session.decorator';
+...
+
+@Controller()
+export class AppController {
+  ...
+  @Get('test')
+  @UseGuards(AuthGuard)
+  async getTest(@Session() session): Promise<string> {
+    // TODO: magic
+  }
+}
+```
+
+You should look at the Sessions section under Common Customizations to see how you can use the session object.
+
+## Minimum setup completed 🎉🥳
+Congratulations! You now have a fully functional session system!
+
+The next step is to set your SuperTokens core instance up.
