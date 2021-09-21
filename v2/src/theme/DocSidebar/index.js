@@ -165,9 +165,9 @@ function DocSidebarItemLink({
   const {href, label} = item;
   const isActive = isActiveSidebarItem(item, activePath);
   return (
-    <li className="menu__list-item" key={label}>
+    <li className={clsx("menu__list-item")} key={label}>
       <Link
-        className={clsx('menu__link', {
+        className={clsx('menu__link', styles.sidebarMenuItemLink, {
           'menu__link--active': isActive,
         })}
         to={href}
@@ -177,15 +177,19 @@ function DocSidebarItemLink({
           onClick: onItemClick,
         })}
         {...props}>
+        {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
         {isInternalUrl(href) ? (
-          label
+          <span className={styles.sidebarMenuItemLinkLabel}>
+            {label}
+          </span>
         ) : (
-          <span>
+          <span className={styles.sidebarMenuItemLinkLabel}>
             {label}
             <IconExternalLink />
           </span>
         )}
       </Link>
+      <div className={styles.spacer}></div>
     </li>
   );
 }
