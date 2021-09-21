@@ -157,7 +157,23 @@ module.exports = {
         },
       ],
     },
-    "using-with-faunadb",
+    {
+      type: 'doc',
+      id: "using-with-faunadb",
+      customProps: {
+        logoUrl: '/img/logos/fauna-db.svg'
+      }
+    },
+    {
+      type: 'category',
+      label: 'NestJS',
+      customProps: {
+        logoUrl: '/img/logos/nest-logo.svg'
+      },
+      items: [
+        "nestjs/guide",
+      ],
+    },
     {
       type: 'category',
       label: 'Serverless Deployment',
@@ -193,13 +209,6 @@ module.exports = {
             "serverless/with-aws-lambda/next-steps"
           ],
         },
-      ],
-    },
-    {
-      type: 'category',
-      label: 'NestJS',
-      items: [
-        "nestjs/guide",
       ],
     },
     {
