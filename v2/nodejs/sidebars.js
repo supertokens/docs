@@ -140,5 +140,14 @@ module.exports = {
         },
       ],
     },
+    {
+      type: 'category',
+      label: 'JWT',
+      items: [
+        "jwt/init",
+        "jwt/createJWT",
+        "jwt/getJWKS",
+      ]
+    }
   ],
 };
