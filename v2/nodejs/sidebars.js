@@ -147,6 +147,14 @@ module.exports = {
         "jwt/init",
         "jwt/createJWT",
         "jwt/getJWKS",
+        {
+          type: 'category',
+          label: 'Override',
+          items: [
+            "jwt/override/apis",
+            "jwt/override/functions"
+          ],
+        },
       ]
     }
   ],
