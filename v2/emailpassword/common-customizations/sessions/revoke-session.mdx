@@ -8,12 +8,13 @@ hide_title: true
 <!-- ./session/common-customizations/sessions/revoke-session.mdx -->
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
 import SelfHostedTabs from "/src/components/tabs/SelfHostedTabs"
 import TabItem from '@theme/TabItem';
 
 # Revoking a session
 
-## Method 1: Revoking via the `req` object.
+## Method 1: Revoking by creating your own API.
 
 :::important
 We provide a default sign out API that does something very similar to the code below. So please have a look at [that page](../sign-out) first.
@@ -22,20 +23,192 @@ We provide a default sign out API that does something very similar to the code b
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
 ```jsx
-let supertokens = require("supertokens-node");
-let Session = require("supertokens-node/recipe/session");
+let { verifySession } = require("supertokens-node/recipe/session/framework/express");
 
 // highlight-start
-app.use("/logout", Session.verifySession(), async (req, res) => {
+app.post("/logout", verifySession(), async (req, res) => {
 
     // This will delete the session from the db and from the frontend (cookies)
     await req.session.revokeSession();
-// highlight-end
+    // highlight-end
 
     res.send("Success! User session revoked");
 });
 ```
+</TabItem>
+<TabItem value="hapi">
+
+```jsx
+let { verifySession } = require("supertokens-node/recipe/session/framework/hapi");
+
+server.route({
+    path: "/logout",
+    method: "post",
+    //highlight-start
+    options: {
+        pre: [
+            {
+                method: verifySession()
+            },
+        ],
+    },
+    handler: async (req, res) => {
+        // This will delete the session from the db and from the frontend (cookies)
+        await req.session.revokeSession();
+        // highlight-end
+        return res.response("Success! User session revoked").code(200);
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```jsx
+let { verifySession } = require("supertokens-node/recipe/session/framework/fastify");
+
+//highlight-start
+fastify.post("/logout", {
+    preHandler: verifySession(),
+}, (req, res) => {
+    // This will delete the session from the db and from the frontend (cookies)
+    await req.session.revokeSession();
+    // highlight-end
+
+    res.send("Success! User session revoked");
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```jsx
+let { verifySession } = require("supertokens-node/recipe/session/framework/awsLambda");
+
+// highlight-start
+async function logout(awsEvent, _) => {
+    // This will delete the session from the db and from the frontend (cookies)
+    await awsEvent.session.revokeSession();
+    // highlight-end
+
+    return {
+        body: JSON.stringify({message: "Success! User session revoked"}),
+        statusCode: 200,
+    };
+});
+
+exports.handler = verifySession(logout);
+
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```jsx
+let { verifySession } = require("supertokens-node/recipe/session/framework/koa");
+
+//highlight-start
+router.post("/logout", verifySession(), (ctx, next) => {
+    // This will delete the session from the db and from the frontend (cookies)
+    await ctx.session.revokeSession();
+    // highlight-end
+
+    ctx.body = "Success! User session revoked";
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```jsx
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+
+class Logout {
+    //highlight-start
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) {}
+    @post("/logout")
+    @intercept(verifySession())
+    @response(200)
+    handler() {
+        // This will delete the session from the db and from the frontend (cookies)
+        await this.ctx.session.revokeSession();
+        // highlight-end
+
+        return "Success! User session revoked";
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```jsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+
+// highlight-start
+export default async function logout(req, res) {
+    await superTokensNextWrapper(
+        async (next) => {
+            // highlight-next-line
+            await verifySession()(req, res, next);
+        },
+        req,
+        res
+    )
+    // This will delete the session from the db and from the frontend (cookies)
+    await req.session.revokeSession();
+    // highlight-end
+    res.send("Success! User session revoked");
+}
+```
+</TabItem>
+<TabItem value="nestjs">
+
+```ts
+
+@Controller()
+export class ExampleController {
+  constructor(private readonly appService: AppService) {}
+
+  // For more information about "AuthGuard" and the "Session" decorator please read our NestJS guide.
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  async postLogout(@Session() session): Promise<string> {
+    await session.revokeSession();
+
+    return "Success! User session revoked";
+  }
+}
+```
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+```go
+func signoutAPI(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	// This will delete the session from the db and from the frontend (cookies)
+	err := sessionContainer.RevokeSession()
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			// TODO: Send 500 status code to client
+		}
+		return
+	}
+
+	// TODO: Send 200 response to client
+}
+```
+
 </TabItem>
 </BackendSDKTabs>
 
@@ -45,7 +218,7 @@ When calling this API from the frontend, please be sure to treat a `401` respons
 
 ## Method 2: Revoking a session using a `sessionHandle`.
 :::caution
-This and the remaining methods below do  not use the `req` object, so they will only delete the session from the db and not from the frontend.
+This and the remaining methods below will only delete the session from the db and not from the frontend.
 
 This implies that the user will still be able to access protected endpoints while their access token is alive (unless you [enable access token blacklisting](#access-token-blacklisting)).
 :::
@@ -69,6 +242,25 @@ app.use("/revoke-user-session", async (req, res) => {
 });
 ```
 </TabItem>
+<TabItem value="go">
+
+```go
+sessionHandle := "someSessionHandle"
+// highlight-next-line
+revoked, err := session.RevokeSession(sessionHandle)
+if err != nil {
+    // TODO: Handle error
+    return
+}
+
+if revoked {
+    // session was revoked
+} else {
+    // session was not found
+}
+```
+
+</TabItem>
 </BackendSDKTabs>
 
 ## Method 3: Revoking multiple sessions using an array of `sessionHandle`.
@@ -90,6 +282,22 @@ app.use("/revoke-multiple-sessions", async (req, res) => {
 });
 ```
 </TabItem>
+<TabItem value="go">
+
+```go
+// highlight-next-line
+revokedSessionHandles, err := session.RevokeMultipleSessions([]string{
+    "sessionHandel1", "sessionHandle2",
+})
+if err != nil {
+    // TODO: Handle error
+    return
+}
+
+// revokedSessionHandles is an array of revoked session handles.
+```
+
+</TabItem>
 </BackendSDKTabs>
 
 ## Method 4: Revoking all sessions for a `userId`.
@@ -110,6 +318,20 @@ app.use("/revoke-all-user-sessions", async (req, res) => {
     res.send("Success! All user sessions have been revoked");
 });
 ```
+</TabItem>
+<TabItem value="go">
+
+```go
+// highlight-next-line
+revokedSessionHandles, err := session.RevokeAllSessionsForUser("userId")
+if err != nil {
+    // TODO: Handle error
+    return
+}
+
+// revokedSessionHandles is an array of revoked session handles.
+```
+
 </TabItem>
 </BackendSDKTabs>
 

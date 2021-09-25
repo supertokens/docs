@@ -6,6 +6,7 @@ hide_title: true
 
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
 import TabItem from '@theme/TabItem';
 
 # Assigning roles to a session
@@ -20,8 +21,11 @@ We can set a JWT payload by passing it to the `createNewSession` function:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
 
 ```jsx
+// highlight-next-line
 let Session = require("supertokens-node/recipe/session");
 
 app.post("/login", async (req, res) => {
@@ -39,6 +43,185 @@ app.post("/login", async (req, res) => {
 })
 
 ```
+
+</TabItem>
+<TabItem value="hapi">
+
+```jsx
+// highlight-next-line
+let Session = require("supertokens-node/recipe/session");
+
+server.route({
+    path: "/login",
+    method: "post",
+    handler: async (req, res) => {
+        // verify user's credentials...
+
+        let userId = // get from db
+
+        let role = "admin"; // TODO: fetch based on user
+
+        // highlight-next-line
+        await Session.createNewSession(res, userId, { role });
+
+        return res.response({message: "User logged in!"}).code(200);
+    },
+});
+```
+</TabItem>
+<TabItem value="fastify">
+
+```jsx
+// highlight-next-line
+let Session = require("supertokens-node/recipe/session");
+
+fastify.post("/login", async (req, res) => {
+
+    // verify user's credentials...
+
+    let userId = // get from db
+
+    let role = "admin"; // TODO: fetch based on user
+
+    // highlight-next-line
+    await Session.createNewSession(res, userId, { role });
+
+    res.send({message: "User logged in!"});
+})
+
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```jsx
+let { middleware } = require("supertokens-node/framework/awsLambda")
+let Session = require("supertokens-node/recipe/session");
+
+async function login(awsEvent, _) {
+    // verify user's credentials...
+
+    let userId = // get from db
+
+    let role = "admin"; // TODO: fetch based on user
+
+    // highlight-next-line
+    await Session.createNewSession(awsEvent, userId, { role });
+
+    return {
+        body: JSON.stringify({message: "User logged in!"}),
+        statusCode: 200,
+    };
+}
+
+exports.handler = middleware(login);
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```jsx
+// highlight-next-line
+let Session = require("supertokens-node/recipe/session");
+
+router.post("/login", async (ctx, next) => {
+
+    // verify user's credentials...
+
+    let userId = // get from db
+
+    let role = "admin"; // TODO: fetch based on user
+
+    // highlight-next-line
+    await Session.createNewSession(ctx, userId, { role });
+
+    ctx.body = {message: "User logged in!"};
+})
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```jsx
+// highlight-next-line
+let Session = require("supertokens-node/recipe/session");
+
+class Login {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) {}
+    @post("/login")
+    @response(200)
+    async handler() {
+        // verify user's credentials...
+
+        let userId = // get from db
+
+        let role = "admin"; // TODO: fetch based on user
+
+        // highlight-next-line
+        await Session.createNewSession(this.ctx, userId, { role });
+        return {message: "User logged in!"};
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```jsx
+// highlight-next-line
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { createNewSession } from "supertokens-node/recipe/session";
+
+export default async function superTokens(req, res) {
+    // verify user's credentials...
+
+    let userId = // get from db
+
+    let role = "admin"; // TODO: fetch based on user
+
+    await superTokensNextWrapper(
+        async (next) => {
+            // highlight-next-line
+            await createNewSession(req, userId, { role });
+        },
+        req,
+        res
+    )
+    res.json({
+        message: "User logged in!"
+    });
+}
+
+```
+
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+```go
+func login(w http.ResponseWriter, r *http.Request) {
+
+	// verify user's credentials...
+
+	userId := "userId" // get from db
+
+	//highlight-start
+	_, err := session.CreateNewSession(w, userId, map[string]interface{}{
+		"role": "admin",
+	}, nil)
+	//highlight-end
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			// Send 500 to client
+		}
+	}
+
+	// Send 200 success to client
+}
+```
+
 </TabItem>
 </BackendSDKTabs>
 
@@ -48,12 +231,72 @@ Post session verification, you can use the `updateJWTPayload` function to store 
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
 
 ```jsx
-let Session = require("supertokens-node/recipe/session");
+let { verifySession } = require("supertokens-node/recipe/session/framework/express");
 
-//highlight-next-line
-app.post("/set-role", Session.verifySession(), (req, res) => {
+app.post("/set-role", verifySession(), async (req, res) => {
+
+    let userId = req.session.getUserId(); 
+
+    let role = "admin"; // TODO: fetch based on user
+
+    // Note that this will override any existing JWT payload
+    // that you may have provided earlier.
+    // highlight-start
+    await req.session.updateJWTPayload(
+        {role}
+    );
+    // highlight-end
+
+    //....
+});
+```
+</TabItem>
+<TabItem value="hapi">
+
+```jsx
+let { verifySession } = require("supertokens-node/recipe/session/framework/hapi");
+
+server.route({
+    path: "/set-role",
+    method: "post",
+    options: {
+        pre: [
+            {
+            method: verifySession()
+            },
+        ],
+    },
+    handler: async (req, res) => {
+        let userId = req.session.getUserId();
+
+        let role = "admin"; // TODO: fetch based on user
+
+    // Note that this will override any existing JWT payload
+    // that you may have provided earlier.
+    // highlight-start
+        // highlight-start
+        await req.session.updateJWTPayload(
+                {role}
+        );
+        // highlight-end
+        
+        //....
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```jsx
+let { verifySession } = require("supertokens-node/recipe/session/framework/fastify");
+
+fastify.post("/set-role", {
+    preHandler: verifySession(),
+}, (req, res) => {
     let userId = req.session.getUserId();
 
     let role = "admin"; // TODO: fetch based on user
@@ -61,13 +304,157 @@ app.post("/set-role", Session.verifySession(), (req, res) => {
     // Note that this will override any existing JWT payload
     // that you may have provided earlier.
     // highlight-start
-    await req.session.updateJWTPayload({
-        role
-    });
+    await req.session.updateJWTPayload(
+        {role}
+    );
+    // highlight-end
+    
+    //....
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```jsx
+let { verifySession } = require("supertokens-node/recipe/session/framework/awsLambda");
+
+async function setRole(awsEvent, _) => {
+    let userId = awsEvent.session.getUserId();
+
+    let role = "admin"; // TODO: fetch based on user
+
+    // Note that this will override any existing JWT payload
+    // that you may have provided earlier.
+    // highlight-start
+    await awsEvent.session.updateJWTPayload(
+        {role}
+    );
     // highlight-end
 
     //....
 });
+
+exports.handler = verifySession(setRole);
+
 ```
+
+</TabItem>
+<TabItem value="koa">
+
+```jsx
+let { verifySession } = require("supertokens-node/recipe/session/framework/koa");
+
+router.post("/set-role", verifySession(), (ctx, next) => {
+    let userId = ctx.session.getUserId();
+
+    let role = "admin"; // TODO: fetch based on user
+
+    // Note that this will override any existing JWT payload
+    // that you may have provided earlier.
+    // highlight-start
+    await ctx.session.updateJWTPayload(
+        {role}
+    );
+    // highlight-end
+    
+    //....
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```jsx
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+
+class SetRole {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) {}
+    @post("/set-role")
+    @intercept(verifySession())
+    @response(200)
+    handler() {
+        let userId = ((this.ctx as any).session as Session.SessionContainer).getUserId();
+
+        let role = "admin"; // TODO: fetch based on user
+
+        // Note that this will override any existing JWT payload
+        // that you may have provided earlier.
+        // highlight-start
+        // highlight-start
+        await ((this.ctx as any).session as Session.SessionContainer).updateJWTPayload(
+            {role}
+        );
+        // highlight-end
+
+        //....
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(AuthGuard)
+  async postExample(@Session() session): Promise<boolean> {
+    // highlight-start
+    // For more information about "AuthGuard" and the "Session" decorator please read our NestJS guide.
+    let userId = session.getUserId(); 
+    let role = "admin"; // TODO: fetch based on user
+
+    // Note that this will override any existing JWT payload
+    // that you may have provided earlier.
+    await session.updateJWTPayload(
+        {role}
+    );
+
+    // highlight-end
+    //....
+  }
+}
+```
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+// Make sure that you wrap this API with the session.VerifySession() function
+func setRoleAPI(w http.ResponseWriter, r *http.Request) {
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	currJWTPayload := sessionContainer.GetJWTPayload()
+
+	currJWTPayload["role"] = "newRole" // TODO: fetch based on user
+
+	// Note that this will override any existing JWT payload
+	// that you may have provided earlier.
+    //highlight-start
+	err := sessionContainer.UpdateJWTPayload(currJWTPayload)
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			// TODO: return 500 status code to the client
+		}
+        return
+	}
+    //highlight-end
+}
+```
+
 </TabItem>
 </BackendSDKTabs>

@@ -40,6 +40,7 @@ module.exports = {
           label: 'Sign In And Up',
           items: [
             "common-customizations/sign-in-and-up/built-in-providers",
+            "common-customizations/sign-in-and-up/changing-oauth-scopes",
             "common-customizations/sign-in-and-up/custom-providers",
             "common-customizations/sign-in-and-up/toc-privacypolicy"
           ],
@@ -65,7 +66,8 @@ module.exports = {
             "common-customizations/email-verification/about",
             "common-customizations/email-verification/email-verification-email",
             "common-customizations/email-verification/embed-in-page",
-            "common-customizations/email-verification/handling-email-verification-success"
+            "common-customizations/email-verification/handling-email-verification-success",
+            "common-customizations/email-verification/changing-token-lifetime"
           ]
         },
         {
@@ -190,13 +192,30 @@ module.exports = {
             "advanced-customizations/frontend-hooks/handle-event",
             "advanced-customizations/frontend-hooks/redirection-callback"
           ],
-        }
+        },
+        {
+          type: 'category',
+          label: 'Examples',
+          items: [
+            {
+              type: 'category',
+              label: 'Using localstorage instead of cookies',
+              items: [
+                "advanced-customizations/examples/localstorage/about",
+                "advanced-customizations/examples/localstorage/guide"
+              ],
+            },
+          ],
+        },
 
       ],
     },
     {
       type: 'category',
       label: 'NextJS',
+      customProps: {
+        logoUrl: '/img/logos/next-logo.png'
+      },
       items: [
         "nextjs/about",
         "nextjs/init",
@@ -216,11 +235,24 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'NestJS',
+      customProps: {
+        logoUrl: '/img/logos/nest-logo.svg'
+      },
+      items: [
+        "nestjs/guide",
+      ],
+    },
+    {
+      type: 'category',
       label: 'Serverless Deployment',
       items: [
         {
           type: 'category',
           label: 'With Netlify',
+          customProps: {
+            logoUrl: '/img/logos/netlify.svg'
+          },
           items: [
             "serverless/with-netlify/about",
             "serverless/with-netlify/frontend",
@@ -233,6 +265,9 @@ module.exports = {
         {
           type: 'category',
           label: 'With AWS Lambda',
+          customProps: {
+            logoUrl: '/img/logos/aws-lambda.svg'
+          },
           items: [
             "serverless/with-aws-lambda/about",
             "serverless/with-aws-lambda/frontend",

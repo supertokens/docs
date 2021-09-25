@@ -140,10 +140,40 @@ module.exports = {
             "advanced-customizations/frontend-hooks/pre-api",
             "advanced-customizations/frontend-hooks/handle-event"
           ],
-        }
+        },
+        {
+          type: 'category',
+          label: 'Examples',
+          items: [
+            {
+              type: 'category',
+              label: 'Using localstorage instead of cookies',
+              items: [
+                "advanced-customizations/examples/localstorage/about",
+                "advanced-customizations/examples/localstorage/guide"
+              ],
+            },
+          ],
+        },
       ],
     },
-    "using-with-faunadb",
+    {
+      type: 'doc',
+      id: "using-with-faunadb",
+      customProps: {
+        logoUrl: '/img/logos/fauna-db.svg'
+      }
+    },
+    {
+      type: 'category',
+      label: 'NestJS',
+      customProps: {
+        logoUrl: '/img/logos/nest-logo.svg'
+      },
+      items: [
+        "nestjs/guide",
+      ],
+    },
     {
       type: 'category',
       label: 'Serverless Deployment',
@@ -151,6 +181,9 @@ module.exports = {
         {
           type: 'category',
           label: 'With Netlify',
+          customProps: {
+            logoUrl: '/img/logos/netlify.svg'
+          },
           items: [
             "serverless/with-netlify/about",
             "serverless/with-netlify/frontend",
@@ -163,6 +196,9 @@ module.exports = {
         {
           type: 'category',
           label: 'With AWS Lambda',
+          customProps: {
+            logoUrl: '/img/logos/aws-lambda.svg'
+          },
           items: [
             "serverless/with-aws-lambda/about",
             "serverless/with-aws-lambda/frontend",

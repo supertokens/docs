@@ -41,6 +41,7 @@ module.exports = {
           label: 'Sign Up Form',
           items: [
             "common-customizations/signup-form/adding-fields",
+            "common-customizations/signup-form/changing-field-labels",
             "common-customizations/signup-form/field-validators",
             "common-customizations/signup-form/toc-privacypolicy",
             "common-customizations/signup-form/default-to-sign-up"
@@ -50,6 +51,7 @@ module.exports = {
           type: "category",
           label: "Sign In Form",
           items: [
+            "common-customizations/signin-form/changing-field-labels",
             "common-customizations/signin-form/field-validators",
           ]
         },
@@ -75,7 +77,8 @@ module.exports = {
             "common-customizations/reset-password/about",
             "common-customizations/reset-password/password-reset-email",
             "common-customizations/reset-password/embed-in-page",
-            "common-customizations/reset-password/post-reset-password"
+            "common-customizations/reset-password/post-reset-password",
+            "common-customizations/reset-password/changing-token-lifetime"
 
           ]
         },
@@ -86,7 +89,8 @@ module.exports = {
             "common-customizations/email-verification/about",
             "common-customizations/email-verification/email-verification-email",
             "common-customizations/email-verification/embed-in-page",
-            "common-customizations/email-verification/handling-email-verification-success"
+            "common-customizations/email-verification/handling-email-verification-success",
+            "common-customizations/email-verification/changing-token-lifetime"
           ]
         },
         {
@@ -220,13 +224,30 @@ module.exports = {
             "advanced-customizations/frontend-hooks/handle-event",
             "advanced-customizations/frontend-hooks/redirection-callback"
           ],
-        }
+        },
+        {
+          type: 'category',
+          label: 'Examples',
+          items: [
+            {
+              type: 'category',
+              label: 'Using localstorage instead of cookies',
+              items: [
+                "advanced-customizations/examples/localstorage/about",
+                "advanced-customizations/examples/localstorage/guide"
+              ],
+            },
+          ],
+        },
 
       ],
     },
     {
       type: 'category',
       label: 'NextJS',
+      customProps: {
+        logoUrl: '/img/logos/next-logo.png'
+      },
       items: [
         "nextjs/about",
         "nextjs/init",
@@ -246,11 +267,24 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'NestJS',
+      customProps: {
+        logoUrl: '/img/logos/nest-logo.svg'
+      },
+      items: [
+        "nestjs/guide",
+      ],
+    },
+    {
+      type: 'category',
       label: 'Serverless Deployment',
       items: [
         {
           type: 'category',
           label: 'With Netlify',
+          customProps: {
+            logoUrl: '/img/logos/netlify.svg'
+          },
           items: [
             "serverless/with-netlify/about",
             "serverless/with-netlify/frontend",
@@ -263,6 +297,9 @@ module.exports = {
         {
           type: 'category',
           label: 'With AWS Lambda',
+          customProps: {
+            logoUrl: '/img/logos/aws-lambda.svg'
+          },
           items: [
             "serverless/with-aws-lambda/about",
             "serverless/with-aws-lambda/frontend",
