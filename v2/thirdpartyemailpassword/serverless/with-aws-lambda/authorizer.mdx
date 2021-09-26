@@ -9,7 +9,7 @@ hide_title: true
 
 # Lambda Authorizer
 
-You can use a lambda similar to [step 5](./session-verification) as an Authorizer in API Gateways. This will enable you to use SuperTokens in a lambda to authorize requests to other integrations (e.g., AppSync).
+You can use a lambda similar to [step 5](./session-verification) as an Authorizer in API Gateways. This will enable you to use SuperTokens in a lambda to authorize requests to other integrations (e.g., AppSync). An Authorizer pointed to this lambda will add `context.authorizer.principalId` that you can map to a header. For example, you can map this to an "x-user-id" header which will be set to the id of the logged-in user. If there is no valid session for the request, this header won't exist.
 
 ## 1) Add configurations and dependencies
 
@@ -28,20 +28,28 @@ let { getBackendConfig } = require("./config");
 supertokens.init(getBackendConfig());
 
 exports.handler = async function(event, context) {
-    const wrappedResponse = wrapResponse(event);
     try {
-        const session = await Session.getSession(wrapRequest(event), wrappedResponse, { sessionRequired: false });
+        const session = await Session.getSession(event, event, { sessionRequired: false });
         if (session) {
+            // We need to add setCookie to the context, since later we will be mapping this to a Set-Cookie header on the response
+            // getSession has to set cookies on the first call after a refresh.
             return generateAllow(session.getUserId(), event.methodArn, {
                 setCookie: event.supertokens.response.cookies.join(', '),
             });
         }  else {
-            // You can also return explicit deny with additional context, but you should configure these as 401s so the SDK can handle them.
+            // You can allow requests without sessions
+            return generateAllow("", event.methodArn, {
+                setCookie: event.supertokens.response.cookies.join(', '),
+            });
+            // You can also return explicit deny with additional context, but you should configure these as 401s so the frontend SDK can handle them.
             // return generateDeny(undefined, event.methodArn);
-            throw new Error("Unauthorized");
+            // throw new Error("Unauthorized");
         }
     } catch(ex) {
-        throw new Error("Unauthorized");
+        if (ex.type === "TRY_REFRESH_TOKEN") {
+            throw new Error("Unauthorized");
+        }
+        throw ex;
     }
 }
      
@@ -85,7 +93,7 @@ const generateDeny = function(principalId, resource, context) {
     - Fill the name field
     - Set "Lambda function" to the one created above
     - Set "Lambda Event Payload" to Request
-    - Set "Identity Sources" to "Cookie"
+    - Delete the empty "Identity Source"
     - Click "Create"
 
 
