@@ -307,7 +307,9 @@ module.exports = {
             "serverless/with-aws-lambda/auth-serverless",
             "serverless/with-aws-lambda/api-gateway-config",
             "serverless/with-aws-lambda/session-verification",
-            "serverless/with-aws-lambda/next-steps"
+            "serverless/with-aws-lambda/next-steps",
+            "serverless/with-aws-lambda/authorizer",
+            "serverless/with-aws-lambda/appsync-integration"
           ],
         },
       ],
