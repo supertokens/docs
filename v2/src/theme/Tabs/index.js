@@ -48,6 +48,7 @@ function Tabs(props) {
 
     if (groupId != null) {
       setTabGroupChoices(groupId, selectedTabValue);
+      window.dispatchEvent( new Event('docs-tab-change') );
       setTimeout(() => {
         if (isInViewport(selectedTab)) {
           return;
