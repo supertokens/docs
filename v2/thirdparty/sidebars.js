@@ -44,6 +44,7 @@ module.exports = {
             "common-customizations/sign-in-and-up/toc-privacypolicy"
           ],
         },
+        "common-customizations/get-user-info",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/handling-signinup-success",
         "common-customizations/account-linking",
