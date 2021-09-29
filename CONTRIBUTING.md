@@ -123,6 +123,10 @@ import {Question, Answer}from "/src/components/question"
 </Question>
 ```
 
+- Use this component instead of tabs when you think that the tabs title are not obvious enough for the user to choose the right tab.
+- It can also be used to guide for showing optional content. For example, some part of docs is only relevant if the user is using axios on their frontend. So we ask them if they are using axios, and if they say yes, only then we render the content, else we render something else.
+- Note that using this too much might affect SEO since the useful content is hidden behind a user interaction.
+
 ## Building for deployment
 - This only works if have access to the `supertokens-backend-website` and `main-website` repo.
 - Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
