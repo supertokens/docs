@@ -17,6 +17,7 @@ export function Question(props: PropsWithChildren<{
                     paddingLeft: "24px",
                     paddingRight: "24px",
                     borderRadius: "6px",
+                    marginBottom: "10px",
                 }}>
                 <div style={{
                     fontSize: "24px",
