@@ -63,27 +63,13 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 - This should be used across recipe docs, when the content of the page is exactly the same across docs.
 - An example of this can be found `v2 > community > database-setup > mysql.mdx`.
 
-## Swizzling components:
+### Swizzling components:
 - Docusaurus allows "swizzling" of their components so that they can be modified as per our needs. Once a component is swizzled, it's placed in the v2 > src > theme folder, and can be edited freely.
 - To swizzle a component:
    - Open `docusaurus.config.js` and comment out all the custom plugins like: `"./src/plugins/reactBundle"` and `"./src/plugins/copyDocs"`.
    - Run the swizzle command: `npx docusaurus swizzle --danger "@docusaurus/theme-classic" "TODO: COMPONENT_NAME"`
    - Uncomment the two plugins that have been commented.
 - To know a list of components that can be swizzled, run `npx docusaurus swizzle --danger "@docusaurus/theme-classic" "App"`
-
-## Building for deployment
-- This only works if have access to the `supertokens-backend-website` and `main-website` repo.
-- Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
-- To build all docs, run the `./buildAllDocs` command.
-- To only build `v2` docs, go into `v2` and run `npm run build`. If this throws an error and you still want to finish building it, then run `npm run build-ignore-errors`.
-- To build non `v2` docs, run `./buildDocs <folder name>` command.
-
-### Fixing broken links
-While building, we may get broken links errors. There are different types:
-- External links: Make sure to give the full path to these links
-- Links to `supertokens.io`, but non docs pages: These links should be `https://supertokens.io/...`
-- Internal docs links: These need to be fixed since it's most likely due to a writing error.
-- `COPY DOCS` related links: Sometimes the source doc's structure may not match the destination doc. For example, the core docs in v2 > community folder are being shown in the recipes, but not in the community docs, and the pages it links to exist in the recipe docs, but not in the community docs. To fix this, we create dummy pages in the community docs like found here: `v2 > community > common-customizations > core > api-keys.mdx`
 
 ### Using variables in markdown files
 There may be cases where you want to use variables in markdown files, for example:
@@ -121,3 +107,32 @@ import { signOut } from "supertokens-auth-react/recipe/^{recipeImportName}";
 When the documentation pages are built, the variable will be replaced with the value in the JSON value. You can also use this in combination with plugins like the Copy Docs plugin explained above.
 
 NOTE: The variable values are only used in the final HTML output, the markdown files themselves are not modified.
+
+### Using question components
+You can ask users questions and show markdown based on what they select as answers. This can be achieved by using:
+```jsx
+import {Question, Answer}from "/src/components/question"
+
+<Question question="question...">
+<Answer title="ans1">
+...
+</Answer>
+<Answer title="ans2">
+...
+</Answer>
+</Question>
+```
+
+## Building for deployment
+- This only works if have access to the `supertokens-backend-website` and `main-website` repo.
+- Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
+- To build all docs, run the `./buildAllDocs` command.
+- To only build `v2` docs, go into `v2` and run `npm run build`. If this throws an error and you still want to finish building it, then run `npm run build-ignore-errors`.
+- To build non `v2` docs, run `./buildDocs <folder name>` command.
+
+### Fixing broken links
+While building, we may get broken links errors. There are different types:
+- External links: Make sure to give the full path to these links
+- Links to `supertokens.io`, but non docs pages: These links should be `https://supertokens.io/...`
+- Internal docs links: These need to be fixed since it's most likely due to a writing error.
+- `COPY DOCS` related links: Sometimes the source doc's structure may not match the destination doc. For example, the core docs in v2 > community folder are being shown in the recipes, but not in the community docs, and the pages it links to exist in the recipe docs, but not in the community docs. To fix this, we create dummy pages in the community docs like found here: `v2 > community > common-customizations > core > api-keys.mdx`
