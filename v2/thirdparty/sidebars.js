@@ -9,7 +9,7 @@ module.exports = {
         "quick-setup/backend",
         {
           type: 'category',
-          label: 'Core',
+          label: 'Step 3) Core',
           items: [
             "quick-setup/core/with-docker",
             "quick-setup/core/without-docker",
@@ -18,7 +18,7 @@ module.exports = {
         },
         {
           type: 'category',
-          label: 'Database Setup',
+          label: 'Database Setup (for self hosted only)',
           items: [
             "quick-setup/database-setup/mysql",
             "quick-setup/database-setup/postgresql",
