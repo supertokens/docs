@@ -33,8 +33,9 @@ module.exports = {
       collapsed: false,
       label: 'Common customizations',
       items: [
-        "common-customizations/redirect-to-auth",
+        "common-customizations/sessions/securing-component",
         "common-customizations/sign-out",
+        "common-customizations/redirect-to-auth",
         {
           type: 'category',
           label: 'Sign In And Up',
@@ -89,7 +90,6 @@ module.exports = {
             "common-customizations/sessions/checking-session-front-end",
             "common-customizations/sessions/user-information-front-end",
             "common-customizations/sessions/handling-session-expiry",
-            "common-customizations/sessions/securing-component",
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/update-jwt-payload",
             "common-customizations/sessions/update-session-data",
