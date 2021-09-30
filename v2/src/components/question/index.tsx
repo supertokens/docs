@@ -13,7 +13,6 @@ export function Question(props: PropsWithChildren<{
                     width: "100%",
                     background: "#292929",
                     paddingTop: "20px",
-                    paddingBottom: "20px",
                     paddingLeft: "24px",
                     paddingRight: "24px",
                     borderRadius: "6px",
@@ -40,6 +39,21 @@ export function Question(props: PropsWithChildren<{
                             }
                         });
                     })}
+                </div>
+                <div
+                    style={{
+                        height: "25px",
+                        marginRight: "-5px",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        color: "#ffffff",
+                        fontSize: "12px",
+                        display: "flex",
+                        fontStyle: "italic"
+                    }}>
+                    <span
+                        style={{ flex: 1 }} />
+                    Refresh the page to undo your selection
                 </div>
             </div>
         );
