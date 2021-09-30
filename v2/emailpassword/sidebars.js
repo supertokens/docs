@@ -10,7 +10,7 @@ module.exports = {
         "quick-setup/backend",
         {
           type: 'category',
-          label: 'Core',
+          label: 'Step 3) Core',
           items: [
             "quick-setup/core/with-docker",
             "quick-setup/core/without-docker",
@@ -19,7 +19,7 @@ module.exports = {
         },
         {
           type: 'category',
-          label: 'Database Setup',
+          label: 'Database Setup (for self hosted only)',
           items: [
             "quick-setup/database-setup/mysql",
             "quick-setup/database-setup/postgresql",
@@ -34,13 +34,15 @@ module.exports = {
       collapsed: false,
       label: 'Common customizations',
       items: [
-        "common-customizations/redirect-to-auth",
+        "common-customizations/sessions/securing-component",
         "common-customizations/sign-out",
+        "common-customizations/redirect-to-auth",
         {
           type: 'category',
           label: 'Sign Up Form',
           items: [
             "common-customizations/signup-form/adding-fields",
+            "common-customizations/signup-form/changing-field-labels",
             "common-customizations/signup-form/field-validators",
             "common-customizations/signup-form/toc-privacypolicy",
             "common-customizations/signup-form/default-to-sign-up"
@@ -50,6 +52,7 @@ module.exports = {
           type: "category",
           label: "Sign In Form",
           items: [
+            "common-customizations/signin-form/changing-field-labels",
             "common-customizations/signin-form/field-validators",
           ]
         },
@@ -76,7 +79,8 @@ module.exports = {
             "common-customizations/reset-password/about",
             "common-customizations/reset-password/password-reset-email",
             "common-customizations/reset-password/embed-in-page",
-            "common-customizations/reset-password/post-reset-password"
+            "common-customizations/reset-password/post-reset-password",
+            "common-customizations/reset-password/changing-token-lifetime"
 
           ]
         },
@@ -87,7 +91,8 @@ module.exports = {
             "common-customizations/email-verification/about",
             "common-customizations/email-verification/email-verification-email",
             "common-customizations/email-verification/embed-in-page",
-            "common-customizations/email-verification/handling-email-verification-success"
+            "common-customizations/email-verification/handling-email-verification-success",
+            "common-customizations/email-verification/changing-token-lifetime"
           ]
         },
         {
@@ -109,7 +114,6 @@ module.exports = {
             "common-customizations/sessions/checking-session-front-end",
             "common-customizations/sessions/user-information-front-end",
             "common-customizations/sessions/handling-session-expiry",
-            "common-customizations/sessions/securing-component",
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/update-jwt-payload",
             "common-customizations/sessions/update-session-data",
@@ -242,6 +246,9 @@ module.exports = {
     {
       type: 'category',
       label: 'NextJS',
+      customProps: {
+        logoUrl: '/img/logos/next-logo.png'
+      },
       items: [
         "nextjs/about",
         "nextjs/init",
@@ -261,11 +268,24 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'NestJS',
+      customProps: {
+        logoUrl: '/img/logos/nest-logo.svg'
+      },
+      items: [
+        "nestjs/guide",
+      ],
+    },
+    {
+      type: 'category',
       label: 'Serverless Deployment',
       items: [
         {
           type: 'category',
           label: 'With Netlify',
+          customProps: {
+            logoUrl: '/img/logos/netlify.svg'
+          },
           items: [
             "serverless/with-netlify/about",
             "serverless/with-netlify/frontend",
@@ -278,6 +298,9 @@ module.exports = {
         {
           type: 'category',
           label: 'With AWS Lambda',
+          customProps: {
+            logoUrl: '/img/logos/aws-lambda.svg'
+          },
           items: [
             "serverless/with-aws-lambda/about",
             "serverless/with-aws-lambda/frontend",
@@ -285,7 +308,9 @@ module.exports = {
             "serverless/with-aws-lambda/auth-serverless",
             "serverless/with-aws-lambda/api-gateway-config",
             "serverless/with-aws-lambda/session-verification",
-            "serverless/with-aws-lambda/next-steps"
+            "serverless/with-aws-lambda/next-steps",
+            "serverless/with-aws-lambda/authorizer",
+            "serverless/with-aws-lambda/appsync-integration"
           ],
         },
       ],

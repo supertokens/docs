@@ -9,7 +9,7 @@ module.exports = {
         "quick-setup/backend",
         {
           type: 'category',
-          label: 'Core',
+          label: 'Step 3) Core',
           items: [
             "quick-setup/core/with-docker",
             "quick-setup/core/without-docker",
@@ -18,7 +18,7 @@ module.exports = {
         },
         {
           type: 'category',
-          label: 'Database Setup',
+          label: 'Database Setup (for self hosted only)',
           items: [
             "quick-setup/database-setup/mysql",
             "quick-setup/database-setup/postgresql",
@@ -157,7 +157,23 @@ module.exports = {
         },
       ],
     },
-    "using-with-faunadb",
+    {
+      type: 'doc',
+      id: "using-with-faunadb",
+      customProps: {
+        logoUrl: '/img/logos/fauna-db.svg'
+      }
+    },
+    {
+      type: 'category',
+      label: 'NestJS',
+      customProps: {
+        logoUrl: '/img/logos/nest-logo.svg'
+      },
+      items: [
+        "nestjs/guide",
+      ],
+    },
     {
       type: 'category',
       label: 'Serverless Deployment',
@@ -165,6 +181,9 @@ module.exports = {
         {
           type: 'category',
           label: 'With Netlify',
+          customProps: {
+            logoUrl: '/img/logos/netlify.svg'
+          },
           items: [
             "serverless/with-netlify/about",
             "serverless/with-netlify/frontend",
@@ -177,6 +196,9 @@ module.exports = {
         {
           type: 'category',
           label: 'With AWS Lambda',
+          customProps: {
+            logoUrl: '/img/logos/aws-lambda.svg'
+          },
           items: [
             "serverless/with-aws-lambda/about",
             "serverless/with-aws-lambda/frontend",
@@ -184,7 +206,9 @@ module.exports = {
             "serverless/with-aws-lambda/auth-serverless",
             "serverless/with-aws-lambda/api-gateway-config",
             "serverless/with-aws-lambda/session-verification",
-            "serverless/with-aws-lambda/next-steps"
+            "serverless/with-aws-lambda/next-steps",
+            "serverless/with-aws-lambda/authorizer",
+            "serverless/with-aws-lambda/appsync-integration"
           ],
         },
       ],
