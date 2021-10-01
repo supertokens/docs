@@ -17,19 +17,15 @@ This list combines overridable components for [EmailPassword](/docs/auth-react/d
 ThirdPartyEmailPassword.init({
     override: {
         components: {
-            EmailPasswordSignIn: ...,
             EmailPasswordSignInFooter: ...,
             EmailPasswordSignInForm: ...,
             EmailPasswordSignInHeader: ...,
-            EmailPasswordSignUp: ...,
             EmailPasswordSignUpFooter: ...,
             EmailPasswordSignUpForm: ...,
             EmailPasswordSignUpHeader: ...,
             EmailPasswordResetPasswordEmail: ...,
             EmailPasswordSubmitNewPassword: ...,
-            ThirdPartySignUpFooter: ...,
             ThirdPartySignInAndUpProvidersForm: ...,
-            ThirdPartySignInAndUpCallbackTheme: ...,
             ThirdPartyEmailPasswordHeader: ...,
             ThirdPartyEmailPasswordSignInAndUpForm: ...,
         }
