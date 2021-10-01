@@ -116,7 +116,6 @@ module.exports = {
             "common-customizations/sessions/revoke-session",
             "common-customizations/sessions/change-session-timeout",
             "common-customizations/sessions/checking-session-front-end",
-            "common-customizations/sessions/user-information-front-end",
             "common-customizations/sessions/handling-session-expiry",
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/update-jwt-payload",
