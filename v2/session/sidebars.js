@@ -11,21 +11,26 @@ module.exports = {
           type: 'category',
           label: 'Step 3) Core',
           items: [
-            "quick-setup/core/with-docker",
-            "quick-setup/core/without-docker",
+            {
+              type: 'category',
+              label: 'Self hosted',
+              items: [
+                "quick-setup/core/with-docker",
+                "quick-setup/core/without-docker",
+                {
+                  type: 'category',
+                  label: 'Database Setup',
+                  items: [
+                    "quick-setup/database-setup/mysql",
+                    "quick-setup/database-setup/postgresql",
+                    "quick-setup/database-setup/rename-database-tables"
+                  ],
+                }
+              ],
+            },
             "quick-setup/core/saas-setup"
           ],
         },
-        {
-          type: 'category',
-          label: 'Database Setup (for self hosted only)',
-          items: [
-            "quick-setup/database-setup/mysql",
-            "quick-setup/database-setup/postgresql",
-            "quick-setup/database-setup/mongodb",
-            "quick-setup/database-setup/rename-database-tables"
-          ],
-        }
       ],
     },
     "appinfo",
