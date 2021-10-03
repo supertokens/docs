@@ -34,6 +34,7 @@ module.exports = {
       label: 'Common customizations',
       items: [
         "common-customizations/sessions/securing-component",
+        "common-customizations/verify-session",
         "common-customizations/sign-out",
         "common-customizations/redirect-to-auth",
         {
