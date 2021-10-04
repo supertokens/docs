@@ -1,6 +1,7 @@
 import React, { PropsWithChildren } from "react";
 import "./style.css";
 import FormItem from './formItem';
+import NormalisedURLDomain from "./normalisedURLDomain";
 
 type Props = {
     askForAppName: boolean,
@@ -147,11 +148,17 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         if (apiDomain.length > 0) {
-            apiDomainFine = true;
+            try {
+                new NormalisedURLDomain(apiDomain);
+                apiDomainFine = true;
+            } catch (ignored) { }
         }
 
         if (websiteDomain.length > 0) {
-            websiteDomainFine = true;
+            try {
+                new NormalisedURLDomain(websiteDomain);
+                websiteDomainFine = true;
+            } catch (ignored) { }
         }
 
         return appNameFine && apiDomainFine && websiteDomainFine;
