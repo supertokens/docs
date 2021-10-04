@@ -28,14 +28,20 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             formSubmitted: false,
             appName: "",
             apiDomain: "",
-            websiteDomain: ""
+            websiteDomain: "",
         }
     }
 
     render() {
         if (this.state.formSubmitted) {
-            // TODO:
-            return this.props.children;
+            return recursiveMap(this.props.children, (c) => {
+                if (typeof c === "string") {
+                    c = c.split("^{form_appName}").join(this.state.appName);
+                    c = c.split("^{form_apiDomain}").join(new NormalisedURLDomain(this.state.apiDomain).getAsStringDangerous());
+                    c = c.split("^{form_websiteDomain}").join(new NormalisedURLDomain(this.state.websiteDomain).getAsStringDangerous());
+                }
+                return c;
+            })
         } else {
             return (
                 <div
@@ -163,4 +169,23 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
         return appNameFine && apiDomainFine && websiteDomainFine;
     }
+}
+
+function recursiveMap(children: any, fn: any) {
+    let result = React.Children.map(children, (child: any) => {
+        if (!React.isValidElement(child) as any) {
+            return fn(child);
+        }
+        if (child.props.children) {
+            child = React.cloneElement(child, {
+                children: recursiveMap(child.props.children, fn)
+            });
+        }
+        return child;
+    });
+    if (children.props !== undefined && children.props.children !== undefined &&
+        !Array.isArray(children.props.children)) {
+        return result[0];
+    }
+    return result;
 }
