@@ -102,36 +102,31 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             }}
                             explanation="This the the URL of your website, without any path."
                             value={this.state.websiteDomain} />}
-                        <div style={{ height: "30px" }} />
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "row",
-                            }}>
-                            <div style={{
-                                flex: 1
-                            }} />
+                        {this.canContinue() ? <><div style={{ height: "30px" }} />
                             <div
-                                onClick={() => {
-                                    if (!this.canContinue()) {
-                                        return;
-                                    }
-                                    this.setState(oldState => {
-                                        return {
-                                            ...oldState,
-                                            formSubmitted: true
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "row",
+                                }}>
+                                <div style={{
+                                    flex: 1
+                                }} />
+                                <div
+                                    onClick={() => {
+                                        if (!this.canContinue()) {
+                                            return;
                                         }
-                                    })
-                                }}
-                                style={this.canContinue() ? {} : {
-                                    cursor: "not-allowed",
-                                    background: "#f7c797",
-                                    borderColor: "#f7c797"
-                                }}
-                                className="button">
-                                Continue
-                            </div>
-                        </div>
+                                        this.setState(oldState => {
+                                            return {
+                                                ...oldState,
+                                                formSubmitted: true
+                                            }
+                                        })
+                                    }}
+                                    className="button">
+                                    Continue
+                                </div>
+                            </div></> : null}
                     </div>
                 </div>
             );
