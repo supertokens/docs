@@ -1,5 +1,6 @@
 import React, { PropsWithChildren, useState } from "react";
 import "./style.css";
+import FormItem from './formItem';
 
 type Props = {
     askForAppName: boolean,
@@ -18,6 +19,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     constructor(props: PropsWithChildren<Props>) {
         super(props);
+        if (!props.askForAPIDomain && !props.askForAppName &&
+            !props.askForWebsiteDomain) {
+            throw new Error("You must ask for at least one item in the form")
+        }
         this.state = {
             formSubmitted: false,
             appName: "",
@@ -96,75 +101,66 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                 })
                             }}
                             explanation="This the the URL of your website, without any path."
-                            value={this.state.appName} />}
+                            value={this.state.websiteDomain} />}
+                        <div style={{ height: "30px" }} />
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "row",
+                            }}>
+                            <div style={{
+                                flex: 1
+                            }} />
+                            <div
+                                onClick={() => {
+                                    if (!this.canContinue()) {
+                                        return;
+                                    }
+                                    this.setState(oldState => {
+                                        return {
+                                            ...oldState,
+                                            formSubmitted: true
+                                        }
+                                    })
+                                }}
+                                style={this.canContinue() ? {} : {
+                                    cursor: "not-allowed",
+                                    background: "#f7c797",
+                                    borderColor: "#f7c797"
+                                }}
+                                className="button">
+                                Continue
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
         }
     }
-}
 
-function FormItem(props: { title: string, placeholder: string, onChange: (val: string) => void, explanation: string, value: string }) {
+    canContinue = () => {
+        let appNameFine = !this.props.askForAppName;
+        let apiDomainFine = !this.props.askForAPIDomain;
+        let websiteDomainFine = !this.props.askForWebsiteDomain;
 
-    let [showExplanation, setShowExplanation] = useState(false)
+        const appName = this.state.appName.trim();
+        const apiDomain = this.state.apiDomain.trim();
+        const websiteDomain = this.state.websiteDomain.trim();
 
-    return (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: "center",
-                alignItems: "center",
-                fontSize: "16px",
-                marginBottom: "14px",
-            }}>
-            {props.title + ":"}
-            <div style={{ width: "1%" }} />
-            <div
-                onClick={() => {
-                    setShowExplanation(!showExplanation);
-                }}
-                className="question">
-                <img
-                    src="/img/form-question.png" />
-            </div>
-            <div
-                style={{
-                    flex: 1,
-                    minWidth: "3%",
-                }} />
-            <div
-                style={{
-                    width: "70%",
-                    display: "flex",
-                    flexDirection: "column",
-                }}>
-                <input
-                    style={{
-                        width: "100%",
-                        height: "34px",
-                        borderRadius: "6px",
-                        paddingLeft: "20px",
-                        paddingRight: "20px",
-                        fontSize: "14px",
-                        color: "#222222"
-                    }}
-                    placeholder={props.placeholder} />
-                {showExplanation &&
-                    <div
-                        style={{
-                            marginTop: "8px",
-                            paddingTop: "10px",
-                            paddingBottom: "10px",
-                            paddingLeft: "20px",
-                            paddingRight: "20px",
-                            borderRadius: "6px",
-                            background: "#363636",
-                            fontSize: "14px",
-                        }}>
-                        {props.explanation}
-                    </div>}
-            </div>
-        </div>
-    );
+        if (appName.length > 0) {
+            appNameFine = true;
+        }
+
+        if (apiDomain.length > 0) {
+            apiDomainFine = true;
+        }
+
+        if (websiteDomain.length > 0) {
+            websiteDomainFine = true;
+        }
+
+        console.log(appNameFine, apiDomainFine, websiteDomainFine)
+
+        return appNameFine && apiDomainFine && websiteDomainFine;
+    }
 }
