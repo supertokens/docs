@@ -7,6 +7,7 @@ type Props = {
     askForAppName: boolean,
     askForAPIDomain: boolean,
     askForWebsiteDomain: boolean
+    // TODO: Add more fields here
 };
 
 type State = {
@@ -14,12 +15,14 @@ type State = {
     appName: string,
     apiDomain: string,
     websiteDomain: string,
+    // TODO: Add more fields here
 };
 
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
 
     constructor(props: PropsWithChildren<Props>) {
         super(props);
+        // TODO: Add more fields here
         if (!props.askForAPIDomain && !props.askForAppName &&
             !props.askForWebsiteDomain) {
             throw new Error("You must ask for at least one item in the form")
@@ -36,6 +39,48 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             if (jsonState !== null && jsonState !== undefined) {
                 this.state = JSON.parse(jsonState)
             }
+            this.state = {
+                ...this.state,
+                formSubmitted: this.canContinue()   // we reset this value because maybe the form is partially completed cause of another form completion which could have taken a subset of the info for this form.
+            }
+            window.addEventListener("appInfoFormFilled", this.anotherFormFilled);
+        }
+    }
+
+    anotherFormFilled = () => {
+        if (typeof window !== 'undefined') {
+            let jsonState = window.localStorage.getItem("form_appInfo")
+            if (jsonState !== null && jsonState !== undefined) {
+                let state = JSON.parse(jsonState)
+                this.setState(oldState => {
+                    return {
+                        ...oldState,
+                        ...state,
+                        formSubmitted: oldState.formSubmitted,
+                    }
+                }, () => {
+                    if (!this.state.formSubmitted) {
+                        if (this.canContinue()) {
+                            this.handleContinueClicked(false);
+                        }
+                    } else {
+                        if (!this.canContinue()) {
+                            this.setState(oldState => {
+                                return {
+                                    ...oldState,
+                                    formSubmitted: false
+                                }
+                            })
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    componentWillUnmount() {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener("appInfoFormFilled", this.anotherFormFilled);
         }
     }
 
@@ -43,9 +88,16 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (this.state.formSubmitted) {
             return recursiveMap(this.props.children, (c) => {
                 if (typeof c === "string") {
-                    c = c.split("^{form_appName}").join(this.state.appName);
-                    c = c.split("^{form_apiDomain}").join(this.state.apiDomain);
-                    c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
+                    // TODO: Add more fields here.
+                    if (this.props.askForAppName) {
+                        c = c.split("^{form_appName}").join(this.state.appName);
+                    }
+                    if (this.props.askForAPIDomain) {
+                        c = c.split("^{form_apiDomain}").join(this.state.apiDomain);
+                    }
+                    if (this.props.askForWebsiteDomain) {
+                        c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
+                    }
                 }
                 return c;
             })
@@ -116,6 +168,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             }}
                             explanation="This the the URL of your website, without any path."
                             value={this.state.websiteDomain} />}
+                        {/* TODO: Add more fields here */}
                         {this.canContinue() ? <><div style={{ height: "30px" }} />
                             <div
                                 style={{
@@ -126,7 +179,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     flex: 1
                                 }} />
                                 <div
-                                    onClick={this.handleContinueClicked}
+                                    onClick={() => this.handleContinueClicked(true)}
                                     className="button">
                                     Continue
                                 </div>
@@ -137,26 +190,30 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
-    handleContinueClicked = () => {
+    handleContinueClicked = (fromUser: boolean) => {
         if (!this.canContinue()) {
             return;
         }
 
         this.setState(oldState => {
             return {
+                // TODO: Add more fields here.
                 ...oldState,
-                apiDomain: new NormalisedURLDomain(this.state.apiDomain).getAsStringDangerous(),
-                websiteDomain: new NormalisedURLDomain(this.state.websiteDomain).getAsStringDangerous(),
+                apiDomain: this.props.askForAPIDomain ? new NormalisedURLDomain(this.state.apiDomain).getAsStringDangerous() : oldState.apiDomain,
+                websiteDomain: this.props.askForWebsiteDomain ? new NormalisedURLDomain(this.state.websiteDomain).getAsStringDangerous() : oldState.websiteDomain,
+                appName: this.props.askForAppName ? this.state.appName.trim() : oldState.appName,
                 formSubmitted: true
             }
         }, () => {
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem("form_appInfo", JSON.stringify(this.state))
+            if (typeof window !== 'undefined' && fromUser) {
+                window.localStorage.setItem("form_appInfo", JSON.stringify(this.state));
+                window.dispatchEvent(new Event('appInfoFormFilled'));
             }
         })
     }
 
     canContinue = () => {
+        // TODO: Add more fields here.
         let appNameFine = !this.props.askForAppName;
         let apiDomainFine = !this.props.askForAPIDomain;
         let websiteDomainFine = !this.props.askForWebsiteDomain;
