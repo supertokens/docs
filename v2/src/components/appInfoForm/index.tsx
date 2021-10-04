@@ -1,4 +1,4 @@
-import React, { PropsWithChildren, useState } from "react";
+import React, { PropsWithChildren } from "react";
 import "./style.css";
 import FormItem from './formItem';
 
@@ -158,8 +158,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (websiteDomain.length > 0) {
             websiteDomainFine = true;
         }
-
-        console.log(appNameFine, apiDomainFine, websiteDomainFine)
 
         return appNameFine && apiDomainFine && websiteDomainFine;
     }
