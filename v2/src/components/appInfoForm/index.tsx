@@ -84,23 +84,80 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
+    resubmitInfoClicked = (event) => {
+        event.preventDefault();
+        this.setState(oldState => {
+            return {
+                ...oldState,
+                formSubmitted: false
+            }
+        })
+    }
+
     render() {
         if (this.state.formSubmitted) {
-            return recursiveMap(this.props.children, (c) => {
-                if (typeof c === "string") {
-                    // TODO: Add more fields here.
-                    if (this.props.askForAppName) {
-                        c = c.split("^{form_appName}").join(this.state.appName);
-                    }
-                    if (this.props.askForAPIDomain) {
-                        c = c.split("^{form_apiDomain}").join(this.state.apiDomain);
-                    }
-                    if (this.props.askForWebsiteDomain) {
-                        c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
-                    }
-                }
-                return c;
-            })
+            return (
+                <div>
+                    <div
+                        style={{
+                            width: "100%",
+                            display: "flex",
+                            borderRadius: "6px",
+                            background: "#292929",
+                            padding: "16px",
+                            marginBottom: "20px",
+                            color: "#ffffff",
+                        }}>
+                        <div
+                            style={{
+                                width: "17px",
+                                marginRight: "10px"
+                            }}>
+                            <img
+                                style={{
+                                    width: "17px",
+                                }}
+                                src="/img/form-submitted-tick.png" />
+                        </div>
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                flex: 1,
+                                marginTop: "-2px"
+                            }}>
+                            <div
+                                style={{
+                                    fontSize: "14px",
+                                    fontWeight: 600
+                                }}>
+                                YOUR CONFIGURATION VALUES
+                            </div>
+                            <div style={{ height: "10px" }} />
+                            <div
+                                style={{
+                                    fontSize: "16px",
+                                }}>
+                                Your provided information is displayed in the code below. <a href="" onClick={this.resubmitInfoClicked}>Resubmit info?</a>
+                            </div>
+                        </div>
+                    </div>
+                    {recursiveMap(this.props.children, (c) => {
+                        if (typeof c === "string") {
+                            // TODO: Add more fields here.
+                            if (this.props.askForAppName) {
+                                c = c.split("^{form_appName}").join(this.state.appName);
+                            }
+                            if (this.props.askForAPIDomain) {
+                                c = c.split("^{form_apiDomain}").join(this.state.apiDomain);
+                            }
+                            if (this.props.askForWebsiteDomain) {
+                                c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
+                            }
+                        }
+                        return c;
+                    })}
+                </div>)
         } else {
             return (
                 <div
