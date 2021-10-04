@@ -30,6 +30,13 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             apiDomain: "",
             websiteDomain: "",
         }
+
+        if (typeof window !== 'undefined') {
+            let jsonState = window.localStorage.getItem("form_appInfo")
+            if (jsonState !== null && jsonState !== undefined) {
+                this.state = JSON.parse(jsonState)
+            }
+        }
     }
 
     render() {
@@ -37,8 +44,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             return recursiveMap(this.props.children, (c) => {
                 if (typeof c === "string") {
                     c = c.split("^{form_appName}").join(this.state.appName);
-                    c = c.split("^{form_apiDomain}").join(new NormalisedURLDomain(this.state.apiDomain).getAsStringDangerous());
-                    c = c.split("^{form_websiteDomain}").join(new NormalisedURLDomain(this.state.websiteDomain).getAsStringDangerous());
+                    c = c.split("^{form_apiDomain}").join(this.state.apiDomain);
+                    c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
                 }
                 return c;
             })
@@ -119,17 +126,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     flex: 1
                                 }} />
                                 <div
-                                    onClick={() => {
-                                        if (!this.canContinue()) {
-                                            return;
-                                        }
-                                        this.setState(oldState => {
-                                            return {
-                                                ...oldState,
-                                                formSubmitted: true
-                                            }
-                                        })
-                                    }}
+                                    onClick={this.handleContinueClicked}
                                     className="button">
                                     Continue
                                 </div>
@@ -138,6 +135,25 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 </div>
             );
         }
+    }
+
+    handleContinueClicked = () => {
+        if (!this.canContinue()) {
+            return;
+        }
+
+        this.setState(oldState => {
+            return {
+                ...oldState,
+                apiDomain: new NormalisedURLDomain(this.state.apiDomain).getAsStringDangerous(),
+                websiteDomain: new NormalisedURLDomain(this.state.websiteDomain).getAsStringDangerous(),
+                formSubmitted: true
+            }
+        }, () => {
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem("form_appInfo", JSON.stringify(this.state))
+            }
+        })
     }
 
     canContinue = () => {
