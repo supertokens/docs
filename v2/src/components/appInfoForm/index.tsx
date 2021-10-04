@@ -256,9 +256,11 @@ function recursiveMap(children: any, fn: any) {
         }
         return child;
     });
-    if (children.props !== undefined && children.props.children !== undefined &&
-        !Array.isArray(children.props.children)) {
-        return result[0];
+    if (result.length === 1) {
+        if (children.props === undefined || children.props.children === undefined ||
+            !Array.isArray(children.props.children)) {
+            return result[0];
+        }
     }
     return result;
 }
