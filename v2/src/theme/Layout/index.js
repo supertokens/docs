@@ -17,6 +17,38 @@ import { ThemeClassNames } from '@docusaurus/theme-common';
 import Head from '@docusaurus/Head';
 import { useLocation } from '@docusaurus/router';
 import './styles.css';
+import supertokens from "supertokens-website";
+
+if (typeof window !== 'undefined') {
+  let API_DOMAIN
+  let API_BASE_PATH
+  if (window.location.hostname === "supertokens.io" || window.location.hostname === "www.supertokens.io") {
+    API_DOMAIN = "https://api.supertokens.io"
+    API_BASE_PATH = "/0/auth"
+  } else {
+    API_DOMAIN = "https://dev.api.supertokens.io"
+    API_BASE_PATH = "/0/auth"
+  }
+
+  let sessionExpiredStatusCode = 401;
+  supertokens.init({
+    apiDomain: API_DOMAIN,
+    apiBasePath: API_BASE_PATH,
+    sessionExpiredStatusCode,
+    preAPIHook: async (context) => {
+      return {
+        ...context,
+        requestInit: {
+          ...context.requestInit,
+          headers: {
+            ...context.requestInit.headers,
+            "api-version": "0"
+          }
+        }
+      }
+    }
+  });
+}
 
 function OriginalLayout(props) {
   const { children, noFooter, wrapperClassName, pageClassName } = props;

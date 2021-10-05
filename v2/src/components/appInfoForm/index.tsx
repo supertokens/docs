@@ -2,6 +2,7 @@ import React, { PropsWithChildren } from "react";
 import "./style.css";
 import FormItem from './formItem';
 import NormalisedURLDomain from "./normalisedURLDomain";
+import { recursiveMap } from "../utils";
 
 type Props = {
     askForAppName: boolean,
@@ -299,25 +300,4 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
         return appNameFine && apiDomainFine && websiteDomainFine;
     }
-}
-
-function recursiveMap(children: any, fn: any) {
-    let result = React.Children.map(children, (child: any) => {
-        if (!React.isValidElement(child) as any) {
-            return fn(child);
-        }
-        if (child.props.children) {
-            child = React.cloneElement(child, {
-                children: recursiveMap(child.props.children, fn)
-            });
-        }
-        return child;
-    });
-    if (result.length === 1) {
-        if (children.props === undefined || children.props.children === undefined ||
-            !Array.isArray(children.props.children)) {
-            return result[0];
-        }
-    }
-    return result;
 }

@@ -1,3 +1,5 @@
+import React from "react";
+
 declare global {
     interface Window {
         stAnalytics: any;
@@ -46,4 +48,25 @@ export const sendButtonAnalytics = (eventName: string, version = "v5", options?:
             version
         )
     });
+}
+
+export function recursiveMap(children: any, fn: any) {
+    let result = React.Children.map(children, (child: any) => {
+        if (!React.isValidElement(child) as any) {
+            return fn(child);
+        }
+        if (child.props.children) {
+            child = React.cloneElement(child, {
+                children: recursiveMap(child.props.children, fn)
+            });
+        }
+        return child;
+    });
+    if (result.length === 1) {
+        if (children.props === undefined || children.props.children === undefined ||
+            !Array.isArray(children.props.children)) {
+            return result[0];
+        }
+    }
+    return result;
 }
