@@ -37,12 +37,19 @@ module.exports = {
     "appinfo",
     {
       type: 'category',
-      collapsed: false,
-      label: 'Common customizations',
+      label: 'Post login operations',
       items: [
         "common-customizations/sessions/securing-component",
         "common-customizations/verify-session",
         "common-customizations/sign-out",
+        "common-customizations/redirecting-post-login",
+        "common-customizations/handling-signinup-success",
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Common customizations',
+      items: [
         "common-customizations/redirect-to-auth",
         {
           type: 'category',
@@ -71,7 +78,6 @@ module.exports = {
         "common-customizations/get-user-info",
         "common-customizations/password-managers",
         "common-customizations/embed-sign-in-up-form",
-        "common-customizations/handling-signinup-success",
         "common-customizations/account-linking",
         {
           type: "category",
