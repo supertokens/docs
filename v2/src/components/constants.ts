@@ -8,8 +8,10 @@ let API_URL = "https://dev.api.supertokens.io/0";
 let API_DOMAIN = "https://dev.api.supertokens.io";
 let API_BASE_PATH = "/0/auth";
 let WEBSITE_DOMAIN = "http://localhost:9001";
+let MOCK_ENABLED = false;
 
 try {
+    MOCK_ENABLED = window.location.hostname === "localhost"
     // we have try catch cause nexJS throws "window not defined" error..
     if (window.location.hostname === "supertokens.io" || window.location.hostname === "www.supertokens.io") {
         API_URL = "https://api.supertokens.io/0";
@@ -24,4 +26,4 @@ try {
     }
 } catch (ignored) { }
 
-export { API_URL, API_DOMAIN, API_BASE_PATH, WEBSITE_DOMAIN };
+export { API_URL, API_DOMAIN, API_BASE_PATH, WEBSITE_DOMAIN, MOCK_ENABLED };

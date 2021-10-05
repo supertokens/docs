@@ -70,3 +70,7 @@ export function recursiveMap(children: any, fn: any) {
     }
     return result;
 }
+
+export function mockDelay(timeout = 2000) {
+    return new Promise(resolve => setTimeout(resolve, timeout));
+}
