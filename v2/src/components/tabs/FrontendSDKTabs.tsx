@@ -35,11 +35,11 @@ function DefaultVanillaJSTabItem() {
                                 </path>
                             </svg>
                         </span>
-                        not supported
+                        not supported / not applicable
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    For this operation, you will need to call <a href="/docs/thirdpartyemailpassword/apis#frontend-driver-interface">our APIs</a> yourself.
+                    If this requires a call to the backend, you will need to call <a href="/docs/thirdpartyemailpassword/apis#frontend-driver-interface">our APIs</a> yourself. Otherwise, since you are building your own login UI, you will have to handle this yourself.
                 </div>
             </div>
         </TabItem>
