@@ -43,6 +43,7 @@ module.exports = {
         "common-customizations/verify-session",
         "common-customizations/sign-out",
         "common-customizations/redirecting-post-login",
+        "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
       ],
     },
@@ -75,7 +76,6 @@ module.exports = {
             "common-customizations/signin-form/custom-providers",
           ]
         },
-        "common-customizations/get-user-info",
         "common-customizations/password-managers",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",

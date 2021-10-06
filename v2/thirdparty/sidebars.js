@@ -42,6 +42,7 @@ module.exports = {
         "common-customizations/verify-session",
         "common-customizations/sign-out",
         "common-customizations/redirecting-post-login",
+        "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
       ],
     },
@@ -60,7 +61,6 @@ module.exports = {
             "common-customizations/sign-in-and-up/toc-privacypolicy"
           ],
         },
-        "common-customizations/get-user-info",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         {
