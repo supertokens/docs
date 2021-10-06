@@ -39,10 +39,7 @@ function DefaultVanillaJSTabItem() {
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    <ul>
-                        <li>We support only the <a href="/docs/session/introduction">session recipe</a> for VanillaJS.</li>
-                        <li>You can use the session recipe and build the login UI yourself by directly integrating with <a href="/docs/thirdpartyemailpassword/apis">our APIs</a></li>
-                    </ul>
+                    For this operation, you will need to call <a href="/docs/thirdpartyemailpassword/apis#frontend-driver-interface">our APIs</a> yourself.
                 </div>
             </div>
         </TabItem>
