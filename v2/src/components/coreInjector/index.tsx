@@ -28,6 +28,10 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
         if (this.state.sessionState === "UNKNOWN") {
             return recursiveMap(this.props.children, (c) => {
                 if (typeof c === "string") {
+                    while (c.includes(" ^{coreInjector_connection_uri_comment}")) {
+                        c = c.split(" ^{coreInjector_connection_uri_comment}").join('^{coreInjector_connection_uri_comment}')
+                    }
+                    c = c.split("\n^{coreInjector_connection_uri_comment}").join('')
                     c = c.split("^{coreInjector_uri}").join('"",');
                     c = c.split("^{coreInjector_api_key}").join('""')
                     c = c.split("^{coreInjector_api_key_commented}").join('')
@@ -39,6 +43,10 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
             let key = this.state.key;
             return recursiveMap(this.props.children, (c) => {
                 if (typeof c === "string") {
+                    while (c.includes(" ^{coreInjector_connection_uri_comment}")) {
+                        c = c.split(" ^{coreInjector_connection_uri_comment}").join('^{coreInjector_connection_uri_comment}')
+                    }
+                    c = c.split("\n^{coreInjector_connection_uri_comment}").join('')
                     c = c.split("^{coreInjector_uri}").join(`"${uri}",`);
                     c = c.split("^{coreInjector_api_key}").join(`"${key}"`)
                     c = c.split("^{coreInjector_api_key_commented}").join('')
@@ -48,7 +56,8 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
         }
         return recursiveMap(this.props.children, (c) => {
             if (typeof c === "string") {
-                c = c.split("^{coreInjector_uri}").join('"https://try.supertokens.io", // This is hosted for demo purposes. You can use this, but make sure to change it to your core instance URI eventually.');
+                c = c.split("^{coreInjector_connection_uri_comment}").join('// try.supertokens.io is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.io), or self host a core.')
+                c = c.split("^{coreInjector_uri}").join('"https://try.supertokens.io",');
                 c = c.split("^{coreInjector_api_key}").join('"IF YOU HAVE AN API KEY FOR THE CORE, ADD IT HERE"')
                 c = c.split("^{coreInjector_api_key_commented}").join('// ')
             }
