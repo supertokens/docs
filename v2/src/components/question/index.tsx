@@ -1,7 +1,7 @@
 import React, { Children, PropsWithChildren, useState } from "react";
 
 export function Question(props: PropsWithChildren<{
-    question: string
+    question: string | (() => JSX.Element)
 }>) {
 
     const [selectedAnsTitle, setSelectedAnsTitle] = useState(undefined);
@@ -23,7 +23,7 @@ export function Question(props: PropsWithChildren<{
                     color: "#ffffff",
                     fontWeight: 600,
                 }}>
-                    {props.question}
+                    {typeof props.question === "string" ? props.question : props.question()}
                 </div>
                 <div
                     style={{

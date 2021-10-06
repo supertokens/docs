@@ -10,7 +10,7 @@ module.exports = {
         "quick-setup/backend",
         {
           type: 'category',
-          label: 'Step 3) Core',
+          label: 'Core',
           items: [
             {
               type: 'category',
