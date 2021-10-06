@@ -160,6 +160,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     })}
                 </div>)
         } else {
+
+            const canContinue = this.canContinue();
+
             return (
                 <div
                     style={{
@@ -177,7 +180,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             fontSize: "14px",
                             fontWeight: 600
                         }}>
-                        PLEASE PROVIDE YOUR CONFIGURATION VALUES
+                        PLEASE PROVIDE YOUR CONFIGURATION VALUES <span
+                            style={{
+                                color: "#ff6161"
+                            }}>(* = Required)</span>
                     </div>
                     <div style={{ height: "25px" }} />
                     <div
@@ -188,7 +194,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             flexDirection: "column"
                         }}>
                         {this.props.askForAppName && <FormItem
-                            title="appName"
+                            title="Your app's name"
                             placeholder="e.g. My awesome App"
                             onChange={(val) => {
                                 this.setState(oldState => {
@@ -201,7 +207,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             explanation="This is the name of your application"
                             value={this.state.appName} />}
                         {this.props.askForAPIDomain && <FormItem
-                            title="apiDomain"
+                            title="API Domain"
                             placeholder="e.g. http://localhost:8080"
                             onChange={(val) => {
                                 this.setState(oldState => {
@@ -211,10 +217,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     };
                                 })
                             }}
-                            explanation="This the the URL of your API domain, without any path."
+                            explanation="This the the URL of your app's API domain, without any path."
                             value={this.state.apiDomain} />}
                         {this.props.askForWebsiteDomain && <FormItem
-                            title="websiteDomain"
+                            title="Website Domain"
                             placeholder="e.g. http://localhost:3000"
                             onChange={(val) => {
                                 this.setState(oldState => {
@@ -227,21 +233,23 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             explanation="This the the URL of your website, without any path."
                             value={this.state.websiteDomain} />}
                         {/* TODO: Add more fields here */}
-                        {this.canContinue() ? <><div style={{ height: "30px" }} />
+                        <div style={{ height: "30px" }} />
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "row",
+                            }}>
+                            <div style={{
+                                flex: 1
+                            }} />
                             <div
-                                style={{
-                                    display: "flex",
-                                    flexDirection: "row",
+                                onClick={() => this.handleContinueClicked(true)}
+                                className="button" style={canContinue ? {} : {
+                                    cursor: "not-allowed"
                                 }}>
-                                <div style={{
-                                    flex: 1
-                                }} />
-                                <div
-                                    onClick={() => this.handleContinueClicked(true)}
-                                    className="button">
-                                    Continue
-                                </div>
-                            </div></> : null}
+                                {canContinue ? "Submit form" : "Fill form to submit"}
+                            </div>
+                        </div>
                     </div>
                 </div>
             );

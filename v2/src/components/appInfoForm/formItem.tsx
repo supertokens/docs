@@ -16,7 +16,10 @@ export default function FormItem(props: { title: string, placeholder: string, on
                 fontSize: "16px",
                 marginBottom: "14px",
             }}>
-            {props.title + ":"}
+            <span>{props.title + ":"}<span
+                style={{
+                    color: "#ff6161"
+                }}>*</span></span>
             <div style={{ width: "1%" }} />
             <div
                 onClick={() => {
