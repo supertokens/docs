@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React, {useState, useCallback, useEffect, useRef, memo} from 'react';
+import React, { useState, useCallback, useEffect, useRef, memo } from 'react';
 import clsx from 'clsx';
 import {
   useThemeConfig,
@@ -13,7 +13,7 @@ import {
   useAnnouncementBar,
 } from '@docusaurus/theme-common';
 import useLockBodyScroll from '@theme/hooks/useLockBodyScroll';
-import useWindowSize, {windowSizes} from '@theme/hooks/useWindowSize';
+import useWindowSize, { windowSizes } from '@theme/hooks/useWindowSize';
 import useScrollPosition from '@theme/hooks/useScrollPosition';
 import Link from '@docusaurus/Link';
 import isInternalUrl from '@docusaurus/isInternalUrl';
@@ -21,7 +21,7 @@ import Logo from '@theme/Logo';
 import IconArrow from '@theme/IconArrow';
 import IconMenu from '@theme/IconMenu';
 import IconExternalLink from '@theme/IconExternalLink';
-import {translate} from '@docusaurus/Translate';
+import { translate } from '@docusaurus/Translate';
 import styles from './styles.module.css';
 const MOBILE_TOGGLE_SIZE = 24;
 
@@ -41,7 +41,7 @@ const isActiveSidebarItem = (item, activePath) => {
 // TODO this item should probably not receive the "activePath" props
 // TODO this triggers whole sidebar re-renders on navigation
 
-const DocSidebarItems = memo(function DocSidebarItems({items, ...props}) {
+const DocSidebarItems = memo(function DocSidebarItems({ items, ...props }) {
   return items.map((item, index) => (
     <DocSidebarItem
       key={index} // sidebar is static, the index does not change
@@ -69,7 +69,7 @@ function DocSidebarItemCategory({
   activePath,
   ...props
 }) {
-  const {items, label} = item;
+  const { items, label } = item;
   const isActive = isActiveSidebarItem(item, activePath);
   const wasActive = usePrevious(isActive); // active categories are always initialized as expanded
   // the default (item.collapsed) is only used for non-active categories
@@ -128,8 +128,8 @@ function DocSidebarItemCategory({
         onClick={collapsible ? handleItemClick : undefined}
         href={collapsible ? '#' : undefined}
         {...props}>
-        {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
         <span className={styles.sidebarMenuItemLinkLabel}>{label}</span>
+        {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
         <div className={styles.spacer}></div>
       </a>
       <ul
@@ -162,7 +162,7 @@ function DocSidebarItemLink({
   collapsible: _collapsible,
   ...props
 }) {
-  const {href, label} = item;
+  const { href, label } = item;
   const isActive = isActiveSidebarItem(item, activePath);
   return (
     <li className={clsx("menu__list-item")} key={label}>
@@ -195,9 +195,9 @@ function DocSidebarItemLink({
 }
 
 function useShowAnnouncementBar() {
-  const {isClosed} = useAnnouncementBar();
+  const { isClosed } = useAnnouncementBar();
   const [showAnnouncementBar, setShowAnnouncementBar] = useState(!isClosed);
-  useScrollPosition(({scrollY}) => {
+  useScrollPosition(({ scrollY }) => {
     if (!isClosed) {
       setShowAnnouncementBar(scrollY === 0);
     }
@@ -231,7 +231,7 @@ function useResponsiveSidebar() {
   };
 }
 
-function HideableSidebarButton({onClick}) {
+function HideableSidebarButton({ onClick }) {
   return (
     <button
       type="button"
@@ -255,23 +255,23 @@ function HideableSidebarButton({onClick}) {
   );
 }
 
-function ResponsiveSidebarButton({responsiveSidebarOpened, onClick}) {
+function ResponsiveSidebarButton({ responsiveSidebarOpened, onClick }) {
   return (
     <button
       aria-label={
         responsiveSidebarOpened
           ? translate({
-              id: 'theme.docs.sidebar.responsiveCloseButtonLabel',
-              message: 'Close menu',
-              description:
-                'The ARIA label for close button of mobile doc sidebar',
-            })
+            id: 'theme.docs.sidebar.responsiveCloseButtonLabel',
+            message: 'Close menu',
+            description:
+              'The ARIA label for close button of mobile doc sidebar',
+          })
           : translate({
-              id: 'theme.docs.sidebar.responsiveOpenButtonLabel',
-              message: 'Open menu',
-              description:
-                'The ARIA label for open button of mobile doc sidebar',
-            })
+            id: 'theme.docs.sidebar.responsiveOpenButtonLabel',
+            message: 'Open menu',
+            description:
+              'The ARIA label for open button of mobile doc sidebar',
+          })
       }
       aria-haspopup="true"
       className="button button--secondary button--sm menu__button"
@@ -302,10 +302,10 @@ function DocSidebar({
 }) {
   const showAnnouncementBar = useShowAnnouncementBar();
   const {
-    navbar: {hideOnScroll},
+    navbar: { hideOnScroll },
     hideableSidebar,
   } = useThemeConfig();
-  const {isClosed: isAnnouncementBarClosed} = useAnnouncementBar();
+  const { isClosed: isAnnouncementBarClosed } = useAnnouncementBar();
   const {
     showResponsiveSidebar,
     closeResponsiveSidebar,

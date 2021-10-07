@@ -43,10 +43,7 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
             let key = this.state.key;
             return recursiveMap(this.props.children, (c) => {
                 if (typeof c === "string") {
-                    while (c.includes(" ^{coreInjector_connection_uri_comment}")) {
-                        c = c.split(" ^{coreInjector_connection_uri_comment}").join('^{coreInjector_connection_uri_comment}')
-                    }
-                    c = c.split("\n^{coreInjector_connection_uri_comment}").join('')
+                    c = c.split("^{coreInjector_connection_uri_comment}").join('// These are the connection details of the app you created on supertokens.io')
                     c = c.split("^{coreInjector_uri}").join(`"${uri}",`);
                     c = c.split("^{coreInjector_api_key}").join(`"${key}"`)
                     c = c.split("^{coreInjector_api_key_commented}").join('')

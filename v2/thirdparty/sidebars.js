@@ -4,6 +4,7 @@ module.exports = {
     {
       type: 'category',
       label: 'Quick setup',
+      collapsed: false,
       items: [
         "quick-setup/frontend",
         "quick-setup/backend",
