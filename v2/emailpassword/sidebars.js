@@ -35,7 +35,6 @@ module.exports = {
         },
       ],
     },
-    "appinfo",
     {
       type: 'category',
       label: 'Post login operations',
@@ -74,6 +73,7 @@ module.exports = {
           ]
         },
         "common-customizations/password-managers",
+        "common-customizations/user-pagination",
         "common-customizations/embed-sign-in-up-form",
         {
           type: "category",
@@ -167,7 +167,6 @@ module.exports = {
             "common-customizations/multi-tenancy/one-login-per-sub-domain"
           ]
         },
-        "common-customizations/user-pagination",
         {
           type: "category",
           label: "Core",
@@ -335,6 +334,7 @@ module.exports = {
         "testing/testing-with-postman"
       ],
     },
+    "appinfo",
     "sdks",
     "apis"
   ]

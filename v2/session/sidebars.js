@@ -34,10 +34,8 @@ module.exports = {
         },
       ],
     },
-    "appinfo",
     {
       type: 'category',
-      collapsed: false,
       label: 'Common customizations',
       items: [
         "common-customizations/sessions/new-session",
@@ -226,6 +224,7 @@ module.exports = {
         "testing/testing-with-postman"
       ],
     },
+    "appinfo",
     "sdks",
     "apis"
   ]

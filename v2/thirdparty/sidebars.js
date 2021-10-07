@@ -34,7 +34,6 @@ module.exports = {
         },
       ],
     },
-    "appinfo",
     {
       type: 'category',
       label: 'Post login operations',
@@ -62,6 +61,7 @@ module.exports = {
             "common-customizations/sign-in-and-up/toc-privacypolicy"
           ],
         },
+        "common-customizations/user-pagination",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         {
@@ -135,7 +135,6 @@ module.exports = {
             "common-customizations/changing-base-path/api-base-path"
           ]
         },
-        "common-customizations/user-pagination",
         {
           type: "category",
           label: "Core",
@@ -303,6 +302,7 @@ module.exports = {
         "testing/testing-with-postman"
       ],
     },
+    "appinfo",
     "sdks",
     "apis"
   ]
