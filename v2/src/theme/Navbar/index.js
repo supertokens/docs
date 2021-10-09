@@ -17,6 +17,7 @@ import NavbarItem from '@theme/NavbarItem';
 import Logo from '@theme/Logo';
 import IconMenu from '@theme/IconMenu';
 import styles from './styles.module.css'; // retrocompatible with v1
+import SignUpButton from "../NavbarItem/SignUpButton";
 
 const DefaultNavItemPosition = 'right'; // If split links by left/right
 // if position is unspecified, fallback to right (as v1)
@@ -108,6 +109,7 @@ function Navbar() {
             />
           )}
           {!hasSearchNavbarItem && <SearchBar />}
+          <SignUpButton />
         </div>
       </div>
       <div
