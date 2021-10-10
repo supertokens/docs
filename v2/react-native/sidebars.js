@@ -13,7 +13,6 @@ module.exports = {
         "usage/reading-userid",
         "usage/reading-jwt-payload",
         "usage/server-side-rendering",
-        "usage/form-data",
         "usage/sign-out",
         {
           type: 'category',
