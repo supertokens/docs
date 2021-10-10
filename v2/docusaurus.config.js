@@ -90,6 +90,16 @@ module.exports = {
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
+          docsPluginId: 'react-native',
+        },
+        {
+          type: 'docsVersionDropdown',
+          //// Optional
+          position: 'left',
+          // Add additional dropdown items at the beginning/end of the dropdown.
+          dropdownItemsBefore: [],
+          // Do not add the link active class when browsing docs.
+          dropdownActiveClassDisabled: true,
           docsPluginId: 'change_me',
         },
         {
@@ -256,6 +266,18 @@ module.exports = {
         path: 'golang',
         routeBasePath: 'docs/golang',
         sidebarPath: require.resolve('./golang/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'react-native',
+        path: 'react-native',
+        routeBasePath: 'docs/react-native',
+        sidebarPath: require.resolve('./react-native/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
