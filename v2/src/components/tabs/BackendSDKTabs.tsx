@@ -9,6 +9,7 @@ export default function BackendSDKTabs(props) {
             values={[
                 { label: 'NodeJS', value: 'nodejs' },
                 { label: 'GoLang', value: 'go' },
+                { label: 'Python', value: 'python' },
             ]}>
             {props.children}
         </Tabs>
