@@ -24,7 +24,11 @@ export default class BackendSDKCasing extends React.PureComponent<any, any> {
         this.setState({ sdk: typeof window === 'undefined' ? "nodejs" : window.localStorage.getItem("docusaurus.tab.backendsdk") });
     };
 
-    camelToSnakeCase = (str) => { return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`) };
+    camelToSnakeCase = (str: string) => { if (str !== "connectionURI") {
+        return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+    } else {
+        return "connection_uri"
+    }};
 
     camelToPascalCase = (str) => {
         if (str.length === 0) {
@@ -34,7 +38,9 @@ export default class BackendSDKCasing extends React.PureComponent<any, any> {
     };
 
     render() {
-        if (this.state.sdk === "go") {
+        if (this.state.sdk === "python") {
+            return (<code>{this.camelToSnakeCase(this.props.children)}</code>);
+        } else if (this.state.sdk === "go") {
             return (<code>{this.camelToPascalCase(this.props.children)}</code>);
         } else {
             return (<code>{this.props.children}</code>);
