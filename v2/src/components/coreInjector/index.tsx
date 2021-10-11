@@ -32,9 +32,14 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
                         c = c.split(" ^{coreInjector_connection_uri_comment}").join('^{coreInjector_connection_uri_comment}')
                     }
                     c = c.split("\n^{coreInjector_connection_uri_comment}").join('')
+                    while (c.includes(" ^{coreInjector_connection_uri_comment_with_hash}")) {
+                        c = c.split(" ^{coreInjector_connection_uri_comment_with_hash}").join('^{coreInjector_connection_uri_comment_with_hash}')
+                    }
+                    c = c.split("\n^{coreInjector_connection_uri_comment_with_hash}").join('')
                     c = c.split("^{coreInjector_uri}").join('"",');
                     c = c.split("^{coreInjector_api_key}").join('""')
                     c = c.split("^{coreInjector_api_key_commented}").join('')
+                    c = c.split("^{coreInjector_api_key_commented_with_hash}").join('')
                 }
                 return c;
             });
@@ -44,9 +49,11 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
             return recursiveMap(this.props.children, (c) => {
                 if (typeof c === "string") {
                     c = c.split("^{coreInjector_connection_uri_comment}").join('// These are the connection details of the app you created on supertokens.io')
+                    c = c.split("^{coreInjector_connection_uri_comment_with_hash}").join('# These are the connection details of the app you created on supertokens.io')
                     c = c.split("^{coreInjector_uri}").join(`"${uri}",`);
                     c = c.split("^{coreInjector_api_key}").join(`"${key}"`)
                     c = c.split("^{coreInjector_api_key_commented}").join('')
+                    c = c.split("^{coreInjector_api_key_commented_with_hash}").join('')
                 }
                 return c;
             });
@@ -54,9 +61,11 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
         return recursiveMap(this.props.children, (c) => {
             if (typeof c === "string") {
                 c = c.split("^{coreInjector_connection_uri_comment}").join('// try.supertokens.io is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.io), or self host a core.')
+                c = c.split("^{coreInjector_connection_uri_comment_with_hash}").join('# try.supertokens.io is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.io), or self host a core.')
                 c = c.split("^{coreInjector_uri}").join('"https://try.supertokens.io",');
                 c = c.split("^{coreInjector_api_key}").join('"IF YOU HAVE AN API KEY FOR THE CORE, ADD IT HERE"')
                 c = c.split("^{coreInjector_api_key_commented}").join('// ')
+                c = c.split("^{coreInjector_api_key_commented_with_hash}").join('# ')
             }
             return c;
         });
