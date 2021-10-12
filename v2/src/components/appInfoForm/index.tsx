@@ -177,10 +177,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     }}>
                     <div
                         style={{
-                            fontSize: "14px",
+                            fontSize: "16px",
                             fontWeight: 600
                         }}>
-                        PLEASE PROVIDE YOUR CONFIGURATION VALUES <span
+                        Please fill the form below to see the code snippet <span
                             style={{
                                 color: "#ff6161"
                             }}>(* = Required)</span>
