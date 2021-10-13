@@ -177,8 +177,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     }}>
                     <div
                         style={{
-                            fontSize: "16px",
-                            fontWeight: 600
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            textTransform: "uppercase"
                         }}>
                         Please fill the form below to see the code snippet <span
                             style={{
@@ -233,7 +234,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             explanation="This the the URL of your website, without any path."
                             value={this.state.websiteDomain} />}
                         {/* TODO: Add more fields here */}
-                        <div style={{ height: "30px" }} />
+                        <div style={{ height: "16px" }} />
                         <div
                             style={{
                                 display: "flex",
