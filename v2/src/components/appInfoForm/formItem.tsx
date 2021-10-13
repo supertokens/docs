@@ -4,7 +4,16 @@ import {isMobile, isTablet} from 'react-device-detect';
 
 import "./style.css";
 
-export default function FormItem(props: { title: string, placeholder: string, onChange: (val: string) => void, explanation: string, value: string }) {
+type FormItemType = {
+    title: string, 
+    placeholder: string,
+    onChange: (val: string) => void,
+    explanation: string,
+    value: string,
+    index: number
+}
+
+export default function FormItem(props: FormItemType) {
     // State
     const [showExplanation, setShowExplanation] = useState(false);
     const [explanationLocation, setExplanationLocation] = useState({
@@ -70,7 +79,7 @@ export default function FormItem(props: { title: string, placeholder: string, on
     const handleMouseClickOutIcon = (event: MouseEvent) => {
         const element = event.target as HTMLElement;
 
-        if (element.className !== "app-info-form-question-icon") {
+        if (element.id !== `app-info-form-question-icon-${props.index}`) {
             handleMouseOutIcon();
         }
 
@@ -86,6 +95,7 @@ export default function FormItem(props: { title: string, placeholder: string, on
                         }}>*</span></span>
                     <div className="question">
                         <img
+                            id={`app-info-form-question-icon-${props.index}`}
                             className="app-info-form-question-icon"
                             src="/img/form-question.png"
                             ref={questionIconRef}

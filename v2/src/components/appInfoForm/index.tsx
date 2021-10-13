@@ -195,6 +195,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             flexDirection: "column"
                         }}>
                         {this.props.askForAppName && <FormItem
+                            index={0}
                             title="Your app's name"
                             placeholder="e.g. My awesome App"
                             onChange={(val) => {
@@ -208,6 +209,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             explanation="This is the name of your application"
                             value={this.state.appName} />}
                         {this.props.askForAPIDomain && <FormItem
+                            index={1}
                             title="API Domain"
                             placeholder="e.g. http://localhost:8080"
                             onChange={(val) => {
@@ -221,6 +223,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             explanation="This the the URL of your app's API domain, without any path."
                             value={this.state.apiDomain} />}
                         {this.props.askForWebsiteDomain && <FormItem
+                            index={2}
                             title="Website Domain"
                             placeholder="e.g. http://localhost:3000"
                             onChange={(val) => {
