@@ -9,7 +9,7 @@ import useUserPreferencesContext from '@theme/hooks/useUserPreferencesContext';
 import clsx from 'clsx';
 import styles from './styles.module.css';
 
-function isInViewport(element) {
+function isInViewport (element) {
   const { top, left, bottom, right } = element.getBoundingClientRect();
   const { innerHeight, innerWidth } = window;
   return top >= 0 && right <= innerWidth && bottom <= innerHeight && left >= 0;
@@ -20,7 +20,7 @@ const keys = {
   right: 39,
 };
 
-function Tabs(props) {
+function Tabs (props) {
   const { lazy, block, defaultValue, values, groupId, className } = props;
   const isSubTab = props.isSubTab === true;
   const { tabGroupChoices, setTabGroupChoices } = useUserPreferencesContext();
@@ -93,15 +93,18 @@ function Tabs(props) {
   };
 
   return (
-    <div className="tabs-container" style={!isSubTab ? undefined : {
-      marginTop: "-1rem"
-    }}>
+    <div
+      className={clsx(
+        'tabs-container',
+        {
+          'sub-tab': isSubTab
+        }
+      )}
+    >
       <ul
         style={{
-          backgroundColor: !isSubTab ? "#222222" : "#292929",
           borderTopLeftRadius: !isSubTab ? "10px" : undefined,
           borderTopRightRadius: !isSubTab ? "10px" : undefined,
-
         }}
         role="tablist"
         aria-orientation="horizontal"
@@ -145,7 +148,7 @@ function Tabs(props) {
           },
         )
       ) : (
-        <div className="margin-vert--md">
+        <div>
           {children.map((tabItem, i) =>
             cloneElement(tabItem, {
               key: i,

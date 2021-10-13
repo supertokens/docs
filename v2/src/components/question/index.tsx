@@ -1,5 +1,7 @@
 import React, { Children, PropsWithChildren, useState } from "react";
 
+let styles = require('./question.module.css').default;
+
 export function Question(props: PropsWithChildren<{
     question: string | (() => JSX.Element)
 }>) {
@@ -8,51 +10,23 @@ export function Question(props: PropsWithChildren<{
 
     if (selectedAnsTitle === undefined) {
         return (
-            <div
-                style={{
-                    width: "100%",
-                    background: "#292929",
-                    paddingTop: "20px",
-                    paddingLeft: "24px",
-                    paddingRight: "24px",
-                    borderRadius: "6px",
-                    marginBottom: "10px",
-                }}>
-                <div style={{
-                    fontSize: "24px",
-                    color: "#ffffff",
-                    fontWeight: 600,
-                }}>
+            <div className={styles.questionBox}>
+                <div className={styles.questionBoxText}>
                     {typeof props.question === "string" ? props.question : props.question()}
                 </div>
-                <div
-                    style={{
-                        marginTop: "10px",
-                        flexWrap: "wrap",
-                        display: "flex"
-                    }}>
-                    {React.Children.map(props.children, (child: any) => {
-                        return React.cloneElement(child, {
+                <div className={styles.questionBoxAnswers}>
+                    {React.Children.map(props.children, (child: any, index: number) => {
+                        const element = React.cloneElement(child, {
+                            isLast: index === Children.count(props.children) - 1,
                             ...child.props,
                             onClick: () => {
                                 setSelectedAnsTitle(child.props.title)
                             }
                         });
+                        return element
                     })}
                 </div>
-                <div
-                    style={{
-                        height: "25px",
-                        marginRight: "-5px",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        color: "#ffffff",
-                        fontSize: "12px",
-                        display: "flex",
-                        fontStyle: "italic"
-                    }}>
-                    <span
-                        style={{ flex: 1 }} />
+                <div className={styles.questionBoxSuggestion}>
                     Refresh the page to undo your selection
                 </div>
             </div>
@@ -70,7 +44,8 @@ export function Question(props: PropsWithChildren<{
 
 type AnswerProps = {
     title: string,
-    onClick?: () => void
+    onClick?: () => void,
+    isLast: boolean
 }
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
@@ -78,30 +53,20 @@ export function Answer(props: PropsWithChildren<AnswerProps>) {
     const [isMouseHover, setMouseHover] = useState(false)
 
     return (
-        <span
-            onClick={props.onClick}
-            onMouseEnter={() => {
-                setMouseHover(true)
-            }}
-            onMouseLeave={() => {
-                setMouseHover(false)
-            }}
-            style={{
-                marginTop: "10px",
-                marginRight: "30px",
-                cursor: "pointer",
-                paddingLeft: "20px",
-                paddingRight: "20px",
-                paddingTop: "5px",
-                paddingBottom: "5px",
-                background: "#363636",
-                borderRadius: "6px",
-                borderColor: isMouseHover ? "#ff9933" : "#4d4d4d",
-                borderStyle: "solid",
-                borderWidth: "1px",
-                fontWeight: 600,
-            }}>
-            {props.title}
-        </span>
+        <>
+            <span
+                className={styles.questionBoxAnswer}
+                onClick={props.onClick}
+                onMouseEnter={() => {
+                    setMouseHover(true)
+                }}
+                onMouseLeave={() => {
+                    setMouseHover(false)
+                }}
+            >
+                {props.title}
+            </span>
+            {!props.isLast && (<span className={styles.questionBoxAnswerSlash}>/</span>)}
+        </>
     );
 }

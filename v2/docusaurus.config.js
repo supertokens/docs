@@ -21,6 +21,10 @@ module.exports = {
     "https://fonts.googleapis.com/css?family=Rubik:300,400,500,700&amp;display=swap"
   ],
   themeConfig: {
+    prism: {
+      theme: require('prism-react-renderer/themes/duotoneLight'),
+      darkTheme: require('prism-react-renderer/themes/duotoneLight'),
+    },
     colorMode: {
       defaultMode: "dark",
       disableSwitch: true,
