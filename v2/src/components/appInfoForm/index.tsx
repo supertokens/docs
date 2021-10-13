@@ -220,7 +220,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     };
                                 })
                             }}
-                            explanation="This the the URL of your app's API domain, without any path."
+                            explanation="This is the URL of your app's API domain, without any path."
                             value={this.state.apiDomain} />}
                         {this.props.askForWebsiteDomain && <FormItem
                             index={2}
@@ -234,7 +234,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     };
                                 })
                             }}
-                            explanation="This the the URL of your website, without any path."
+                            explanation="This is the URL of your website, without any path."
                             value={this.state.websiteDomain} />}
                         {/* TODO: Add more fields here */}
                         <div style={{ height: "16px" }} />

@@ -41,7 +41,7 @@ export default function FormItem(props: FormItemType) {
             }
         }
 
-        () => {
+        return () => {
             window.removeEventListener('scroll', handleMouseOutIcon);
 
             if (isMobile || isTablet) {
