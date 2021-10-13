@@ -102,12 +102,7 @@ export default function FormItem(props: FormItemType) {
                         />
                     </div>
                 </div>
-            <div
-                style={{
-                    flexGrow: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                }}>
+            <div className="app-info-form-field-container">
                 <input
                     value={props.value}
                     onChange={(evt) => {
@@ -132,8 +127,6 @@ export default function FormItem(props: FormItemType) {
                     }}    
                 >
                     {props.explanation}
-
-                    <span className="app-info-form-explanation-caret" />
                 </div>
             </div>
         </div>
