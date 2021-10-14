@@ -12,7 +12,6 @@ module.exports = {
         "usage/checking-for-active-session",
         "usage/reading-userid",
         "usage/reading-jwt-payload",
-        "usage/server-side-rendering",
         "usage/sign-out",
         {
           type: 'category',
