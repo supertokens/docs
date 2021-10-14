@@ -99,20 +99,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (this.state.formSubmitted) {
             return (
                 <div>
-                    <div
-                        style={{
-                            width: "100%",
-                            display: "flex",
-                            borderRadius: "6px",
-                            background: "#292929",
-                            padding: "16px",
-                            marginBottom: "20px",
-                            color: "#ffffff",
-                        }}>
+                    <div className="app-info-form-question-container">
                         <div
                             style={{
-                                width: "17px",
-                                marginRight: "10px"
+                                width: "17px"
                             }}>
                             <img
                                 style={{

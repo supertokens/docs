@@ -41,7 +41,7 @@ const isActiveSidebarItem = (item, activePath) => {
 // TODO this item should probably not receive the "activePath" props
 // TODO this triggers whole sidebar re-renders on navigation
 
-const DocSidebarItems = memo(function DocSidebarItems({ items, ...props }) {
+const DocSidebarItems = memo(function DocSidebarItems ({ items, ...props }) {
   return items.map((item, index) => (
     <DocSidebarItem
       key={index} // sidebar is static, the index does not change
@@ -51,22 +51,24 @@ const DocSidebarItems = memo(function DocSidebarItems({ items, ...props }) {
   ));
 });
 
-function DocSidebarItem(props) {
+function DocSidebarItem (props) {
+  const depth = props.depth + 1
   switch (props.item.type) {
     case 'category':
-      return <DocSidebarItemCategory {...props} />;
+      return <DocSidebarItemCategory {...props} depth={depth} />;
 
     case 'link':
     default:
-      return <DocSidebarItemLink {...props} />;
+      return <DocSidebarItemLink {...props} depth={depth} />;
   }
 }
 
-function DocSidebarItemCategory({
+function DocSidebarItemCategory ({
   item,
   onItemClick,
   collapsible,
   activePath,
+  depth,
   ...props
 }) {
   const { items, label } = item;
@@ -127,8 +129,15 @@ function DocSidebarItemCategory({
         })}
         onClick={collapsible ? handleItemClick : undefined}
         href={collapsible ? '#' : undefined}
-        {...props}>
-        <span className={styles.sidebarMenuItemLinkLabel}>{label}</span>
+        {...props}
+        data-depth={depth}
+      >
+        <span
+          className={styles.sidebarMenuItemLinkLabel}
+          style={{
+            paddingLeft: `${depth * 15}px`
+          }}
+        >{label}</span>
         {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
         <div className={styles.spacer}></div>
       </a>
@@ -149,17 +158,19 @@ function DocSidebarItemCategory({
           onItemClick={onItemClick}
           collapsible={collapsible}
           activePath={activePath}
+          depth={depth}
         />
       </ul>
     </li>
   );
 }
 
-function DocSidebarItemLink({
+function DocSidebarItemLink ({
   item,
   onItemClick,
   activePath,
   collapsible: _collapsible,
+  depth,
   ...props
 }) {
   const { href, label } = item;
@@ -179,11 +190,21 @@ function DocSidebarItemLink({
         {...props}>
         {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
         {isInternalUrl(href) ? (
-          <span className={styles.sidebarMenuItemLinkLabel}>
+          <span
+            className={styles.sidebarMenuItemLinkLabel}
+            style={{
+              paddingLeft: `${depth * 15}px`
+            }}
+          >
             {label}
           </span>
         ) : (
-          <span className={styles.sidebarMenuItemLinkLabel}>
+          <span
+            className={styles.sidebarMenuItemLinkLabel}
+            style={{
+              paddingLeft: `${depth * 15}px`
+            }}
+          >
             {label}
             <IconExternalLink />
           </span>
@@ -194,7 +215,7 @@ function DocSidebarItemLink({
   );
 }
 
-function useShowAnnouncementBar() {
+function useShowAnnouncementBar () {
   const { isClosed } = useAnnouncementBar();
   const [showAnnouncementBar, setShowAnnouncementBar] = useState(!isClosed);
   useScrollPosition(({ scrollY }) => {
@@ -205,7 +226,7 @@ function useShowAnnouncementBar() {
   return showAnnouncementBar;
 }
 
-function useResponsiveSidebar() {
+function useResponsiveSidebar () {
   const [showResponsiveSidebar, setShowResponsiveSidebar] = useState(false);
   useLockBodyScroll(showResponsiveSidebar);
   const windowSize = useWindowSize();
@@ -231,7 +252,7 @@ function useResponsiveSidebar() {
   };
 }
 
-function HideableSidebarButton({ onClick }) {
+function HideableSidebarButton ({ onClick }) {
   return (
     <button
       type="button"
@@ -255,7 +276,7 @@ function HideableSidebarButton({ onClick }) {
   );
 }
 
-function ResponsiveSidebarButton({ responsiveSidebarOpened, onClick }) {
+function ResponsiveSidebarButton ({ responsiveSidebarOpened, onClick }) {
   return (
     <button
       aria-label={
@@ -293,7 +314,7 @@ function ResponsiveSidebarButton({ responsiveSidebarOpened, onClick }) {
   );
 }
 
-function DocSidebar({
+function DocSidebar ({
   path,
   sidebar,
   sidebarCollapsible = true,
@@ -346,6 +367,7 @@ function DocSidebar({
             onItemClick={closeResponsiveSidebar}
             collapsible={sidebarCollapsible}
             activePath={path}
+            depth={-1}
           />
         </ul>
       </nav>
