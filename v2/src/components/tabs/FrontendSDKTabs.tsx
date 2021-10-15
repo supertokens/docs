@@ -4,20 +4,24 @@ let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
 
 export default function FrontendSDKTabs(props) {
+    console.log(props)
     return (
-        <Tabs
-            groupId="frontendsdk"
-            defaultValue="reactjs"
-            values={[
-                { label: 'ReactJS', value: 'reactjs' },
-                { label: 'Plain JavaScript', value: 'vanillajs' },
-                { label: 'React Native', value: 'react-native' },
-            ]}>
-            {childContainsTabItemWithValue("reactjs", props.children) ? null : DefaultReactJSTabItem()}
-            {childContainsTabItemWithValue("vanillajs", props.children) ? null : DefaultVanillaJSTabItem()}
+        <>
+            <Tabs
+                groupId="frontendsdk"
+                defaultValue="reactjs"
+                values={[
+                    { label: 'ReactJS', value: 'reactjs' },
+                    { label: 'Plain JavaScript', value: 'vanillajs' },
+                    { label: 'React Native', value: 'react-native' },
+                ]}
+            >
+                {childContainsTabItemWithValue("reactjs", props.children) ? null : DefaultReactJSTabItem()}
+                {childContainsTabItemWithValue("vanillajs", props.children) ? null : DefaultVanillaJSTabItem()}
+                {props.children}
+            </Tabs>
             {childContainsTabItemWithValue("react-native", props.children) ? null : DefaultRNTabItem()}
-            {props.children}
-        </Tabs>
+        </>
     );
 }
 
