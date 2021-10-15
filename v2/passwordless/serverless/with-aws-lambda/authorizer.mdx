@@ -1,0 +1,121 @@
+---
+id: authorizer
+title: Lambda Authorizer
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./session/serverless/with-aws-lambda/authorizer.mdx -->
+
+# Lambda Authorizer
+
+You can use a lambda similar to [step 5](./session-verification) as an Authorizer in API Gateways. This will enable you to use SuperTokens in a lambda to authorize requests to other integrations (e.g., AppSync). An Authorizer pointed to this lambda will add `context.authorizer.principalId` that you can map to a header. For example, you can map this to an "x-user-id" header which will be set to the id of the logged-in user. If there is no valid session for the request, this header won't exist.
+
+## 1) Add configurations and dependencies
+
+Follow [step 1](./frontend) and [step 2](./backend-config).
+
+## 2) Create a new file `index.js`
+Use the code below as the handler for the lambda. Remember that whenever we want to use any functions from the `supertokens-node` lib, we have to call the `supertokens.init` function at the top of that serverless function file. We can then use `getSession()` to get the session.
+
+```jsx title="index.js"
+let supertokens = require("supertokens-node");
+let { wrapRequest, wrapResponse } = require("supertokens-node/framework/awsLambda");
+let Session = require("supertokens-node/recipe/session");
+
+let { getBackendConfig } = require("./config");
+
+supertokens.init(getBackendConfig());
+
+exports.handler = async function(event, context) {
+    try {
+        const session = await Session.getSession(event, event, { sessionRequired: false });
+        if (session) {
+            // We need to add setCookie to the context, since later we will be mapping this to a Set-Cookie header on the response
+            // getSession has to set cookies on the first call after a refresh.
+            return generateAllow(session.getUserId(), event.methodArn, {
+                setCookie: event.supertokens.response.cookies.join(', '),
+            });
+        }  else {
+            // You can allow requests without sessions
+            return generateAllow("", event.methodArn, {
+                setCookie: event.supertokens.response.cookies.join(', '),
+            });
+            // You can also return explicit deny with additional context, but you should configure these as 401s so the frontend SDK can handle them.
+            // return generateDeny(undefined, event.methodArn);
+            // throw new Error("Unauthorized");
+        }
+    } catch(ex) {
+        if (ex.type === "TRY_REFRESH_TOKEN") {
+            throw new Error("Unauthorized");
+        }
+        throw ex;
+    }
+}
+     
+// Help function to generate an IAM policy
+const generatePolicy = function(principalId, effect, resource, context) {
+    // Required output:
+    const authResponse = {};
+    authResponse.principalId = principalId;
+    if (effect && resource) {
+        const policyDocument = {};
+        policyDocument.Version = '2012-10-17'; // default version
+        policyDocument.Statement = [];
+
+        const statementOne = {};
+        statementOne.Action = 'execute-api:Invoke'; // default action
+        statementOne.Effect = effect;
+        statementOne.Resource = resource;
+        policyDocument.Statement[0] = statementOne;
+        authResponse.policyDocument = policyDocument;
+    }
+
+    // Optional output with custom properties of the String, Number or Boolean type.
+    authResponse.context = context;
+
+    return authResponse;
+}
+     
+const generateAllow = function(principalId, resource, context) {
+    return generatePolicy(principalId, 'Allow', resource, context);
+};
+     
+const generateDeny = function(principalId, resource, context) {
+    return generatePolicy(principalId, 'Deny', resource, context);
+};
+```
+
+## 3) Configure the Authorizer
+
+- Go to the "Authorizers" tab in the API Gateway configuration
+- Click "Create new Authorizer" and add the new Authorizer
+    - Fill the name field
+    - Set "Lambda function" to the one created above
+    - Set "Lambda Event Payload" to Request
+    - Delete the empty "Identity Source"
+    - Click "Create"
+
+
+## 4) Configure API Gateway
+- In your API Gateway, create the resources and methods you require, enabling CORS if necessary (see [step 4](./api-gateway-config) for details)
+- Select each Method you want to enable the Authorizer on and configure it to use the new Authorizer
+    - Click on "Method Request"
+    - Edit the "Authorization" field in Settings and set it to the one we just created.
+    - Go back to the method configuration and click on "Integration Request"
+        - Set up the integration you require (see [AppSync](./appsync-integration) for an example)
+        - Add a header mapping to make use of the context set in the lambda.
+            - Open "HTTP Headers"
+            - Add all headers required (e.g., "x-user-id" mapped to "context.authorizer.principalId")
+            - Repeat for any values from the context you want to add as a Header
+
+    - Go back to the method configuration and click on "Method Response"
+        - Open the dropdown next to the 200 status code
+        - Add the "Set-Cookie" header
+        - Add any other headers that should be present on the response.
+
+    - Go back to the method configuration and click on "Integration Response"
+        - Open the dropdown
+        - Open "Header Mappings"
+        - Add "Set-Cookie" mapped to "context.authorizer.setCookie"
+- Deploy your API and test it

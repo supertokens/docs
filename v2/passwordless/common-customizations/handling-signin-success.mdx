@@ -1,0 +1,157 @@
+---
+id: handling-signin-success
+title: Post sign in callbacks
+hide_title: true
+---
+
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Post sign in callbacks
+
+## 1) On the frontend
+
+This method allows you to fire events immediately after a successful sign in. For example to send analytics events post sign in.
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```jsx
+SuperTokens.init({
+    appInfo: {...},
+    recipeList: [
+        Passwordless.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SESSION_ALREADY_EXISTS") {
+                    // TODO:
+                } else {
+                    let {id, email} = context.user;
+                    if (context.action === "SUCCESS") {
+                        if (context.isNewUser) {
+                            // TODO: Sign up
+                        } else {
+                            // TODO: Sign in
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+
+:::info
+Please refer to [this page](../advanced-customizations/frontend-hooks/handle-event) to learn more about the `onHandleEvent` hook.
+:::
+
+</TabItem>
+</FrontendSDKTabs>
+
+
+## 2) On the backend
+
+For this, you'll have to override the `signInPOST` API in the `init` function call.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+SuperTokens.init({
+    appInfo: {...},
+    supertokens: {...},
+    recipeList: [
+        Passwordless.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInPOST: async (input) => {
+
+                            if (originalImplementation.signInPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+                            
+                            // First we call the original implementation of signInPOST.
+                            let response = await originalImplementation.signInPOST(input);
+
+                            // Post sign up response, we check if it was successful
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+
+                                // These are the input form fields values that the user used while signing in
+                                let formFields = input.formFields
+                                // TODO: post sign in logic
+                            }
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({...})
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			passwordless.Init(&epmodels.TypeInput{
+				//highlight-start
+				Override: &epmodels.OverrideStruct{
+					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+						// create a copy of the originalImplementation
+						newImplementation := originalImplementation
+
+						// override the sign in up API
+						newImplementation.SignInPOST = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (epmodels.SignInResponse, error) {
+
+							// First we call the original implementation of SignInUpPOST.
+							response, err := originalImplementation.SignInPOST(formFields, options)
+							if err != nil {
+								return epmodels.SignInResponse{}, err
+							}
+
+							if response.OK != nil {
+								// sign in was successful
+
+								// user object contains the ID and email
+								user := response.OK.User
+
+								// TODO: Post sign in logic.
+								// You can even read the formFields from the input
+								// params to get the user filled fields.
+
+							}
+							return response, nil
+						}
+
+						// return the new implementation
+						return newImplementation
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
+```
+
+</TabItem>
+</BackendSDKTabs>

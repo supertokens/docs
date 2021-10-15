@@ -18,6 +18,15 @@ type RecipeCardInfo = {
 };
 const recipeTabsData: RecipeCardInfo[] = [
     {
+        imageSrc: "/img/recipe-tabs/recipe-passwordless.png",
+        url: "/docs/passwordless/introduction",
+        linkTitle: "Passwordless",
+        cardBody: "Add passwordless login with sessions to your app",
+        antcsInfo: {
+            option_selected: "Passwordless"
+        }
+    },
+    {
         imageSrc: "/img/recipe-tabs/recipe-email-social.png",
         url: "/docs/thirdpartyemailpassword/introduction",
         linkTitle: "Email password + Social Login",
