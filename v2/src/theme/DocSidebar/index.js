@@ -134,9 +134,9 @@ function DocSidebarItemCategory ({
       >
         <span
           className={styles.sidebarMenuItemLinkLabel}
-          style={{
-            paddingLeft: `${depth * 15}px`
-          }}
+          style={depth > 0 ? {
+            marginLeft: `${depth * 15}px`,
+          } : {}}
         >{label}</span>
         {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
         <div className={styles.spacer}></div>
@@ -176,7 +176,11 @@ function DocSidebarItemLink ({
   const { href, label } = item;
   const isActive = isActiveSidebarItem(item, activePath);
   return (
-    <li className={clsx("menu__list-item")} key={label}>
+    <li
+      className={clsx("menu__list-item")}
+      key={label}
+      data-depth={depth}
+    >
       <Link
         className={clsx('menu__link', styles.sidebarMenuItemLink, {
           'menu__link--active': isActive,
@@ -192,18 +196,18 @@ function DocSidebarItemLink ({
         {isInternalUrl(href) ? (
           <span
             className={styles.sidebarMenuItemLinkLabel}
-            style={{
-              paddingLeft: `${depth * 15}px`
-            }}
+            style={depth > 0 ? {
+              marginLeft: `${depth * 15}px`,
+            } : {}}
           >
             {label}
           </span>
         ) : (
           <span
             className={styles.sidebarMenuItemLinkLabel}
-            style={{
-              paddingLeft: `${depth * 15}px`
-            }}
+            style={depth > 0 ? {
+              marginLeft: `${depth * 15}px`,
+            } : {}}
           >
             {label}
             <IconExternalLink />
@@ -367,7 +371,7 @@ function DocSidebar ({
             onItemClick={closeResponsiveSidebar}
             collapsible={sidebarCollapsible}
             activePath={path}
-            depth={-1}
+            depth={-2}
           />
         </ul>
       </nav>

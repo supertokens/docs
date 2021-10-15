@@ -160,11 +160,13 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         display: "flex",
                         flexDirection: "column",
                         borderRadius: "6px",
-                        background: "#292929",
+                        background: "rgb(42, 47, 68)",
+                        border: "1px solid rgb(42, 47, 68)",
                         padding: "16px",
                         marginBottom: "10px",
                         color: "#ffffff",
-                    }}>
+                    }}
+                >
                     <div
                         style={{
                             fontSize: "14px",
