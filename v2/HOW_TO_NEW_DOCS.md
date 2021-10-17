@@ -20,6 +20,8 @@
 # To create new SDK docs (using an automatic docs generation tool and not docusaurus)
 - Start by selecting an automatic docs generation tool. For example, for TypeScript based projects, we chose TypeDoc.
 - Setup the tool to run on `addDevTag` (and add a commit for it during dev tag building) and also you should be able to run it manually. In the node repo, we can do so by running `npm run build-docs`. The output of this should be in one folder in the SDK repo.
+   - Remember to exclude this folder from being published (to npm or pypi etc)
+   - When generating these docs, remember to delete the entire folder and then generate the docs
 - Test that the site works by opening the `index.html` of that site.
 - Push the docs to git on that branch.
 - For CICD, add a new job that runs whenever there is a push to the master branch (see job `update-docs` in node repo).
