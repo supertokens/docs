@@ -117,11 +117,13 @@ function DocVersionBannerEnabled({ versionMetadata }) {
 }
 
 function DocVersionBanner({ versionMetadata }) {
-  if (versionMetadata.banner === 'none') {
-    return <></>;
-  } else {
-    return <DocVersionBannerEnabled versionMetadata={versionMetadata} />;
-  }
+  // we removed this because we are moving to automated docs generation anyway
+  return <></>;
+  // if (versionMetadata.banner === 'none') {
+  //   return <></>;
+  // } else {
+  //   return <DocVersionBannerEnabled versionMetadata={versionMetadata} />;
+  // }
 }
 
 export default DocVersionBanner;
