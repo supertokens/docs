@@ -80,26 +80,6 @@ module.exports = {
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
-          docsPluginId: 'golang',
-        },
-        {
-          type: 'docsVersionDropdown',
-          //// Optional
-          position: 'left',
-          // Add additional dropdown items at the beginning/end of the dropdown.
-          dropdownItemsBefore: [],
-          // Do not add the link active class when browsing docs.
-          dropdownActiveClassDisabled: true,
-          docsPluginId: 'python',
-        },
-        {
-          type: 'docsVersionDropdown',
-          //// Optional
-          position: 'left',
-          // Add additional dropdown items at the beginning/end of the dropdown.
-          dropdownItemsBefore: [],
-          // Do not add the link active class when browsing docs.
-          dropdownActiveClassDisabled: true,
           docsPluginId: 'change_me',
         },
         {
@@ -254,30 +234,6 @@ module.exports = {
         path: 'contribute',
         routeBasePath: 'docs/contribute',
         sidebarPath: require.resolve('./contribute/sidebars.js'),
-        showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
-        remarkPlugins: remarkPlugins,
-      },
-    ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'golang',
-        path: 'golang',
-        routeBasePath: 'docs/golang',
-        sidebarPath: require.resolve('./golang/sidebars.js'),
-        showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
-        remarkPlugins: remarkPlugins,
-      },
-    ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'python',
-        path: 'python',
-        routeBasePath: 'docs/python',
-        sidebarPath: require.resolve('./python/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
