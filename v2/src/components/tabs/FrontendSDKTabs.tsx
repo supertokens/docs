@@ -27,7 +27,7 @@ function DefaultReactJSTabItem() {
 
 function DefaultRNTabItem() {
     return (
-        <TabItem value="vanillajs">
+        <TabItem value="react-native">
             <div className="admonition admonition-caution alert alert--warning">
                 <div className="admonition-heading">
                     <h5>
