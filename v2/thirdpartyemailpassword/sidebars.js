@@ -118,6 +118,7 @@ module.exports = {
           label: "Sessions",
           items: [
             "common-customizations/sessions/about",
+            "common-customizations/sessions/session-with-jwt",
             "common-customizations/sessions/new-session",
             {
               type: "category",
@@ -249,6 +250,8 @@ module.exports = {
         },
       ],
     },
+    "integrating-with-hasura",
+    "integrating-with-graphql",
     {
       type: 'category',
       label: 'NextJS',
