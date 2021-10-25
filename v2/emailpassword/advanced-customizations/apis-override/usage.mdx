@@ -72,6 +72,11 @@ SuperTokens.init({
     ]
 });
 ```
+
+- `originalImplementation` and `originalImplementationEmailVerification` are objects that contain apis that have the original implementation for this and the email verification recipe. They can be used in your custom apis as a way to use the SuperTokens' default behaviour.
+- In the above code snippet, we override the `signUpPOST` api of this recipe. This api will be called when the user clicks the sign up button on the frontend.
+- Likewise, we override the `verifyEmailPOST` api from the email verification recipe.
+
 </TabItem>
 <TabItem value="go">
 
@@ -128,17 +133,74 @@ func main() {
 	})
 }
 ```
-</TabItem>
-<TabItem value="python">
-
-<img src="/img/work-in-progress.png" width="100" />
-
-</TabItem>
-</BackendSDKTabs>
 
 - `originalImplementation` and `originalImplementationEmailVerification` are objects that contain apis that have the original implementation for this and the email verification recipe. They can be used in your custom apis as a way to use the SuperTokens' default behaviour.
 - In the above code snippet, we override the `signUpPOST` api of this recipe. This api will be called when the user clicks the sign up button on the frontend.
 - Likewise, we override the `verifyEmailPOST` api from the email verification recipe.
+
+</TabItem>
+<TabItem value="python">
+
+:::info
+See all the [functions that can be overrided here](https://supertokens.io/docs/python/recipe/emailpassword/interfaces.html#supertokens_python.recipe.emailpassword.interfaces.APIInterface)
+:::
+
+```python
+
+# highlight-start
+def override_email_password_apis(original_implementation):
+	original_sign_up_post = original_implementation.sign_up_post
+
+	async def sign_up_post(form_fields: List[FormField], api_options: APIOptions):
+		# TODO: custom logic
+
+		# or call the default behaviour as show below
+		return await original_sign_up_post(form_fields, api_options)
+	
+	original_implementation.sign_up_post = sign_up_post
+	return original_implementation
+# highlight-end
+
+# highlight-start
+def override_email_verification_apis(original_implementation_email_verification):
+	original_email_verify_post = original_implementation_email_verification.email_verify_post
+
+	async def email_verify_post(token: str, api_options: APIOptions):
+		# TODO: custom logic
+
+		# or call the default behaviour as show below
+		return await original_email_verify_post(token, api_options)
+
+	original_implementation_email_verification.email_verify_post = email_verify_post
+	return original_implementation_email_verification
+# highlight-end
+
+
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        emailpassword.init({
+            # highlight-start
+            'override': {
+                'apis': override_email_password_apis,
+                'email_verification_feature': {
+                    'apis': override_email_verification_apis
+                }
+            }
+            # highlight-end
+        })
+    ]
+});
+```
+
+- `original_implementation` and `original_implementation_email_verification` are objects that contain apis that have the original implementation for this and the email verification recipe. They can be used in your custom apis as a way to use the SuperTokens' default behaviour.
+- In the above code snippet, we override the `sign_up_post` api of this recipe. This api will be called when the user clicks the sign up button on the frontend.
+- Likewise, we override the `verify_email_post` api from the email verification recipe.
+
+</TabItem>
+</BackendSDKTabs>
 
 
 ## Method 2: Change API logic by copy / paste
@@ -268,7 +330,52 @@ func main() {
 </TabItem>
 <TabItem value="python">
 
-<img src="/img/work-in-progress.png" width="100" />
+### Step 1: Copy the API code from the SDK.
+
+You first need to find the implementation for the API you would like to change in the backend SDK.
+- All the APIs you can override can be found [here](https://supertokens.io/docs/python/recipe/emailpassword/interfaces.html#supertokens_python.recipe.emailpassword.interfaces.APIInterface), copy the name of the function you would like to override.
+- You can find the API code for this recipe [here](https://github.com/supertokens/supertokens-python/blob/0.1/supertokens_python/recipe/emailpassword/api/implementation.py).
+- In this example we want to override the `sign_in_post` API, so we can search for a function with that name in the page mentioned above and copy the code.
+
+### Step 2: Add the API code to the `override` config.
+Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `sign_in_post` code we copied earlier and modify it.
+
+```python
+# highlight-start
+def override_email_password_apis(original_implementation):
+	async def sign_in_post(form_fields: List[FormField], api_options: APIOptions) -> SignInPostResponse:
+        password = find_first_occurrence_in_list(lambda x: x.id == FORM_FIELD_PASSWORD_ID, form_fields).value
+        email = find_first_occurrence_in_list(lambda x: x.id == FORM_FIELD_EMAIL_ID, form_fields).value
+
+        result = await api_options.recipe_implementation.sign_in(email, password)
+
+        if result.is_wrong_credentials_error or result.user is None:
+            return SignInPostWrongCredentialsErrorResponse()
+
+        user = result.user
+        await create_new_session(api_options.request, user.user_id)
+        return SignInPostOkResponse(user)
+	
+	original_implementation.sign_in_post = sign_in_post
+	return original_implementation
+# highlight-end
+
+
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        emailpassword.init({
+            # highlight-start
+            'override': {
+                'apis': override_email_password_apis
+            }
+            # highlight-end
+        })
+    ]
+});
+```
 
 </TabItem>
 </BackendSDKTabs>
