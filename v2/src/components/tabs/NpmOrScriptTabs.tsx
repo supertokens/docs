@@ -5,6 +5,7 @@ let TabItem = require("@theme/TabItem").default;
 export default function NpmOrScriptTabs(props) {
     return (
         <Tabs
+            isSubTab={true}
             groupId="npm-or-script"
             defaultValue="npm"
             values={[

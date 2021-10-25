@@ -236,75 +236,61 @@ SuperTokens.init({
                     return {
                         ...originalImplementation,
 
-                        signInUpPOST: async (input) => {
+                        signInUpPOST: async ({provider, code, redirectURI, options}) => {
 
                             let userInfo;
-                            let accessTokenAPIResponse: any;
-                            let providerInfo = await provider.get(redirectURI, code);
-                            accessTokenAPIResponse = await axios.default({
-                                method: "post",
-                                url: providerInfo.accessTokenAPI.url,
-                                data: qs.stringify(providerInfo.accessTokenAPI.params),
-                                headers: {
-                                    "content-type": "application/x-www-form-urlencoded",
-                                    accept: "application/json", // few providers like github don't send back json response by default
-                                },
-                            });
-                            userInfo = await providerInfo.getProfileInfo(accessTokenAPIResponse.data);
+							let accessTokenAPIResponse: any;
+							let providerInfo = await provider.get(redirectURI, code);
 
-                            let emailInfo = userInfo.email;
-                            if (emailInfo === undefined) {
-                                return {
-                                    status: "NO_EMAIL_GIVEN_BY_PROVIDER",
-                                };
-                            }
-                            let response = await options.recipeImplementation.signInUp({
-                                thirdPartyId: provider.id,
-                                thirdPartyUserId: userInfo.id,
-                                email: emailInfo,
-                            });
+							accessTokenAPIResponse = await axios.default({
+								method: "post",
+								url: providerInfo.accessTokenAPI.url,
+								data: qs.stringify(providerInfo.accessTokenAPI.params),
+								headers: {
+									"content-type": "application/x-www-form-urlencoded",
+									accept: "application/json", // few providers like github don't send back json response by default
+								},
+							});
+							userInfo = await providerInfo.getProfileInfo(accessTokenAPIResponse.data);
 
-                            if (response.status === "FIELD_ERROR") {
-                                return response;
-                            }
+							let emailInfo = userInfo.email;
+							if (emailInfo === undefined) {
+								return {
+									status: "NO_EMAIL_GIVEN_BY_PROVIDER",
+								};
+							}
+							let response = await options.recipeImplementation.signInUp({
+								thirdPartyId: provider.id,
+								thirdPartyUserId: userInfo.id,
+								email: emailInfo,
+							});
 
-                            // we set the email as verified if already verified by the OAuth provider.
-                            // This block was added because of https://github.com/supertokens/supertokens-core/issues/295
-                            if (emailInfo.isVerified) {
-                                const tokenResponse = await options.emailVerificationRecipeImplementation.createEmailVerificationToken({
-                                    userId: response.user.id,
-                                    email: response.user.email,
-                                });
+							if (response.status === "FIELD_ERROR") {
+								return response;
+							}
 
-                                if (tokenResponse.status === "OK") {
-                                    await options.emailVerificationRecipeImplementation.verifyEmailUsingToken({
-                                        token: tokenResponse.token,
-                                    });
-                                }
-                            }
+							// we set the email as verified if already verified by the OAuth provider.
+							// This block was added because of https://github.com/supertokens/supertokens-core/issues/295
+							if (emailInfo.isVerified) {
+								const tokenResponse = await options.emailVerificationRecipeImplementation.createEmailVerificationToken({
+									userId: response.user.id,
+									email: response.user.email,
+								});
 
-                            let action = response.createdNewUser ? "signup" : "signin";
-                            let jwtPayloadPromise = options.config.sessionFeature.setJwtPayload(
-                                response.user,
-                                accessTokenAPIResponse.data,
-                                action
-                            );
-                            let sessionDataPromise = options.config.sessionFeature.setSessionData(
-                                response.user,
-                                accessTokenAPIResponse.data,
-                                action
-                            );
+								if (tokenResponse.status === "OK") {
+									await options.emailVerificationRecipeImplementation.verifyEmailUsingToken({
+										token: tokenResponse.token,
+									});
+								}
+							}
 
-                            let jwtPayload = await jwtPayloadPromise;
-                            let sessionData = await sessionDataPromise;
-
-                            await Session.createNewSession(options.res, response.user.id, jwtPayload, sessionData);
-                            return {
-                                status: "OK",
-                                createdNewUser: response.createdNewUser,
-                                user: response.user,
-                                authCodeResponse: accessTokenAPIResponse.data,
-                            };
+							await Session.createNewSession(options.res, response.user.id, {}, {});
+							return {
+								status: "OK",
+								createdNewUser: response.createdNewUser,
+								user: response.user,
+								authCodeResponse: accessTokenAPIResponse.data,
+							};
                         },
                         
                     }
