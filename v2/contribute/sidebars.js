@@ -108,5 +108,23 @@ module.exports = {
         "code-style/go"
       ],
     },
+    {
+      type: 'category',
+      label: 'Checklists',
+      items: [
+        "checklists/new-backend-sdk",
+        "checklists/new-frontend-sdk",
+        "checklists/new-super-recipe",
+        {
+          type: 'category',
+          label: 'SaaS',
+          items: [
+            "checklists/saas/add-new-region",
+            "checklists/saas/scaling-prod-instances",
+            "checklists/saas/upgrading-users-core-version"
+          ],
+        }
+      ],
+    },
   ],
 };
