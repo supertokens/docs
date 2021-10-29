@@ -123,7 +123,8 @@ module.exports = {
             "checklists/saas/scaling-prod-instances",
             "checklists/saas/upgrading-users-core-version"
           ],
-        }
+        },
+        "checklists/pricing-change-checklist"
       ],
     },
   ],
