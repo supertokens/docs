@@ -124,7 +124,15 @@ module.exports = {
             "checklists/saas/upgrading-users-core-version"
           ],
         },
-        "checklists/pricing-change-checklist"
+        {
+          type: 'category',
+          label: 'Website Dev',
+          items: [
+            "checklists/website/webflow"
+          ],
+        },
+        "checklists/pricing-change-checklist",
+        "checklists/new-tech-stack-launch"
       ],
     },
   ],
