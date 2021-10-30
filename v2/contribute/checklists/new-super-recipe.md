@@ -10,3 +10,4 @@ hide_title: true
 - Exposing all APIs and errors of sub recipe
 - Exposing all functions of sub recipe
 - Allowing override of sub recipe functions
+- Make sure all chile recipe implementations are in the APIOptions object.
