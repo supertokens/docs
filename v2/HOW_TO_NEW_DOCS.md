@@ -32,3 +32,4 @@
    This will copy the generated docs into the relevant folder (`/app/docs/sdk/docs/<sdk-name>/*`) in the backend website repo, and push that change to its master branch
 - Make sure to add a route in the website node server to redirect `/docs/<sdk-name>` to the `index.html` of the generated docs.
 - If creating a new backend SDK, then make sure to also change the website dashboard code snippets.
+- In the nodejs code for the website, we should change where all and how the version header is being injected
