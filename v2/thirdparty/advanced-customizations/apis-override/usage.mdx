@@ -31,7 +31,7 @@ SuperTokens.init({
                         ...originalImplementation,
 
                          // here we only override the sign in / up API logic 
-                        signInUpPOST: async (input) => {
+                        signInUpPOST: async function(input) {
 
                             if (originalImplementation.signInUpPOST === undefined){
                                 throw Error('Should never come here')
@@ -50,7 +50,7 @@ SuperTokens.init({
                     apis: (originalImplementationEmailVerification) => {
                         return {
                             ...originalImplementationEmailVerification,
-                            verifyEmailPOST: async (input) => {
+                            verifyEmailPOST: async function(input) {
                                 
                                 if (originalImplementationEmailVerification.verifyEmailPOST === undefined){
                                     throw Error('Should never come here')
@@ -94,36 +94,36 @@ func main() {
 					APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
 
 						//First we copy the original impl
-						newImplementation := originalImplementation
+						originalSignInUpPOST := *originalImplementation.SignInUpPOST
 
 						// Then we override the functions we want to
-						newImplementation.SignInUpPOST = func(provider tpmodels.TypeProvider, code, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
+						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
 							// TODO: some custom logic
 
 							// or call the default behaviour as show below
-							return originalImplementation.SignInUpPOST(provider, code, redirectURI, options)
+							return originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options)
 						}
 
 						// TODO: Override more APIs
 
-						return newImplementation
+						return originalImplementation
 					},
 					EmailVerificationFeature: &evmodels.OverrideStruct{
 						APIs: func(originalImplementationEmailVerification evmodels.APIInterface) evmodels.APIInterface {
 							//First we copy the original impl
-							newImplementation := originalImplementationEmailVerification
+							originalVerifyEmailPOST := *originalImplementationEmailVerification.VerifyEmailPOST
 
 							// Then we override the functions we want to
-							newImplementation.VerifyEmailPOST = func(token string, options evmodels.APIOptions) (evmodels.VerifyEmailUsingTokenResponse, error) {
+							(*originalImplementationEmailVerification.VerifyEmailPOST) = func(token string, options evmodels.APIOptions) (evmodels.VerifyEmailUsingTokenResponse, error) {
 								// TODO: some custom logic
 
 								// or call the default behaviour as show below
-								return originalImplementationEmailVerification.VerifyEmailPOST(token, options)
+								return originalVerifyEmailPOST(token, options)
 							}
 
 							// TODO: Override more functions
 
-							return newImplementation
+							return originalImplementationEmailVerification
 						},
 					},
 				},
@@ -236,7 +236,7 @@ SuperTokens.init({
                     return {
                         ...originalImplementation,
 
-                        signInUpPOST: async ({provider, code, redirectURI, options}) => {
+                        signInUpPOST: async function({provider, code, redirectURI, options}) {
 
                             let userInfo;
 							let accessTokenAPIResponse: any;
@@ -337,17 +337,20 @@ func main() {
 				Override: &tpmodels.OverrideStruct{
 					APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
 
-						//First we copy the original impl
-						newImplementation := originalImplementation
-
 						// Then we override the functions we want to
-						newImplementation.SignInUpPOST = func(provider tpmodels.TypeProvider, code, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
+						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
 							providerInfo := provider.Get(&redirectURI, &code)
 
-							accessTokenAPIResponse, err := postRequest(providerInfo)
+							var accessTokenAPIResponse map[string]interface{} = nil
 
-							if err != nil {
-								return tpmodels.SignInUpPOSTResponse{}, err
+							if authCodeResponse != nil {
+								accessTokenAPIResponse = authCodeResponse.(map[string]interface{})
+							} else {
+								accessTokenAPIResponseTemp, err := postRequest(providerInfo)
+								if err != nil {
+									return tpmodels.SignInUpPOSTResponse{}, err
+								}
+								accessTokenAPIResponse = accessTokenAPIResponseTemp
 							}
 
 							userInfo, err := providerInfo.GetProfileInfo(accessTokenAPIResponse)
@@ -362,7 +365,7 @@ func main() {
 								}, nil
 							}
 
-							response, err := options.RecipeImplementation.SignInUp(provider.ID, userInfo.ID, *emailInfo)
+							response, err := (*options.RecipeImplementation.SignInUp)(provider.ID, userInfo.ID, *emailInfo)
 							if err != nil {
 								return tpmodels.SignInUpPOSTResponse{}, err
 							}
@@ -375,12 +378,12 @@ func main() {
 							}
 
 							if emailInfo.IsVerified {
-								tokenResponse, err := options.EmailVerificationRecipeImplementation.CreateEmailVerificationToken(response.OK.User.ID, response.OK.User.Email)
+								tokenResponse, err := (*options.EmailVerificationRecipeImplementation.CreateEmailVerificationToken)(response.OK.User.ID, response.OK.User.Email)
 								if err != nil {
 									return tpmodels.SignInUpPOSTResponse{}, err
 								}
 								if tokenResponse.OK != nil {
-									_, err := options.EmailVerificationRecipeImplementation.VerifyEmailUsingToken(tokenResponse.OK.Token)
+									_, err := (*options.EmailVerificationRecipeImplementation.VerifyEmailUsingToken)(tokenResponse.OK.Token)
 									if err != nil {
 										return tpmodels.SignInUpPOSTResponse{}, err
 									}
@@ -404,7 +407,7 @@ func main() {
 							}, nil
 						}
 
-						return newImplementation
+						return originalImplementation
 					},
 				},
 				//highlight-end
