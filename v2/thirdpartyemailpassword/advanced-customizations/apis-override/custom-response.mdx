@@ -1,0 +1,126 @@
+---
+id: custom-response
+title: Sending custom responses
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# How to send a custom response
+
+:::important
+This feature is only applicable for users who build their own frontend since our frontend requires on a specific output from the APIs as defined [here](https://supertokens.io/docs/fdi).
+:::
+
+Let's take an example of sending a custom response for the `/auth/signup/email/exists GET` API (does email exist).
+
+We need to first override the function for that API (`emailExistsGET`) and then use the response object in the `input` param to send a custom response.
+
+The function signature expects an return type that has a certain shape, therefore, we must still return a valid response object from the function, but that will be ignored since you have already sent a response to the client.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```js
+ThirdPartyEmailPassword.init({
+    override: {
+        apis: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                emailExistsGET: async function (input) {
+
+                    // highlight-start
+                    // we can send a custom response like this:
+                    input.options.res.setStatusCode(200); // or any other status code
+                    input.options.res.sendJSONResponse({
+                        message: "my custom response",
+                        //...
+                    })
+                    // highlight-end
+
+                    // this return doesn't matter. But we must do it
+                    // cause the function signature expects a response.
+                    return {
+                        status: "OK",
+                        exists: false
+                    };
+                }
+            }
+        }
+    }
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+    Override: &tpepmodels.OverrideStruct{
+        APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
+
+            (*originalImplementation.EmailExistsGET) = func(email string, options epmodels.APIOptions) (epmodels.EmailExistsGETResponse, error) {
+
+                // highlight-start
+                // we create our custom response.
+                options.Res.Header().Set("Content-Type", "application/json; charset=utf-8")
+                options.Res.WriteHeader(200)
+                responseJson := map[string]interface{}{
+                    "message": "My custom response",
+                    // ...
+                }
+
+                bytes, _ := json.Marshal(responseJson)
+                options.Res.Write(bytes)
+                // highlight-end
+
+                // this return doesn't matter. But we must do it
+                // cause the function signature expects a response.
+                return epmodels.EmailExistsGETResponse{
+                    OK: &struct{ Exists bool }{
+                        Exists: false,
+                    },
+                }, nil
+            }
+
+            return originalImplementation
+        },
+    },
+})
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python.recipe.emailpassword.interfaces import APIOptions, EmailExistsGetOkResponse
+
+def override_thirdpartyemailpassword_apis(original_implementation):
+
+    async def email_exists_get(email: str, api_options: APIOptions):
+
+        # highlight-start
+        # send custom response like this
+        api_options.response.set_status_code(200)  # or any other status code
+        json_dict = {'message': 'Custom response'}
+        api_options.response.set_json_content(json_dict)
+        # highlight-end
+
+        # this return doesn't matter. But we must do it
+        # cause the function signature expects a response.
+        return EmailExistsGetOkResponse(False)
+
+    original_implementation.email_exists_get = email_exists_get
+    return original_implementation
+
+
+thirdpartyemailpassword.init(config={
+    'override': {
+        'apis': override_thirdpartyemailpassword_apis
+    }
+})
+```
+
+</TabItem>
+</BackendSDKTabs>
