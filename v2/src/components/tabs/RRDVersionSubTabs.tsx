@@ -8,8 +8,8 @@ export default function RRDVersionSubTabs(props) {
             groupId="rrd-version"
             defaultValue="v6"
             values={[
-                { label: '>= Version 6', value: 'v6' },
-                { label: '<= Version 5', value: 'v5' }
+                { label: 'react-router-dom >= v6', value: 'v6' },
+                { label: 'react-router-dom <= v5', value: 'v5' }
             ]}>
             {props.children}
         </Tabs>
