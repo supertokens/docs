@@ -329,6 +329,13 @@ module.exports = {
         "testing/testing-with-postman"
       ],
     },
+    {
+      type: 'category',
+      label: 'Migration',
+      items: [
+        "migration/from-auth0"
+      ],
+    },
     "appinfo",
     "sdks",
     "apis"

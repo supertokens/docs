@@ -1,0 +1,236 @@
+---
+id: from-auth0
+title: From Auth0
+hide_title: true
+---
+
+# About
+
+In this guide we will be migrating users with EmailPassword or Social accounts from Auth0 to SuperTokens.
+
+## Flow
+
+- We will be using SuperToken's `override` feature for this. Essentially, this will allow us to add addtional logic to our sign in functions which will check whether or not the input email and password/ Social credential exists in the Auth0 database.
+If the user does exist in the Auth0 Database we will create a new user with SuperTokens.
+- We will also need to map the User's Auth0 `userId` to the newly created SuperTokens `userId`.
+- Finally we will need to override all the functions that take `userId` as input or return `userId` as output to return the required `userId` from the userId mapping mentioned above(If the developer had stored Auth0 `userId` to be used for some feature, this will enable that feature to continue to work). 
+
+## Method 1: Using Auth0's APIs
+
+In this method when a user tries to sign in and is not a preexisting SuperTokens user, we will check if the user exists in the Auth0 database and if the input credentials are valid. If the user does exist and the input credentials are valid then then the sign up function is called and the userId's are mapped, else a `WRONG_CREDENTIALS` error is returned.
+
+
+### Step 1: Overriding the `signIn` and `signInUp` functions on the backend:
+
+```jsx title="Nodejs"
+ThirdPartyEmailPassword.init({
+    override: {
+        functions: (orignalImpl) => {
+            return {
+                ...orignalImpl,
+                signInUp: async function (input) {
+                    let response = await orignalImpl.signInUp(input)
+
+                    // check if they are a newly created user.
+                    if (response.createdNewUser) {
+                        // check if a user with the input ThirdParty ID exists in Auth0
+                        let auth0SocialUserId = await doesThirdPartyUserIdExistInAuth0(response.user.thirdParty.userId)
+
+                        if (auth0SocialUserId !== undefined) {
+                            // if an Auth0 user exists, map the Auth0 userId to the SuperTokens userId
+                            mapUserData(auth0SocialUserId, response.user.id)
+                            // Set the userId in the response to use the Auth0 userId.
+                            response.user.id = auth0SocialUserId
+                        }
+                    }
+                    return response
+                },
+                signIn: async function (input) {
+                    // check if user exists in supertokens 
+                    let users = await this.getUsersByEmail({ email: input.email });
+                    let emailPasswordUserExists = false;
+                    
+                    for (let i = 0; i < users.length; i++) {
+                        if (users[i].thirdParty === undefined) {
+                            emailPasswordUserExists = true
+                        }
+                    }
+                    
+                    // check if the email used to sign in is associated with a user in SuperTokens, if it is make sure the user has not authenticated with Email and Password.
+                    if (((await this.getUsersByEmail({ email: input.email })).length === 0) || !emailPasswordUserExists) {
+
+                        // Validate user credentials with the auth0 authorization endpoint
+                        let auth0UserData = await doesEmailPasswordUserExistInAuth0(input.email, input.password)
+
+                        // user does not exist
+                        if (auth0UserData === undefined) {
+                            return {
+                                status: 'WRONG_CREDENTIALS_ERROR'
+                            }
+                        }
+                        // call the signup function to create a new SuperTokens user.
+                        let response = await this.signUp(input)
+
+                        // map the Auth0 userId to the SuperTokens userId
+                        mapUserData(auth0UserData.sub, response.user.id)
+
+                        return response
+
+                    } else {
+                        // user exists in SuperTokens, call regular signIn function.
+                        return orignalImpl.signIn(input)
+                    }
+                }
+            }
+        }
+    },
+})
+
+```
+
+Example implementation for `doesThirdPartyUserIdExistInAuth0` and `doesEmailPasswordUserExistInAuth0`: 
+
+```jsx title="Nodejs"
+
+let doesEmailPasswordUserExistInAuth0 = async (email, password) => {
+
+    try {
+        // generate an user access token using the input credentials
+        let access_token = (await axios({
+            method: "post",
+            url: "https://YOUR_AUTH0_DOMAIN/oauth/token",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            data: {
+                client_id: "YOUR_CLIENT_ID",
+                grant_type: "password",
+                username: email,
+                password: password,
+            }
+        })).data.access_token;
+
+        // retive the users info using the access token if valid crendentials were passed
+        let userResponse = await axios.get("https://YOUR_AUTH0_DOMAIN/userInfo", {
+            headers: { "authorization": `Bearer ${access_token}` },
+        })
+        return userResponse.data
+
+    } catch (error) {
+        // user does not exist in Auth0
+        return undefined
+    }
+}
+
+let doesThirdPartyUserIdExistInAuth0 = async (userId) => {
+    
+    try {
+        // generate an access_token so you can use the Auth0 management API
+        let access_token = (await axios({
+            method: 'POST',
+            url: "https://YOUR_DOMAIN/oauth/token",
+            headers: { 'content-type': 'application/json' },
+            data: {
+                client_id: "CLIENT_ID",
+                client_secret: "CLIENT_SECRET",
+                audience: "https://YOUR_DOMAIN/api/v2/",
+                grant_type: "client_credentials"
+            }
+        })).data.access_token
+
+        // get the user info with userId as the identifier.
+        let response = await axios({
+            method: 'GET',
+            url: "https://YOUR_DOMAIN/api/v2/users",
+            params: { q: `identities.user_id:"${userId}"` },
+            headers: { authorization: `Bearer ${access_token}` }
+        })
+        return response.data[0].user_id
+
+    } catch (error) {
+
+        // User does not exist in Auth0
+        return undefined
+    }
+}
+
+```
+
+### Step 2: Overriding all functions on the backend which take `userId` as input or return `userId` in their response:
+
+- If a user has a SuperTokens `userId` mapped to an Auth0 `userId`, then all function which take `userId` as input need to replace the Auth0 `userId` in the input with the associated SuperTokens `userId`. 
+- If a user has a SuperTokens `userId` mapped to an Auth0 `userId`, then all function which return `userId` in their response need to replace the SuperTokens `userId` in the response with the associated Auth0 `userId`.
+- This is done so that if the developer has stored the Auth0 `userId` of a user in their database for some feature, it can still be used. 
+
+
+```jsx title="Nodejs"
+
+ThirdPartyEmailPassword.init({
+    override: {
+        functions: (orignalImpl) => {
+            return {
+                ...orignalImpl,
+                getUsersByEmail: async function (input) {
+
+                    let users = await orignalImpl.getUsersByEmail(input)
+                    // if the ST userId in reponse is mapped to a Auth0 userId return that else return the input userId
+                    for (let i = 0; i < users.length; i++) {
+                        users[i].id = getAuth0UserIdFromSTUserId(users[i].id)
+                    }
+                    return users;
+                },
+                getUserByThirdPartyInfo: async function (input) {
+
+                    let response = await orignalImpl.getUserByThirdPartyInfo(input)
+
+                    // if the ST userId in reponse is mapped to a Auth0 userId return that else return the input userId
+                    response.id = getAuth0UserIdFromSTUserId(response.id)
+
+                    return response;
+                },
+                getUserById: async function (input) {
+
+                    // if input userid is an auth0 userid get the mapped ST userId else return the input userId
+                    let userId = getSTUserIdFromAuth0UserId(input.userId)
+
+                    // call orignal implementation
+                    let response = await orignalImpl.getUserById({ userId })
+
+                    // if the ST userId in reponse is mapped to an Auth0 userId return that else return the input userId
+                    response.id = getAuth0UserIdFromSTUserId(response.id)
+
+                    return response;
+                },
+                createResetPasswordToken: async function (input) {
+
+                    // if input userid is an Auth0 userid get the  mapped ST userId else return the input userId
+                    let userId = getSTUserIdFromAuth0UserId(input.userId)
+
+                    return orignalImpl.createResetPasswordToken({ userId })
+
+                },
+                updateEmailOrPassword: async function (input) {
+                    // if input userid is an Auth0 userid get the mapped ST userId else return the input userId
+                    input.userId = getSTUserIdFromAuth0UserId(input.userId)
+
+                    return orignalImpl.updateEmailOrPassword(input)
+                }
+            }
+        }
+    },
+})
+```
+
+### Step 3: Mapping the Users Auth0 `userId` to their SuperTokens `userId`:
+
+- As mentioned in [Step 2](#step-2-overriding-all-functions-on-the-backend-which-take-userid-as-input-or-return-userid-in-their-response), Auth0 users who have migrated to SuperTokens need to have their Auth0 `userId` mapped to their SuperTokens `userId`.
+- This can be done by the storing the mapping in your database.
+- You will also need to have functions which can get a user's SuperTokens `userId` from their Auth0 `userId` and vice versa. 
+
+
+##  Method 2: Using the exported Auth0 user data and password hashes. 
+
+- In this method we can follow the same steps mentioned in [Method 1](#method-1-using-auth0s-apis), but, instead of querying Auth0's APIs to check if a user exists we will be reading the exported user data to check if it contains the user information and whether the input credentials are valid.
+
+- By default Auth0 uses `bcrypt` to hash passwords, if
