@@ -11,7 +11,7 @@ import {
   useLatestVersion,
   useActiveDocContext,
 } from '@theme/hooks/useDocs';
-import {useDocsPreferredVersion} from '@docusaurus/theme-common';
+import { useDocsPreferredVersion } from '@docusaurus/theme-common';
 
 const getVersionMainDoc = (version) =>
   version.docs.find((doc) => doc.id === version.mainDocId);
@@ -27,7 +27,7 @@ export default function DocsVersionDropdownNavbarItem({
   const activeDocContext = useActiveDocContext(docsPluginId);
   const versions = useVersions(docsPluginId);
   const latestVersion = useLatestVersion(docsPluginId);
-  const {preferredVersion, savePreferredVersionName} = useDocsPreferredVersion(
+  const { preferredVersion, savePreferredVersionName } = useDocsPreferredVersion(
     docsPluginId,
   );
 
@@ -64,6 +64,10 @@ export default function DocsVersionDropdownNavbarItem({
   }
 
   const items = getItems();
+  if (items[0].label === "Next") {
+    // we remove this item because we are using automated SDK docs generation
+    items.shift();
+  }
   const dropdownVersion =
     activeDocContext.activeVersion ?? preferredVersion ?? latestVersion; // Mobile dropdown is handled a bit differently
 

@@ -194,6 +194,7 @@ module.exports = {
           items: [
             "advanced-customizations/apis-override/about",
             "advanced-customizations/apis-override/usage",
+            "advanced-customizations/apis-override/custom-response",
             "advanced-customizations/apis-override/disabling"
           ],
         },

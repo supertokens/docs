@@ -46,10 +46,6 @@ SuperTokens.init({
 </TabItem>
 </FrontendSDKTabs>
 
-:::info
-Please refer to the [Auth React > SignInAndUpFeature configs](/docs/auth-react/thirdparty/config/sign-in-and-up) section for information on how to customize the styles.
-:::
-
 ### Step 2: Back End 
 
 <BackendSDKTabs>
@@ -97,10 +93,6 @@ SuperTokens.init({
 });
 ```
 
-:::info
-Learn more about customizing third party configs [here](/docs/nodejs/thirdparty/providers/google)
-:::
-
 </TabItem>
 <TabItem value="go">
 
@@ -137,14 +129,44 @@ func main() {
 }
 ```
 
-:::info
-Learn more about customizing third party configs [here](/docs/golang/thirdparty/providers/google)
-:::
-
 </TabItem>
 <TabItem value="python">
 
-<img src="/img/work-in-progress.png" width="100" />
+```python
+from supertokens_python.recipe.thirdparty import Github,Google, Facebook, Apple
+
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        thirdparty.init({
+            # highlight-start
+            'sign_in_and_up_feature': [
+                Google(
+                    client_id: "TODO: GOOGLE_CLIENT_ID",
+                    client_secret: "TODO: GOOGLE_CLIENT_SECRET"
+                ),
+                Github(
+                    client_id: "TODO: GITHUB_CLIENT_ID",
+                    client_secret: "TODO: GITHUB_CLIENT_SECRET"
+                ),
+                Facebook(
+                    client_id: "TODO: FACEBOOK_CLIENT_ID",
+                    client_secret: "TODO: FACEBOOK_CLIENT_SECRET"
+                ),
+                Apple(
+                    client_id: "APPLE_CLIENT_ID", 
+                    client_key_id: "KEY_ID", 
+                    client_private_key: "APPLE_PRIVATE_KEY", 
+                    client_team_id: "APPLE_TEAM_ID"
+                )
+            ]
+            # highlight-end
+        })
+    ]
+})
+```
 
 </TabItem>
 </BackendSDKTabs>
@@ -171,7 +193,7 @@ SuperTokens.init({
                     return {
                         ...originalImplementation,
 
-                        signInUpPOST: async (input) => {
+                        signInUpPOST: async function(input) {
 
                             if (originalImplementation.signInUpPOST === undefined) {
                                 throw Error("Should never come here");
@@ -209,10 +231,10 @@ func main() {
 				Override: &tpmodels.OverrideStruct{
 					APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
 						// First we copy the original implementation
-						newImplementation := originalImplementation
+						originalSignInUpPOST := *originalImplementation.SignInUpPOST
 
-						newImplementation.SignInUpPOST = func(provider tpmodels.TypeProvider, code, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
-							resp, err := originalImplementation.SignInUpPOST(provider, code, redirectURI, options)
+						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
+							resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options)
 							if err != nil {
 								return tpmodels.SignInUpPOSTResponse{}, err
 							}
@@ -230,7 +252,7 @@ func main() {
 							return resp, err
 						}
 
-						return newImplementation
+						return originalImplementation
 					},
 				},
 			}),
@@ -242,7 +264,48 @@ func main() {
 </TabItem>
 <TabItem value="python">
 
-<img src="/img/work-in-progress.png" width="100" />
+```python
+# highlight-start
+def override_thirdparty_apis(original_implementation):
+	original_sign_in_up_post = original_implementation.sign_in_up_post
+
+	async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, auth_code_response: Union[str, None], api_options: APIOptions):
+		# First we call the original implementation of signInPOST.
+		response = await original_sign_in_up_post(provider, code, redirect_uri, auth_code_response, api_options)
+
+        # Post sign up response, we check if it was successful
+        if response.is_ok:
+            id = response.user.user_id
+            email = response.user.email
+
+            # In this example we are using Google as our provider
+            thirdparty_auth_response = response.auth_code_response
+
+            accessToken = thirdparty_auth_response.access_token
+
+            # TODO
+
+        return response
+	
+	original_implementation.sign_in_up_post = sign_in_up_post
+	return original_implementation
+# highlight-end
+
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        thirdparty.init({
+            # highlight-start
+            'override': {
+                'apis': override_thirdparty_apis
+            }
+            # highlight-end
+        })
+    ]
+})
+```
 
 </TabItem>
 </BackendSDKTabs>
