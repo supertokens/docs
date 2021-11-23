@@ -45,6 +45,7 @@ module.exports = {
         "common-customizations/redirecting-post-login",
         "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
+        "post-login/getting-provider-access-token"
       ],
     },
     {
