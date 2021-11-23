@@ -55,14 +55,20 @@ module.exports = {
         "common-customizations/redirect-to-auth",
         {
           type: 'category',
+          label: 'Third Party Providers',
+          items: [
+            "common-customizations/signup-form/built-in-providers",
+            "common-customizations/signup-form/changing-oauth-scopes",
+            "common-customizations/signup-form/custom-providers"
+          ],
+        },
+        {
+          type: 'category',
           label: 'Sign Up Form',
           items: [
             "common-customizations/signup-form/adding-fields",
             "common-customizations/signup-form/changing-field-labels",
             "common-customizations/signup-form/field-validators",
-            "common-customizations/signup-form/built-in-providers",
-            "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers",
             "common-customizations/signup-form/toc-privacypolicy",
             "common-customizations/signup-form/default-to-sign-up"
           ],
