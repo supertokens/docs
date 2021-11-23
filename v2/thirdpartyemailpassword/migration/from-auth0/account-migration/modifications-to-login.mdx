@@ -269,3 +269,95 @@ ThirdPartyEmailPassword.init({
     },
 })
 ```
+
+###  Method 2: Using the exported Auth0 user data and password hashes. 
+
+- In this method we can follow the same steps mentioned in [Method 1](#method-1-using-auth0s-apis), but, instead of querying Auth0's APIs in `doesEmailPasswordUserExistInAuth0` and `doesThirdPartyUserIdExistInAuth0` to check if a user exists we will be reading the exported Auth0 user data to check if it contains the user information and whether the input credentials are valid.
+
+- By default Auth0 uses `bcrypt` to hash passwords with `$2a$` or `$2b$` identifiers and have 10 `saltRounds`.
+
+#### Prerequisites
+- This method assuems you can export your Auth0 user data and have an enterprise account to export password hashes.
+
+#### Implementation: 
+
+Replace the logic in `doesEmailPasswordUserExistInAuth0` and `doesThirdPartyUserIdExistInAuth0` mentioned in [Method 1](#method-1-using-auth0s-apis) with the code below:
+
+```jsx
+
+let doesEmailPasswordUserExistInAuth0 = async (email, password) => {
+
+    try {
+
+        // read exported Auth0 user info and password hashes
+        let auth0UsersDataString = fs.readFileSync(__dirname + auth0ExportedUsersDataFile)
+        let auth0UsersData = JSON.parse(auth0UsersDataString);
+        // get auth0 user info
+        let auth0UsersInfo = auth0UsersData.userData
+        // get auth0 password hashes
+        let auth0PasswordHashes = auth0UsersData.passwordHashes
+
+
+        // check if input email has an associated user
+        for (let i = 0; i < auth0UsersInfo.length; i++) {
+            if ((!auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].email === email) {
+
+                // get password hash from associated userid
+                let usersPasswordHash = getPasswordHashFromUserId(auth0UsersInfo[i].identities[0].user_id, auth0PasswordHashes)
+                if (verifyPasswordhash(password, usersPasswordHash)) {
+                    return auth0UsersInfo[i]
+                }
+            }
+        }
+        return undefined
+
+    } catch (error) {
+        return undefined
+    }
+}
+
+let doesThirdPartyUserIdExistInAuth0 = async (userId) => {
+
+    try {
+        // read exported Auth0 user info and password hashes
+        let auth0UsersDataString = fs.readFileSync(__dirname + auth0ExportedUsersDataFile)
+        let auth0UsersData = JSON.parse(auth0UsersDataString);
+        // get auth0 user info
+        let auth0UsersInfo = auth0UsersData.userData
+
+        for (let i = 0; i < auth0UsersInfo.length; i++) {
+
+             // check if input userId has an associated user which is social and userId matches 
+            if ((auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].identities[0].user_id === userId) {
+                
+                return auth0UsersInfo[i]
+            }
+        }
+        return undefined
+
+    } catch (error) {
+        return undefined
+    }
+}
+
+
+function getPasswordHashFromUserId(userId, auth0PasswordHashes) {
+
+    // retrive the password hash associated with the input userId.
+    for (let i = 0; i < auth0PasswordHashes.length; i++) {
+        if (auth0PasswordHashes[i]._id.$oid === userId) {
+            return auth0PasswordHashes[i].passwordHash
+        }
+    }
+    return undefined
+}
+
+function verifyPasswordhash(password, passwordHash) {
+
+    // verify password with password hash
+    if (passwordHash === undefined) {
+        return false
+    }
+    return bcrypt.compareSync(password, passwordHash)
+}
+```

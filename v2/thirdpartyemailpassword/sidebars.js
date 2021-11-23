@@ -333,7 +333,21 @@ module.exports = {
       type: 'category',
       label: 'Migration',
       items: [
-        "migration/from-auth0"
+        {
+          type: 'category',
+          label: 'From Auth0',
+          items: [
+            {
+              type: 'category',
+              label: 'Account Migration',
+              items: [
+                "migration/from-auth0/account-migration/modifications-to-login",
+                "migration/from-auth0/account-migration/userid-mapping",
+              ],
+            },
+            "migration/from-auth0/session-migration"
+          ],
+        }
       ],
     },
     "appinfo",
