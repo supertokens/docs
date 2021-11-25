@@ -1,8 +1,11 @@
 ---
-id: custom-response
-title: Sending custom responses
+id: throwing-error
+title: Via throwing errors
 hide_title: true
 ---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/advanced-customizations/apis-override/custom-response/throwing-error.mdx -->
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
@@ -10,123 +13,7 @@ import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs"
 import TabItem from '@theme/TabItem';
 import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
 
-# How to send a custom response
-
-## Method 1) By overriding the API Interface
-
-Let's take an example of sending a custom response for the `/auth/signup/email/exists GET` API (does email exist).
-
-We need to first override the function for that API (`emailExistsGET`) and then use the response object in the `input` param to send a custom response.
-
-The function signature expects an return type that has a certain shape, therefore, we must still return a valid response object from the function, but that will be ignored since you have already sent a response to the client.
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
-
-```js
-ThirdPartyEmailPassword.init({
-    override: {
-        apis: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                emailExistsGET: async function (input) {
-
-                    // highlight-start
-                    // we can send a custom response like this:
-                    input.options.res.setStatusCode(200); // or any other status code
-                    input.options.res.sendJSONResponse({
-                        message: "my custom response",
-                        //...
-                    })
-                    // highlight-end
-
-                    // this return doesn't matter. But we must do it
-                    // cause the function signature expects a response.
-                    return {
-                        status: "OK",
-                        exists: false
-                    };
-                }
-            }
-        }
-    }
-})
-```
-
-</TabItem>
-<TabItem value="go">
-
-```go
-thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
-    Override: &tpepmodels.OverrideStruct{
-        APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
-
-            (*originalImplementation.EmailExistsGET) = func(email string, options epmodels.APIOptions) (epmodels.EmailExistsGETResponse, error) {
-
-                // highlight-start
-                // we create our custom response.
-                options.Res.Header().Set("Content-Type", "application/json; charset=utf-8")
-                options.Res.WriteHeader(200)
-                responseJson := map[string]interface{}{
-                    "message": "My custom response",
-                    // ...
-                }
-
-                bytes, _ := json.Marshal(responseJson)
-                options.Res.Write(bytes)
-                // highlight-end
-
-                // this return doesn't matter. But we must do it
-                // cause the function signature expects a response.
-                return epmodels.EmailExistsGETResponse{
-                    OK: &struct{ Exists bool }{
-                        Exists: false,
-                    },
-                }, nil
-            }
-
-            return originalImplementation
-        },
-    },
-})
-```
-
-</TabItem>
-<TabItem value="python">
-
-```python
-from supertokens_python.recipe.emailpassword.interfaces import APIOptions, EmailExistsGetOkResponse
-
-def override_thirdpartyemailpassword_apis(original_implementation):
-
-    async def email_exists_get(email: str, api_options: APIOptions):
-
-        # highlight-start
-        # send custom response like this
-        api_options.response.set_status_code(200)  # or any other status code
-        json_dict = {'message': 'Custom response'}
-        api_options.response.set_json_content(json_dict)
-        # highlight-end
-
-        # this return doesn't matter. But we must do it
-        # cause the function signature expects a response.
-        return EmailExistsGetOkResponse(False)
-
-    original_implementation.email_exists_get = email_exists_get
-    return original_implementation
-
-
-thirdpartyemailpassword.init(config={
-    'override': {
-        'apis': override_thirdpartyemailpassword_apis
-    }
-})
-```
-
-</TabItem>
-</BackendSDKTabs>
-
-## Method 2) By throwing an error and catching it
+# How to send a custom response by throwing an error and catching it
 
 This method is useful in case you want to send a custom response from an overrided function which doesn't have access to the response object. This can happen in case you are overriding any of our recipe interface functions. 
 
@@ -134,7 +21,7 @@ Let's take an example in which we want to prevent a user from logging into a new
 
 In the override, we will check if a session already exists for the given userId, and if it does, we will throw an error from the function. This error will be propogated to your application's error handler (or an error handler callback if you have provided one to us), in which you can catch this and send a custom response.
 
-### Step 1
+## Step 1
 
 First, we override the `createNewSession` function and throw an error in case a session already exists for a user. We can do this in the `Session.init` function:
 
@@ -240,7 +127,7 @@ session.init({
 </TabItem>
 </BackendSDKTabs>
 
-### Step 2
+## Step 2
 
 Next, we want to catch the thrown error and then send a custom response to the client
 
@@ -364,7 +251,7 @@ app.use(async (ctx, next) => {
   }
 })
 
-app.use(middleware());
+app.use(middleware);
 ```
 
 </TabItem>
@@ -430,7 +317,53 @@ supertokens.Init(supertokens.TypeInput{
 
 </TabItem>
 <TabItem value="python">
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
 
+```python
+@app.exception_handler(Exception)
+async def exception_handler(_, exc):
+    if str(exc) == "Session already exists on another device":
+        # TODO: send custom response
+    
+    # TODO: Send generic 500 response
+```
 
+</TabItem>
+<TabItem value="flask">
+
+```python
+@app.errorhandler(Exception)
+def all_exception_handler(exc: Exception):
+    if str(exc) == "Session already exists on another device":
+        # TODO: send custom response
+    
+    # TODO: Send generic 500 response
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+# Add this middlware in settings.py
+
+class ErrorHandlerMiddleware:
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        return response
+
+    def process_exception(self, request, exception):
+        if exception and str(exception) == "Session already exists on another device":
+            # TODO: send custom response
+            
+        return HttpResponse("Error processing the request.", status=500)
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
 </TabItem>
 </BackendSDKTabs>
