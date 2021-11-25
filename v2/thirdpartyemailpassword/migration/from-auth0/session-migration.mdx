@@ -6,19 +6,81 @@ hide_title: true
 
 # Session Migration
 
-In this section we will go over how to migrate Auth0 user sessions
+In this section we will go over how to migrate Auth0 user sessions to SuperTokens sessions.
 
 ## Implementation
 
+### Prerequisites
+- You will need to use the [`@auth0/auth0-react`](https://www.npmjs.com/package/@auth0/auth0-react) library on your frontend to access `getAccessTokenSilently` , `isAuthenticated` and `logout` from the `useAuth0` hook.
+- You will need to a JWT decodeing library to extract the Auth0 userId from the `access_token` on the backend. In our implementation we used [`jsonwebtoken`](https://www.npmjs.com/package/jsonwebtoken) to decode the access token.
+- You will need to configure your `Auth0Provider` to store the users `access_token` in localstorage instead of memory so Auth0's `/authorize` endpoint is not called when retrieving the `access_token`. This can be done by setting `cacheLocation` to `localstorage` in `Auth0Provider`'s config.
+
 ### Frontend Changes:
 
-- In your frontend, on page load we will first check if an Auth0 session exists. If a session exists we then send a request to a `migrate-session` endpoint on your backend with the Auth0 access token.
+- On your frontend, on page load, check if a valid Auth0 session exists. If a valid session exists send a request to the API defined in the next section with the Auth0 access token.
+
+- You can add the following `useEffect` hook to your functional home component:
+
+```jsx
+import { useAuth0 } from "@auth0/auth0-react";
+
+function Home() {
+    
+    const {
+        getAccessTokenSilently,
+        isAuthenticated,
+        logout
+    } = useAuth0();
+
+    useEffect( async () => {
+        // Does user have a valid session
+        if ( isAuthenticated ){
+            
+            // get Auth0 access token
+            let access_token = await getAccessTokenSilently()
+
+            // send a request to your migrate session endpoint
+            let response = axios.get(`${apiDomain}/migrate-session`, {
+                params: {
+                    access_token
+                }
+            })
+
+            if ( response.data.status === "OK"){
+                // logout user from auth0 to revoke their session
+                logout({
+                    returnTo: window.location.origin,
+                })
+            }
+        }
+    });
+
+    // TODO: Your react code
+}
+
+```
+
 
 ### Backend Changes:
 
-- On your backend you will need to configure a `migrate-session` endpoint.
-- When the frontend sends a request to this endpoint we first take the token sent in the request and retrive the auth0 userInfo.
-- We can then revoke the auth0 session.
-- We can extract the Auth0 userId from the the userInfo retrived in the previous step and check if the user exists in SuperTokens( can be done by checking if an associated SuperTokens userId is mapped to the Auth0 userId).
-- If a SuperTokens user exists we can create a new session with the associated userId and send a response.
-- If no associated user exists we should send a request to the frontend prompting it to signIn the user.
+- Create a new API on your backend, this will be called to migrate your Auth0 session:
+
+```jsx
+let jsonWebToken = require("jsonwebtoken")
+
+app.get("/migrate-session", (req, res) => {
+
+    //extract auth0 access_token from request
+    let access_token = req.query.access_token
+
+    // Get the users Auth0 userId from the access_token
+    // decodeAuth0UserId is a function defined by you
+    let auth0UserId = decodeAuth0UserId(access_token).sub
+        
+    // create a new SuperTokens session using the Auth0 userId
+    await Session.createNewSession(res, auth0UserId)
+    res.send({
+        status: "OK"
+    })
+})
+```
