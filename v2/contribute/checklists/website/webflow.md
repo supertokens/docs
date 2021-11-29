@@ -22,3 +22,9 @@ hide_title: true
 - For homepage and pricing page, having separate projects is fine
 - For a new page on website remove the existing page in currently working page and put it inside the main file as another page.
 - Now you can work on the new page in this project so you avoid creating multiple projects
+
+## Steps to update backend website server:
+1. cd supertokens-backend-website
+2. git reset --hard
+3. git clean -f
+4. git pull
