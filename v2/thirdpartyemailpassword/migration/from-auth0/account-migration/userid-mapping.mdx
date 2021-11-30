@@ -42,3 +42,103 @@ function getAuth0ToSuperTokensUserIdMapping( userId ){
 }
 
 ```
+
+
+### Step 2: Overriding all functions on the backend which take `userId` as input or return `userId` in their response:
+
+- This is done so that if the developer has stored the Auth0 `userId` of a user in their database for some feature, it can still be used.
+- If a user has a Auth0 `userId` mapped to an SuperTokens `userId`, then: 
+  - All function which take `userId` as input need to replace the Auth0 `userId` in the input with the associated SuperTokens `userId`. 
+  - All function which return `userId` in their response need to replace the SuperTokens `userId` in the response with the associated Auth0 `userId`.
+
+You can learn more about User ID mapping and the associated functions in the next [section](./userid-mapping)
+
+```jsx title="Nodejs"
+ThirdPartyEmailPassword.init({
+    override: {
+        functions: (orignalImpl) => {
+            return {
+                ...orignalImpl,
+                signInUp: async function (input) { ... },
+                signIn: async function (input) { ... },
+                getUsersByEmail: async function (input) {
+
+                    let users = await orignalImpl.getUsersByEmail(input)
+                    // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
+                    for (let i = 0; i < users.length; i++) {
+
+                        let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(users[i].id)
+
+                        if(userIdMappingInfo !== undefined){
+                           users[i].id = userIdMappingInfo.auth0UserId 
+                        }
+                        
+                    }
+                    return users;
+                },
+                getUserByThirdPartyInfo: async function (input) {
+
+                    let response = await orignalImpl.getUserByThirdPartyInfo(input)
+
+                    // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
+                    let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(response.id)
+
+                    if( userIdMappingInfo !== undefined ){
+                        response.id = userIdMappingInfo.auth0UserId
+                    }
+                    return response;
+                },
+                getUserById: async function (input) {
+
+                    // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
+                    let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(response.id)
+
+                    if( userIdMappingInfo !== undefined ){
+                        
+                        // call orignal implementation with the mapped SuperTokens userId
+                        let response = await orignalImpl.getUserById({ userId: userIdMappingInfo.supertokensUserId })
+
+                        // set Auth0 userId in the response
+                        response.id = userIdMappingInfo.auth0UserId
+
+                        return response;
+                    }
+                    return await orignalImpl.getUserById(input)
+
+                    
+                },
+                createResetPasswordToken: async function (input) {
+                    
+                    // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
+                    let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(response.id)
+
+                    if( userIdMappingInfo !== undefined ){
+                        
+                        // call orignal implementation with the mapped SuperTokens userId
+                        let response = await orignalImpl.createResetPasswordToken({ userId: userIdMappingInfo.supertokensUserId })
+
+                        return response;
+                    }
+
+                    return await orignalImpl.createResetPasswordToken(input)
+                },
+                updateEmailOrPassword: async function (input) {
+
+                    // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
+                    let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(response.id)
+
+                    if( userIdMappingInfo !== undefined ){
+                        
+                        // call orignal implementation with the mapped SuperTokens userId
+                        input.userId = userIdMappingInfo.supertokensUserId
+
+                        return await orignalImpl.updateEmailOrPassword(input)
+                    }
+
+                    return await orignalImpl.createResetPasswordToken(input)
+                }
+            }
+        }
+    },
+})
+```
