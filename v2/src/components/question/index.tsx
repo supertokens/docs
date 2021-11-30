@@ -15,7 +15,7 @@ export function Question(props: PropsWithChildren<{
 
     if (selectedAnsTitle === undefined) {
         return (
-            <div className={styles.questionBox}>
+            <div className={`${styles.questionBox} question-box`}>
                 <div className={styles.questionBoxText}>
                     {typeof props.question === "string" ? props.question : props.question()}
                 </div>
@@ -46,16 +46,8 @@ export function Question(props: PropsWithChildren<{
         return (
             <>
                 <div
-                    style={{
-                        width: "100%",
-                        display: "flex",
-                        borderRadius: "6px",
-                        background: "rgb(42, 47, 68)",
-                        border: "1px solid rgb(60 66 88)",
-                        padding: "16px",
-                        marginBottom: "20px",
-                        color: "#ffffff",
-                    }}>
+                    className={`${styles.questionBoxSubmittedContainer} question-box-submitted-container`}
+                >
                     <div
                         style={{
                             width: "17px",

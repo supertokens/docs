@@ -159,13 +159,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         width: "100%",
                         display: "flex",
                         flexDirection: "column",
-                        borderRadius: "6px",
                         background: "rgb(42, 47, 68)",
-                        border: "1px solid rgb(42, 47, 68)",
                         padding: "16px",
-                        marginBottom: "10px",
                         color: "#ffffff",
                     }}
+                    className="app-info-form-container"
                 >
                     <div
                         style={{

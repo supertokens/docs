@@ -8,6 +8,7 @@ import React, { useState, cloneElement, Children } from 'react';
 import useUserPreferencesContext from '@theme/hooks/useUserPreferencesContext';
 import clsx from 'clsx';
 import styles from './styles.module.css';
+import { childContainsTabItemWithValue } from '../../components/tabs/utils';
 
 function isInViewport (element) {
   const { top, left, bottom, right } = element.getBoundingClientRect();
@@ -92,72 +93,87 @@ function Tabs (props) {
     focusElement?.focus();
   };
 
-  return (
-    <div
-      className={clsx(
-        'tabs-container',
-        {
-          'sub-tab': isSubTab
-        }
-      )}
-    >
-      <ul
-        style={{
-          borderTopLeftRadius: !isSubTab ? "10px" : undefined,
-          borderTopRightRadius: !isSubTab ? "10px" : undefined,
-        }}
-        role="tablist"
-        aria-orientation="horizontal"
-        className={clsx(
-          'tabs',
-          {
-            'tabs--block': block,
-          },
-          className,
-        )}>
-        {values.map(({ value, label }) => (
-          <li
-            style={isSubTab ? {
-              padding: "10px",
-              borderWidth: "0px",
-              fontWeight: "normal"
-            } : {}}
-            role="tab"
-            tabIndex={selectedValue === value ? 0 : -1}
-            aria-selected={selectedValue === value}
-            className={clsx('tabs__item', styles.tabItem, {
-              'tabs__item--active': selectedValue === value,
-            })}
-            key={value}
-            ref={(tabControl) => tabRefs.push(tabControl)}
-            onKeyDown={handleKeydown}
-            onFocus={handleTabChange}
-            onClick={handleTabChange}>
-            {label}
-          </li>
-        ))}
-      </ul>
+  const getAlternateOrDefaultTabContent = () => {
+    const { alternateTabContent, defaultTabContent } = props
 
-      {lazy ? (
-        cloneElement(
-          children.filter(
-            (tabItem) => tabItem.props.value === selectedValue,
-          )[0],
+    if (alternateTabContent && Object.keys(alternateTabContent).includes(selectedValue)) {
+      return alternateTabContent[selectedValue]();
+    } else if (defaultTabContent && Object.keys(defaultTabContent).includes(selectedValue)) {
+      return defaultTabContent[selectedValue]();
+    }
+
+    return;
+  };
+
+  return (
+    <>
+      <div
+        className={clsx(
+          'tabs-container',
           {
-            className: 'margin-vert--md',
-          },
-        )
-      ) : (
-        <div>
-          {children.map((tabItem, i) =>
-            cloneElement(tabItem, {
-              key: i,
-              hidden: tabItem.props.value !== selectedValue,
-            }),
-          )}
-        </div>
-      )}
-    </div>
+            'sub-tab': isSubTab
+          }
+        )}
+      >
+        <ul
+          style={{
+            borderTopLeftRadius: !isSubTab ? "10px" : undefined,
+            borderTopRightRadius: !isSubTab ? "10px" : undefined,
+          }}
+          role="tablist"
+          aria-orientation="horizontal"
+          className={clsx(
+            'tabs',
+            {
+              'tabs--block': block,
+            },
+            className,
+          )}>
+          {values.map(({ value, label }) => (
+            <li
+              style={isSubTab ? {
+                padding: "10px",
+                borderWidth: "0px",
+                fontWeight: "normal"
+              } : {}}
+              role="tab"
+              tabIndex={selectedValue === value ? 0 : -1}
+              aria-selected={selectedValue === value}
+              className={clsx('tabs__item', styles.tabItem, {
+                'tabs__item--active': selectedValue === value,
+              })}
+              key={value}
+              ref={(tabControl) => tabRefs.push(tabControl)}
+              onKeyDown={handleKeydown}
+              onFocus={handleTabChange}
+              onClick={handleTabChange}>
+              {label}
+            </li>
+          ))}
+        </ul>
+
+        {lazy ? (
+          cloneElement(
+            children.filter(
+              (tabItem) => tabItem.props.value === selectedValue,
+            )[0],
+            {
+              className: 'margin-vert--md',
+            },
+          )
+        ) : (
+          <div>
+            {children.map((tabItem, i) =>
+              cloneElement(tabItem, {
+                key: i,
+                hidden: tabItem.props.value !== selectedValue,
+              }),
+            )}
+          </div>
+        )}
+      </div>
+      {!childContainsTabItemWithValue(selectedValue, props.children) && getAlternateOrDefaultTabContent()}
+    </>
   );
 }
 
