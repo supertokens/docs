@@ -7,6 +7,7 @@ hide_title: true
 import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
 
 # Adding Extra Fields
 
@@ -54,9 +55,6 @@ SuperTokens.init({
 
 <img src="/img/thirdpartyemailpassword/signup-with-name-and-age.png" />
 
-:::tip
-Please refer to the <a href="/docs/auth-react/emailpassword/config/sign-up#signupform-config-values" target="_blank">auth-react reference API</a>  for more information about adding custom fields.
-:::
 
 ## Step 2: Back End
 
@@ -130,15 +128,53 @@ func main() {
 ```
 
 </TabItem>
+<TabItem value="python">
 
+```python
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        thirdpartyemailpassword.init({
+            # highlight-start
+            'sign_up_feature': {
+                'form_fields': [{
+                        'id': 'name'
+                    }, {
+                        'id': 'age'
+                    }, {
+                        'id': 'country',
+                        'optional': True
+                    }
+                ]
+            }
+            # highlight-end
+        }),
+        session.init({...})
+    ]
+})
+```
+
+</TabItem>
 </BackendSDKTabs>
 
 ## Handle form fields on successful Sign-up
 
-To handle form fields on the backend you'll have to `override` the `signInUpPOST` API when initializing the recipe
-
 <BackendSDKTabs>
 <TabItem value="nodejs">
+
+<Tabs
+	isSubTab={true}
+	groupId="node-80X-version"
+	defaultValue="greater"
+	values={[
+		{ label: '>= v8.0.0', value: 'greater' },
+		{ label: '< v8.0.0', value: 'lesser' },
+	]}>
+<TabItem value="greater">
+
+To handle form fields on the backend you'll have to `override` the `emailPasswordSignUpPOST` API when initializing the recipe
 
 ```jsx
 SuperTokens.init({
@@ -150,7 +186,51 @@ SuperTokens.init({
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signInUpPOST: async (input) => {
+                        emailPasswordSignUpPOST: async function(input) {
+                            if (originalImplementation.emailPasswordSignUpPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+
+                            // First we call the original implementation
+                            let response = await originalImplementation.emailPasswordSignUpPOST(input);
+
+                            // If sign up was successful
+                            if (response.status === "OK") {
+
+                                // We can get the form fields from the input like this
+                                let formFields = input.formFields
+                                let user = response.user
+
+                                // some post sign up logic
+                            }
+
+                            return response;
+                        }
+                    }
+                }
+            }
+        }),
+        Session.init({...})
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="lesser">
+
+To handle form fields on the backend you'll have to `override` the `signInUpPOST` API when initializing the recipe
+
+```jsx
+SuperTokens.init({
+    appInfo: {...},
+    supertokens: {...},
+    recipeList: [
+        ThirdPartyEmailPassword.init({
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUpPOST: async function(input) {
 
                             if (originalImplementation.signInUpPOST === undefined) {
                                 throw Error("Should never come here");
@@ -179,8 +259,14 @@ SuperTokens.init({
     ]
 });
 ```
+
+</TabItem>
+</Tabs>
+
 </TabItem>
 <TabItem value="go">
+
+To handle form fields on the backend you'll have to `override` the `EmailPasswordSignUpPOST` API when initializing the recipe
 
 ```go
 func main() {
@@ -190,26 +276,28 @@ func main() {
 				Override: &tpepmodels.OverrideStruct{
 					APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
 						// First we copy the original implementation
-						newImplementation := originalImplementation
+						originalEmailPasswordSignUpPOST := *originalImplementation.EmailPasswordSignUpPOST
 
-						newImplementation.SignInUpPOST = func(input tpepmodels.SignInUpAPIInput) (tpepmodels.SignInUpAPIOutput, error) {
-							resp, err := originalImplementation.SignInUpPOST(input)
+						(*originalImplementation.EmailPasswordSignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (tpepmodels.SignUpResponse, error) {
+
+							// First we call the original implementation
+							resp, err := originalEmailPasswordSignUpPOST(formFields, options)
 							if err != nil {
-								return tpepmodels.SignInUpAPIOutput{}, err
+								return tpepmodels.SignUpResponse{}, err
 							}
 
-							if resp.EmailpasswordOutput != nil && resp.EmailpasswordOutput.OK != nil {
-								// the user logged in / signed up successfully using email and password
-
-								// These are the input form fields values that the user used while signing up or in
-								formFields := input.EmailpasswordInput.FormFields
+							// if sign up was successful
+							if resp.OK != nil {
+								// TODO: The input of this function is the formFields array.
+								// You can also retrieve the user object like this:
+								user := resp.OK.User
 
 							}
 
 							return resp, err
 						}
 
-						return newImplementation
+						return originalImplementation
 					},
 				},
 			}),
@@ -217,6 +305,46 @@ func main() {
 	})
 }
 ```
+</TabItem>
+<TabItem value="python">
+
+```python
+# highlight-start
+def override_apis(original_implementation):
+	original_emailpassword_sign_up_post = original_implementation.emailpassword_sign_up_post
+
+	async def emailpassword_sign_up_post(form_fields: List[FormField], api_options: APIOptions):
+		# First we call the original implementation of sign_up_post
+		response = await original_emailpassword_sign_up_post(form_fields, api_options)
+
+        # Post sign up response, we check if it was successful
+        if response.is_ok:
+            id = response.user.user_id
+            email = response.user.email
+
+            # TODO: use the input form fields values for custom logic
+        return response
+	
+	original_implementation.emailpassword_sign_up_post = emailpassword_sign_up_post
+	return original_implementation
+# highlight-end
+
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        thirdpartyemailpassword.init({
+            # highlight-start
+            'override': {
+                'apis': override_apis
+            }
+            # highlight-end
+        })
+    ]
+})
+```
+
 </TabItem>
 </BackendSDKTabs>
 

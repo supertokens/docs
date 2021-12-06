@@ -9,6 +9,7 @@ hide_title: true
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
 import TabItem from '@theme/TabItem';
 
 # Assigning roles to a session
@@ -38,13 +39,13 @@ SuperTokens.init({
                 functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        createNewSession: async (input) => {
+                        createNewSession: async function(input) {
                             let userId = input.userId;
 
                             let role = "admin"; // TODO: fetch role based on userId
 
-                            input.jwtPayload = {
-                                ...input.jwtPayload,
+                            input.accessTokenPayload = {
+                                ...input.accessTokenPayload,
                                 role
                             };
 
@@ -72,30 +73,30 @@ import (
 
 func main() {
 
-    supertokens.Init(supertokens.TypeInput{
+	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			session.Init(&sessmodels.TypeInput{
 				Override: &sessmodels.OverrideStruct{
 					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 
 						// first we create a copy of the original implementation
-						newImplementation := originalImplementation
+						originalCreateNewSession := *originalImplementation.CreateNewSession
 
 						// we override the create new session function
 						//highlight-start
-						newImplementation.CreateNewSession = func(res http.ResponseWriter, userID string, jwtPayload, sessionData map[string]interface{}) (sessmodels.SessionContainer, error) {
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}) (sessmodels.SessionContainer, error) {
 							role := "admin" // TODO: fetch role based on userID
 
-							if jwtPayload == nil {
-								jwtPayload = map[string]interface{}{}
+							if accessTokenPayload == nil {
+								accessTokenPayload = map[string]interface{}{}
 							}
-							jwtPayload["role"] = role
+							accessTokenPayload["role"] = role
 
-							return originalImplementation.CreateNewSession(res, userID, jwtPayload, sessionData)
+							return originalCreateNewSession(res, userID, accessTokenPayload, sessionData)
 						}
 						//highlight-end
 
-						return newImplementation
+						return originalImplementation
 					},
 				},
 			}),
@@ -104,11 +105,52 @@ func main() {
 }
 ```
 </TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, session
+
+def override_functions(original_implementation):
+    original_implementation_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(request: any, user_id: str, access_token_payload: Union[dict, None] = None,
+                                 session_data: Union[dict, None] = None):
+        if session_data is None:
+            session_data = {}
+
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        role = "admin"; # TODO: fetch role based on user_id
+        access_token_payload["role"] = role
+
+        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data)
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+init({
+    'supertokens': {...},
+    'app_info': {...},
+    'recipe_list': [
+        ...
+        session.init({
+            # highlight-start
+            'override': {
+                'functions': override_functions
+            },
+            # highlight-end
+        })
+    ]
+})
+```
+
+</TabItem>
 </BackendSDKTabs>
 
 ## 2) In any API call post login
 
-Post session verification, you can use the `updateJWTPayload` function to store the user's role:
+Post session verification, you can use the `updateAccessTokenPayload` function to store the user's role:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -124,10 +166,10 @@ app.post("/set-role", verifySession(), async (req, res) => {
 
     let role = "admin"; // TODO: fetch based on user
 
-    // Note that this will override any existing JWT payload
+    // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await req.session.updateJWTPayload(
+    await req.session.updateAccessTokenPayload(
         {role}
     );
     // highlight-end
@@ -156,11 +198,11 @@ server.route({
 
         let role = "admin"; // TODO: fetch based on user
 
-    // Note that this will override any existing JWT payload
+    // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
         // highlight-start
-        await req.session.updateJWTPayload(
+        await req.session.updateAccessTokenPayload(
                 {role}
         );
         // highlight-end
@@ -182,10 +224,10 @@ fastify.post("/set-role", {
 
     let role = "admin"; // TODO: fetch based on user
 
-    // Note that this will override any existing JWT payload
+    // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await req.session.updateJWTPayload(
+    await req.session.updateAccessTokenPayload(
         {role}
     );
     // highlight-end
@@ -205,10 +247,10 @@ async function setRole(awsEvent, _) => {
 
     let role = "admin"; // TODO: fetch based on user
 
-    // Note that this will override any existing JWT payload
+    // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await awsEvent.session.updateJWTPayload(
+    await awsEvent.session.updateAccessTokenPayload(
         {role}
     );
     // highlight-end
@@ -231,10 +273,10 @@ router.post("/set-role", verifySession(), (ctx, next) => {
 
     let role = "admin"; // TODO: fetch based on user
 
-    // Note that this will override any existing JWT payload
+    // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await ctx.session.updateJWTPayload(
+    await ctx.session.updateAccessTokenPayload(
         {role}
     );
     // highlight-end
@@ -260,11 +302,11 @@ class SetRole {
 
         let role = "admin"; // TODO: fetch based on user
 
-        // Note that this will override any existing JWT payload
+        // Note that this will override any existing access token payload
         // that you may have provided earlier.
         // highlight-start
         // highlight-start
-        await ((this.ctx as any).session as Session.SessionContainer).updateJWTPayload(
+        await ((this.ctx as any).session as Session.SessionContainer).updateAccessTokenPayload(
             {role}
         );
         // highlight-end
@@ -294,10 +336,10 @@ export default async function setRole(req, res) {
     let userId = req.session.getUserId(); 
     let role = "admin"; // TODO: fetch based on user
 
-    // Note that this will override any existing JWT payload
+    // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await req.session.updateJWTPayload(
+    await req.session.updateAccessTokenPayload(
         {role}
     );
     // highlight-end
@@ -320,9 +362,9 @@ export class ExampleController {
     let userId = session.getUserId(); 
     let role = "admin"; // TODO: fetch based on user
 
-    // Note that this will override any existing JWT payload
+    // Note that this will override any existing access token payload
     // that you may have provided earlier.
-    await session.updateJWTPayload(
+    await session.updateAccessTokenPayload(
         {role}
     );
 
@@ -351,14 +393,14 @@ func setRoleAPI(w http.ResponseWriter, r *http.Request) {
 
 	userID := sessionContainer.GetUserID()
 
-	currJWTPayload := sessionContainer.GetJWTPayload()
+	currAccessTokenPayload := sessionContainer.GetAccessTokenPayload()
 
-	currJWTPayload["role"] = "newRole" // TODO: fetch based on user
+	currAccessTokenPayload["role"] = "newRole" // TODO: fetch based on user
 
-	// Note that this will override any existing JWT payload
+	// Note that this will override any existing access token payload
 	// that you may have provided earlier.
     //highlight-start
-	err := sessionContainer.UpdateJWTPayload(currJWTPayload)
+	err := sessionContainer.UpdateAccessTokenPayload(currAccessTokenPayload)
 	if err != nil {
 		err = supertokens.ErrorHandler(err, r, w)
 		if err != nil {
@@ -369,6 +411,74 @@ func setRoleAPI(w http.ResponseWriter, r *http.Request) {
     //highlight-end
 }
 ```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+
+@app.post('/update-jwt')
+async def update_jwt(session: Session = Depends(verify_session())):
+    # retrieve the session object as shown below
+    current_jwt_payload = session.get_jwt_payload()
+
+    current_jwt_payload['role'] = 'admin'
+
+    # highlight-next-line
+    await session.update_jwt_payload(current_jwt_payload)
+
+    return PlainTextResponse(content='success')
+
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+
+from supertokens_python.recipe.session.framework.flask import verify_session
+
+@app.route('/update-jwt', methods=['POST'])
+@verify_session()
+def update_jwt():
+    session = g.supertokens
+
+    # retrieve the session object as shown below
+    current_jwt_payload = session.get_jwt_payload()
+
+    current_jwt_payload['role'] = 'admin'
+
+    # highlight-next-line
+    session.sync_update_jwt_payload(current_jwt_payload)
+
+    return 'success'
+
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+
+@verify_session()
+async def update_jwt(request):
+    session = request.supertokens
+    # retrieve the session object as shown below
+    current_jwt_payload = session.get_jwt_payload()
+
+    current_jwt_payload['role'] = 'admin'
+
+    # highlight-next-line
+    await session.update_jwt_payload(current_jwt_payload)
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
 
 </TabItem>
 </BackendSDKTabs>

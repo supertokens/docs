@@ -54,10 +54,6 @@ SuperTokens.init({
 
 <img src="/img/emailpassword/signup-with-name-and-age.png" />
 
-:::tip
-Please refer to the <a href="/docs/auth-react/emailpassword/config/sign-up#signupform-config-values" target="_blank">auth-react reference API</a>  for more information about adding custom fields.
-:::
-
 ## Step 2: Back End
 
 ### Add fields to SuperTokens `init`
@@ -130,6 +126,35 @@ func main() {
 ```
 
 </TabItem>
+<TabItem value="python">
+
+```python
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        emailpassword.init({
+            # highlight-start
+            'sign_up_feature': {
+                'form_fields': [{
+                        'id': 'name'
+                    }, {
+                        'id': 'age'
+                    }, {
+                        'id': 'country',
+                        'optional': True
+                    }
+                ]
+            }
+            # highlight-end
+        }),
+        session.init({...})
+    ]
+})
+```
+
+</TabItem>
 </BackendSDKTabs>
 
 ## Handle form fields on successful Sign-up
@@ -149,7 +174,7 @@ SuperTokens.init({
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signUpPOST: async (input) => {
+                        signUpPOST: async function(input) {
 
                             if (originalImplementation.signUpPOST === undefined) {
                                 throw Error("Should never come here");
@@ -185,11 +210,11 @@ func main() {
 			emailpassword.Init(&epmodels.TypeInput{
 				Override: &epmodels.OverrideStruct{
 					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
-						// First we copy the original implementation
-						newImplementation := originalImplementation
+						// First we copy the original implementation func
+						originalSignUpPOST := *originalImplementation.SignUpPOST
 
-						newImplementation.SignUpPOST = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (epmodels.SignUpResponse, error) {
-							resp, err := originalImplementation.SignUpPOST(formFields, options)
+						(*&originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (epmodels.SignUpResponse, error) {
+							resp, err := originalSignUpPOST(formFields, options)
 							if err != nil {
 								return epmodels.SignUpResponse{}, err
 							}
@@ -204,7 +229,7 @@ func main() {
 							return resp, err
 						}
 
-						return newImplementation
+						return originalImplementation
 					},
 				},
 			}),
@@ -212,6 +237,46 @@ func main() {
 	})
 }
 ```
+</TabItem>
+<TabItem value="python">
+
+```python
+# highlight-start
+def override_email_password_apis(original_implementation):
+	original_sign_up_post = original_implementation.sign_up_post
+
+	async def sign_up_post(form_fields: List[FormField], api_options: APIOptions):
+		# First we call the original implementation of signInPOST.
+		response = await original_sign_up_post(form_fields, api_options)
+
+        # Post sign up response, we check if it was successful
+        if response.is_ok:
+            id = response.user.user_id
+            email = response.user.email
+
+            # TODO: use the input form fields values for custom logic
+        return response
+	
+	original_implementation.sign_up_post = sign_up_post
+	return original_implementation
+# highlight-end
+
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        emailpassword.init({
+            # highlight-start
+            'override': {
+                'apis': override_email_password_apis
+            }
+            # highlight-end
+        })
+    ]
+})
+```
+
 </TabItem>
 </BackendSDKTabs>
 

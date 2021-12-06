@@ -226,6 +226,14 @@ module.exports = {
           items: [
             "advanced-customizations/apis-override/about",
             "advanced-customizations/apis-override/usage",
+            {
+              type: 'category',
+              label: 'Sending custom response',
+              items: [
+                "advanced-customizations/apis-override/custom-response/api-override",
+                "advanced-customizations/apis-override/custom-response/throwing-error"
+              ],
+            },
             "advanced-customizations/apis-override/disabling"
           ],
         },

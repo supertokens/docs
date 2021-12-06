@@ -24,7 +24,7 @@ export default function SignUpButton() {
             onClick={() => {
                 window.open("/auth", '_blank').focus();
             }}
-            className="button">
+            className="signUpButton">
             {title}
         </div>
     );

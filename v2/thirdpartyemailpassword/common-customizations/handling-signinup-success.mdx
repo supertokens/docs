@@ -7,6 +7,7 @@ hide_title: true
 import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
 
 # Post signin / signup callbacks
 
@@ -53,10 +54,23 @@ Please refer to [this page](../advanced-customizations/frontend-hooks/handle-eve
 
 ## 2) On the backend
 
-For this, you'll have to override the `signInUpPOST` API in the `init` function call.
-
 <BackendSDKTabs>
 <TabItem value="nodejs">
+
+<Tabs
+	isSubTab={true}
+	groupId="node-80X-version"
+	defaultValue="greater"
+	values={[
+		{ label: '>= v8.0.0', value: 'greater' },
+		{ label: '< v8.0.0', value: 'lesser' },
+	]}>
+<TabItem value="greater">
+
+For this, you'll have to override the following APIs in the `init` function call, on the backend:
+- `emailPasswordSignUpPOST`: Sign up with email & password
+- `emailPasswordSignInPOST`: Sign in with email & password
+- `thirdPartySignInUpPOST`: Sign in or up with third party
 
 ```jsx
 SuperTokens.init({
@@ -69,7 +83,88 @@ SuperTokens.init({
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signInUpPOST: async (input) => {
+
+                        // override the email password sign up API
+                        emailPasswordSignUpPOST: async function(input) {
+                            if (originalImplementation.emailPasswordSignUpPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+
+                            // TODO: some pre sign up logic
+
+                            let response = await originalImplementation.emailPasswordSignUpPOST(input);
+
+                            if (response.status === "OK") {
+                                // TODO: some post sign up logic
+                            }
+
+                            return response;
+                        },
+
+                        // override the email password sign in API
+                        emailPasswordSignInPOST: async function(input) {
+                            if (originalImplementation.emailPasswordSignInPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+
+                            // TODO: some pre sign in logic
+
+                            let response = await originalImplementation.emailPasswordSignInPOST(input);
+
+                            if (response.status === "OK") {
+                                // TODO: some post sign in logic
+                            }
+
+                            return response;
+                        },
+
+                        // override the thirdparty sign in / up API
+                        thirdPartySignInUpPOST: async function(input) {
+                            if (originalImplementation.thirdPartySignInUpPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+
+                            // TODO: Some pre sign in / up logic
+
+                            let response = await originalImplementation.thirdPartySignInUpPOST(input);
+
+                            if (response.status === "OK") {
+                                if (response.createdNewUser) {
+                                    // TODO: some post sign up logic
+                                } else {
+                                    // TODO: some post sign in logic
+                                }
+                            }
+
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({...})
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="lesser">
+
+For this, you'll have to override the `signInUpPOST` API in the `init` function call.
+
+```jsx
+SuperTokens.init({
+    appInfo: {...},
+    supertokens: {...},
+    recipeList: [
+        ThirdPartyEmailPassword.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUpPOST: async function(input) {
 
                             if (originalImplementation.signInUpPOST === undefined) {
                                 throw Error("Should never come here");
@@ -112,7 +207,15 @@ SuperTokens.init({
 ```
 
 </TabItem>
+</Tabs>
+
+</TabItem>
 <TabItem value="go">
+
+For this, you'll have to override the following APIs in the `init` function call, on the backend:
+- `EmailPasswordSignUpPOST`: Sign up with email & password
+- `EmailPasswordSignInPOST`: Sign in with email & password
+- `ThirdPartySignInUpPOST`: Sign in or up with third party
 
 ```go
 import (
@@ -126,71 +229,150 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
-                //highlight-start
+				//highlight-start
 				Override: &tpepmodels.OverrideStruct{
 					APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
-                        // create a copy of the originalImplementation
-                        newImplementation := originalImplementation
+						// create a copy of the originalImplementation
+						originalEmailPasswordSignUpPOST := *originalImplementation.EmailPasswordSignUpPOST
+						originalEmailPasswordSignInPOST := *originalImplementation.EmailPasswordSignInPOST
+						originalThirdPartySignInUpPOST := *originalImplementation.ThirdPartySignInUpPOST
 
-                        // override the sign in up API
-                        newImplementation.SignInUpPOST = func(input tpepmodels.SignInUpAPIInput) (tpepmodels.SignInUpAPIOutput, error) {
+						// override the email password sign up API
+						(*originalImplementation.EmailPasswordSignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (tpepmodels.SignUpResponse, error) {
 
-                            // First we call the original implementation of SignInUpPOST.
-                            response, err := originalImplementation.SignInUpPOST(input)
-                            if err != nil {
-                                return tpepmodels.SignInUpAPIOutput{}, err
-                            }
+							// TODO: some pre sign up logic
 
-                            if response.EmailpasswordOutput != nil {
-                                // User sign in or up using email password
-                                if response.EmailpasswordOutput.OK != nil {
-                                    // sign in / up was successful
+							resp, err := originalEmailPasswordSignUpPOST(formFields, options)
+							if err != nil {
+								return tpepmodels.SignUpResponse{}, err
+							}
 
-                                    // user object contains the ID and email
-                                    user := response.EmailpasswordOutput.OK.User
+							if resp.OK != nil {
+								// TODO: some post sign up logic
+							}
 
-                                    // formFields contains the values in the form the user filled up during sign in / up
-                                    formFields := input.EmailpasswordInput.FormFields
+							return resp, err
+						}
 
-                                    if response.EmailpasswordOutput.OK.CreatedNewUser {
-                                        // TODO: Post sign up logic
-                                    } else {
-                                        // TODO: Post sign in logic
-                                    }
+						// override the email password sign in API
+						(*originalImplementation.EmailPasswordSignInPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (tpepmodels.SignInResponse, error) {
 
-                                }
-                            } else {
-                                // User sign in or up using social login
-                                if response.ThirdPartyOutput.OK != nil {
-                                    // sign in / up was successful
+							// TODO: some pre sign in logic
 
-                                    // user object contains the ID, email and other third party info
-                                    user := response.ThirdPartyOutput.OK.User
+							resp, err := originalEmailPasswordSignInPOST(formFields, options)
+							if err != nil {
+								return tpepmodels.SignInResponse{}, err
+							}
 
-                                    // This is the response from the OAuth 2 provider that contains their tokens or user info.
-                                    thirdPartyAuthCodeResponse := response.ThirdPartyOutput.OK.AuthCodeResponse
+							if resp.OK != nil {
+								// TODO: some post sign in logic
+							}
 
-                                    if response.ThirdPartyOutput.OK.CreatedNewUser {
-                                        // TODO: Post sign up logic
-                                    } else {
-                                        // TODO: Post sign in logic
-                                    }
+							return resp, err
+						}
 
-                                }
-                            }
-                            return response, nil
-                        }
+						// override the thirdparty sign in / up API
+						(*originalImplementation.ThirdPartySignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions) (tpepmodels.ThirdPartyOutput, error) {
 
-                        // return the new implementation
-						return newImplementation
+							// TODO: some pre sign in / up logic
+
+							resp, err := originalThirdPartySignInUpPOST(provider, code, authCodeResponse, redirectURI, options)
+							if err != nil {
+								return tpepmodels.ThirdPartyOutput{}, err
+							}
+
+							if resp.OK != nil {
+								if resp.OK.CreatedNewUser {
+									// TODO: some post sign up logic
+								} else {
+									// TODO: some post sign in logic
+								}
+							}
+
+							return resp, err
+						}
+
+						return originalImplementation
 					},
 				},
-                //highlight-end
+				//highlight-end
 			}),
 		},
 	})
 }
 ```
 
+</TabItem>
+<TabItem value="python">
+
+For this, you'll have to override the following APIs in the `init` function call, on the backend:
+- `emailpassword_sign_up_post`: Sign up with email & password
+- `emailpassword_sign_in_post`: Sign in with email & password
+- `thirdparty_sign_in_up_post`: Sign in or up with third party
+
+```python
+
+# highlight-start
+def override_thirdpartyemailpassword_apis(original_implementation):
+	original_thirdparty_sign_in_up_post = original_implementation.thirdparty_sign_in_up_post
+    original_emailpassword_sign_in_post = original_implementation.emailpassword_sign_in_post
+    original_emailpassword_sign_up_post = original_implementation.emailpassword_sign_up_post
+
+	async def thirdparty_sign_in_up_post(provider: Provider, code: str, redirect_uri: str,
+                              auth_code_response: Union[str, None], api_options: APIOptions):
+		# call the default behaviour as show below
+		result = await original_thirdparty_sign_in_up_post(provider, code, redirect_uri, auth_code_response, api_options)
+
+        if result.is_ok:
+            if result.created_new_user:
+                # TODO: some post sign up logic
+            else:
+                # TODO: some post sign in logic
+        
+        return result
+
+	
+    async def emailpassword_sign_in_post(self, form_fields: List[FormField],
+                                         api_options: EmailPasswordApiOptions) -> SignInPostResponse:
+        # call the default behaviour as show below
+		result = await original_emailpassword_sign_in_post(form_fields, api_options)
+
+        if result.is_ok:
+            # TODO: some post sign in logic
+        
+        return result
+
+    async def emailpassword_sign_up_post(self, form_fields: List[FormField],
+                                         api_options: EmailPasswordApiOptions) -> SignUpPostResponse:
+        # call the default behaviour as show below
+		result = await original_emailpassword_sign_up_post(form_fields, api_options)
+
+        if result.is_ok:
+            # TODO: some post sign up logic
+        
+        return result
+
+    original_implementation.thirdparty_sign_in_up_post = thirdparty_sign_in_up_post
+    original_implementation.emailpassword_sign_in_post = emailpassword_sign_in_post
+    original_implementation.emailpassword_sign_up_post = emailpassword_sign_up_post
+	return original_implementation
+# highlight-end
+
+
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        thirdpartyemailpassword.init({
+            # highlight-start
+            'override': {
+                'apis': override_thirdpartyemailpassword_apis
+            }
+            # highlight-end
+        })
+    ]
+})
+```
 </TabItem>
 </BackendSDKTabs>

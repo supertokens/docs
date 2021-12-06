@@ -6,6 +6,11 @@ export function Question(props: PropsWithChildren<{
 
     const [selectedAnsTitle, setSelectedAnsTitle] = useState(undefined);
 
+    let resubmitInfoClicked = (event) => {
+        event.preventDefault();
+        setSelectedAnsTitle(undefined);
+    }
+
     if (selectedAnsTitle === undefined) {
         return (
             <div
@@ -64,7 +69,47 @@ export function Question(props: PropsWithChildren<{
                 childrenComponent = child.props.children;
             }
         });
-        return childrenComponent
+        return (
+            <>
+                <div
+                    style={{
+                        width: "100%",
+                        display: "flex",
+                        borderRadius: "6px",
+                        background: "#292929",
+                        padding: "16px",
+                        marginBottom: "20px",
+                        color: "#ffffff",
+                    }}>
+                    <div
+                        style={{
+                            width: "17px",
+                            marginRight: "10px"
+                        }}>
+                        <img
+                            style={{
+                                width: "17px",
+                            }}
+                            src="/img/form-submitted-tick.png" />
+                    </div>
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            flex: 1,
+                            marginTop: "-2px"
+                        }}>
+                        <div
+                            style={{
+                                fontSize: "16px",
+                            }}>
+                            The content below is shown based on your answer. <a href="" onClick={resubmitInfoClicked}>Resubmit answer?</a>
+                        </div>
+                    </div>
+                </div>
+                {childrenComponent}
+            </>
+        )
     }
 }
 
