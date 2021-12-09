@@ -10,8 +10,8 @@ export default function PythonFrameworkSubTabs(props) {
             defaultValue="fastapi"
             values={[
                 { label: 'FastAPI', value: 'fastapi' },
-                // { label: 'Flask', value: 'flask' },
-                // { label: 'Django', value: 'django' }
+                { label: 'Flask', value: 'flask' },
+                { label: 'Django', value: 'django' }
             ]}>
             {props.children}
         </Tabs>

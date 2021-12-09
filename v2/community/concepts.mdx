@@ -1,0 +1,110 @@
+---
+id: concepts
+title: Concepts and terminology 
+hide_title: true
+---
+
+# Concepts and terminology
+
+## Recipes
+SuperTokens is organized into modules that handle a specific part of the overall authentication experience. These modules are called ***Recipes***. Some of the ***Recipes*** we offer are:
+- [EmailPassword](/docs/emailpassword/introduction): Use this for providing authentication via email and password. It includes sign in, sign up, reset password and email verification flows.
+- [ThirdParty](/docs/thirdparty/introduction): Use this for providing social login or auth via any generic [OIDC provider](https://openid.net/connect/). This also provides the email verification flow.
+- [Session](/docs/session/introduction): Use this for session management post login. This recipe allows you to create, revoke and refresh sessions. As such, it also provides the logout functionality.
+
+You can use multiple recipes within your application. For example, you can use the emailpassword recipe and the session recipe togther to provide a full auth experience in your app.
+
+A recipe can also be used inside another recipe. For example, we have the [ThirdPartyEmailPassword recipe](/docs/thirdpartyemailpassword/introduction) which uses the EmailPassword and ThirdParty recipes inside it.
+
+This modularity also allows you to use our Session recipe just on its own. You would do this in case you have your own login method and want to use SuperTokeks just for session management.
+
+## Managed service and self-hosted
+
+:::important
+First please see the [architecture section](/docs/community/architecture).
+:::
+
+If you choose the managed service option, we will run the [SuperTokens Core](/docs/community/architecture) for you in a region of our choice. We will also be running the database that is used by the core. In this mode, you will still need to run a backend API layer which integrates with our backend SDK.
+
+For the self-hosted version, you will have to run the SuperTokens core service yourself. We allow you to do so via our docker image or by downloading a ZIP file and installing it. This core will have to be connected to your database.
+
+## Overrides
+This feature allows you to change the default functionality of SuperTokens on the frontend or on the backend. Using this, you can:
+- Change our default UI
+- Add pre / post API logic
+- Entirely disable or arbitrarily modify our API logic
+
+If you are familiar with Auth0 actions, or AWS Congito's lambda triggers, ***Overrides*** is our version of that. However, unlike those, you can use the override feature to make changes (to SuperTokens) within your own backend API code. 
+
+There are specific types of overrides:
+- Recipe function overrides (on the backend)
+- API functions override (on the backend)
+- Recipe function overrides (on the frontend)
+- ReactJS component override (on the frontend)
+
+To know more about these, please see the "Advanced customization" section for your recipe docs
+
+## Frontend driver interface ([FDI](https://supertokens.io/docs/fdi))
+:::important
+First please see the [architecture section](/docs/community/architecture).
+:::
+
+This is the API spec that defines the APIs exposed by our backend SDK. Your frontend can use these APIs to drive the UI.
+
+These APIs are exposed via your API layer on the `/auth` path by default. This path is known as the `apiBasePath`. For example, if your API domain is `https://api.myapp.com`, then the sign out API we expose can be reached by `https://api.myapp.com/auth/signout`.
+
+See the [API spec here](https://supertokens.io/docs/fdi).
+
+## Core driver interface ([CDI](https://supertokens.io/docs/cdi))
+:::important
+First please see the [architecture section](/docs/community/architecture).
+:::
+
+This is the API spec that defines the APIs exposed by the SuperTokens core.
+
+These APIs are to be called only by your backend API layer and **never** directly from the frontend (see FDI for APIs to call on the frontend). Think of these APIs for admin use to control SuperTokens and all of its user data.
+
+You can call these APIs directly from your backend, or use the functions our SDK exposes to call them. We recommend using our SDK functions since those have auto-retry logic when querying the core, and they are easier to use.
+
+See the [API spec here](https://supertokens.io/docs/cdi).
+
+## Recipe interface functions
+This is a set of functions that defines how a recipe behaves. For example, if we conside the EmailPassword recipe:
+- On the bacend, we have the [these functions](https://supertokens.io/docs/nodejs/modules/recipe_emailpassword.html#RecipeInterface) that determine how the recipe behaves. They essentially query the SuperTokens core and return the result from the query. You can override these add pre / post logic or replace the core call with your custom logic entirely.
+- On the frontend, we have [these functions](https://supertokens.io/docs/auth-react/modules/recipe_emailpassword.html#RecipeInterface). They query your backend API layer (as per the FDI spec) and return the result from the query. You can also override these to add pre / post logic or replace the API call with some other logic entirely.
+
+## API interface functions
+On the backend SDK, these are the set of functions which govern how an API call defined in the FDI spec behaves. They accept the API input and return the API output as per the FDI spec. For example, for the EmailPassword recipe, we have [these functions](https://supertokens.io/docs/nodejs/modules/recipe_emailpassword.html#APIInterface).
+
+You can override them as well to add pre / post logic or change how the API behaves entirely. The different between these and the backend recipe functions are:
+- These have access to the API's request and response objects
+- One API interface function may interact with multiple recipes or multiple recipe functions. For example, the `signInPOST` API function for the EmailPassword recipe calls the `signIn` recipe function from the EmailPassword recipe, and the `createNewSession` function from the Session recipe.
+
+## AppInfo
+You can learn more about the AppInfo object [here](http://localhost:3000/docs/thirdpartyemailpassword/appinfo).
+
+## RID header
+Multiple recipes can share the same API path. For example, the ThirdParty recipe and the EmailPassword recipe, both have `/recipe/user GET` in their CDI spec (querying the core).
+
+In this case, the core needs to be able to determine which type of user list it should return and it does that based on the value of the `rid` header passed in the request. For the EmailPassword recipe, the value of this is `emailpassword`, and for the ThirdParty recipe, the value of this is `thirdparty`.
+
+Likewise, there is a unqiue `rid` for all recipes, and this header is used by the core and by our backend SDK (exposes the FDI spec) to determine which recipe the reuqest should go to.
+
+## Access token vs JWTs
+In our session flow, we issue an access and a refresh token. Our access token is **NOT** a typical JWT and should not be used in replacement of one. Here are the differences:
+- Our access token doesn't have the `sub` or `iss` claim
+- The access token doesn't follow the JWT standards strictly. So verification of it using a generic JWT library might not work - therefore, we provide functions in our backend SDK to easily very our access tokens.
+
+However, there are few similarities:
+- Both, our access token, and a JWT can be verified in a stateless manner. Therefore, session verifications are very quick (< 1 MS)
+- Our access tokens are signed via RSA256 using the private key stored in the SuperTokens' database. Verificaiton happens using the associated public key.
+
+:::important
+That being said, we do issue JWTs per session (you need to enable this feature) and can be accessed from the session. This JWT is a different token than the access token and can be used to authenticate with external services like Hasura or AWS lambda. 
+
+However, whenever possible, stick to using our access tokens for session verifications - it's way more secure.
+:::
+
+## Rotating refresh tokens
+
+[Here is a blog](https://supertokens.io/blog/the-best-way-to-securely-manage-user-sessions) explaining what this is.

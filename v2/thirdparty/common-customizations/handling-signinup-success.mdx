@@ -69,7 +69,7 @@ SuperTokens.init({
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signInUpPOST: async (input) => {
+                        signInUpPOST: async function(input) {
 
                             if (originalImplementation.signInUpPOST === undefined) {
                                 throw Error("Should never come here");
@@ -121,13 +121,13 @@ func main() {
 				Override: &tpmodels.OverrideStruct{
 					APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
 						// create a copy of the originalImplementation
-						newImplementation := originalImplementation
+						originalSignInUpPOST := *originalImplementation.SignInUpPOST
 
 						// override the sign in up API
-						newImplementation.SignInUpPOST = func(provider tpmodels.TypeProvider, code, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
+						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
 
 							// First we call the original implementation of SignInUpPOST.
-							response, err := originalImplementation.SignInUpPOST(provider, code, redirectURI, options)
+							response, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options)
 							if err != nil {
 								return tpmodels.SignInUpPOSTResponse{}, err
 							}
@@ -151,8 +151,7 @@ func main() {
 							return response, nil
 						}
 
-						// return the new implementation
-						return newImplementation
+						return originalImplementation
 					},
 				},
 				//highlight-end
@@ -164,7 +163,50 @@ func main() {
 </TabItem>
 <TabItem value="python">
 
-<img src="/img/work-in-progress.png" width="100" />
+```python
+
+# highlight-start
+def override_thirdparty_apis(original_implementation):
+	original_sign_in_up_post = original_implementation.sign_in_up_post
+
+	async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, auth_code_response: Union[str, None], api_options: APIOptions):
+		# First we call the original implementation of signInPOST.
+		response = await original_sign_in_up_post(provider, code, redirect_uri, auth_code_response, api_options)
+
+        # Post sign up response, we check if it was successful
+        if response.is_ok:
+            id = response.user.user_id
+            email = response.user.email
+
+            # This is the response from the OAuth 2 provider that contains their tokens or user info.
+            thirdparty_auth_response = response.auth_code_response
+
+            if response.created_new_user:
+                # TODO: Post sign up logic
+            else:
+                # TODO: Post sign in logic
+
+        return response
+	
+	original_implementation.sign_in_up_post = sign_in_up_post
+	return original_implementation
+# highlight-end
+
+supertokens_python.init({
+    'app_info': {...},
+    'supertokens': {...},
+	'framework': '...',
+    'recipe_list': [
+        thirdparty.init({
+            # highlight-start
+            'override': {
+                'apis': override_thirdparty_apis
+            }
+            # highlight-end
+        })
+    ]
+})
+```
 
 </TabItem>
 </BackendSDKTabs>

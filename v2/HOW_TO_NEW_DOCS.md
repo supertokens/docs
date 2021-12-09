@@ -6,6 +6,7 @@
 - If the github icon is not to be shown in the docs, modify `DO_NOT_SHOW_GITHUB_BUTTON` in `src/theme/NavbarItem/index.js`
 - If creating a new recipe, to add the recipe label in the nav bar, edit `RECIPE_LABELS` in src > theme > Navbar > index.js to add info about the new recipe.
 - If the new doc needs to be linked with older versions of the docs, then add it to the `LINK_TO_OLDER_VERSIONS` in `src/theme/NavbarItem/index.js`
+- If creating a new backend SDK, then make sure to also change the website dashboard code snippets.
 
 ## Post creation
 - If you are copying docs from an existing docusaurus v1 project, then:
@@ -30,3 +31,5 @@
 
    This will copy the generated docs into the relevant folder (`/app/docs/sdk/docs/<sdk-name>/*`) in the backend website repo, and push that change to its master branch
 - Make sure to add a route in the website node server to redirect `/docs/<sdk-name>` to the `index.html` of the generated docs.
+- If creating a new backend SDK, then make sure to also change the website dashboard code snippets.
+- In the nodejs code for the website, we should change where all and how the version header is being injected

@@ -63,7 +63,7 @@ SuperTokens.init({
                 functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        createNewSession: async (input) => {
+                        createNewSession: async function(input) {
                             let userId = input.userId;
 
                             // This goes in the access token, and is availble to read on the frontend.
@@ -92,45 +92,85 @@ SuperTokens.init({
 <TabItem value="go">
 
 ```go
-supertokens.Init(supertokens.TypeInput{
-    RecipeList: []supertokens.Recipe{
-        session.Init(&sessmodels.TypeInput{
-            // highlight-start
-            Override: &sessmodels.OverrideStruct{
-                Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
-                    // First we copy the original implementation
-                    newImplementation := originalImplementation
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				// highlight-start
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+						// First we copy the original implementation func
+						originalCreateNewSession := *originalImplementation.CreateNewSession
 
-                    // Now we override the CreateNewSession function
-                    newImplementation.CreateNewSession = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}) (sessmodels.SessionContainer, error) {
+						// Now we override the CreateNewSession function
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}) (sessmodels.SessionContainer, error) {
 
-                        // This goes in the access token, and is availble to read on the frontend.
-                        if accessTokenPayload == nil {
-                            accessTokenPayload = map[string]interface{}{}
-                        }
-                        accessTokenPayload["someKey"] = "someValue"
+							// This goes in the access token, and is availble to read on the frontend.
+							if accessTokenPayload == nil {
+								accessTokenPayload = map[string]interface{}{}
+							}
+							accessTokenPayload["someKey"] = "someValue"
 
-                        // This is stored in the db against the sessionHandle for this session
-                        if sessionData == nil {
-                            sessionData = map[string]interface{}{}
-                        }
-                        sessionData["someKey"] = "someValue"
+							// This is stored in the db against the sessionHandle for this session
+							if sessionData == nil {
+								sessionData = map[string]interface{}{}
+							}
+							sessionData["someKey"] = "someValue"
 
-                        return originalImplementation.CreateNewSession(res, userID, accessTokenPayload, sessionData)
-                    }
+							return originalCreateNewSession(res, userID, accessTokenPayload, sessionData)
+						}
 
-                    return newImplementation
-                },
-            },
-            // highlight-end
-        }),
-    },
-})
+						return originalImplementation
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
 ```
 </TabItem>
 <TabItem value="python">
 
-<img src="/img/work-in-progress.png" width="100" />
+```python
+from supertokens_python import init, session
 
+def override_functions(original_implementation):
+    original_implementation_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(request: any, user_id: str, access_token_payload: Union[dict, None] = None,
+                                 session_data: Union[dict, None] = None):
+        if session_data is None:
+            session_data = {}
+
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        # This is stored in the db against the sessionHandle for this session
+        session_data[someKey] = 'someValue'
+
+        # This goes in the access token, and is availble to read on the frontend.
+        access_token_payload[someKey] = 'someValue'
+
+        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data)
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+init({
+    'supertokens': {...},
+    'app_info': {...},
+    'recipe_list': [
+        ...
+        session.init({
+            # highlight-start
+            'override': {
+                'functions': override_functions
+            },
+            # highlight-end
+        })
+    ]
+})
+```
 </TabItem>
 </BackendSDKTabs>

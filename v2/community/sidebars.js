@@ -3,6 +3,7 @@ module.exports = {
     "introduction",
     "architecture",
     "recipes",
+    "concepts",
     {
       type: 'category',
       label: 'Migration',
