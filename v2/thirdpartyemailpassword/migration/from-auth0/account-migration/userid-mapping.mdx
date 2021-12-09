@@ -6,31 +6,36 @@ hide_title: true
 
 # User ID Mapping
 
+:::tip
+If you have not stored your user's Auth0 userId in your database you can **ignore** this section.
+:::
+
 If you have stored a user's Auth0 userId in your database and you use that information for some feature, you will need to map the user's Auth0 userId to their SuperTokens userId to be able to continue to use that feature.
 
-In this section we will go over the functions used to set and retrive `userId` data used in the [Modifications to login](./modifications-to-login#implementation) section, and, how to override the necessary SuperTokens functions to ensure your app continues to function.
+In this section we will go over the functions used to set and retrive `userId` data used in the [Modifications to login](./modifications-to-login) section, and, how to override the necessary SuperTokens functions to ensure your app continues to function.
 
 ## Implementation
 
 We will need the following two functions:
 
-- `setAuth0ToSuperTokensUserIdMapping()`
-- `getAuth0ToSuperTokensUserIdMapping()`
+- `setUserIdMapping()`
+- `getUserIdMapping()`
 
 ```jsx
-// The following function is used in Step 9 of the flow diagram in the Modifications to login section
-function setAuth0ToSuperTokensUserIdMapping({ auth0UserId, supertokensUserId }){
+// The following function is used in login functions in the modifications to login section
+function setUserIdMapping({ auth0UserId, supertokensUserId }){
     // add the userId mapping to your data store
 }
 
-function getAuth0ToSuperTokensUserIdMapping( userId ){
+function getUserIdMapping( input: { auth0UserId | supertokensUserId } ){
     // get the userID Mapping from your data store
-    // getUserIDMappingFromDataStore is a function defined by you 
+    // getUserIDMappingFromDataStore is a function defined by you
+
     let allUsersIDMapping = getUserIdMappingFromDataStore()
     
     // get mapped userIds if the input userId exits in your data store
     // getUserIdMappingIfExists is a function defined by you
-    let userIdMapping = getUserIdMappingIfExists(allUsersIDMapping, userId)
+    let userIdMapping = getUserIdMappingIfExists(allUsersIDMapping, input)
 
     // if input userId exists get the mapped user data
     if( userIdMapping !== undefined ){
@@ -47,11 +52,15 @@ You will now need to modify the SuperTokens functions which handle userId to ens
 
 ### Overriding all functions on the backend which take `userId` as input or return `userId` in their response:
 
-- If a user has a Auth0 `userId` mapped to an SuperTokens `userId`, then: 
-  - All function which take `userId` as input need to replace the Auth0 `userId` in the input with the associated SuperTokens `userId`. 
-  - All function which return `userId` in their response need to replace the SuperTokens `userId` in the response with the associated Auth0 `userId`.
+- If a user has a Auth0 `userId` mapped to an SuperTokens `userId`, then use then use the Supertokens `userId` in the function and set the Auth0  `userId` in the response.
 
-You can learn more about User ID mapping and the associated functions in the next [section](./userid-mapping)
+The following functions need to be modified so that the correct  `userId` is used:
+- `getUsersByEmail`
+- `getUserByThirdPartyInfo`
+- `getUserById`
+- `createResetPasswordToken`
+- `updateEmailOrPassword`
+
 
 ```jsx title="Nodejs"
 ThirdPartyEmailPassword.init({
@@ -67,7 +76,7 @@ ThirdPartyEmailPassword.init({
                     // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
                     for (let i = 0; i < users.length; i++) {
 
-                        let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(users[i].id)
+                        let userIdMappingInfo = getUserIdMapping({supertokensUserId: users[i].id})
 
                         if(userIdMappingInfo !== undefined){
                            users[i].id = userIdMappingInfo.auth0UserId 
@@ -81,7 +90,7 @@ ThirdPartyEmailPassword.init({
                     let response = await orignalImpl.getUserByThirdPartyInfo(input)
 
                     // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
-                    let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(response.id)
+                    let userIdMappingInfo = getUserIdMapping({ supertokensUserId: response.id})
 
                     if( userIdMappingInfo !== undefined ){
                         response.id = userIdMappingInfo.auth0UserId
@@ -90,8 +99,8 @@ ThirdPartyEmailPassword.init({
                 },
                 getUserById: async function (input) {
 
-                    // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
-                    let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(response.id)
+                    // if the Auth0 userId in input is mapped to a SuperTokens userId return the mapped userId object, else return undefined
+                    let userIdMappingInfo = getUserIdMapping({ auth0UserId: input.userId})
 
                     if( userIdMappingInfo !== undefined ){
                         
@@ -109,8 +118,8 @@ ThirdPartyEmailPassword.init({
                 },
                 createResetPasswordToken: async function (input) {
                     
-                    // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
-                    let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(response.id)
+                     // if the Auth0 userId in input is mapped to a SuperTokens userId return the mapped userId object, else return undefined
+                    let userIdMappingInfo = getUserIdMapping({ auth0UserId: input.userId})
 
                     if( userIdMappingInfo !== undefined ){
                         
@@ -124,8 +133,8 @@ ThirdPartyEmailPassword.init({
                 },
                 updateEmailOrPassword: async function (input) {
 
-                    // if the ST userId in reponse is mapped to a Auth0 userId return the mapped userId object, else return undefined
-                    let userIdMappingInfo = getAuth0ToSuperTokensUserIdMapping(response.id)
+                     // if the Auth0 userId in input is mapped to a SuperTokens userId return the mapped userId object, else return undefined
+                    let userIdMappingInfo = getUserIdMapping({ auth0UserId: input.userId})
 
                     if( userIdMappingInfo !== undefined ){
                         

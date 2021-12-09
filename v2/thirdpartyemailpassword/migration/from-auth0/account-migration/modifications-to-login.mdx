@@ -9,23 +9,38 @@ import Tabs from '@theme/Tabs';
 
 # Modifications to Login
 
-In this section we will be modifying login to enable the migrating of users with EmailPassword or Social accounts from Auth0 to SuperTokens. 
-
-To get started, you will first need to setup SuperTokens on your frontend and backend. You can do so by following the [quick setup](/docs/thirdpartyemailpassword/quick-setup/frontend)
+In this section we will be modifying login to enable the migrating of users with EmailPassword or Social accounts from Auth0 to SuperTokens.
 
 :::info
 The following code is implemented for Nodejs, but, you can apply the same logic in your own tech stack.
 :::
 
-## Flow 
+<Tabs
+    groupId="migration-methods"  
+    defaultValue="method-1"
+    values={[
+        {label: "EmailPassword Account Migration", value: 'method-1'},
+        {label: 'Social Account Migration', value: 'method-2'},
+]}>
 
-<img src="/img/thirdpartyemailpassword/user-migration-flow.png" />
+<TabItem value="method-1">
 
-## Implementation
+## EmailPassword Account Migration
+
+
+### Flow 
+
+:::tip
+If you have not stored your user's Auth0 userId in your database you can **ignore** the steps mentioned in **Box 5** and **Box 8** of the flow diagram.
+:::
+
+<img src="/img/thirdpartyemailpassword/ep-account-migration.png" />
+
+### Implementation
 
 We will be overriding SuperToken's login functions to enable account migration, if a user signs up, a new SuperTokens account will be created so no changes need to be made to the sign up functionality. 
 
-### Modifying the `signInUp` and `signIn` functions on the backend:
+#### Modifying the `signIn` function on the backend:
 
 ```jsx title="Nodejs"
 ThirdPartyEmailPassword.init({
@@ -36,14 +51,13 @@ ThirdPartyEmailPassword.init({
                 // EmailPassword Login function modification
                 signIn: async function (input) {
 
-                    // Step 2: check if the User exists in Auth0
-                    if( await doesEmailPasswordUserExistInAuth0(input.email) !== undefined){
+                    // Box 2: check if the User exists in Auth0
+                    if(await doesUserExistInAuth0(input.email)){
 
-                        // Step 3: check if user exists in SuperTokens
+                        // Box 3: check if user exists in SuperTokens
                         let superTokensUsers = await this.getUsersByEmail({ email: input.email });
                         let emailPasswordUserExists = false;
 
-                        // check that if SuperTokens user exits, they are not an EmailPassword User
                         for (let i = 0; i < superTokensUsers.length; i++) {
                             if (users[i].thirdParty === undefined) {
                                 emailPasswordUserExists = true
@@ -51,66 +65,40 @@ ThirdPartyEmailPassword.init({
                         }
 
                         let response;
+
+                        // check that if a SuperTokens user exits, they are not an EmailPassword User
                         if( !emailPasswordUserExists ){
                             // EmailPassword User with the input credentials does not exist in SuperTokens
 
-                            // Step 6: validate users credentials in Auth0
-                            let auth0UserInfo = await validateEmailPasswordUserInAuth0( input.email, input.passoword)
+                            // Box 6: validate users credentials in Auth0
+                            let auth0UserInfo = await validateAndGetUserInfoFromAuth0( input.email, input.passoword)
 
                             if ( auth0UserInfo === undefined ){
-                                // Step 10: return WRONG_CREDENTIALS_ERROR
+                                // Box 9: return WRONG_CREDENTIALS_ERROR
                                 return {
                                      status: "WRONG_CREDENTIALS_ERROR"
                                 }
                             }
 
-                            // Step 8: call the signup function to create a new SuperTokens user.
+                            // Box 7: call the signup function to create a new SuperTokens user.
                             response = await this.signUp(input)
-                            // Step 9: map the Auth0 userId to the SuperTokens userId
-                            setAuth0ToSuperTokensUserIdMapping({ auth0UserId: auth0UserData.sub, supertokensUserId: response.user.id})                          
+                            // Box 8: map the Auth0 userId to the SuperTokens userId (Optional)
+                            setUserIdMapping({ auth0UserId: auth0UserData.sub, supertokensUserId: response.user.id})                          
 
                         } else {
-                            // Step 4: EmailPassword User with the input credentials exists in SuperTokens, so call the orignal signIn implementation
+                            // Box 4: EmailPassword User with the input credentials exists in SuperTokens, so call the orignal signIn implementation
                             response = await orignalImpl.signIn(input)
                         }
 
-                        // Step 5: Set the userId in the response to use the Auth0 userId.
+                        // Box 5: Set the userId in the response to use the Auth0 userId (Optional)
                         response.user.id = auth0UserData.sub
                         return response
 
                     } else {
-                        // Step 11: user does not exist in Auth0 call orignal signIn implementation
+                        // Box 10: user does not exist in Auth0 call orignal signIn implementation
                         return orignalImpl.signIn(input)
                     }                    
                 },
-                // Social Login function modification
-                signInUp: async function (input) {
-
-                    // Step 2: check if a user with the input ThirdParty userId exists in Auth0
-                    let auth0SocialUserId = await doesThirdPartyUserIdExistInAuth0(response.user.thirdParty.userId)
-
-                    if (auth0SocialUserId !== undefined){
-                        
-                        let response = await orignalImpl.signInUp(input)
-                        
-                        // Step 3: check if user existed in SuperTokens
-                        if (response.createdNewUser){
-                            // Step 9: map the Auth0 userId to the SuperTokens userId
-                            setAuth0ToSuperTokensUserIdMapping({ auth0UserId: auth0SocialUserId, supertokensUserId: response.user.id})
-                            // Set the newly created flag value to false in the response
-                            response.createdNewUser = false
-                        }
-                        
-                        // Step 5: Set the userId in the response to use the Auth0 userId.
-                        response.user.id = auth0SocialUserId
-
-                        return response
-
-                    } else {
-                        // Step 11: Auth0 user does not exist
-                        return await orignalImpl.signInUp(input)
-                    }
-                }
             }
         }
     },
@@ -118,6 +106,7 @@ ThirdPartyEmailPassword.init({
 
 ```
 
+### User Migration Scheme
 After making the changes mentioned above you can now decide how you would like to migrate your users:
 
 There are two methods of migrating user accounts:
@@ -125,20 +114,20 @@ There are two methods of migrating user accounts:
 - Using the exported user data and password hashes from Auth0
 
 <Tabs
-    groupId="migration-methods"  
-    defaultValue="method-1"
+    groupId="ep-migration-methods"  
+    defaultValue="migration-method-1"
     values={[
-        {label: "Using Auth0's APIs", value: 'method-1'},
-        {label: 'Using the exported Auth0 user data and password hashes. ', value: 'method-2'},
+        {label: "Using Auth0's APIs", value: 'migration-method-1'},
+        {label: 'Using the exported Auth0 user data and password hashes. ', value: 'migration-method-2'},
 ]}>
 
-<TabItem value="method-1">
+<TabItem value="migration-method-1">
 
-## Using Auth0's APIs
+#### Using Auth0's APIs
 
 In this method we will be using Auth0's APIs to check if the user signing in is an Auth0 user.
 
-### Prerequisites
+##### Prerequisites
 - This method assumes you have access to your Auth0 account and database for the complete duration of user migration.
 - To enable email and password validation, you will need to add the database connection name to the `Default Directory` field in your Auth0 tenant settings.
 
@@ -151,16 +140,15 @@ For example:
 
 <img src="/img/thirdpartyemailpassword/default-directory-settings.png" />
 
-### Implementation
+##### Implementation
 
-Implementation for the `doesThirdPartyUserIdExistInAuth0`, `validateEmailPasswordUserInAuth0` and `doesEmailPasswordUserExistInAuth0` functions used in [this](#modifying-the-signinup-and-signin-functions-on-the-backend) section:
+Implementation for the `validateAndGetUserInfoFromAuth0` and `doesUserExistInAuth0` functions used in SuperTokens `signIn` function:
 
 The functions below uses Auth0's Authentication and Management APIs to access user information and validate credentials. Please refer to their [documentation](https://auth0.com/docs/api) to get the complete spec for the APIs used below.
 
 ```jsx title="Nodejs"
 
-// Used in Step 6 of the flow diagram
-let validateEmailPasswordUserInAuth0 = async (email, password) => {
+let validateAndGetUserInfoFromAuth0 = async (email, password) => {
 
     try {
         // generate an user access token using the input credentials
@@ -173,6 +161,7 @@ let validateEmailPasswordUserInAuth0 = async (email, password) => {
                 'Content-Type': 'application/json',
             },
             data: {
+                // TODO: add your Auth0 app's clientId
                 client_id: "YOUR_CLIENT_ID",
                 grant_type: "password",
                 username: email,
@@ -181,6 +170,7 @@ let validateEmailPasswordUserInAuth0 = async (email, password) => {
         })).data.access_token;
 
         // retive the users info using the access token if valid crendentials were passed
+        // TODO: add your Auth0 domain 
         let userResponse = await axios.get("https://YOUR_AUTH0_DOMAIN/userInfo", {
             headers: { "authorization": `Bearer ${access_token}` },
         })
@@ -192,67 +182,306 @@ let validateEmailPasswordUserInAuth0 = async (email, password) => {
     }
 }
 
-// Used in Step 2 of the flow diagram
-let doesEmailPasswordUserExistInAuth0 = async (email) => {
+let doesUserExistInAuth0 = async (email) => {
 
-    try {
-        // generate an access_token so you can use the Auth0 management API
-        let access_token = (await axios({
-            method: 'POST',
-            url: "https://YOUR_DOMAIN/oauth/token",
-            headers: { 'content-type': 'application/json' },
-            data: {
-                client_id: "CLIENT_ID",
-                client_secret: "CLIENT_SECRET",
-                audience: "https://YOUR_DOMAIN/api/v2/",
-                grant_type: "client_credentials"
-            }
-        })).data.access_token
+    let access_token = (await axios({
+        method: 'POST',
+        // TODO: add your Auth0 domain
+        url: "https://YOUR_DOMAIN/oauth/token",
+        headers: { 'content-type': 'application/json' },
+        data: {
+            // TODO: add your Auth0 app's clientId
+            client_id: "CLIENT_ID",
+            // TODO: add your Auth0 app's clientSecret
+            client_secret: "CLIENT_SECRET",
+            // TODO: add your Auth0 domain
+            audience: "https://YOUR_DOMAIN/api/v2/",
+            grant_type: "client_credentials"
+        }
+    })).data.access_token
 
-        // get the user info with userId as the identifier.
-        let response = await axios({
+    let response = await axios({
             method: 'GET',
+            // TODO: add your Auth0 domain
             url: "https://YOUR_DOMAIN/api/v2/users",
             params: { q: `identities.isSocial:false AND  email:${email}` },
             headers: { authorization: `Bearer ${access_token}` }
-        })
-        return response.data[0]
+    })
+    if(response.data[0] !== undefined){
+        return true
+    }
+    return false
+}
 
-    } catch (error) {
-        // User does not exist in Auth0
-        return undefined
+
+```
+
+</TabItem>
+
+
+<TabItem value="migration-method-2">
+
+####  Using the exported Auth0 user data and password hashes. 
+
+- By default Auth0 uses `bcrypt` to hash passwords with `$2a$` or `$2b$` identifiers and have 10 `saltRounds`.
+
+##### Prerequisites
+- This method assumes you have an Auth0 enterprise account so you can export your Auth0 user data and password hashes.
+- You can refer to the following guides on how to export your [user data](https://auth0.com/docs/users/import-and-export-users/bulk-user-exports) and [password hashes](https://auth0.com/docs/support/manage-subscriptions/export-data).
+
+
+##### Implementation
+
+Implementation for the `validateAndGetUserInfoFromAuth0` and `doesUserExistInAuth0` functions used in SuperTokens `signIn` function:
+
+```jsx
+let bcrypt = require("bcryptjs")
+
+// read exported Auth0 user info and password hashes
+let auth0UsersDataString = fs.readFileSync(__dirname + auth0ExportedUsersDataFile)
+let auth0UsersData = JSON.parse(auth0UsersDataString);
+
+let validateAndGetUserInfoFromAuth0= async (email, password) => {
+
+    // get auth0 user info
+    let auth0UsersInfo = auth0UsersData.userData
+    
+    // get auth0 password hashes
+    let auth0PasswordHashes = auth0UsersData.passwordHashes
+
+    // check if input email has an associated user
+    for (let i = 0; i < auth0UsersInfo.length; i++) {
+        if ((!auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].email === email) {
+
+            // get password hash from associated userid
+            let usersPasswordHash = undefined
+            for (let i = 0; i < auth0PasswordHashes.length; i++) {
+                if (auth0PasswordHashes[i]._id.$oid === auth0UsersInfo[i].identities[0].user_id) {
+                    usersPasswordHash = auth0PasswordHashes[i].passwordHash;
+                    break;
+                }
+            }
+
+            if(usersPasswordHash === undefined){
+                return undefined
+            }
+
+            if(bcrypt.compareSync(password, passwordHash)){
+                return auth0UsersInfo[i]
+            } else {
+                return undefined
+            }
+        }
     }
 }
 
-let doesThirdPartyUserIdExistInAuth0 = async (userId) => {
-    
-    try {
-        // generate an access_token so you can use the Auth0 management API
-        let access_token = (await axios({
-            method: 'POST',
-            url: "https://YOUR_DOMAIN/oauth/token",
-            headers: { 'content-type': 'application/json' },
-            data: {
-                client_id: "CLIENT_ID",
-                client_secret: "CLIENT_SECRET",
-                audience: "https://YOUR_DOMAIN/api/v2/",
-                grant_type: "client_credentials"
+let doesUserExistInAuth0 = async (email) => {
+
+    // get auth0 user info
+    let auth0UsersInfo = auth0UsersData.userData
+
+    // check if input email has an associated user
+    for (let i = 0; i < auth0UsersInfo.length; i++) {
+        if ((!auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].email === email) {
+            return true
+        }
+    }
+    return false
+}
+
+```
+
+</TabItem>
+
+</Tabs>
+</TabItem>
+
+
+
+<TabItem value="method-2">
+
+## Social Account Migration
+
+### Flow 
+
+:::tip
+If you have not stored your user's Auth0 userId in your database you can **ignore** the steps mentioned in **Box 5** and **Box 7** of the flow diagram.
+:::
+
+
+<img src="/img/thirdpartyemailpassword/tp-account-migration.png" />
+
+### Implementation
+
+We will be overriding SuperToken's login functions to enable account migration, if a user signs up, a new SuperTokens account will be created so no changes need to be made to the sign up functionality. 
+
+#### Modifying the `signInUp` function on the backend:
+
+```jsx title="Nodejs"
+ThirdPartyEmailPassword.init({
+    override: {
+        functions: (orignalImpl) => {
+            return {
+                ...orignalImpl,
+                // Social Login function modification
+                signInUp: async function (input) {
+
+                    // Box 2: check if a user with the input ThirdParty userId exists in Auth0
+                    if (await doesUserExistInAuth0(input.user.thirdParty.userId)){
+                        
+
+                        let auth0SocialUserId = await getUsersAuth0UserIdFromThirdPartyId(input.user.thirdParty.userId)
+
+                        // Box 3: call the Supertokens signInUp implementation
+                        let response = await orignalImpl.signInUp(input)
+                        
+                        // Box 4: check if user existed in SuperTokens
+                        if (response.createdNewUser){
+                            // Box 5: map the Auth0 userId to the SuperTokens userId (Optional)
+                            setUserIdMapping({ auth0UserId: auth0SocialUserId, supertokensUserId: response.user.id})
+                            
+                            // Box 6: Set the newly created flag value to false in the response
+                            response.createdNewUser = false
+                        }
+                        
+                        // Box 7: Set the userId in the response to use the Auth0 userId. (Optional)
+                        response.user.id = auth0SocialUserId
+
+                        return response
+
+                    } else {
+                        // Box 8: Auth0 user does not exist
+                        return await orignalImpl.signInUp(input)
+                    }
+                }
             }
-        })).data.access_token
+        }
+    },
+})
 
-        // get the user info with userId as the identifier.
-        let response = await axios({
-            method: 'GET',
-            url: "https://YOUR_DOMAIN/api/v2/users",
-            params: { q: `identities.user_id:"${userId}"` },
-            headers: { authorization: `Bearer ${access_token}` }
-        })
-        return response.data[0].user_id
+```
+### User Migration Scheme
+After making the changes mentioned above you can now decide how you would like to migrate your users:
 
-    } catch (error) {
+There are two methods of migrating user accounts:
+- Using Auth0's APIs
+- Using the exported user data and password hashes from Auth0
 
-        // User does not exist in Auth0
-        return undefined
+
+<Tabs
+    groupId="ep-migration-methods"  
+    defaultValue="migration-method-1"
+    values={[
+        {label: "Using Auth0's APIs", value: 'migration-method-1'},
+        {label: 'Using the exported Auth0 user data', value: 'migration-method-2'},
+]}>
+
+<TabItem value="migration-method-1">
+
+#### Using Auth0's APIs
+
+In this method we will be using Auth0's APIs to check if the user signing in is an Auth0 user.
+
+##### Prerequisites
+- This method assumes you have access to your Auth0 account and database for the complete duration of user migration.
+
+##### Implementation
+
+IImplementation for the `doesUserExistInAuth0` and `getUsersAuth0UserIdFromThirdPartyId` functions used in SuperTokens `signInUp` function:
+
+The functions below uses Auth0's Management API to access user information. Please refer to their [documentation](https://auth0.com/docs/api) to get the complete spec for the APIs used below.
+
+```jsx title="Nodejs"
+
+// generate an access_token so you can use the Auth0 management API
+let access_token = (await axios({
+    method: 'POST',
+    url: "https://YOUR_DOMAIN/oauth/token",
+    headers: { 'content-type': 'application/json' },
+    data: {
+        client_id: "CLIENT_ID",
+        client_secret: "CLIENT_SECRET",
+        audience: "https://YOUR_DOMAIN/api/v2/",
+        grant_type: "client_credentials"
+    }
+})).data.access_token
+
+
+let doesUserExistInAuth0 = async (userId) => {
+    
+    let response = await axios({
+        method: 'GET',
+        url: "https://YOUR_DOMAIN/api/v2/users",
+        params: { q: `identities.user_id:"${userId}"` },
+        headers: { authorization: `Bearer ${access_token}` }
+    })
+
+    if(response.data.[0] !== undefined){
+     return true;   
+    }
+
+    return false
+}
+
+let getUsersAuth0UserIdFromThirdPartyId = async (thirdPartyId) => {
+
+    let response = await axios({
+        method: 'GET',
+        url: "https://YOUR_DOMAIN/api/v2/users",
+        params: { q: `identities.user_id:"${userId}"` },
+        headers: { authorization: `Bearer ${access_token}` }
+    })
+
+    return response.data[0].user_id;
+}
+
+
+```
+
+</TabItem>
+
+
+<TabItem value="migration-method-2">
+
+####  Using the exported Auth0 user data. 
+
+
+##### Prerequisites
+- This method assumes you have an Auth0 enterprise account so you can export your Auth0 user data.
+
+##### Implementation
+
+Implementation for the `doesThirdPartyUserIdExistInAuth0`  function used in SuperTokens `signInUp` function:
+
+```jsx
+let bcrypt = require("bcryptjs")
+
+// read exported Auth0 user info and password hashes
+let auth0UsersDataString = fs.readFileSync(__dirname + auth0ExportedUsersDataFile)
+let auth0UsersData = JSON.parse(auth0UsersDataString);
+
+let doesUserExistInAuth0 = async (userId) => {
+
+   // get auth0 user info
+    let auth0UsersInfo = auth0UsersData.userData
+    for (let i = 0; i < auth0UsersInfo.length; i++) {
+         // check if input userId has an associated user which is social and userId matches 
+        if ((auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].identities[0].user_id === userId) {
+            
+            return true
+        }
+    }
+    return false
+}
+
+let getUsersAuth0UserIdFromThirdPartyId = async (thirdPartyId) => {
+     let auth0UsersInfo = auth0UsersData.userData
+    for (let i = 0; i < auth0UsersInfo.length; i++) {
+         // check if input userId has an associated user which is social and userId matches 
+        if ((auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].identities[0].user_id === userId) {
+            
+            return auth0UsersInfo[i].user_id
+        }
     }
 }
 
@@ -260,126 +489,7 @@ let doesThirdPartyUserIdExistInAuth0 = async (userId) => {
 
 </TabItem>
 
-<TabItem value="method-2">
-
-##  Using the exported Auth0 user data and password hashes. 
-
-- By default Auth0 uses `bcrypt` to hash passwords with `$2a$` or `$2b$` identifiers and have 10 `saltRounds`.
-
-### Prerequisites
-- This method assumes you can export your Auth0 user data and have an enterprise account to export password hashes.
-- You can refer to the following guides on how to export your [user data](https://auth0.com/docs/users/import-and-export-users/bulk-user-exports) and [password hashes](https://auth0.com/docs/support/manage-subscriptions/export-data).
-
-
-### Implementation
-
-Implementation for the `doesThirdPartyUserIdExistInAuth0`, `validateEmailPasswordUserInAuth0` and `doesEmailPasswordUserExistInAuth0` functions used in [this](#modifying-the-signinup-and-signin-functions-on-the-backend) section:
-
-```jsx
-let bcrypt = require("bcryptjs")
-
-// Used in Step 6 of the flow diagram
-let validateEmailPasswordUserInAuth0 = async (email, password) => {
-
-    try {
-
-        // read exported Auth0 user info and password hashes
-        let auth0UsersDataString = fs.readFileSync(__dirname + auth0ExportedUsersDataFile)
-        let auth0UsersData = JSON.parse(auth0UsersDataString);
-        // get auth0 user info
-        let auth0UsersInfo = auth0UsersData.userData
-        // get auth0 password hashes
-        let auth0PasswordHashes = auth0UsersData.passwordHashes
-
-
-        // check if input email has an associated user
-        for (let i = 0; i < auth0UsersInfo.length; i++) {
-            if ((!auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].email === email) {
-
-                // get password hash from associated userid
-                let usersPasswordHash = getPasswordHashFromUserId(auth0UsersInfo[i].identities[0].user_id, auth0PasswordHashes)
-                if (verifyPasswordhash(password, usersPasswordHash)) {
-                    return auth0UsersInfo[i]
-                }
-            }
-        }
-        return undefined
-
-    } catch (error) {
-        return undefined
-    }
-}
-
-// Used in Step 2 of the flow diagram
-let doesEmailPasswordUserExistInAuth0 = async (email) => {
-
-    try {
-
-        // read exported Auth0 user info and password hashes
-        let auth0UsersDataString = fs.readFileSync(__dirname + auth0ExportedUsersDataFile)
-        let auth0UsersData = JSON.parse(auth0UsersDataString);
-        // get auth0 user info
-        let auth0UsersInfo = auth0UsersData.userData
-
-        // check if input email has an associated user
-        for (let i = 0; i < auth0UsersInfo.length; i++) {
-            if ((!auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].email === email) {
-
-                return auth0UsersInfo[i]
-            }
-        }
-        return undefined
-
-    } catch (error) {
-        return undefined
-    }
-}
-
-let doesThirdPartyUserIdExistInAuth0 = async (userId) => {
-
-    try {
-        // read exported Auth0 user info and password hashes
-        let auth0UsersDataString = fs.readFileSync(__dirname + auth0ExportedUsersDataFile)
-        let auth0UsersData = JSON.parse(auth0UsersDataString);
-        // get auth0 user info
-        let auth0UsersInfo = auth0UsersData.userData
-
-        for (let i = 0; i < auth0UsersInfo.length; i++) {
-
-             // check if input userId has an associated user which is social and userId matches 
-            if ((auth0UsersInfo[i].identities[0].isSocial) && auth0UsersInfo[i].identities[0].user_id === userId) {
-                
-                return auth0UsersInfo[i]
-            }
-        }
-        return undefined
-
-    } catch (error) {
-        return undefined
-    }
-}
-
-
-function getPasswordHashFromUserId(userId, auth0PasswordHashes) {
-
-    // retrive the password hash associated with the input userId.
-    for (let i = 0; i < auth0PasswordHashes.length; i++) {
-        if (auth0PasswordHashes[i]._id.$oid === userId) {
-            return auth0PasswordHashes[i].passwordHash
-        }
-    }
-    return undefined
-}
-
-function verifyPasswordhash(password, passwordHash) {
-
-    // verify password with password hash
-    if (passwordHash === undefined) {
-        return false
-    }
-    return bcrypt.compareSync(password, passwordHash)
-}
-```
+</Tabs>
 
 </TabItem>
 </Tabs>

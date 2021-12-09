@@ -340,7 +340,7 @@ module.exports = {
             "migration/from-auth0/about",
             {
               type: 'category',
-              label: 'Step 1:Account Migration',
+              label: 'Step 1) Account Migration',
               items: [
                 "migration/from-auth0/account-migration/modifications-to-login",
                 "migration/from-auth0/account-migration/userid-mapping",
