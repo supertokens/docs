@@ -38,6 +38,20 @@ module.exports = {
       type: 'category',
       label: 'Common customizations',
       items: [
+        {
+          type: "category",
+          label: "Using sessions with JWTs",
+          items: [
+            "common-customizations/sessions/with-jwt/about",
+            "common-customizations/sessions/with-jwt/enabling-jwts",
+            "common-customizations/sessions/with-jwt/custom-claims",
+            "common-customizations/sessions/with-jwt/read-jwt",
+            "common-customizations/sessions/with-jwt/update-jwt",
+            "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
+            "common-customizations/sessions/with-jwt/get-public-key",
+            "common-customizations/sessions/with-jwt/jwt-validity"
+          ]
+        },
         "common-customizations/sessions/new-session",
         {
           type: "category",
