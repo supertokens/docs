@@ -184,6 +184,15 @@ module.exports = {
       ],
     },
     {
+      type: 'category',
+      label: 'Integrating with Hasura',
+      items: [
+        "hasura-integration/about",
+        "hasura-integration/with-jwt",
+        "hasura-integration/without-jwt",
+      ],
+    },
+    {
       type: 'doc',
       id: "using-with-faunadb",
       customProps: {

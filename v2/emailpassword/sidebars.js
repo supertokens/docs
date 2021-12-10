@@ -280,6 +280,15 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Integrating with Hasura',
+      items: [
+        "hasura-integration/about",
+        "hasura-integration/with-jwt",
+        "hasura-integration/without-jwt",
+      ],
+    },
+    {
+      type: 'category',
       label: 'NextJS',
       customProps: {
         logoUrl: '/img/logos/next-logo.png'

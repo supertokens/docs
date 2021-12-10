@@ -1,0 +1,424 @@
+---
+id: with-jwt
+title: Authentication using JWTs
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./session/hasura-integration/with-jwt.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+import BackendSDKCasing from "/src/components/BackendSDKCasing"
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
+import FrontendReactContextSubTabs from "/src/components/tabs/FrontendReactContextSubTabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import {Question, Answer}from "/src/components/question"
+
+# Authentication using JWTs
+
+:::info
+You do not need to create and maintain your own JWT signing keys, SuperTokens creates them for you
+:::
+
+### 1) Enable the JWT feature
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+let SuperTokens = require("supertokens-node");
+let Session = require("supertokens-node/recipe/session");
+
+SuperTokens.init({
+    supertokens: {...},
+    appInfo: {...},
+    recipeList: [
+        Session.init({
+            //highlight-start
+            jwt: {
+                enable: true,
+            },
+            //highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+WIP
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+WIP
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+:::info
+[Read here](../common-customizations/sessions/with-jwt/enabling-jwts) to know about the different ways to initialise the JWT feature
+:::
+
+### 2)  Add custom claims to the JWT
+
+:::caution
+Hasura requires claims to be set in a specific way, read the [official documentation](https://hasura.io/docs/latest/graphql/core/auth/authentication/jwt.html) to know more.
+:::
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+let SuperTokens = require("supertokens-node");
+let Session = require("supertokens-node/recipe/session");
+
+SuperTokens.init({
+    supertokens: {...},
+    appInfo: {...},
+    recipeList: [
+        Session.init({
+            //highlight-start
+            jwt: {
+                enable: true,
+            },
+            override: {
+                functions: function (originalImplementation) {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async function (input) {
+                            input.accessTokenPayload = {
+                                ...input.accessTokenPayload,
+                                role: "user",
+                            };
+
+                            return originalImplementation.createNewSession(input);
+                        },
+                    };
+                }
+            },
+            //highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+WIP
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+WIP
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+The above example would add a `role` claim to the JWT.
+
+### 3) Configure Hasura environment variables
+
+:::info
+Read the [official documentation](https://hasura.io/docs/latest/graphql/core/auth/authentication/jwt.html#configuring-jwt-mode) to know about setting the JWT secret environment variable on Hasura
+:::
+
+To use JWT based authentication, Hasura requires setting environment variables when configuring your app. With SuperTokens this can be done in 2 ways:
+
+#### Using the JWKS endpoint
+
+When configuring Hasura, you can set the `jwk_url` property. By default SuperTokens uses your <BackendSDKCasing>apiDomain</BackendSDKCasing>, <BackendSDKCasing>apiGatewayPath</BackendSDKCasing> and <BackendSDKCasing>apiBasePath</BackendSDKCasing> for the issuer URL, [read more here](../common-customizations/sessions/with-jwt/enabling-jwts#using-a-custom-issuer) if you want to use a custom URL instead.
+
+```json
+{
+    "jwk_url": "https://api.test.com/auth/jwt/jwks.json",
+}
+```
+
+You can also get the jwks URL for your backend by using the method explained [here](../common-customizations/sessions/with-jwt/get-jwks-and-issuer)
+
+#### Using a key string
+
+Hasura lets you provide a PEM string in the configuration. You can use the JWKS endpoint mentioned above to fetch a JWK and then convert it into a PEM string:
+
+```json
+{
+    "type": "RS256",
+    "key": "CERTIFICATE_STRING",
+}
+```
+
+### 4) Setting up access control on Hasura
+
+There are several ways to manage access control/authorization on Hasura. One such way could be based on the user id.
+
+:::info
+SuperTokens adds some default claims to the JWT, including the `sub` claim which is the user id. To know about all the default claims [visit here](../common-customizations/sessions/with-jwt/custom-claims#claims-added-by-supertokens)
+:::
+
+Visit the [official documentation](https://hasura.io/docs/latest/graphql/core/auth/authorization/index.html) for a full guide on setting up permissions
+
+### 5) Making requests to Hasura
+
+#### Getting the JWT on the frontend
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+<FrontendReactContextSubTabs>
+
+<TabItem value="with-react-context">
+
+#### Step 1: Wrap the component in which you want to get the info with `^{recipeNameCapitalLetters}Auth`
+
+```jsx
+import { ^{recipeNameCapitalLetters}Auth } from 'supertokens-auth-react/recipe/^{codeImportRecipeName}';
+
+render() {
+     return (
+           <^{recipeNameCapitalLetters}Auth>
+                  <Dashboard />
+           </^{recipeNameCapitalLetters}Auth>
+     );
+}
+```
+
+
+#### Step 2: This is how to use the session context in a component:
+
+```jsx
+
+import React from "react";
+// highlight-next-line
+import { useSessionContext } from 'supertokens-auth-react/recipe/session'; 
+
+// Your dashboard component
+function Dashboard(props) {
+    // highlight-next-line
+    let {userId, accessTokenPayload} = useSessionContext();
+
+    let jwt = accessTokenPayload.jwt;
+}
+```
+
+</TabItem>
+
+<TabItem value="without-react-context">
+
+```jsx
+import Session from 'supertokens-auth-react/recipe/session';
+
+if (await Session.doesSessionExist()) {
+      let userId = await Session.getUserId();
+      let jwt = (await Session.getAccessTokenPayloadSecurely()).jwt;
+}
+```
+
+</TabItem>
+</FrontendReactContextSubTabs>
+</TabItem>
+
+<TabItem value="vanillajs">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```jsx
+import SuperTokens from 'supertokens-website';
+
+if (await SuperTokens.doesSessionExist()) {
+      let userId = await SuperTokens.getUserId();
+      let jwt = (await SuperTokens.getAccessTokenPayloadSecurely()).jwt;
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```jsx
+if (await supertokens.doesSessionExist()) {
+      let userId = await SuperTokens.getUserId();
+      let jwt = (await SuperTokens.getAccessTokenPayloadSecurely()).jwt;
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+<TabItem value="react-native">
+
+```jsx
+import SuperTokens from 'supertokens-react-native';
+
+if (await SuperTokens.doesSessionExist()) {
+      let userId = await SuperTokens.getUserId();
+      let jwt = (await SuperTokens.getAccessTokenPayloadSecurely()).jwt;
+}
+```
+</TabItem>
+</FrontendSDKTabs>
+
+#### Making HTTP requests
+
+<Question
+    question="Do you use axios on your frontend?">
+<Answer title="Yes">
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```jsx
+import axios from "axios";
+
+async function makeRequest() {
+    let response = await axios.get(url, {
+        // highlight-start
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+<TabItem value="vanillajs">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```jsx
+import axios from "axios";
+
+async function makeRequest() {
+    let response = await axios.get(url, {
+        // highlight-start
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```jsx
+import axios from "axios";
+
+async function makeRequest() {
+    let response = await axios.get(url, {
+        // highlight-start
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+<TabItem value="react-native">
+
+```jsx
+import axios from "axios";
+
+async function makeRequest() {
+    let response = await axios.get(url, {
+        // highlight-start
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+</FrontendSDKTabs>
+
+</Answer>
+<Answer title="No">
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```jsx
+async function makeRequest() {
+    let response = await fetch(url, {
+        // highlight-start
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+<TabItem value="vanillajs">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```jsx
+async function makeRequest() {
+    let response = await fetch(url, {
+        // highlight-start
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```jsx
+async function makeRequest() {
+    let response = await fetch(url, {
+        // highlight-start
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+<TabItem value="react-native">
+
+```jsx
+async function makeRequest() {
+    let response = await fetch(url, {
+        // highlight-start
+        headers: {
+          "Authorization": `Bearer ${jwt}`,
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+</FrontendSDKTabs>
+
+</Answer>
+</Question>
