@@ -137,7 +137,6 @@ module.exports = {
                 "common-customizations/sessions/with-jwt/update-jwt",
                 "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
                 "common-customizations/sessions/with-jwt/get-public-key",
-                "common-customizations/sessions/with-jwt/jwt-validity"
               ]
             },
             "common-customizations/sessions/new-session",
@@ -281,9 +280,11 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Integrating with Hasura',
+      label: 'Hasura',
+      customProps: {
+        logoUrl: '/img/logos/hasura-logo.png'
+      },
       items: [
-        "hasura-integration/about",
         "hasura-integration/with-jwt",
         "hasura-integration/without-jwt",
       ],

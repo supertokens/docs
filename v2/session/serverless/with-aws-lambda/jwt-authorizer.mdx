@@ -1,0 +1,86 @@
+---
+id: jwt-authorizer
+title: Using JWT Authorizers
+hide_title: true
+---
+
+import AppInfoForm from "/src/components/appInfoForm"
+import CoreInjector from "/src/components/coreInjector"
+import BackendSDKCasing from "/src/components/BackendSDKCasing"
+
+# Using JWT Authorizers
+
+:::caution
+AWS supports JWT authorizers for HTTP APIs and not REST APIs on the API Gateway service. For REST APIs follow the [Lambda authorizer](./authorizer) guide
+:::
+
+## 1) Update the backend config
+
+Update the backend config, created in [step 2](./backend-config#3-create-a-backend-config-function), to enable the JWT feature.
+
+<CoreInjector>
+
+```jsx title="config.js"
+
+let Session = require('supertokens-node/recipe/session')
+
+function getBackendConfig() {
+  return {
+    framework: "awsLambda",
+    supertokens: {...},
+    appInfo: {...},
+    recipeList: [
+        // highlight-start
+      Session.init({
+          jwt: {
+              enable: true,
+          },
+          override: {
+            functions: function (originalImplementation) {
+                return {
+                    ...originalImplementation,
+                    createNewSession: async function (input) {
+                        input.accessTokenPayload = {
+                            ...input.accessTokenPayload,
+                            aud: "users",
+                        };
+
+                        return originalImplementation.createNewSession(input);
+                    },
+                };
+            }
+        },
+      }),
+    ],
+    // highlight-end
+    isInServerlessEnv: true,
+  }
+}
+
+module.exports.getBackendConfig = getBackendConfig;
+
+```
+
+</CoreInjector>
+
+The config above enables JWTs being created for sessions and adds the `aud` claim to each JWT.
+
+## 2) Configure your authorizer
+
+- Go to the "Authorizers" tab in the API Gateway configuration and select the "Manage authorizers" tab
+- Click "Create", in the creation screen select "JWT" as the "Authorizer type"
+- Enter a name for your authorizer
+- Use `$request.header.Authorization` for the "Identity source". This means that API requests will contain the JWT as a Bearer token under the request header "Authorization".
+- Set a value for the "Audience" field, this will be the value you expect the JWT to have under the `aud` claim. In the backend config above the value is set to `"users"`
+
+:::caution
+AWS requires that the issuer (iss) and audience claims (aud) in the JWT to match the values you set when creating the authorizer.
+:::
+
+## 3) Add the authorizer to your API
+
+- In your API Gateway, create the resources and methods you require, enabling CORS if necessary (see [step 4](./api-gateway-config) for details)
+- In the "Authorization" section select the "Attach authorizers to routes" tab
+- Click on the route you want to add the authorizer to and select the authorizer you created from the dropdown
+- Click "Attach authorizer"
+- Deploy your changes and test your API

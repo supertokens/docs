@@ -45,7 +45,6 @@ module.exports = {
         "common-customizations/sessions/with-jwt/update-jwt",
         "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
         "common-customizations/sessions/with-jwt/get-public-key",
-        "common-customizations/sessions/with-jwt/jwt-validity"
       ]
     },
     {
@@ -185,9 +184,11 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Integrating with Hasura',
+      label: 'Hasura',
+      customProps: {
+        logoUrl: '/img/logos/hasura-logo.png'
+      },
       items: [
-        "hasura-integration/about",
         "hasura-integration/with-jwt",
         "hasura-integration/without-jwt",
       ],
@@ -240,9 +241,16 @@ module.exports = {
             "serverless/with-aws-lambda/backend-config",
             "serverless/with-aws-lambda/auth-serverless",
             "serverless/with-aws-lambda/api-gateway-config",
-            "serverless/with-aws-lambda/session-verification",
+            {
+              type: 'category',
+              label: '5. Handling authorization',
+              items: [
+                "serverless/with-aws-lambda/session-verification",
+                "serverless/with-aws-lambda/authorizer",
+                "serverless/with-aws-lambda/jwt-authorizer",
+              ],
+            },
             "serverless/with-aws-lambda/next-steps",
-            "serverless/with-aws-lambda/authorizer",
             "serverless/with-aws-lambda/appsync-integration"
           ],
         },
