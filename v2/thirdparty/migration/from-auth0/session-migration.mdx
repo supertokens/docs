@@ -1,0 +1,80 @@
+---
+id: session-migration
+title: Step 2) Session Migration
+hide_title: true
+---
+
+# Session Migration
+
+In this section we will go over how to migrate Auth0 user sessions to SuperTokens sessions.
+
+There are two steps to this process
+ - Adding a new `/migrate-session` API to your backend which will create a new SuperTokens session
+ - Checking if a Auth0 session exists on your frontend and calling the `/migrate-session` API so that a SuperTokens session is created and the Auth0 session is revoked.
+
+
+
+## Flow
+
+<img src="/img/thirdpartyemailpassword/session-migration.png" />
+
+
+### Frontend Changes:
+
+- On your frontend, on page load, check if a valid Auth0 session exists. If a valid session exists send a request to the API defined in the next section with the Auth0 access token. You can then revoke the Auth0 session.
+
+```jsx title="Frontend changes"
+import axios from "axios";
+
+// You will need to add the SuperTokens axios interceptor so cookies are properly set.
+import Session from "supertokens-auth-react/recipe/session";
+Session.addAxiosInterceptors(axios);
+
+
+// TODO: Your Frontend code
+
+    // On page load check if an Auth0 session exists
+    if ( isAuthenticated ){
+        
+        // get Auth0 access token
+        let access_token = await getAccessTokenFromAuth0()
+
+        // send a request to your migrate session endpoint with Auth0's access token
+        let response = axios.get(`${apiDomain}/migrate-session`, {
+            params: {
+                access_token
+            }
+        })
+        if ( response.data.status === "OK"){
+            // revoke users Auth0 session
+        
+        }
+    }
+
+```
+
+
+### Backend Changes:
+
+- Create a new API on your backend, this will be called by the frontend to migrate a user's Auth0 session:
+
+```jsx title="Backend changes"
+let Session = require("supertokens-node/recipe/session");
+let jsonWebToken = require("jsonwebtoken")
+
+app.get("/migrate-session", (req, res) => {
+
+    //extract auth0 access_token from request
+    let access_token = req.query.access_token
+
+    // Decode the users access token and retrive their userId
+    let auth0UserId = jsonWebToken.decode(access_token).sub
+        
+    // create a new SuperTokens session using the Auth0 userId
+    // the createNewSession function will attach the SuperTokens session cookies to the response object.
+    await Session.createNewSession(res, auth0UserId)
+    res.send({
+        status: "OK"
+    })
+})
+```
