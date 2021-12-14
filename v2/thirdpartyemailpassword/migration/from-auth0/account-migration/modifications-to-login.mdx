@@ -59,10 +59,15 @@ ThirdPartyEmailPassword.init({
                         let superTokensUsers = await this.getUsersByEmail({ email: input.email });
                         let emailPasswordUserExists = false;
 
-                        // If a user with the input email exists we want to check if they are an Email-Password account.
+                        // supertokensUserId is used to retrive the Auth0 userId from the userId mapping
+                        let supertokensUserId;
+
                         for (let i = 0; i < superTokensUsers.length; i++) {
+                            // if the thirdParty field in the user object is undefined, then the user is an EmailPassword account.
                             if (users[i].thirdParty === undefined) {
                                 emailPasswordUserExists = true
+                                supertokensUserId = users[i].id
+                                break;
                             }
                         }
 
@@ -72,10 +77,10 @@ ThirdPartyEmailPassword.init({
                             // EmailPassword User with the input credentials does not exist in SuperTokens
 
                             // Box 6: validate users credentials in Auth0
-                            let auth0UserInfo = await validateAndGetUserInfoFromAuth0( input.email, input.passoword)
+                            let auth0UserData = await validateAndGetUserInfoFromAuth0( input.email, input.passoword)
 
-                            if ( auth0UserInfo === undefined ){
-                                // Box 9: return WRONG_CREDENTIALS_ERROR
+                            if ( auth0UserData === undefined ){
+                                // Box 9: credentials are incorrect
                                 return {
                                      status: "WRONG_CREDENTIALS_ERROR"
                                 }
@@ -83,6 +88,8 @@ ThirdPartyEmailPassword.init({
 
                             // Box 7: call the signup function to create a new SuperTokens user.
                             response = await this.signUp(input)
+
+                            supertokensUserId = response.user.id
 
                             // Box 8: map the Auth0 userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
                             // If you have not stored the users Auth0 userId in your tables, you can ignore this step
@@ -93,9 +100,10 @@ ThirdPartyEmailPassword.init({
                             response = await originalImpl.signIn(input)
                         }
 
+
                         // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
                         // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                        response.user.id = auth0UserData.sub
+                        response.user.id = (await getUserIdMapping({ supertokensUserId })).auth0UserId
                         return response
 
                     } else {
@@ -236,7 +244,7 @@ let doesUserExistInAuth0 = async (email) => {
 
 ##### Implementation
 
-The Implementation below follows the following sample data structure. Please refer to Auth0's [docs](https://auth0.com/docs/support/manage-subscriptions/export-data) to get the latest information.
+The Implementation below follows the following sample data structure. 
 
 ```json title="Exported Auth0 user data"
 {"user_id":"auth0|60425da93519d90068f82966","email":"test@example.com","identities": [{"user_id": "60425da93519d90068f82966","provider": "auth0","connection": "Username-Password-Authentication","isSocial": false}],"name":"test@example.com","nickname":"test","created_at":"2021-03-05T16:34:49.518Z","updated_at":"2021-03-05T16:34:49.518Z","email_verified":false}
@@ -507,4 +515,4 @@ let getThirdPartyUserFromAuth0 = async (thirdPartyId) => {
 </TabItem>
 </Tabs>
 
-We can now move on to the next section discussing the `setUserIdMapping` function and how userId's should be mapped.
+We can now move on to the next section discussing the `setUserIdMapping` and `getUserIdMapping` functions and how userId's should be mapped.
