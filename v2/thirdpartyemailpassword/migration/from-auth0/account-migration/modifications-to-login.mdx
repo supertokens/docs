@@ -53,63 +53,61 @@ ThirdPartyEmailPassword.init({
                 signIn: async function (input) {
 
                     // Box 2: check if the User exists in Auth0
-                    if(await doesUserExistInAuth0(input.email)){
+                    if (await doesUserExistInAuth0(input.email)) {
 
                         // Box 3: check if user exists in SuperTokens
                         let superTokensUsers = await this.getUsersByEmail({ email: input.email });
-                        let emailPasswordUserExists = false;
-
-                        // supertokensUserId is used to retrive the Auth0 userId from the userId mapping
-                        let supertokensUserId;
+                        let emailPasswordUser = undefined;
 
                         for (let i = 0; i < superTokensUsers.length; i++) {
                             // if the thirdParty field in the user object is undefined, then the user is an EmailPassword account.
                             if (users[i].thirdParty === undefined) {
-                                emailPasswordUserExists = true
-                                supertokensUserId = users[i].id
+                                emailPasswordUser = superTokensUsers[i]
                                 break;
                             }
                         }
 
                         let response;
 
-                        if( !emailPasswordUserExists ){
-                            // EmailPassword User with the input credentials does not exist in SuperTokens
+                        if (emailPasswordUser === undefined) {
+                            // EmailPassword user does not exist in SuperTokens 
 
                             // Box 6: validate users credentials in Auth0
-                            let auth0UserData = await validateAndGetUserInfoFromAuth0( input.email, input.password)
+                            let auth0UserData = await validateAndGetUserInfoFromAuth0(input.email, input.password)
 
-                            if ( auth0UserData === undefined ){
+                            if (auth0UserData === undefined) {
                                 // Box 9: credentials are incorrect
                                 return {
-                                     status: "WRONG_CREDENTIALS_ERROR"
+                                    status: "WRONG_CREDENTIALS_ERROR"
                                 }
                             }
 
                             // Box 7: call the signup function to create a new SuperTokens user.
                             response = await this.signUp(input)
 
-                            supertokensUserId = response.user.id
 
                             // Box 8: map the Auth0 userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
                             // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                            await setUserIdMapping({ auth0UserId: auth0UserData.sub, supertokensUserId: response.user.id})                          
+                            await setUserIdMapping({ auth0UserId: auth0UserData.sub, supertokensUserId: response.user.id })
+
+                            // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
+                            // If you have not stored the users Auth0 userId in your tables, you can ignore this step
+                            response.user.id = auth0UserData.sub
 
                         } else {
                             // Box 4: EmailPassword User with the input credentials exists in SuperTokens, so call the original signIn implementation
                             response = await originalImpl.signIn(input)
+
+                            // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
+                            // If you have not stored the users Auth0 userId in your tables, you can ignore this step
+                            response.user.id = (await getUserIdMapping({ supertokensUserId: emailPasswordUser.id })).auth0UserId
                         }
-
-
-                        // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
-                        // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                        response.user.id = (await getUserIdMapping({ supertokensUserId })).auth0UserId
                         return response
 
                     } else {
                         // Box 10: user does not exist in Auth0 call original signIn implementation
                         return originalImpl.signIn(input)
-                    }                    
+                    }
                 },
             }
         }
@@ -262,13 +260,15 @@ Implementation for the `validateAndGetUserInfoFromAuth0` and `doesUserExistInAut
 // Auth0 uses bcrypt to hash user passwords, we can use the bcrypt library to validate the input password.
 let bcrypt = require("bcryptjs")
 
+// Since password hashes are mapped to user data through userIds, you will need to load both files.
+
 // load your exported Auth0 user data
 // TODO: Add your user data file name
 let auth0UsersDataString = fs.readFileSync(__dirname + "YOUR_USER_DATA")
 let auth0UsersData = JSON.parse(auth0UsersDataString);
 
-// load your exported Auth0 user data
-// TODO: Add your user data file name
+// load your exported Auth0 password hashes
+// TODO: Add your password hashes file name
 let auth0PasswordHashesString = fs.readFileSync(__dirname + "YOUR_PASSWORD_HASHES")
 let auth0PasswordHashes = JSON.parse(auth0PasswordHashesString);
 
@@ -363,7 +363,7 @@ ThirdPartyEmailPassword.init({
                         // Box 4: call the Supertokens signInUp implementation
                         let response = await originalImpl.signInUp(input)
                         
-                        // Box 5: check if user existed in SuperTokens
+                        // Box 5: check if a new SuperTokens user is created
                         if (response.createdNewUser){
 
                             // Box 6: map the Auth0 userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
@@ -381,7 +381,7 @@ ThirdPartyEmailPassword.init({
                         return response
 
                     } else {
-                        // Box 89: Auth0 user does not exist
+                        // Box 9: Auth0 user does not exist
                         return await originalImpl.signInUp(input)
                     }
                 }
@@ -392,13 +392,13 @@ ThirdPartyEmailPassword.init({
 
 
 ```
-### Validating Auth0 credentials
+### Implementing the `getThirdPartyUserFromAuth0` function
 
-In order to make the changes mentioned above, you have to decide how you would like to validate your user's Auth0 account credentials 
+In order to make the changes mentioned above, you have to decide how you would like to retrieve your user's data. 
 
-There are two methods of validating user credentials:
+There are two methods :
 - Using Auth0's APIs
-- Using the exported user data and password hashes from Auth0
+- Using the exported user data from Auth0
 
 
 <Tabs
@@ -488,7 +488,6 @@ The Implementation below follows the following sample data structure. Please ref
 Implementation for the `getThirdPartyUserFromAuth0` function used in SuperTokens `signInUp` function:
 
 ```jsx
-let bcrypt = require("bcryptjs")
 
 // load your exported Auth0 user data
 // TODO: Add your user data file name
