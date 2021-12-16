@@ -244,7 +244,7 @@ module.exports = {
             "serverless/with-aws-lambda/api-gateway-config",
             {
               type: 'category',
-              label: '5. Handling authorization',
+              label: '5. Session Verification',
               items: [
                 "serverless/with-aws-lambda/session-verification",
                 "serverless/with-aws-lambda/authorizer",
