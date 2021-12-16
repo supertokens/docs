@@ -7,7 +7,7 @@ export default function PythonSyncAsyncSubTabs(props) {
         <Tabs
             isSubTab={true}
             groupId="python-framework"
-            defaultValue="fastapi"
+            defaultValue="asyncio"
             values={[
                 { label: 'Asyncio', value: 'asyncio' },
                 { label: 'Syncio', value: 'syncio' }
