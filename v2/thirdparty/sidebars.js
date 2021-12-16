@@ -44,6 +44,7 @@ module.exports = {
         "common-customizations/redirecting-post-login",
         "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
+        "post-login/getting-provider-access-token"
       ],
     },
     {
@@ -53,11 +54,17 @@ module.exports = {
         "common-customizations/redirect-to-auth",
         {
           type: 'category',
-          label: 'Sign In And Up',
+          label: 'Third Party Providers',
           items: [
             "common-customizations/sign-in-and-up/built-in-providers",
             "common-customizations/sign-in-and-up/changing-oauth-scopes",
-            "common-customizations/sign-in-and-up/custom-providers",
+            "common-customizations/sign-in-and-up/custom-providers"
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Sign In And Up',
+          items: [
             "common-customizations/sign-in-and-up/toc-privacypolicy"
           ],
         },
@@ -194,7 +201,14 @@ module.exports = {
           items: [
             "advanced-customizations/apis-override/about",
             "advanced-customizations/apis-override/usage",
-            "advanced-customizations/apis-override/custom-response",
+            {
+              type: 'category',
+              label: 'Sending custom response',
+              items: [
+                "advanced-customizations/apis-override/custom-response/api-override",
+                "advanced-customizations/apis-override/custom-response/throwing-error"
+              ],
+            },
             "advanced-customizations/apis-override/disabling"
           ],
         },

@@ -1,0 +1,147 @@
+---
+id: getting-provider-access-token
+title: Getting provider's access token
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Getting provider's access token
+
+You can get the Third Party Provider's access token to query their APIs with the following method:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```jsx
+SuperTokens.init({
+    appInfo: {...},
+    supertokens: {...},
+    recipeList: [
+        ThirdParty.init({
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        signInUpPOST: async function(input) {
+
+                            if (originalImplementation.signInUpPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+                            
+                            let response = await originalImplementation.signInUpPOST(input)
+
+                            if (response.status === "OK"){
+                                
+                                // In this example we are using Google as our provider
+                                let accessToken = response.authCodeResponse.access_token
+                                    
+                                // TODO: ...
+                                
+                            }
+
+                            return response;
+                        },
+                    }
+                }
+            },
+        }),
+        Session.init() 
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{
+				Override: &tpmodels.OverrideStruct{
+					APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
+						// First we copy the original implementation
+						originalSignInUpPOST := *originalImplementation.SignInUpPOST
+
+						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
+							resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options)
+							if err != nil {
+								return tpmodels.SignInUpPOSTResponse{}, err
+							}
+
+							if resp.OK != nil {
+								// the user logged in / signed up successfully
+
+								// In this example we are using Google as our provider
+								authCodeResponse := resp.OK.AuthCodeResponse
+
+								accessToken := authCodeResponse.(map[string]interface{})["access_token"].(string)
+
+							}
+
+							return resp, err
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import thirdparty
+
+# highlight-start
+def override_thirdparty_apis(original_implementation):
+	original_sign_in_up_post = original_implementation.sign_in_up_post
+
+	async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, auth_code_response: Union[str, None], api_options: APIOptions):
+		# First we call the original implementation of signInPOST.
+		response = await original_sign_in_up_post(provider, code, redirect_uri, auth_code_response, api_options)
+
+        # Post sign up response, we check if it was successful
+        if response.is_ok:
+            id = response.user.user_id
+            email = response.user.email
+
+            # In this example we are using Google as our provider
+            thirdparty_auth_response = response.auth_code_response
+
+            accessToken = thirdparty_auth_response.access_token
+
+            # TODO
+
+        return response
+	
+	original_implementation.sign_in_up_post = sign_in_up_post
+	return original_implementation
+# highlight-end
+
+init(
+    supertokens_config=SupertokensConfig(...),
+    app_info=InputAppInfo(...),
+    framework='...',
+    recipe_list=[
+        thirdparty.init(
+            # highlight-start
+            override=thirdparty.InputOverrideConfig(
+                apis=override_thirdparty_apis
+            ),
+            # highlight-end
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[...])
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
