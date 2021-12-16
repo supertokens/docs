@@ -4,14 +4,6 @@ module.exports = {
     "architecture",
     "recipes",
     "concepts",
-    {
-      type: 'category',
-      label: 'Migration',
-      items: [
-        "migration/to-st",
-        "migration/away-from-st"
-      ],
-    },
     "compatibility-table",
     "sdks",
     "apis"
