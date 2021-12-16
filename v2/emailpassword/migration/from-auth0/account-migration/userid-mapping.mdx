@@ -62,45 +62,41 @@ If a user has an Auth0 `userId` mapped to an SuperTokens `userId`, then:
 - A SuperTokens function which returns `userId` in its response should replace the SuperTokens `userId` in the response object with the Auth0 `userId`
 
 The following functions need to be modified so that the correct  `userId` is used:
-- `getUsersByEmail`
+- `getUserByEmail`
 - `getUserById`
 - `createResetPasswordToken`
 - `updateEmailOrPassword`
 
 
 ```jsx title="Nodejs"
-ThirdPartyEmailPassword.init({
+EmailPassword.init({
     override: {
         functions: (originalImpl) => {
             return {
                 ...originalImpl,
-                signIn: async function (input) { 
+                signIn: async function (input) {
                     // TODO: see Modifications to login section
                 },
-                getUsersByEmail: async function (input) {
+                getUserByEmail: async function (input) {
 
-                    let users = await originalImpl.getUsersByEmail(input)
+                    let user = await originalImpl.getUserByEmail(input)
 
-                    // if any of the users in the response have their SuperTokens userId mapped to an Auth0 userId, then the Auth0 userId should be set in the response object.
-                    for (let i = 0; i < users.length; i++) {
+                    // if the user in the response has their SuperTokens userId mapped to an Auth0 userId, then the Auth0 userId should be set in the response object.
+                    // get userId mapping if it exists
+                    let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: user.id })
 
-                        // get userId mapping if it exists
-                        let userIdMappingInfo = await getUserIdMapping({supertokensUserId: users[i].id})
-
-                        if(userIdMappingInfo !== undefined){
-                           users[i].id = userIdMappingInfo.auth0UserId 
-                        }
-                        
+                    if (userIdMappingInfo !== undefined) {
+                        users[i].id = userIdMappingInfo.auth0UserId
                     }
-                    return users;
+                    return user
                 },
                 getUserById: async function (input) {
 
                     // if the Auth0 userId in the input is mapped to a SuperTokens userId, then the Auth0 userId should be set in the response
-                    let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId})
+                    let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId })
 
-                    if( userIdMappingInfo !== undefined ){
-                        
+                    if (userIdMappingInfo !== undefined) {
+
                         // call original implementation with the mapped SuperTokens userId
                         let response = await originalImpl.getUserById({ userId: userIdMappingInfo.supertokensUserId })
 
@@ -111,15 +107,14 @@ ThirdPartyEmailPassword.init({
                     }
                     return await originalImpl.getUserById(input)
 
-                    
                 },
                 createResetPasswordToken: async function (input) {
-                    
-                     // if the Auth0 userId in the input is mapped to a SuperTokens userId, then the Auth0 userId should be set in the response
-                    let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId})
 
-                    if( userIdMappingInfo !== undefined ){
-                        
+                    // if the Auth0 userId in the input is mapped to a SuperTokens userId, then the Auth0 userId should be set in the response
+                    let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId })
+
+                    if (userIdMappingInfo !== undefined) {
+
                         // set the mapped SuperTokens userId in the input
                         input.userId = userIdMappingInfo.supertokensUserId
                     }
@@ -129,10 +124,10 @@ ThirdPartyEmailPassword.init({
                 updateEmailOrPassword: async function (input) {
 
                     // if the Auth0 userId in the input is mapped to a SuperTokens userId, then the Auth0 userId should be set in the response
-                    let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId})
+                    let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId })
 
-                    if( userIdMappingInfo !== undefined ){
-                        
+                    if (userIdMappingInfo !== undefined) {
+
                         /// set the mapped SuperTokens userId in the input
                         input.userId = userIdMappingInfo.supertokensUserId
                     }
