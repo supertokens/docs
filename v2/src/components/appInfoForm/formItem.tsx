@@ -10,7 +10,9 @@ type FormItemType = {
     onChange: (val: string) => void,
     explanation: string,
     value: string,
-    index: number
+    index: number,
+    error?: string,
+    required?: boolean
 }
 
 export default function FormItem(props: FormItemType) {
@@ -89,10 +91,10 @@ export default function FormItem(props: FormItemType) {
     return (
         <div className="app-info-form-question">
                 <div className="app-info-form-label">
-                    <span>{props.title + ":"}<span
-                        style={{
-                            color: "#ff6161"
-                        }}>*</span></span>
+                    <span>
+                        {props.title + ":"}
+                        {props.required && (<span style={{ color: "#ff6161" }}>*</span>)}
+                    </span>
                     <div className="question">
                         <img
                             id={`app-info-form-question-icon-${props.index}`}
@@ -119,6 +121,20 @@ export default function FormItem(props: FormItemType) {
                     }}
                     placeholder={props.placeholder}
                 />
+
+                {props.error && (
+                    <p
+                        style={{
+                            color: "rgb(255, 97, 97)",
+                            margin: "0",
+                            fontSize: ".875rem",
+                            fontWeight: "500"
+                        }}
+                    >
+                        *{props.error}
+                    </p>
+                )}
+
                 <div
                     className={`app-info-form-explanation ${showExplanation ? "show" : ""}`}
                     style={{
