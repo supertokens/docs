@@ -35,6 +35,20 @@ module.exports = {
       ],
     },
     {
+      type: "category",
+      label: "Using sessions with JWTs",
+      items: [
+        "common-customizations/sessions/with-jwt/about",
+        "common-customizations/sessions/with-jwt/enabling-jwts",
+        "common-customizations/sessions/with-jwt/custom-claims",
+        "common-customizations/sessions/with-jwt/read-jwt",
+        "common-customizations/sessions/with-jwt/read-claims",
+        "common-customizations/sessions/with-jwt/update-jwt",
+        "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
+        "common-customizations/sessions/with-jwt/get-public-key",
+      ]
+    },
+    {
       type: 'category',
       label: 'Common customizations',
       items: [
@@ -170,6 +184,17 @@ module.exports = {
       ],
     },
     {
+      type: 'category',
+      label: 'Hasura',
+      customProps: {
+        logoUrl: '/img/logos/hasura-logo.png'
+      },
+      items: [
+        "hasura-integration/with-jwt",
+        "hasura-integration/without-jwt",
+      ],
+    },
+    {
       type: 'doc',
       id: "using-with-faunadb",
       customProps: {
@@ -217,9 +242,16 @@ module.exports = {
             "serverless/with-aws-lambda/backend-config",
             "serverless/with-aws-lambda/auth-serverless",
             "serverless/with-aws-lambda/api-gateway-config",
-            "serverless/with-aws-lambda/session-verification",
+            {
+              type: 'category',
+              label: '5. Session Verification',
+              items: [
+                "serverless/with-aws-lambda/session-verification",
+                "serverless/with-aws-lambda/authorizer",
+                "serverless/with-aws-lambda/jwt-authorizer",
+              ],
+            },
             "serverless/with-aws-lambda/next-steps",
-            "serverless/with-aws-lambda/authorizer",
             "serverless/with-aws-lambda/appsync-integration"
           ],
         },
