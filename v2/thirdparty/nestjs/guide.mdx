@@ -310,9 +310,9 @@ import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 
 import { errorHandler } from 'supertokens-node/framework/express';
-import { Error } from 'supertokens-node';
+import { Error as STError } from 'supertokens-node';
 
-@Catch(Error)
+@Catch(STError)
 export class SupertokensExceptionFilter implements ExceptionFilter {
   handler: ErrorRequestHandler;
 
@@ -323,10 +323,15 @@ export class SupertokensExceptionFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
 
+    const resp = ctx.getResponse<Response>();
+    if (resp.headersSent) {
+      return;
+    }
+
     this.handler(
       exception,
       ctx.getRequest<Request>(),
-      ctx.getResponse<Response>(),
+      resp,
       ctx.getNext<NextFunction>(),
     );
   }
@@ -368,6 +373,7 @@ Now that the library is set up, you can add a guard to protect your API. You can
 
 ```ts
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { Error as STError } from "supertokens-node";
 
 import { verifySession } from 'supertokens-node/recipe/session/framework/express';
 
@@ -377,15 +383,23 @@ export class AuthGuard implements CanActivate {
     const ctx = context.switchToHttp();
 
     let err = undefined;
+    const resp = ctx.getResponse();
     await verifySession()(
       ctx.getRequest(),
-      ctx.getResponse(),
+      resp,
       (res) => {
         err = res;
       },
     );
 
-    if (err !== undefined) {
+    if (resp.headersSent) {
+      throw new STError({
+        message: "UNAUTHORISED",
+        type: "UNAUTHORISED",
+      });
+    }
+
+    if (err) {
       throw err;
     }
 
