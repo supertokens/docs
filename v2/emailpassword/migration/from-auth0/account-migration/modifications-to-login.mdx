@@ -1,0 +1,299 @@
+---
+id: modifications-to-login
+title: Modifications to login
+hide_title: true
+---
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+
+# Modifications to Login
+
+In this section we will be modifying login to enable the migrating of users with Email Password accounts from Auth0 to SuperTokens.
+
+:::info
+The following code is implemented for Nodejs, but, you can apply the same logic in your own tech stack.
+:::
+
+## Flow 
+
+:::tip
+If you have not stored your user's Auth0 userId in your database you can **ignore** the steps mentioned in **Box 5** and **Box 8** of the flow diagram.
+:::
+
+<img src="/img/thirdpartyemailpassword/ep-account-migration.png" />
+
+## Implementation
+
+We will be overriding SuperToken's login functions to enable account migration, if a user signs up, a new SuperTokens account will be created so no changes need to be made to the sign up functionality. 
+
+### Modifying the `signIn` function on the backend:
+
+```jsx title="Nodejs"
+EmailPassword.init({
+    override: {
+        functions: (originalImpl) => {
+            return {
+                ...originalImpl,
+                // EmailPassword Login function modification
+                signIn: async function (input) {
+
+                    // Box 2: check if the User exists in Auth0
+                    if(await doesUserExistInAuth0(input.email)){
+
+                        // Box 3: check if user exists in SuperTokens
+                        let supertokensUser = await this.getUserByEmail({ email: input.email });
+
+                        if( supertokensUser === undefined ){
+                            // EmailPassword User with the input credentials does not exist in SuperTokens
+
+                            // Box 6: validate users credentials in Auth0
+                            let auth0UserInfo = await validateAndGetUserInfoFromAuth0( input.email, input.password)
+
+                            if ( auth0UserInfo === undefined ){
+                                // Box 9: credentials are incorrect
+                                return {
+                                     status: "WRONG_CREDENTIALS_ERROR"
+                                }
+                            }
+
+                            // Box 7: call the signup function to create a new SuperTokens user.
+                            response = await this.signUp(input)
+
+                            // Box 8: map the Auth0 userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
+                            // If you have not stored the users Auth0 userId in your tables, you can ignore this step
+                            await setUserIdMapping({ auth0UserId: auth0UserData.sub, supertokensUserId: response.user.id})
+                            
+                            // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
+                            // If you have not stored the users Auth0 userId in your tables, you can ignore this step
+                            response.user.id = response.user.id
+                            
+                        } else {
+                            // Box 4: EmailPassword User with the input credentials exists in SuperTokens, so call the original signIn implementation
+                            response = await originalImpl.signIn(input)
+
+                            // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
+                            // If you have not stored the users Auth0 userId in your tables, you can ignore this step
+                            response.user.id = (await getUserIdMapping({ supertokensUserId: supertokensUser.id })).auth0UserId
+                        }
+
+                        return response
+
+                    } else {
+                        // Box 10: user does not exist in Auth0 call original signIn implementation
+                        return originalImpl.signIn(input)
+                    }                    
+                },
+            }
+        }
+    },
+})
+
+```
+
+## Validating Auth0 credentials
+
+In order to make the changes mentioned above, you have to now decide how you would like to validate the user's Auth0 account credentials 
+
+There are two methods of validating user credentials:
+- Using Auth0's APIs
+- Using the exported user data and password hashes from Auth0
+
+<Tabs
+    groupId="ep-migration-methods"  
+    defaultValue="migration-method-1"
+    values={[
+        {label: "Using Auth0's APIs", value: 'migration-method-1'},
+        {label: 'Using the exported Auth0 user data and password hashes. ', value: 'migration-method-2'},
+]}>
+
+<TabItem value="migration-method-1">
+
+### Using Auth0's APIs
+
+We will be using Auth0's APIs to validate user credentials. Please refer to Auth0's [documentation](https://auth0.com/docs/api) to get the complete spec for the APIs used below.
+
+#### Prerequisites
+- This method assumes you have access to your Auth0 account and database for the complete duration of user migration.
+- To enable email and password validation, you will need to add the database connection name to the `Default Directory` field in your Auth0 tenant settings.
+
+For example:
+- The default connection name for the database is `Username-Password-Authentication`, you can find your database connections under Authentication -> Database on your Auth0 dashboard.
+
+<img src="/img/thirdpartyemailpassword/auth0-database.png" />
+
+- Set your database connection name in your `Default Directory` field in your tennant settings.
+
+<img src="/img/thirdpartyemailpassword/default-directory-settings.png" />
+
+#### Implementation
+
+Implementation for the `validateAndGetUserInfoFromAuth0` and `doesUserExistInAuth0` functions used in SuperTokens `signIn` function:
+
+```jsx title="Nodejs"
+
+// Box 6: Validates user credentials by generating an access token with their credentials and returns user data
+let validateAndGetUserInfoFromAuth0 = async (email, password) => {
+
+    let accessToken;
+    try {
+        // generate an user access token using the input credentials
+        access_token = (await axios({
+            method: "post",
+            // TODO: add your Auth0 domain 
+            url: "https://YOUR_AUTH0_DOMAIN/oauth/token",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            data: {
+                // TODO: add your Auth0 app's clientId
+                client_id: "YOUR_CLIENT_ID",
+                grant_type: "password",
+                username: email,
+                password: password,
+            }
+        })).data.access_token;
+
+    } catch (error) {
+        // input credentials are invalid
+        return undefined
+    }
+
+    // retrieve the user's data using the access token if valid credentials were passed
+    // TODO: add your Auth0 domain 
+    let userResponse = await axios.get("https://YOUR_AUTH0_DOMAIN/userInfo", {
+        headers: { "authorization": `Bearer ${access_token}` },
+    })
+    return userResponse.data
+}
+
+// Box 2: Checks if a user with an EmailPassword account exists in Auth0 with the input email
+let doesUserExistInAuth0 = async (email) => {
+
+    // generate an access token to use the Auth0's Management API.
+    let access_token = (await axios({
+        method: 'POST',
+        // TODO: add your Auth0 domain
+        url: "https://YOUR_DOMAIN/oauth/token",
+        headers: { 'content-type': 'application/json' },
+        data: {
+            // TODO: add your Auth0 app's clientId
+            client_id: "CLIENT_ID",
+            // TODO: add your Auth0 app's clientSecret
+            client_secret: "CLIENT_SECRET",
+            // TODO: add your Auth0 domain
+            audience: "https://YOUR_DOMAIN/api/v2/",
+            grant_type: "client_credentials"
+        }
+    })).data.access_token
+
+    // checks if a user exists with the input email and is not a social account
+    let response = await axios({
+        method: 'GET',
+        // TODO: add your Auth0 domain
+        url: "https://YOUR_DOMAIN/api/v2/users",
+        params: { q: `identities.isSocial:false AND  email:${email}` },
+        headers: { authorization: `Bearer ${access_token}` }
+    })
+    if (response.data[0] !== undefined) {
+        return true
+    }
+    return false
+}
+
+```
+
+</TabItem>
+
+
+<TabItem value="migration-method-2">
+
+###  Using the exported Auth0 user data and password hashes. 
+
+#### Prerequisites
+- This method assumes you have an Auth0 enterprise account so you can export your Auth0 user data and password hashes.
+- You can refer to the following guides on how to export your [user data](https://auth0.com/docs/users/import-and-export-users/bulk-user-exports) and [password hashes](https://auth0.com/docs/support/manage-subscriptions/export-data).
+
+
+#### Implementation
+
+The Implementation below follows the following sample data structure.
+
+```json title="Exported Auth0 user data"
+{"user_id":"auth0|60425da93519d90068f82966","email":"test@example.com","identities": [{"user_id": "60425da93519d90068f82966","provider": "auth0","connection": "Username-Password-Authentication","isSocial": false}],"name":"test@example.com","nickname":"test","created_at":"2021-03-05T16:34:49.518Z","updated_at":"2021-03-05T16:34:49.518Z","email_verified":false}
+```
+
+```json title="Exported Auth0 password hashes"
+{"_id":{"$oid":"60425dc43519d90068f82973"},"email_verified":false,"email":"test2@example.com","passwordHash":"$2b$10$Z6hUTEEeoJXN5/AmSm/4.eZ75RYgFVriQM9LPhNEC7kbAbS/VAaJ2","password_set_date":{"$date":"2021-03-05T16:35:16.775Z"},"tenant":"dev-rwsbs6ym","connection":"Username-Password-Authentication","_tmp_is_unique":true}
+```
+
+Implementation for the `validateAndGetUserInfoFromAuth0` and `doesUserExistInAuth0` functions used in SuperTokens `signIn` function:
+
+```jsx title="Nodejs"
+
+// Auth0 uses bcrypt to hash user passwords, we can use the bcrypt library to validate the input password.
+let bcrypt = require("bcryptjs")
+
+// Since password hashes are mapped to user data through userIds, you will need to load both files.
+
+// load your exported Auth0 user data
+// TODO: Add your user data file name
+let auth0UsersDataString = fs.readFileSync(__dirname + "YOUR_USER_DATA")
+let auth0UsersData = JSON.parse(auth0UsersDataString);
+
+// load your exported Auth0 password hashes
+// TODO: Add your password hashes file name
+let auth0PasswordHashesString = fs.readFileSync(__dirname + "YOUR_PASSWORD_HASHES")
+let auth0PasswordHashes = JSON.parse(auth0PasswordHashesString);
+
+// Box 6: Validate user credentials and retrieve user data
+let validateAndGetUserInfoFromAuth0 = async (email, password) => {
+
+    for (let i = 0; i < auth0UsersData.length; i++) {
+        // check that a user with the input email exists and they are not a Social account.
+        if ((!auth0UsersData[i].identities[0].isSocial) && auth0UsersData[i].email === email) {
+
+            let usersPasswordHash = undefined
+            // retrieve the password hash from the passwordHash data using the the associated userId.
+            for (let i = 0; i < auth0PasswordHashes.length; i++) {
+                // check if the passwordHash userId matches the users userId
+                if (auth0PasswordHashes[i]._id.$oid === auth0UsersData[i].identities[0].user_id) {
+                    usersPasswordHash = auth0PasswordHashes[i].passwordHash;
+                    break;
+                }
+            }
+
+            if (usersPasswordHash === undefined) {
+                return undefined
+            }
+
+            // validate the password hash with the users password
+            if (bcrypt.compareSync(password, passwordHash)) {
+                return auth0UsersData[i]
+            } else {
+                return undefined
+            }
+        }
+    }
+}
+
+// Box 2: check that the user exists in Auth0
+let doesUserExistInAuth0 = async (email) => {
+
+    // check if input email has an associated user
+    for (let i = 0; i < auth0UsersData.length; i++) {
+        // check that a user with the input email exists and they are not a Social account.
+        if ((!auth0UsersData[i].identities[0].isSocial) && auth0UsersData[i].email === email) {
+            return true
+        }
+    }
+    return false
+}
+
+```
+
+</TabItem>
+</Tabs>
+
+We can now move on to the next section discussing the `setUserIdMapping` and `getUserIdMapping` functions and how userId's should be mapped.

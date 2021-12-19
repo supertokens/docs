@@ -11,7 +11,7 @@ let remarkPlugins = [
 
 module.exports = {
   title: 'SuperTokens Docs',
-  url: 'https://supertokens.io/',
+  url: 'https://supertokens.io',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'throw',

@@ -1,0 +1,129 @@
+---
+id: userid-mapping
+title: User ID Mapping
+hide_title: true
+---
+
+# User ID Mapping
+
+:::tip
+If you have not stored your user's Auth0 userId in your database you can **ignore** this section.
+:::
+
+If you store your user's Auth0 `userId` in your tables you will need to map the user's Auth0 `userId` to their SuperTokens `userId` and override SuperTokens functions so the correct `userId` is used.
+
+In this section we will go over:
+- The functions used to set and retrive `userId` data used in the [Modifications to login](./modifications-to-login) section,
+- How to override the necessary SuperTokens functions to use the correct `userId`.
+
+## UserId Mapping functions
+
+We will need the following two functions:
+
+- `setUserIdMapping()`
+- `getUserIdMapping()`
+
+```tsx
+// The function is used in the Modifications to Login section to map a users newly created SuperTokens userIds with their Auth0 userId
+let setUserIdMapping = async (
+    input: {
+        auth0UserId: string,
+        supertokensUserId: string
+    }): Promise<void> => {
+    // set the mapping in your data store
+}
+
+// The function retrieves the userId mapping using either the SuperTokens or Auth0 userId.
+let getUserIdMapping = async (
+    input: {
+        auth0UserId?: string,
+        supertokensUserId?: string
+    }): Promise<{ auth0UserId: string, supertokensUserId: string } | undefined> => {
+
+    // get mapped userIds if the input userId exits in your data store
+    // getUserIdMappingIfExists is a function defined by you
+    let userIdMapping = getUserIdMappingIfExists(input)
+
+    // if input userId exists get the mapped user data
+    if (userIdMapping !== undefined) {
+
+        return ({ auth0UserId: userIdMapping.auth0UserId, supertokensUserId: userIdMapping.supertokensUserId })
+    }
+
+    return undefined
+}
+
+```
+
+## Overriding all functions on the backend which take `userId` as input or return `userId` in their response:
+
+If a user has an Auth0 `userId` mapped to an SuperTokens `userId`, then: 
+- A SuperTokens function which has `userId` in its input should replace the Auth0 `userId` in the input object with the SuperTokens `userId`
+- A SuperTokens function which returns `userId` in its response should replace the SuperTokens `userId` in the response object with the Auth0 `userId`
+
+The following functions need to be modified so that the correct  `userId` is used:
+- `getUsersByEmail`
+- `getUserByThirdPartyInfo`
+- `getUserById`
+
+
+```jsx title="Nodejs"
+ThirdParty.init({
+    override: {
+        functions: (originalImpl) => {
+            return {
+                ...originalImpl,
+                signInUp: async function (input) {
+                    // TODO: see Modifications to login section
+                },
+                getUsersByEmail: async function (input) {
+
+                    let users = await originalImpl.getUsersByEmail(input)
+
+                    // if any of the users in the response have their SuperTokens userId mapped to an Auth0 userId, then the Auth0 userId should be set in the response object.
+                    for (let i = 0; i < users.length; i++) {
+
+                        // get userId mapping if it exists
+                        let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: users[i].id })
+
+                        if (userIdMappingInfo !== undefined) {
+                            users[i].id = userIdMappingInfo.auth0UserId
+                        }
+
+                    }
+                    return users;
+                },
+                getUserByThirdPartyInfo: async function (input) {
+
+                    let response = await originalImpl.getUserByThirdPartyInfo(input)
+
+                    // if the user in the response has their SuperTokens userId mapped to an Auth0 userId, then the Auth0 userId should be set in the response object.
+                    let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: response.id })
+
+                    if (userIdMappingInfo !== undefined) {
+                        response.id = userIdMappingInfo.auth0UserId
+                    }
+                    return response;
+                },
+                getUserById: async function (input) {
+
+                    // if the Auth0 userId in the input is mapped to a SuperTokens userId, then the Auth0 userId should be set in the response
+                    let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId })
+
+                    if (userIdMappingInfo !== undefined) {
+
+                        // call original implementation with the mapped SuperTokens userId
+                        let response = await originalImpl.getUserById({ userId: userIdMappingInfo.supertokensUserId })
+
+                        // set Auth0 userId in the response
+                        response.id = userIdMappingInfo.auth0UserId
+
+                        return response;
+                    }
+                    return await originalImpl.getUserById(input)
+                }
+            }
+        }
+    },
+})
+```
