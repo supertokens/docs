@@ -1,0 +1,99 @@
+---
+id: get-public-key
+title: Getting public keys for JWT verification
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./session/common-customizations/sessions/with-jwt/get-public-key.mdx -->
+
+# Getting public keys for JWT verification
+
+:::caution
+Using JWTs is optional and is only required if you want to integrate with another service that relies on JWTs or if you want to integrate with a backend framework that we do not support yet
+:::
+
+## 1) Call the JWKS endpoint for SuperTokens Core
+
+SuperTokens uses RSA for signing JWTs, this means that in order to verify the JWT you need a public key. SuperTokens provides a JWKS endpoint that contains a set of public keys as Json Web Keys
+
+You can make a `GET` request to the SuperTokens core on `{connectionURI}/recipe/jwt/jwks`:
+- If you are using our managed service use the `connectionURI` found on the supertokens.io dashboard
+- If you are using the self-hosted option, you can query any one of the SuperTokens core instances that you host
+
+The response would be similar to: 
+
+```json
+{
+    "keys": [
+        {
+            "kty": "RSA",
+            "kid": "2de612a5-a5ba-413e-9216-4c43e2e78c86",
+            "n": "AMZruthvYz7Ft-Dp0BC_...", // Truncated for display
+            "e": "AQAB",
+            "alg": "RS256",
+            "use": "sig"
+        }
+    ],
+    "status": "OK"
+}
+```
+
+The `keys` array in the response contains a list of Json Web Keys (JWK).
+
+## 2) JWT verification using a key string
+
+A JWK can also be converted into a key string. Some libraries and services may require you to provide a key string during JWT verification.
+
+For example, lets consider using NodeJS with `jsonwebtoken`. `jsonwebtoken` allows you to provide a certificate that will be used to verify JWTs, once you fetch a JWK to use (as explained above) you can then convert it to a key string by using a library or an online service (since this is a public key there is no risk in using an online service).
+
+In this example we will use `jwk-to-pem`
+
+```jsx
+var jwkToPem = require('jwk-to-pem');
+
+// This JWK is copied from the result of the above SuperTokens core request
+let jwk = {
+    "kty": "RSA",
+    "kid": "2de612a5-a5ba-413e-9216-4c43e2e78c86",
+    "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
+    "e": "AQAB",
+    "alg": "RS256",
+    "use": "sig"
+};
+
+let certString = jwkToPem(jwk);
+```
+
+The above snippet would generate the following certificate string:
+
+```
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9I
+QQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm
+lVYdE7Oq34WOHxMCqh1rKE8lW5m3bl5CJiupxor92e4eubyrBSr6GSjqrWjWj00g
+hlY19QERVaY2HIAkWTluLekvC0o9itRDNUtxN0NR7hIiW2+9+lgdtUWdi3GQFWao
+7ryPuwjyS2ZNcz+F5qWz5bpaajNpsOQL38hMJ5Fq3Z/sDaXS3hDM7RkLNlwl+G6w
+XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStT
+xwIDAQAB
+-----END PUBLIC KEY-----
+```
+
+You can then use this when configuring `jsonwebtoken`
+
+```js
+var JsonWebToken = require('jsonwebtoken');
+
+// Truncated for display
+let certificate = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----";
+JsonWebToken.verify(jwt, certificate, function(err, decoded) {
+    let decodedJWT = decoded;
+    // Use JWT
+});
+```
+
+For other languages, [jwt.io](https://jwt.io/libraries) recommends some libraries that you can use for JWT verification
+
+:::caution
+Make sure that you add line break characters to your string as shown above, certificate strings without the line breaks are considered invalid
+:::
