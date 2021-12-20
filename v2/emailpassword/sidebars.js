@@ -74,6 +74,7 @@ module.exports = {
         },
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
+        "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
         {
           type: "category",
