@@ -104,8 +104,9 @@ module.exports = {
       theme: require('prism-react-renderer/themes/vsDark'),
     },
     algolia: {
-      apiKey: '0eeffc534667153c420f239cc6c7f4fb',
+      apiKey: 'ce04a158637d345fc094ebbfa9a5156a',
       indexName: 'supertokens',
+      appId: "SBR5UR2Z16"
     },
   },
   presets: [
