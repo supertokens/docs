@@ -236,7 +236,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             value={this.state.appName}
                             error={this.state.fieldErrors.appName}
                         />}
-                        {this.props.askForAPIDomain && !this.state.nextJSApiRouteUsed && <FormItem
+                        {/* show apiDomain field if it is not a NextJS form */}
+                        {/* show apiDomain field if it is a nextJS form and the `nextJS api route used` checkbox is not checked */}
+                        {this.props.askForAPIDomain
+                            && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))
+                            && <FormItem
                             index={1}
                             title="API Domain"
                             placeholder="e.g. http://localhost:8080"
