@@ -44,13 +44,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             websiteDomain: "",
             apiBasePath: "/auth",
             websiteBasePath: "/auth",
-            fieldErrors: {
-                appName: "",
-                apiDomain: "",
-                websiteDomain: "",
-                apiBasePath: "",
-                websiteBasePath: ""
-            },
+            fieldErrors: {},
             nextJSApiRouteUsed: true
         }
 
@@ -334,7 +328,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     getDomainOriginOrEmptyString = (domain: string) => {
         try {
-            return new URL(this.state.apiDomain.trim()).origin;
+            return new URL(domain.trim()).origin;
         } catch {
             return "";
         }
