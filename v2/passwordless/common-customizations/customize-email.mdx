@@ -4,28 +4,48 @@ title: Customising the email sent
 hide_title: true
 ---
 
-import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
-import TabItem from '@theme/TabItem';
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from "@theme/TabItem";
 
 # Customising the email sent
 
-## The default email
+## The default emails
+
 - From: no-reply@supertokens.io, but the user will see your app name
 - Subject: `Sign in instructions`
 
-<img width="450px" src="/img/passwordless/email-verify-email.png" />
+### OTP flow
+<img width="450px" src="/img/passwordless/otp-email.png" />
 
+### Magic Link flow
+<img width="450px" src="/img/passwordless/magic-link-email.png" />
+
+### Both OTP and Magic Link flow
+<img width="450px" src="/img/passwordless/otp-and-magic-link-email.png" />
 
 This is achieved by calling an API provided by us (`https://api.supertokens.io`). The backend SDK calls our API with the magic link, the app name, and the email of the end-user.
 
 :::tip security
-- We do not log / store any of this information on our servers.
+- Do not log / store the `userInputCode` or the `urlWithLinkCode`
 - For production use, we recommend that you use the feature to send emails yourself (see below section) using your own domain. This will make it easier for end-users to trust the email (since it's coming from your domain, and not from @supertokens.io)
 :::
 
 ## Send a custom email
 
-You can take full control of sending an email verification email by providing the `deliverLoginInfo` function during `init` function call:
+:::important
+When using this callback, you must send the email yourself.
+:::
+
+You can take full control of sending the passwordless sign in/up email by providing the `createAndSendCustomEmail` function during `init` function call:
+
+- You can fully customize the email body, subject and the sender.
+- You can get the email address from the `email` parameter.
+- If you choose the OTP flow, the `userInputCode` will be defined and you should include it in the email, directing the user to enter it into the form on the device that started the sign in/up process.
+- If you choose the Magic Link flow, then the `urlWithLinkCode` will be defined and you should include it in the email, directing the user to visit it. The user will be signed in on the device that visits the link instead of the one that started the process.
+- If both flows are enabled, then you should include both options in the message, since the user can finish the sign in/up process both ways. 
+- You can use the `codeLifetime` parameter to tell the user how long they have until the code expires. Do not forget to convert it to seconds (or minutes).
+- Both the `preAuthSessionId` and the `context` parameters can be used for advanced customizations that need to fetch data from the database or access something saved earlier in the process.
+- Any errors thrown from this function will be ignored.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -37,18 +57,23 @@ supertokens.init({
     recipeList: [
         ^{recipeNameCapitalLetters}.init({
             // highlight-start
-            loginFeature: {
-                deliverLoginInfo: async (email, loginUrl, loginCode) => {
-                    let {id, email} = user;
-                    // TODO:
-                }
-            } 
+            createAndSendCustomEmail: async (input, context) => {
+                const {
+                    email,
+                    userInputCode,
+                    urlWithLinkCode,
+                    codeLifetime,
+                    preAuthSessionId,
+                } = input;
+                // TODO: Send the email
+            }
             // highlight-end
         }),
         Session.init()
     ]
 });
 ```
+
 </TabItem>
 <TabItem value="go">
 
@@ -57,81 +82,40 @@ supertokens.Init(supertokens.TypeInput{
     RecipeList: []supertokens.Recipe{
         ^{codeImportRecipeName}.Init(&^{goModelName}.TypeInput{
             // highlight-start
-            LoginFeature: &^{goModelName}.TypeInputLoginFeature{
-                DeliverLoginInfo: func(email string, loginUrl string, loginCode string) {
-                    // TODO: Create and send verification email
-                },
+            CreateAndSendCustomEmail: func(email string, userInputCode *string, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext)
+                // TODO: Send custom email
             },
             // highlight-end
         }),
     },
 })
 ```
+
 </TabItem>
-</BackendSDKTabs>
+<TabItem value="python">
 
-- You can get the user's email via the `user` input param.
-- Your email should direct the user to open the `loginUrl` link. This link is a full URL with the sign-in token. Clicking this link will sign the user in on the browser that opened the link.
-- If you enabled the OTP logins, your email should also include the `loginCode`. Your users could copy and paste this code to sing into your application. To see how to enable this flow, please see the quick-setup [guide](../quick-setup/frontend).
-- Any errors thrown from this function will be ignored.
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import ^{codeImportRecipeName}
 
-:::important
-When using this callback, you must send the email yourself.
-:::
+# highlight-start
+async def func (email: str, userInputCode: Union[str, None], urlWithLinkCode: Union[str, None], codeLifetime: int, preAuthSessionId: str, userContext: Union[dict, None]):
+    # TODO: Send custom email
+# highlight-end
 
-
-## Send a custom email
-
-You can take full control of sending an email verification email by providing the `deliverLoginInfo` function during `init` function call:
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
-
-```jsx
-supertokens.init({
-    supertokens: {...},
-    appInfo: {...},
-    recipeList: [
-        ^{recipeNameCapitalLetters}.init({
-            // highlight-start
-            loginFeature: {
-                deliverLoginInfo: async (email, loginUrl, loginCode) => {
-                    let {id, email} = user;
-                    // TODO:
-                }
-            } 
-            // highlight-end
-        }),
-        Session.init()
+init(
+    app_info=InputAppInfo(...),
+    supertokens_config=SupertokensConfig(...),
+    framework='...',
+    recipe_list=[
+        ^{codeImportRecipeName}.init(
+            # highlight-start
+            create_and_send_custom_email=func
+            # highlight-end
+        )
     ]
-});
+)
 ```
-</TabItem>
-<TabItem value="go">
 
-```go
-supertokens.Init(supertokens.TypeInput{
-    RecipeList: []supertokens.Recipe{
-        ^{codeImportRecipeName}.Init(&^{goModelName}.TypeInput{
-            // highlight-start
-            LoginFeature: &^{goModelName}.TypeInputLoginFeature{
-                DeliverLoginInfo: func(email string, loginUrl string, loginCode string) {
-                    // TODO: Create and send verification email
-                },
-            },
-            // highlight-end
-        }),
-    },
-})
-```
 </TabItem>
 </BackendSDKTabs>
-
-- You can get the user's email via the `user` input param.
-- Your email should direct the user to open the `loginUrl` link. This link is a full URL with the sign-in token. Clicking this link will sign the user in on the browser that opened the link.
-- If you enabled the OTP logins, your email should also include the `loginCode`. Your users could copy and paste this code to sing into your application. To see how to enable this flow, please see the quick-setup [guide](../quick-setup/frontend).
-- Any errors thrown from this function will be ignored.
-
-:::important
-When using this callback, you must send the email yourself.
-:::

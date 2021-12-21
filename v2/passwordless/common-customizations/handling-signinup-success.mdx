@@ -1,6 +1,6 @@
 ---
-id: handling-signin-success
-title: Post sign in callbacks
+id: handling-signinup-success
+title: Post signin / signup callbacks
 hide_title: true
 ---
 
@@ -8,7 +8,7 @@ import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import TabItem from '@theme/TabItem';
 
-# Post sign in callbacks
+# Post signin / signup callbacks
 
 ## 1) On the frontend
 
@@ -54,7 +54,7 @@ Please refer to [this page](../advanced-customizations/frontend-hooks/handle-eve
 
 ## 2) On the backend
 
-For this, you'll have to override the `signInPOST` API in the `init` function call.
+For this, you'll have to override the `consumeCodePOST` API in the `init` function call.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -70,22 +70,24 @@ SuperTokens.init({
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signInPOST: async (input) => {
+                        consumeCodePOST: async (input) => {
 
-                            if (originalImplementation.signInPOST === undefined) {
+                            if (originalImplementation.consumeCodePOST === undefined) {
                                 throw Error("Should never come here");
                             }
                             
-                            // First we call the original implementation of signInPOST.
-                            let response = await originalImplementation.signInPOST(input);
+                            // First we call the original implementation of consumeCodePOST.
+                            let response = await originalImplementation.consumeCodePOST(input);
 
                             // Post sign up response, we check if it was successful
                             if (response.status === "OK") {
-                                let { id, email } = response.user;
+                                let { id, email, phoneNumber } = response.user;
 
-                                // These are the input form fields values that the user used while signing in
-                                let formFields = input.formFields
-                                // TODO: post sign in logic
+                                if (response.createdNewUser) {
+                                    // TODO: post sign up logic
+                                } else {
+                                    // TODO: post sign in logic
+                                }
                             }
                             return response;
                         }
@@ -104,7 +106,7 @@ SuperTokens.init({
 ```go
 import (
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
-	"github.com/supertokens/supertokens-golang/recipe/passwordless/epmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -112,26 +114,26 @@ func main() {
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			passwordless.Init(&epmodels.TypeInput{
+			passwordless.Init(&plessmodels.TypeInput{
 				//highlight-start
-				Override: &epmodels.OverrideStruct{
-					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+				Override: &plessmodels.OverrideStruct{
+					APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 						// create a copy of the originalImplementation
 						newImplementation := originalImplementation
 
 						// override the sign in up API
-						newImplementation.SignInPOST = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (epmodels.SignInResponse, error) {
+						newImplementation.ConsumeCodePOST = func(formFields []plessmodels.TypeFormField, options plessmodels.APIOptions) (plessmodels.ConsumeCodeResponse, error) {
 
-							// First we call the original implementation of SignInUpPOST.
-							response, err := originalImplementation.SignInPOST(formFields, options)
+							// First we call the original implementation of ConsumeCodeUpPOST.
+							response, err := originalImplementation.ConsumeCodePOST(formFields, options)
 							if err != nil {
-								return epmodels.SignInResponse{}, err
+								return plessmodels.ConsumeCodeResponse{}, err
 							}
 
 							if response.OK != nil {
 								// sign in was successful
 
-								// user object contains the ID and email
+								// user object contains the ID and email or phone number
 								user := response.OK.User
 
 								// TODO: Post sign in logic.
@@ -151,6 +153,54 @@ func main() {
 		},
 	})
 }
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import passwordless
+
+# highlight-start
+def override_passwordless_apis(original_implementation):
+	original_consume_code_post = original_implementation.consume_code_post
+
+	async def consume_code_post(userInputCode: Union[str, None], deviceId: Union[str, None], preAuthSessionId: str, linkCode: Union[str, None], api_options: APIOptions):
+		# First we call the original implementation of consume_code_post.
+		response = await original_consume_code_post(provider, code, redirect_uri, auth_code_response, api_options)
+
+        # Post sign up response, we check if it was successful
+        if response.is_ok:
+            id = response.user.user_id
+            email = response.user.email
+            phone_number = response.user.phone_number
+
+            if response.created_new_user:
+                # TODO: Post sign up logic
+            else:
+                # TODO: Post sign in logic
+
+        return response
+	
+	original_implementation.consume_code_post = consume_code_post
+	return original_implementation
+# highlight-end
+
+init(
+    app_info=InputAppInfo(...),
+    supertokens_config=SupertokensConfig(...),
+    framework='...',
+    recipe_list=[
+        passwordless.init(
+			# highlight-start
+            override=passwordless.InputOverrideConfig(
+                apis=override_passwordless_apis
+            ),
+			# highlight-end            
+        )
+    ]
+)
 ```
 
 </TabItem>

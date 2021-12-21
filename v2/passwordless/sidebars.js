@@ -6,7 +6,6 @@ module.exports = {
       label: 'Quick setup',
       collapsed: false,
       items: [
-        "quick-setup/overview",
         "quick-setup/frontend",
         "quick-setup/backend",
         {
@@ -44,36 +43,16 @@ module.exports = {
         "common-customizations/sign-out",
         "common-customizations/redirecting-post-login",
         "common-customizations/get-user-info",
-        "common-customizations/handling-signup-success",
-        "common-customizations/handling-signin-success",
+        "common-customizations/handling-signinup-success",
       ],
     },
     {
       type: 'category',
       label: 'Common customizations',
       items: [
-        "common-customizations/customize-email",
         "common-customizations/redirect-to-auth",
-        {
-          type: 'category',
-          label: 'Sign Up Form',
-          items: [
-            "common-customizations/signup-form/adding-fields",
-            "common-customizations/signup-form/changing-field-labels",
-            "common-customizations/signup-form/field-validators",
-            "common-customizations/signup-form/toc-privacypolicy",
-            "common-customizations/signup-form/default-to-sign-up"
-          ],
-        },
-        {
-          type: "category",
-          label: "Sign In Form",
-          items: [
-            "common-customizations/signin-form/changing-field-labels",
-            "common-customizations/signin-form/field-validators",
-          ]
-        },
         "common-customizations/user-pagination",
+        "common-customizations/toc-privacypolicy",
         "common-customizations/embed-sign-in-up-form",
         {
           type: "category",
@@ -83,9 +62,11 @@ module.exports = {
             "common-customizations/user-roles/assigning-session-roles",
             "common-customizations/user-roles/reading-role-in-api",
             "common-customizations/user-roles/reading-role-in-frontend",
-            "common-customizations/user-roles/updating-session-roles"
+            "common-customizations/user-roles/updating-session-roles",
           ]
         },
+        "common-customizations/customize-email",
+        "common-customizations/customize-sms",
         {
           type: "category",
           label: "Sessions",
@@ -133,15 +114,6 @@ module.exports = {
           items: [
             "common-customizations/changing-base-path/website-base-path",
             "common-customizations/changing-base-path/api-base-path"
-          ]
-        },
-        {
-          type: "category",
-          label: "Multi Tenancy",
-          items: [
-            "common-customizations/multi-tenancy/about",
-            "common-customizations/multi-tenancy/one-login-many-sub-domains",
-            "common-customizations/multi-tenancy/one-login-per-sub-domain"
           ]
         },
         {

@@ -50,18 +50,24 @@ export const sendButtonAnalytics = (eventName: string, version = "v5", options?:
     });
 }
 
-export function recursiveMap(children: any, fn: any) {
+export function recursiveMap(children: any, fn: any, filterDescendants?: (comp: any) => boolean) {
     let result = React.Children.map(children, (child: any) => {
         if (!React.isValidElement(child) as any) {
             return fn(child);
         }
+        if (filterDescendants && !filterDescendants(child)) {
+            // We will later filter out the undefined entries from the array.
+            return undefined;
+        }
         if (child.props.children) {
             child = React.cloneElement(child, {
-                children: recursiveMap(child.props.children, fn)
+                children: recursiveMap(child.props.children, fn, filterDescendants)
             });
         }
         return child;
-    });
+    }).filter(child => child !== undefined); 
+    // We need to remove undefineds here, because they are not valid nodes and represents entries not matching the filter
+
     if (result.length === 1) {
         if (children.props === undefined || children.props.children === undefined ||
             !Array.isArray(children.props.children)) {

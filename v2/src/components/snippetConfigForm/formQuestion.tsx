@@ -1,17 +1,31 @@
-import React, { Children, PropsWithChildren, useState } from "react";
+import React, { PropsWithChildren, useCallback, useEffect, useState } from "react";
+
+type Option = {
+    title: string;
+    value: string;
+};
 
 export function Question(props: PropsWithChildren<{
-    question: string | (() => JSX.Element)
+    question: string | (() => JSX.Element);
+    options: Option[];
+    initialValue?: string;
+    onChange?: (title: string) => void;
 }>) {
+    const [selected, setSelected] = useState(props.initialValue);
 
-    const [selectedAnsTitle, setSelectedAnsTitle] = useState(undefined);
+    const onChange = useCallback(props.onChange, [props.onChange]);
+    useEffect(() => {
+        if (selected !== props.initialValue && onChange !== undefined) {
+            onChange(selected);
+        }
+    }, [onChange, selected]);
 
     let resubmitInfoClicked = (event) => {
         event.preventDefault();
-        setSelectedAnsTitle(undefined);
+        setSelected(undefined);
     }
 
-    if (selectedAnsTitle === undefined) {
+    if (selected === undefined) {
         return (
             <div
                 style={{
@@ -34,41 +48,14 @@ export function Question(props: PropsWithChildren<{
                     style={{
                         marginTop: "10px",
                         flexWrap: "wrap",
-                        display: "flex"
-                    }}>
-                    {React.Children.map(props.children, (child: any) => {
-                        return React.cloneElement(child, {
-                            ...child.props,
-                            onClick: () => {
-                                setSelectedAnsTitle(child.props.title)
-                            }
-                        });
-                    })}
-                </div>
-                <div
-                    style={{
-                        height: "25px",
-                        marginRight: "-5px",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        color: "#ffffff",
-                        fontSize: "12px",
                         display: "flex",
-                        fontStyle: "italic"
+                        paddingBottom: "20px"
                     }}>
-                    <span
-                        style={{ flex: 1 }} />
-                    Refresh the page to undo your selection
+                    {props.options.map(opt => (<Answer key={opt.value} title={opt.title} onClick={() => setSelected(opt.value)} />))}
                 </div>
             </div>
         );
     } else {
-        let childrenComponent = null;
-        React.Children.forEach(props.children, (child: any) => {
-            if (child.props.title === selectedAnsTitle) {
-                childrenComponent = child.props.children;
-            }
-        });
         return (
             <>
                 <div
@@ -103,11 +90,10 @@ export function Question(props: PropsWithChildren<{
                             style={{
                                 fontSize: "16px",
                             }}>
-                            The content below is shown based on your answer. <a href="" onClick={resubmitInfoClicked}>Resubmit answer?</a>
+                            You choose {props.options.find(opt => opt.value === selected).title}. <a href="" onClick={resubmitInfoClicked}>Resubmit answer?</a>
                         </div>
                     </div>
                 </div>
-                {childrenComponent}
             </>
         )
     }
@@ -119,5 +105,33 @@ type AnswerProps = {
 }
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
-    return <>{props.children}</>;
+    const [isMouseHover, setMouseHover] = useState(false)
+
+    return (
+        <span
+            onClick={props.onClick}
+            onMouseEnter={() => {
+                setMouseHover(true)
+            }}
+            onMouseLeave={() => {
+                setMouseHover(false)
+            }}
+            style={{
+                marginTop: "10px",
+                marginRight: "30px",
+                cursor: "pointer",
+                paddingLeft: "20px",
+                paddingRight: "20px",
+                paddingTop: "5px",
+                paddingBottom: "5px",
+                background: "#363636",
+                borderRadius: "6px",
+                borderColor: isMouseHover ? "#ff9933" : "#4d4d4d",
+                borderStyle: "solid",
+                borderWidth: "1px",
+                fontWeight: 600,
+            }}>
+            {props.title}
+        </span>
+    );
 }
