@@ -42,7 +42,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             appName: "",
             apiDomain: "",
             websiteDomain: "",
-            apiBasePath: "/auth",
+            apiBasePath: props.showNextJSAPIRouteCheckbox ? "/api/auth" : "/auth",
             websiteBasePath: "/auth",
             fieldErrors: {},
             nextJSApiRouteUsed: true
@@ -56,12 +56,16 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     ...JSON.parse(jsonState)
                 }
             }
-            this.state = {
-                ...this.state,
-                formSubmitted: this.canContinue(true)   // we reset this value because maybe the form is partially completed cause of another form completion which could have taken a subset of the info for this form.
-            }
+            
             window.addEventListener("appInfoFormFilled", this.anotherFormFilled);
         }
+    }
+
+    componentDidMount() {
+        this.setState(oldState => ({
+            ...oldState,
+            formSubmitted: this.canContinue(true)   // we reset this value because maybe the form is partially completed cause of another form completion which could have taken a subset of the info for this form.
+        }))
     }
 
     anotherFormFilled = () => {
@@ -215,8 +219,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                 color: "#ff6161"
                             }}>(* = Required)</span>
                     </div>
-                    <div>
-                        To learn more about appInfo, <a href="/docs/thirdpartyemailpassword/appinfo">read here</a>.
+                    <div style={{ marginTop: "10px" }}>
+                        To learn more about what these properties mean read <a href="/docs/thirdpartyemailpassword/appinfo">here</a>.
                     </div>
                     <div style={{ height: "25px" }} />
                     <div
@@ -374,6 +378,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
             const domainAsURL = new URL(domain);
 
+            // check if it is localhost and doesn't contain a port number
+            if (domainAsURL.hostname === "localhost" && domainAsURL.port === "") throw new Error();
 
             // check if it does not have any path value
             if (domainAsURL.pathname !== "/") throw new Error("domain_has_path_error");
@@ -409,20 +415,22 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         // validate apiDomain field
-        // the field is allowed to be empty
-        if (this.props.askForAPIDomain) {
+        if (this.props.askForAPIDomain && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))) {
             if (apiDomain.length > 0) {
                 const error = this.validateDomain(apiDomain, "apiDomain", "apiBasePath");// should not contain any path, use  instead.");
                 if (error.length > 0) validationErrors.apiDomain = error
+            } else {
+                validationErrors.apiDomain = "apiDomain cannot be empty.";
             }
         }
         
         // validate websiteDomain field
-        // the field is allowed to be empty
         if (this.props.askForWebsiteDomain) {
             if (websiteDomain.length > 0) {
                 const error = this.validateDomain(websiteDomain, "websiteDomain", "websiteBasePath");
                 if (error.length > 0) validationErrors.websiteDomain = error
+            } else {
+                validationErrors.websiteDomain = "websiteDomain cannot be empty.";
             }
         }
 
@@ -437,23 +445,28 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 } else {
                     validationErrors.apiBasePath = "Please enter a valid path."
                 }
-            } else {
-                validationErrors.apiBasePath = "apiBasePath cannot be empty."
             }
         }
 
         if (this.props.askForWebsiteBasePath) {
-            if (websiteBasePath.length === 0) {
-                validationErrors.websiteBasePath = "websiteBasePath cannot be empty."
-            } else if (!pathRegex.test(websiteBasePath)) {
+            if (websiteBasePath.length > 0 && !pathRegex.test(websiteBasePath)) {
                 validationErrors.websiteBasePath = "Please enter a valid path."
             }
         }
 
-        if (!preventErrorUpdateInState) this.setState(oldState => ({
-            ...oldState,
-            fieldErrors: validationErrors
-        }))
+        if (!preventErrorUpdateInState) {
+            this.setState(oldState => ({
+                ...oldState,
+                fieldErrors: validationErrors
+            }))
+        } else if (validationErrors.apiBasePath !== undefined) {
+            this.setState(oldState => ({
+                ...oldState,
+                fieldErrors: {
+                    apiBasePath: validationErrors.apiBasePath
+                }
+            }))
+        }
 
         return Object.keys(validationErrors).length === 0;
     }
