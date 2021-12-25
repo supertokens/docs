@@ -184,7 +184,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Advanced customizations',
+      label: 'Advanced customizations / Overrides',
       items: [
         "advanced-customizations/overview",
         {
