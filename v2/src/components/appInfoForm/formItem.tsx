@@ -44,14 +44,16 @@ export default function FormItem(props: FormItemType) {
         }
 
         return () => {
-            window.removeEventListener('scroll', handleMouseOutIcon);
-
-            if (isMobile || isTablet) {
-                questionIconRef.current.removeEventListener('click', handleMouseClickIcon);
-                window.removeEventListener('click', handleMouseClickOutIcon);
-            } else {
-                questionIconRef.current.removeEventListener('mouseover', handleMouseOverIcon);
-                questionIconRef.current.removeEventListener('mouseout', handleMouseOutIcon);
+            if (questionIconRef.current !== undefined && questionIconRef.current !== null) {
+                window.removeEventListener('scroll', handleMouseOutIcon);
+    
+                if (isMobile || isTablet) {
+                    questionIconRef.current.removeEventListener('click', handleMouseClickIcon);
+                    window.removeEventListener('click', handleMouseClickOutIcon);
+                } else {
+                    questionIconRef.current.removeEventListener('mouseover', handleMouseOverIcon);
+                    questionIconRef.current.removeEventListener('mouseout', handleMouseOutIcon);
+                }
             }
         }
     }, [])

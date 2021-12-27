@@ -245,6 +245,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         {this.props.askForAPIDomain
                             && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))
                             && <FormItem
+                            required
                             index={1}
                             title="API Domain"
                             placeholder="e.g. http://localhost:8080"
@@ -254,16 +255,16 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             error={this.state.fieldErrors.apiDomain}
                         />}
                         {this.props.askForAPIBasePath && <FormItem
-                            required
                             index={3}
                             title="API Base Path"
                             placeholder="e.g. /auth"
                             onChange={(value) => this.updateFieldStateAndRemoveError("apiBasePath", value)}
-                            explanation="This is the base path of your API."
+                            explanation="SuperTokens will expose it's APIs scoped by this base API path."
                             value={this.state.apiBasePath}
                             error={this.state.fieldErrors.apiBasePath}
                             />}
                         {this.props.askForWebsiteDomain && <FormItem
+                            required
                             index={2}
                             title="Website Domain"
                             placeholder="e.g. http://localhost:3000"
@@ -273,12 +274,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             error={this.state.fieldErrors.websiteDomain}
                         />}
                         {this.props.askForWebsiteBasePath && <FormItem
-                            required
                             index={4}
                             title="Website Base Path"
                             placeholder="e.g. /auth"
                             onChange={(value) => this.updateFieldStateAndRemoveError("websiteBasePath", value)}
-                            explanation="This is the base path of your website."
+                            explanation="SuperTokens UI will be shown on this website route."
                             value={this.state.websiteBasePath}
                             error={this.state.fieldErrors.websiteBasePath}
                         />}
@@ -295,10 +295,24 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     type="checkbox"
                                     checked={this.state.nextJSApiRouteUsed}
                                     onChange={() => {
-                                        this.setState(oldState => ({
-                                            ...oldState,
-                                            nextJSApiRouteUsed: !oldState.nextJSApiRouteUsed
-                                        }))
+                                        this.setState(oldState => {
+                                            const toggledNextJSApiRouteUsed = !oldState.nextJSApiRouteUsed;
+
+                                            let defaultApiBasePath = oldState.apiBasePath;
+
+                                            // nextjs api route used checkbox is toggled true
+                                            if (toggledNextJSApiRouteUsed && defaultApiBasePath === "/auth") {
+                                                defaultApiBasePath = "/api/auth";
+                                            } else if (!toggledNextJSApiRouteUsed && defaultApiBasePath === "/api/auth") {
+                                                defaultApiBasePath = "/auth";
+                                            }
+
+                                            return {
+                                                ...oldState,
+                                                nextJSApiRouteUsed: toggledNextJSApiRouteUsed,
+                                                apiBasePath: defaultApiBasePath
+                                            }
+                                        })
                                     }}
                                     style={{
                                         marginRight: "10px"
@@ -336,7 +350,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     getDomainOriginOrEmptyString = (domain: string) => {
         try {
-            return new URL(domain.trim()).origin;
+            return new URL(new NormalisedURLDomain(domain.trim()).getAsStringDangerous()).origin;
         } catch {
             return "";
         }
@@ -371,23 +385,19 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         })
     }
 
+    // returns empty string if the domain is valid
+    // returns an error if the domain is not valid
     validateDomain = (domain: string, fieldName: string, pathErrorAlternateFieldName: string) => {
         try {
-            // check if the protocols are correct
-            if (!domain.startsWith("http://") && !domain.startsWith("https://")) throw new Error("invalid_protocol_error");
+            const normalisedURLDomain = new NormalisedURLDomain(domain);
 
-            const domainAsURL = new URL(domain);
-
-            // check if it is localhost and doesn't contain a port number
-            if (domainAsURL.hostname === "localhost" && domainAsURL.port === "") throw new Error();
+            const domainAsURL = new URL(normalisedURLDomain.getAsStringDangerous());
 
             // check if it does not have any path value
-            if (domainAsURL.pathname !== "/") throw new Error("domain_has_path_error");
+            if (domainAsURL.pathname !== "/") return `${fieldName} should not contain any path, use ${pathErrorAlternateFieldName} instead.`;
 
             return ""
-        } catch (error) {
-            if (error.message === "invalid_protocol_error") return `${fieldName} should have a valid protocol.`;
-            if (error.message === "domain_has_path_error") return `${fieldName} should not contain any path, use ${pathErrorAlternateFieldName} instead.`;
+        } catch {
             return "Please enter a valid domain.";
         }
     }
@@ -417,7 +427,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         // validate apiDomain field
         if (this.props.askForAPIDomain && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))) {
             if (apiDomain.length > 0) {
-                const error = this.validateDomain(apiDomain, "apiDomain", "apiBasePath");// should not contain any path, use  instead.");
+                const error = this.validateDomain(apiDomain, "apiDomain", "apiBasePath");
                 if (error.length > 0) validationErrors.apiDomain = error
             } else {
                 validationErrors.apiDomain = "apiDomain cannot be empty.";
