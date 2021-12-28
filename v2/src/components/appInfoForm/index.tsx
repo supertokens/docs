@@ -146,60 +146,37 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         })
     }
 
-    handleNextJSAPIRouteUsedToggle = () => {
+    handleNextNetlifyRouteToggle = (fieldName: string, pathPrefix: string) => {
         this.setState(oldState => {
-            const toggledNextJSApiRouteUsed = !oldState.nextJSApiRouteUsed;
+            const toggledNextJSApiRouteUsed = !oldState[fieldName];
 
-            let defaultApiBasePath = oldState.apiBasePath;
+            let oldApiBasePath = oldState.apiBasePath;
 
-            // netlify api route used checkbox is toggled true
-            if (toggledNextJSApiRouteUsed && !defaultApiBasePath.startsWith("/api")) {
-                if (defaultApiBasePath === "" || defaultApiBasePath === "/") {
-                    defaultApiBasePath = "/api/auth";
+            const apiBasePathWithPrefix = oldApiBasePath.startsWith(pathPrefix)
+
+            // if the checkbox is toggled true
+            if (toggledNextJSApiRouteUsed && !apiBasePathWithPrefix) {
+                if (oldApiBasePath === "" || oldApiBasePath === "/") {
+                    oldApiBasePath = `${pathPrefix}/auth`;
                 } else {
-                    defaultApiBasePath = `/api${defaultApiBasePath}`;
+                    oldApiBasePath = `${pathPrefix}${oldApiBasePath}`;
                 }
-            } else if (!toggledNextJSApiRouteUsed && defaultApiBasePath.startsWith("/api")) {
-                // if the route starts with `/.netlify/functions`, splitting it by `/.netlify/functions`
-                // will give us an array with the route without `/.netlify/functions` at index 1
-                defaultApiBasePath = defaultApiBasePath.split("/api")[1];
+            } else if (!toggledNextJSApiRouteUsed && apiBasePathWithPrefix) {
+                // if the checkbox is toggled to false
 
-                if (defaultApiBasePath === "" || defaultApiBasePath === "/") defaultApiBasePath = "/auth"
+                // if the route starts with pathPrefix, splitting it by pathPrefix
+                // will give us an array of 2 elements with the route without the pathPrefix at index 1
+                oldApiBasePath = oldApiBasePath.split(pathPrefix)[1];
+
+                if (oldApiBasePath === undefined || oldApiBasePath === "" || oldApiBasePath === "/") {
+                    oldApiBasePath = "/auth";
+                }
             }
 
             return {
                 ...oldState,
-                nextJSApiRouteUsed: toggledNextJSApiRouteUsed,
-                apiBasePath: defaultApiBasePath
-            }
-        })
-    }
-
-    handleNetlifyAPIRouteUsedToggle = () => {
-        this.setState(oldState => {
-            const toggledNetlifyApiRouteUsed = !oldState.netlifyApiRouteUsed;
-
-            let defaultApiBasePath = oldState.apiBasePath;
-
-            // netlify api route used checkbox is toggled true
-            if (toggledNetlifyApiRouteUsed && !defaultApiBasePath.startsWith("/.netlify/functions/")) {
-                if (defaultApiBasePath === "" || defaultApiBasePath === "/") {
-                    defaultApiBasePath = "/.netlify/functions/auth";
-                } else {
-                    defaultApiBasePath = `/.netlify/functions${defaultApiBasePath}`;
-                }
-            } else if (!toggledNetlifyApiRouteUsed && defaultApiBasePath.startsWith("/.netlify/functions")) {
-                // if the route starts with `/.netlify/functions`, splitting it by `/.netlify/functions`
-                // will give us an array with the route without `/.netlify/functions` at index 1
-                defaultApiBasePath = defaultApiBasePath.split("/.netlify/functions")[1];
-
-                if (defaultApiBasePath === "" || defaultApiBasePath === "/") defaultApiBasePath = "/auth"
-            }
-
-            return {
-                ...oldState,
-                netlifyApiRouteUsed: toggledNetlifyApiRouteUsed,
-                apiBasePath: defaultApiBasePath
+                [fieldName]: toggledNextJSApiRouteUsed,
+                apiBasePath: oldApiBasePath
             }
         })
     }
@@ -375,7 +352,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     name="nextjs-api-route"
                                     type="checkbox"
                                     checked={this.state.nextJSApiRouteUsed}
-                                    onChange={this.handleNextJSAPIRouteUsedToggle}
+                                    onChange={() => this.handleNextNetlifyRouteToggle("nextJSApiRouteUsed", "/api")}
                                     style={{
                                         marginRight: "10px"
                                     }}
@@ -397,7 +374,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     name="nextjs-api-route"
                                     type="checkbox"
                                     checked={this.state.netlifyApiRouteUsed}
-                                    onChange={this.handleNetlifyAPIRouteUsedToggle}
+                                    onChange={() => this.handleNextNetlifyRouteToggle("netlifyApiRouteUsed", "/.netlify/functions")}
                                     style={{
                                         marginRight: "10px"
                                     }}
