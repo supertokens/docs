@@ -10,7 +10,8 @@ type Props = {
     askForWebsiteDomain: boolean
     askForAPIBasePath: boolean,
     askForWebsiteBasePath: boolean,
-    showNextJSAPIRouteCheckbox: boolean
+    showNextJSAPIRouteCheckbox: boolean,
+    showNetlifyAPIRouteCheckbox: boolean
     // TODO: Add more fields here
 };
 
@@ -24,7 +25,8 @@ type State = {
     fieldErrors: {
         [key: string]: string
     },
-    nextJSApiRouteUsed: boolean
+    nextJSApiRouteUsed: boolean,
+    netlifyApiRouteUsed: boolean
     // TODO: Add more fields here
 };
 
@@ -42,10 +44,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             appName: "",
             apiDomain: "",
             websiteDomain: "",
-            apiBasePath: props.showNextJSAPIRouteCheckbox ? "/api/auth" : "/auth",
+            apiBasePath: "/auth",
             websiteBasePath: "/auth",
             fieldErrors: {},
-            nextJSApiRouteUsed: true
+            nextJSApiRouteUsed: true,
+            netlifyApiRouteUsed: true
         }
 
         if (typeof window !== 'undefined') {
@@ -62,10 +65,30 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     }
 
     componentDidMount() {
+        // we reset this value because maybe the form is partially completed cause of another form completion
+        // which could have taken a subset of the info for this form.
+        const canContinue = this.canContinue(true)
+
         this.setState(oldState => ({
             ...oldState,
-            formSubmitted: this.canContinue(true)   // we reset this value because maybe the form is partially completed cause of another form completion which could have taken a subset of the info for this form.
-        }))
+            formSubmitted: canContinue
+        }), () => {
+            this.setDefaultApiBasePathBasedOnToggles()
+        })
+    }
+
+    setDefaultApiBasePathBasedOnToggles = () => {
+        let defaultApiBasePath = "/auth";
+
+        if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed) {
+            defaultApiBasePath = "/api/auth";
+        } else if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed) {
+            defaultApiBasePath = "/.netlify/functions/auth";
+        }
+
+        this.setState({
+            apiBasePath: defaultApiBasePath
+        })
     }
 
     anotherFormFilled = () => {
@@ -120,6 +143,64 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 ...oldState,
                 fieldErrors: errors
             }))
+        })
+    }
+
+    handleNextJSAPIRouteUsedToggle = () => {
+        this.setState(oldState => {
+            const toggledNextJSApiRouteUsed = !oldState.nextJSApiRouteUsed;
+
+            let defaultApiBasePath = oldState.apiBasePath;
+
+            // netlify api route used checkbox is toggled true
+            if (toggledNextJSApiRouteUsed && !defaultApiBasePath.startsWith("/api")) {
+                if (defaultApiBasePath === "" || defaultApiBasePath === "/") {
+                    defaultApiBasePath = "/api/auth";
+                } else {
+                    defaultApiBasePath = `/api${defaultApiBasePath}`;
+                }
+            } else if (!toggledNextJSApiRouteUsed && defaultApiBasePath.startsWith("/api")) {
+                // if the route starts with `/.netlify/functions`, splitting it by `/.netlify/functions`
+                // will give us an array with the route without `/.netlify/functions` at index 1
+                defaultApiBasePath = defaultApiBasePath.split("/api")[1];
+
+                if (defaultApiBasePath === "" || defaultApiBasePath === "/") defaultApiBasePath = "/auth"
+            }
+
+            return {
+                ...oldState,
+                nextJSApiRouteUsed: toggledNextJSApiRouteUsed,
+                apiBasePath: defaultApiBasePath
+            }
+        })
+    }
+
+    handleNetlifyAPIRouteUsedToggle = () => {
+        this.setState(oldState => {
+            const toggledNetlifyApiRouteUsed = !oldState.netlifyApiRouteUsed;
+
+            let defaultApiBasePath = oldState.apiBasePath;
+
+            // netlify api route used checkbox is toggled true
+            if (toggledNetlifyApiRouteUsed && !defaultApiBasePath.startsWith("/.netlify/functions/")) {
+                if (defaultApiBasePath === "" || defaultApiBasePath === "/") {
+                    defaultApiBasePath = "/.netlify/functions/auth";
+                } else {
+                    defaultApiBasePath = `/.netlify/functions${defaultApiBasePath}`;
+                }
+            } else if (!toggledNetlifyApiRouteUsed && defaultApiBasePath.startsWith("/.netlify/functions")) {
+                // if the route starts with `/.netlify/functions`, splitting it by `/.netlify/functions`
+                // will give us an array with the route without `/.netlify/functions` at index 1
+                defaultApiBasePath = defaultApiBasePath.split("/.netlify/functions")[1];
+
+                if (defaultApiBasePath === "" || defaultApiBasePath === "/") defaultApiBasePath = "/auth"
+            }
+
+            return {
+                ...oldState,
+                netlifyApiRouteUsed: toggledNetlifyApiRouteUsed,
+                apiBasePath: defaultApiBasePath
+            }
         })
     }
 
@@ -294,32 +375,35 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     name="nextjs-api-route"
                                     type="checkbox"
                                     checked={this.state.nextJSApiRouteUsed}
-                                    onChange={() => {
-                                        this.setState(oldState => {
-                                            const toggledNextJSApiRouteUsed = !oldState.nextJSApiRouteUsed;
-
-                                            let defaultApiBasePath = oldState.apiBasePath;
-
-                                            // nextjs api route used checkbox is toggled true
-                                            if (toggledNextJSApiRouteUsed && defaultApiBasePath === "/auth") {
-                                                defaultApiBasePath = "/api/auth";
-                                            } else if (!toggledNextJSApiRouteUsed && defaultApiBasePath === "/api/auth") {
-                                                defaultApiBasePath = "/auth";
-                                            }
-
-                                            return {
-                                                ...oldState,
-                                                nextJSApiRouteUsed: toggledNextJSApiRouteUsed,
-                                                apiBasePath: defaultApiBasePath
-                                            }
-                                        })
-                                    }}
+                                    onChange={this.handleNextJSAPIRouteUsedToggle}
                                     style={{
                                         marginRight: "10px"
                                     }}
                                 />
                                 <span>
                                     I am using NextJS' <a target="_blank" href="https://nextjs.org/docs/api-routes/introduction">API route</a>
+                                </span>
+                            </label>
+                        )}
+
+                        {this.props.showNetlifyAPIRouteCheckbox && (
+                            <label style={{
+                                display: "flex",
+                                alignItems: "center",
+                                cursor: "pointer",
+                                width: "fit-content"
+                            }}>
+                                <input
+                                    name="nextjs-api-route"
+                                    type="checkbox"
+                                    checked={this.state.netlifyApiRouteUsed}
+                                    onChange={this.handleNetlifyAPIRouteUsedToggle}
+                                    style={{
+                                        marginRight: "10px"
+                                    }}
+                                />
+                                <span>
+                                    I am using Netlify Serverless Functions
                                 </span>
                             </label>
                         )}
@@ -417,7 +501,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         } = {}
 
         // regex for path
-        const pathRegex = /^\/$|^(\/\w+)+$/
+        const pathRegex = /^\/$|^(\/\w+)+$/;
 
         // validate appName field
         if (this.props.askForAppName && appName.length === 0) {
@@ -449,7 +533,23 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 if (pathRegex.test(apiBasePath)) {
                     // if nextJS api route checkbox is set to true
                     // the api base path can be `/api` or `/api/some/path`
-                    if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed && !(apiBasePath === "/api" || apiBasePath.startsWith("/api/"))) {
+                    if (
+                        this.props.showNextJSAPIRouteCheckbox
+                        && this.state.nextJSApiRouteUsed
+                        && !(apiBasePath === "/api" || apiBasePath.startsWith("/api/"))
+                    ) {
+                        validationErrors.apiBasePath = "Please enter a valid path."
+                    }
+                } else if (
+                    this.props.showNetlifyAPIRouteCheckbox
+                    && this.state.netlifyApiRouteUsed
+                    && apiBasePath.startsWith("/.netlify/functions"
+                )) {
+                    // if the netlify route checkbox is set to true
+                    // the api base path can be `/.netlify/functions/*`
+
+                    const path = apiBasePath.split("/.netlify/functions")[1];
+                    if (!pathRegex.test(path) || path === "/") {
                         validationErrors.apiBasePath = "Please enter a valid path."
                     }
                 } else {
@@ -473,7 +573,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             this.setState(oldState => ({
                 ...oldState,
                 fieldErrors: {
-                    apiBasePath: validationErrors.apiBasePath
+                    apiBasePath: ""
                 }
             }))
         }
