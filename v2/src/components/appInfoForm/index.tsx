@@ -78,17 +78,19 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     }
 
     setDefaultApiBasePathBasedOnToggles = () => {
-        let defaultApiBasePath = "/auth";
-
-        if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed) {
-            defaultApiBasePath = "/api/auth";
-        } else if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed) {
-            defaultApiBasePath = "/.netlify/functions/auth";
+        if (this.state.apiBasePath === "/auth") {
+            let defaultApiBasePath = this.state.apiBasePath;
+    
+            if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed) {
+                defaultApiBasePath = "/api/auth";
+            } else if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed) {
+                defaultApiBasePath = "/.netlify/functions/auth";
+            }
+    
+            this.setState({
+                apiBasePath: defaultApiBasePath
+            })
         }
-
-        this.setState({
-            apiBasePath: defaultApiBasePath
-        })
     }
 
     anotherFormFilled = () => {
