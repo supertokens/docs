@@ -423,11 +423,22 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         this.setState(oldState => {
+            const websiteDomain = this.props.askForWebsiteDomain ? this.getDomainOriginOrEmptyString(this.state.websiteDomain) : oldState.websiteDomain;
+            let apiDomain = oldState.apiDomain;
+
+            // if the nextjs route is set to true
+            // then we set apiDomain to the same value as website domain
+            if (this.props.askForAPIDomain && this.props.showNextJSAPIRouteCheckbox && oldState.nextJSApiRouteUsed) {
+                apiDomain = websiteDomain;
+            } else if (this.props.askForAPIDomain) {
+                apiDomain = this.getDomainOriginOrEmptyString(this.state.apiDomain);
+            }
+
             return {
                 // TODO: Add more fields here.
                 ...oldState,
-                apiDomain: this.props.askForAPIDomain ? this.getDomainOriginOrEmptyString(this.state.apiDomain) : oldState.apiDomain,
-                websiteDomain: this.props.askForWebsiteDomain ? this.getDomainOriginOrEmptyString(this.state.websiteDomain) : oldState.websiteDomain,
+                apiDomain,
+                websiteDomain,
                 appName: this.props.askForAppName ? this.state.appName.trim() : oldState.appName,
                 apiBasePath: this.props.askForAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath,
                 websiteBasePath: this.props.askForWebsiteBasePath ? this.state.websiteBasePath.trim() : oldState.websiteBasePath,
@@ -545,13 +556,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             this.setState(oldState => ({
                 ...oldState,
                 fieldErrors: validationErrors
-            }))
-        } else if (validationErrors.apiBasePath !== undefined) {
-            this.setState(oldState => ({
-                ...oldState,
-                fieldErrors: {
-                    apiBasePath: ""
-                }
             }))
         }
 
