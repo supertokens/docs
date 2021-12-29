@@ -7,9 +7,7 @@ import { recursiveMap } from "../utils";
 type Props = {
     askForAppName: boolean,
     askForAPIDomain: boolean,
-    askForWebsiteDomain: boolean
-    askForAPIBasePath: boolean,
-    askForWebsiteBasePath: boolean,
+    askForWebsiteDomain: boolean,
     showNextJSAPIRouteCheckbox: boolean,
     showNetlifyAPIRouteCheckbox: boolean
     // TODO: Add more fields here
@@ -243,10 +241,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             if (this.props.askForWebsiteDomain) {
                                 c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
                             }
-                            if (this.props.askForAPIBasePath) {
+                            if (this.props.askForAPIDomain) {
                                 c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
                             }
-                            if (this.props.askForWebsiteBasePath) {
+                            if (this.props.askForWebsiteDomain) {
                                 c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
                             }
                         }
@@ -314,7 +312,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             value={this.state.apiDomain}
                             error={this.state.fieldErrors.apiDomain}
                         />}
-                        {this.props.askForAPIBasePath && <FormItem
+                        {this.props.askForAPIDomain && <FormItem
                             index={3}
                             title="API Base Path"
                             placeholder="e.g. /auth"
@@ -333,7 +331,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             value={this.state.websiteDomain}
                             error={this.state.fieldErrors.websiteDomain}
                         />}
-                        {this.props.askForWebsiteBasePath && <FormItem
+                        {this.props.askForWebsiteDomain && <FormItem
                             index={4}
                             title="Website Base Path"
                             placeholder="e.g. /auth"
@@ -442,8 +440,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 apiDomain,
                 websiteDomain,
                 appName: this.props.askForAppName ? this.state.appName.trim() : oldState.appName,
-                apiBasePath: this.props.askForAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath,
-                websiteBasePath: this.props.askForWebsiteBasePath ? this.state.websiteBasePath.trim() : oldState.websiteBasePath,
+                apiBasePath: this.props.askForAPIDomain ? this.state.apiBasePath.trim() : oldState.apiBasePath,
+                websiteBasePath: this.props.askForWebsiteDomain ? this.state.websiteBasePath.trim() : oldState.websiteBasePath,
                 formSubmitted: true
             }
         }, () => {
@@ -518,7 +516,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }
 
-        if (this.props.askForAPIBasePath) {
+        if (this.props.askForAPIDomain) {
             if (apiBasePath.length > 0) {
                 if (pathRegex.test(apiBasePath)) {
                     // if nextJS api route checkbox is set to true
@@ -548,7 +546,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }
 
-        if (this.props.askForWebsiteBasePath) {
+        if (this.props.askForWebsiteDomain) {
             if (websiteBasePath.length > 0 && !pathRegex.test(websiteBasePath)) {
                 validationErrors.websiteBasePath = "Please enter a valid path."
             }
