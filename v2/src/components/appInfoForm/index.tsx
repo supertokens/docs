@@ -9,7 +9,8 @@ type Props = {
     askForAPIDomain: boolean,
     askForWebsiteDomain: boolean,
     showNextJSAPIRouteCheckbox: boolean,
-    showNetlifyAPIRouteCheckbox: boolean
+    showNetlifyAPIRouteCheckbox: boolean,
+    addNetlifyPathExplanation: boolean
     // TODO: Add more fields here
 };
 
@@ -198,6 +199,17 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         })
     }
 
+    getNetlifyPathExplanationString = () => {
+        if (!this.state.netlifyApiRouteUsed) return <></>;
+
+        const netlifyPrefix = "/.netlify/functions";
+        return (
+            <>
+                The value of <code>apiBasePath</code> should be <code>"{this.state.apiBasePath}"</code>. This is because Netlify exposes the serverless functions via <code>{netlifyPrefix}/*</code> and we further scope the auth related APIs by adding a <code>{this.state.apiBasePath.substring(netlifyPrefix.length)}</code>, resulting in the above full path.
+            </>
+        );
+    }
+
     render() {
         if (this.state.formSubmitted) {
             return (
@@ -263,6 +275,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             }
                             if (this.props.askForWebsiteDomain) {
                                 c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
+                            }
+                            if (this.props.addNetlifyPathExplanation) {
+                                if (c === "^{form_netlifyPathExplanation}") {
+                                    c = this.getNetlifyPathExplanationString()
+                                }
                             }
                         }
                         return c;
