@@ -75,20 +75,38 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         })
     }
 
+    replacePathPrefixWithNewPrefix = (path: string, oldPrefix: string, newPrefix: string) => {
+        if (path.startsWith(oldPrefix)) {
+            const pathWithoutPrefix = path.substring(oldPrefix.length);
+            return `${newPrefix}${pathWithoutPrefix}`;
+        } else {
+            return `${newPrefix}${path}`;
+        }
+    }
+
     setDefaultApiBasePathBasedOnToggles = () => {
-        if (this.state.apiBasePath === "/auth") {
-            let defaultApiBasePath = this.state.apiBasePath;
-    
+        let defaultApiBasePath = this.state.apiBasePath;
+        
+        if (defaultApiBasePath === "/auth") {
             if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed) {
                 defaultApiBasePath = "/api/auth";
             } else if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed) {
                 defaultApiBasePath = "/.netlify/functions/auth";
             }
-    
-            this.setState({
-                apiBasePath: defaultApiBasePath
-            })
+        } else {
+            const nextJSPrefix = "/api";
+            const NetlifyPrefix = "/.netlify/functions";
+
+            if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed && !defaultApiBasePath.startsWith(nextJSPrefix)) {
+                defaultApiBasePath = this.replacePathPrefixWithNewPrefix(defaultApiBasePath, "/.netlify/functions", "/api");
+            } else if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed && !defaultApiBasePath.startsWith(NetlifyPrefix)) {
+                defaultApiBasePath = this.replacePathPrefixWithNewPrefix(defaultApiBasePath, "/api", "/.netlify/functions");
+            }
         }
+
+        this.setState({
+            apiBasePath: defaultApiBasePath
+        })
     }
 
     anotherFormFilled = () => {
@@ -164,10 +182,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             } else if (!toggledNextJSApiRouteUsed && apiBasePathWithPrefix) {
                 // if the checkbox is toggled to false
 
-                // if the route starts with pathPrefix, splitting it by pathPrefix
-                // will give us an array of 2 elements with the route without the pathPrefix at index 1
-                oldApiBasePath = oldApiBasePath.split(pathPrefix)[1];
-
+                // get the path without the prefix
+                oldApiBasePath = oldApiBasePath.substring(pathPrefix.length);
+                
                 if (oldApiBasePath === undefined || oldApiBasePath === "" || oldApiBasePath === "/") {
                     oldApiBasePath = "/auth";
                 }
@@ -526,6 +543,13 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         && this.state.nextJSApiRouteUsed
                         && !(apiBasePath === "/api" || apiBasePath.startsWith("/api/"))
                     ) {
+                        validationErrors.apiBasePath = "Please enter a valid path."
+                    } else if (
+                        this.props.showNetlifyAPIRouteCheckbox
+                        && this.state.netlifyApiRouteUsed
+                    ) {
+                        // this will only be true when the apiBasePath is set in another form
+                        // and the form is then accessed in any netlify docs
                         validationErrors.apiBasePath = "Please enter a valid path."
                     }
                 } else if (
