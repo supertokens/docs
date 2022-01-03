@@ -69,6 +69,7 @@ module.exports = {
           ],
         },
         "common-customizations/user-pagination",
+        "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         {
@@ -183,7 +184,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Advanced customizations',
+      label: 'Advanced customizations / Overrides',
       items: [
         "advanced-customizations/overview",
         {
