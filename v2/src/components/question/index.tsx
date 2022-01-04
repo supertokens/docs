@@ -119,5 +119,34 @@ type AnswerProps = {
 }
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
-    return <>{props.children}</>;
+
+    const [isMouseHover, setMouseHover] = useState(false)
+
+    return (
+        <span
+            onClick={props.onClick}
+            onMouseEnter={() => {
+                setMouseHover(true)
+            }}
+            onMouseLeave={() => {
+                setMouseHover(false)
+            }}
+            style={{
+                marginTop: "10px",
+                marginRight: "30px",
+                cursor: "pointer",
+                paddingLeft: "20px",
+                paddingRight: "20px",
+                paddingTop: "5px",
+                paddingBottom: "5px",
+                background: "#363636",
+                borderRadius: "6px",
+                borderColor: isMouseHover ? "#ff9933" : "#4d4d4d",
+                borderStyle: "solid",
+                borderWidth: "1px",
+                fontWeight: 600,
+            }}>
+            {props.title}
+        </span>
+    );
 }
