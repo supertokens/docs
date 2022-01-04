@@ -2,6 +2,15 @@ import React, { PropsWithChildren } from "react";
 import { Question } from "./formQuestion";
 import { recursiveMap } from "../utils";
 
+/**
+ * Difference between this and questions component:
+ *   - Allows you to ask multiple questions one after the other
+ *   - Saves the answers in localstorage and can be edited (like in appInfo component)
+ *   - Allows children to have replaceable content based on the answer provided by the user.
+ *   - It also displays answer post submission.
+ * 
+ */
+
 type QuestionInfo = {
   id: string;
   title: string;
@@ -118,10 +127,9 @@ export default class SnippetConfigForm extends React.PureComponent<PropsWithChil
               return (
                 comp.props.originalType !== ConditionalSection ||
                 Object.entries(comp.props.conditions).every(
-                  ([questionId, value]) =>
-                    {
-                      return this.state.answers[this.props.questions.findIndex((info) => info.id === questionId)] === value;
-                    },
+                  ([questionId, value]) => {
+                    return this.state.answers[this.props.questions.findIndex((info) => info.id === questionId)] === value;
+                  },
                 )
               );
             },
