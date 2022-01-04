@@ -195,20 +195,6 @@ module.exports = {
       ],
     },
     {
-      type: 'category',
-      label: 'GraphQL',
-      customProps: {
-        logoUrl: '/img/logos/graphql-logo.png'
-      },
-      items: [
-        "graphql-integration/backend-setup",
-        "graphql-integration/frontend-setup",
-        "graphql-integration/making-requests",
-        "graphql-integration/access-session-info",
-        "graphql-integration/manual-session-management",
-      ],
-    },
-    {
       type: 'doc',
       id: "using-with-faunadb",
       customProps: {
