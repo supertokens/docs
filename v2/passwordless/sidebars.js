@@ -204,6 +204,7 @@ module.exports = {
 
       ],
     },
+    "flow_diagram",
     {
       type: 'category',
       label: 'NextJS',
