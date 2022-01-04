@@ -3,7 +3,7 @@ import React from 'react';
 import SnippetQuestionForm from "./index";
 import { passwordlessQuestions } from "./passwordlessQuestions";
 
-export function PasswordlessFrontendForm(props) {
+export function PasswordlessBackendForm(props) {
   return (
     <SnippetQuestionForm questions={[passwordlessQuestions.contactMethod, passwordlessQuestions.flowType]}>
       {props.children}
