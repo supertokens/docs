@@ -325,6 +325,16 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'RedwoodJS',
+      customProps: {
+        logoUrl: '/img/logos/redwood-logo.png',
+      },
+      items: [
+        "redwood/about"
+      ],
+    },
+    {
+      type: 'category',
       label: 'Serverless Deployment',
       items: [
         {
