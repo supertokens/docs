@@ -203,10 +203,10 @@ module.exports = {
       },
       items: [
         "graphql-integration/backend-setup",
-        "graphql-integration/frontend-setup",
         "graphql-integration/making-requests",
         "graphql-integration/access-session-info",
-        "graphql-integration/manual-session-management",
+        "graphql-integration/create-session",
+        "graphql-integration/revoke-session",
       ],
     },
     {
