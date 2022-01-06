@@ -207,6 +207,29 @@ module.exports = {
     "flow_diagram",
     {
       type: 'category',
+      label: 'Hasura',
+      customProps: {
+        logoUrl: '/img/logos/hasura-logo.png'
+      },
+      items: [
+        "hasura-integration/with-jwt",
+        "hasura-integration/without-jwt",
+      ],
+    },
+    {
+      type: 'category',
+      label: 'GraphQL',
+      customProps: {
+        logoUrl: '/img/logos/graphql-logo.png'
+      },
+      items: [
+        "graphql-integration/backend-setup",
+        "graphql-integration/making-requests",
+        "graphql-integration/access-session-info",
+      ],
+    },
+    {
+      type: 'category',
       label: 'NextJS',
       customProps: {
         logoUrl: '/img/logos/next-logo.png'
