@@ -112,6 +112,7 @@ module.exports = {
                 "common-customizations/sessions/with-jwt/update-jwt",
                 "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
                 "common-customizations/sessions/with-jwt/get-public-key",
+                "common-customizations/sessions/with-jwt/jwt-verification"
               ]
             },
             "common-customizations/sessions/new-session",
@@ -263,6 +264,18 @@ module.exports = {
       items: [
         "hasura-integration/with-jwt",
         "hasura-integration/without-jwt",
+      ],
+    },
+    {
+      type: 'category',
+      label: 'GraphQL',
+      customProps: {
+        logoUrl: '/img/logos/graphql-logo.png'
+      },
+      items: [
+        "graphql-integration/backend-setup",
+        "graphql-integration/making-requests",
+        "graphql-integration/access-session-info",
       ],
     },
     {
