@@ -40,7 +40,7 @@ The result should be a new `auth` folder with `auth.module.ts` in it. We should 
 
 ### Add config type and injection token
 
-Add a `config.ts` file next into the `auth` folder. We will put the type and injection token for the SuperTokens config here.
+Add a `config.interface.ts` file next into the `auth` folder. We will put the type and injection token for the SuperTokens config here.
 
 ```ts
 import { AppInfo } from "supertokens-node/lib/build/types";
@@ -67,7 +67,7 @@ import {
 } from '@nestjs/common';
 
 import { AuthMiddleware } from './auth.middleware';
-import { ConfigProviderToken, AuthModuleConfig } from './config.interface';
+import { ConfigInjectionToken, AuthModuleConfig } from './config.interface';
 
 @Module({
   providers: [],
@@ -88,7 +88,7 @@ export class AuthModule implements NestModule {
             connectionURI,
             apiKey,
           },
-          provide: ConfigProviderToken,
+          provide: ConfigInjectionToken,
         },
       ],
       exports: [],
@@ -152,6 +152,10 @@ The nest CLI will add this service to the normal module providers, which you sho
 
 We initialize the SDK in a service so that you can have access to injected services in event handlers. Edit the `supertokens.service.ts` to match:
 
+import { PasswordlessBackendForm } from "/src/components/snippetConfigForm/passwordlessBackendForm";
+
+<PasswordlessBackendForm>
+
 ```ts
 import { Inject, Injectable } from '@nestjs/common';
 import supertokens from "supertokens-node";
@@ -170,13 +174,18 @@ export class SupertokensService {
                 apiKey: config.apiKey,
             },
             recipeList: [
-              Passwordless.init(),
+              Passwordless.init({
+                flowType: "^{form_flowType}",
+                contactMethod: "^{form_contactMethod}",
+            }),
               Session.init(),
             ],
         });
     }
 }
 ```
+
+</PasswordlessBackendForm>
 
 ## 4) Exposing SuperTokens APIs using its `middleware`
 
@@ -262,9 +271,9 @@ import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 
 import { errorHandler } from 'supertokens-node/framework/express';
-import { Error } from 'supertokens-node';
+import { Error as STError } from 'supertokens-node';
 
-@Catch(Error)
+@Catch(STError)
 export class SupertokensExceptionFilter implements ExceptionFilter {
   handler: ErrorRequestHandler;
 
@@ -275,10 +284,15 @@ export class SupertokensExceptionFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
 
+    const resp = ctx.getResponse<Response>();
+    if (resp.headersSent) {
+      return;
+    }
+
     this.handler(
       exception,
       ctx.getRequest<Request>(),
-      ctx.getResponse<Response>(),
+      resp,
       ctx.getNext<NextFunction>(),
     );
   }
@@ -320,6 +334,7 @@ Now that the library is set up, you can add a guard to protect your API. You can
 
 ```ts
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { Error as STError } from "supertokens-node";
 
 import { verifySession } from 'supertokens-node/recipe/session/framework/express';
 
@@ -329,15 +344,23 @@ export class AuthGuard implements CanActivate {
     const ctx = context.switchToHttp();
 
     let err = undefined;
+    const resp = ctx.getResponse();
     await verifySession()(
       ctx.getRequest(),
-      ctx.getResponse(),
+      resp,
       (res) => {
         err = res;
       },
     );
 
-    if (err !== undefined) {
+    if (resp.headersSent) {
+      throw new STError({
+        message: "RESPONSE_SENT",
+        type: "RESPONSE_SENT",
+      });
+    }
+
+    if (err) {
       throw err;
     }
 
