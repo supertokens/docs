@@ -52,7 +52,19 @@ module.exports = {
       items: [
         "common-customizations/redirect-to-auth",
         "common-customizations/user-pagination",
-        "common-customizations/toc-privacypolicy",
+        {
+          type: "category",
+          label: "Sign In / Up",
+          items: [
+            "common-customizations/sign-in-up/default-country",
+            "common-customizations/sign-in-up/guess-phonenumber",
+            "common-customizations/sign-in-up/resend-time-gap",
+            "common-customizations/sign-in-up/toc-privacypolicy",
+          ],
+        },
+        "common-customizations/change-code-lifetime",
+        "common-customizations/change-magic-link-url",
+        "common-customizations/change-maximum-retries",
         "common-customizations/embed-sign-in-up-form",
         {
           type: "category",
@@ -65,8 +77,6 @@ module.exports = {
             "common-customizations/user-roles/updating-session-roles",
           ]
         },
-        "common-customizations/customize-email",
-        "common-customizations/customize-sms",
         {
           type: "category",
           label: "Sessions",
