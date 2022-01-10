@@ -3,9 +3,9 @@ export const passwordlessQuestions = {
     id: "contactMethod",
     title: "How do you want to identify your users?",
     options: [
-      { title: "Phone number", activeText: "Your users will log in using a phone number.", value: "PHONE" },
-      { title: "Email", activeText: "Your users will log in using an email.", value: "EMAIL" },
-      { title: "Email or Phone number", activeText: "Your users will log in using an email or a phone number.", value: "EMAIL_OR_PHONE" },
+      { title: "Only phone number", activeText: "Your users will log in using a phone number.", value: "PHONE" },
+      { title: "Only email", activeText: "Your users will log in using an email.", value: "EMAIL" },
+      { title: "Email or phone number", activeText: "Your users will log in using an email or a phone number.", value: "EMAIL_OR_PHONE" },
     ],
   },
   flowType: {
