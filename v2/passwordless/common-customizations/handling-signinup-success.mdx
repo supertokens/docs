@@ -27,7 +27,7 @@ SuperTokens.init({
                 if (context.action === "SESSION_ALREADY_EXISTS") {
                     // TODO:
                 } else {
-                    let {id, email} = context.user;
+                    let {id, email, phoneNumber} = context.user;
                     if (context.action === "SUCCESS") {
                         if (context.isNewUser) {
                             // TODO: Sign up
@@ -104,52 +104,48 @@ SuperTokens.init({
 <TabItem value="go">
 
 ```go
-import (
-	"github.com/supertokens/supertokens-golang/recipe/passwordless"
-	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
-	"github.com/supertokens/supertokens-golang/supertokens"
-)
-
 func main() {
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			passwordless.Init(&plessmodels.TypeInput{
-				//highlight-start
-				Override: &plessmodels.OverrideStruct{
-					APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
-						// create a copy of the originalImplementation
-						newImplementation := originalImplementation
+			passwordless.Init(plessmodels.TypeInput{
+                // highlight-start
+                Override: &plessmodels.OverrideStruct{
+                    APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 
-						// override the sign in up API
-						newImplementation.ConsumeCodePOST = func(formFields []plessmodels.TypeFormField, options plessmodels.APIOptions) (plessmodels.ConsumeCodeResponse, error) {
+                        // create a copy of the original function
+                        originalConsumeCodePOST := originalImplementation.ConsumeCodePOST
 
-							// First we call the original implementation of ConsumeCodeUpPOST.
-							response, err := originalImplementation.ConsumeCodePOST(formFields, options)
-							if err != nil {
-								return plessmodels.ConsumeCodeResponse{}, err
-							}
+                        // override the sign in up API
+                        (*originalImplementation.ConsumeCodePOST) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 
-							if response.OK != nil {
-								// sign in was successful
+                            // First we call the original implementation of ConsumeCodeUpPOST.
+                            response, err := (*originalConsumeCodePOST)(userInput, linkCode, preAuthSessionID, options, userContext)
+                            if err != nil {
+                                return plessmodels.ConsumeCodePOSTResponse{}, err
+                            }
 
-								// user object contains the ID and email or phone number
-								user := response.OK.User
+                            if response.OK != nil {
+                                // sign in was successful
 
-								// TODO: Post sign in logic.
-								// You can even read the formFields from the input
-								// params to get the user filled fields.
+                                // user object contains the ID and email or phone number
+                                user := response.OK.User
 
-							}
-							return response, nil
-						}
+                                if response.OK.CreatedNewUser {
+                                    // TODO: Post sign up logic
+                                } else {
+                                    // TODO: Post sign in logic
+                                }
 
-						// return the new implementation
-						return newImplementation
-					},
-				},
-				//highlight-end
-			}),
+                            }
+                            return response, nil
+                        }
+
+                        return originalImplementation
+                    },
+                },
+                // highlight-end
+            })
 		},
 	})
 }
