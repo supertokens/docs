@@ -2,6 +2,7 @@ import React, { PropsWithChildren, useCallback, useEffect, useState } from "reac
 
 type Option = {
     title: string;
+    activeText?: string;
     value: string;
 };
 
@@ -56,6 +57,7 @@ export function Question(props: PropsWithChildren<{
             </div>
         );
     } else {
+        const selectedOption = props.options.find(opt => opt.value === selected);
         return (
             <>
                 <div
@@ -90,7 +92,8 @@ export function Question(props: PropsWithChildren<{
                             style={{
                                 fontSize: "16px",
                             }}>
-                            You choose {props.options.find(opt => opt.value === selected).title}. <a href="" onClick={resubmitInfoClicked}>Resubmit answer?</a>
+                            {selectedOption.activeText !== undefined ? selectedOption.activeText : `You choose ${selectedOption.title}.`}{" "}
+                            <a href="" onClick={resubmitInfoClicked}>Resubmit answer?</a>
                         </div>
                     </div>
                 </div>
