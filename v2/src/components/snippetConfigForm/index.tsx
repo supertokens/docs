@@ -8,18 +8,18 @@ import { recursiveMap } from "../utils";
  *   - Saves the answers in localstorage and can be edited (like in appInfo component)
  *   - Allows children to have replaceable content based on the answer provided by the user.
  *   - It also displays answer post submission.
- * 
+ *
  */
 
-type QuestionInfo = {
+export type QuestionInfo<VarKeys extends keyof any> = {
   id: string;
   title: string;
   default?: string;
-  options: { title: string; value: string }[];
+  options: { title: string; value: string; activeText?: string; variableMap?: Record<VarKeys, string> }[];
 };
 
-type Props = {
-  questions: QuestionInfo[];
+type Props<T extends keyof any> = {
+  questions: QuestionInfo<T>[];
 };
 
 type State = {
@@ -32,12 +32,15 @@ const eventName = "snippetQuestionSelected";
 // Registering the custom event on window for typescript. This avoids casts in the code
 declare global {
   interface WindowEventMap {
-    [eventName]: CustomEvent<{ detail: SnippetConfigForm }>;
+    [eventName]: CustomEvent<{ detail: { source: any } }>;
   }
 }
 
-export default class SnippetConfigForm extends React.PureComponent<PropsWithChildren<Props>, State> {
-  constructor(props: PropsWithChildren<Props>) {
+export default class SnippetConfigForm<T extends keyof any> extends React.PureComponent<
+  PropsWithChildren<Props<T>>,
+  State
+> {
+  constructor(props: PropsWithChildren<Props<T>>) {
     super(props);
     if (props.questions.length === 0) {
       throw new Error("You must ask at least one question in the form");
@@ -118,7 +121,16 @@ export default class SnippetConfigForm extends React.PureComponent<PropsWithChil
             (c) => {
               if (typeof c === "string") {
                 for (const [ind, question] of this.props.questions.entries()) {
-                  c = c.replaceAll(`^{form_${question.id}}`, this.state.answers[ind]);
+                  const value = this.state.answers[ind];
+                  c = c.replaceAll(`^{form_${question.id}}`, value);
+                  const selectedAns = question.options.find((opt) => opt.value === value);
+                  if (selectedAns && selectedAns.variableMap) {
+                    for (const [name, value] of Object.entries<string>(selectedAns.variableMap)) {
+                      const key = `form_${question.id}_${name}`;
+
+                      c = replaceWithIndent(key, value, c).replaceAll(`^{${key}}`, value);
+                    }
+                  }
                 }
               }
               return c;
@@ -126,11 +138,9 @@ export default class SnippetConfigForm extends React.PureComponent<PropsWithChil
             (comp) => {
               return (
                 comp.props.originalType !== ConditionalSection ||
-                Object.entries(comp.props.conditions).every(
-                  ([questionId, value]) => {
-                    return this.state.answers[this.props.questions.findIndex((info) => info.id === questionId)] === value;
-                  },
-                )
+                Object.entries(comp.props.conditions).every(([questionId, value]) => {
+                  return this.state.answers[this.props.questions.findIndex((info) => info.id === questionId)] === value;
+                })
               );
             },
           )}
@@ -159,4 +169,12 @@ type ConditionalSectionProps = {
 
 export function ConditionalSection(props: PropsWithChildren<ConditionalSectionProps>) {
   return props.children;
+}
+
+function replaceWithIndent(target: string, replecement: string, str: string) {
+  const regex = new RegExp(`(\\n\\s*)\\^{${target}}`, "g");
+
+  return str.replace(regex, (match, p1) => {
+    return p1 + replecement.replace(/\n/g, p1);
+  });
 }
