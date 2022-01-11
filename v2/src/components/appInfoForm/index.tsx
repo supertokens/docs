@@ -342,7 +342,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             title="API Domain"
                             placeholder="e.g. http://localhost:8080"
                             onChange={(value) => this.updateFieldStateAndRemoveError("apiDomain", value)}
-                            explanation="This is the URL of your app's API domain."
+                            explanation="This is the URL of your app's API server."
                             value={this.state.apiDomain}
                             error={this.state.fieldErrors.apiDomain}
                         />}
@@ -508,6 +508,17 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
+    // returns the path if it is valid
+    // returns an empty string if the path is invalid
+    getValidatedPath = (path: string) => {
+        try {
+            new URL(`https://domain.com${path}`)
+            return path;
+        } catch {
+            return "";
+        }
+    }
+
     canContinue = (preventErrorUpdateInState?: boolean) => {
         // TODO: Add more fields here.
         const appName = this.state.appName.trim();
@@ -521,9 +532,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         const validationErrors: {
             [key: string]: string
         } = {}
-
-        // regex for path
-        const pathRegex = /^\/$|^(\/\w+)+$/;
 
         // validate appName field
         if (this.props.askForAppName && appName.length === 0) {
@@ -552,7 +560,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
         if (this.props.askForAPIDomain) {
             if (apiBasePath.length > 0) {
-                if (pathRegex.test(apiBasePath)) {
+                if (this.getValidatedPath(apiBasePath).length !== 0) {
                     // if nextJS api route checkbox is set to true
                     // the api base path can be `/api` or `/api/some/path`
                     if (
@@ -564,21 +572,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     } else if (
                         this.props.showNetlifyAPIRouteCheckbox
                         && this.state.netlifyApiRouteUsed
+                        && !apiBasePath.startsWith('/.netlify/functions')
                     ) {
-                        // this will only be true when the apiBasePath is set in another form
-                        // and the form is then accessed in any netlify docs
-                        validationErrors.apiBasePath = "Please enter a valid path."
-                    }
-                } else if (
-                    this.props.showNetlifyAPIRouteCheckbox
-                    && this.state.netlifyApiRouteUsed
-                    && apiBasePath.startsWith("/.netlify/functions"
-                )) {
-                    // if the netlify route checkbox is set to true
-                    // the api base path can be `/.netlify/functions/*`
-
-                    const path = apiBasePath.split("/.netlify/functions")[1];
-                    if (!pathRegex.test(path) || path === "/") {
+                        // if the netlify api route checkbox is set to true
+                        // the api base path can only start with `/.netlify/functions`
                         validationErrors.apiBasePath = "Please enter a valid path."
                     }
                 } else {
@@ -588,7 +585,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         if (this.props.askForWebsiteDomain) {
-            if (websiteBasePath.length > 0 && !pathRegex.test(websiteBasePath)) {
+            if (websiteBasePath.length > 0 && this.getValidatedPath(websiteBasePath).length === 0) {
                 validationErrors.websiteBasePath = "Please enter a valid path."
             }
         }
