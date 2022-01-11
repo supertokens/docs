@@ -139,6 +139,7 @@ module.exports = {
                 "common-customizations/sessions/with-jwt/update-jwt",
                 "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
                 "common-customizations/sessions/with-jwt/get-public-key",
+                "common-customizations/sessions/with-jwt/jwt-verification"
               ]
             },
             "common-customizations/sessions/new-session",
@@ -293,6 +294,18 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'GraphQL',
+      customProps: {
+        logoUrl: '/img/logos/graphql-logo.png'
+      },
+      items: [
+        "graphql-integration/backend-setup",
+        "graphql-integration/making-requests",
+        "graphql-integration/access-session-info",
+      ],
+    },
+    {
+      type: 'category',
       label: 'NextJS',
       customProps: {
         logoUrl: '/img/logos/next-logo.png'
@@ -322,6 +335,16 @@ module.exports = {
       },
       items: [
         "nestjs/guide",
+      ],
+    },
+    {
+      type: 'category',
+      label: 'RedwoodJS',
+      customProps: {
+        logoUrl: '/img/logos/redwood-logo.png',
+      },
+      items: [
+        "redwood/about"
       ],
     },
     {
