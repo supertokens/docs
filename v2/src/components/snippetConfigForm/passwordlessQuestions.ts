@@ -10,9 +10,15 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
         activeText: "Your users will log in using a phone number.",
         value: "PHONE",
         variableMap: {
-          sendCB_Node: "createAndSendCustomTextMessage: (input, context) => { /* See next step */ },",
+          sendCB_Node: "createAndSendCustomTextMessage: async (input, context) => { /* See next step */ },",
           sendCB_Go:
-            "CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode *string, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) { /* See next step */ },",
+            `ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+    Enabled: true,
+    CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
+        /* See next step */
+        return nil
+    },
+},`,
           sendCB_Python_def:
             "\nasync def send_text_message (phoneNumber: str, userInputCode: Union[str, None], urlWithLinkCode: Union[str, None], codeLifetime: int, preAuthSessionId: str, userContext: Union[dict, None]):\n    # See next step\n",
           sendCB_Python: "create_and_send_custom_text_message=send_text_message",
@@ -23,9 +29,15 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
         activeText: "Your users will log in using an email.",
         value: "EMAIL",
         variableMap: {
-          sendCB_Node: "createAndSendCustomEmail: (input, context) => { /* See next step */ },",
+          sendCB_Node: "createAndSendCustomEmail: async (input, context) => { /* See next step */ },",
           sendCB_Go:
-            "CreateAndSendCustomEmail: func(email string, userInputCode *string, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext){ /* See next step */ },",
+            `ContactMethodEmail: plessmodels.ContactMethodEmailConfig{
+    Enabled: true,
+    CreateAndSendCustomEmail: func(email string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
+        /* See next step */
+        return nil
+    },
+},`,
           sendCB_Python_def:
             "\nasync def send_email (email: str, userInputCode: Union[str, None], urlWithLinkCode: Union[str, None], codeLifetime: int, preAuthSessionId: str, userContext: Union[dict, None]):\n    # See next step\n",
           sendCB_Python: "create_and_send_custom_email=send_email",
@@ -36,9 +48,19 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
         activeText: "Your users will log in using an email or a phone number.",
         variableMap: {
           sendCB_Node:
-            "createAndSendCustomEmail: (input, context) => { /* See next step */ },\ncreateAndSendCustomTextMessage: (input, context) => { /* See next step */ },",
+            "createAndSendCustomEmail: async (input, context) => { /* See next step */ },\ncreateAndSendCustomTextMessage: async (input, context) => { /* See next step */ },",
           sendCB_Go:
-            "CreateAndSendCustomEmail: func(email string, userInputCode *string, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext){ /* See next step */ },\nCreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode *string, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) { /* See next step */ },",
+            `ContactMethodEmailOrPhone: plessmodels.ContactMethodEmailOrPhoneConfig{
+    Enabled: true,
+    CreateAndSendCustomEmail: func(email string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
+      /* See next step */
+      return nil
+    },
+    CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
+      /* See next step */
+      return nil
+    },
+},`,
           sendCB_Python_def:
             "\nasync def send_text_message (phoneNumber: str, userInputCode: Union[str, None], urlWithLinkCode: Union[str, None], codeLifetime: int, preAuthSessionId: str, userContext: Union[dict, None]):\n    # See next step\n" +
             "\nasync def send_email (email: str, userInputCode: Union[str, None], urlWithLinkCode: Union[str, None], codeLifetime: int, preAuthSessionId: str, userContext: Union[dict, None]):\n    # See next step\n",
