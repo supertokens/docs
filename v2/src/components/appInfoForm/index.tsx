@@ -13,10 +13,6 @@ type Props = {
     showNextJSAPIRouteCheckbox: boolean,
     showNetlifyAPIRouteCheckbox: boolean,
     addNetlifyPathExplanation: boolean,
-    addThirdPartyAPIRoutesInfo: boolean,
-    addSessionAPIRoutesInfo: boolean,
-    addEmailPasswordAPIRoutesInfo: boolean,
-    addThirdPartyEmailPasswordAPIRoutesInfo: boolean,
     askForWebsiteBasePath: boolean,
     addVisitWebsiteBasePathText: boolean
     // TODO: Add more fields here
@@ -222,52 +218,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         );
     }
 
-    getAPIRouteInfo = (recipe: "thirdparty" | "session" | "emailpassword" | "thirdpartyemailpassword") => {
-        const routeInfoList = [];
-
-        if (recipe === "thirdparty" || recipe === "thirdpartyemailpassword") {
-            routeInfoList.push((
-                <li>
-                    <code> POST {this.state.apiBasePath}/signinup</code>:  For signing up/signing in a user using a thirdparty provider.
-                </li>
-            ))
-        }
-        if (recipe === "session") {
-            routeInfoList.push((
-                <>
-                    <li>
-                        <code>POST {this.state.apiBasePath}/refresh</code>: It is used to get a new refresh and access token in case the older one expires.
-                    </li>
-                    <li>
-                        <code>POST {this.state.apiBasePath}/signout</code>: It is used sign out the currently logged in user.
-                    </li>
-                </>
-            ))
-        }
-        if (recipe === "emailpassword" || recipe === "thirdpartyemailpassword") {
-            routeInfoList.push(
-                (
-                    <li>
-                        <code>POST {this.state.apiBasePath}/signup</code>: For signing up a user with email & password
-                    </li>
-                ), (
-                    <li>
-                        <code>POST {this.state.apiBasePath}/signin</code>: For signing in a user with email & password
-                    </li>
-                )
-            )
-        }
-
-        return (
-            <ul>
-                {routeInfoList}
-            </ul>
-        )
-    }
-
     getVisitWebsiteBasePathText = () => (
         <span>
-            You can view the login UI by visiting <code>{this.state.websiteBasePath}</code>.
+            You can view the login UI by visiting <code>{this.state.websiteBasePath || "/"}</code>.
         </span>
     )
 
@@ -339,18 +292,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             }
                             if (this.props.addNetlifyPathExplanation && c === "^{form_netlifyPathExplanation}") {
                                 c = this.getNetlifyPathExplanationString();
-                            }
-                            if (this.props.addThirdPartyAPIRoutesInfo && c === "^{form_thirdPartyAPIRouteInfo}") {
-                                c = this.getAPIRouteInfo("thirdparty");
-                            }
-                            if (this.props.addSessionAPIRoutesInfo && c === "^{form_sessionAPIRouteInfo}") {
-                                c = this.getAPIRouteInfo("session");
-                            }
-                            if (this.props.addEmailPasswordAPIRoutesInfo && c === "^{form_emailPasswordAPIRouteInfo}") {
-                                c = this.getAPIRouteInfo("emailpassword");
-                            }
-                            if (this.props.addThirdPartyEmailPasswordAPIRoutesInfo && c === "^{form_thirdPartyEmailPasswordAPIRouteInfo}") {
-                                c = this.getAPIRouteInfo("thirdpartyemailpassword");
                             }
                             if (this.props.addVisitWebsiteBasePathText && c === "^{form_addVisitWebsiteBasePathText}") {
                                 c = this.getVisitWebsiteBasePathText()
