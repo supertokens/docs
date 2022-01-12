@@ -10,7 +10,7 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
         activeText: "Your users will log in using a phone number.",
         value: "PHONE",
         variableMap: {
-          sendCB_Node: "createAndSendCustomEmail: (input, context) => { /* See next step */ },",
+          sendCB_Node: "createAndSendCustomTextMessage: (input, context) => { /* See next step */ },",
           sendCB_Go:
             "CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode *string, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) { /* See next step */ },",
           sendCB_Python_def:
@@ -23,7 +23,7 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
         activeText: "Your users will log in using an email.",
         value: "EMAIL",
         variableMap: {
-          sendCB_Node: "createAndSendCustomTextMessage: (input, context) => { /* See next step */ },",
+          sendCB_Node: "createAndSendCustomEmail: (input, context) => { /* See next step */ },",
           sendCB_Go:
             "CreateAndSendCustomEmail: func(email string, userInputCode *string, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext){ /* See next step */ },",
           sendCB_Python_def:
