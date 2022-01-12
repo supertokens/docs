@@ -499,6 +499,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
                 // do not save fieldErrors in localStorage
                 delete currentState.fieldErrors;
+                delete currentState.showWebsiteBasePath;
+                delete currentState.showAPIBasePath;
 
                 window.localStorage.setItem("form_appInfo", JSON.stringify(currentState));
                 window.dispatchEvent(new Event('appInfoFormFilled'));
