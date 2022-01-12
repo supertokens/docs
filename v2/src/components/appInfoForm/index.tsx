@@ -16,7 +16,9 @@ type Props = {
     addThirdPartyAPIRoutesInfo: boolean,
     addSessionAPIRoutesInfo: boolean,
     addEmailPasswordAPIRoutesInfo: boolean,
-    addThirdPartyEmailPasswordAPIRoutesInfo: boolean
+    addThirdPartyEmailPasswordAPIRoutesInfo: boolean,
+    askForWebsiteBasePath: boolean,
+    addVisitWebsiteBasePathText: boolean
     // TODO: Add more fields here
 };
 
@@ -31,7 +33,9 @@ type State = {
         [key: string]: string
     },
     nextJSApiRouteUsed: boolean,
-    netlifyApiRouteUsed: boolean
+    netlifyApiRouteUsed: boolean,
+    showWebsiteBasePath: boolean,
+    showAPIBasePath: boolean
     // TODO: Add more fields here
 };
 
@@ -41,7 +45,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         super(props);
         // TODO: Add more fields here
         if (!props.askForAPIDomain && !props.askForAppName &&
-            !props.askForWebsiteDomain) {
+            !props.askForWebsiteDomain && !props.askForWebsiteBasePath && !props.askForAPIBasePath) {
             throw new Error("You must ask for at least one item in the form")
         }
         this.state = {
@@ -53,7 +57,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             websiteBasePath: "/auth",
             fieldErrors: {},
             nextJSApiRouteUsed: true,
-            netlifyApiRouteUsed: true
+            netlifyApiRouteUsed: true,
+            showWebsiteBasePath: (props.askForWebsiteDomain || props.askForWebsiteBasePath) && !props.hideWebsiteBasePathField,
+            showAPIBasePath: (props.askForAPIDomain || props.askForAPIBasePath)
         }
 
         if (typeof window !== 'undefined') {
@@ -259,6 +265,12 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         )
     }
 
+    getVisitWebsiteBasePathText = () => (
+        <span>
+            You can view the Sign In/Sign Up form by visiting <code>{this.state.websiteBasePath}</code>.
+        </span>
+    )
+
     render() {
         if (this.state.formSubmitted) {
             return (
@@ -319,10 +331,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             if (this.props.askForWebsiteDomain) {
                                 c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
                             }
-                            if (this.props.askForAPIDomain || this.props.askForAPIBasePath) {
+                            if (this.state.showAPIBasePath) {
                                 c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
                             }
-                            if (this.props.askForWebsiteDomain && !this.props.hideWebsiteBasePathField) {
+                            if (this.state.showWebsiteBasePath) {
                                 c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
                             }
                             if (this.props.addNetlifyPathExplanation && c === "^{form_netlifyPathExplanation}") {
@@ -339,6 +351,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             }
                             if (this.props.addThirdPartyEmailPasswordAPIRoutesInfo && c === "^{form_thirdPartyEmailPasswordAPIRouteInfo}") {
                                 c = this.getAPIRouteInfo("thirdpartyemailpassword");
+                            }
+                            if (this.props.addVisitWebsiteBasePathText && c === "^{form_addVisitWebsiteBasePathText}") {
+                                c = this.getVisitWebsiteBasePathText()
                             }
                         }
                         return c;
@@ -405,7 +420,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             value={this.state.apiDomain}
                             error={this.state.fieldErrors.apiDomain}
                         />}
-                        {(this.props.askForAPIDomain || this.props.askForAPIBasePath) && <FormItem
+                        {(this.state.showAPIBasePath) && <FormItem
                             index={3}
                             title="API Base Path"
                             placeholder="e.g. /auth"
@@ -424,7 +439,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             value={this.state.websiteDomain}
                             error={this.state.fieldErrors.websiteDomain}
                         />}
-                        {this.props.askForWebsiteDomain && !this.props.hideWebsiteBasePathField && <FormItem
+                        {this.state.showWebsiteBasePath && <FormItem
                             index={4}
                             title="Website Base Path"
                             placeholder="e.g. /auth"
@@ -516,7 +531,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         this.setState(oldState => {
-            const websiteDomain = this.props.askForWebsiteDomain && !this.props.hideWebsiteBasePathField ? this.getDomainOriginOrEmptyString(this.state.websiteDomain) : oldState.websiteDomain;
+            const websiteDomain = this.state.showWebsiteBasePath ? this.getDomainOriginOrEmptyString(this.state.websiteDomain) : oldState.websiteDomain;
             let apiDomain = oldState.apiDomain;
 
             // if the nextjs route is set to true
@@ -533,8 +548,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 apiDomain,
                 websiteDomain,
                 appName: this.props.askForAppName ? this.state.appName.trim() : oldState.appName,
-                apiBasePath: this.props.askForAPIDomain || this.props.askForAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath,
-                websiteBasePath: this.props.askForWebsiteDomain && !this.props.hideWebsiteBasePathField ? this.state.websiteBasePath.trim() : oldState.websiteBasePath,
+                apiBasePath: this.state.showAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath,
+                websiteBasePath: this.state.showWebsiteBasePath ? this.state.websiteBasePath.trim() : oldState.websiteBasePath,
                 formSubmitted: true
             }
         }, () => {
@@ -617,7 +632,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }
 
-        if (this.props.askForAPIDomain || this.props.askForAPIBasePath) {
+        if (this.state.showAPIBasePath) {
             if (apiBasePath.length > 0) {
                 if (this.getValidatedPath(apiBasePath).length !== 0) {
                     // if nextJS api route checkbox is set to true
@@ -643,7 +658,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }
 
-        if (this.props.askForWebsiteDomain && !this.props.hideWebsiteBasePathField) {
+        if (this.state.showWebsiteBasePath) {
             if (websiteBasePath.length > 0 && this.getValidatedPath(websiteBasePath).length === 0) {
                 validationErrors.websiteBasePath = "Please enter a valid path."
             }
