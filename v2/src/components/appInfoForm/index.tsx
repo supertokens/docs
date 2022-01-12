@@ -267,7 +267,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     getVisitWebsiteBasePathText = () => (
         <span>
-            You can view the Sign In/Sign Up form by visiting <code>{this.state.websiteBasePath}</code>.
+            You can view the login UI by visiting <code>{this.state.websiteBasePath}</code>.
         </span>
     )
 
