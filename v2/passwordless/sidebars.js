@@ -51,7 +51,6 @@ module.exports = {
       label: 'Common customizations',
       items: [
         "common-customizations/redirect-to-auth",
-        "common-customizations/user-pagination",
         {
           type: "category",
           label: "Sign In / Up",
@@ -62,6 +61,7 @@ module.exports = {
             "common-customizations/sign-in-up/toc-privacypolicy",
           ],
         },
+        "common-customizations/user-pagination",
         "common-customizations/change-code-lifetime",
         "common-customizations/change-magic-link-url",
         "common-customizations/change-maximum-retries",
