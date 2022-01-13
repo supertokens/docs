@@ -76,11 +76,27 @@ module.exports = {
             "common-customizations/user-roles/updating-session-roles",
           ]
         },
+        "common-customizations/session-with-jwt",
         {
           type: "category",
           label: "Sessions",
           items: [
             "common-customizations/sessions/about",
+            {
+              type: "category",
+              label: "Using sessions with JWTs",
+              items: [
+                "common-customizations/sessions/with-jwt/about",
+                "common-customizations/sessions/with-jwt/enabling-jwts",
+                "common-customizations/sessions/with-jwt/custom-claims",
+                "common-customizations/sessions/with-jwt/read-jwt",
+                "common-customizations/sessions/with-jwt/read-claims",
+                "common-customizations/sessions/with-jwt/update-jwt",
+                "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
+                "common-customizations/sessions/with-jwt/get-public-key",
+                "common-customizations/sessions/with-jwt/jwt-verification"
+              ]
+            },
             "common-customizations/sessions/new-session",
             {
               type: "category",
