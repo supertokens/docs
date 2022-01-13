@@ -57,13 +57,14 @@ module.exports = {
           items: [
             "common-customizations/sign-in-up/default-country",
             "common-customizations/sign-in-up/resend-time-gap",
+            "common-customizations/sign-in-up/change-maximum-retries",
+            "common-customizations/sign-in-up/change-otp-format",
             "common-customizations/sign-in-up/toc-privacypolicy",
           ],
         },
         "common-customizations/user-pagination",
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",
-        "common-customizations/change-maximum-retries",
         "common-customizations/embed-sign-in-up-form",
         {
           type: "category",
