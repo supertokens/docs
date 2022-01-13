@@ -53,17 +53,16 @@ module.exports = {
         "common-customizations/redirect-to-auth",
         {
           type: "category",
-          label: "Sign In / Up",
+          label: "Sign In / Up form",
           items: [
             "common-customizations/sign-in-up/default-country",
-            "common-customizations/sign-in-up/guess-phonenumber",
             "common-customizations/sign-in-up/resend-time-gap",
             "common-customizations/sign-in-up/toc-privacypolicy",
           ],
         },
         "common-customizations/user-pagination",
-        "common-customizations/change-code-lifetime",
         "common-customizations/change-magic-link-url",
+        "common-customizations/change-code-lifetime",
         "common-customizations/change-maximum-retries",
         "common-customizations/embed-sign-in-up-form",
         {
