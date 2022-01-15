@@ -9,24 +9,17 @@ type Option = {
 export function Question(props: PropsWithChildren<{
     question: string | (() => JSX.Element);
     options: Option[];
-    initialValue?: string;
+    value?: string;
     onChange?: (title: string) => void;
 }>) {
-    const [selected, setSelected] = useState(props.initialValue);
-
-    const onChange = useCallback(props.onChange, [props.onChange]);
-    useEffect(() => {
-        if (selected !== props.initialValue && onChange !== undefined) {
-            onChange(selected);
-        }
-    }, [onChange, selected]);
+    const [unselected, setUnselected] = useState(false);
 
     let resubmitInfoClicked = (event) => {
         event.preventDefault();
-        setSelected(undefined);
+        setUnselected(true);
     }
 
-    if (selected === undefined) {
+    if (unselected || props.value === undefined) {
         return (
             <div
                 style={{
@@ -52,12 +45,15 @@ export function Question(props: PropsWithChildren<{
                         display: "flex",
                         paddingBottom: "20px"
                     }}>
-                    {props.options.map(opt => (<Answer key={opt.value} title={opt.title} onClick={() => setSelected(opt.value)} />))}
+                    {props.options.map(opt => (<Answer key={opt.value} title={opt.title} onClick={() => {
+                        setUnselected(false);
+                        props.onChange(opt.value);
+                    }} />))}
                 </div>
             </div>
         );
     } else {
-        const selectedOption = props.options.find(opt => opt.value === selected);
+        const selectedOption = props.options.find(opt => opt.value === props.value);
         return (
             <>
                 <div

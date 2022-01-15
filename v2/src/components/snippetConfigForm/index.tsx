@@ -66,7 +66,8 @@ export default class SnippetConfigForm<T extends keyof any> extends React.PureCo
     if (event.detail.source === this) {
       return;
     }
-    this.state = {
+    this.setState((os) => ({
+      ...os,
       answers: this.props.questions.map((info, ind) => {
         if (typeof window !== "undefined") {
           const storedVal = window.localStorage.getItem(storageKeyPrefix + info.id);
@@ -76,11 +77,7 @@ export default class SnippetConfigForm<T extends keyof any> extends React.PureCo
         }
         return this.state.answers[ind];
       }),
-    };
-
-    this.state = {
-      ...this.state,
-    };
+    }));
   };
 
   componentWillUnmount() {
@@ -97,7 +94,7 @@ export default class SnippetConfigForm<T extends keyof any> extends React.PureCo
             <Question
               key={questionInfo.id}
               question={questionInfo.title}
-              initialValue={this.state.answers[ind]}
+              value={this.state.answers[ind]}
               options={questionInfo.options}
               onChange={(val) => {
                 this.setState((oldState) => {
