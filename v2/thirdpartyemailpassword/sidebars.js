@@ -59,7 +59,8 @@ module.exports = {
           items: [
             "common-customizations/signup-form/built-in-providers",
             "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers"
+            "common-customizations/signup-form/custom-providers",
+            "common-customizations/getting-provider-access-token"
           ],
         },
         {
