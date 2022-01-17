@@ -569,6 +569,8 @@ function addRecipeNameToHeader() {
         headerRecipeName = "ThirdParty Recipe";
     } else if (window.location.pathname.startsWith("/docs/thirdpartyemailpassword/")) {
         headerRecipeName = "ThirdPartyEmailPassword Recipe";
+    } else if (window.location.pathname.startsWith("/docs/passwordless/")) {
+        headerRecipeName = "Passwordless Recipe";
     } else if (window.location.pathname.startsWith("/docs/session/")) {
         headerRecipeName = "Session Recipe";
     }

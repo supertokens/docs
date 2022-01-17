@@ -166,6 +166,11 @@ const RECIPE_LABELS = [{
   position: "left",
   docsPluginId: "thirdparty",
   label: "ThirdParty Recipe"
+},{
+  type: "recipeLabel",
+  position: "left",
+  docsPluginId: "passwordless",
+  label: "Passwordless Recipe"
 }, {
   type: "recipeLabel",
   position: "left",
