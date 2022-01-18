@@ -3,7 +3,7 @@ let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
 
-export default function FrontendSDKTabs(props) {
+export default function FrontendSDKTabs(props: any) {
     return (
         <Tabs
             groupId="frontendsdk"

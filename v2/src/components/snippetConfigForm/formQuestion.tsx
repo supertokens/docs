@@ -14,7 +14,7 @@ export function Question(props: PropsWithChildren<{
 }>) {
     const [unselected, setUnselected] = useState(false);
 
-    let resubmitInfoClicked = (event) => {
+    let resubmitInfoClicked = (event: any) => {
         event.preventDefault();
         setUnselected(true);
     }
@@ -47,13 +47,19 @@ export function Question(props: PropsWithChildren<{
                     }}>
                     {props.options.map(opt => (<Answer key={opt.value} title={opt.title} onClick={() => {
                         setUnselected(false);
-                        props.onChange(opt.value);
+                        if (props.onChange !== undefined) {
+                            props.onChange(opt.value);
+                        }
                     }} />))}
                 </div>
             </div>
         );
     } else {
-        const selectedOption = props.options.find(opt => opt.value === props.value);
+        // we always expect find to return a value, the object declaration is just to fix typescript
+        const selectedOption = props.options.find(opt => opt.value === props.value) || {
+            activeText: undefined,
+            title: ""
+        };
         return (
             <>
                 <div

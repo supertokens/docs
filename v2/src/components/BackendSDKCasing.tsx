@@ -30,7 +30,7 @@ export default class BackendSDKCasing extends React.PureComponent<any, any> {
         return "connection_uri"
     }};
 
-    camelToPascalCase = (str) => {
+    camelToPascalCase = (str: any) => {
         if (str.length === 0) {
             return str;
         }
@@ -39,7 +39,7 @@ export default class BackendSDKCasing extends React.PureComponent<any, any> {
 
     render() {
         if (this.state.sdk === "python") {
-            return (<code>{this.camelToSnakeCase(this.props.children)}</code>);
+            return (<code>{this.camelToSnakeCase(this.props.children as any)}</code>);
         } else if (this.state.sdk === "go") {
             return (<code>{this.camelToPascalCase(this.props.children)}</code>);
         } else {
