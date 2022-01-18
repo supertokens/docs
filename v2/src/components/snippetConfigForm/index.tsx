@@ -125,7 +125,7 @@ export default class SnippetConfigForm<T extends keyof any> extends React.PureCo
                     for (const [name, value] of Object.entries<string>(selectedAns.variableMap)) {
                       const key = `form_${question.id}_${name}`;
 
-                      c = replaceWithIndent(key, value, c).replaceAll(`^{${key}}`, value);
+                      c = (replaceWithIndent(key, value, c) as any).replaceAll(`^{${key}}`, value);
                     }
                   }
                 }
