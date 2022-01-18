@@ -1,0 +1,82 @@
+---
+id: in-api
+title: 5a. Session verification in an API call
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/nextjs/session-verification/in-api.mdx -->
+
+import AppInfoForm from "/src/components/appInfoForm"
+
+# 5a. Session verification in an API call
+
+:::note
+This is applicable for when the frontend calls an API in the `/pages/api` folder.
+:::
+
+For this guide, we will assume that we want an API `/api/user GET` which returns the current session information.
+
+## 1) Create a new file `/pages/api/user.js`
+- An example of this is [here](https://github.com/supertokens/next.js/blob/canary/examples/with-supertokens/pages/api/user.js).
+
+## 2) Call the `supertokens.init` function
+Remember that whenever we want to use any functions from the `supertokens-node` lib, we have to call the `supertokens.init` function at the top of that serverless function file.
+
+```jsx title="pages/index.js"
+import supertokens from 'supertokens-node'
+import { backendConfig } from '../../../config/backendConfig'
+
+supertokens.init(backendConfig())
+```
+
+## 3) Call the `verifySession` session function
+
+<AppInfoForm
+    askForWebsiteDomain={true}>
+
+```jsx title="pages/index.js"
+
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from 'supertokens-node/recipe/session/framework/express'
+import supertokens from 'supertokens-node'
+import { backendConfig } from '../../../config/backendConfig'
+import NextCors from "nextjs-cors";
+
+supertokens.init(backendConfig())
+
+export default async function user(req, res) {
+
+    // NOTE: We need CORS only if we are querying the APIs from a different origin
+    await NextCors(req, res, {
+        methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+        origin: "^{form_websiteDomain}",
+        credentials: true,
+        allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+    });
+
+    // we first verify the session 
+    await superTokensNextWrapper(
+        async (next) => {
+            return await verifySession()(req, res, next)
+        },
+        req, res
+    )
+    // if it comes here, it means that the session verification was successful
+
+    
+    return res.json({
+        note:
+            'Fetch any data from your application for authenticated user after using verifySession middleware',
+        userId: req.session.getUserId(),
+        sessionHandle: req.session.getHandle(),
+        userDataInAccessToken: req.session.getAccessTokenPayload(),
+    })
+}
+
+```
+
+- If no session exists, the API will return a `401` error to the client. In this case, the code `return res.json` will not be executed at all.
+- In case the session does exist, `req.session` can be used to get session information. Learn more about this object [here](../../common-customizations/sessions/session-verification-in-api/verify-session#the-session-object).
+
+</AppInfoForm>

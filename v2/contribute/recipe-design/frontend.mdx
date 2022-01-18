@@ -8,17 +8,110 @@ hide_title: true
 - 1) Should be as decoupled from other recipes as possible so that it can be reused.
 - 2) Should be as minimal as possible.
 - 3) All sub recipes being used should be allowed to be overrided by an instance provided in the constructor. This will allow super recipes to also use these sub recipes without creating multiple instances of those sub recipes. An example of this can be found [here](https://github.com/supertokens/supertokens-auth-react/blob/master/lib/ts/recipe/thirdpartyemailpassword/recipe.tsx#L61).
-- 4) Recipe interface should follow:
-    - a) If a function has valid error states, those should be returned from the function like `{status: "OK", ...} | {status: "ERROR_1", ...} | {status: "ERROR_2", ...}`. That is, no throwing or errors unless it's a general error, or if the type system for that language allows you to clearly define error types (like in the case of Java).
-    - b) The implementaiton should take care of calling the pre API hook as well as fire the event hook.
-- 5) All components and styles in the recipe should be overridable
+- 4) All components and styles in the recipe should be overridable
     - a) All `divs` etc that are styled, should have a `data-supertokens` and a `css` prop like so `<div data-supertokens="container" css={styles.container}>`.
-- 6) Each component theme should have a globally unique name. The format should be {actualRecipeId}{Name of component}. For example `ThirdPartyEmailPasswordSignInButton`
-- 7) Each theme component must be overridable (using the `withOverride` component).
-- 8) When doing output parsing for an API call, only handle what we care about. If the user has manually added some other fields to response from the API, let them handle that.
-- 9) There should be one file where all the functions exposed by this recipe are listed and documented. This file will be linked from the docs as API documentation.
+- 5) Each component theme should have a globally unique name. The format should be {actualRecipeId}{Name of component}. For example `ThirdPartyEmailPasswordSignInButton`
+- 6) Each theme component must be overridable (using the `withOverride` component).
+- 7) When doing output parsing for an API call, only handle what we care about. If the user has manually added some other fields to response from the API, let them handle that.
+- 8) There should be one file where all the functions exposed by this recipe are listed and documented. This file will be linked from the docs as API documentation.
    - a) For functions
    - b) For component override interface
    - c) For functions override interface
-- 10) User interaction with a recipe should be isolated to that recipe, even if that recipe uses several other sub recipes. For example, if a user initialises recipeX (which uses recipeY and recipeZ underneath), the user should not have to do `recipeY.something` or `recipeZ.something`. Therefore, recipeX must re-export useful functions / components that are provided by recipeY and recipeZ.
-- 11) When implementing Recipe interfaces, make sure that if a function uses another function in the interface, it will call the user's overrided verion of that function (if the user has overriden it). See https://github.com/supertokens/supertokens-node/issues/199
+- 9) User interaction with a recipe should be isolated to that recipe, even if that recipe uses several other sub recipes. For example, if a user initialises recipeX (which uses recipeY and recipeZ underneath), the user should not have to do `recipeY.something` or `recipeZ.something`. Therefore, recipeX must re-export useful functions / components that are provided by recipeY and recipeZ.
+- 10) When implementing Recipe interfaces, make sure that if a function uses another function in the interface, it will call the user's overrided verion of that function (if the user has overriden it). See https://github.com/supertokens/supertokens-node/issues/199
+
+## Recipe Interface Functions
+
+### Error Handling
+
+- a) If a function has valid error states, those should be returned from the function like `{status: "OK", ...} | {status: "ERROR_1", ...} | {status: "ERROR_2", ...}`. That is, no throwing or errors unless it's a `GENERAL_ERROR`, or if the type system for that language allows you to clearly define error types (like in the case of Java).
+- b) `GENERAL_ERRORS` should be thrown as a normal error (depending on the language)
+
+For example
+
+```ts
+function doSomething(status: "OK" | "ERROR") {
+    let response = makeAPICall();
+
+    if (response.status === "GENERAL_ERROR") {
+        throw new Error(response.message);
+    }
+
+    ...
+
+    return {status: response.status};
+}
+```
+
+### Network Calls
+
+- a) The recipe implementation should allow for pre-api hooks to be configured when the recipe is initialised. These hooks should be called by implementation functioms before making any network request.
+- b) Each recipe interface function should allow for a "local" pre-api hook, this can be useful where users require dynamic request parameters or if for specific APIs the fields in the recipe level pre-api hook need to be changed.
+
+Recipe Level Pre API Hook (Javascript example)
+
+```ts
+Recipe.init({
+    preApiHook: (req: RequestInit) => RequestInit,
+})
+```
+
+For function level pre API hooks we introduce a new `options` parameter.
+
+```ts
+function doSomething(options?: {
+    preApiHook?: (req: RequestInit) => RequestInit,
+}) {
+    ...
+    let requestConfig: RequestInit = {...}
+    requestConfig = callRecipePreAPIHook(requestConfig);
+    
+    if (options !== undefined && options.preApiHook !== undefined) {
+        requestConfig = options.preApiHook(requestConfig);
+    }
+
+    makeAPIRequest(requestConfig);
+    ...
+}
+```
+
+:::important
+In recipe functions the API logic should follow this order:
+
+1. Create a request object (For example RequestInit in JS).
+2. Call the recipe level pre api hook.
+3. Call the function level pre api hook.
+4. Call the API
+:::
+
+### Custom function responses
+
+Because the user can override APIs in the Backend SDK and provide responses in their own formats, the recipe functions on the Frontend must always assume that API responses (and function responses) can be non-standard. The recipe functions should rely on `status` in the API responses to decide if the response is a custom one.
+
+For example consider a function `getUserInformation` that returns `{status: "OK" | "NOT_AUTHORISED"}`
+
+```ts
+async function getUserInformation(): Promise<{status: "OK" | "NOT_AUTHORISED"}> {}
+```
+
+If the user wants to return the userID from this function, they cannot do so by simply overriding the function. To accommodate for this we use a `status: "CUSTOM"`. When API responses are recieved the recipe functions first check if the `status` matches an expected value. If it does not the function returns `{status: "CUSTOM"}`. In addition to this the functions should always return the fetched API result to allow users to do custom parsing should they need it
+
+The recipe function signature would then look like:
+
+```ts
+async function getUserInformation(): Promise<{status: "OK" | "NOT_AUTHORISED" | "CUSTOM", fetchedResponse: Response}> {
+    ...
+    let response = await makeAPICall();
+
+    if (response.status !=== "OK" && response.status !== "NOT_AUTHORISED" ) {
+        return {
+            status: "CUSTOM",
+            fetchedResponse: response,
+        };
+    }
+
+    ...
+}
+```
+
+Note that this means that the user MUST use `status: "CUSTOM"` if they are choosing to not follow the FDI. For example if an API returns `{status: "OK", userId: string}` and the user overrides this API to return `{status: "OK", message: string}` the SDK will throw an error because the `status` matched an expected value but the expected field `userId` is not present. In such a case the user should return `{status: "CUSTOM", message: string}` and handle API parsing on the frontend using `fetchedResponse`.
