@@ -2,7 +2,7 @@ import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 
-export default function GoFrameworkSubTabs(props) {
+export default function GoFrameworkSubTabs(props: any) {
     return (
         <Tabs
             isSubTab={true}

@@ -65,7 +65,7 @@ export function recursiveMap(children: any, fn: any, filterDescendants?: (comp: 
             });
         }
         return child;
-    }).filter(child => child !== undefined); 
+    }).filter((child: any) => child !== undefined);
     // We need to remove undefineds here, because they are not valid nodes and represents entries not matching the filter
 
     if (result.length === 1) {

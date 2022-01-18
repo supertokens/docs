@@ -1,7 +1,7 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 
-export default function FrontendReactContextSubTabs(props) {
+export default function FrontendReactContextSubTabs(props: any) {
     return (
         <Tabs
             isSubTab={true}

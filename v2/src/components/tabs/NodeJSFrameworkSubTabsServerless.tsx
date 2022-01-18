@@ -3,7 +3,7 @@ let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
 
-export default function NodeJSFrameworkSubTabsServerless(props) {
+export default function NodeJSFrameworkSubTabsServerless(props: any) {
     return (
         <Tabs
             isSubTab={true}

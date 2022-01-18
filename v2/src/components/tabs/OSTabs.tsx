@@ -1,7 +1,7 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 
-export default function OSTabs(props) {
+export default function OSTabs(props: any) {
     return (
         <Tabs
             groupId="os"
