@@ -159,7 +159,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }))
     }
 
-    updateFieldStateAndRemoveError = (fieldName, value) => {
+    updateFieldStateAndRemoveError = (fieldName: string, value: string) => {
         this.setState(oldState => ({
             ...oldState,
             [fieldName]: value
@@ -173,7 +173,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         })
     }
 
-    handleNextNetlifyRouteToggle = (fieldName: string, pathPrefix: string) => {
+    handleNextNetlifyRouteToggle = (fieldName: "nextJSApiRouteUsed" | "netlifyApiRouteUsed", pathPrefix: string) => {
         this.setState(oldState => {
             const toggledNextJSApiRouteUsed = !oldState[fieldName];
 
@@ -514,7 +514,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }, () => {
             if (typeof window !== 'undefined' && fromUser) {
-                const currentState = {...this.state};
+                const currentState: any = {...this.state};
 
                 // do not save fieldErrors in localStorage
                 delete currentState.fieldErrors;
