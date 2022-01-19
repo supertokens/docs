@@ -604,7 +604,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         && this.state.nextJSApiRouteUsed
                         && !(apiBasePath === "/api" || apiBasePath.startsWith("/api/"))
                     ) {
-                        validationErrors.apiBasePath = "Please enter a valid path."
+                        validationErrors.apiBasePath = "apiBasePath should begin with '/api' when using NextJS' API Route."
                     } else if (
                         this.props.showNetlifyAPIRouteCheckbox
                         && this.state.netlifyApiRouteUsed
@@ -612,7 +612,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     ) {
                         // if the netlify api route checkbox is set to true
                         // the api base path can only start with `/.netlify/functions`
-                        validationErrors.apiBasePath = "Please enter a valid path."
+                        validationErrors.apiBasePath = "apiBasePath should begin with '/.netlify/functions/' when using Netlify Serverless Functions."
                     }
                 } else {
                     validationErrors.apiBasePath = "Please enter a valid path."
