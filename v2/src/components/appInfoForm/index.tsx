@@ -104,11 +104,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         } else {
             const nextJSPrefix = "/api";
-            const NetlifyPrefix = "/.netlify/functions";
+            const netlifyPrefix = "/.netlify/functions";
 
             if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed && !defaultApiBasePath.startsWith(nextJSPrefix)) {
                 defaultApiBasePath = this.replacePathPrefixWithNewPrefix(defaultApiBasePath, "/.netlify/functions", "/api");
-            } else if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed && !defaultApiBasePath.startsWith(NetlifyPrefix)) {
+            } else if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed && !defaultApiBasePath.startsWith(netlifyPrefix)) {
                 defaultApiBasePath = this.replacePathPrefixWithNewPrefix(defaultApiBasePath, "/api", "/.netlify/functions");
             }
         }
@@ -483,14 +483,33 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 apiDomain = this.getDomainOriginOrEmptyString(this.state.apiDomain);
             }
 
+            // if the apiBasePath is an empty string, we set it to the default values -
+            // '/auth', '/api/auth' or '/.netlify/functions/auth' depending upon the options selected
+            let apiBasePath = this.state.showAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath;
+            if (apiBasePath.length === 0 && this.state.showAPIBasePath) {
+                if (this.props.showNetlifyAPIRouteCheckbox) {
+                    apiBasePath = this.state.netlifyApiRouteUsed ? "/.netlify/functions/auth" : "/auth";
+                } else if (this.props.showNextJSAPIRouteCheckbox) {
+                    apiBasePath = this.state.nextJSApiRouteUsed ? "/api/auth" : "/auth";
+                } else {
+                    apiBasePath = "/auth";
+                }
+            }
+
+            // if the websiteBasePath is an empty string, we set it to the default value '/auth'
+            let websiteBasePath = this.state.showWebsiteBasePath ? this.state.websiteBasePath.trim() : oldState.websiteBasePath;
+            if (websiteBasePath.length === 0 && this.state.showWebsiteBasePath) {
+                websiteBasePath = "/auth";
+            }
+
             return {
                 // TODO: Add more fields here.
                 ...oldState,
                 apiDomain,
                 websiteDomain,
+                apiBasePath,
+                websiteBasePath,
                 appName: this.props.askForAppName ? this.state.appName.trim() : oldState.appName,
-                apiBasePath: this.state.showAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath,
-                websiteBasePath: this.state.showWebsiteBasePath ? this.state.websiteBasePath.trim() : oldState.websiteBasePath,
                 formSubmitted: true
             }
         }, () => {
