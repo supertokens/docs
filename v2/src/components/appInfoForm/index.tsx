@@ -612,7 +612,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     ) {
                         // if the netlify api route checkbox is set to true
                         // the api base path can only start with `/.netlify/functions`
-                        validationErrors.apiBasePath = "apiBasePath should begin with '/.netlify/functions/' when using Netlify Serverless Functions."
+                        validationErrors.apiBasePath = "apiBasePath should begin with '/.netlify/functions' when using Netlify Serverless Functions."
                     }
                 } else {
                     validationErrors.apiBasePath = "Please enter a valid path."
