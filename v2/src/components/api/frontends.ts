@@ -1,6 +1,5 @@
 import { API_URL } from "../constants";
 import * as httpNetworking from "../httpNetworking";
-import { PlanType } from "../types/planType";
 
 const URL = API_URL + "/frontends";
 const VERSION = 0;

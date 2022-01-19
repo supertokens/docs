@@ -151,7 +151,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
-    resubmitInfoClicked = (event) => {
+    resubmitInfoClicked = (event: any) => {
         event.preventDefault();
         this.setState(oldState => ({
             ...oldState,
@@ -272,7 +272,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             </div>
                         </div>
                     </div>
-                    {recursiveMap(this.props.children, (c) => {
+                    {recursiveMap(this.props.children, (c: any) => {
                         if (typeof c === "string") {
                             // TODO: Add more fields here.
                             if (this.props.askForAppName) {

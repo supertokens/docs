@@ -1,7 +1,7 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 
-export default function SelfHostedTabs(props) {
+export default function SelfHostedTabs(props: any) {
     return (
         <Tabs
             groupId="self-hosted"

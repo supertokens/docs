@@ -1,7 +1,7 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 
-export default function NodeJSFrameworkSubTabs(props) {
+export default function NodeJSFrameworkSubTabs(props: any) {
     return (
         <Tabs
             isSubTab={true}

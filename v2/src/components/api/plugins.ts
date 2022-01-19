@@ -1,6 +1,5 @@
 import { API_URL } from "../constants";
 import * as httpNetworking from "../httpNetworking";
-import { PlanType } from "../types/planType";
 
 const URL = API_URL + "/plugins";
 const VERSION = 0;
@@ -18,7 +17,7 @@ export type GetSupportedPluginsResponse = {
  * Fetches a list of supported plugins in format {id: string, displayName: string}
  * @param planType free or commercial
  */
-export default async function getSupportedPlugins(planType: PlanType): Promise<GetSupportedPluginsResponse> {
+export default async function getSupportedPlugins(planType: any): Promise<GetSupportedPluginsResponse> {
     let options: httpNetworking.GETRequestConfig = {
         timeout: 50000,
         params: {

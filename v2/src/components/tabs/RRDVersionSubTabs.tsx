@@ -1,7 +1,7 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 
-export default function RRDVersionSubTabs(props) {
+export default function RRDVersionSubTabs(props: any) {
     return (
         <Tabs
             isSubTab={true}

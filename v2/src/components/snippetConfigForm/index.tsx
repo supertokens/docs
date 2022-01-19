@@ -23,7 +23,7 @@ type Props<T extends keyof any> = {
 };
 
 type State = {
-  answers: string[];
+  answers: (string | undefined)[];
 };
 
 const storageKeyPrefix = "snippetQuestionVal_";
@@ -115,7 +115,7 @@ export default class SnippetConfigForm<T extends keyof any> extends React.PureCo
         {this.canContinue() &&
           recursiveMap(
             this.props.children,
-            (c) => {
+            (c: any) => {
               if (typeof c === "string") {
                 for (const [ind, question] of this.props.questions.entries()) {
                   const value = this.state.answers[ind];

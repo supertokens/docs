@@ -5,7 +5,7 @@ import {isMobile, isTablet} from 'react-device-detect';
 import "./style.css";
 
 type FormItemType = {
-    title: string, 
+    title: string,
     placeholder: string,
     onChange: (val: string) => void,
     explanation: string,
@@ -24,7 +24,7 @@ export default function FormItem(props: FormItemType) {
     });
 
     // Refs
-    const questionIconRef = useRef(undefined);
+    const questionIconRef: any = useRef(undefined);
 
     // Did mount
     useEffect(() => {
@@ -71,7 +71,7 @@ export default function FormItem(props: FormItemType) {
 
         setShowExplanation(true);
     }
-    
+
     const handleMouseOutIcon = () => {
         setShowExplanation(false);
     }
@@ -79,7 +79,7 @@ export default function FormItem(props: FormItemType) {
     const handleMouseClickIcon = () => {
         handleMouseOverIcon();
     }
-    
+
     const handleMouseClickOutIcon = (event: MouseEvent) => {
         const element = event.target as HTMLElement;
 
@@ -142,7 +142,7 @@ export default function FormItem(props: FormItemType) {
                     style={{
                         top: `${explanationLocation.y}px`,
                         left: `${explanationLocation.x}px`
-                    }}    
+                    }}
                 >
                     {props.explanation}
                 </div>
