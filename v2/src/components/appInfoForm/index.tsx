@@ -494,12 +494,20 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 } else {
                     apiBasePath = "/auth";
                 }
+            } else if (this.state.showAPIBasePath && !apiBasePath.startsWith('/')) {
+                // if the base path does not start with '/'
+                // we add a '/' at the start of the path
+                apiBasePath = `/${apiBasePath}`;
             }
 
             // if the websiteBasePath is an empty string, we set it to the default value '/auth'
             let websiteBasePath = this.state.showWebsiteBasePath ? this.state.websiteBasePath.trim() : oldState.websiteBasePath;
             if (websiteBasePath.length === 0 && this.state.showWebsiteBasePath) {
                 websiteBasePath = "/auth";
+            } else if (this.state.showWebsiteBasePath && !websiteBasePath.startsWith('/')) {
+                // if the base path does not start with '/'
+                // we add a '/' at the start of the path
+                websiteBasePath = `/${websiteBasePath}`;
             }
 
             return {
