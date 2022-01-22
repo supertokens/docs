@@ -603,7 +603,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         if (this.state.showAPIBasePath) {
-            if (!localStorage.getItem('form_appInfo')) {
+            if (preventErrorUpdateInState && !localStorage.getItem('form_appInfo')) {
                 // we do this check in case the user has not submitted the form
                 // in which case the base path fields will have the default '/auth'
                 validationErrors.apiBasePath = "Please enter a valid path.";
@@ -633,7 +633,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         if (this.state.showWebsiteBasePath) {
-            if (!localStorage.getItem('form_appInfo')) {
+            if (preventErrorUpdateInState && !localStorage.getItem('form_appInfo')) {
                 // we do this check in case the user has not submitted the form
                 // in which case the base path fields will have the default '/auth'
                 validationErrors.websiteBasePath = "Please enter a valid path.";
