@@ -603,7 +603,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         if (this.state.showAPIBasePath) {
-            if (apiBasePath.length > 0) {
+            if (!localStorage.getItem('form_appInfo')) {
+                // we do this check in case the user has not submitted the form
+                // in which case the base path fields will have the default '/auth'
+                validationErrors.apiBasePath = "Please enter a valid path.";
+            } else if (apiBasePath.length > 0) {
                 if (this.getValidatedPath(apiBasePath).length !== 0) {
                     // if nextJS api route checkbox is set to true
                     // the api base path can be `/api` or `/api/some/path`
@@ -629,7 +633,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         if (this.state.showWebsiteBasePath) {
-            if (websiteBasePath.length > 0 && this.getValidatedPath(websiteBasePath).length === 0) {
+            if (!localStorage.getItem('form_appInfo')) {
+                // we do this check in case the user has not submitted the form
+                // in which case the base path fields will have the default '/auth'
+                validationErrors.websiteBasePath = "Please enter a valid path.";
+            } else if (websiteBasePath.length > 0 && this.getValidatedPath(websiteBasePath).length === 0) {
                 validationErrors.websiteBasePath = "Please enter a valid path."
             }
         }
