@@ -76,7 +76,7 @@ app.use((err, req, res, next) => {
 ## 4) Specify the location of SuperTokens Service and other configs
 - Call this somewhere close to where you initialise the app.
 - You can provide multiple addresses in case you are running more than one SuperTokens service (as shown below).
-- The default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.io`
+- The default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.com`
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Javascript-->
 ```js
@@ -85,7 +85,7 @@ let supertokens = require("supertokens-node");
 let app = express();
 
 supertokens.init({
-    hosts: "http://localhost:3567;https://try.supertokens.io"
+    hosts: "http://localhost:3567;https://try.supertokens.com"
 });
 ```
 <!--Typescript-->
@@ -95,7 +95,7 @@ import * as supertokens from "supertokens-node";
 let app = express();
 
 supertokens.init({
-    hosts: "http://localhost:3567;https://try.supertokens.io"
+    hosts: "http://localhost:3567;https://try.supertokens.com"
 });
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->

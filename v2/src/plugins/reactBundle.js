@@ -1,4 +1,4 @@
-// loads the react JS bundle for supertokens.io for footer and analytics etc..
+// loads the react JS bundle for supertokens.com for footer and analytics etc..
 
 module.exports = function myPlugin(context, options) {
     return {
@@ -7,7 +7,7 @@ module.exports = function myPlugin(context, options) {
             if (process.env.MODE !== "production") {
                 return {};
             }
-            console.log("ADDING supertokens.io REACT BUNDLE");
+            console.log("ADDING supertokens.com REACT BUNDLE");
             return {
                 postBodyTags: [
                     {

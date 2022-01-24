@@ -11,7 +11,7 @@
 const siteConfig = {
   title: "SuperTokens", // Title for your website.
   tagline: "A website for testing",
-  url: "https://supertokens.io", // Your website URL
+  url: "https://supertokens.com", // Your website URL
   baseUrl: "/docs/laravel/", // when creating new documentation, replace laravel with folder name
   // Used for publishing and more, irrelevant for us
   projectName: "test-site",

@@ -13,7 +13,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 const nonDocsProxyOptions = {
-    target: "https://supertokens.io",
+    target: "https://supertokens.com",
     changeOrigin: true
 };
 const nonDocsProxy = createProxyMiddleware(nonDocsProxyOptions);

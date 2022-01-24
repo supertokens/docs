@@ -40,7 +40,7 @@ r.POST("/refresh", supertokens.Middleware(), func(c *gin.Context) {
 ## 4) Specify the location of SuperTokens Service and other configs
 - Call this somewhere close to where you initialise the app.
 - You can provide multiple addresses in case you are running more than one SuperTokens service (as shown below).
-- The default location of SuperTokens is `http://localhost:3567`. If using the trial instance, use `https://try.supertokens.io`
+- The default location of SuperTokens is `http://localhost:3567`. If using the trial instance, use `https://try.supertokens.com`
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Mux or net/http-->
 ```go
@@ -49,7 +49,7 @@ import "github.com/supertokens/supertokens-go/supertokens"
 func main() {
     // ; separated addresses
     supertokens.Config(supertokens.ConfigMap{
-		Hosts: "http://localhost:9000;https://try.supertokens.io",
+		Hosts: "http://localhost:9000;https://try.supertokens.com",
     })
 }
 ```
@@ -60,7 +60,7 @@ import "github.com/supertokens/supertokens-go/gin/supertokens"
 func main() {
     // ; separated addresses
     supertokens.Config(supertokens.ConfigMap{
-		Hosts: "http://localhost:9000;https://try.supertokens.io",
+		Hosts: "http://localhost:9000;https://try.supertokens.com",
     })
 }
 ```

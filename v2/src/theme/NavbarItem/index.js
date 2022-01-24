@@ -72,7 +72,7 @@ export default function NavbarItem({ type, ...props }) {
           {
             isNavLink: true,
             label: "Older versions",
-            to: `https://supertokens.io/docs/${currDocs}/versions`,
+            to: `https://supertokens.com/docs/${currDocs}/versions`,
             isActive: () => { },
             onClick: () => { }
           }

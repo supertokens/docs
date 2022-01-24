@@ -18,8 +18,8 @@ SuperTokens.init({
         ThirdParty.init({
             signInAndUpFeature: {
                 disableDefaultImplementation: false,
-                privacyPolicyLink: "https://supertokens.io/legal/privacy-policy",
-                termsAndConditionsLink: "https://supertokens.io/legal/terms-and-conditions",
+                privacyPolicyLink: "https://supertokens.com/legal/privacy-policy",
+                termsAndConditionsLink: "https://supertokens.com/legal/terms-and-conditions",
                 style: {
                     container: {
                         backgroundColor: "#ffeeff"
@@ -54,12 +54,12 @@ SuperTokens.init({
 
 - **privacyPolicyLink**: 
     - Description: Link to your privacy policy
-    - Example: ```privacyPolicyLink: "https://supertokens.io/legal/privacy-policy"```
+    - Example: ```privacyPolicyLink: "https://supertokens.com/legal/privacy-policy"```
     - Optional
 
 - **termsAndConditionsLink**: 
     - Description: Link to your terms and conditions
-    - Example: ```termsAndConditionsLink: "https://supertokens.io/legal/terms-and-conditions"```
+    - Example: ```termsAndConditionsLink: "https://supertokens.com/legal/terms-and-conditions"```
 
 - **style**: 
     - Description: An object to overwrite the Sign up form styles. Please refer to the <a href="/docs/thirdparty/common-customizations/styling/changing-style" target="_blank">common customizations guide</a> on how to update the sign in form style.

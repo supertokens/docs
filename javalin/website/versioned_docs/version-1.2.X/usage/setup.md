@@ -34,14 +34,14 @@ app.exception(SuperTokensException.class, SuperTokens.exceptionHandler());
 ## 4) Specify the location of SuperTokens Service and other configs
 - Call this somewhere close to where you initialise the app.
 - You can provide multiple addresses in case you are running more than one SuperTokens service (as shown below).
-- If using our managed service, you can get the connection information using the <div class="connect-action-button">Connect</div> button on your dashboard. For self hosted, the default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.io`.
+- If using our managed service, you can get the connection information using the <div class="connect-action-button">Connect</div> button on your dashboard. For self hosted, the default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.com`.
 - You can also specify an API key if you have set one in the `config.yaml` file
 
 ```java
 import io.supertokens.javalin.*;
 
 // ; separated addresses
-SuperTokens.config().withHosts("http://localhost:9000;https://try.supertokens.io", "apiKey");
+SuperTokens.config().withHosts("http://localhost:9000;https://try.supertokens.com", "apiKey");
 ```
 
 - All config values (these will override the ones specified in the `config.yaml` file):
