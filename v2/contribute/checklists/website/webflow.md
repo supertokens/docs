@@ -72,5 +72,5 @@ hide_title: true
 31. Copy and paste new command that you get in the terminal
 32. Compare and pull request on GitHub main website
 33. Test everything 
-* Then remember, only after the website has been pushed to production, you go to https://supertokens.io/update-seo-content and update the seo content. If the link navigates you to homepage, go to the website, inspect element and paste this in console : localStorage.setItem('st_antcs', 'st-team-udid1234') After that you can check the link again
+* Then remember, only after the website has been pushed to production, you go to https://supertokens.com/update-seo-content and update the seo content. If the link navigates you to homepage, go to the website, inspect element and paste this in console : localStorage.setItem('st_antcs', 'st-team-udid1234') After that you can check the link again
 * To check if everything is working fine, https://socialsharepreview.com/

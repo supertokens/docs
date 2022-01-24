@@ -40,7 +40,7 @@ def refresh():
 ## 5) Specify the location of SuperTokens Service and other configs
 - Set `SUPERTOKENS_HOSTS` in config of your app.
 - You can provide multiple addresses in case you are running more than one SuperTokens service (as shown below).
-- If using our managed service, you can get the connection information using the <div class="connect-action-button">Connect</div> button on your dashboard. For self hosted, the default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.io`.
+- If using our managed service, you can get the connection information using the <div class="connect-action-button">Connect</div> button on your dashboard. For self hosted, the default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.com`.
 - You can also specify an API key if you have set one in the `config.yaml` file
 
 ```python
@@ -48,7 +48,7 @@ from supertokens_flask import SuperTokens
 from flask import Flask
 
 app = Flask(__name__)
-app.config['SUPERTOKENS_HOSTS'] = "http://localhost:3567;https://try.supertokens.io"
+app.config['SUPERTOKENS_HOSTS'] = "http://localhost:3567;https://try.supertokens.com"
 app.config['SUPERTOKENS_API_KEY'] = "key"
 SuperTokens(app)
 ```

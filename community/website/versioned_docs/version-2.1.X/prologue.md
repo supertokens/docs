@@ -7,7 +7,7 @@ original_id: prologue
 
 # SuperTokens Community Version
 
-SuperTokens is an end-to-end and secure session management solution for web and mobile apps. At its core, SuperTokens uses rotating refresh tokens along with short lived access tokens to provide optimal security as well as user experience. The concept of rotating refresh tokens is explained [here](https://supertokens.io/blog/the-best-way-to-securely-manage-user-sessions?s=d).
+SuperTokens is an end-to-end and secure session management solution for web and mobile apps. At its core, SuperTokens uses rotating refresh tokens along with short lived access tokens to provide optimal security as well as user experience. The concept of rotating refresh tokens is explained [here](https://supertokens.com/blog/the-best-way-to-securely-manage-user-sessions?s=d).
 
 ## Overview of session flow
 <img src="/docs/static/assets/session_flow.png" />

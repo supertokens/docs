@@ -11,7 +11,7 @@ let remarkPlugins = [
 
 module.exports = {
   title: 'SuperTokens Docs',
-  url: 'https://supertokens.io',
+  url: 'https://supertokens.com',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'throw',
@@ -89,7 +89,7 @@ module.exports = {
           target: "_blank"
         },
         {
-          href: 'https://supertokens.io/discord',
+          href: 'https://supertokens.com/discord',
           label: 'Ask Questions',
           position: 'right',
         },
@@ -130,14 +130,14 @@ module.exports = {
   ],
   plugins: [
     [
-      // loads the supertokens.io react bundle for footer and analytics etc..
+      // loads the supertokens.com react bundle for footer and analytics etc..
       "./src/plugins/reactBundle",
       {
         id: "react-bundle",
       }
     ],
     [
-      // loads the supertokens.io react bundle for footer and analytics etc..
+      // loads the supertokens.com react bundle for footer and analytics etc..
       "./src/plugins/copyDocs",
       {
         // used for copying docs content via the <-COPY DOCS-> directive

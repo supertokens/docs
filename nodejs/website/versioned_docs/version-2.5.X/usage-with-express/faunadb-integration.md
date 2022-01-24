@@ -21,7 +21,7 @@ let supertokens = require("supertokens-node/faunadb");
 let app = express();
 
 app.use(supertokens.init({
-    hosts: "http://localhost:3567;https://try.supertokens.io",
+    hosts: "http://localhost:3567;https://try.supertokens.com",
     apiKey: "key",
     faunadbSecret: "FAUNADB SERVER KEY",
     userCollectionName: "COLLECTION NAME",
@@ -34,7 +34,7 @@ import * as supertokens from "supertokens-node/faunadb";
 let app = express();
 
 app.use(supertokens.init({
-    hosts: "http://localhost:3567;https://try.supertokens.io",
+    hosts: "http://localhost:3567;https://try.supertokens.com",
     apiKey: "key",
     faunadbSecret: "FAUNADB SERVER KEY",
     userCollectionName: "COLLECTION NAME",

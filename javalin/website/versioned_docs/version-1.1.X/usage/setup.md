@@ -33,13 +33,13 @@ app.exception(SuperTokensException.class, SuperTokens.exceptionHandler());
 ## 4) Specify the location of SuperTokens Service and other configs
 - Call this somewhere close to where you initialise the app.
 - You can provide multiple addresses in case you are running more than one SuperTokens service (as shown below).
-- The default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.io`
+- The default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.com`
 
 ```java
 import io.supertokens.javalin.*;
 
 // ; separated addresses
-SuperTokens.config().withHosts("http://localhost:9000;https://try.supertokens.io");
+SuperTokens.config().withHosts("http://localhost:9000;https://try.supertokens.com");
 ```
 
 - All config values (these will override the ones specified in the `config.yaml` file):

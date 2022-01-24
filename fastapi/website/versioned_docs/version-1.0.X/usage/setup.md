@@ -14,7 +14,7 @@ from supertokens_fastapi import SuperTokens
 from fastapi import FastAPI
 
 app = FastAPI()
-SuperTokens(app, hosts="http://localhost:3567;https://try.supertokens.io", api_key="key")
+SuperTokens(app, hosts="http://localhost:3567;https://try.supertokens.com", api_key="key")
 ```
 
 - All config values:

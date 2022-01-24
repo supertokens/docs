@@ -10,12 +10,12 @@ for (let pageKeys in PAGE_PATHS) {
 }
 pathExistOnFrontend = { ...redirectPaths, ...pathExistOnFrontend };
 
-// https://www.supertokens.io || http://wwww.supertokens.io  || https://supertokens.io || http://supertokens.io
+// https://www.supertokens.com || http://wwww.supertokens.com  || https://supertokens.com || http://supertokens.com
 export const hardcodedLinksMapper = {
-    "https://www.supertokens.io": true,
-    "http://wwww.supertokens.io": true,
-    "https://supertokens.io": true,
-    "http://supertokens.io": true
+    "https://www.supertokens.com": true,
+    "http://wwww.supertokens.com": true,
+    "https://supertokens.com": true,
+    "http://supertokens.com": true
 };
 
 export const gettingStartedLinks = {

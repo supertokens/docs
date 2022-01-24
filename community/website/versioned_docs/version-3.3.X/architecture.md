@@ -12,7 +12,7 @@ original_id: architecture
 
 - **Frontend SDK**: Responsible for rendering the login UI widgets and managing session tokens automatically.
 - **Backend SDK**: Provides APIs for sign-up, sign-in, signout, session refreshing etc. You can also disable these default APIs and build your own using the provided functions from this SDK.
-- **SuperTokens Core**: This is an HTTP service that contains the core logic for auth and sessions. It's also responsible for interfacing with the database. We have one instance of the Core running on [`https://try.supertokens.io`](https://try.supertokens.io/hello).
+- **SuperTokens Core**: This is an HTTP service that contains the core logic for auth and sessions. It's also responsible for interfacing with the database. We have one instance of the Core running on [`https://try.supertokens.com`](https://try.supertokens.com/hello).
 
 ## Why we chose Java for the SuperTokens core
 

@@ -10,7 +10,7 @@ original_id: installation
 To get started with SuperTokens, you first need to install and run the SuperTokens core. Please follow the steps mentioned below:
 
 ### 1) Sign up
-- Sign up by visiting [this page](https://supertokens.io/signup)
+- Sign up by visiting [this page](https://supertokens.com/signup)
 - The sign up form asks you to choose a database - this is where your app's session data will be stored.
 
 ### 2) Go to your [dashboard](/dashboard-saas) to download SuperTokens core

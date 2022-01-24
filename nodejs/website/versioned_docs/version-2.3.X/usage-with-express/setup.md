@@ -16,7 +16,7 @@ let supertokens = require("supertokens-node");
 let app = express();
 
 app.use(supertokens.init({
-    hosts: "http://localhost:3567;https://try.supertokens.io",
+    hosts: "http://localhost:3567;https://try.supertokens.com",
     apiKey: "key"
 }));
 ```
@@ -27,7 +27,7 @@ import * as supertokens from "supertokens-node";
 let app = express();
 
 app.use(supertokens.init({
-    hosts: "http://localhost:3567;https://try.supertokens.io",
+    hosts: "http://localhost:3567;https://try.supertokens.com",
     apiKey: "key"
 }));
 ```

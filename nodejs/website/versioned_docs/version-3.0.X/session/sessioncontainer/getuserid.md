@@ -7,4 +7,4 @@ original_id: getuserid
 
 # getUserId
 
-### We are hard at work writing these docs... 🖊️⌛. In the meantime, you can ask us questions on [our Discord](https://supertokens.io/discord)
+### We are hard at work writing these docs... 🖊️⌛. In the meantime, you can ask us questions on [our Discord](https://supertokens.com/discord)
