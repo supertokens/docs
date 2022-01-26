@@ -160,9 +160,16 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     }
 
     updateFieldStateAndRemoveError = (fieldName: string, value: string) => {
+        let newValue = value;
+        // if the value for apiBasePath or websiteBasePath is an empty string
+        // we save a "/" instead
+        if ((fieldName === "apiBasePath" || fieldName === "websiteBasePath") && value === "") {
+            newValue = "/";
+        }
+
         this.setState(oldState => ({
             ...oldState,
-            [fieldName]: value
+            [fieldName]: newValue
         }), () => {
             const errors = {...this.state.fieldErrors};
             delete errors[fieldName];
@@ -494,20 +501,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 apiDomain = this.getDomainOriginOrEmptyString(this.state.apiDomain);
             }
 
-            // if the apiBasePath is an empty string, we set it to the default values -
-            // '/auth', '/api/auth' or '/.netlify/functions/auth' depending upon the options selected
             let apiBasePath = this.state.showAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath;
-            if (apiBasePath.length === 0 && this.state.showAPIBasePath) {
-                if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed) {
-                    apiBasePath = "/.netlify/functions/auth";
-                } else if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed) {
-                    apiBasePath = "/api/auth";
-                } else {
-                    apiBasePath = "/auth";
-                }
-            } else if (this.state.showAPIBasePath && !apiBasePath.startsWith('/')) {
-                // if the base path does not start with '/'
-                // we add a '/' at the start of the path
+
+            // if the base path does not start with '/'
+            // we add a '/' at the start of the path
+            if (this.state.showAPIBasePath && !apiBasePath.startsWith('/')) {
                 apiBasePath = `/${apiBasePath}`;
             }
 
@@ -661,7 +659,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 // we do this check in case the user has not submitted the form
                 // in which case the base path fields will have the default '/auth'
                 validationErrors.apiBasePath = "Please enter a valid path.";
-            } else if (apiBasePath.length > 0) {
+            } else {
                 if (this.isBasePathValid(apiBasePath)) {
                     // if nextJS api route checkbox is set to true
                     // the api base path can only be of the form `/api` or `/api/some/path/...`
@@ -693,7 +691,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 // we do this check in case the user has not submitted the form
                 // in which case the base path fields will have the default '/auth'
                 validationErrors.websiteBasePath = "Please enter a valid path.";
-            } else if (websiteBasePath.length > 0 && !this.isBasePathValid(websiteBasePath)) {
+            } else if (!this.isBasePathValid(websiteBasePath)) {
                 validationErrors.websiteBasePath = "Please enter a valid path."
             }
         }
@@ -709,9 +707,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 && this.state.nextJSApiRouteUsed
                 && areBasePathsSameOrHaveCommonPrefix
             ) {
-                validationErrors.websiteBasePath = "apiBasePath and websiteBasePath cannot be equal or have a common prefix when using NextJS' API Route."
+                validationErrors.apiBasePath = "apiBasePath and websiteBasePath cannot be equal and apiBasePath cannot be prefixed by websiteBasePath when using NextJS' API Route."
             } else if (normalisedApiDomain === normalisedWebsiteDomain && areBasePathsSameOrHaveCommonPrefix) {
-                validationErrors.websiteBasePath = "apiBasePath and websiteBasePath cannot be equal or have a common prefix when apiDomain and websiteDomain have the same value."
+                validationErrors.apiBasePath = "apiBasePath and websiteBasePath cannot be equal and apiBasePath cannot be prefixed by websiteBasePath when apiDomain and websiteDomain have the same value."
             }
         }
 
