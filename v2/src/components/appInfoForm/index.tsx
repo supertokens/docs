@@ -129,11 +129,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     formSubmitted: oldState.formSubmitted,
                 }), () => {
                     if (!this.state.formSubmitted) {
-                        if (this.canContinue()) {
+                        if (this.canContinue(true)) {
                             this.handleContinueClicked(false);
                         }
                     } else {
-                        if (!this.canContinue()) {
+                        if (!this.canContinue(true)) {
                             this.setState(oldState => ({
                                 ...oldState,
                                 formSubmitted: false
@@ -175,33 +175,38 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     handleNextNetlifyRouteToggle = (fieldName: "nextJSApiRouteUsed" | "netlifyApiRouteUsed", pathPrefix: string) => {
         this.setState(oldState => {
-            const toggledNextJSApiRouteUsed = !oldState[fieldName];
+            const toggledRouteCheckboxValue = !oldState[fieldName];
 
             let oldApiBasePath = oldState.apiBasePath;
+            if (!oldApiBasePath.startsWith("/")) {
+                oldApiBasePath = `/${oldApiBasePath}`;
+            }
 
+            // we check if the old apiBasePath starts with the path prefix or not
             const apiBasePathWithPrefix = oldApiBasePath.startsWith(pathPrefix)
 
+            const isApiBasePathEmpty = oldApiBasePath === undefined || oldApiBasePath === "" || oldApiBasePath === "/";
+
             // if the checkbox is toggled true
-            if (toggledNextJSApiRouteUsed && !apiBasePathWithPrefix) {
-                if (oldApiBasePath === "" || oldApiBasePath === "/") {
+            if (toggledRouteCheckboxValue && !apiBasePathWithPrefix) {
+                if (isApiBasePathEmpty) {
                     oldApiBasePath = `${pathPrefix}/auth`;
                 } else {
                     oldApiBasePath = `${pathPrefix}${oldApiBasePath}`;
                 }
-            } else if (!toggledNextJSApiRouteUsed && apiBasePathWithPrefix) {
+            } else if (!toggledRouteCheckboxValue && apiBasePathWithPrefix) {
                 // if the checkbox is toggled to false
 
                 // get the path without the prefix
                 oldApiBasePath = oldApiBasePath.substring(pathPrefix.length);
-
-                if (oldApiBasePath === undefined || oldApiBasePath === "" || oldApiBasePath === "/") {
-                    oldApiBasePath = "/auth";
-                }
+            } else if (!toggledRouteCheckboxValue && !apiBasePathWithPrefix && isApiBasePathEmpty) {
+                // if the checkbox is set to false and the apiBasePath is empty or '/'
+                oldApiBasePath = "/auth"
             }
 
             return {
                 ...oldState,
-                [fieldName]: toggledNextJSApiRouteUsed,
+                [fieldName]: toggledRouteCheckboxValue,
                 apiBasePath: oldApiBasePath
             }
         })
@@ -287,8 +292,14 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             if (this.state.showAPIBasePath) {
                                 c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
                             }
+                            if (this.state.showAPIBasePath) {
+                                c = c.split("^{form_apiBasePathForCallbacks}").join(this.state.apiBasePath !== "/" ? this.state.apiBasePath : "");
+                            }
                             if (this.state.showWebsiteBasePath) {
                                 c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
+                            }
+                            if (this.state.showWebsiteBasePath) {
+                                c = c.split("^{form_websiteBasePathForCallbacks}").join(this.state.websiteBasePath !== "/" ? this.state.websiteBasePath : "");
                             }
                             if (this.props.addNetlifyPathExplanation && c === "^{form_netlifyPathExplanation}") {
                                 c = this.getNetlifyPathExplanationString();
@@ -487,10 +498,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             // '/auth', '/api/auth' or '/.netlify/functions/auth' depending upon the options selected
             let apiBasePath = this.state.showAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath;
             if (apiBasePath.length === 0 && this.state.showAPIBasePath) {
-                if (this.props.showNetlifyAPIRouteCheckbox) {
-                    apiBasePath = this.state.netlifyApiRouteUsed ? "/.netlify/functions/auth" : "/auth";
-                } else if (this.props.showNextJSAPIRouteCheckbox) {
-                    apiBasePath = this.state.nextJSApiRouteUsed ? "/api/auth" : "/auth";
+                if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed) {
+                    apiBasePath = "/.netlify/functions/auth";
+                } else if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed) {
+                    apiBasePath = "/api/auth";
                 } else {
                     apiBasePath = "/auth";
                 }
@@ -522,14 +533,25 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }, () => {
             if (typeof window !== 'undefined' && fromUser) {
-                const currentState: any = {...this.state};
+                // get the current form values stored in the localstorage
+                const currentLocalStorageFormData = localStorage.getItem("form_appInfo");
+                let currentLocalStorageParsedFormData: any = {};
+                if (currentLocalStorageFormData) {
+                    currentLocalStorageParsedFormData = JSON.parse(currentLocalStorageFormData);
+                }
 
-                // do not save fieldErrors in localStorage
-                delete currentState.fieldErrors;
-                delete currentState.showWebsiteBasePath;
-                delete currentState.showAPIBasePath;
+                const newLocalStorageFormData = {
+                    appName: this.props.askForAppName ? this.state.appName : currentLocalStorageParsedFormData.appName,
+                    apiDomain: this.props.askForAPIDomain ? this.state.apiDomain : currentLocalStorageParsedFormData.apiDomain,
+                    websiteDomain: this.props.askForWebsiteDomain ? this.state.websiteDomain : currentLocalStorageParsedFormData.websiteDomain,
+                    websiteBasePath: this.state.showWebsiteBasePath ? this.state.websiteBasePath : currentLocalStorageParsedFormData.websiteBasePath,
+                    apiBasePath: this.state.showAPIBasePath ? this.state.apiBasePath : currentLocalStorageParsedFormData.apiBasePath,
+                    nextJSApiRouteUsed: this.state.nextJSApiRouteUsed,
+                    netlifyApiRouteUsed: this.state.netlifyApiRouteUsed,
+                    formSubmitted: this.state.formSubmitted
+                }
 
-                window.localStorage.setItem("form_appInfo", JSON.stringify(currentState));
+                window.localStorage.setItem("form_appInfo", JSON.stringify(newLocalStorageFormData));
                 window.dispatchEvent(new Event('appInfoFormFilled'));
             }
         })
@@ -544,7 +566,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             const domainAsURL = new URL(normalisedURLDomain.getAsStringDangerous());
 
             // check if it does not have any path value
-            if (domainAsURL.pathname !== "/") return `${fieldName} should not contain any path, use ${pathErrorAlternateFieldName} instead.`;
+            if (domainAsURL.pathname !== "/") {
+                return `${fieldName} should not contain any path, use ${pathErrorAlternateFieldName} instead.`;
+            }
 
             return ""
         } catch {
@@ -554,12 +578,22 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     // returns the path if it is valid
     // returns an empty string if the path is invalid
-    getValidatedPath = (path: string) => {
+    isBasePathValid = (path: string) => {
         try {
-            new URL(`https://domain.com${path}`)
-            return path;
+            // we check if there are any non-standard characters in the path
+            if (encodeURI(path) !== path) {
+                return false;
+            }
+
+            // we check if the path successfully creates a URL object
+            if (path.startsWith("/")) {
+                new URL(`https://domain.com${path}`)
+            } else {
+                new URL(`https://domain.com/${path}`)
+            }
+            return true;
         } catch {
-            return "";
+            return false;
         }
     }
 
@@ -568,14 +602,31 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         const appName = this.state.appName.trim();
         const apiDomain = this.state.apiDomain.trim();
         const websiteDomain = this.state.websiteDomain.trim();
-        const apiBasePath = this.state.apiBasePath.trim();
-        const websiteBasePath = this.state.websiteBasePath.trim();
+        let apiBasePath = this.state.apiBasePath.trim();
+        let websiteBasePath = this.state.websiteBasePath.trim();
+
+        // add '/' in front of the base paths for validation
+        if (!apiBasePath.startsWith('/')) {
+            apiBasePath = `/${apiBasePath}`;
+        }
+        if (!websiteBasePath.startsWith('/')) {
+            websiteBasePath = `/${websiteBasePath}`;
+        }
 
         // empty map for validation errors
         // maps the field's name to it's error
         const validationErrors: {
             [key: string]: string
-        } = {}
+        } = {};
+
+        // parse the form data stored in localstorage
+        let localFormDataParsed: any = {};
+        if (preventErrorUpdateInState) {
+            const localFormData = window.localStorage.getItem("form_appInfo");
+            if (localFormData) {
+                localFormDataParsed = JSON.parse(localFormData);
+            }
+        }
 
         // validate appName field
         if (this.props.askForAppName && appName.length === 0) {
@@ -603,24 +654,25 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         if (this.state.showAPIBasePath) {
-            if (preventErrorUpdateInState && !localStorage.getItem('form_appInfo')) {
+            const netlifyApiRouteUsed = this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed;
+            const nextJSApiRouteUsed = this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed;
+
+            if (preventErrorUpdateInState && (!localFormDataParsed || localFormDataParsed.apiBasePath === undefined)) {
                 // we do this check in case the user has not submitted the form
                 // in which case the base path fields will have the default '/auth'
                 validationErrors.apiBasePath = "Please enter a valid path.";
             } else if (apiBasePath.length > 0) {
-                if (this.getValidatedPath(apiBasePath).length !== 0) {
+                if (this.isBasePathValid(apiBasePath)) {
                     // if nextJS api route checkbox is set to true
-                    // the api base path can be `/api` or `/api/some/path`
+                    // the api base path can only be of the form `/api` or `/api/some/path/...`
                     if (
-                        this.props.showNextJSAPIRouteCheckbox
-                        && this.state.nextJSApiRouteUsed
+                        nextJSApiRouteUsed
                         && !(apiBasePath === "/api" || apiBasePath.startsWith("/api/"))
                     ) {
                         validationErrors.apiBasePath = "apiBasePath should begin with '/api' when using NextJS' API Route."
                     } else if (
-                        this.props.showNetlifyAPIRouteCheckbox
-                        && this.state.netlifyApiRouteUsed
-                        && !apiBasePath.startsWith('/.netlify/functions')
+                        netlifyApiRouteUsed
+                        && !(apiBasePath !== "/.netlify/functions" || apiBasePath.startsWith('/.netlify/functions/'))
                     ) {
                         // if the netlify api route checkbox is set to true
                         // the api base path can only start with `/.netlify/functions`
@@ -633,12 +685,29 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         if (this.state.showWebsiteBasePath) {
-            if (preventErrorUpdateInState && !localStorage.getItem('form_appInfo')) {
+            if (preventErrorUpdateInState && (!localFormDataParsed || localFormDataParsed.websiteBasePath === undefined)) {
                 // we do this check in case the user has not submitted the form
                 // in which case the base path fields will have the default '/auth'
                 validationErrors.websiteBasePath = "Please enter a valid path.";
-            } else if (websiteBasePath.length > 0 && this.getValidatedPath(websiteBasePath).length === 0) {
+            } else if (websiteBasePath.length > 0 && !this.isBasePathValid(websiteBasePath)) {
                 validationErrors.websiteBasePath = "Please enter a valid path."
+            }
+        }
+
+        if (this.state.showAPIBasePath && this.state.showWebsiteBasePath) {
+            const normalisedApiDomain = this.getDomainOriginOrEmptyString(apiDomain);
+            const normalisedWebsiteDomain = this.getDomainOriginOrEmptyString(websiteDomain);
+
+            const areBasePathsSameOrHaveCommonPrefix = apiBasePath.startsWith(websiteBasePath) || websiteBasePath.startsWith(apiBasePath);
+
+            if (
+                this.props.showNextJSAPIRouteCheckbox
+                && this.state.nextJSApiRouteUsed
+                && areBasePathsSameOrHaveCommonPrefix
+            ) {
+                validationErrors.websiteBasePath = "apiBasePath and websiteBasePath cannot be equal or have a common prefix when using NextJS' API Route."
+            } else if (normalisedApiDomain === normalisedWebsiteDomain && areBasePathsSameOrHaveCommonPrefix) {
+                validationErrors.websiteBasePath = "apiBasePath and websiteBasePath cannot be equal or have a common prefix when apiDomain and websiteDomain have the same value."
             }
         }
 
