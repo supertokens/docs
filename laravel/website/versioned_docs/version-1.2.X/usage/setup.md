@@ -59,13 +59,13 @@ public function render($request, Throwable $exception) {
 ## 6) Specify the location of SuperTokens Service
 - The config file allows you to specify the `hostname` and `port` of all the running SuperTokens instances. The default is `localhost` and `3567`.
 - You can provide multiple addresses in case you are running more than one SuperTokens service (as shown below).
-- The default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.io`
+- The default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.com`
 ```php
 // config/supertokens.php
 
 // we want to use two instances of SuperTokens core.
 return [
-    'hosts' => "http://localhost:3567;https://try.supertokens.io"
+    'hosts' => "http://localhost:3567;https://try.supertokens.com"
 ];
 ```
 

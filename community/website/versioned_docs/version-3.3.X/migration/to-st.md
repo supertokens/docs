@@ -15,7 +15,7 @@ original_id: to-st
    - For this approach, you should change the session verification, creation and revocation for all your APIs, excepting for one. This one API will be a new API whose job is to verify a session created from your system, revoke it, and create a new session using SuperTokens.
    - For all users, on first page load, if your session exists (and not SuperTokens' session), you want to call this special API, wait for it to switch sessions, and then continue with the rest of the app load.
 ## If you are using login
-This depends a lot on the existing solution you are using. We are hard at work writing these docs... 🖊️⌛. In the meantime, you can ask us questions on [our Discord](https://supertokens.io/discord)
+This depends a lot on the existing solution you are using. We are hard at work writing these docs... 🖊️⌛. In the meantime, you can ask us questions on [our Discord](https://supertokens.com/discord)
 
 [comment]: <> (TODO:)
 [comment]: <> (Custom)

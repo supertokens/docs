@@ -51,8 +51,8 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 ### Building custom react components:
 - These should go in v2 > src > components > <some-folder>
 
-### Linking to other parts of supertokens.io site:
-- For non docs links, you need to use `https://supertokens.io/*`. Otherwise the build process will fail (cause of broken link). This also adds a limitation that those links can be seen / tested only in production.
+### Linking to other parts of supertokens.com site:
+- For non docs links, you need to use `https://supertokens.com/*`. Otherwise the build process will fail (cause of broken link). This also adds a limitation that those links can be seen / tested only in production.
 
 ### Creating a new docs:
 - Please see v2 > HOW_TO_NEW_DOCS.md
@@ -137,6 +137,6 @@ import {Question, Answer}from "/src/components/question"
 ### Fixing broken links
 While building, we may get broken links errors. There are different types:
 - External links: Make sure to give the full path to these links
-- Links to `supertokens.io`, but non docs pages: These links should be `https://supertokens.io/...`
+- Links to `supertokens.com`, but non docs pages: These links should be `https://supertokens.com/...`
 - Internal docs links: These need to be fixed since it's most likely due to a writing error.
 - `COPY DOCS` related links: Sometimes the source doc's structure may not match the destination doc. For example, the core docs in v2 > community folder are being shown in the recipes, but not in the community docs, and the pages it links to exist in the recipe docs, but not in the community docs. To fix this, we create dummy pages in the community docs like found here: `v2 > community > common-customizations > core > api-keys.mdx`

@@ -15,8 +15,8 @@ import SuperTokens from "supertokens-auth-react";
 SuperTokens.init({
  	appInfo: {
 __HIGHLIGHT__        appName: "YOUR APP NAME", // Example: "SuperTokens",
-        apiDomain: "YOUR API DOMAIN", // Example: "https://api.supertokens.io",
-        websiteDomain: "YOUR WEBSITE DOMAIN" // Example: "https://supertokens.io"
+        apiDomain: "YOUR API DOMAIN", // Example: "https://api.supertokens.com",
+        websiteDomain: "YOUR WEBSITE DOMAIN" // Example: "https://supertokens.com"
 	}, __END_HIGHLIGHT__
     recipeList: [/* TODO */]
 });
@@ -34,12 +34,12 @@ Make sure to replace all the above configurations values with yours.
 - **apiDomain**:
     - Description: This is your API domain that is used to serve resources to your users.
     - Default: ```""```
-    - Example: ```apiDomain: "https://api.supertokens.io"```
+    - Example: ```apiDomain: "https://api.supertokens.com"```
 
 - **websiteDomain**:
     - Description: This is your website URL.
     - Default: ```""```
-    - Example: ```websiteDomain: "https://supertokens.io"```
+    - Example: ```websiteDomain: "https://supertokens.com"```
 
 - **apiBasePath**:
     - Description: This is the base path prefixes all the back end routes managed by SuperTokens.

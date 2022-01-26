@@ -13,7 +13,7 @@ from supertokens_flask import SuperTokens
 from flask import Flask
 
 app = Flask(__name__)
-app.config['SUPERTOKENS_HOSTS'] = "http://localhost:3567;https://try.supertokens.io"
+app.config['SUPERTOKENS_HOSTS'] = "http://localhost:3567;https://try.supertokens.com"
 app.config['SUPERTOKENS_API_KEY'] = "key"
 SuperTokens(app)
 ```

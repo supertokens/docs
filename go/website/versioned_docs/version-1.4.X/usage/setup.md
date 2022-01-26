@@ -17,7 +17,7 @@ import "github.com/supertokens/supertokens-go/supertokens"
 func main() {
     // ; separated addresses
     supertokens.Config(supertokens.ConfigMap{
-        Hosts:  "http://localhost:9000;https://try.supertokens.io",
+        Hosts:  "http://localhost:9000;https://try.supertokens.com",
         APIKey: "key",
     })
 }
@@ -29,7 +29,7 @@ import "github.com/supertokens/supertokens-go/gin/supertokens"
 func main() {
     // ; separated addresses
     supertokens.Config(supertokens.ConfigMap{
-        Hosts:  "http://localhost:9000;https://try.supertokens.io",
+        Hosts:  "http://localhost:9000;https://try.supertokens.com",
         APIKey: "key",
     })
 }

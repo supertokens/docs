@@ -28,7 +28,7 @@ protected $routeMiddleware = [
 // config/supertokens.php
 
 return [
-    'hosts' => "http://localhost:3567;https://try.supertokens.io",
+    'hosts' => "http://localhost:3567;https://try.supertokens.com",
     'apiKey' => "key"
 ];
 ```

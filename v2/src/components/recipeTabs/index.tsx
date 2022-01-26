@@ -22,7 +22,7 @@ const recipeTabsData: RecipeCardInfo[] = [
         imageSrc: "/img/recipe-tabs/recipe-passwordless.png",
         url: "/docs/passwordless/introduction",
         linkTitle: "Passwordless",
-        cardBody: "Add passwordless login with sessions to your app",
+        cardBody: "Add magic link or OTP based login with sessions to your app",
         className: "cardPasswordless",
         antcsInfo: {
             option_selected: "Passwordless"

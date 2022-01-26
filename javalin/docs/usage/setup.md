@@ -12,7 +12,7 @@ hide_title: true
 import io.supertokens.javalin.*;
 
 // ; separated addresses
-SuperTokens.config().withHosts("http://localhost:9000;https://try.supertokens.io", "apiKey");
+SuperTokens.config().withHosts("http://localhost:9000;https://try.supertokens.com", "apiKey");
 ```
 
 - All config values:

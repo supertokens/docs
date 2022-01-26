@@ -108,7 +108,7 @@ function checkAndfixLink(currentPath: string): string {
     // if the url contains "/" in the end we are removing it (some url's may contain and some may not, making them consistent)
     let uniformPath: string =
         currentPath[currentPath.length - 1] === "/" ? currentPath.slice(0, currentPath.length - 1) : currentPath;
-    // check if substring contains https://www.supertokens.io || http://wwww.supertokens.io  || https://supertokens.io || http://upertokens.io
+    // check if substring contains https://www.supertokens.com || http://wwww.supertokens.com  || https://supertokens.com || http://upertokens.io
     // if it does contain then remove it
     Object.keys(hardcodedLinksMapper).forEach(url => {
         if (uniformPath.includes(url)) {
