@@ -84,6 +84,7 @@ module.exports = {
             "common-customizations/signin-form/custom-providers",
           ]
         },
+        "common-customizations/change-password",
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
