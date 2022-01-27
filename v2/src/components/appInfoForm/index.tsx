@@ -707,17 +707,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
             if (nextJSApiRouteUsed || areNormalisedDomainsEqual) {
                 if (normalisedApiBasePath === normalisedWebsiteBasePath) {
-                    validationErrors.apiBasePath = nextJSApiRouteUsed
-                        ? "apiBasePath and websiteBasePath cannot be equal when using NextJS' API Route."
-                        : "apiBasePath and websiteBasePath cannot be equal when apiDomain and websiteDomain have the same value."
+                    validationErrors.apiBasePath = "apiBasePath and websiteBasePath cannot be equal.";
                 } else if (normalisedApiBasePath.startsWith(normalisedWebsiteBasePath)) {
-                    validationErrors.websiteBasePath = nextJSApiRouteUsed
-                        ? "websiteBasePath cannot be a prefix of apiBasePath when using NextJS' API Route."
-                        : "websiteBasePath cannot be a prefix of apiBasePath  when apiDomain and websiteDomain have the same value."
+                    validationErrors.websiteBasePath = "websiteBasePath cannot be a prefix of apiBasePath.";
                 } else if (normalisedWebsiteBasePath.startsWith(normalisedApiBasePath)) {
-                    validationErrors.apiBasePath = nextJSApiRouteUsed
-                        ? "apiBasePath cannot be a prefix of websiteBasePath when using NextJS' API Route."
-                        : "apiBasePath cannot be a prefix of websiteBasePath when apiDomain and websiteDomain have the same value."
+                    validationErrors.apiBasePath = "apiBasePath cannot be a prefix of websiteBasePath.";
                 }
             }
         }
