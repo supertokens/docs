@@ -2,6 +2,7 @@ import React, { PropsWithChildren } from "react";
 import "./style.css";
 import FormItem from './formItem';
 import NormalisedURLDomain from "./normalisedURLDomain";
+import NormalisedURLPath from "./normalisedURLPath";
 import { recursiveMap } from "../utils";
 
 type Props = {
@@ -163,7 +164,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         let newValue = value;
         // if the value for apiBasePath or websiteBasePath is an empty string
         // we save a "/" instead
-        if ((fieldName === "apiBasePath" || fieldName === "websiteBasePath") && value === "") {
+        if ((fieldName === "apiBasePath" || fieldName === "websiteBasePath") && value.trim() === "") {
             newValue = "/";
         }
 
@@ -484,6 +485,14 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
+    getNormalisedBasePath = (path: string) => {
+        try {
+            return new NormalisedURLPath(path).getAsStringDangerous();
+        } catch {
+            return "";
+        }
+    }
+
     handleContinueClicked = (fromUser: boolean) => {
         if (!this.canContinue()) {
             return;
@@ -501,23 +510,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 apiDomain = this.getDomainOriginOrEmptyString(this.state.apiDomain);
             }
 
-            let apiBasePath = this.state.showAPIBasePath ? this.state.apiBasePath.trim() : oldState.apiBasePath;
-
-            // if the base path does not start with '/'
-            // we add a '/' at the start of the path
-            if (this.state.showAPIBasePath && !apiBasePath.startsWith('/')) {
-                apiBasePath = `/${apiBasePath}`;
-            }
+            let apiBasePath = this.state.showAPIBasePath ? this.getNormalisedBasePath(this.state.apiBasePath.trim()) : oldState.apiBasePath;
 
             // if the websiteBasePath is an empty string, we set it to the default value '/auth'
-            let websiteBasePath = this.state.showWebsiteBasePath ? this.state.websiteBasePath.trim() : oldState.websiteBasePath;
-            if (websiteBasePath.length === 0 && this.state.showWebsiteBasePath) {
-                websiteBasePath = "/auth";
-            } else if (this.state.showWebsiteBasePath && !websiteBasePath.startsWith('/')) {
-                // if the base path does not start with '/'
-                // we add a '/' at the start of the path
-                websiteBasePath = `/${websiteBasePath}`;
-            }
+            let websiteBasePath = this.state.showWebsiteBasePath ? this.getNormalisedBasePath(this.state.websiteBasePath.trim()) : oldState.websiteBasePath;
 
             return {
                 // TODO: Add more fields here.
@@ -574,23 +570,12 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
-    // returns the path if it is valid
-    // returns an empty string if the path is invalid
+    // validates the basepaths using the node sdk path normalisation code
     isBasePathValid = (path: string) => {
         try {
-            // we check if there are any non-standard characters in the path
-            if (encodeURI(path) !== path) {
-                return false;
-            }
-
-            // we check if the path successfully creates a URL object
-            if (path.startsWith("/")) {
-                new URL(`https://domain.com${path}`)
-            } else {
-                new URL(`https://domain.com/${path}`)
-            }
+            new NormalisedURLPath(path);
             return true;
-        } catch {
+        } catch (error) {
             return false;
         }
     }
@@ -602,14 +587,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         const websiteDomain = this.state.websiteDomain.trim();
         let apiBasePath = this.state.apiBasePath.trim();
         let websiteBasePath = this.state.websiteBasePath.trim();
-
-        // add '/' in front of the base paths for validation
-        if (!apiBasePath.startsWith('/')) {
-            apiBasePath = `/${apiBasePath}`;
-        }
-        if (!websiteBasePath.startsWith('/')) {
-            websiteBasePath = `/${websiteBasePath}`;
-        }
 
         // empty map for validation errors
         // maps the field's name to it's error
@@ -661,21 +638,23 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 validationErrors.apiBasePath = "Please enter a valid path.";
             } else {
                 if (this.isBasePathValid(apiBasePath)) {
+                    const validApiBasePath = this.getNormalisedBasePath(apiBasePath);
+
                     // if nextJS api route checkbox is set to true
                     // the api base path can only be of the form `/api` or `/api/some/path/...`
                     if (
                         nextJSApiRouteUsed
-                        && !(apiBasePath === "/api" || apiBasePath.startsWith("/api/"))
+                        && !(validApiBasePath === "/api" || validApiBasePath.startsWith("/api/"))
                     ) {
                         validationErrors.apiBasePath = "apiBasePath should begin with '/api' when using NextJS' API Route."
                     } else if (
                         netlifyApiRouteUsed
-                        && !apiBasePath.startsWith("/.netlify/functions/")
+                        && !validApiBasePath.startsWith("/.netlify/functions/")
                     ) {
                         // if the netlify api route checkbox is set to true
                         // the api base path can only start with `/.netlify/functions`
                         validationErrors.apiBasePath = "apiBasePath should begin with '/.netlify/functions/' when using Netlify Serverless Functions."
-                    } else if (netlifyApiRouteUsed && apiBasePath === "/.netlify/functions/") {
+                    } else if (netlifyApiRouteUsed && validApiBasePath === "/.netlify/functions/") {
                         // if the netlify api route is `/.netlify/functions/` without any scope
                         // we show this error, as functions at `/.netlify/functions/` route aren't possible
                         validationErrors.apiBasePath = "apiBasePath should be of the format '/.netlify/functions/*' when using Netlify Serverless Functions.";
@@ -696,11 +675,13 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }
 
-        if (this.state.showAPIBasePath && this.state.showWebsiteBasePath) {
+        if (this.state.showAPIBasePath && this.state.showWebsiteBasePath && !validationErrors.apiBasePath && !validationErrors.websiteBasePath) {
             const normalisedApiDomain = this.getDomainOriginOrEmptyString(apiDomain);
             const normalisedWebsiteDomain = this.getDomainOriginOrEmptyString(websiteDomain);
+            const normalisedApiBasePath = this.getNormalisedBasePath(apiBasePath);
+            const normalisedWebsiteBasePath = this.getNormalisedBasePath(websiteBasePath);
 
-            const areBasePathsSameOrHaveCommonPrefix = apiBasePath.startsWith(websiteBasePath) || websiteBasePath.startsWith(apiBasePath);
+            const areBasePathsSameOrHaveCommonPrefix = normalisedApiBasePath.startsWith(normalisedWebsiteBasePath) || normalisedWebsiteBasePath.startsWith(normalisedApiBasePath);
 
             if (
                 this.props.showNextJSAPIRouteCheckbox
