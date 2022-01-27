@@ -72,6 +72,7 @@ module.exports = {
             "common-customizations/signin-form/field-validators",
           ]
         },
+        "common-customizations/change-password",
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
