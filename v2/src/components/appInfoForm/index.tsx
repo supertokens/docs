@@ -487,7 +487,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     getNormalisedBasePath = (path: string) => {
         try {
-            return new NormalisedURLPath(path).getAsStringDangerous();
+            const normalisedPath = new NormalisedURLPath(path).getAsStringDangerous();
+
+            // if the path is "" or "/", NormalisedURLPath returns an empty string
+            // in that case, return "/", else return the normalisedPath
+            return normalisedPath.length > 0 ? normalisedPath : "/";
         } catch {
             return "";
         }
