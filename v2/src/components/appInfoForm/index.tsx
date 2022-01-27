@@ -577,6 +577,12 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     // validates the basepaths using the node sdk path normalisation code
     isBasePathValid = (path: string) => {
         try {
+            const doesNotContainDomain = this.getDomainOriginOrEmptyString(path).length === 0;
+
+            if (!doesNotContainDomain) {
+                return false;
+            }
+
             new NormalisedURLPath(path);
             return true;
         } catch (error) {
@@ -685,16 +691,24 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             const normalisedApiBasePath = this.getNormalisedBasePath(apiBasePath);
             const normalisedWebsiteBasePath = this.getNormalisedBasePath(websiteBasePath);
 
-            const areBasePathsSameOrHaveCommonPrefix = normalisedApiBasePath.startsWith(normalisedWebsiteBasePath) || normalisedWebsiteBasePath.startsWith(normalisedApiBasePath);
+            const nextJSApiRouteUsed = this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed;
+            const areNormalisedDomainsEqual = normalisedApiDomain === normalisedWebsiteDomain
 
-            if (
-                this.props.showNextJSAPIRouteCheckbox
-                && this.state.nextJSApiRouteUsed
-                && areBasePathsSameOrHaveCommonPrefix
-            ) {
-                validationErrors.apiBasePath = "apiBasePath and websiteBasePath cannot be equal and apiBasePath cannot be prefixed by websiteBasePath when using NextJS' API Route."
-            } else if (normalisedApiDomain === normalisedWebsiteDomain && areBasePathsSameOrHaveCommonPrefix) {
-                validationErrors.apiBasePath = "apiBasePath and websiteBasePath cannot be equal and apiBasePath cannot be prefixed by websiteBasePath when apiDomain and websiteDomain have the same value."
+
+            if (nextJSApiRouteUsed || areNormalisedDomainsEqual) {
+                if (normalisedApiBasePath === normalisedWebsiteBasePath) {
+                    validationErrors.apiBasePath = nextJSApiRouteUsed
+                        ? "apiBasePath and websiteBasePath cannot be equal when using NextJS' API Route."
+                        : "apiBasePath and websiteBasePath cannot be equal when apiDomain and websiteDomain have the same value."
+                } else if (normalisedApiBasePath.startsWith(normalisedWebsiteBasePath)) {
+                    validationErrors.websiteBasePath = nextJSApiRouteUsed
+                        ? "websiteBasePath cannot be a prefix of apiBasePath when using NextJS' API Route."
+                        : "websiteBasePath cannot be a prefix of apiBasePath  when apiDomain and websiteDomain have the same value."
+                } else if (normalisedWebsiteBasePath.startsWith(normalisedApiBasePath)) {
+                    validationErrors.apiBasePath = nextJSApiRouteUsed
+                        ? "apiBasePath cannot be a prefix of websiteBasePath when using NextJS' API Route."
+                        : "apiBasePath cannot be a prefix of websiteBasePath when apiDomain and websiteDomain have the same value."
+                }
             }
         }
 
