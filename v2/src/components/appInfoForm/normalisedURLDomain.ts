@@ -25,12 +25,12 @@ function normaliseURLDomainOrThrowError(input: string, ignoreProtocol = false): 
         const urlObj: URL = new URL(input);
         if (ignoreProtocol) {
             if (urlObj.hostname.startsWith("localhost") || isAnIpAddress(urlObj.hostname)) {
-                input = "http://" + urlObj.host;
+                input = "http://" + urlObj.host + urlObj.pathname;
             } else {
-                input = "https://" + urlObj.host;
+                input = "https://" + urlObj.host + urlObj.pathname;
             }
         } else {
-            input = urlObj.protocol + "//" + urlObj.host;
+            input = urlObj.protocol + "//" + urlObj.host + urlObj.pathname;
         }
         return input;
         // eslint-disable-next-line no-empty
