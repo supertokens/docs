@@ -45,14 +45,17 @@ function doSomething(status: "OK" | "ERROR") {
 
 ### Network Calls
 
-- a) The recipe implementation should allow for pre-api hooks to be configured when the recipe is initialised. These hooks should be called by implementation functioms before making any network request.
+- a) The recipe implementation should allow for pre-api hooks to be configured when the recipe is initialised. These hooks should be called by implementation functions before making any network request.
 - b) Each recipe interface function should allow for a "local" pre-api hook, this can be useful where users require dynamic request parameters or if for specific APIs the fields in the recipe level pre-api hook need to be changed.
+- c) Each recipe implementation should allow for post-api hooks to be configured when the recipe is initialised. These hooks should be called by the functions after network requests have completed.
 
-Recipe Level Pre API Hook (Javascript example)
+Recipe Level Pre + Post API Hook (Javascript example)
 
 ```ts
 Recipe.init({
-    preApiHook: (req: RequestInit) => RequestInit,
+    preApiHook: (req: RequestInit) => Promise<RequestInit>,
+    // Read the Custom function responses section to understand what jsonBody and fetchResponse are
+    postApiHook: (req: RequestInit, url: string, jsonBody: any, fetchResponse: Response) => Promise<void>,
 })
 ```
 
@@ -84,6 +87,61 @@ In recipe functions the API logic should follow this order:
 4. Call the API
 :::
 
+### Function return types
+
+Each recipe interface function must follow a consistent return scheme:
+
+{
+    status: "OK" | "...",
+    jsonBody: any,
+    fetchResponse: Response,
+    ...
+}
+
+Functions that call APIs must always return fetchResponse, this means that parameter validations need to change accordingly. For example consider the following function
+
+```ts
+
+function verifyEmail(token?: string) {
+    // Read token from query params if undefined
+}
+```
+
+Normally you would return a validation error if no `token` was provided and one couldnt be found in the query param. But this makes the return type inconsistent because in that case no API call was made and both `jsonBody` and `fetchResponse` would need to be marked as optional (making the overall API hard to consume)
+
+Instead we set the value of `token` to something default (empty string for example) and let the API throw an error. This means that either the function will always have an API response to return or it will throw an error.
+
+**Wrong &#10060**
+```ts
+function verifyEmail(token?: string) {
+    if (token === undefined) {
+        token = readFromQueryParams();
+    }
+
+    if (token === undefined) {
+        return {status: "INVALID_TOKEN", ...}
+    }
+
+    callAPI(token);
+}
+```
+
+**Correct &#9989**
+```ts
+function verifyEmail(token?: string) {
+    if (token === undefined) {
+        token = readFromQueryParams();
+    }
+
+    if (token === undefined) {
+        token = "";
+    }
+
+    // This will throw an error
+    callAPI(token);
+}
+```
+
 ### Custom function responses
 
 Because the user can override APIs in the Backend SDK and provide responses in their own formats, the recipe functions on the Frontend must always assume that API responses (and function responses) can be non-standard. The recipe functions should rely on `status` in the API responses to decide if the response is a custom one.
@@ -94,24 +152,40 @@ For example consider a function `getUserInformation` that returns `{status: "OK"
 async function getUserInformation(): Promise<{status: "OK" | "NOT_AUTHORISED"}> {}
 ```
 
-If the user wants to return the userID from this function, they cannot do so by simply overriding the function. To accommodate for this we use a `status: "CUSTOM"`. When API responses are recieved the recipe functions first check if the `status` matches an expected value. If it does not the function returns `{status: "CUSTOM"}`. In addition to this the functions should always return the fetched API result to allow users to do custom parsing should they need it
-
-The recipe function signature would then look like:
+If the user wants to return the userID from this function, they cannot do so by simply overriding the function. To accodmate this we return the json body and the response object back to the user from every recipe function. For the above example the signature of the method would then be
 
 ```ts
-async function getUserInformation(): Promise<{status: "OK" | "NOT_AUTHORISED" | "CUSTOM", fetchedResponse: Response}> {
-    ...
-    let response = await makeAPICall();
+async function getUserInformation(): Promise<{status: "OK" | "NOT_AUTHORISED", jsonBody: any, fetchResponse: Response}> {}
+```
 
-    if (response.status !=== "OK" && response.status !== "NOT_AUTHORISED" ) {
-        return {
-            status: "CUSTOM",
-            fetchedResponse: response,
-        };
-    }
+The `jsonBody` allows the user to consume custom properties from the response body should they need it, the `fetchResponse` allows users to consume other properties such as headers from the API response.
 
-    ...
+:::important
+Even though we support custom responses, users **MUST ALWAYS** provide the properties mentioned in the FDI in API responses. For example lets consider the `/user/email/verify GET` API which returns 
+
+```ts
+{
+    "status": "OK",
+    "isVerified": boolean,
 }
 ```
 
-Note that this means that the user MUST use `status: "CUSTOM"` if they are choosing to not follow the FDI. For example if an API returns `{status: "OK", userId: string}` and the user overrides this API to return `{status: "OK", message: string}` the SDK will throw an error because the `status` matched an expected value but the expected field `userId` is not present. In such a case the user should return `{status: "CUSTOM", message: string}` and handle API parsing on the frontend using `fetchedResponse`.
+Should the user want to provide a custom response they **HAVE TO** provide `isVerified`.
+
+**Valid Response &#9989**
+```ts
+{
+    "status": "OK",
+    "isVerified": boolean,
+    "userId": string,
+}
+```
+
+**Invalid Response &#10060**
+```ts
+{
+    "status": "OK",
+    "userId": string,
+}
+```
+:::
