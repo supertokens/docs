@@ -1,6 +1,6 @@
 let fs = require('fs');
 let path = require('path');
-let { doCodeTypeChecking } = require("./codeTypeChecking");
+let { addCodeSnippetToEnv, checkCodeSnippets } = require("./codeTypeChecking");
 
 module.exports = function (context, opts) {
 
@@ -22,8 +22,8 @@ module.exports = function (context, opts) {
                 });
             })
 
-            // code type checking..
-            return new Promise((res, rej) => {
+            // add code snippets to their respective env..
+            await new Promise((res, rej) => {
                 walk(__dirname + "/../../", async (err, results) => {
                     if (err) {
                         return rej(err);
@@ -31,15 +31,21 @@ module.exports = function (context, opts) {
                     results = results.filter(r => r.endsWith(".md") || r.endsWith(".mdx"));
                     for (let i = 0; i < results.length; i++) {
                         try {
-                            await doCodeTypeChecking(results[i]);
+                            await addCodeSnippetToEnv(results[i]);
                         } catch (err) {
-                            console.log('\x1b[31m%s\x1b[0m', err);  //cyan
-                            console.log("\n");
+                            return rej(err);
                         }
                     }
                     res();
                 });
-            })
+            });
+
+            // now we compile code snippets to make sure their types are correct..
+            try {
+                await checkCodeSnippets();
+            } catch (err) {
+                console.log('\x1b[31m%s\x1b[0m', err);
+            }
         },
     };
 };

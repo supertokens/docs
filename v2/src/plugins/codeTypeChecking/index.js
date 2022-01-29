@@ -1,7 +1,9 @@
 let fs = require('fs');
 let path = require('path');
+var exec = require('child_process').exec;
+var crypto = require('crypto');
 
-async function doCodeTypeChecking(mdFile) {
+async function addCodeSnippetToEnv(mdFile) {
     if (mdFile.includes("/v2/change_me/") || mdFile.includes("/v2/contribute/") ||
         mdFile.includes("/v2/nodejs") || mdFile.includes("/v2/golang") || mdFile.includes("/v2/python") ||
         mdFile.includes("/v2/auth-react") || mdFile.includes("/v2/website") || mdFile.includes("/v2/react-native")) {
@@ -33,9 +35,7 @@ async function doCodeTypeChecking(mdFile) {
                         }
                         // we just finished copying a code snippet
                         if (currentCodeLanguage !== "ignore") {
-                            if (!await checkCodeSnippet(currentCodeSnippet, currentCodeLanguage)) {
-                                return rej(new Error(`CODE TYPING FAILED in file ${mdFile}`));
-                            }
+                            await addCodeSnippetToEnvHelper(currentCodeSnippet, currentCodeLanguage, mdFile);
                         }
                         currentCodeSnippet = "";
                         currentCodeLanguage = "";
@@ -64,48 +64,42 @@ async function doCodeTypeChecking(mdFile) {
     });
 }
 
-async function checkCodeSnippet(codeSnippet, language) {
-    // console.log("///////////START///// " + language)
-    // console.log(codeSnippet);
-    // console.log("///////////END//////////////")
-    return true;
+async function checkCodeSnippets() {
+    // typescript..
+    await new Promise((res, rej) => {
+        exec("cd src/plugins/codeTypeChecking/jsEnv/ && npm run test", function (err, stdout, stderr) {
+            if (err) {
+                console.log('\x1b[31m%s\x1b[0m', stdout);
+                return rej(err);
+            }
+            res();
+        });
+    })
+
+    // TODO: other languages
 }
 
-module.exports = { doCodeTypeChecking }
+async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile) {
+    if (language === "typescript") {
+        let folderName = mdFile.replaceAll("~", "");
+        await new Promise((res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName, { recursive: true }, (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    fs.writeFile('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName + "/index.tsx", codeSnippet, function (err) {
+                        if (err) {
+                            rej(err);
+                        } else {
+                            res();
+                        }
+                    });
+                }
+            });
+        });
+    } else {
+        // TODO: other languages...
+    }
+}
 
-// async function getDataToCopyFromFile(pathLine, lines) {
-//     return new Promise((res, rej) => {
-//         fs.readFile(pathLine, 'utf8', function (err, toCopyData) {
-//             if (err) {
-//                 return rej(err);
-//             }
-
-//             toCopyData = toCopyData.trim();
-
-//             let finalData = "";
-
-//             for (let i = 0; i < lines.length; i++) {
-//                 finalData += lines[i] + "\n";
-//                 if (lines[i].trim() === "<!-- COPY DOCS -->") {
-//                     finalData += lines[i + 1] + "\n";
-//                     break;
-//                 }
-//             }
-
-//             let copyLines = toCopyData.split("\n");
-//             let startCopying = false;
-//             for (let i = 0; i < copyLines.length; i++) {
-//                 if (copyLines[i].trim() === "<!-- COPY DOCS -->") {
-//                     startCopying = true;
-//                     i++;
-//                     continue;
-//                 }
-//                 if (!startCopying) {
-//                     continue;
-//                 }
-//                 finalData += copyLines[i] + "\n";
-//             }
-//             res(finalData);
-//         });
-//     });
-// }
+module.exports = { addCodeSnippetToEnv, checkCodeSnippets }
