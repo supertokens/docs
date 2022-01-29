@@ -84,6 +84,13 @@ async function checkCodeSnippets(language) {
 }
 
 async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile) {
+    // we replace all the variables here so that the code can compile:
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment}", "");
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
+
+
     if (language === "typescript") {
         codeSnippet = "export { }\n" + codeSnippet; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
 
