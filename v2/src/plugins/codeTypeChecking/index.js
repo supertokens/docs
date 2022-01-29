@@ -43,7 +43,7 @@ async function addCodeSnippetToEnv(mdFile) {
                     } else {
                         // we are starting a code block
                         if (currLine === "```js" || currLine.startsWith("```js ") ||
-                            currLine === "```jsx" || currLine.startsWith("```jsx ") ||
+                            currLine === "```tsx" || currLine.startsWith("```tsx ") ||
                             currLine === "```ts" || currLine.startsWith("```ts ") ||
                             currLine === "```tsx" || currLine.startsWith("```tsx ")) {
                             currentCodeLanguage = "typescript";
