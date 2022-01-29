@@ -1,13 +1,15 @@
 let fs = require('fs');
 let path = require('path');
+let { doCodeTypeChecking } = require("./codeTypeChecking");
 
 module.exports = function (context, opts) {
 
     return {
-        name: 'copy-docs',
+        name: 'copy-docs-and-code-type-checking',
 
         async loadContent() {
-            return new Promise((res, rej) => {
+            // copy docs..
+            await new Promise((res, rej) => {
                 walk(__dirname + "/../../", async (err, results) => {
                     if (err) {
                         return rej(err);
@@ -15,6 +17,25 @@ module.exports = function (context, opts) {
                     results = results.filter(r => r.endsWith(".md") || r.endsWith(".mdx"));
                     for (let i = 0; i < results.length; i++) {
                         await doCopyDocs(results[i]);
+                    }
+                    res();
+                });
+            })
+
+            // code type checking..
+            return new Promise((res, rej) => {
+                walk(__dirname + "/../../", async (err, results) => {
+                    if (err) {
+                        return rej(err);
+                    }
+                    results = results.filter(r => r.endsWith(".md") || r.endsWith(".mdx"));
+                    for (let i = 0; i < results.length; i++) {
+                        try {
+                            await doCodeTypeChecking(results[i]);
+                        } catch (err) {
+                            console.log('\x1b[31m%s\x1b[0m', err);  //cyan
+                            console.log("\n");
+                        }
                     }
                     res();
                 });
