@@ -35,7 +35,7 @@ async function addCodeSnippetToEnv(mdFile) {
                         }
                         // we just finished copying a code snippet
                         if (currentCodeLanguage !== "ignore") {
-                            await addCodeSnippetToEnvHelper(currentCodeSnippet, currentCodeLanguage, mdFile + fileNameCounter);
+                            await addCodeSnippetToEnvHelper(currentCodeSnippet, currentCodeLanguage, mdFile, fileNameCounter);
                             fileNameCounter++;
                         }
                         currentCodeSnippet = "";
@@ -83,7 +83,7 @@ async function checkCodeSnippets(language) {
     }
 }
 
-async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile) {
+async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBlockCountInFile) {
     // we replace all the variables here so that the code can compile:
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
@@ -92,9 +92,12 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile) {
 
 
     if (language === "typescript") {
+        if (codeSnippet.includes("require(")) {
+            throw new Error("Do not use 'require' in TS code. Error in " + mdFile);
+        }
         codeSnippet = "export { }\n" + codeSnippet; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
 
-        let folderName = mdFile.replaceAll("~", "");
+        let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
         await new Promise((res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName, { recursive: true }, (err) => {
                 if (err) {
