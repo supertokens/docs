@@ -82,6 +82,8 @@ async function checkCodeSnippets() {
 
 async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile) {
     if (language === "typescript") {
+        codeSnippet = "export { }\n" + codeSnippet; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
+
         let folderName = mdFile.replaceAll("~", "");
         await new Promise((res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName, { recursive: true }, (err) => {
