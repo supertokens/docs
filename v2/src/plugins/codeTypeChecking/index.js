@@ -43,8 +43,9 @@ async function addCodeSnippetToEnv(mdFile) {
                     } else {
                         // we are starting a code block
                         if (currLine === "```js" || currLine.startsWith("```js ") ||
-                            currLine === "```tsx" || currLine.startsWith("```tsx ") ||
-                            currLine === "```ts" || currLine.startsWith("```ts ") ||
+                            currLine === "```jsx" || currLine.startsWith("```jsx ")) {
+                            return rej(new Error(`Please do not use js or jsx in code snippets. Only ts or tsx. Error in ` + mdFile));
+                        } else if (currLine === "```ts" || currLine.startsWith("```ts ") ||
                             currLine === "```tsx" || currLine.startsWith("```tsx ")) {
                             currentCodeLanguage = "typescript";
                         } else if (currLine === "```go" || currLine.startsWith("```go ")) {
@@ -65,19 +66,21 @@ async function addCodeSnippetToEnv(mdFile) {
     });
 }
 
-async function checkCodeSnippets() {
+async function checkCodeSnippets(language) {
     // typescript..
-    await new Promise((res, rej) => {
-        exec("cd src/plugins/codeTypeChecking/jsEnv/ && npm run test", function (err, stdout, stderr) {
-            if (err) {
-                console.log('\x1b[31m%s\x1b[0m', stdout);
-                return rej(err);
-            }
-            res();
-        });
-    })
-
-    // TODO: other languages
+    if (language === "typescript") {
+        await new Promise((res, rej) => {
+            exec("cd src/plugins/codeTypeChecking/jsEnv/ && npm run test", function (err, stdout, stderr) {
+                if (err) {
+                    console.log('\x1b[31m%s\x1b[0m', stdout);
+                    return rej(err);
+                }
+                res();
+            });
+        })
+    } else {
+        // TODO: other langs..
+    }
 }
 
 async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile) {
