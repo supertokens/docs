@@ -14,7 +14,7 @@ async function addCodeSnippetToEnv(mdFile) {
             if (err) {
                 return rej(err);
             }
-
+            let fileNameCounter = 0;
             let originalData = data;
 
             let lines = originalData.split("\n");
@@ -35,7 +35,8 @@ async function addCodeSnippetToEnv(mdFile) {
                         }
                         // we just finished copying a code snippet
                         if (currentCodeLanguage !== "ignore") {
-                            await addCodeSnippetToEnvHelper(currentCodeSnippet, currentCodeLanguage, mdFile);
+                            await addCodeSnippetToEnvHelper(currentCodeSnippet, currentCodeLanguage, mdFile + fileNameCounter);
+                            fileNameCounter++;
                         }
                         currentCodeSnippet = "";
                         currentCodeLanguage = "";
