@@ -75,6 +75,12 @@ async function checkCodeSnippets(language) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
+                    console.log("=======SETUP INSTRS========\n");
+                    console.log('\x1b[36m%s\x1b[0m', `To setup a JS env, run the following (from v2 folder):
+    - cd src/plugins/codeTypeChecking/jsEnv/
+    - npm i
+    - npm run test (to make sure that it's setup correctly)`)
+                    console.log("==========================\n");
                     return rej(err);
                 }
                 res();
@@ -86,6 +92,9 @@ async function checkCodeSnippets(language) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
+                    console.log("=======SETUP INSTRS========\n");
+                    console.log('\x1b[36m%s\x1b[0m', `Make sure that you have go installed on your system and try this command again`)
+                    console.log("==========================\n");
                     return rej(err);
                 }
                 res();
