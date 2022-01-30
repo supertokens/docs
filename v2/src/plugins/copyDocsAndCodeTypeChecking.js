@@ -2,6 +2,12 @@ let fs = require('fs');
 let path = require('path');
 let { addCodeSnippetToEnv, checkCodeSnippets } = require("./codeTypeChecking");
 
+if (typeof String.prototype.replaceAll === "undefined") {
+    String.prototype.replaceAll = function (match, replace) {
+        return this.replace(new RegExp(match, 'g'), () => replace);
+    }
+}
+
 module.exports = function (context, opts) {
 
     return {
