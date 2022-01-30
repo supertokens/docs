@@ -125,22 +125,22 @@ async function checkCodeSnippets(language) {
 }
 
 function getRecipeName(mdFile) {
-    let postV2 = mdFile.split("docs/v2/")[1];
-    return postV2.split("/")[0];
+    try {
+        let postV2 = mdFile.split("docs/v2/")[1];
+        return postV2.split("/")[0];
+    } catch (err) {
+        console.log("ERROR: ", mdFile);
+        throw err;
+    }
 }
 
 async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBlockCountInFile) {
     // we replace all the variables here so that the code can compile:
 
-    try {
-        codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment}", "");
-        codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
-        codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
-        codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
-    } catch (err) {
-        console.log(codeSnippet);
-        throw err;
-    }
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment}", "");
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
 
     let recipeName = getRecipeName(mdFile);
     let replaceMap = mdVars[recipeName];
