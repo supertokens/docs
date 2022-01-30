@@ -42,7 +42,7 @@ module.exports = function (context, opts) {
 
             // now we compile code snippets to make sure their types are correct..
             try {
-                await checkCodeSnippets("typescript");
+                // await checkCodeSnippets("typescript");
                 await checkCodeSnippets("go")
             } catch (err) {
                 console.log('\x1b[31m%s\x1b[0m', err);

@@ -2,6 +2,7 @@ let fs = require('fs');
 let path = require('path');
 var exec = require('child_process').exec;
 var crypto = require('crypto');
+let mdVars = require("../markdownVariables.json");
 
 async function addCodeSnippetToEnv(mdFile) {
     if (mdFile.includes("/v2/change_me/") || mdFile.includes("/v2/contribute/") ||
@@ -93,12 +94,29 @@ async function checkCodeSnippets(language) {
     }
 }
 
+function getRecipeName(mdFile) {
+    let postV2 = mdFile.split("docs/v2/")[1];
+    return postV2.split("/")[0];
+}
+
 async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBlockCountInFile) {
     // we replace all the variables here so that the code can compile:
+
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
+
+    let recipeName = getRecipeName(mdFile);
+    let replaceMap = mdVars[recipeName];
+    if (replaceMap !== undefined) {
+        let keys = Object.keys(replaceMap);
+        for (let i = 0; i < keys.length; i++) {
+            if (codeSnippet.includes(`^{${keys[i]}}`)) {
+                codeSnippet = codeSnippet.replaceAll(`^{${keys[i]}}`, replaceMap[keys[i]]);
+            }
+        }
+    }
 
 
     if (language === "typescript") {
