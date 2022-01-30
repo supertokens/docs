@@ -42,6 +42,7 @@ module.exports = function (context, opts) {
 
             // now we compile code snippets to make sure their types are correct..
             try {
+                // modify this block to add a new language
                 let check = process.env.CODE_TYPE_CHECK;
                 if (check === undefined && process.env.MODE === "production") {
                     check = "all";

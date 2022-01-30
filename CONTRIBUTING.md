@@ -140,3 +140,20 @@ While building, we may get broken links errors. There are different types:
 - Links to `supertokens.com`, but non docs pages: These links should be `https://supertokens.com/...`
 - Internal docs links: These need to be fixed since it's most likely due to a writing error.
 - `COPY DOCS` related links: Sometimes the source doc's structure may not match the destination doc. For example, the core docs in v2 > community folder are being shown in the recipes, but not in the community docs, and the pages it links to exist in the recipe docs, but not in the community docs. To fix this, we create dummy pages in the community docs like found here: `v2 > community > common-customizations > core > api-keys.mdx`
+
+### Using code type checker
+This feature allows you to type check code snippets in the docs. To use this during docs writing, you want to run:
+```
+CODE_TYPE_CHECK=lang1,lang2 npm run start
+```
+Where `lang1`, `lang2`, `langN` are the languages for which you want to check the snippets for. For example, if you want to check for `typescript`, you should run `CODE_TYPE_CHECK=typescript npm run start`, or if you want to check for Golang and TS, then you should run `CODE_TYPE_CHECK=typescript,go npm run start`. Instructions on how to setup each language will be printed out in case there is an error while typechecking.
+
+You can even check for all languages by running
+```
+CODE_TYPE_CHECK=all npm run start
+```
+
+## Loading different versions of SDK to check
+If you are writing docs for a new version of the SDK, you want to load that version and then run the `CODE_TYPE_CHECK=lang1,lang2 npm run start` command. In order to change the SDK version, you want to navigate to `v2/src/plugins/codeTypeChecking/<lang>Env` and the modify that env's dependency file, and install the new dependencies.
+
+For example, if you want to test a new version of supertokens-node SDK, you should go to `v2/src/plugins/codeTypeChecking/jsEnv`, and modify `package.json` to use the new version. Then you want to run `npm i` in that dir.
