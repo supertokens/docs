@@ -74,6 +74,7 @@ async function checkCodeSnippets(language) {
             exec("cd src/plugins/codeTypeChecking/jsEnv/ && npm run test", function (err, stdout, stderr) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
+                    console.log('\x1b[31m%s\x1b[0m', err);
                     return rej(err);
                 }
                 res();
@@ -84,6 +85,7 @@ async function checkCodeSnippets(language) {
             exec("cd src/plugins/codeTypeChecking/goEnv/ && go build ./...", function (err, stdout, stderr) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
+                    console.log('\x1b[31m%s\x1b[0m', err);
                     return rej(err);
                 }
                 res();
@@ -91,9 +93,18 @@ async function checkCodeSnippets(language) {
         })
     } else if (language === "python") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venv/bin/activate && pylint ./snippets", function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venvv/bin/activate && pylint ./snippets", function (err, stdout, stderr) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
+                    console.log('\x1b[31m%s\x1b[0m', err);
+                    console.log("=======SETUP INSTRS========\n");
+                    console.log('\x1b[36m%s\x1b[0m', `To setup a python env, run the following (from v2 folder):
+    - cd src/plugins/codeTypeChecking/pythonEnv/
+    - virtualenv ./venv
+    - source venv/bin/activate
+    - pip install -r requirements.txt
+    - pylint ./snippets (to make sure that it's setup correctly)`)
+                    console.log("==========================\n");
                     return rej(err);
                 }
                 res();
