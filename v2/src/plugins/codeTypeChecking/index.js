@@ -125,13 +125,8 @@ async function checkCodeSnippets(language) {
 }
 
 function getRecipeName(mdFile) {
-    try {
-        let postV2 = mdFile.split("docs/v2/")[1];
-        return postV2.split("/")[0];
-    } catch (err) {
-        console.log("ERROR: ", mdFile);
-        throw err;
-    }
+    let postV2 = mdFile.split("/v2/")[1];
+    return postV2.split("/")[0];
 }
 
 async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBlockCountInFile) {
