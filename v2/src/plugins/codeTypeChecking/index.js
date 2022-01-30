@@ -24,14 +24,14 @@ async function addCodeSnippetToEnv(mdFile) {
             let currentCodeLanguage = "";
             let startAppendingToCodeSnippet = false;
             for (let i = 0; i < lines.length; i++) {
-                let currLine = lines[i].trim();
-                if (startAppendingToCodeSnippet && !currLine.startsWith("```")) {
-                    currentCodeSnippet = currentCodeSnippet + "\n" + currLine;
+                let currLineTrimmed = lines[i].trim();
+                if (startAppendingToCodeSnippet && !currLineTrimmed.startsWith("```")) {
+                    currentCodeSnippet = currentCodeSnippet + "\n" + lines[i];
                 }
-                if (currLine.startsWith("```")) {
+                if (currLineTrimmed.startsWith("```")) {
                     startAppendingToCodeSnippet = !startAppendingToCodeSnippet;
                     if (!startAppendingToCodeSnippet) {
-                        if (currLine !== "```") {
+                        if (currLineTrimmed !== "```") {
                             return rej(new Error(`Something wrong in how a code snippet has ended in ${mdFile}`));
                         }
                         // we just finished copying a code snippet
@@ -43,18 +43,18 @@ async function addCodeSnippetToEnv(mdFile) {
                         currentCodeLanguage = "";
                     } else {
                         // we are starting a code block
-                        if (currLine === "```js" || currLine.startsWith("```js ") ||
-                            currLine === "```jsx" || currLine.startsWith("```jsx ")) {
+                        if (currLineTrimmed === "```js" || currLineTrimmed.startsWith("```js ") ||
+                            currLineTrimmed === "```jsx" || currLineTrimmed.startsWith("```jsx ")) {
                             return rej(new Error(`Please do not use js or jsx in code snippets. Only ts or tsx. Error in ` + mdFile));
-                        } else if (currLine === "```ts" || currLine.startsWith("```ts ") ||
-                            currLine === "```tsx" || currLine.startsWith("```tsx ")) {
+                        } else if (currLineTrimmed === "```ts" || currLineTrimmed.startsWith("```ts ") ||
+                            currLineTrimmed === "```tsx" || currLineTrimmed.startsWith("```tsx ")) {
                             currentCodeLanguage = "typescript";
-                        } else if (currLine === "```go" || currLine.startsWith("```go ")) {
+                        } else if (currLineTrimmed === "```go" || currLineTrimmed.startsWith("```go ")) {
                             currentCodeLanguage = "go";
-                        } else if (currLine === "```python" || currLine.startsWith("```python ")) {
+                        } else if (currLineTrimmed === "```python" || currLineTrimmed.startsWith("```python ")) {
                             currentCodeLanguage = "python";
-                        } else if (currLine.includes("bash") || currLine.includes("yaml") || currLine.includes("cql") || currLine.includes("sql") || currLine.includes("batch") ||
-                            currLine.includes("text") || currLine.includes("json")) {
+                        } else if (currLineTrimmed.includes("bash") || currLineTrimmed.includes("yaml") || currLineTrimmed.includes("cql") || currLineTrimmed.includes("sql") || currLineTrimmed.includes("batch") ||
+                            currLineTrimmed.includes("text") || currLineTrimmed.includes("json")) {
                             currentCodeLanguage = "ignore"
                         } else {
                             return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE in file ${mdFile}.`));
@@ -82,6 +82,16 @@ async function checkCodeSnippets(language) {
     } else if (language === "go") {
         await new Promise((res, rej) => {
             exec("cd src/plugins/codeTypeChecking/goEnv/ && go build ./...", function (err, stdout, stderr) {
+                if (err) {
+                    console.log('\x1b[31m%s\x1b[0m', stdout);
+                    return rej(err);
+                }
+                res();
+            });
+        })
+    } else if (language === "python") {
+        await new Promise((res, rej) => {
+            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venv/bin/activate && pylint ./snippets", function (err, stdout, stderr) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     return rej(err);
@@ -162,6 +172,23 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
                     rej(err);
                 } else {
                     fs.writeFile('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName + "/main.go", codeSnippet, function (err) {
+                        if (err) {
+                            rej(err);
+                        } else {
+                            res();
+                        }
+                    });
+                }
+            });
+        });
+    } else if (language === "python") {
+        let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+        await new Promise((res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName, { recursive: true }, (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    fs.writeFile('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName + "/main.py", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
                         } else {
