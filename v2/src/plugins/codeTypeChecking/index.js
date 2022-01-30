@@ -78,6 +78,16 @@ async function checkCodeSnippets(language) {
                 res();
             });
         })
+    } else if (language === "go") {
+        await new Promise((res, rej) => {
+            exec("cd src/plugins/codeTypeChecking/goEnv/ && go build ./...", function (err, stdout, stderr) {
+                if (err) {
+                    console.log('\x1b[31m%s\x1b[0m', stdout);
+                    return rej(err);
+                }
+                res();
+            });
+        })
     } else {
         // TODO: other langs..
     }
@@ -104,6 +114,33 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
                     rej(err);
                 } else {
                     fs.writeFile('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName + "/index.tsx", codeSnippet, function (err) {
+                        if (err) {
+                            rej(err);
+                        } else {
+                            res();
+                        }
+                    });
+                }
+            });
+        });
+    } else if (language === "go") {
+        // we change the last folder path dir to be a valid go module name
+        let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+        let splittedFolder = folderName.split("/");
+        let lastDir = splittedFolder[splittedFolder.length - 1];
+        lastDir = lastDir.replaceAll("-", "").replaceAll(".", "");
+        splittedFolder[splittedFolder.length - 1] = lastDir;
+        let newFolderName = splittedFolder.join("/");
+
+        // adding package on top of go file
+        codeSnippet = `package ${lastDir}\n` + codeSnippet;
+
+        await new Promise((res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName, { recursive: true }, (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    fs.writeFile('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName + "/main.go", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
                         } else {
