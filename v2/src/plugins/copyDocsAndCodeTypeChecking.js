@@ -42,11 +42,30 @@ module.exports = function (context, opts) {
 
             // now we compile code snippets to make sure their types are correct..
             try {
-                await checkCodeSnippets("typescript");
-                await checkCodeSnippets("go")
-                await checkCodeSnippets("python")
+                let check = process.env.CODE_TYPE_CHECK;
+                if (check === undefined && process.env.MODE === "production") {
+                    check = "all";
+                }
+                if (check !== undefined && check !== "nothing") {
+                    let splittedCheck = check.split(",");
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                        splittedCheck.filter(i => i === "typescript").length >= 1) {
+                        await checkCodeSnippets("typescript");
+                    }
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                        splittedCheck.filter(i => i === "go").length >= 1) {
+                        await checkCodeSnippets("go");
+                    }
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                        splittedCheck.filter(i => i === "python").length >= 1) {
+                        await checkCodeSnippets("python");
+                    }
+                }
             } catch (err) {
                 console.log('\x1b[31m%s\x1b[0m', err);
+                if (process.env.MODE === "production") {
+                    throw err;
+                }
             }
         },
     };

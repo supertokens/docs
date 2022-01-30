@@ -100,7 +100,7 @@ async function checkCodeSnippets(language) {
             });
         })
     } else {
-        // TODO: other langs..
+        throw new Error("Unsupported language in checkCodeSnippets");
     }
 }
 
@@ -199,7 +199,7 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
             });
         });
     } else {
-        // TODO: other languages...
+        throw new Error("Unsupported language in addCodeSnippetToEnvHelper");
     }
 }
 
