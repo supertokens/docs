@@ -124,8 +124,17 @@ async function checkCodeSnippets(language) {
     }
 }
 
-function getRecipeName(mdFile) {
-    let postV2 = mdFile.split("/v2/")[1];
+let rootDir = undefined; // uptil v2
+
+async function getRecipeName(mdFile) {
+    if (rootDir === undefined) {
+        rootDir = await new Promise(res => exec("pwd", function (err, stdout, stderr) {
+            res(stdout);
+        }));
+        rootDir = rootDir.trim() + "/";
+        // at this point, rootDir is /Users/.../main-website/docs/v2/ or if only cloned docs, then its /Users/.../docs/v2/
+    }
+    let postV2 = mdFile.replace(rootDir, "");
     return postV2.split("/")[0];
 }
 
@@ -137,7 +146,7 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
 
-    let recipeName = getRecipeName(mdFile);
+    let recipeName = await getRecipeName(mdFile);
     let replaceMap = mdVars[recipeName];
     if (replaceMap !== undefined) {
         let keys = Object.keys(replaceMap);
