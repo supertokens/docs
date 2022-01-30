@@ -142,7 +142,7 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
             });
         });
     } else if (language === "go") {
-        if (codeSnippet.includes("/supertokens-go/")) {
+        if (codeSnippet.includes("/supertokens-go/") || codeSnippet.includes("/supertokens-go\n")) {
             throw new Error("Do not use supertokens-go package. Use supertokens-golang package. Error in " + mdFile);
         }
         // we change the last folder path dir to be a valid go module name
