@@ -58,35 +58,45 @@ Session.init({
 <TabItem value="go">
 
 ```go
-session.Init(&sessmodels.TypeInput{
-	Override: &sessmodels.OverrideStruct{
-		Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+import (
+	"errors"
+	"net/http"
 
-			// first we copy the original implementation
-			originalCreateNewSession := *originalImplementation.CreateNewSession
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
 
-			(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}) (sessmodels.SessionContainer, error) {
-				// highlight-start
-				existingSessions, err := session.GetAllSessionHandlesForUser(userID)
-				if err != nil {
-					return sessmodels.SessionContainer{}, err
+func main() {
+	session.Init(&sessmodels.TypeInput{
+		Override: &sessmodels.OverrideStruct{
+			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+
+				// first we copy the original implementation
+				originalCreateNewSession := *originalImplementation.CreateNewSession
+
+				(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}) (sessmodels.SessionContainer, error) {
+					// highlight-start
+					existingSessions, err := session.GetAllSessionHandlesForUser(userID)
+					if err != nil {
+						return sessmodels.SessionContainer{}, err
+					}
+
+					if len(existingSessions) > 0 {
+						// this means that the user already has a session on some other device
+						return sessmodels.SessionContainer{}, errors.New("Session already exists on another device")
+					}
+
+					// no other session exists, and so we can continue with logging in this user
+					return originalCreateNewSession(res, userID, accessTokenPayload, sessionData)
+					// highlight-end
 				}
 
-				if len(existingSessions) > 0 {
-					// this means that the user already has a session on some other device
-					return sessmodels.SessionContainer{}, errors.New("Session already exists on another device")
-				}
+				return originalImplementation
 
-				// no other session exists, and so we can continue with logging in this user
-				return originalCreateNewSession(res, userID, accessTokenPayload, sessionData)
-				// highlight-end
-			}
-
-			return originalImplementation
-
+			},
 		},
-	},
-})
+	})
+}
 ```
 
 </TabItem>
@@ -311,14 +321,22 @@ export class AppErrorHandler implements ExceptionFilter {
 <TabItem value="go">
 
 ```go
-supertokens.Init(supertokens.TypeInput{
-	OnGeneralError: func(err error, req *http.Request, res http.ResponseWriter) {
-		if err.Error() == "Session already exists on another device" {
-			// TODO: send custom error
-		}
-		// TODO: send generic error
-	},
-})
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		OnGeneralError: func(err error, req *http.Request, res http.ResponseWriter) {
+			if err.Error() == "Session already exists on another device" {
+				// TODO: send custom error
+			}
+			// TODO: send generic error
+		},
+	})
+}
 ```
 
 </TabItem>
