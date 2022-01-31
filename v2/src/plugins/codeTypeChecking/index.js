@@ -232,4 +232,33 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     }
 }
 
-module.exports = { addCodeSnippetToEnv, checkCodeSnippets }
+function replaceTSIgnoreWithEmptyLine(child, exportedVariables) {
+    // A child will either have value properties or more children
+
+    // If it has a value, check if it is using a variable. If it is then replace otherwise skip
+    if (child.value) {
+        var valueCopy = child.value;
+
+        let eachLine = valueCopy.split("\n");
+        let newLines = [];
+        for (let i = 0; i < eachLine.length; i++) {
+            if (eachLine[i].includes("@ts-ignore")) {
+                continue;
+            }
+            newLines.push(eachLine[i]);
+        }
+
+        child.value = newLines.join("\n");
+    }
+
+    // If it has children then repeat recursively
+    if (child.children) {
+        child.children = child.children.map(subChild => {
+            return replaceTSIgnoreWithEmptyLine(subChild, exportedVariables);
+        })
+    }
+
+    return child;
+}
+
+module.exports = { addCodeSnippetToEnv, checkCodeSnippets, replaceTSIgnoreWithEmptyLine }

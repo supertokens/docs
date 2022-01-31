@@ -153,7 +153,10 @@ You can even check for all languages by running
 CODE_TYPE_CHECK=all npm run start
 ```
 
-## Loading different versions of SDK to check
+#### Tips JS / TS
+- If you need to purposely tell TS to ignore errors in the next line, you can add a `// @ts-ignore` comment in your code snippets. This will make the TS checker pass. The type checking engine will also remove these from the final code output so that users don't see this unnecessarily.
+
+#### Loading different versions of SDK to check
 If you are writing docs for a new version of the SDK, you want to load that version and then run the `CODE_TYPE_CHECK=lang1,lang2 npm run start` command. In order to change the SDK version, you want to navigate to `v2/src/plugins/codeTypeChecking/<lang>Env` and the modify that env's dependency file, and install the new dependencies.
 
 For example, if you want to test a new version of supertokens-node SDK, you should go to `v2/src/plugins/codeTypeChecking/jsEnv`, and modify `package.json` to use the new version. Then you want to run `npm i` in that dir.
