@@ -1,6 +1,7 @@
 let fs = require('fs');
 let path = require('path');
 let { addCodeSnippetToEnv, checkCodeSnippets } = require("./codeTypeChecking");
+var exec = require('child_process').exec;
 
 if (typeof String.prototype.replaceAll === "undefined") {
     String.prototype.replaceAll = function (match, replace) {

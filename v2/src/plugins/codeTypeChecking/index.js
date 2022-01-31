@@ -141,6 +141,7 @@ async function getRecipeName(mdFile) {
 async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBlockCountInFile) {
     // we replace all the variables here so that the code can compile:
 
+    let ogCodeSnippet = codeSnippet;
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
@@ -157,6 +158,19 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
         }
     }
 
+    // this block is there so that the dev knows that the resulting block should use variable code snippets.
+    if (ogCodeSnippet !== codeSnippet) {
+        for (let i = 0; i < 50; i++) {
+            if (language === "typescript" || language === "go") {
+                codeSnippet = "// THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE\n" + codeSnippet;
+            } else if (language === "python") {
+                codeSnippet = "# THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE\n" + codeSnippet;
+            } else {
+                throw new Error("language not supported");
+            }
+        }
+    }
+
 
     if (language === "typescript") {
         if (codeSnippet.includes("require(")) {
@@ -165,11 +179,12 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
         codeSnippet = "export { }\n" + codeSnippet; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
 
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
-        await new Promise((res, rej) => {
-            fs.mkdir('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName, { recursive: true }, (err) => {
+        await new Promise(async (res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName, { recursive: true }, async (err) => {
                 if (err) {
                     rej(err);
                 } else {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName + "/index.tsx", codeSnippet);
                     fs.writeFile('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName + "/index.tsx", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
@@ -195,11 +210,12 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
         // adding package on top of go file
         codeSnippet = `package ${lastDir}\n` + codeSnippet;
 
-        await new Promise((res, rej) => {
-            fs.mkdir('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName, { recursive: true }, (err) => {
+        await new Promise(async (res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName, { recursive: true }, async (err) => {
                 if (err) {
                     rej(err);
                 } else {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName + "/main.go", codeSnippet);
                     fs.writeFile('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName + "/main.go", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
@@ -212,11 +228,12 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
         });
     } else if (language === "python") {
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
-        await new Promise((res, rej) => {
-            fs.mkdir('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName, { recursive: true }, (err) => {
+        await new Promise(async (res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName, { recursive: true }, async (err) => {
                 if (err) {
                     rej(err);
                 } else {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName + "/main.py", codeSnippet);
                     fs.writeFile('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName + "/main.py", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
@@ -230,6 +247,22 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     } else {
         throw new Error("Unsupported language in addCodeSnippetToEnvHelper");
     }
+}
+
+async function assertThatUserIsNotRemovedDocsVariableByMistake(path, codeSnippet) {
+    /* first we try and read the contents to see if this has 
+                    THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE and if the new code snippet doesn't then, the dev has made a mistake of removing variables...*/
+    return new Promise((res, rej) => {
+        fs.readFile(path, 'utf8', function (err, data) {
+            if (data !== undefined) {
+                if (data.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE") && !codeSnippet.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE")) {
+                    return rej(new Error("DID YOU FORGET TO USE DOCS VARIABLES IN A RECENT CODE CHANGE? PLEASE CHECK"));
+                }
+                res();
+            }
+
+        });
+    })
 }
 
 function replaceTSIgnoreWithEmptyLine(child, exportedVariables) {
