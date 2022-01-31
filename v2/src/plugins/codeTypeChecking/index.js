@@ -1,4 +1,5 @@
 let fs = require('fs');
+let { readdir } = require("fs/promises")
 let path = require('path');
 var exec = require('child_process').exec;
 var crypto = require('crypto');
@@ -67,20 +68,78 @@ async function addCodeSnippetToEnv(mdFile) {
     });
 }
 
+async function deleteFilesWithoutErrorsTypescript(stdout) {
+    let errors = stdout.split("\n");
+    let fileNames = [];
+
+    errors.forEach(error => {
+        if (error !== "" && error.includes("snippets")) {
+            fileNames.push(error.split("(")[0]);
+        }
+    })
+
+    async function getFiles(dir) {
+        const dirents = await readdir(dir, { withFileTypes: true });
+        const files = await Promise.all(dirents.map((dirent) => {
+            const res = path.resolve(dir, dirent.name);
+            return dirent.isDirectory() ? getFiles(res) : res;
+        }));
+        return Array.prototype.concat(...files);
+    }
+
+    let files = await getFiles("src/plugins/codeTypeChecking/jsEnv/snippets/");
+
+    files.forEach(file => {
+        // TODO: change this to make
+        let actualPath = "snippets" + file.split("snippets")[1];
+
+        if (!fileNames.includes(actualPath)) {
+            fs.rmSync("src/plugins/codeTypeChecking/jsEnv/" + actualPath);
+        }
+    });
+
+    function cleanEmptyFoldersRecursively(folder) {
+        var isDir = fs.statSync(folder).isDirectory();
+        if (!isDir) {
+            return;
+        }
+        var files = fs.readdirSync(folder);
+        if (files.length > 0) {
+            files.forEach(function (file) {
+                var fullPath = path.join(folder, file);
+                cleanEmptyFoldersRecursively(fullPath);
+            });
+
+            // re-evaluate files; after deleting subfolder
+            // we may have parent folder empty now
+            files = fs.readdirSync(folder);
+        }
+
+        if (files.length == 0) {
+            fs.rmdirSync(folder);
+            return;
+        }
+    }
+
+    cleanEmptyFoldersRecursively("src/plugins/codeTypeChecking/jsEnv/snippets");
+}
+
 async function checkCodeSnippets(language) {
     // typescript..
     if (language === "typescript") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/jsEnv/ && npm run test", function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/jsEnv/ && npm run test", async function (err, stdout, stderr) {
                 if (err) {
+                    await deleteFilesWithoutErrorsTypescript(stdout);
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
                     console.log("=======SETUP INSTRS========\n");
                     console.log('\x1b[36m%s\x1b[0m', `To setup a JS env, run the following (from v2 folder):
-    - cd src/plugins/codeTypeChecking/jsEnv/
-    - npm i
-    - npm run test (to make sure that it's setup correctly)`)
+                    - cd src/plugins/codeTypeChecking/jsEnv/
+                    - npm i
+                    - npm run test (to make sure that it's setup correctly)`)
                     console.log("==========================\n");
+
                     return rej(err);
                 }
                 res();
