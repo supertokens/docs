@@ -317,9 +317,8 @@ async function assertThatUserIsNotRemovedDocsVariableByMistake(path, codeSnippet
                 if (data.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE") && !codeSnippet.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE")) {
                     return rej(new Error("DID YOU FORGET TO USE DOCS VARIABLES IN A RECENT CODE CHANGE? PLEASE CHECK"));
                 }
-                res();
             }
-
+            res();
         });
     })
 }
