@@ -15,6 +15,8 @@ module.exports = function (context, opts) {
         name: 'copy-docs-and-code-type-checking',
 
         async loadContent() {
+            const skipCopies = process.env.SKIP_COPIES === "true";
+            const origDocs = [];
             // copy docs..
             await new Promise((res, rej) => {
                 walk(__dirname + "/../../", async (err, results) => {
@@ -22,30 +24,20 @@ module.exports = function (context, opts) {
                         return rej(err);
                     }
                     results = results.filter(r => r.endsWith(".md") || r.endsWith(".mdx"));
-                    for (let i = 0; i < results.length; i++) {
-                        await doCopyDocs(results[i]);
+                    for (const mdPath of results) {
+                        const isCopy = await doCopyDocs(mdPath);
+                        if (!skipCopies || !isCopy) {
+                            origDocs.push(mdPath);
+                        }
                     }
                     res();
                 });
             })
 
             // add code snippets to their respective env..
-            await new Promise((res, rej) => {
-                walk(__dirname + "/../../", async (err, results) => {
-                    if (err) {
-                        return rej(err);
-                    }
-                    results = results.filter(r => r.endsWith(".md") || r.endsWith(".mdx"));
-                    for (let i = 0; i < results.length; i++) {
-                        try {
-                            await addCodeSnippetToEnv(results[i]);
-                        } catch (err) {
-                            return rej(err);
-                        }
-                    }
-                    res();
-                });
-            });
+            for (const mdPath of origDocs) {
+                await addCodeSnippetToEnv(mdPath);
+            }
 
             // now we compile code snippets to make sure their types are correct..
             try {
@@ -99,23 +91,27 @@ async function doCopyDocs(mdFile) {
             }
 
             if (pathLine === undefined) {
-                return res();
+                return res(false);
             }
 
-            pathLine = __dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", "");
+            pathLine = path.resolve(__dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", ""));
+
+            if (pathLine === mdFile) {
+                return res(false);
+            }
 
             let sourceData = await getDataToCopyFromFile(pathLine, lines);
 
             let destinationData = await getDataToCopyFromFile(mdFile, lines);
 
             if (sourceData === destinationData) {
-                return res();
+                return res(true);
             } else {
                 fs.writeFile(mdFile, sourceData, 'utf8', function (err) {
                     if (err) {
                         return rej(err);
                     }
-                    res();
+                    res(true);
                 });
             }
         });
