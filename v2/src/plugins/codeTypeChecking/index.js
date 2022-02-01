@@ -225,6 +225,21 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
 
+    codeSnippet = codeSnippet.replaceAll("^{form_flowType}", "USER_INPUT_CODE_AND_MAGIC_LINK");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Node}", "createAndSendCustomTextMessage: async (input, context) => { /* See next step */ },");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python_def}", "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters):\n    # See next step\n");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python}", "create_and_send_custom_text_message=send_text_message");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_initialize_Python}", "ContactPhoneOnlyConfig");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_import_Python}", "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig, CreateAndSendCustomTextMessageParameters");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Go}",
+      `ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+Enabled: true,
+CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
+  /* See next step */
+  return nil
+},
+},`);
+
     let recipeName = await getRecipeName(mdFile);
     let replaceMap = mdVars[recipeName];
     if (replaceMap !== undefined) {
@@ -254,7 +269,7 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
         if (codeSnippet.includes("require(")) {
             throw new Error("Do not use 'require' in TS code. Error in " + mdFile);
         }
-        codeSnippet = "export { }\n" + codeSnippet; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
+        codeSnippet = `export { }\n// Original: ${mdFile}\n${codeSnippet}`; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
 
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
         await new Promise(async (res, rej) => {
