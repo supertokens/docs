@@ -68,58 +68,65 @@ async function addCodeSnippetToEnv(mdFile) {
     });
 }
 
+async function getFiles(dir) {
+    const dirents = await readdir(dir, { withFileTypes: true });
+    const files = await Promise.all(dirents.map((dirent) => {
+        const res = path.resolve(dir, dirent.name);
+        return dirent.isDirectory() ? getFiles(res) : res;
+    }));
+    return Array.prototype.concat(...files);
+}
+
+function cleanEmptyFoldersRecursively(folder) {
+    var isDir = fs.statSync(folder).isDirectory();
+    if (!isDir) {
+        return;
+    }
+    var files = fs.readdirSync(folder);
+    if (files.length > 0) {
+        files.forEach(function (file) {
+            var fullPath = path.join(folder, file);
+            cleanEmptyFoldersRecursively(fullPath);
+        });
+
+        // re-evaluate files; after deleting subfolder
+        // we may have parent folder empty now
+        files = fs.readdirSync(folder);
+    }
+
+    if (files.length == 0) {
+        fs.rmdirSync(folder);
+        return;
+    }
+}
+
 async function deleteFilesWithoutErrorsTypescript(stdout) {
     let errors = stdout.split("\n");
     let fileNames = [];
 
+    /**
+     * NOTE that because of how typescript reports file paths, all paths in 
+     * fileNames will start from /snippets and not from the root (~/)
+     */
     errors.forEach(error => {
+        // tsc output has some other lines + info that we are not interested in
         if (error !== "" && error.includes("snippets")) {
             fileNames.push(error.split("(")[0]);
         }
     })
 
-    async function getFiles(dir) {
-        const dirents = await readdir(dir, { withFileTypes: true });
-        const files = await Promise.all(dirents.map((dirent) => {
-            const res = path.resolve(dir, dirent.name);
-            return dirent.isDirectory() ? getFiles(res) : res;
-        }));
-        return Array.prototype.concat(...files);
-    }
-
-    let files = await getFiles("src/plugins/codeTypeChecking/jsEnv/snippets/");
+    let snippetsPathPrefix = "src/plugins/codeTypeChecking/jsEnv/snippets/";
+    let files = await getFiles(snippetsPathPrefix);
+    await getRootDir();
 
     files.forEach(file => {
-        // TODO: change this to make
-        let actualPath = "snippets" + file.split("snippets")[1];
+        let actualPath = file.replace(rootDir, "");
 
-        if (!fileNames.includes(actualPath)) {
-            fs.rmSync("src/plugins/codeTypeChecking/jsEnv/" + actualPath);
+        // We replace the path from project root to snippets with just snippets/ to match the format that tsc outputs
+        if (!fileNames.includes(actualPath.replace(snippetsPathPrefix, "snippets/"))) {
+            fs.rmSync(actualPath);
         }
     });
-
-    function cleanEmptyFoldersRecursively(folder) {
-        var isDir = fs.statSync(folder).isDirectory();
-        if (!isDir) {
-            return;
-        }
-        var files = fs.readdirSync(folder);
-        if (files.length > 0) {
-            files.forEach(function (file) {
-                var fullPath = path.join(folder, file);
-                cleanEmptyFoldersRecursively(fullPath);
-            });
-
-            // re-evaluate files; after deleting subfolder
-            // we may have parent folder empty now
-            files = fs.readdirSync(folder);
-        }
-
-        if (files.length == 0) {
-            fs.rmdirSync(folder);
-            return;
-        }
-    }
 
     cleanEmptyFoldersRecursively("src/plugins/codeTypeChecking/jsEnv/snippets");
 }
@@ -184,6 +191,18 @@ async function checkCodeSnippets(language) {
 }
 
 let rootDir = undefined; // uptil v2
+
+async function getRootDir() {
+    if (rootDir === undefined) {
+        rootDir = await new Promise(res => exec("pwd", function (err, stdout, stderr) {
+            res(stdout);
+        }));
+        rootDir = rootDir.trim() + "/";
+        // at this point, rootDir is /Users/.../main-website/docs/v2/ or if only cloned docs, then its /Users/.../docs/v2/
+    }
+
+    return rootDir;
+}
 
 async function getRecipeName(mdFile) {
     if (rootDir === undefined) {
