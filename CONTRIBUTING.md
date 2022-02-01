@@ -162,3 +162,10 @@ CODE_TYPE_CHECK=all npm run start
 If you are writing docs for a new version of the SDK, you want to load that version and then run the `CODE_TYPE_CHECK=lang1,lang2 npm run start` command. In order to change the SDK version, you want to navigate to `v2/src/plugins/codeTypeChecking/<lang>Env` and the modify that env's dependency file, and install the new dependencies.
 
 For example, if you want to test a new version of supertokens-node SDK, you should go to `v2/src/plugins/codeTypeChecking/jsEnv`, and modify `package.json` to use the new version. Then you want to run `npm i` in that dir.
+
+#### Skipping copies
+
+We have many documentation files that are recipe specific copies of an original. In many (but not all) cases, this can result in a single error being reported for each recipe. To avoid this, you can set the `SKIP_COPIES` environment variable to `true`. Doing this will only type-check the original versions of documents. This is off by default, because it could cause you to miss a recipe specific error. To check only on the "originals" you can:
+```bash
+SKIP_COPIES=true CODE_TYPE_CHECK=all npm run start
+```
