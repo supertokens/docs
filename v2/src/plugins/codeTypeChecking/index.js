@@ -1,5 +1,5 @@
 let fs = require('fs');
-let { readdir } = require("fs/promises")
+let readdir = require("fs").promises.readdir
 let path = require('path');
 var exec = require('child_process').exec;
 var crypto = require('crypto');
