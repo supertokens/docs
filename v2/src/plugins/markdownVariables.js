@@ -19,7 +19,7 @@
  */
 
 let configuredVariables = require("./markdownVariables.json");
-let { replaceTSIgnoreWithEmptyLine } = require("./codeTypeChecking")
+let { replaceCustomPlaceholdersInLine } = require("./codeTypeChecking")
 
 module.exports = () => {
 
@@ -78,7 +78,7 @@ module.exports = () => {
 
         if (dataCopy.children.length) {
             dataCopy.children = dataCopy.children.map(child => {
-                return replaceTSIgnoreWithEmptyLine(child);
+                return replaceCustomPlaceholdersInLine(child);
             })
         }
 

@@ -359,7 +359,7 @@ async function assertThatUserIsNotRemovedDocsVariableByMistake(path, codeSnippet
     })
 }
 
-function replaceTSIgnoreWithEmptyLine(child, exportedVariables) {
+function replaceCustomPlaceholdersInLine(child, exportedVariables) {
     // A child will either have value properties or more children
 
     // If it has a value, check if it is using a variable. If it is then replace otherwise skip
@@ -369,9 +369,31 @@ function replaceTSIgnoreWithEmptyLine(child, exportedVariables) {
         let eachLine = valueCopy.split("\n");
         let newLines = [];
         for (let i = 0; i < eachLine.length; i++) {
-            if (eachLine[i].includes("@ts-ignore")) {
+            let line = eachLine[i];
+            // If the line contains ts-ignore, we skip the line
+            if (line.includes("@ts-ignore")) {
                 continue;
             }
+
+            /**
+             * For snippets that use an older version of supertokens-node we use supertokens-node7 to import
+             * If the import contains supertokens-node7 we replace it with supertokens-node for the final
+             * rendered snippet
+             */
+            if (line.includes("supertokens-node7")) {
+                line = line.split("supertokens-node7").join("supertokens-node");
+                newLines.push(line);
+                continue;
+            }
+
+            /**
+             * For snippets that use supertokens-website as an HTML script we import supertokens-website-script for types.
+             * If the line contains this we skip adding the line
+             */
+            if (line.includes("supertokens-website-script")) {
+                continue;
+            }
+
             newLines.push(eachLine[i]);
         }
 
@@ -381,11 +403,11 @@ function replaceTSIgnoreWithEmptyLine(child, exportedVariables) {
     // If it has children then repeat recursively
     if (child.children) {
         child.children = child.children.map(subChild => {
-            return replaceTSIgnoreWithEmptyLine(subChild, exportedVariables);
+            return replaceCustomPlaceholdersInLine(subChild, exportedVariables);
         })
     }
 
     return child;
 }
 
-module.exports = { addCodeSnippetToEnv, checkCodeSnippets, replaceTSIgnoreWithEmptyLine }
+module.exports = { addCodeSnippetToEnv, checkCodeSnippets, replaceCustomPlaceholdersInLine }
