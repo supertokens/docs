@@ -232,7 +232,7 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_initialize_Python}", "ContactPhoneOnlyConfig");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_import_Python}", "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig, CreateAndSendCustomTextMessageParameters");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Go}",
-      `ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+        `ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
 Enabled: true,
 CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
   /* See next step */
@@ -349,7 +349,9 @@ async function assertThatUserIsNotRemovedDocsVariableByMistake(path, codeSnippet
         fs.readFile(path, 'utf8', function (err, data) {
             if (data !== undefined) {
                 if (data.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE") && !codeSnippet.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE")) {
-                    return rej(new Error("DID YOU FORGET TO USE DOCS VARIABLES IN A RECENT CODE CHANGE? PLEASE CHECK"));
+                    let message = "DID YOU FORGET TO USE DOCS VARIABLES IN A RECENT CODE CHANGE? PLEASE CHECK"
+                        + "\n\nIf you think this error is unrelated to your changes, try deleting the `snippets` folder for all languages and run again\n"
+                    return rej(new Error(message));
                 }
             }
             res();
