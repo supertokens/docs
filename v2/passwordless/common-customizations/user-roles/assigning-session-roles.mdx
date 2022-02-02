@@ -26,11 +26,13 @@ We can set the user's role in the access token by overriding the `createNewSessi
 <TabItem value="nodejs">
 
 ```tsx
-import supertokens from "supertokens-node";
+import SuperTokens from "supertokens-node";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
-    SuperTokens: { /* ... */ },
+    supertokens: {
+        connectionURI: "...",
+    },
     appInfo: {
         apiDomain: "...",
         appName: "...",
@@ -43,7 +45,7 @@ SuperTokens.init({
                 functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        createNewSession: async function(input) {
+                        createNewSession: async function (input) {
                             let userId = input.userId;
 
                             let role = "admin"; // TODO: fetch role based on userId
@@ -164,18 +166,22 @@ Post session verification, you can use the `updateAccessTokenPayload` function t
 
 ```tsx
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
 
-app.post("/set-role", verifySession(), async (req, res) => {
+let app = express();
 
-    let userId = req.session.getUserId(); 
+app.post("/set-role", verifySession(), async (req: SessionRequest, res) => {
+
+    let userId = req.session!.getUserId();
 
     let role = "admin"; // TODO: fetch based on user
 
     // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await req.session.updateAccessTokenPayload(
-        {role}
+    await req.session!.updateAccessTokenPayload(
+        { role }
     );
     // highlight-end
 
@@ -186,7 +192,11 @@ app.post("/set-role", verifySession(), async (req, res) => {
 <TabItem value="hapi">
 
 ```tsx
+import Hapi from "@hapi/hapi";
 import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+
+let server = Hapi.server({ port: 8000 });
 
 server.route({
     path: "/set-role",
@@ -194,24 +204,24 @@ server.route({
     options: {
         pre: [
             {
-            method: verifySession()
+                method: verifySession()
             },
         ],
     },
-    handler: async (req, res) => {
-        let userId = req.session.getUserId();
+    handler: async (req: SessionRequest, res) => {
+        let userId = req.session!.getUserId();
 
         let role = "admin"; // TODO: fetch based on user
 
-    // Note that this will override any existing access token payload
-    // that you may have provided earlier.
-    // highlight-start
+        // Note that this will override any existing access token payload
+        // that you may have provided earlier.
         // highlight-start
-        await req.session.updateAccessTokenPayload(
-                {role}
+        // highlight-start
+        await req.session!.updateAccessTokenPayload(
+            { role }
         );
         // highlight-end
-        
+
         //....
     }
 })
@@ -220,23 +230,27 @@ server.route({
 <TabItem value="fastify">
 
 ```tsx
+import Fastify from "fastify";
 import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+
+let fastify = Fastify();
 
 fastify.post("/set-role", {
     preHandler: verifySession(),
-}, (req, res) => {
-    let userId = req.session.getUserId();
+}, async (req: SessionRequest, res) => {
+    let userId = req.session!.getUserId();
 
     let role = "admin"; // TODO: fetch based on user
 
     // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await req.session.updateAccessTokenPayload(
-        {role}
+    await req.session!.updateAccessTokenPayload(
+        { role }
     );
     // highlight-end
-    
+
     //....
 });
 ```
@@ -246,17 +260,18 @@ fastify.post("/set-role", {
 
 ```tsx
 import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
 
-async function setRole(awsEvent, _) {
-    let userId = awsEvent.session.getUserId();
+async function setRole(awsEvent: SessionEvent) {
+    let userId = awsEvent.session!.getUserId();
 
     let role = "admin"; // TODO: fetch based on user
 
     // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await awsEvent.session.updateAccessTokenPayload(
-        {role}
+    await awsEvent.session!.updateAccessTokenPayload(
+        { role }
     );
     // highlight-end
 
@@ -264,24 +279,27 @@ async function setRole(awsEvent, _) {
 };
 
 exports.handler = verifySession(setRole);
-
 ```
 
 </TabItem>
 <TabItem value="koa">
 
 ```tsx
+import KoaRouter from "koa-router";
 import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import {SessionContext} from "supertokens-node/framework/koa";
 
-router.post("/set-role", verifySession(), (ctx, next) => {
-    let userId = ctx.session.getUserId();
+let router = new KoaRouter();
+
+router.post("/set-role", verifySession(), async (ctx: SessionContext, next) => {
+    let userId = ctx.session!.getUserId();
 
     let role = "admin"; // TODO: fetch based on user
 
     // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await ctx.session.updateAccessTokenPayload(
+    await ctx.session!.updateAccessTokenPayload(
         {role}
     );
     // highlight-end
@@ -294,15 +312,17 @@ router.post("/set-role", verifySession(), (ctx, next) => {
 <TabItem value="loopback">
 
 ```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
 import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
 import Session from "supertokens-node/recipe/session";
 
 class SetRole {
-    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) {}
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
     @post("/set-role")
     @intercept(verifySession())
     @response(200)
-    handler() {
+    async handler() {
         let userId = ((this.ctx as any).session as Session.SessionContainer).getUserId();
 
         let role = "admin"; // TODO: fetch based on user
@@ -312,7 +332,7 @@ class SetRole {
         // highlight-start
         // highlight-start
         await ((this.ctx as any).session as Session.SessionContainer).updateAccessTokenPayload(
-            {role}
+            { role }
         );
         // highlight-end
 
@@ -327,9 +347,10 @@ class SetRole {
 ```tsx
 import { superTokensNextWrapper } from 'supertokens-node/nextjs'
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
 
 // highlight-start
-export default async function setRole(req, res) {
+export default async function setRole(req: SessionRequest, res: any) {
     await superTokensNextWrapper(
         async (next) => {
             await verifySession()(req, res, next);
@@ -338,14 +359,14 @@ export default async function setRole(req, res) {
         res
     )
 
-    let userId = req.session.getUserId(); 
+    let userId = req.session!.getUserId();
     let role = "admin"; // TODO: fetch based on user
 
     // Note that this will override any existing access token payload
     // that you may have provided earlier.
     // highlight-start
-    await req.session.updateAccessTokenPayload(
-        {role}
+    await req.session!.updateAccessTokenPayload(
+        { role }
     );
     // highlight-end
 
