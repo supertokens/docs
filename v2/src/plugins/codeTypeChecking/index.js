@@ -226,6 +226,7 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
 
     codeSnippet = codeSnippet.replaceAll("^{form_flowType}", "USER_INPUT_CODE_AND_MAGIC_LINK");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod}", "PHONE");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Node}", "createAndSendCustomTextMessage: async (input, context) => { /* See next step */ },");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python_def}", "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters):\n    # See next step\n");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python}", "create_and_send_custom_text_message=send_text_message");
@@ -382,6 +383,17 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
              */
             if (line.includes("supertokens-node7")) {
                 line = line.split("supertokens-node7").join("supertokens-node");
+                newLines.push(line);
+                continue;
+            }
+
+            /**
+             * For snippets that use v5 react-router-dom we use react-router-dom5 to import
+             * If the import contains react-router-dom5 we replace it with react-router-dom for the final
+             * rendered snippet
+             */
+            if (line.includes("react-router-dom5")) {
+                line = line.split("react-router-dom5").join("react-router-dom");
                 newLines.push(line);
                 continue;
             }
