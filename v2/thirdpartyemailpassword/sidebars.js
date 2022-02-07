@@ -179,6 +179,7 @@ module.exports = {
             "common-customizations/styling/shadow-dom"
           ]
         },
+        "common-customizations/translations",
         {
           type: "category",
           label: "Changing base path",
