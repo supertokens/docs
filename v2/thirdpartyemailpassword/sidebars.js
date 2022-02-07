@@ -84,12 +84,12 @@ module.exports = {
             "common-customizations/signin-form/custom-providers",
           ]
         },
-        "common-customizations/change-password",
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
+        "common-customizations/change-password",
         {
           type: "category",
           label: "User Roles",

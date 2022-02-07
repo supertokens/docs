@@ -72,11 +72,11 @@ module.exports = {
             "common-customizations/signin-form/field-validators",
           ]
         },
-        "common-customizations/change-password",
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
+        "common-customizations/change-password",
         {
           type: "category",
           label: "User Roles",
