@@ -20,14 +20,18 @@ Use the code below as the handler for the lambda. Remember that whenever we want
 
 ```tsx title="index.js"
 import supertokens from "supertokens-node";
-import { wrapRequest, wrapResponse } from "supertokens-node/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import { APIGatewayAuthorizerEvent, PolicyDocument, Statement, AuthResponse } from "aws-lambda";
 import Session from "supertokens-node/recipe/session";
 
+// @ts-ignore
 import { getBackendConfig } from "./config";
 
 supertokens.init(getBackendConfig());
 
-exports.handler = async function(event, context) {
+type AuthorizerEvent = SessionEvent & APIGatewayAuthorizerEvent;
+
+exports.handler = async function (event: AuthorizerEvent) {
     try {
         const session = await Session.getSession(event, event, { sessionRequired: false });
         if (session) {
@@ -36,7 +40,7 @@ exports.handler = async function(event, context) {
             return generateAllow(session.getUserId(), event.methodArn, {
                 setCookie: event.supertokens.response.cookies.join(', '),
             });
-        }  else {
+        } else {
             // You can allow requests without sessions
             return generateAllow("", event.methodArn, {
                 setCookie: event.supertokens.response.cookies.join(', '),
@@ -45,43 +49,45 @@ exports.handler = async function(event, context) {
             // return generateDeny(undefined, event.methodArn);
             // throw new Error("Unauthorized");
         }
-    } catch(ex) {
+    } catch (ex: any) {
         if (ex.type === "TRY_REFRESH_TOKEN") {
             throw new Error("Unauthorized");
         }
         throw ex;
     }
 }
-     
+
 // Help function to generate an IAM policy
-const generatePolicy = function(principalId, effect, resource, context) {
+const generatePolicy = function (principalId: string, effect: string, resource: string, context?: any) {
     // Required output:
-    const authResponse = {};
-    authResponse.principalId = principalId;
-    if (effect && resource) {
-        const policyDocument = {};
-        policyDocument.Version = '2012-10-17'; // default version
-        policyDocument.Statement = [];
+    const policyDocument: PolicyDocument = {
+        Version: '2012-10-17',
+        Statement: [],
+    };
 
-        const statementOne = {};
-        statementOne.Action = 'execute-api:Invoke'; // default action
-        statementOne.Effect = effect;
-        statementOne.Resource = resource;
-        policyDocument.Statement[0] = statementOne;
-        authResponse.policyDocument = policyDocument;
-    }
+    const statementOne: Statement = {
+        Action: 'execute-api:Invoke',
+        Effect: effect,
+        Resource: resource,
+    };
 
-    // Optional output with custom properties of the String, Number or Boolean type.
-    authResponse.context = context;
+    policyDocument.Statement[0] = statementOne;
+
+    const authResponse: AuthResponse = {
+        principalId: principalId,
+        policyDocument: policyDocument,
+        // Optional output with custom properties of the String, Number or Boolean type.
+        context,
+    };
 
     return authResponse;
 }
-     
-const generateAllow = function(principalId, resource, context) {
+
+const generateAllow = function (principalId: string, resource: string, context?: any) {
     return generatePolicy(principalId, 'Allow', resource, context);
 };
-     
-const generateDeny = function(principalId, resource, context) {
+
+const generateDeny = function (principalId: string, resource: string, context?: any) {
     return generatePolicy(principalId, 'Deny', resource, context);
 };
 ```

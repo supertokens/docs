@@ -136,8 +136,8 @@ async function checkCodeSnippets(language) {
     if (language === "typescript") {
         await new Promise((res, rej) => {
             exec("cd src/plugins/codeTypeChecking/jsEnv/ && npm run test", async function (err, stdout, stderr) {
+                await deleteFilesWithoutErrorsTypescript(stdout);
                 if (err) {
-                    await deleteFilesWithoutErrorsTypescript(stdout);
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
                     console.log("=======SETUP INSTRS========\n");
