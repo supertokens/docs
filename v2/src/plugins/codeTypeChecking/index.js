@@ -69,6 +69,9 @@ async function addCodeSnippetToEnv(mdFile) {
 }
 
 async function getFiles(dir) {
+    if (!fs.existsSync(dir)) {
+        return [];
+    }
     const dirents = await readdir(dir, { withFileTypes: true });
     const files = await Promise.all(dirents.map((dirent) => {
         const res = path.resolve(dir, dirent.name);
@@ -78,6 +81,9 @@ async function getFiles(dir) {
 }
 
 function cleanEmptyFoldersRecursively(folder) {
+    if (!fs.existsSync(folder)) {
+        return;
+    }
     var isDir = fs.statSync(folder).isDirectory();
     if (!isDir) {
         return;
@@ -124,7 +130,10 @@ async function deleteFilesWithoutErrorsTypescript(stdout) {
 
         // We replace the path from project root to snippets with just snippets/ to match the format that tsc outputs
         if (!fileNames.includes(actualPath.replace(snippetsPathPrefix, "snippets/"))) {
-            fs.rmSync(actualPath);
+            let exists = fs.existsSync(actualPath);
+            if (exists) {
+                fs.rmSync(actualPath);
+            }
         }
     });
 
