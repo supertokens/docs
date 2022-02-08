@@ -42,6 +42,7 @@ let getUserIdMapping = async (
 
     // get mapped userIds if the input userId exits in your data store
     // getUserIdMappingIfExists is a function defined by you
+    // @ts-ignore
     let userIdMapping = getUserIdMappingIfExists(input)
 
     // if input userId exists get the mapped user data
@@ -52,7 +53,6 @@ let getUserIdMapping = async (
 
     return undefined
 }
-
 ```
 
 ## Overriding all functions on the backend which take `userId` as input or return `userId` in their response:
@@ -68,25 +68,43 @@ The following functions need to be modified so that the correct  `userId` is use
 - `updateEmailOrPassword`
 
 
-```jsx title="Nodejs"
+```tsx title="Nodejs"
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+
+let getUserIdMapping = async (
+    input: {
+        auth0UserId?: string,
+        supertokensUserId?: string
+    }): Promise<{ auth0UserId: string, supertokensUserId: string } | undefined> => {
+    // Refer to previous step
+    return {
+        auth0UserId: "...",
+        supertokensUserId: "...",
+    };
+}
+
 EmailPassword.init({
     override: {
         functions: (originalImpl) => {
             return {
                 ...originalImpl,
                 signIn: async function (input) {
-                    // TODO: see Modifications to login section
+                    throw new Error("Unimplimented: See Modifications to login section");
                 },
                 getUserByEmail: async function (input) {
 
                     let user = await originalImpl.getUserByEmail(input)
+
+                    if (user === undefined) {
+                        return user;
+                    }
 
                     // if the user in the response has their SuperTokens userId mapped to an Auth0 userId, then the Auth0 userId should be set in the response object.
                     // get userId mapping if it exists
                     let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: user.id })
 
                     if (userIdMappingInfo !== undefined) {
-                        users[i].id = userIdMappingInfo.auth0UserId
+                        user.id = userIdMappingInfo.auth0UserId
                     }
                     return user
                 },
@@ -99,6 +117,10 @@ EmailPassword.init({
 
                         // call original implementation with the mapped SuperTokens userId
                         let response = await originalImpl.getUserById({ userId: userIdMappingInfo.supertokensUserId })
+
+                        if (response === undefined) {
+                            return response;
+                        }
 
                         // set Auth0 userId in the response
                         response.id = userIdMappingInfo.auth0UserId

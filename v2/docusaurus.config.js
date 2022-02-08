@@ -137,11 +137,11 @@ module.exports = {
       }
     ],
     [
-      // loads the supertokens.com react bundle for footer and analytics etc..
-      "./src/plugins/copyDocs",
+      "./src/plugins/copyDocsAndCodeTypeChecking",
       {
         // used for copying docs content via the <-COPY DOCS-> directive
-        id: "copy-docs",
+        // used for do code type checking as well AFTER running cop docs
+        id: "copy-docs-and-code-type-checking",
       }
     ],
     [

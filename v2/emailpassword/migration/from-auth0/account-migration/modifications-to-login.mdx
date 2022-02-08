@@ -29,7 +29,49 @@ We will be overriding SuperToken's login functions to enable account migration, 
 
 ### Modifying the `signIn` function on the backend:
 
-```jsx title="Nodejs"
+```tsx title="Nodejs"
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import fs from 'fs';
+
+// TODO: Add your user data file name
+let auth0UsersDataString = fs.readFileSync(__dirname + "YOUR_USER_DATA")
+let auth0UsersData = JSON.parse(auth0UsersDataString.toString());
+
+async function doesUserExistInAuth0(email: string): Promise<boolean> {
+    return true;
+}
+
+let validateAndGetUserInfoFromAuth0 = async (email: string, password: string): Promise<{
+    user_id: string,
+    email: string,
+} | undefined> => {
+    // ...
+    return {
+        user_id: "...",
+        email: "...",
+    };
+}
+
+let setUserIdMapping = async (
+    input: {
+        auth0UserId: string,
+        supertokensUserId: string
+    }): Promise<void> => {
+    // set the mapping in your data store
+}
+
+let getUserIdMapping = async (
+    input: {
+        auth0UserId?: string,
+        supertokensUserId?: string
+    }): Promise<{ auth0UserId: string, supertokensUserId: string } | undefined> => {
+    // Refer to user id mapping
+    return {
+        auth0UserId: "...",
+        supertokensUserId: "...",
+    };
+}
+
 EmailPassword.init({
     override: {
         functions: (originalImpl) => {
@@ -39,50 +81,59 @@ EmailPassword.init({
                 signIn: async function (input) {
 
                     // Box 2: check if the User exists in Auth0
-                    if(await doesUserExistInAuth0(input.email)){
+                    if (await doesUserExistInAuth0(input.email)) {
 
                         // Box 3: check if user exists in SuperTokens
                         let supertokensUser = await this.getUserByEmail({ email: input.email });
 
-                        if( supertokensUser === undefined ){
+                        if (supertokensUser === undefined) {
                             // EmailPassword User with the input credentials does not exist in SuperTokens
 
                             // Box 6: validate users credentials in Auth0
-                            let auth0UserInfo = await validateAndGetUserInfoFromAuth0( input.email, input.password)
+                            let auth0UserInfo = await validateAndGetUserInfoFromAuth0(input.email, input.password)
 
-                            if ( auth0UserInfo === undefined ){
+                            if (auth0UserInfo === undefined) {
                                 // Box 9: credentials are incorrect
                                 return {
-                                     status: "WRONG_CREDENTIALS_ERROR"
+                                    status: "WRONG_CREDENTIALS_ERROR"
                                 }
                             }
 
                             // Box 7: call the signup function to create a new SuperTokens user.
-                            response = await this.signUp(input)
+                            let response = await this.signUp(input)
+
+                            if (response.status !== "OK") {
+                                return {
+                                    status: "WRONG_CREDENTIALS_ERROR",
+                                };
+                            }
 
                             // Box 8: map the Auth0 userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
                             // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                            await setUserIdMapping({ auth0UserId: auth0UserData.sub, supertokensUserId: response.user.id})
-                            
+                            await setUserIdMapping({ auth0UserId: auth0UsersData.sub, supertokensUserId: response.user.id })
+
                             // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
                             // If you have not stored the users Auth0 userId in your tables, you can ignore this step
                             response.user.id = response.user.id
-                            
+                            return response;
                         } else {
                             // Box 4: EmailPassword User with the input credentials exists in SuperTokens, so call the original signIn implementation
-                            response = await originalImpl.signIn(input)
+                            let response = await originalImpl.signIn(input)
+
+                            if (response.status !== "OK") {
+                                return response;
+                            }
 
                             // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
                             // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                            response.user.id = (await getUserIdMapping({ supertokensUserId: supertokensUser.id })).auth0UserId
+                            response.user.id = (await getUserIdMapping({ supertokensUserId: supertokensUser.id }))!.auth0UserId
+                            return response;
                         }
-
-                        return response
 
                     } else {
                         // Box 10: user does not exist in Auth0 call original signIn implementation
                         return originalImpl.signIn(input)
-                    }                    
+                    }
                 },
             }
         }
@@ -130,12 +181,12 @@ For example:
 
 Implementation for the `validateAndGetUserInfoFromAuth0` and `doesUserExistInAuth0` functions used in SuperTokens `signIn` function:
 
-```jsx title="Nodejs"
-
+```tsx title="Nodejs"
+import axios from "axios";
 // Box 6: Validates user credentials by generating an access token with their credentials and returns user data
-let validateAndGetUserInfoFromAuth0 = async (email, password) => {
+let validateAndGetUserInfoFromAuth0 = async (email: string, password: string) => {
 
-    let accessToken;
+    let access_token;
     try {
         // generate an user access token using the input credentials
         access_token = (await axios({
@@ -169,7 +220,7 @@ let validateAndGetUserInfoFromAuth0 = async (email, password) => {
 }
 
 // Box 2: Checks if a user with an EmailPassword account exists in Auth0 with the input email
-let doesUserExistInAuth0 = async (email) => {
+let doesUserExistInAuth0 = async (email: string) => {
 
     // generate an access token to use the Auth0's Management API.
     let access_token = (await axios({
@@ -201,7 +252,6 @@ let doesUserExistInAuth0 = async (email) => {
     }
     return false
 }
-
 ```
 
 </TabItem>
@@ -230,25 +280,25 @@ The Implementation below follows the following sample data structure.
 
 Implementation for the `validateAndGetUserInfoFromAuth0` and `doesUserExistInAuth0` functions used in SuperTokens `signIn` function:
 
-```jsx title="Nodejs"
-
+```tsx title="Nodejs"
+import fs from "fs";
 // Auth0 uses bcrypt to hash user passwords, we can use the bcrypt library to validate the input password.
-let bcrypt = require("bcryptjs")
+import bcrypt from "bcryptjs"
 
 // Since password hashes are mapped to user data through userIds, you will need to load both files.
 
 // load your exported Auth0 user data
 // TODO: Add your user data file name
 let auth0UsersDataString = fs.readFileSync(__dirname + "YOUR_USER_DATA")
-let auth0UsersData = JSON.parse(auth0UsersDataString);
+let auth0UsersData = JSON.parse(auth0UsersDataString.toString());
 
 // load your exported Auth0 password hashes
 // TODO: Add your password hashes file name
 let auth0PasswordHashesString = fs.readFileSync(__dirname + "YOUR_PASSWORD_HASHES")
-let auth0PasswordHashes = JSON.parse(auth0PasswordHashesString);
+let auth0PasswordHashes = JSON.parse(auth0PasswordHashesString.toString());
 
 // Box 6: Validate user credentials and retrieve user data
-let validateAndGetUserInfoFromAuth0 = async (email, password) => {
+let validateAndGetUserInfoFromAuth0 = async (email: string, password: string) => {
 
     for (let i = 0; i < auth0UsersData.length; i++) {
         // check that a user with the input email exists and they are not a Social account.
@@ -269,7 +319,7 @@ let validateAndGetUserInfoFromAuth0 = async (email, password) => {
             }
 
             // validate the password hash with the users password
-            if (bcrypt.compareSync(password, passwordHash)) {
+            if (bcrypt.compareSync(password, usersPasswordHash)) {
                 return auth0UsersData[i]
             } else {
                 return undefined
@@ -279,7 +329,7 @@ let validateAndGetUserInfoFromAuth0 = async (email, password) => {
 }
 
 // Box 2: check that the user exists in Auth0
-let doesUserExistInAuth0 = async (email) => {
+let doesUserExistInAuth0 = async (email: string) => {
 
     // check if input email has an associated user
     for (let i = 0; i < auth0UsersData.length; i++) {
@@ -290,7 +340,6 @@ let doesUserExistInAuth0 = async (email) => {
     }
     return false
 }
-
 ```
 
 </TabItem>

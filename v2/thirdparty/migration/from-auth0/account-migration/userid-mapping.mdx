@@ -42,6 +42,7 @@ let getUserIdMapping = async (
 
     // get mapped userIds if the input userId exits in your data store
     // getUserIdMappingIfExists is a function defined by you
+    // @ts-ignore
     let userIdMapping = getUserIdMappingIfExists(input)
 
     // if input userId exists get the mapped user data
@@ -52,7 +53,6 @@ let getUserIdMapping = async (
 
     return undefined
 }
-
 ```
 
 ## Overriding all functions on the backend which take `userId` as input or return `userId` in their response:
@@ -67,14 +67,29 @@ The following functions need to be modified so that the correct  `userId` is use
 - `getUserById`
 
 
-```jsx title="Nodejs"
+```tsx title="Nodejs"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+let getUserIdMapping = async (
+    input: {
+        auth0UserId?: string,
+        supertokensUserId?: string
+    }): Promise<{ auth0UserId: string, supertokensUserId: string } | undefined> => {
+    // TODO: See previous step
+    return undefined;
+}
+
 ThirdParty.init({
+    signInAndUpFeature: {
+        providers: [/* ... */]
+    },
     override: {
         functions: (originalImpl) => {
             return {
                 ...originalImpl,
                 signInUp: async function (input) {
                     // TODO: see Modifications to login section
+                    throw new Error("Unimplimented: See Modifications to login section");
                 },
                 getUsersByEmail: async function (input) {
 
@@ -97,6 +112,10 @@ ThirdParty.init({
 
                     let response = await originalImpl.getUserByThirdPartyInfo(input)
 
+                    if (response === undefined) {
+                        return response;
+                    }
+
                     // if the user in the response has their SuperTokens userId mapped to an Auth0 userId, then the Auth0 userId should be set in the response object.
                     let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: response.id })
 
@@ -114,6 +133,10 @@ ThirdParty.init({
 
                         // call original implementation with the mapped SuperTokens userId
                         let response = await originalImpl.getUserById({ userId: userIdMappingInfo.supertokensUserId })
+
+                        if (response === undefined) {
+                            return response;
+                        }
 
                         // set Auth0 userId in the response
                         response.id = userIdMappingInfo.auth0UserId

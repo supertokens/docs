@@ -30,9 +30,17 @@ We will be overriding SuperToken's login functions to enable account migration, 
 
 ### Modifying the `signInUp` function on the backend:
 
-```jsx title="Nodejs"
+```tsx title="Nodejs"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+async function getThirdPartyUserFromAuth0(thirdPartyUserId: string) {
+    // Box 2: Get userInfo from Auth0 with Social Provider id.
+}
 
 ThirdParty.init({
+    signInAndUpFeature: {
+        providers: [],
+    },
     override: {
         functions: (originalImpl) => {
             return {
@@ -41,27 +49,33 @@ ThirdParty.init({
                 signInUp: async function (input) {
 
                     // Box 2: Get userInfo from Auth0 with Social Provider id.
-                    let auth0UserInfo = await getThirdPartyUserFromAuth0(input.user.thirdParty.userId)
+                    let auth0UserInfo = await getThirdPartyUserFromAuth0(input.thirdPartyUserId)
 
                     // Box 3: check if userInfo exists
-                    if (auth0UserInfo !== undefined){
-                
+                    if (auth0UserInfo !== undefined) {
+
                         // Box 4: call the Supertokens signInUp implementation
                         let response = await originalImpl.signInUp(input)
-                        
+
+                        if (response.status !== "OK") {
+                            return response;
+                        }
+
                         // Box 5: check if a new SuperTokens user was created
-                        if (response.createdNewUser){
+                        if (response.createdNewUser) {
 
                             // Box 6: map the Auth0 userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
                             // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                            await setUserIdMapping({ auth0UserId: auth0UserInfo.user_id, supertokensUserId: response.user.id})
-                            
+                            // @ts-ignore
+                            await setUserIdMapping({ auth0UserId: auth0UserInfo.user_id, supertokensUserId: response.user.id })
+
                             // Box 7: Set the newly created flag value to false in the response
                             response.createdNewUser = false
                         }
-                        
+
                         // Box 8: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
                         // If you have not stored the users Auth0 userId, you can ignore this step
+                        // @ts-ignore
                         response.user.id = auth0UserInfo.user_id
 
                         return response
@@ -75,8 +89,6 @@ ThirdParty.init({
         }
     },
 })
-
-
 ```
 ### Implementing the `getThirdPartyUserFromAuth0` function
 
@@ -108,7 +120,8 @@ In this method we will be using Auth0's APIs to check if the user signing in is 
 
 Implementation for the `getThirdPartyUserFromAuth0` function used in SuperTokens `signInUp` function:
 
-```jsx title="Nodejs"
+```tsx title="Nodejs"
+import axios from "axios";
 
 // generate an access_token so you can use the Auth0 management API
 let generateAccessToken = async () => {
@@ -133,7 +146,7 @@ let generateAccessToken = async () => {
 let access_token = generateAccessToken()
 
 // Get the social account user info from Auth0 with the input thirdPartyId.
-let getThirdPartyUserFromAuth0 = async (thirdPartyId) => {
+let getThirdPartyUserFromAuth0 = async (thirdPartyId: string) => {
 
     // send a request to Auth0's get user API with the input thirdPartyId as the search criteria.
     let response = await axios({
@@ -152,7 +165,6 @@ let getThirdPartyUserFromAuth0 = async (thirdPartyId) => {
 
     return undefined
 }
-
 ```
 
 </TabItem>
@@ -173,17 +185,18 @@ The Implementation below follows the following sample data structure. Please ref
 
 Implementation for the `getThirdPartyUserFromAuth0` function used in SuperTokens `signInUp` function:
 
-```jsx title="Nodejs"
+```tsx title="Nodejs"
+import fs from "fs";
 
 // load your exported Auth0 user data
 // TODO: Add your user data file name
 let auth0UsersDataString = fs.readFileSync(__dirname + "YOUR_USER_DATA.json")
-let auth0UsersData = JSON.parse(auth0UsersDataString);
+let auth0UsersData = JSON.parse(auth0UsersDataString.toString());
 
-let getThirdPartyUserFromAuth0 = async (thirdPartyId) => {
-    
+let getThirdPartyUserFromAuth0 = async (thirdPartyId: string) => {
+
     for (let i = 0; i < auth0UsersData.length; i++) {
-         // check if current user has a social account and the Social Provider Id is a match to the thirdPartyId. 
+        // check if current user has a social account and the Social Provider Id is a match to the thirdPartyId. 
         if ((auth0UsersData[i].identities[0].isSocial) && auth0UsersData[i].identities[0].user_id === thirdPartyId) {
             // return Auth0 user data
             return auth0UsersData[0]
@@ -191,7 +204,6 @@ let getThirdPartyUserFromAuth0 = async (thirdPartyId) => {
     }
     return undefined
 }
-
 ```
 
 </TabItem>
