@@ -4,8 +4,13 @@ let { addCodeSnippetToEnv, checkCodeSnippets } = require("./codeTypeChecking");
 var exec = require('child_process').exec;
 
 if (typeof String.prototype.replaceAll === "undefined") {
-    String.prototype.replaceAll = function (match, replace) {
-        return this.replace(new RegExp(match, 'g'), () => replace);
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+    }
+
+    String.prototype.replaceAll = function (find, replace) {
+        var target = this;
+        return target.replace(new RegExp(escapeRegExp(find), 'g'), replace);
     }
 }
 
