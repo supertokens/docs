@@ -89,6 +89,7 @@ module.exports = {
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
+        "common-customizations/change-password",
         {
           type: "category",
           label: "User Roles",

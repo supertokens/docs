@@ -76,6 +76,7 @@ module.exports = {
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
+        "common-customizations/change-password",
         {
           type: "category",
           label: "User Roles",
