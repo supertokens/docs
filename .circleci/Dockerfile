@@ -6,5 +6,5 @@ RUN mv go /usr/local
 env GOROOT /usr/local/go
 env GOPATH $HOME/go
 env PATH $GOPATH/bin:$GOROOT/bin:$PATH
-RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash -
+RUN curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
 RUN apt-get install -y nodejs
