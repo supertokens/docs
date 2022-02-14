@@ -273,11 +273,11 @@ SuperTokens.init({
 					return {
 						...originalImplementation,
 
-						signInUpPOST: async function ({ provider, code, redirectURI, options }) {
+						signInUpPOST: async function ({ provider, code, redirectURI, options, userContext }) {
 
 							let userInfo;
 							let accessTokenAPIResponse: any;
-							let providerInfo = await provider.get(redirectURI, code);
+							let providerInfo = await provider.get(redirectURI, code, userContext);
 
 							accessTokenAPIResponse = await axios({
 								method: "post",
@@ -288,7 +288,7 @@ SuperTokens.init({
 									accept: "application/json", // few providers like github don't send back json response by default
 								},
 							});
-							userInfo = await providerInfo.getProfileInfo(accessTokenAPIResponse.data);
+							userInfo = await providerInfo.getProfileInfo(accessTokenAPIResponse.data, userContext);
 
 							let emailInfo = userInfo.email;
 							if (emailInfo === undefined) {
@@ -300,6 +300,7 @@ SuperTokens.init({
 								thirdPartyId: provider.id,
 								thirdPartyUserId: userInfo.id,
 								email: emailInfo,
+								userContext
 							});
 
 							if (response.status === "FIELD_ERROR") {
@@ -312,21 +313,24 @@ SuperTokens.init({
 								const tokenResponse = await options.emailVerificationRecipeImplementation.createEmailVerificationToken({
 									userId: response.user.id,
 									email: response.user.email,
+									userContext
 								});
 
 								if (tokenResponse.status === "OK") {
 									await options.emailVerificationRecipeImplementation.verifyEmailUsingToken({
 										token: tokenResponse.token,
+										userContext
 									});
 								}
 							}
 
-							await Session.createNewSession(options.res, response.user.id, {}, {});
+							let session = await Session.createNewSession(options.res, response.user.id, {}, {});
 							return {
 								status: "OK",
 								createdNewUser: response.createdNewUser,
 								user: response.user,
 								authCodeResponse: accessTokenAPIResponse.data,
+								session
 							};
 						},
 
