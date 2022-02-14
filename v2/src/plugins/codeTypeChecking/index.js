@@ -311,7 +311,7 @@ CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithL
         let newFolderName = splittedFolder.join("/");
 
         // adding package on top of go file
-        codeSnippet = `package ${lastDir}\n` + codeSnippet;
+        codeSnippet = `package ${lastDir}\n// Original: ${mdFile}\n${codeSnippet}`;
 
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName, { recursive: true }, async (err) => {
