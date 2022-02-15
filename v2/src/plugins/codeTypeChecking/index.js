@@ -140,6 +140,33 @@ async function deleteFilesWithoutErrorsTypescript(stdout) {
     cleanEmptyFoldersRecursively("src/plugins/codeTypeChecking/jsEnv/snippets");
 }
 
+
+async function deleteFilesWithoutErrorsPython(stdout) {
+    let errors = stdout.split("\n");
+    let fileNames = [];
+
+    errors.forEach(error => {
+        if (error !== "" && error.includes("snippets")) {
+            fileNames.push(error.split(":")[0].trim());
+        }
+    })
+
+    let snippetsPathPrefix = "src/plugins/codeTypeChecking/pythonEnv/snippets/";
+    let files = await getFiles(snippetsPathPrefix);
+    await getRootDir();
+
+    files.forEach(file => {
+        if (!fileNames.includes(file)) {
+            let exists = fs.existsSync(file);
+            if (exists) {
+                fs.rmSync(file);
+            }
+        }
+    });
+
+    cleanEmptyFoldersRecursively("src/plugins/codeTypeChecking/pythonEnv/snippets");
+}
+
 async function checkCodeSnippets(language) {
     // typescript..
     if (language === "typescript") {
@@ -177,7 +204,8 @@ async function checkCodeSnippets(language) {
         })
     } else if (language === "python") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venv/bin/activate && pyright ./snippets && pylint ./snippets", function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venv/bin/activate && pyright ./snippets && pylint ./snippets", async function (err, stdout, stderr) {
+                await deleteFilesWithoutErrorsPython(stdout);
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
