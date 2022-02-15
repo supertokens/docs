@@ -330,6 +330,7 @@ CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithL
             });
         });
     } else if (language === "python") {
+        codeSnippet = `# ${mdFile}\n${codeSnippet}`
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName, { recursive: true }, async (err) => {
@@ -403,6 +404,31 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
              */
             if (line.includes("react-router-dom5")) {
                 line = line.split("react-router-dom5").join("react-router-dom");
+                newLines.push(line);
+                continue;
+            }
+
+            /**
+             * For python code snippets that contain "# type: ignore", we remove that
+             * string snippet from the line
+             */
+            if (line.includes("# type: ignore")) {
+                line = line.split("# type: ignore").join("");
+                newLines.push(line);
+                continue;
+            }
+            if (line.includes("#type: ignore")) {
+                line = line.split("#type: ignore").join("");
+                newLines.push(line);
+                continue;
+            }
+            if (line.includes("# type:ignore")) {
+                line = line.split("# type:ignore").join("");
+                newLines.push(line);
+                continue;
+            }
+            if (line.includes("#type:ignore")) {
+                line = line.split("#type:ignore").join("");
                 newLines.push(line);
                 continue;
             }
