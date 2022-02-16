@@ -162,33 +162,39 @@ See all the [functions that can be overrided here](https://supertokens.com/docs/
 :::
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import APIInterface as EmailPasswordAPIInterface, APIOptions as EPAPIOptions
+from supertokens_python.recipe.emailpassword.types import FormField
+from supertokens_python.recipe.emailverification.interfaces import APIInterface as EmailVerificationAPIInterface, APIOptions as EVAPIOptions
 from supertokens_python.recipe.emailverification import InputOverrideConfig as EVInputOverrideConfig
+from typing import List, Dict, Any
 
 # highlight-start
-def override_email_password_apis(original_implementation):
+def override_email_password_apis(original_implementation: EmailPasswordAPIInterface):
 	original_sign_up_post = original_implementation.sign_up_post
 
-	async def sign_up_post(form_fields: List[FormField], api_options: APIOptions):
+	async def sign_up_post(form_fields: List[FormField],
+                           api_options: EPAPIOptions,
+                           user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_sign_up_post(form_fields, api_options)
+		return await original_sign_up_post(form_fields, api_options, user_context)
 	
 	original_implementation.sign_up_post = sign_up_post
 	return original_implementation
 # highlight-end
 
 # highlight-start
-def override_email_verification_apis(original_implementation_email_verification):
+def override_email_verification_apis(original_implementation_email_verification: EmailVerificationAPIInterface):
 	original_email_verify_post = original_implementation_email_verification.email_verify_post
 
-	async def email_verify_post(token: str, api_options: APIOptions):
+	async def email_verify_post(token: str, api_options: EVAPIOptions, user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_email_verify_post(token, api_options)
+		return await original_email_verify_post(token, api_options, user_context)
 
 	original_implementation_email_verification.email_verify_post = email_verify_post
 	return original_implementation_email_verification
@@ -196,7 +202,7 @@ def override_email_verification_apis(original_implementation_email_verification)
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    supertokens_config=SupertokensConfig(...),
+    
     framework='...', # type: ignore
     recipe_list=[
         emailpassword.init(
@@ -383,31 +389,51 @@ You first need to find the implementation for the API you would like to change i
 Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `sign_in_post` code we copied earlier and modify it.
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions, SignInPostResponse, SignInPostOkResponse, SignInPostWrongCredentialsErrorResponse, SignInResult
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import Dict, List, Any, Callable, TypeVar, Union
+from supertokens_python.recipe.session.asyncio import create_new_session
+
+_T = TypeVar("_T")
+def find_first_occurrence_in_list(
+        condition: Callable[[_T], bool], given_list: List[_T]) -> Union[_T, None]:
+    for item in given_list:
+        if condition(item):
+            return item
+    return None
 
 # highlight-start
-def override_email_password_apis(original_implementation):
-	async def sign_in_post(form_fields: List[FormField], api_options: APIOptions) -> SignInPostResponse:
-        password = find_first_occurrence_in_list(lambda x: x.id == FORM_FIELD_PASSWORD_ID, form_fields).value
-        email = find_first_occurrence_in_list(lambda x: x.id == FORM_FIELD_EMAIL_ID, form_fields).value
+def override_email_password_apis(original_implementation: APIInterface):
+	
+    async def sign_in_post(form_fields: List[FormField],
+                           api_options: APIOptions,
+                           user_context: Dict[str, Any]) -> SignInPostResponse:
+        passwordFormField: Union[None, FormField] = find_first_occurrence_in_list(lambda x: x.id == "password", form_fields)
+        emailFormField: Union[None, FormField] = find_first_occurrence_in_list(lambda x: x.id == "email", form_fields)
+        if passwordFormField is None or emailFormField is None:
+            raise Exception("Should never come here")
+        password: str = passwordFormField.value
+        email: str = emailFormField.value
 
-        result = await api_options.recipe_implementation.sign_in(email, password)
+        result: SignInResult = await api_options.recipe_implementation.sign_in(email=email, password=password, user_context=user_context)
 
-        if result.is_wrong_credentials_error or result.user is None:
+        if result.is_wrong_credentials_error:
             return SignInPostWrongCredentialsErrorResponse()
 
+        if result.user is None:
+            raise Exception("Should never come here")
         user = result.user
-        await create_new_session(api_options.request, user.user_id)
-        return SignInPostOkResponse(user)
+        session = await create_new_session(api_options.request, user.user_id)
+        return SignInPostOkResponse(user, session)
 	
-	original_implementation.sign_in_post = sign_in_post
-	return original_implementation
+    original_implementation.sign_in_post = sign_in_post
+    return original_implementation
 # highlight-end
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    supertokens_config=SupertokensConfig(...),
     framework='...', # type: ignore
     recipe_list=[
         emailpassword.init(
