@@ -47,3 +47,6 @@ hide_title: true
   - `passwordless_users` that stores the users of the passwordless recipe
   - `passwordless_devices` that stores devices/information about passwordless login attempts
   - `passwordless_codes` that stores the codes each device can consume to finish the login process
+
+### 3.8 to 3.9
+- No manual change required
