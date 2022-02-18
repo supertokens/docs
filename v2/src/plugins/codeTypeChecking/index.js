@@ -261,6 +261,8 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment_with_hash}", "")
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented_with_hash}", "")
 
     codeSnippet = codeSnippet.replaceAll("^{form_flowType}", "USER_INPUT_CODE_AND_MAGIC_LINK");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod}", "PHONE");
