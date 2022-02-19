@@ -165,34 +165,38 @@ See all the [functions that can be overrided here](https://supertokens.com/docs/
 :::
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdparty
 from supertokens_python.recipe.emailverification import InputOverrideConfig as EVInputOverrideConfig
+from supertokens_python.recipe.thirdparty.interfaces import APIInterface, APIOptions
+from supertokens_python.recipe.emailverification.interfaces import APIInterface as EVAPIInterface, APIOptions as EVAPIOptions
+from typing import Union, Dict, Any
+from supertokens_python.recipe.thirdparty.provider import Provider
 
 # highlight-start
-def override_thirdparty_apis(original_implementation):
+def override_thirdparty_apis(original_implementation: APIInterface):
 	original_sign_in_up_post = original_implementation.sign_in_up_post
 
-	async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str,
-                              auth_code_response: Union[str, None], api_options: APIOptions):
+	async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: APIOptions,
+                              user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_sign_in_up_post(provider, code, redirect_uri, auth_code_response, api_options)
+		return await original_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
 	
 	original_implementation.sign_in_up_post = sign_in_up_post
 	return original_implementation
 # highlight-end
 
 # highlight-start
-def override_email_verification_apis(original_implementation_email_verification):
+def override_email_verification_apis(original_implementation_email_verification: EVAPIInterface):
 	original_email_verify_post = original_implementation_email_verification.email_verify_post
 
-	async def email_verify_post(token: str, api_options: APIOptions):
+	async def email_verify_post(token: str, api_options: EVAPIOptions, user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_email_verify_post(token, api_options)
+		return await original_email_verify_post(token, api_options, user_context)
 
 	original_implementation_email_verification.email_verify_post = email_verify_post
 	return original_implementation_email_verification
@@ -200,7 +204,6 @@ def override_email_verification_apis(original_implementation_email_verification)
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    
     framework='...', # type: ignore
     recipe_list=[
         thirdparty.init(
@@ -212,7 +215,9 @@ init(
 				)
             ),
 			# highlight-end
-            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[...])
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[
+				#...
+			])
         )
     ]
 )
@@ -512,58 +517,83 @@ You first need to find the implementation for the API you would like to change i
 Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `sign_in_post` code we copied earlier and modify it.
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.interfaces import APIInterface, SignInUpPostResponse, APIOptions, SignInUpPostFieldErrorResponse, SignInUpPostNoEmailGivenByProviderResponse, SignInUpPostOkResponse
+from supertokens_python.recipe.thirdparty.provider import Provider
+from typing import Union, Any, Dict
+from httpx import AsyncClient
+from supertokens_python.exceptions import raise_general_exception
+from supertokens_python.recipe.thirdparty.types import UserInfo
+from supertokens_python.recipe.session.asyncio import create_new_session
 
 # highlight-start
-def override_thirdparty_apis(original_implementation):
-	async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str,
-                              auth_code_response: Union[str, None], api_options: APIOptions) -> SignInUpPostResponse:
-		if is_using_oauth_development_client_id(provider.client_id):
-            redirect_uri = DEV_OAUTH_REDIRECT_URL
+def override_thirdparty_apis(original_implementation: APIInterface):
+    async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: APIOptions,
+                              user_context: Dict[str, Any]) -> SignInUpPostResponse:
+        redirect_uri_from_provider = provider.get_redirect_uri(user_context)
+        if redirect_uri_from_provider is not None:
+            # we overwrite the redirectURI provided by the frontend
+            # since the backend wants to take charge of setting this.
+            redirect_uri = redirect_uri_from_provider
         try:
             if auth_code_response is None:
                 access_token_api_info = provider.get_access_token_api_info(
-                    redirect_uri, code)
-                if is_using_oauth_development_client_id(provider.client_id):
-                    for k, v in access_token_api_info.params:
-                        if access_token_api_info.params[k] == provider.client_id:
-                            access_token_api_info.params[k] = get_actual_client_id_from_development_client_id(
-                                provider.client_id)
+                    redirect_uri, code, user_context)
                 headers = {
                     'Accept': 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }
                 async with AsyncClient() as client:
-                    access_token_response = await client.post(access_token_api_info.url, data=access_token_api_info.params,
-                                                              headers=headers)
+                    access_token_response = await client.post(access_token_api_info.url, data=access_token_api_info.params, headers=headers)  # type: ignore
                     access_token_response = access_token_response.json()
             else:
                 access_token_response = auth_code_response
-            user_info = await provider.get_profile_info(access_token_response)
         except Exception as e:
             raise_general_exception(e)
 
+        user_info: UserInfo
+        try:
+            user_info = await provider.get_profile_info(access_token_response, user_context) # type: ignore
+        except Exception as e:
+            return SignInUpPostFieldErrorResponse(str(e))
         email = user_info.email.id if user_info.email is not None else None
         email_verified = user_info.email.is_verified if user_info.email is not None else None
         if email is None or email_verified is None:
             return SignInUpPostNoEmailGivenByProviderResponse()
 
-        signinup_response = await api_options.recipe_implementation.sign_in_up(provider.id, user_info.user_id, email,
-                                                                               email_verified)
+        signinup_response = await api_options.recipe_implementation.sign_in_up(provider.id, user_info.user_id, email, email_verified, user_context)
+
+        if signinup_response.is_field_error:
+            if signinup_response.error is None:
+                raise Exception("Should never come here")
+            return SignInUpPostFieldErrorResponse(signinup_response.error)
+
+        if signinup_response.user is None:
+            raise Exception("Should never come here")
+
+        if email_verified:
+            token_response = await api_options.email_verification_recipe_implementation.create_email_verification_token(user_id=signinup_response.user.user_id, email=signinup_response.user.email, user_context=user_context)
+
+            if token_response.is_ok:
+                if token_response.token is None:
+                    raise Exception("Should never come here")
+                await api_options.email_verification_recipe_implementation.verify_email_using_token(token=token_response.token, user_context=user_context)
+
         user = signinup_response.user
-        await create_new_session(api_options.request, user.user_id)
+        if user is None or signinup_response.created_new_user is None:
+            raise Exception("Should never come here")
+        session = await create_new_session(api_options.request, user.user_id, user_context)
 
         return SignInUpPostOkResponse(
-            user, signinup_response.created_new_user, access_token_response)
-	
-	original_implementation.sign_in_up_post = sign_in_up_post
-	return original_implementation
+            user, signinup_response.created_new_user, access_token_response, session) # type: ignore
+    
+    original_implementation.sign_in_up_post = sign_in_up_post
+    return original_implementation
 # highlight-end
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    
     framework='...', # type: ignore
     recipe_list=[
         thirdparty.init(
@@ -572,7 +602,9 @@ init(
                 apis=override_thirdparty_apis
             ),
 			# highlight-end
-            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[...])
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[
+                # ...
+            ])
         )
     ]
 )
