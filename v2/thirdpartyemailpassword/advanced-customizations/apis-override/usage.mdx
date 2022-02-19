@@ -373,27 +373,42 @@ You first need to find the implementation for the API you would like to change i
 Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `password_reset_post` code we copied earlier and modify it.
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdpartyemailpassword
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, EmailPasswordAPIOptions
+from supertokens_python.recipe.emailpassword.types import FormField
+from supertokens_python.recipe.emailpassword.interfaces import PasswordResetPostResponse, PasswordResetPostOkResponse, PasswordResetPostInvalidTokenResponse
+from typing import Dict, Any, List, Callable, TypeVar, Union
+
+_T = TypeVar("_T")
+
+def find_first_occurrence_in_list(
+        condition: Callable[[_T], bool], given_list: List[_T]) -> Union[_T, None]:
+    for item in given_list:
+        if condition(item):
+            return item
+    return None
 
 # highlight-start
-def override_thirdpartyemailpassword_apis(original_implementation):
-	async def password_reset_post(form_fields: List[FormField], token: str,
-                                  options: EmailPasswordAPIOptions) -> PasswordResetPostResponse:
-        new_password = find_first_occurrence_in_list(
-            lambda x: x.id == FORM_FIELD_PASSWORD_ID, form_fields).value
-        result = await api_options.recipe_implementation.reset_password_using_token(token, new_password)
+def override_thirdpartyemailpassword_apis(original_implementation: APIInterface):
+    async def password_reset_post(form_fields: List[FormField], token: str,
+                                  api_options: EmailPasswordAPIOptions, user_context: Dict[str, Any]) -> PasswordResetPostResponse:
+        new_password_form_field = find_first_occurrence_in_list(
+            lambda x: x.id == "password", form_fields)
+        if new_password_form_field is None:
+            raise Exception("Should never come here")
+        new_password = new_password_form_field.value
+        result = await api_options.recipe_implementation.reset_password_using_token(token, new_password, user_context)
         if result.is_ok:
-            return PasswordResetPostOkResponse()
+            return PasswordResetPostOkResponse(user_id=result.user_id)
         return PasswordResetPostInvalidTokenResponse()
-	
-	original_implementation.password_reset_post = password_reset_post
-	return original_implementation
+        
+    original_implementation.password_reset_post = password_reset_post
+    return original_implementation
 # highlight-end
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    
     framework='...', # type: ignore
     recipe_list=[
         thirdpartyemailpassword.init(
