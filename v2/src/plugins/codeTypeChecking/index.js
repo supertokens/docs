@@ -204,7 +204,7 @@ async function checkCodeSnippets(language) {
         })
     } else if (language === "python") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venv/bin/activate && pyright ./snippets && pylint ./snippets", async function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venv/bin/activate && pyright ./snippets", async function (err, stdout, stderr) {
                 await deleteFilesWithoutErrorsPython(stdout);
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
