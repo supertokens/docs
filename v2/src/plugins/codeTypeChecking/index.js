@@ -267,7 +267,7 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     codeSnippet = codeSnippet.replaceAll("^{form_flowType}", "USER_INPUT_CODE_AND_MAGIC_LINK");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod}", "PHONE");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Node}", "createAndSendCustomTextMessage: async (input, context) => { /* See next step */ },");
-    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python_def}", "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters):\n    # See next step\n");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python_def}", "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters, user_context: Dict[str, Any]):\n    pass # See next step\n");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python}", "create_and_send_custom_text_message=send_text_message");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_initialize_Python}", "ContactPhoneOnlyConfig");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_import_Python}", "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig, CreateAndSendCustomTextMessageParameters");
