@@ -8,7 +8,7 @@ let mdVars = require("../markdownVariables.json");
 async function addCodeSnippetToEnv(mdFile) {
     if (mdFile.includes("/v2/change_me/") || mdFile.includes("/v2/contribute/") ||
         mdFile.includes("/v2/nodejs") || mdFile.includes("/v2/golang") || mdFile.includes("/v2/python") ||
-        mdFile.includes("/v2/auth-react") || mdFile.includes("/v2/website") || mdFile.includes("/v2/react-native")) {
+        mdFile.includes("/v2/auth-react") || mdFile.includes("/v2/website") || mdFile.includes("/v2/react-native") || mdFile.includes("/codeTypeChecking/")) {
         return;
     }
     return new Promise((res, rej) => {
