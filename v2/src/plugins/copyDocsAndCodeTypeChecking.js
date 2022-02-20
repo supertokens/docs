@@ -39,18 +39,21 @@ module.exports = function (context, opts) {
                 });
             })
 
-            // add code snippets to their respective env..
-            for (const mdPath of origDocs) {
-                await addCodeSnippetToEnv(mdPath);
+            let check = process.env.CODE_TYPE_CHECK;
+            if (check === undefined && process.env.MODE === "production") {
+                check = "all";
+            }
+
+            if (check !== undefined && check !== "nothing") {
+                // add code snippets to their respective env..
+                for (const mdPath of origDocs) {
+                    await addCodeSnippetToEnv(mdPath);
+                }
             }
 
             // now we compile code snippets to make sure their types are correct..
             try {
                 // modify this block to add a new language
-                let check = process.env.CODE_TYPE_CHECK;
-                if (check === undefined && process.env.MODE === "production") {
-                    check = "all";
-                }
                 if (check !== undefined && check !== "nothing") {
                     let splittedCheck = check.split(",");
                     if (splittedCheck.filter(i => i === "all").length >= 1 ||
