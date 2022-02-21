@@ -64,7 +64,6 @@ If a user has an Auth0 `userId` mapped to an SuperTokens `userId`, then:
 The following functions need to be modified so that the correct  `userId` is used:
 - `getUserByEmail`
 - `getUserById`
-- `getUserById`
 - `getUserByPhoneNumber`
 - `updateUser`
 
@@ -95,45 +94,68 @@ Passwordless.init({
             return {
                 ...originalImpl,
                 getUserByEmail: async function (input) {
-                    let user = await originalImpl.getUserByEmail(input)
-                    // get userId mapping if it exists
-                    let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: user?.id })
+                    let response = await originalImpl.getUserByEmail(input)
 
-                    if (userIdMappingInfo !== undefined && user?.id !== undefined) {
-                        user.id = userIdMappingInfo.auth0UserId
+                    if (response === undefined) {
+                        return undefined
                     }
 
-                    return user
+                    // get userId mapping if it exists
+                    let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: response.id })
+
+                    // set Auth0 userId in the response
+                    if (userIdMappingInfo !== undefined) {
+                        response.id = userIdMappingInfo.auth0UserId
+                    }
+
+                    return response
                 },
                 getUserById: async function (input) {
-                    let user = await originalImpl.getUserById(input)
 
                     // get userId mapping if it exists
-                    let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: user?.id })
+                    let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId })
 
-                    if (userIdMappingInfo !== undefined && user?.id !== undefined) {
-                        user.id = userIdMappingInfo.auth0UserId
+                    if (userIdMappingInfo !== undefined) {
+                        // call original implementation with the mapped SuperTokens userId
+                        let response = await originalImpl.getUserById({
+                            userId: userIdMappingInfo.supertokensUserId,
+                            userContext: undefined
+                        })
+
+                        if (response === undefined) {
+                            return response
+                        }
+
+                        // set Auth0 userId in the response
+                        response.id = userIdMappingInfo.auth0UserId
+                        return response
                     }
 
-                    return user
+                    return await originalImpl.getUserById(input)
                 },
                 getUserByPhoneNumber: async function (input) {
-                    let user = await originalImpl.getUserByPhoneNumber(input)
+                    let response = await originalImpl.getUserByPhoneNumber(input)
 
-                    // get userId mapping if it exists
-                    let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: user?.id })
-
-                    if (userIdMappingInfo !== undefined && user?.id !== undefined) {
-                        user.id = userIdMappingInfo.auth0UserId
+                    if (response === undefined) {
+                        return response
                     }
 
-                    return user
+                    // get userId mapping if it exists
+                    let userIdMappingInfo = await getUserIdMapping({ supertokensUserId: response.id })
+
+                    if (userIdMappingInfo !== undefined) {
+                        // set Auth0 userId in the response
+                        response.id = userIdMappingInfo.auth0UserId
+                    }
+
+                    return response
                 },
                 updateUser: async function (input) {
 
                     // get userId mapping if it exists
                     let userIdMappingInfo = await getUserIdMapping({ auth0UserId: input.userId })
                     if (userIdMappingInfo !== undefined) {
+                        // set the mapped SuperTokens userId in the input
                         input.userId = userIdMappingInfo.supertokensUserId
                     }
 
