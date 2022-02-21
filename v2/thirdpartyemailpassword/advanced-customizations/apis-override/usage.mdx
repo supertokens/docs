@@ -121,13 +121,13 @@ func main() {
 						originalEmailPasswordSignUpPOST := *originalImplementation.EmailPasswordSignUpPOST
 
 						// here we only override the email & password sign up API logic
-						(*originalImplementation.EmailPasswordSignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (tpepmodels.SignUpResponse, error) {
+						(*originalImplementation.EmailPasswordSignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (tpepmodels.SignUpPOSTResponse, error) {
 
 							// TODO: some pre sign up logic
 
-							resp, err := originalEmailPasswordSignUpPOST(formFields, options)
+							resp, err := originalEmailPasswordSignUpPOST(formFields, options, userContext)
 							if err != nil {
-								return tpepmodels.SignUpResponse{}, err
+								return tpepmodels.SignUpPOSTResponse{}, err
 							}
 
 							if resp.OK != nil {
@@ -147,11 +147,11 @@ func main() {
 							originalVerifyEmailPOST := *originalImplementationEmailVerification.VerifyEmailPOST
 
 							// Then we override the functions we want to
-							(*originalImplementationEmailVerification.VerifyEmailPOST) = func(token string, options evmodels.APIOptions) (evmodels.VerifyEmailUsingTokenResponse, error) {
+							(*originalImplementationEmailVerification.VerifyEmailPOST) = func(token string, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailUsingTokenResponse, error) {
 								// TODO: some custom logic
 
 								// or call the default behaviour as show below
-								return originalVerifyEmailPOST(token, options)
+								return originalVerifyEmailPOST(token, options, userContext)
 							}
 
 							// TODO: Override more functions
@@ -179,43 +179,47 @@ See all the [functions that can be overrided here](https://supertokens.com/docs/
 :::
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdpartyemailpassword
 from supertokens_python.recipe.emailverification import InputOverrideConfig as EVInputOverrideConfig
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, ThirdPartyAPIOptions
+from supertokens_python.recipe.thirdparty.provider import Provider
+from typing import Union, Dict, Any
+from supertokens_python.recipe.emailverification.interfaces import APIInterface as EVAPIInterface, APIOptions as EVAPIOptions
+
 
 # highlight-start
-def override_thirdpartyemailpassword_apis(original_implementation):
+def override_thirdpartyemailpassword_apis(original_implementation: APIInterface):
 	original_thirdparty_sign_in_up_post = original_implementation.thirdparty_sign_in_up_post
 
-	async def thirdparty_sign_in_up_post(provider: Provider, code: str, redirect_uri: str,
-                              auth_code_response: Union[str, None], api_options: APIOptions):
+	async def thirdparty_sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None],
+                                         api_options: ThirdPartyAPIOptions, user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_thirdparty_sign_in_up_post(provider, code, redirect_uri, auth_code_response, api_options)
+		return await original_thirdparty_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
 	
 	original_implementation.thirdparty_sign_in_up_post = thirdparty_sign_in_up_post
 	return original_implementation
 # highlight-end
 
 # highlight-start
-def override_email_verification_apis(original_implementation_email_verification):
+def override_email_verification_apis(original_implementation_email_verification: EVAPIInterface):
 	original_email_verify_post = original_implementation_email_verification.email_verify_post
 
-	async def email_verify_post(token: str, api_options: APIOptions):
+	async def email_verify_post(token: str, api_options: EVAPIOptions, user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_email_verify_post(token, api_options)
+		return await original_email_verify_post(token, api_options, user_context)
 
 	original_implementation_email_verification.email_verify_post = email_verify_post
 	return original_implementation_email_verification
 # highlight-end
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         thirdpartyemailpassword.init(
 			# highlight-start
@@ -283,11 +287,11 @@ SuperTokens.init({
                     return {
                         ...originalImplementation,
 
-                        passwordResetPOST: async function ({ formFields, token, options }) {
+                        passwordResetPOST: async function ({ formFields, token, options, userContext }) {
 
                             let newPassword = formFields.filter((f) => f.id === "password")[0].value;
 
-                            let response = await options.recipeImplementation.resetPasswordUsingToken({ token, newPassword });
+                            let response = await options.recipeImplementation.resetPasswordUsingToken({ token, newPassword, userContext });
 
                             return response;
                         }
@@ -330,7 +334,7 @@ func main() {
 					APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
 
 						// Then we override the functions we want to
-						(*originalImplementation.PasswordResetPOST) = func(formFields []epmodels.TypeFormField, token string, options epmodels.APIOptions) (epmodels.ResetPasswordUsingTokenResponse, error) {
+						(*originalImplementation.PasswordResetPOST) = func(formFields []epmodels.TypeFormField, token string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.ResetPasswordUsingTokenResponse, error) {
 							var newPassword string
 							for _, formField := range formFields {
 								if formField.ID == "password" {
@@ -338,7 +342,7 @@ func main() {
 								}
 							}
 
-							response, err := (*options.RecipeImplementation.ResetPasswordUsingToken)(token, newPassword)
+							response, err := (*options.RecipeImplementation.ResetPasswordUsingToken)(token, newPassword, userContext)
 							if err != nil {
 								return epmodels.ResetPasswordUsingTokenResponse{}, err
 							}
@@ -369,28 +373,43 @@ You first need to find the implementation for the API you would like to change i
 Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `password_reset_post` code we copied earlier and modify it.
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdpartyemailpassword
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, EmailPasswordAPIOptions
+from supertokens_python.recipe.emailpassword.types import FormField
+from supertokens_python.recipe.emailpassword.interfaces import PasswordResetPostResponse, PasswordResetPostOkResponse, PasswordResetPostInvalidTokenResponse
+from typing import Dict, Any, List, Callable, TypeVar, Union
+
+_T = TypeVar("_T")
+
+def find_first_occurrence_in_list(
+        condition: Callable[[_T], bool], given_list: List[_T]) -> Union[_T, None]:
+    for item in given_list:
+        if condition(item):
+            return item
+    return None
 
 # highlight-start
-def override_thirdpartyemailpassword_apis(original_implementation):
-	async def password_reset_post(form_fields: List[FormField], token: str,
-                                  options: EmailPasswordAPIOptions) -> PasswordResetPostResponse:
-        new_password = find_first_occurrence_in_list(
-            lambda x: x.id == FORM_FIELD_PASSWORD_ID, form_fields).value
-        result = await api_options.recipe_implementation.reset_password_using_token(token, new_password)
+def override_thirdpartyemailpassword_apis(original_implementation: APIInterface):
+    async def password_reset_post(form_fields: List[FormField], token: str,
+                                  api_options: EmailPasswordAPIOptions, user_context: Dict[str, Any]) -> PasswordResetPostResponse:
+        new_password_form_field = find_first_occurrence_in_list(
+            lambda x: x.id == "password", form_fields)
+        if new_password_form_field is None:
+            raise Exception("Should never come here")
+        new_password = new_password_form_field.value
+        result = await api_options.recipe_implementation.reset_password_using_token(token, new_password, user_context)
         if result.is_ok:
-            return PasswordResetPostOkResponse()
+            return PasswordResetPostOkResponse(user_id=result.user_id)
         return PasswordResetPostInvalidTokenResponse()
-	
-	original_implementation.password_reset_post = password_reset_post
-	return original_implementation
+        
+    original_implementation.password_reset_post = password_reset_post
+    return original_implementation
 # highlight-end
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         thirdpartyemailpassword.init(
 			# highlight-start

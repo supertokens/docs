@@ -147,14 +147,14 @@ func main() {
 <TabItem value="python">
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword, session
 from supertokens_python.recipe.emailpassword import InputFormField
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    
+    framework='...', # type: ignore
     recipe_list=[
         emailpassword.init(
             # highlight-start
@@ -243,10 +243,10 @@ func main() {
 						// First we copy the original implementation func
 						originalSignUpPOST := *originalImplementation.SignUpPOST
 
-						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (epmodels.SignUpResponse, error) {
-							resp, err := originalSignUpPOST(formFields, options)
+						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
+							resp, err := originalSignUpPOST(formFields, options, userContext)
 							if err != nil {
-								return epmodels.SignUpResponse{}, err
+								return epmodels.SignUpPOSTResponse{}, err
 							}
 
 							if resp.OK != nil {
@@ -271,33 +271,39 @@ func main() {
 <TabItem value="python">
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword, session
+from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import List, Dict, Any
 
 # highlight-start
-def override_email_password_apis(original_implementation):
-	original_sign_up_post = original_implementation.sign_up_post
-
-	async def sign_up_post(form_fields: List[FormField], api_options: APIOptions):
-		# First we call the original implementation of signInPOST.
-		response = await original_sign_up_post(form_fields, api_options)
+def override_email_password_apis(original_implementation: APIInterface):
+    original_sign_up_post = original_implementation.sign_up_post
+    
+    async def sign_up_post(form_fields: List[FormField],
+                           api_options: APIOptions,
+                           user_context: Dict[str, Any]):
+        # First we call the original implementation of signInPOST.
+        response = await original_sign_up_post(form_fields, api_options, user_context)
 
         # Post sign up response, we check if it was successful
         if response.is_ok:
-            id = response.user.user_id
-            email = response.user.email
-
+            if response.user is None:
+                raise Exception("Should never come here")
+            _ = response.user.user_id
+            __ = response.user.email
             # TODO: use the input form fields values for custom logic
+
         return response
-	
-	original_implementation.sign_up_post = sign_up_post
-	return original_implementation
+    
+    original_implementation.sign_up_post = sign_up_post
+    return original_implementation
 # highlight-end
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         emailpassword.init(
             # highlight-start

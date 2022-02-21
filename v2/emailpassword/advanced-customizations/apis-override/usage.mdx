@@ -113,11 +113,11 @@ func main() {
 						originalSignUpPOST := *originalImplementation.SignUpPOST
 
 						// Then we override the functions we want to
-						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (epmodels.SignUpResponse, error) {
+						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
 							// TODO: some custom logic
 
 							// or call the default behaviour as show below
-							return originalSignUpPOST(formFields, options)
+							return originalSignUpPOST(formFields, options, userContext)
 						}
 
 						// TODO: Override more APIs
@@ -130,11 +130,11 @@ func main() {
 							originalVerifyEmailPOST := *originalImplementationEmailVerification.VerifyEmailPOST
 
 							// Then we override the functions we want to
-							(*originalImplementationEmailVerification.VerifyEmailPOST) = func(token string, options evmodels.APIOptions) (evmodels.VerifyEmailUsingTokenResponse, error) {
+							(*originalImplementationEmailVerification.VerifyEmailPOST) = func(token string, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailUsingTokenResponse, error) {
 								// TODO: some custom logic
 
 								// or call the default behaviour as show below
-								return originalVerifyEmailPOST(token, options)
+								return originalVerifyEmailPOST(token, options, userContext)
 							}
 
 							// TODO: Override more functions
@@ -162,42 +162,48 @@ See all the [functions that can be overrided here](https://supertokens.com/docs/
 :::
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import APIInterface as EmailPasswordAPIInterface, APIOptions as EPAPIOptions
+from supertokens_python.recipe.emailpassword.types import FormField
+from supertokens_python.recipe.emailverification.interfaces import APIInterface as EmailVerificationAPIInterface, APIOptions as EVAPIOptions
 from supertokens_python.recipe.emailverification import InputOverrideConfig as EVInputOverrideConfig
+from typing import List, Dict, Any
 
 # highlight-start
-def override_email_password_apis(original_implementation):
+def override_email_password_apis(original_implementation: EmailPasswordAPIInterface):
 	original_sign_up_post = original_implementation.sign_up_post
 
-	async def sign_up_post(form_fields: List[FormField], api_options: APIOptions):
+	async def sign_up_post(form_fields: List[FormField],
+                           api_options: EPAPIOptions,
+                           user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_sign_up_post(form_fields, api_options)
+		return await original_sign_up_post(form_fields, api_options, user_context)
 	
 	original_implementation.sign_up_post = sign_up_post
 	return original_implementation
 # highlight-end
 
 # highlight-start
-def override_email_verification_apis(original_implementation_email_verification):
+def override_email_verification_apis(original_implementation_email_verification: EmailVerificationAPIInterface):
 	original_email_verify_post = original_implementation_email_verification.email_verify_post
 
-	async def email_verify_post(token: str, api_options: APIOptions):
+	async def email_verify_post(token: str, api_options: EVAPIOptions, user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_email_verify_post(token, api_options)
+		return await original_email_verify_post(token, api_options, user_context)
 
 	original_implementation_email_verification.email_verify_post = email_verify_post
 	return original_implementation_email_verification
 # highlight-end
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    
+    framework='...', # type: ignore
     recipe_list=[
         emailpassword.init(
             # highlight-start
@@ -262,24 +268,24 @@ SuperTokens.init({
                     return {
                         ...originalImplementation,
 
-                        signInPOST: async function ({ formFields, options }) {
+                        signInPOST: async function ({ formFields, options, userContext }) {
 
                             let email = formFields.filter((f) => f.id === "email")[0].value;
                             let password = formFields.filter((f) => f.id === "password")[0].value;
 
-                            let response = await options.recipeImplementation.signIn({ email, password });
+                            let response = await options.recipeImplementation.signIn({ email, password, userContext });
                             if (response.status === "WRONG_CREDENTIALS_ERROR") {
                                 return response;
                             }
                             let user = response.user;
 
-                            await Session.createNewSession(options.res, user.id, {}, {});
+                            let session = await Session.createNewSession(options.res, user.id, {}, {}, userContext);
                             return {
                                 status: "OK",
                                 user,
+                                session
                             };
                         },
-
                     }
                 },
             }
@@ -306,6 +312,7 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -318,7 +325,7 @@ func main() {
 					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
 
 						// We override the functions we want to
-						(*originalImplementation.SignInPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions) (epmodels.SignInResponse, error) {
+						(*originalImplementation.SignInPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignInPOSTResponse, error) {
 							var email string
 							for _, formField := range formFields {
 								if formField.ID == "email" {
@@ -332,21 +339,31 @@ func main() {
 								}
 							}
 
-							response, err := (*options.RecipeImplementation.SignIn)(email, password)
+							response, err := (*options.RecipeImplementation.SignIn)(email, password, userContext)
 							if err != nil {
-								return epmodels.SignInResponse{}, err
+								return epmodels.SignInPOSTResponse{}, err
 							}
 							if response.WrongCredentialsError != nil {
-								return response, nil
+								return epmodels.SignInPOSTResponse{
+									WrongCredentialsError: response.WrongCredentialsError,
+								}, nil
 							}
 
 							user := response.OK.User
-							_, err = session.CreateNewSession(options.Res, user.ID, map[string]interface{}{}, map[string]interface{}{})
+							session, err := session.CreateNewSessionWithContext(options.Res, user.ID, map[string]interface{}{}, map[string]interface{}{}, userContext)
 							if err != nil {
-								return epmodels.SignInResponse{}, err
+								return epmodels.SignInPOSTResponse{}, err
 							}
 
-							return response, nil
+							return epmodels.SignInPOSTResponse{
+								OK: &struct {
+									User    epmodels.User
+									Session sessmodels.SessionContainer
+								}{
+									User:    response.OK.User,
+									Session: session,
+								},
+							}, nil
 						}
 
 						return originalImplementation
@@ -372,32 +389,52 @@ You first need to find the implementation for the API you would like to change i
 Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `sign_in_post` code we copied earlier and modify it.
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions, SignInPostResponse, SignInPostOkResponse, SignInPostWrongCredentialsErrorResponse, SignInResult
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import Dict, List, Any, Callable, TypeVar, Union
+from supertokens_python.recipe.session.asyncio import create_new_session
+
+_T = TypeVar("_T")
+def find_first_occurrence_in_list(
+        condition: Callable[[_T], bool], given_list: List[_T]) -> Union[_T, None]:
+    for item in given_list:
+        if condition(item):
+            return item
+    return None
 
 # highlight-start
-def override_email_password_apis(original_implementation):
-	async def sign_in_post(form_fields: List[FormField], api_options: APIOptions) -> SignInPostResponse:
-        password = find_first_occurrence_in_list(lambda x: x.id == FORM_FIELD_PASSWORD_ID, form_fields).value
-        email = find_first_occurrence_in_list(lambda x: x.id == FORM_FIELD_EMAIL_ID, form_fields).value
+def override_email_password_apis(original_implementation: APIInterface):
+	
+    async def sign_in_post(form_fields: List[FormField],
+                           api_options: APIOptions,
+                           user_context: Dict[str, Any]) -> SignInPostResponse:
+        passwordFormField: Union[None, FormField] = find_first_occurrence_in_list(lambda x: x.id == "password", form_fields)
+        emailFormField: Union[None, FormField] = find_first_occurrence_in_list(lambda x: x.id == "email", form_fields)
+        if passwordFormField is None or emailFormField is None:
+            raise Exception("Should never come here")
+        password: str = passwordFormField.value
+        email: str = emailFormField.value
 
-        result = await api_options.recipe_implementation.sign_in(email, password)
+        result: SignInResult = await api_options.recipe_implementation.sign_in(email=email, password=password, user_context=user_context)
 
-        if result.is_wrong_credentials_error or result.user is None:
+        if result.is_wrong_credentials_error:
             return SignInPostWrongCredentialsErrorResponse()
 
+        if result.user is None:
+            raise Exception("Should never come here")
         user = result.user
-        await create_new_session(api_options.request, user.user_id)
-        return SignInPostOkResponse(user)
+        session = await create_new_session(api_options.request, user.user_id)
+        return SignInPostOkResponse(user, session)
 	
-	original_implementation.sign_in_post = sign_in_post
-	return original_implementation
+    original_implementation.sign_in_post = sign_in_post
+    return original_implementation
 # highlight-end
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         emailpassword.init(
             # highlight-start

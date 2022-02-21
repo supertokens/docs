@@ -91,11 +91,11 @@ func main() {
 						originalSignOutPOST := *originalImplementation.SignOutPOST
 
 						// Then we override the default impl
-						(*originalImplementation.SignOutPOST) = func(options sessmodels.APIOptions) (sessmodels.SignOutPOSTResponse, error) {
+						(*originalImplementation.SignOutPOST) = func(options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
 							// TODO: some custom logic
 
 							// or call the default behaviour as show below
-							return originalSignOutPOST(options)
+							return originalSignOutPOST(options, userContext)
 						}
 
 						return originalImplementation
@@ -119,27 +119,28 @@ See all the [functions that can be overrided here](https://supertokens.com/docs/
 :::
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import APIInterface, APIOptions
+from typing import Dict, Any
 
 # highlight-start
-def override_session_apis(original_implementation):
-	original_sign_out_post = original_implementation.sign_out_post
+def override_session_apis(original_implementation: APIInterface):
+	original_signout_post = original_implementation.signout_post
 
-	async def sign_out_post(api_options: APIOptions):
+	async def signout_post(api_options: APIOptions, user_context: Dict[str, Any]):
 		# TODO: custom logic
 
 		# or call the default behaviour as show below
-		return await original_sign_out_post(api_options)
+		return await original_signout_post(api_options, user_context)
 	
-	original_implementation.sign_out_post = sign_out_post
+	original_implementation.signout_post = signout_post
 	return original_implementation
 # highlight-end
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         session.init(
             # highlight-start
@@ -199,11 +200,11 @@ SuperTokens.init({
                     return {
                         ...originalImplementation,
 
-                        signOutPOST: async function ({ options }) {
+                        signOutPOST: async function ({ options, userContext }) {
 
                             let session;
                             try {
-                                session = await options.recipeImplementation.getSession({ req: options.req, res: options.res });
+                                session = await options.recipeImplementation.getSession({ req: options.req, res: options.res, userContext });
                             } catch (err) {
                                 if (Session.Error.isErrorFromSuperTokens(err) && err.type === Session.Error.UNAUTHORISED) {
                                     // The session is expired / does not exist anyway. So we return OK
@@ -264,8 +265,8 @@ func main() {
 				Override: &sessmodels.OverrideStruct{
 					APIs: func(originalImplementation sessmodels.APIInterface) sessmodels.APIInterface {
 						// We override the default impl
-						(*originalImplementation.SignOutPOST) = func(options sessmodels.APIOptions) (sessmodels.SignOutPOSTResponse, error) {
-							session, err := (*options.RecipeImplementation.GetSession)(options.Req, options.Res, nil)
+						(*originalImplementation.SignOutPOST) = func(options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
+							session, err := (*options.RecipeImplementation.GetSession)(options.Req, options.Res, nil, userContext)
 							if err != nil {
 								if defaultErrors.As(err, &errors.UnauthorizedError{}) {
 									return sessmodels.SignOutPOSTResponse{
@@ -313,32 +314,33 @@ You first need to find the implementation for the API you would like to change i
 Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `sign_out_post` code we copied earlier and modify it.
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import APIInterface, APIOptions, SignOutOkayResponse
+from supertokens_python.recipe.session import exceptions
+from typing import Dict, Any
 
 # highlight-start
-def override_session_apis(original_implementation):
-	original_sign_out_post = original_implementation.sign_out_post
-
-	async def sign_out_post(api_options: APIOptions):
-		try:
-            session = await api_options.recipe_implementation.get_session(api_options.request)
-        except UnauthorisedError:
+def override_session_apis(original_implementation: APIInterface):
+    
+    async def signout_post(api_options: APIOptions, user_context: Dict[str, Any]):
+        try:
+            session = await api_options.recipe_implementation.get_session(api_options.request, None, True, user_context)
+        except exceptions.UnauthorisedError:
             return SignOutOkayResponse()
-
+        
         if session is None:
             raise Exception('Session is undefined. Should not come here.')
         await session.revoke_session()
         return SignOutOkayResponse()
-	
-	original_implementation.sign_out_post = sign_out_post
-	return original_implementation
+    
+    original_implementation.signout_post = signout_post
+    return original_implementation
 # highlight-end
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         session.init(
             # highlight-start

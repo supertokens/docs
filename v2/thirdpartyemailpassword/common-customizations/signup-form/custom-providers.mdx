@@ -154,8 +154,8 @@ func main() {
 				Providers: []tpmodels.TypeProvider{
 					{
 						ID: "custom",
-						Get: func(redirectURI, authCodeFromRequest *string) tpmodels.TypeProviderGetResponse {
-                            
+						Get: func(redirectURI, authCodeFromRequest *string, userContext supertokens.UserContext) tpmodels.TypeProviderGetResponse {
+
 							if redirectURI == nil {
 								temp := ""
 								redirectURI = &temp
@@ -164,8 +164,8 @@ func main() {
 							if authCodeFromRequest == nil {
 								temp := ""
 								authCodeFromRequest = &temp
-							}   
-                                                     
+							}
+
 							return tpmodels.TypeProviderGetResponse{
 								AccessTokenAPI: tpmodels.AccessTokenAPI{
 									// this contains info about the token endpoint which exchanges the auth code with the access token and profile info.
@@ -189,10 +189,10 @@ func main() {
 										"response_type": "code",
 									},
 								},
-                                GetClientId: func() string {
-                                    return "<CLIENT ID>"
-                                },
-								GetProfileInfo: func(authCodeResponse interface{}) (tpmodels.UserInfo, error) {
+								GetClientId: func(userContext supertokens.UserContext) string {
+									return "<CLIENT ID>"
+								},
+								GetProfileInfo: func(authCodeResponse interface{}, userContext supertokens.UserContext) (tpmodels.UserInfo, error) {
 									/* authCodeResponse is the JSON response from the AccessTokenAPI POST call. Using this, you need to return an object of the following type:*/
 									return tpmodels.UserInfo{
 										ID: "userId from Auth provider",
@@ -221,32 +221,31 @@ To see example implementations for popular third party providers like Google or 
 <TabItem value="python">
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdpartyemailpassword
 from supertokens_python.recipe.thirdparty.provider import Provider
-from supertokens_python.recipe.thirdparty.types import UserInfo, AccessTokenAPI, AuthorisationRedirectAPI, UserInfoEmail
+from supertokens_python.recipe.thirdparty.types import UserInfo, AccessTokenAPI, AuthorisationRedirectAPI
+from typing import Dict, Union, Any
+from supertokens_python.recipe.thirdparty.types import UserInfo, UserInfoEmail
 
 class CustomProvider(Provider):
-    def __init__(self, client_id: str, client_secret: str, is_default: bool = False, scope: List[str] = None,
-                 authorisation_redirect: Dict[str, Union[str, Callable[[BaseRequest], str]]] = None):
-        super().__init__('custom', client_id, is_default)
-        self.authorisation_redirect_url = "..."
-        self.access_token_api_url = "..."
+    def __init__(self):
+        super().__init__('<PROVIDER_ID>', "<CLIENT ID>", False)
 
-    async def get_profile_info(self, auth_code_response: any) -> UserInfo:
-        # TODO
+    async def get_profile_info(self, auth_code_response: Dict[str, Any], user_context: Dict[str, Any]) -> UserInfo:
+        # TODO: fetch user info from provider based on auth_code_response
+        return UserInfo(user_id="...", email=UserInfoEmail(email="..", email_verified=True))
 
-    def get_authorisation_redirect_api_info(self) -> AuthorisationRedirectAPI:
-        params = {
-            'scope': '...',
+    def get_authorisation_redirect_api_info(self, user_context: Dict[str, Any]) -> AuthorisationRedirectAPI:
+        params: Dict[str, Any] = {
+            'scope': '<SCOPES>',
             'response_type': 'code',
             'client_id': "<CLIENT ID>",
         }
-        return AuthorisationRedirectAPI(
-            self.authorisation_redirect_url, params)
+        return AuthorisationRedirectAPI(url="https://oauth.example.com", params=params)
 
     def get_access_token_api_info(
-            self, redirect_uri: str, auth_code_from_request: str) -> AccessTokenAPI:
+            self, redirect_uri: str, auth_code_from_request: str, user_context: Dict[str, Any]) -> AccessTokenAPI:
         params = {
             'client_id': "<CLIENT ID>",
             'client_secret': "<CLIENT SECRET>",
@@ -254,20 +253,20 @@ class CustomProvider(Provider):
             'code': auth_code_from_request,
             'redirect_uri': redirect_uri
         }
-        return AccessTokenAPI(self.access_token_api_url, params)
+        return AccessTokenAPI(url="https://oauth.example.com/token", params=params)
+
+    def get_redirect_uri(self, user_context: Dict[str, Any]) -> Union[None, str]:
+        return None
 
 init(
-    supertokens_config=SupertokensConfig(...),
-    app_info=InputAppInfo(...),
-    framework='...',
+    
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         thirdpartyemailpassword.init(
             # highlight-start
             providers=[
-                CustomProvider(
-                    client_id='TODO: CLIENT_ID',
-                    client_secret='TODO: CLIENT_SECRET'
-                )
+                CustomProvider()
             ]
             # highlight-end
         )

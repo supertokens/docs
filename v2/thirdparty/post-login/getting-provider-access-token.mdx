@@ -89,8 +89,8 @@ func main() {
 						// First we copy the original implementation
 						originalSignInUpPOST := *originalImplementation.SignInUpPOST
 
-						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
-							resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options)
+						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpmodels.SignInUpPOSTResponse, error) {
+							resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
 							if err != nil {
 								return tpmodels.SignInUpPOSTResponse{}, err
 							}
@@ -123,39 +123,48 @@ func main() {
 <TabItem value="python">
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.interfaces import APIInterface, APIOptions
+from typing import Union, Dict, Any
+from supertokens_python.recipe.thirdparty.provider import Provider
 
 # highlight-start
-def override_thirdparty_apis(original_implementation):
-	original_sign_in_up_post = original_implementation.sign_in_up_post
-
-	async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, auth_code_response: Union[str, None], api_options: APIOptions):
-		# First we call the original implementation of signInPOST.
-		response = await original_sign_in_up_post(provider, code, redirect_uri, auth_code_response, api_options)
-
+def override_thirdparty_apis(original_implementation: APIInterface):
+    
+    original_sign_in_up_post = original_implementation.sign_in_up_post
+    
+    async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: APIOptions,
+                              user_context: Dict[str, Any]):
+        # First we call the original implementation of signInPOST.
+        response = await original_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+        
         # Post sign up response, we check if it was successful
         if response.is_ok:
-            id = response.user.user_id
-            email = response.user.email
+            if response.user is None:
+                raise Exception("Should never come here")
+            _ = response.user.user_id
+            __ = response.user.email
 
             # In this example we are using Google as our provider
             thirdparty_auth_response = response.auth_code_response
 
-            accessToken = thirdparty_auth_response.access_token
+            if thirdparty_auth_response is None:
+                raise Exception("Should never come here")
 
+            access_token = thirdparty_auth_response["access_token"]
+            print(access_token)
             # TODO
 
         return response
-	
-	original_implementation.sign_in_up_post = sign_in_up_post
-	return original_implementation
+        
+    original_implementation.sign_in_up_post = sign_in_up_post
+    return original_implementation
 # highlight-end
 
 init(
-    supertokens_config=SupertokensConfig(...),
-    app_info=InputAppInfo(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         thirdparty.init(
             # highlight-start
@@ -163,7 +172,9 @@ init(
                 apis=override_thirdparty_apis
             ),
             # highlight-end
-            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[...])
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[
+                #...
+            ])
         )
     ]
 )

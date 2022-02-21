@@ -90,7 +90,7 @@ func main() {
 
 						// we override the create new session function
 						//highlight-start
-						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}) (sessmodels.SessionContainer, error) {
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 							role := "admin" // TODO: fetch role based on userID
 
 							if accessTokenPayload == nil {
@@ -98,7 +98,7 @@ func main() {
 							}
 							accessTokenPayload["role"] = role
 
-							return originalCreateNewSession(res, userID, accessTokenPayload, sessionData)
+							return originalCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
 						}
 						//highlight-end
 
@@ -114,14 +114,17 @@ func main() {
 <TabItem value="python">
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.session.interfaces import RecipeInterface
 from supertokens_python.recipe import session
+from typing import Union, Dict, Any
 
-def override_functions(original_implementation):
+def override_functions(original_implementation: RecipeInterface):
     original_implementation_create_new_session = original_implementation.create_new_session
 
-    async def create_new_session(request: any, user_id: str, access_token_payload: Union[dict, None] = None,
-                                 session_data: Union[dict, None] = None):
+    async def create_new_session(request: Any, user_id: str,
+                                 access_token_payload: Union[None, Dict[str, Any]],
+                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
         if session_data is None:
             session_data = {}
 
@@ -131,15 +134,14 @@ def override_functions(original_implementation):
         role = "admin"; # TODO: fetch role based on user_id
         access_token_payload["role"] = role
 
-        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data)
+        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
 
 init(
-    app_info=InputAppInfo(...),
-    supertokens_config=SupertokensConfig(...),
-    framework='...',
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
     recipe_list=[
         session.init(
             # highlight-start
@@ -450,10 +452,12 @@ func setRoleAPI(w http.ResponseWriter, r *http.Request) {
 
 ```python
 from supertokens_python.recipe.session.framework.fastapi import verify_session
-from supertokens_python.recipe.session import Session
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+from fastapi.responses import PlainTextResponse
 
-@app.post('/update-access-token-payload')
-async def update_access_token_payload(session: Session = Depends(verify_session())):
+@app.post('/update-access-token-payload') # type: ignore
+async def update_access_token_payload(session: SessionContainer = Depends(verify_session())):
     # retrieve the session object as shown below
     current_access_token_payload = session.get_access_token_payload()
 
@@ -463,20 +467,19 @@ async def update_access_token_payload(session: Session = Depends(verify_session(
     await session.update_access_token_payload(current_access_token_payload)
 
     return PlainTextResponse(content='success')
-
 ```
 
 </TabItem>
 <TabItem value="flask">
 
 ```python
-
 from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
 
-@app.route('/update-access-token-payload', methods=['POST'])
+@app.route('/update-access-token-payload', methods=['POST']) # type: ignore
 @verify_session()
 def update_access_token_payload():
-    session = g.supertokens
+    session: SessionContainer = g.supertokens # type: ignore
 
     # retrieve the session object as shown below
     current_access_token_payload = session.get_access_token_payload()
@@ -487,7 +490,6 @@ def update_access_token_payload():
     session.sync_update_access_token_payload(current_access_token_payload)
 
     return 'success'
-
 ```
 
 </TabItem>
@@ -495,10 +497,12 @@ def update_access_token_payload():
 
 ```python
 from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.session import SessionContainer
 
 @verify_session()
-async def update_access_token_payload(request):
-    session = request.supertokens
+async def update_access_token_payload(request: HttpRequest):
+    session: SessionContainer = request.supertokens # type: ignore
     # retrieve the session object as shown below
     current_access_token_payload = session.get_access_token_payload()
 

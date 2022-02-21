@@ -20,7 +20,7 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
     },
 },`,
           sendCB_Python_def:
-            "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters):\n    # See next step\n",
+            "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters, user_context: Dict[str, Any]):\n    pass # See next step\n",
           sendCB_Python: "create_and_send_custom_text_message=send_text_message",
           initialize_Python: "ContactPhoneOnlyConfig",
           import_Python: "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig, CreateAndSendCustomTextMessageParameters"
@@ -41,7 +41,7 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
     },
 },`,
           sendCB_Python_def:
-            "\nasync def send_email (params: CreateAndSendCustomEmailParameters):\n    # See next step\n",
+            "\nasync def send_email (params: CreateAndSendCustomEmailParameters, user_context: Dict[str, Any]):\n    pass # See next step\n",
           sendCB_Python: "create_and_send_custom_email=send_email",
           initialize_Python: "ContactEmailOnlyConfig",
           import_Python: "from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig, CreateAndSendCustomEmailParameters"
@@ -66,12 +66,12 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
     },
 },`,
           sendCB_Python_def:
-            "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters):\n    # See next step\n" +
-            "\nasync def send_email (params: CreateAndSendCustomEmailParameters):\n    # See next step\n",
+            "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters, user_context: Dict[str, Any]):\n    pass # See next step\n" +
+            "\nasync def send_email (params: CreateAndSendCustomEmailParameters):\n    pass # See next step\n",
           sendCB_Python:
             "create_and_send_custom_text_message=send_text_message,\ncreate_and_send_custom_email=send_email",
           initialize_Python: "ContactEmailOrPhoneConfig",
-          import_Python: "from supertokens_python.recipe.passwordless import ContactEmailOrPhoneConfig, CreateAndSendCustomEmailParameters, CreateAndSendCustomEmailParameters"
+          import_Python: "from supertokens_python.recipe.passwordless import ContactEmailOrPhoneConfig, CreateAndSendCustomEmailParameters, CreateAndSendCustomTextMessageParameters"
         },
         value: "EMAIL_OR_PHONE",
       },

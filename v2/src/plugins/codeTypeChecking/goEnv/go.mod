@@ -24,7 +24,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
 	github.com/nyaruka/phonenumbers v1.0.73 // indirect
-	github.com/supertokens/supertokens-golang v0.4.1 // indirect
+	github.com/supertokens/supertokens-golang v0.4.3-0.20220221060254-a9c71c1cce09 // indirect
 	github.com/ugorji/go/codec v1.1.7 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect

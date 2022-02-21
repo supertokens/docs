@@ -8,7 +8,7 @@ let mdVars = require("../markdownVariables.json");
 async function addCodeSnippetToEnv(mdFile) {
     if (mdFile.includes("/v2/change_me/") || mdFile.includes("/v2/contribute/") ||
         mdFile.includes("/v2/nodejs") || mdFile.includes("/v2/golang") || mdFile.includes("/v2/python") ||
-        mdFile.includes("/v2/auth-react") || mdFile.includes("/v2/website") || mdFile.includes("/v2/react-native")) {
+        mdFile.includes("/v2/auth-react") || mdFile.includes("/v2/website") || mdFile.includes("/v2/react-native") || mdFile.includes("/codeTypeChecking/")) {
         return;
     }
     return new Promise((res, rej) => {
@@ -140,6 +140,33 @@ async function deleteFilesWithoutErrorsTypescript(stdout) {
     cleanEmptyFoldersRecursively("src/plugins/codeTypeChecking/jsEnv/snippets");
 }
 
+
+async function deleteFilesWithoutErrorsPython(stdout) {
+    let errors = stdout.split("\n");
+    let fileNames = [];
+
+    errors.forEach(error => {
+        if (error !== "" && error.includes("snippets")) {
+            fileNames.push(error.split(":")[0].trim());
+        }
+    })
+
+    let snippetsPathPrefix = "src/plugins/codeTypeChecking/pythonEnv/snippets/";
+    let files = await getFiles(snippetsPathPrefix);
+    await getRootDir();
+
+    files.forEach(file => {
+        if (!fileNames.includes(file)) {
+            let exists = fs.existsSync(file);
+            if (exists) {
+                fs.rmSync(file);
+            }
+        }
+    });
+
+    cleanEmptyFoldersRecursively("src/plugins/codeTypeChecking/pythonEnv/snippets");
+}
+
 async function checkCodeSnippets(language) {
     // typescript..
     if (language === "typescript") {
@@ -177,7 +204,8 @@ async function checkCodeSnippets(language) {
         })
     } else if (language === "python") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venv/bin/activate && pyright ./snippets && pylint ./snippets", function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/pythonEnv/ && source venv/bin/activate && pyright ./snippets", async function (err, stdout, stderr) {
+                await deleteFilesWithoutErrorsPython(stdout);
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
@@ -233,11 +261,13 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key}", "\"\"");
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment_with_hash}", "")
+    codeSnippet = codeSnippet.replaceAll("^{coreInjector_api_key_commented_with_hash}", "")
 
     codeSnippet = codeSnippet.replaceAll("^{form_flowType}", "USER_INPUT_CODE_AND_MAGIC_LINK");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod}", "PHONE");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Node}", "createAndSendCustomTextMessage: async (input, context) => { /* See next step */ },");
-    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python_def}", "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters):\n    # See next step\n");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python_def}", "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters, user_context: Dict[str, Any]):\n    pass # See next step\n");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python}", "create_and_send_custom_text_message=send_text_message");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_initialize_Python}", "ContactPhoneOnlyConfig");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_import_Python}", "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig, CreateAndSendCustomTextMessageParameters");
@@ -311,7 +341,7 @@ CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithL
         let newFolderName = splittedFolder.join("/");
 
         // adding package on top of go file
-        codeSnippet = `package ${lastDir}\n` + codeSnippet;
+        codeSnippet = `package ${lastDir}\n/*\n${mdFile}\n*/\n${codeSnippet}`;
 
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/goEnv/snippets/' + newFolderName, { recursive: true }, async (err) => {
@@ -330,6 +360,7 @@ CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithL
             });
         });
     } else if (language === "python") {
+        codeSnippet = `# ${mdFile}\n${codeSnippet}`
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName, { recursive: true }, async (err) => {
@@ -403,6 +434,31 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
              */
             if (line.includes("react-router-dom5")) {
                 line = line.split("react-router-dom5").join("react-router-dom");
+                newLines.push(line);
+                continue;
+            }
+
+            /**
+             * For python code snippets that contain "# type: ignore", we remove that
+             * string snippet from the line
+             */
+            if (line.includes("# type: ignore")) {
+                line = line.split("# type: ignore").join("");
+                newLines.push(line);
+                continue;
+            }
+            if (line.includes("#type: ignore")) {
+                line = line.split("#type: ignore").join("");
+                newLines.push(line);
+                continue;
+            }
+            if (line.includes("# type:ignore")) {
+                line = line.split("# type:ignore").join("");
+                newLines.push(line);
+                continue;
+            }
+            if (line.includes("#type:ignore")) {
+                line = line.split("#type:ignore").join("");
                 newLines.push(line);
                 continue;
             }

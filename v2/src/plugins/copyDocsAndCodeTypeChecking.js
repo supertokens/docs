@@ -64,7 +64,7 @@ module.exports = function (context, opts) {
                         splittedCheck.filter(i => i === "go").length >= 1) {
                         await checkCodeSnippets("go");
                     }
-                    if (/*splittedCheck.filter(i => i === "all").length >= 1 ||*/
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
                         splittedCheck.filter(i => i === "python").length >= 1) {
                         await checkCodeSnippets("python");
                     }
