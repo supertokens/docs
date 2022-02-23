@@ -26,15 +26,14 @@ In order to achieve this, all the API interface and recipe interface functions t
 
 ## Example use
 
-Let's take the example mentioned above and implement it in the context of this recipe. First, we override the sign up APIs to add information into the context indicating that it's a sign up API call:
+Let's take the example mentioned above and implement it in the context of this recipe. First, we override the sign up recipe function to add information into the context indicating that it's a sign up call:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
-import Session from "supertokens-node/recipe/session";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
 
 SuperTokens.init({
     appInfo: {
@@ -46,33 +45,17 @@ SuperTokens.init({
         connectionURI: "...",
     },
     recipeList: [
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
+            signInAndUpFeature: { 
+                providers: [/*...*/]
+            },
             // highlight-start
             override: {
-                apis: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        // override sign up using email / password 
-                        emailPasswordSignUpPOST: async function (input) {
-                            if (originalImplementation.emailPasswordSignUpPOST === undefined) {
-                                throw new Error("Should never come here");
-                            }
-
-                            // by default, the userContext object is {},
-                            // we change it to {isSignUp: true}, since this is one of the
-                            // sign up API, and this will tell the createNewSession function
-                            // (being called inside originalImplementation.emailPasswordSignUpPOST)
-                            // to not create a new session in case userContext.isSignUp === true
-                            input.userContext.isSignUp = true;
-                            return originalImplementation.emailPasswordSignUpPOST(input);
-                        },
-                    }
-                },
                 functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        thirdPartySignInUp: async function (input) {
-                            let resp = await originalImplementation.thirdPartySignInUp(input);
+                        signInUp: async function (input) {
+                            let resp = await originalImplementation.signInUp(input);
                             if (resp.status === "OK" && resp.createdNewUser) {
                                 /*
                                  * This is called during the signInUp API for third party login,
@@ -81,6 +64,14 @@ SuperTokens.init({
                                  * sign in or a sign up, so we cannot override the API function.
                                  * Instead, we override the recipe function as shown here,
                                  * and then set the relevant context only if it's a new user.
+                                 */
+
+                                /*
+                                 * by default, the userContext Dict is {},
+                                 * we change it to {isSignUp: true}, since this is called in the 
+                                 * sign up API, and this will tell the create_new_session function
+                                 * (which will be called next)
+                                 * to not create a new session in case input.userContext.isSignUp == true
                                  */
                                 input.userContext.isSignUp = true;
                             }
@@ -100,41 +91,25 @@ SuperTokens.init({
 
 ```go
 import (
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+			thirdparty.Init(&tpmodels.TypeInput{
 				// highlight-start
-				Override: &tpepmodels.OverrideStruct{
-					APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
-						ogEmailPasswordSignUpPOST := *originalImplementation.EmailPasswordSignUpPOST
+				Override: &tpmodels.OverrideStruct{
+					Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
+						ogSignInUp := *originalImplementation.SignInUp
 
-						(*originalImplementation.EmailPasswordSignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (tpepmodels.SignUpPOSTResponse, error) {
-							// by default, the userContext object is {},
-							// we change it to {isSignUp: true}, since this is one of the
-							// sign up API, and this will tell the CreateNewSession function
-							// (being called inside ogEmailPasswordSignUpPOST)
-							// to not create a new session in case userContext["isSignUp"] == true
-							(*userContext)["isSignUp"] = true
-							return ogEmailPasswordSignUpPOST(formFields, options, userContext)
-						}
-
-						return originalImplementation
-					},
-					Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
-						ogThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
-
-						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID string, email tpepmodels.EmailStruct, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
-							resp, err := ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+						(*originalImplementation.SignInUp) = func(thirdPartyID, thirdPartyUserID string, email tpmodels.EmailStruct, userContext supertokens.UserContext) (tpmodels.SignInUpResponse, error) {
+							resp, err := ogSignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
 
 							if err != nil {
-								return tpepmodels.SignInUpResponse{}, err
+								return tpmodels.SignInUpResponse{}, err
 							}
 
 							if resp.OK != nil && resp.OK.CreatedNewUser {
@@ -146,6 +121,14 @@ func main() {
 								 * Instead, we override the recipe function as shown here,
 								 * and then set the relevant context only if it's a new user.
 								 */
+
+                                /*
+                                 * by default, the userContext Dict is {},
+                                 * we change it to {isSignUp: true}, since this is called in the 
+                                 * sign up API, and this will tell the create_new_session function
+                                 * (which will be called next)
+                                 * to not create a new session in case (*userContext)["isSignUp"] == True
+                                 */
 								(*userContext)["isSignUp"] = true
 							}
 							return resp, nil
@@ -165,38 +148,19 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import thirdpartyemailpassword
-from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, EmailPasswordAPIOptions, RecipeInterface
-from supertokens_python.recipe.emailpassword.types import FormField
-from typing import List, Dict, Any
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.interfaces import RecipeInterface
+from typing import Dict, Any
 
 # highlight-start
 
 
-def override_thirdpartyemailpassword_apis(original_implementation: APIInterface):
-    original_emailpassword_sign_up_post = original_implementation.emailpassword_sign_up_post
+def override_thirdparty_functions(original_implementation: RecipeInterface):
+    original_sign_in_up = original_implementation.sign_in_up
 
-    async def emailpassword_sign_up_post(form_fields: List[FormField],
-                                         api_options: EmailPasswordAPIOptions, user_context: Dict[str, Any]):
-
-        # by default, the userContext Dict is {},
-        # we change it to {isSignUp: true}, since this is one of the
-        # sign up API, and this will tell the create_new_session function
-        # (being called inside original_emailpassword_sign_up_post)
-        # to not create a new session in case userContext["isSignUp"] is True
-        user_context["isSignUp"] = True
-        return await original_emailpassword_sign_up_post(form_fields, api_options, user_context)
-
-    original_implementation.emailpassword_sign_up_post = emailpassword_sign_up_post
-    return original_implementation
-
-
-def override_thirdpartyemailpassword_functions(original_implementation: RecipeInterface):
-    original_thirdparty_sign_in_up = original_implementation.thirdparty_sign_in_up
-
-    async def thirdparty_sign_in_up(third_party_id: str, third_party_user_id: str, email: str,
-                                    email_verified: bool, user_context: Dict[str, Any]):
-        response = await original_thirdparty_sign_in_up(
+    async def sign_in_up(third_party_id: str, third_party_user_id: str, email: str,
+                         email_verified: bool, user_context: Dict[str, Any]):
+        response = await original_sign_in_up(
             third_party_id, third_party_user_id, email, email_verified, user_context)
 
         if response.is_ok:
@@ -208,12 +172,18 @@ def override_thirdpartyemailpassword_functions(original_implementation: RecipeIn
             # sign in or a sign up, so we cannot override the API function.
             # Instead, we override the recipe function as shown here,
             # and then set the relevant context only if it's a new user.
+
+            # by default, the userContext Dict is {},
+            # we change it to {isSignUp: true}, since this is called in the 
+            # sign up API, and this will tell the create_new_session function
+            # (which will be called next)
+            # to not create a new session in case userContext["isSignUp"] is True
             if response.created_new_user:
                 user_context["isSignUp"] = True
 
         return response
 
-    original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
+    original_implementation.sign_in_up = sign_in_up
     return original_implementation
 # highlight-end
 
@@ -223,10 +193,10 @@ init(
         api_domain="...", app_name="...", website_domain="..."),
     framework='...',  # type: ignore
     recipe_list=[
-        thirdpartyemailpassword.init(
-            override=thirdpartyemailpassword.InputOverrideConfig(
-                apis=override_thirdpartyemailpassword_apis,
-                functions=override_thirdpartyemailpassword_functions
+        thirdparty.init(
+            sign_in_and_up_feature=...,  # type: ignore
+            override=thirdparty.InputOverrideConfig(
+                functions=override_thirdparty_functions
             )
         )
     ]
@@ -243,7 +213,7 @@ Then we consume that context in the `createNewSession` function to return an emp
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
@@ -257,7 +227,7 @@ SuperTokens.init({
     },
     recipeList: [
         // @ts-ignore
-        ThirdPartyEmailPassword.init({/* See previous step... */}),
+        ThirdParty.init({/* See previous step... */}),
         Session.init({
             override: {
                 functions: (originalImplementation) => {
@@ -303,15 +273,15 @@ import (
 
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{ /* See previous step... */ }),
+			thirdparty.Init(&tpmodels.TypeInput{ /* See previous step... */ }),
 			session.Init(&sessmodels.TypeInput{
 				Override: &sessmodels.OverrideStruct{
 					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
@@ -345,7 +315,7 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import thirdpartyemailpassword
+from supertokens_python.recipe import thirdparty
 from supertokens_python.recipe.session.interfaces import RecipeInterface
 from typing import Dict, Any, Union
 from supertokens_python.recipe import session
@@ -375,7 +345,7 @@ init(
         api_domain="...", app_name="...", website_domain="..."),
     framework='...',  # type: ignore
     recipe_list=[
-        thirdpartyemailpassword.init(
+        thirdparty.init( # type: ignore
             # see previous step...
         ),
         session.init(
@@ -428,5 +398,3 @@ class EmptySession(session.SessionContainer):
 As a summary, when the sign up API is called, the initial value of `userContext` is an empty object. We change that user context to add the `isSignUp` field so that that information can be communicated to the `createNewSession` function.
 
 When that is called, that function checks if `isSignUp === true`, and if it is, it doesn't call the original implementation, and instead, just returns an empty session. This way, we don't create a session if the user is signing up, but we do create one if the user is signing in.
-
-Note that there are other ways of achiving this, but the above showcases how we can use user context to communicate across recipes and across API & Recipe functions.
