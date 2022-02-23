@@ -77,7 +77,7 @@ SuperTokens.init({
                         thirdPartySignInUp: async function (input) {
                             let resp = await originalImplementation.thirdPartySignInUp(input);
                             if (resp.status === "OK" && resp.createdNewUser) {
-                                /**
+                                /*
                                  * This is called during the signInUp API for third party login,
                                  * but before calling the createNewSession function.
                                  * At the start of the API, we do not know if it will result in a 
@@ -102,7 +102,66 @@ SuperTokens.init({
 <TabItem value="go">
 
 ```go
-TODO
+import (
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+				// highlight-start
+				Override: &tpepmodels.OverrideStruct{
+					APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
+						ogEmailPasswordSignUpPOST := *originalImplementation.EmailPasswordSignUpPOST
+
+						(*originalImplementation.EmailPasswordSignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (tpepmodels.SignUpPOSTResponse, error) {
+							// by default, the userContext object is {},
+							// we change it to {isSignUp: true}, since this is one of the
+							// sign up API, and this will tell the CreateNewSession function
+							// (being called inside ogEmailPasswordSignUpPOST)
+							// to not create a new session in case userContext["isSignUp"] === true
+							(*userContext)["isSignUp"] = true
+							return ogEmailPasswordSignUpPOST(formFields, options, userContext)
+						}
+
+						return originalImplementation
+					},
+					Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
+						ogThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
+
+						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID string, email tpepmodels.EmailStruct, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
+							resp, err := ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+
+							if err != nil {
+								return tpepmodels.SignInUpResponse{}, err
+							}
+
+							if resp.OK != nil && resp.OK.CreatedNewUser {
+								/*
+								 * This is called during the signInUp API for third party login,
+								 * but before calling the createNewSession function.
+								 * At the start of the API, we do not know if it will result in a
+								 * sign in or a sign up, so we cannot override the API function.
+								 * Instead, we override the recipe function as shown here,
+								 * and then set the relevant context only if it's a new user.
+								 */
+								(*userContext)["isSignUp"] = true
+							}
+							return resp, nil
+						}
+
+						return originalImplementation
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
 ```
 </TabItem>
 <TabItem value="python">
@@ -176,7 +235,47 @@ SuperTokens.init({
 <TabItem value="go">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{ /* See previous step... */ }),
+			session.Init(&sessmodels.TypeInput{
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+						ogCreateNewSession := *originalImplementation.CreateNewSession
+
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+							_, isSignUp := (*userContext)["isSignUp"]
+							if isSignUp {
+								/**
+								 * The execution will come here only in case
+								 * a sign up API is calling this function. This is because
+								 * only then will the (*userContext)["isSignUp"] === true
+								 * (see above code).
+								 */
+								return sessmodels.SessionContainer{}, nil // this is an empty session. It won't result in a session being created for the user.
+							}
+
+							return ogCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
 ```
 </TabItem>
 <TabItem value="python">
