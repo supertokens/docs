@@ -18,4 +18,4 @@ On a higher level, you need to:
 
 The above being said, the steps may differ depending on your current setup and we thought it would be best if we guide you through it on a one-to-one basis (for free!).
 
-Please [contact us](mailto:rishabh@supertokens.io) for assistance. Thank you.
+Please [contact us](mailto:rishabh@supertokens.com) for assistance. Thank you.

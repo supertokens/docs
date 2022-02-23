@@ -15,7 +15,7 @@ original_id: away-from-st
 
 - **If you are using our managed service**:
    - The points highlighted above apply here as well.
-   - Please [contact us](mailto:team@supertokens.io) so that we can verify your identity and give you access to the database instance (PostgreSQL) we use to run your SuperTokens setup.
+   - Please [contact us](mailto:team@supertokens.com) so that we can verify your identity and give you access to the database instance (PostgreSQL) we use to run your SuperTokens setup.
 
 ## If you are using sessions
 - **If you are OK with logging all users out**:

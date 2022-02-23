@@ -83,7 +83,7 @@ There are a few more function that can be overrided, but those need not be in mo
 
 You cna find the database schema used by SuperTokens by visiting the recipe page > Quick setup > Database setup > And then choosing your db > Scrolling down and expanding the "See table structure" drop down.
 
-If you are using our managed service, you can contact us via [email](mailto:team@supertokens.io) or via [Discord](/discord) and ask us to move your users from your database to the one we host for you (we use PostgreSQL).
+If you are using our managed service, you can contact us via [email](mailto:team@supertokens.com) or via [Discord](/discord) and ask us to move your users from your database to the one we host for you (we use PostgreSQL).
 
 </div>
 

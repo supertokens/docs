@@ -47,7 +47,7 @@ docker run -p 3567:3567 -d supertokens/supertokens-mongodb
 ## Testing that the service is running 🤞
 Open a browser and visit `http://localhost:3567/hello`. If you see a page that says `Hello` back, then the container was started successfully!
 
-If you are having issues with starting the docker image, please feel free to reach out to us [over email](mailto:founders@supertokens.io) or [via Discord](https://supertokens.com/discord).
+If you are having issues with starting the docker image, please feel free to reach out to us [over email](mailto:founders@supertokens.com) or [via Discord](https://supertokens.com/discord).
 
 # Connecting the backend SDK with SuperTokens 🔌
 - The default `port` for SuperTokens is `3567`. You can change this by binding a different port in the `docker run` command. For example, `docker run -p 8080:3567` will run SuperTokens on port `8080` on your machine.
