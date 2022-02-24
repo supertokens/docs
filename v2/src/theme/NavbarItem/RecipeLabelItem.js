@@ -12,6 +12,6 @@ export default function RecipeLabelItem(props) {
                 fontStyle: "italic"
             }}>{props.label}<span style={{
                 fontStyle: "normal"
-            }}>{" | "}</span><a href="/docs/community/recipes">See All Recipes</a></span>
+            }}>{" | "}</span><a href="https://supertokens.com/docs/guides">See All Recipes</a></span>
     );
 }

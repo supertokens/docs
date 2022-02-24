@@ -220,32 +220,6 @@ const PATH_TO_META_TAGS = {
       </Head>
     )
   },
-  "/docs/community/recipes": () => {
-    return (
-      <Head>
-        <meta name="description" content="Get started with SuperTokens by implementing the recipe of your choice. Explore the different types of authentication methods available." />
-        <meta property="og:title" content="SuperTokens Docs | Getting Started" />
-        <meta property="og:description" content="Get started with SuperTokens by implementing the recipe of your choice. Explore the different types of authentication methods available." />
-        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/getting_started.png" />
-        <meta name="twitter:title" content="SuperTokens Docs | Getting Started" />
-        <meta name="twitter:description" content="Get started with SuperTokens by implementing the recipe of your choice. Explore the different types of authentication methods available." />
-        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/getting_started.png" />
-      </Head>
-    )
-  },
-  "/docs/community/introduction": () => {
-    return (
-      <Head>
-        <meta name="description" content="Implement user signup functionality to your web app in < 15 minutes." />
-        <meta property="og:title" content="SuperTokens Docs | Introduction" />
-        <meta property="og:description" content="Implement user signup functionality to your web app in < 15 minutes." />
-        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/docs_introduction.png" />
-        <meta name="twitter:title" content="SuperTokens Docs | Introduction" />
-        <meta name="twitter:description" content="Implement user signup functionality to your web app in < 15 minutes." />
-        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/docs_introduction.png" />
-      </Head>
-    )
-  },
   "default": () => {
     return (
       <Head>
