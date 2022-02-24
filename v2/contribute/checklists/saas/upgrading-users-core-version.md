@@ -50,3 +50,6 @@ hide_title: true
 
 ### 3.8 to 3.9
 - No manual change required
+
+### 3.9 to 3.10
+- No manual change required
