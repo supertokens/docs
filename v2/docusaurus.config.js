@@ -171,6 +171,16 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'guides',
+        path: 'guides',
+        routeBasePath: 'docs/guides',
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'thirdparty',
         path: 'thirdparty',
         routeBasePath: 'docs/thirdparty',
