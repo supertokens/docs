@@ -12,7 +12,7 @@ Please refer to the [CONTRIBUTING.md](https://github.com/supertokens/docs/blob/m
 
 ## Contact us
 
-For any queries, or support requests, please email us at team@supertokens.io, or join our [Discord](supertokens.com/discord) server.
+For any queries, or support requests, please email us at team@supertokens.com, or join our [Discord](supertokens.com/discord) server.
 
 ## Authors
 

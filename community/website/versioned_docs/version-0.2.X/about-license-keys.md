@@ -14,5 +14,5 @@ A license key is needed for the SuperTokens core to run:
 For the community version, the provided key never expires.
 
 <div class="specialNote">
-Please make sure that your license key is not leaked. In the event that you think it has been leaked, please <a href="mailto:team@supertokens.io">contact us</a> to get a new one.
+Please make sure that your license key is not leaked. In the event that you think it has been leaked, please <a href="mailto:team@supertokens.com">contact us</a> to get a new one.
 </div>

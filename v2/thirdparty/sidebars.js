@@ -1,6 +1,7 @@
 module.exports = {
   sidebar: [
     "introduction",
+    "architecture",
     {
       type: 'category',
       label: 'Quick setup',
@@ -402,6 +403,7 @@ module.exports = {
     },
     "appinfo",
     "sdks",
-    "apis"
+    "apis",
+    "compatibility-table"
   ]
 };

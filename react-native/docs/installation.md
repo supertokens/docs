@@ -8,7 +8,7 @@ hide_title: true
 
 ## About
 - This is a pure JS library.
-- If your RN app is not greenfield and it makes authenticated API calls from both, the native and JS sides, please [contact us](mailto:team@supertokens.io).
+- If your RN app is not greenfield and it makes authenticated API calls from both, the native and JS sides, please [contact us](mailto:team@supertokens.com).
 - The minimum supported react native version is `0.61.5`.
 
 ## Installation

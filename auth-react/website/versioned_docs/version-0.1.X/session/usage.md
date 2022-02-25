@@ -11,7 +11,7 @@ Session recipe is integrated with the EmailPassword recipe. That means that when
 
 The Session module is essentially a wrapper around the `supertokens-website` [session management package](../../../website/installation).
 
-If you were using this package and would like to upgrade to use supertokens-auth-react, please contact us at [founders@supertokens.io](mailto:founders@supertokens.io)
+If you were using this package and would like to upgrade to use supertokens-auth-react, please contact us at [founders@supertokens.com](mailto:founders@supertokens.com)
 
 
 ## Reference guide

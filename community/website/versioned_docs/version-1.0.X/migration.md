@@ -21,7 +21,7 @@ There has been an architectural changes to how SuperTokens works. The new setup 
 - Earlier, the configuration options were given to the SuperTokens library directly. These have now moved to the ```config.yaml``` file which is used by the core. See the [configuration options](./configuration/core).
 
 ### 3) Setup database
-- Some of the table names and structure have changed. If you are using the old version in production, and need migration help, please [contact us](mailto:team@supertokens.io)
+- Some of the table names and structure have changed. If you are using the old version in production, and need migration help, please [contact us](mailto:team@supertokens.com)
 - See the database changes [here](./getting-started/database-setup/mysql)
 
 ### 4) Backend framework changes
