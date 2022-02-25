@@ -267,6 +267,7 @@ module.exports = {
             "advanced-customizations/frontend-hooks/redirection-callback"
           ],
         },
+        "advanced-customizations/user-context",
         {
           type: 'category',
           label: 'Examples',
