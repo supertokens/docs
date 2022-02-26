@@ -20,7 +20,7 @@ Any changes in price will only affect new customers. A reasonable advance notice
 After each successful payment, a new [license key](./about-license-keys) will be automatically applied to your running SuperTokens core instances.
 
 ### Payment failures
-- In case of payment failures, the next time you pay, there may be some past dues. If you have any questions at the time of payment about the past dues that were calculated for you, please [contact us](mailto:team@supertokens.com)
+- In case of payment failures, the next time you pay, there may be some past dues. If you have any questions at the time of payment about the past dues that were calculated for you, please [contact us](mailto:team@supertokens.com).
 - Payment failures will not affect the operation of the SuperTokens instances (assuming that you still have a non-expired license key).
 
 ### Cancelling subscription
