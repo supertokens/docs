@@ -19,6 +19,9 @@ hide_title: true
 
 # Core DB Migration
 
+### 3.3 to 3.4
+- No change
+
 ### 3.4 to 3.5
 - Change `user_id` in `emailverification_verified_emails` to `VARCHAR(128)`
 - Change `user_id` in `emailverification_tokens` to `VARCHAR(128)`
