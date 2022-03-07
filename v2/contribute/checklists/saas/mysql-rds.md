@@ -1,3 +1,4 @@
+# This needs to be executed with creating a new MySQL RDS instance.
 - MySQL version: 8.0.23
 - Option groups: default:mysql-8-0
 - Parameter group: default.mysql8.0
