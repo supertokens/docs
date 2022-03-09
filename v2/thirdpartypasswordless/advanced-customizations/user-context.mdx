@@ -1,0 +1,403 @@
+---
+id: user-context
+title: User Context
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# User Context
+
+:::important
+This feature is only available for SDKs versions:
+- NodeJS >= `v9.0`
+- Python >= `v0.5`
+- GoLang >= `v0.5`
+:::
+
+## How does it work?
+
+This is a powerful concept that allows you to pass information across recipe and / or API functions so that customisations can be made based on a specific "execution context".
+
+For example, you may want to disable creation of a session during sign up so that the user has to login again post sign up. In order to do that, the `createNewSession` recipe function (from the Session recipe) will have to know that it's being called from the sign up API and return an empty  session (which is equal to no session). This is as opposed to it being called from the sign in API, in which it should continue with normal functionalty.
+
+In order to achieve this, all the API interface and recipe interface functions take a parameter called `userContext` which is by default an empty object. When overriding the functions, you can add anything in this object and that information is carried onto the next set of functions being called in the API
+
+## Example use
+
+Let's take the example mentioned above and implement it in the context of this recipe. First, we override the sign up recipe function to add information into the context indicating that it's a sign up call:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdPartyPasswordless.init({
+            // @ts-ignore
+            contactMethod: "...",
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        consumeCode: async function (input) {
+                            let resp = await originalImplementation.consumeCode(input);
+                            if (resp.status === "OK" && resp.createdNewUser) {
+                                /*
+                                 * This is called during the consume code API,
+                                 * but before calling the createNewSession function.
+                                 * At the start of the API, we do not know if it will result in a 
+                                 * sign in or a sign up, so we cannot override the API function.
+                                 * Instead, we override the recipe function as shown here,
+                                 * and then set the relevant context only if it's a new user.
+                                 */
+
+                                /*
+                                 * by default, the userContext Dict is {},
+                                 * we change it to {isSignUp: true}, since this is called in the 
+                                 * sign up API, and this will tell the create_new_session function
+                                 * (which will be called next)
+                                 * to not create a new session in case input.userContext.isSignUp == true
+                                 */
+                                input.userContext.isSignUp = true;
+                            }
+                            return resp;
+                        },
+                    }
+                },
+            }
+            // highlight-end
+        })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tpplessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartypasswordless.Init(tpplessmodels.TypeInput{
+				// highlight-start
+				Override: &tpplessmodels.OverrideStruct{
+					Functions: func(originalImplementation tpplessmodels.RecipeInterface) tpplessmodels.RecipeInterface {
+						ogConsumeCode := *originalImplementation.ConsumeCode
+
+						(*originalImplementation.ConsumeCode) = func(userInput *tpplessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, userContext supertokens.UserContext) (tpplessmodels.ConsumeCodeResponse, error) {
+							resp, err := ogConsumeCode(userInput, linkCode, preAuthSessionID, userContext)
+
+							if err != nil {
+								return tpplessmodels.ConsumeCodeResponse{}, err
+							}
+
+							if resp.OK != nil && resp.OK.CreatedNewUser {
+								/*
+								 * This is called during the consume code API,
+								 * but before calling the createNewSession function.
+								 * At the start of the API, we do not know if it will result in a
+								 * sign in or a sign up, so we cannot override the API function.
+								 * Instead, we override the recipe function as shown here,
+								 * and then set the relevant context only if it's a new user.
+								 */
+
+								/*
+								 * by default, the userContext Dict is {},
+								 * we change it to {isSignUp: true}, since this is called in the
+								 * sign up API, and this will tell the create_new_session function
+								 * (which will be called next)
+								 * to not create a new session in case (*userContext)["isSignUp"] == True
+								 */
+								(*userContext)["isSignUp"] = true
+							}
+							return resp, nil
+						}
+
+						return originalImplementation
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
+
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdpartypasswordless
+from supertokens_python.recipe.thirdpartypasswordless.interfaces import RecipeInterface
+from typing import Dict, Any, Union
+
+# highlight-start
+
+
+def override_thirdpartypasswordless_functions(original_implementation: RecipeInterface):
+    original_consume_code = original_implementation.consume_code
+
+    async def consume_code(pre_auth_session_id: str,
+                           user_input_code: Union[str, None],
+                           device_id: Union[str, None],
+                           link_code: Union[str, None],
+                           user_context: Dict[str, Any]):
+        response = await original_consume_code(pre_auth_session_id, user_input_code, device_id, link_code, user_context)
+
+        if response.is_ok:
+            if response.created_new_user is None:
+                raise Exception("Should never come here")
+            # This is called during the consume_code API ,
+            # but before calling the create_new_session function.
+            # At the start of the API, we do not know if it will result in a
+            # sign in or a sign up, so we cannot override the API function.
+            # Instead, we override the recipe function as shown here,
+            # and then set the relevant context only if it's a new user.
+
+            # by default, the userContext Dict is {},
+            # we change it to {isSignUp: true}, since this is called in the
+            # sign up API, and this will tell the create_new_session function
+            # (which will be called next)
+            # to not create a new session in case userContext["isSignUp"] is True
+            if response.created_new_user:
+                user_context["isSignUp"] = True
+
+        return response
+
+    original_implementation.consume_code = consume_code
+    return original_implementation
+# highlight-end
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
+    recipe_list=[
+        thirdpartypasswordless.init(
+            contact_config=...,  # type: ignore
+            flow_type="...",  # type: ignore
+            override=thirdpartypasswordless.InputOverrideConfig(
+                functions=override_thirdpartypasswordless_functions
+            )
+        )
+    ]
+)
+```
+</TabItem>
+</BackendSDKTabs>
+
+
+Then we consume that context in the `createNewSession` function to return an empty function in case the `userContext.isSignUp` is `true`
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        // @ts-ignore
+        ThirdPartyPasswordless.init({/* See previous step... */}),
+        Session.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async function (input) {
+                            if (input.userContext.isSignUp) {
+                                /**
+                                 * The execution will come here only in case
+                                 * a sign up API is calling this function. This is because
+                                 * only then will the input.userContext.isSignUp === true
+                                 * (see above code).
+                                 */
+                                return {
+                                    getAccessToken: () => "",
+                                    getAccessTokenPayload: () => null,
+                                    getExpiry: async () => -1,
+                                    getHandle: () => "",
+                                    getSessionData: async () => null,
+                                    getTimeCreated: async () => -1,
+                                    getUserId: () => "",
+                                    revokeSession: async () => { },
+                                    updateAccessTokenPayload: async () => { },
+                                    updateSessionData: async () => { },
+                                }; // this is an empty session. It won't result in a session being created for the user.
+                            }
+                            return originalImplementation.createNewSession(input);
+                        }
+                    }
+                }
+            }
+        })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tpplessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartypasswordless.Init(tpplessmodels.TypeInput{ /* See previous step... */ }),
+			session.Init(&sessmodels.TypeInput{
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+						ogCreateNewSession := *originalImplementation.CreateNewSession
+
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+							_, isSignUp := (*userContext)["isSignUp"]
+							if isSignUp {
+								/**
+								 * The execution will come here only in case
+								 * a sign up API is calling this function. This is because
+								 * only then will the (*userContext)["isSignUp"] === true
+								 * (see above code).
+								 */
+								return sessmodels.SessionContainer{}, nil // this is an empty session. It won't result in a session being created for the user.
+							}
+
+							return ogCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdpartypasswordless
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from typing import Dict, Any, Union
+from supertokens_python.recipe import session
+
+# highlight-start
+def override_session_functions(original_implementation: RecipeInterface):
+    original_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(request: Any, user_id: str,
+                                 access_token_payload: Union[None, Dict[str, Any]],
+                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+        if user_context["isSignUp"] is True:
+            # The execution will come here only in case
+            # a sign up API is calling this function. This is because
+            # only then will the user_context["isSignUp"] === true
+            # (see above code).
+            return EmptySession(original_implementation)
+
+        return await original_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+# highlight-end
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
+    recipe_list=[
+        thirdpartypasswordless.init( # type: ignore
+            # see previous step...
+        ),
+        session.init(
+            override=session.InputOverrideConfig(
+                functions=override_session_functions
+            )
+        )
+    ]
+)
+
+
+class EmptySession(session.SessionContainer):
+    def __init__(self, recipe_implementation: RecipeInterface):
+        super().__init__(recipe_implementation, "", "", "", {})
+
+    async def revoke_session(self, user_context: Union[Any, None] = None) -> None:
+        pass
+
+    async def get_session_data(self, user_context: Union[Dict[str, Any], None] = None) -> Dict[str, Any]:
+        return {}
+
+    async def update_session_data(self, new_session_data: Dict[str, Any], user_context: Union[Dict[str, Any], None] = None) -> None:
+        pass
+
+    async def update_access_token_payload(self, new_access_token_payload: Dict[str, Any], user_context: Union[Dict[str, Any], None] = None) -> None:
+        pass
+
+    def get_user_id(self, user_context: Union[Dict[str, Any], None] = None) -> str:
+        return ""
+
+    def get_access_token_payload(
+            self, user_context: Union[Dict[str, Any], None] = None) -> Dict[str, Any]:
+        return {}
+
+    def get_handle(self, user_context: Union[Dict[str, Any], None] = None) -> str:
+        return ""
+
+    def get_access_token(self, user_context: Union[Dict[str, Any], None] = None) -> str:
+        return ""
+
+    async def get_time_created(self, user_context: Union[Dict[str, Any], None] = None) -> int:
+        return -1
+
+    async def get_expiry(self, user_context: Union[Dict[str, Any], None] = None) -> int:
+        return -1
+```
+</TabItem>
+</BackendSDKTabs>
+
+As a summary, when the sign up API is called, the initial value of `userContext` is an empty object. We change that user context to add the `isSignUp` field so that that information can be communicated to the `createNewSession` function.
+
+When that is called, that function checks if `isSignUp === true`, and if it is, it doesn't call the original implementation, and instead, just returns an empty session. This way, we don't create a session if the user is signing up, but we do create one if the user is signing in.

@@ -29,6 +29,16 @@ const recipeTabsData: RecipeCardInfo[] = [
         }
     },
     {
+        imageSrc: "/img/recipe-tabs/recipe-passwordless-social.png",
+        url: "/docs/thirdpartypasswordless/introduction",
+        linkTitle: "Passwordless + Social Login",
+        cardBody: "Add passwordless + social login with sessions to your app",
+        className: "cardEmailPasswordSocial",
+        antcsInfo: {
+            option_selected: "Passwordless+Sociallogin"
+        }
+    },
+    {
         imageSrc: "/img/recipe-tabs/recipe-email-social.png",
         url: "/docs/thirdpartyemailpassword/introduction",
         linkTitle: "Email password + Social Login",

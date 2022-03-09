@@ -1,0 +1,142 @@
+---
+id: api-override
+title: Via API overrides
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# How to send a custom response by overriding the API Interface
+
+Let's take an example of sending a custom response for the `/auth/signup/email/exists GET` API (does email exist).
+
+We need to first override the function for that API (`emailExistsGET`) and then use the response object in the `input` param to send a custom response.
+
+The function signature expects an return type that has a certain shape, therefore, we must still return a valid response object from the function, but that will be ignored since you have already sent a response to the client.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+
+ThirdPartyPasswordless.init({
+    ^{nodeRecipeInitDefault}
+    override: {
+        apis: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                passwordlessUserEmailExistsGET: async function (input) {
+
+                    // highlight-start
+                    // we can send a custom response like this:
+                    input.options.res.setStatusCode(200); // or any other status code
+                    input.options.res.sendJSONResponse({
+                        message: "my custom response",
+                        //...
+                    })
+                    // highlight-end
+
+                    // this return doesn't matter. But we must do it
+                    // cause the function signature expects a response.
+                    return {
+                        status: "OK",
+                        exists: false
+                    };
+                }
+            }
+        }
+    }
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"encoding/json"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tpplessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	thirdpartypasswordless.Init(&tpplessmodels.TypeInput{
+        ^{goRecipeInitDefault}
+		Override: &tpplessmodels.OverrideStruct{
+			APIs: func(originalImplementation tpplessmodels.APIInterface) tpplessmodels.APIInterface {
+
+				(*originalImplementation.passwordlessUserEmailExistsGET) = func(email string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.EmailExistsGETResponse, error) {
+
+					// highlight-start
+					// we create our custom response.
+					options.Res.Header().Set("Content-Type", "application/json; charset=utf-8")
+					options.Res.WriteHeader(200)
+					responseJson := map[string]interface{}{
+						"message": "My custom response",
+						// ...
+					}
+
+					bytes, _ := json.Marshal(responseJson)
+					options.Res.Write(bytes)
+					// highlight-end
+
+					// this return doesn't matter. But we must do it
+					// cause the function signature expects a response.
+					return plessmodels.EmailExistsGETResponse{
+						OK: &struct{ Exists bool }{
+							Exists: false,
+						},
+					}, nil
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python.recipe import thirdpartypasswordless
+from supertokens_python.recipe.emailpassword.interfaces import APIOptions, EmailExistsGetOkResponse
+from typing import Dict, Any
+from supertokens_python.recipe.thirdpartypasswordless.interfaces import APIInterface
+
+^{pythonDefaultCallbackDefs}
+
+def override_thirdpartypasswordless_apis(original_implementation: APIInterface):
+
+    async def passwordless_user_email_exists_get(email: str, api_options: APIOptions, user_context: Dict[str, Any]):
+
+        # highlight-start
+        # send custom response like this
+        api_options.response.set_status_code(200)  # or any other status code
+        json_dict = {'message': 'Custom response'}
+        api_options.response.set_json_content(json_dict)
+        # highlight-end
+
+        # this return doesn't matter. But we must do it
+        # cause the function signature expects a response.
+        return EmailExistsGetOkResponse(False)
+
+    original_implementation.passwordless_user_email_exists_get = passwordless_user_email_exists_get
+    return original_implementation
+
+thirdpartypasswordless.init(
+    ^{pythonRecipeInitDefault}
+    override=thirdpartypasswordless.InputOverrideConfig(
+        apis=override_thirdpartypasswordless_apis
+    )
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
