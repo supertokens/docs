@@ -3,7 +3,7 @@ import ReactAdmonition from "../reactAdmonition/ReactAdmonition";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 
-export default function FrontendSDKTabs(props) {
+export default function FrontendSDKTabs(props: any) {
     return (
         <>
             <Tabs

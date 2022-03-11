@@ -1,0 +1,102 @@
+---
+id: manual-session-management
+title: Manual Session Management
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./session/graphql-integration/manual-session-management.mdx -->
+
+# Manual Session Management
+
+:::caution
+This page is relevant if you are using SuperTokens only for session management and not using one of our other recipes
+:::
+
+## Create a schema
+
+```tsx
+import { buildSchema } from 'graphql';
+
+var schema = buildSchema(`
+  type Query {
+    getUserId: String
+  }
+
+  type Mutation {
+      login: String
+  }
+`);
+```
+
+## Create resolvers
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+
+function getResolvers(req: any, res: any) {
+    return {
+        getUserId: async (_: any, context: any) => {
+            return new Promise(async (resolve, reject) => {
+                if (context.user === undefined) {
+                    reject("Session does not exist");
+                } else {
+                    resolve(context.user.userId);
+                }
+            });
+        },
+        login: async () => {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    let session = await Session.createNewSession(res, "userid");
+
+                    resolve(session.getHandle());
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        },
+    };
+}
+```
+
+## Add GraphQL endpoint
+
+```tsx
+import express from "express"
+import { graphqlHTTP } from 'express-graphql';
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionContainer } from "supertokens-node/recipe/session";
+import { buildSchema } from 'graphql';
+
+var GraphQLSchema = buildSchema(`...`); // Refer to backend setup, step c
+function getResolvers(req: any, res: any) {
+    // Refer to previous step
+    return {/* ... */ };
+}
+// ...
+
+let app = express();
+
+app.use("/graphQL", verifySession(), graphqlHTTP(async (req, res) => {
+    let userContext = undefined;
+
+    if ((req as any).session !== undefined) {
+        let session: SessionContainer = (req as any).session;
+        userContext = {
+            // Add session information to the context object
+            sessionHandle: session.getHandle(),
+            accessTokenPayload: session.getAccessTokenPayload(),
+            userId: session.getUserId(),
+        };
+    }
+
+    return {
+        schema: GraphQLSchema,
+        rootValue: getResolvers(req, res),
+        context: {
+            user: userContext,
+        }
+    };
+}))
+```

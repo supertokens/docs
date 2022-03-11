@@ -1,7 +1,7 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 
-export default function DatabaseTabs(props) {
+export default function DatabaseTabs(props: any) {
     return (
         <Tabs
             groupId="database-tabs"

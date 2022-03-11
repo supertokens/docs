@@ -17,9 +17,17 @@ This method allows you to fire events immediately after a successful sign in / u
 <FrontendSDKTabs>
 <TabItem value="reactjs">
 
-```jsx
+```tsx
+import SuperTokens from "supertokens-auth-react";
+import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
+import Session from "supertokens-auth-react/recipe/session";
+
 SuperTokens.init({
-    appInfo: {...},
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
     recipeList: [
         ThirdParty.init({
             // highlight-start
@@ -27,7 +35,6 @@ SuperTokens.init({
                 if (context.action === "SESSION_ALREADY_EXISTS") {
                     // TODO:
                 } else {
-                    let {id, email} = context.user;
                     if (context.action === "SUCCESS") {
                         if (context.isNewUser) {
                             // TODO: Sign up
@@ -58,18 +65,31 @@ For this, you'll have to override `signInUpPOST` API in the `init` function call
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
-```jsx
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import Session from "supertokens-node/recipe/session";
+
 SuperTokens.init({
-    appInfo: {...},
-    supertokens: {...},
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
     recipeList: [
         ThirdParty.init({
+            signInAndUpFeature: {
+                providers: [/* ... */]
+            },
             // highlight-start
             override: {
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signInUpPOST: async function(input) {
+                        signInUpPOST: async function (input) {
 
                             if (originalImplementation.signInUpPOST === undefined) {
                                 throw Error("Should never come here");
@@ -77,14 +97,14 @@ SuperTokens.init({
 
                             // First we call the original implementation of signInUpPOST.
                             let response = await originalImplementation.signInUpPOST(input);
-                            
+
                             // Post sign up response, we check if it was successful
                             if (response.status === "OK") {
                                 let { id, email } = response.user;
-                                
+
                                 // This is the response from the OAuth 2 provider that contains their tokens or user info.
                                 let thirdPartyAuthCodeResponse = response.authCodeResponse;
-                                
+
                                 if (response.createdNewUser) {
                                     // TODO: Post sign up logic
                                 } else {
@@ -98,7 +118,7 @@ SuperTokens.init({
             }
             // highlight-end
         }),
-        Session.init({...})
+        Session.init({ /* ... */ })
     ]
 });
 ```
@@ -107,6 +127,8 @@ SuperTokens.init({
 
 ```go
 import (
+	"fmt"
+
 	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
 	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
@@ -124,10 +146,10 @@ func main() {
 						originalSignInUpPOST := *originalImplementation.SignInUpPOST
 
 						// override the sign in up API
-						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions) (tpmodels.SignInUpPOSTResponse, error) {
+						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpmodels.SignInUpPOSTResponse, error) {
 
 							// First we call the original implementation of SignInUpPOST.
-							response, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options)
+							response, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
 							if err != nil {
 								return tpmodels.SignInUpPOSTResponse{}, err
 							}
@@ -137,9 +159,11 @@ func main() {
 
 								// user object contains the ID, email and other third party info
 								user := response.OK.User
+								fmt.Println(user)
 
 								// This is the response from the OAuth 2 provider that contains their tokens or user info.
 								thirdPartyAuthCodeResponse := response.OK.AuthCodeResponse
+								fmt.Println(thirdPartyAuthCodeResponse)
 
 								if response.OK.CreatedNewUser {
 									// TODO: Post sign up logic
@@ -164,48 +188,58 @@ func main() {
 <TabItem value="python">
 
 ```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.interfaces import APIInterface, APIOptions
+from typing import Union, Dict, Any
+from supertokens_python.recipe.thirdparty.provider import Provider
 
 # highlight-start
-def override_thirdparty_apis(original_implementation):
-	original_sign_in_up_post = original_implementation.sign_in_up_post
-
-	async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, auth_code_response: Union[str, None], api_options: APIOptions):
+def override_thirdparty_apis(original_implementation: APIInterface):
+    original_sign_in_up_post = original_implementation.sign_in_up_post
+    
+    async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: APIOptions,
+                              user_context: Dict[str, Any]):
 		# First we call the original implementation of signInPOST.
-		response = await original_sign_in_up_post(provider, code, redirect_uri, auth_code_response, api_options)
-
+        response = await original_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+        
         # Post sign up response, we check if it was successful
         if response.is_ok:
-            id = response.user.user_id
-            email = response.user.email
+            if response.user is None:
+                raise Exception("Should never come here")
+            _ = response.user.user_id
+            __ = response.user.email
 
             # This is the response from the OAuth 2 provider that contains their tokens or user info.
-            thirdparty_auth_response = response.auth_code_response
+            ___ = response.auth_code_response
 
             if response.created_new_user:
-                # TODO: Post sign up logic
+                pass # TODO: Post sign up logic
             else:
-                # TODO: Post sign in logic
+                pass # TODO: Post sign in logic
 
         return response
-	
-	original_implementation.sign_in_up_post = sign_in_up_post
-	return original_implementation
+        
+    
+    original_implementation.sign_in_up_post = sign_in_up_post
+    return original_implementation
 # highlight-end
 
-supertokens_python.init({
-    'app_info': {...},
-    'supertokens': {...},
-	'framework': '...',
-    'recipe_list': [
-        thirdparty.init({
-            # highlight-start
-            'override': {
-                'apis': override_thirdparty_apis
-            }
-            # highlight-end
-        })
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    
+    framework='...', # type: ignore
+    recipe_list=[
+        thirdparty.init(
+			# highlight-start
+            override=thirdparty.InputOverrideConfig(
+                apis=override_thirdparty_apis
+            ),
+			# highlight-end
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[])
+        )
     ]
-})
+)
 ```
 
 </TabItem>

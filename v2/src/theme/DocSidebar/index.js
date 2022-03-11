@@ -192,7 +192,6 @@ function DocSidebarItemLink ({
           onClick: onItemClick,
         })}
         {...props}>
-        {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
         {isInternalUrl(href) ? (
           <span
             className={styles.sidebarMenuItemLinkLabel}
@@ -213,6 +212,7 @@ function DocSidebarItemLink ({
             <IconExternalLink />
           </span>
         )}
+        {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
       </Link>
       <div className={styles.spacer}></div>
     </li>

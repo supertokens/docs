@@ -77,7 +77,7 @@ app.use((err, req, res, next) => {
 ## 4) Specify the location of SuperTokens Service and other configs
 - Call this somewhere close to where you initialise the app.
 - You can provide multiple addresses in case you are running more than one SuperTokens service (as shown below).
-- If using our managed service, you can get the connection information using the <div class="connect-action-button">Connect</div> button on your dashboard. For self hosted, the default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.io`.
+- If using our managed service, you can get the connection information using the <div class="connect-action-button">Connect</div> button on your dashboard. For self hosted, the default location of SuperTokens is `localhost:3567`. If using the trial instance, use `https://try.supertokens.com`.
 - You can also specify an API key if you have set one in the `config.yaml` file
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Javascript-->
@@ -87,7 +87,7 @@ let supertokens = require("supertokens-node");
 let app = express();
 
 supertokens.init({
-    hosts: "http://localhost:3567;https://try.supertokens.io",
+    hosts: "http://localhost:3567;https://try.supertokens.com",
     apiKey: "key"
 });
 ```
@@ -98,7 +98,7 @@ import * as supertokens from "supertokens-node";
 let app = express();
 
 supertokens.init({
-    hosts: "http://localhost:3567;https://try.supertokens.io",
+    hosts: "http://localhost:3567;https://try.supertokens.com",
     apiKey: "key"
 });
 ```

@@ -72,7 +72,7 @@ export default function NavbarItem({ type, ...props }) {
           {
             isNavLink: true,
             label: "Older versions",
-            to: `https://supertokens.io/docs/${currDocs}/versions`,
+            to: `https://supertokens.com/docs/${currDocs}/versions`,
             isActive: () => { },
             onClick: () => { }
           }
@@ -110,6 +110,6 @@ export default function NavbarItem({ type, ...props }) {
   return <NavbarItemComponent {...newProps} />;
 }
 
-const DO_NOT_SHOW_GITHUB_BUTTON = ["emailpassword", "thirdparty", "thirdpartyemailpassword", "session", "contribute"];
+const DO_NOT_SHOW_GITHUB_BUTTON = ["emailpassword", "thirdparty", "thirdpartyemailpassword", "passwordless", "session", "contribute"];
 
 const LINK_TO_OLDER_VERSIONS = ["nodejs", "auth-react", "website"];

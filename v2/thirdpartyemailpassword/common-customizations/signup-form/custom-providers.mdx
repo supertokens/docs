@@ -19,11 +19,15 @@ If you think that this provider should be supported by SuperTokens by default, m
 <FrontendSDKTabs>
 <TabItem value="reactjs">
 
-```jsx
+```tsx
 import SuperTokens from "supertokens-auth-react";
 import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword";
 SuperTokens.init({
-    appInfo: {...},
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
     recipeList: [
         ThirdPartyEmailPassword.init({
             signInAndUpFeature: {
@@ -35,11 +39,11 @@ SuperTokens.init({
                     }
                 ],
                 // highlight-end
-                (...)
+                // ...
             },
-            (...)
+            // ...
         }),
-        (...)
+        // ...
     ]
 });
 ```
@@ -54,14 +58,20 @@ The OAuth callback URL for your custom provider will be `{websiteDomain}{website
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
-```jsx
-let SuperTokens = require("supertokens-node");
-let Session = require("supertokens-node/recipe/session");
-let ThirdPartyEmailPassword = require("supertokens-node/recipe/thirdpartyemailpassword");
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
 
 SuperTokens.init({
-    appInfo: {...},
-    supertokens: {...},
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
     recipeList: [
         ThirdPartyEmailPassword.init({
             // highlight-start
@@ -78,8 +88,8 @@ SuperTokens.init({
                                     client_id: "<CLIENT ID>",
                                     client_secret: "<CLIENT SECRET>",
                                     grant_type: "authorization_code",
-                                    redirect_uri: redirectURI,
-                                    code: authCodeFromRequest,
+                                    redirect_uri: redirectURI!,
+                                    code: authCodeFromRequest!,
                                     //...
                                 }
                             },
@@ -106,6 +116,9 @@ SuperTokens.init({
                                     }
                                 }
                                 */
+                                return {
+                                    id: "..."
+                                };
                             }
                         }
                     }
@@ -141,7 +154,18 @@ func main() {
 				Providers: []tpmodels.TypeProvider{
 					{
 						ID: "custom",
-						Get: func(redirectURI, authCodeFromRequest *string) tpmodels.TypeProviderGetResponse {
+						Get: func(redirectURI, authCodeFromRequest *string, userContext supertokens.UserContext) tpmodels.TypeProviderGetResponse {
+
+							if redirectURI == nil {
+								temp := ""
+								redirectURI = &temp
+							}
+
+							if authCodeFromRequest == nil {
+								temp := ""
+								authCodeFromRequest = &temp
+							}
+
 							return tpmodels.TypeProviderGetResponse{
 								AccessTokenAPI: tpmodels.AccessTokenAPI{
 									// this contains info about the token endpoint which exchanges the auth code with the access token and profile info.
@@ -165,10 +189,10 @@ func main() {
 										"response_type": "code",
 									},
 								},
-                                GetClientId: func() string {
-                                    return "<CLIENT ID>"
-                                },
-								GetProfileInfo: func(authCodeResponse interface{}) (tpmodels.UserInfo, error) {
+								GetClientId: func(userContext supertokens.UserContext) string {
+									return "<CLIENT ID>"
+								},
+								GetProfileInfo: func(authCodeResponse interface{}, userContext supertokens.UserContext) (tpmodels.UserInfo, error) {
 									/* authCodeResponse is the JSON response from the AccessTokenAPI POST call. Using this, you need to return an object of the following type:*/
 									return tpmodels.UserInfo{
 										ID: "userId from Auth provider",
@@ -197,30 +221,31 @@ To see example implementations for popular third party providers like Google or 
 <TabItem value="python">
 
 ```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdpartyemailpassword
 from supertokens_python.recipe.thirdparty.provider import Provider
-from supertokens_python.recipe.thirdparty.types import UserInfo, AccessTokenAPI, AuthorisationRedirectAPI, UserInfoEmail
+from supertokens_python.recipe.thirdparty.types import UserInfo, AccessTokenAPI, AuthorisationRedirectAPI
+from typing import Dict, Union, Any
+from supertokens_python.recipe.thirdparty.types import UserInfo, UserInfoEmail
 
 class CustomProvider(Provider):
-    def __init__(self, client_id: str, client_secret: str, scope: List[str] = None,
-                 authorisation_redirect: Dict[str, Union[str, Callable[[BaseRequest], str]]] = None):
-        super().__init__('custom', client_id)
-        self.authorisation_redirect_url = "..."
-        self.access_token_api_url = "..."
+    def __init__(self):
+        super().__init__('<PROVIDER_ID>', "<CLIENT ID>", False)
 
-    async def get_profile_info(self, auth_code_response: any) -> UserInfo:
-        # TODO
+    async def get_profile_info(self, auth_code_response: Dict[str, Any], user_context: Dict[str, Any]) -> UserInfo:
+        # TODO: fetch user info from provider based on auth_code_response
+        return UserInfo(user_id="...", email=UserInfoEmail(email="..", email_verified=True))
 
-    def get_authorisation_redirect_api_info(self) -> AuthorisationRedirectAPI:
-        params = {
-            'scope': '...',
+    def get_authorisation_redirect_api_info(self, user_context: Dict[str, Any]) -> AuthorisationRedirectAPI:
+        params: Dict[str, Any] = {
+            'scope': '<SCOPES>',
             'response_type': 'code',
             'client_id': "<CLIENT ID>",
         }
-        return AuthorisationRedirectAPI(
-            self.authorisation_redirect_url, params)
+        return AuthorisationRedirectAPI(url="https://oauth.example.com", params=params)
 
     def get_access_token_api_info(
-            self, redirect_uri: str, auth_code_from_request: str) -> AccessTokenAPI:
+            self, redirect_uri: str, auth_code_from_request: str, user_context: Dict[str, Any]) -> AccessTokenAPI:
         params = {
             'client_id': "<CLIENT ID>",
             'client_secret': "<CLIENT SECRET>",
@@ -228,26 +253,25 @@ class CustomProvider(Provider):
             'code': auth_code_from_request,
             'redirect_uri': redirect_uri
         }
-        return AccessTokenAPI(self.access_token_api_url, params)
+        return AccessTokenAPI(url="https://oauth.example.com/token", params=params)
 
+    def get_redirect_uri(self, user_context: Dict[str, Any]) -> Union[None, str]:
+        return None
 
-supertokens_python.init({
-    'app_info': {...},
-    'supertokens': {...},
-	'framework': '...',
-    'recipe_list': [
-        thirdpartyemailpassword.init({
+init(
+    
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        thirdpartyemailpassword.init(
             # highlight-start
-            'providers': [
-                CustomProvider(
-                    client_id: "TODO: CLIENT_ID",
-                    client_secret: "TODO: CLIENT_SECRET",
-                )
+            providers=[
+                CustomProvider()
             ]
             # highlight-end
-        })
+        )
     ]
-})
+)
 ```
 
 </TabItem>

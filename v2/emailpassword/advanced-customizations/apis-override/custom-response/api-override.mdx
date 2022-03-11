@@ -10,7 +10,7 @@ import TabItem from '@theme/TabItem';
 # How to send a custom response
 
 :::important
-This feature is only applicable for users who build their own frontend since our frontend requires on a specific output from the APIs as defined [here](https://supertokens.io/docs/fdi).
+This feature is only applicable for users who build their own frontend since our frontend requires on a specific output from the APIs as defined [here](https://supertokens.com/docs/fdi).
 :::
 
 Let's take an example of sending a custom response for the `/auth/signup/email/exists GET` API (does email exist).
@@ -22,7 +22,10 @@ The function signature expects an return type that has a certain shape, therefor
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
-```js
+```ts
+
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+
 EmailPassword.init({
     override: {
         apis: (originalImplementation) => {
@@ -56,55 +59,67 @@ EmailPassword.init({
 <TabItem value="go">
 
 ```go
-emailpassword.Init(&epmodels.TypeInput{
-    Override: &epmodels.OverrideStruct{
-        APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+import (
+	"encoding/json"
 
-            (*originalImplementation.EmailExistsGET) = func(email string, options epmodels.APIOptions) (epmodels.EmailExistsGETResponse, error) {
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
 
-                // highlight-start
-                // we create our custom response.
-                options.Res.Header().Set("Content-Type", "application/json; charset=utf-8")
-                options.Res.WriteHeader(200)
-                responseJson := map[string]interface{}{
-                    "message": "My custom response",
-                    // ...
-                }
+func main() {
+	emailpassword.Init(&epmodels.TypeInput{
+		Override: &epmodels.OverrideStruct{
+			APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
 
-                bytes, _ := json.Marshal(responseJson)
-                options.Res.Write(bytes)
-                // highlight-end
+				(*originalImplementation.EmailExistsGET) = func(email string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.EmailExistsGETResponse, error) {
 
-                // this return doesn't matter. But we must do it
-                // cause the function signature expects a response.
-                return epmodels.EmailExistsGETResponse{
-                    OK: &struct{ Exists bool }{
-                        Exists: false,
-                    },
-                }, nil
-            }
+					// highlight-start
+					// we create our custom response.
+					options.Res.Header().Set("Content-Type", "application/json; charset=utf-8")
+					options.Res.WriteHeader(200)
+					responseJson := map[string]interface{}{
+						"message": "My custom response",
+						// ...
+					}
 
-            return originalImplementation
-        },
-    },
-})
+					bytes, _ := json.Marshal(responseJson)
+					options.Res.Write(bytes)
+					// highlight-end
+
+					// this return doesn't matter. But we must do it
+					// cause the function signature expects a response.
+					return epmodels.EmailExistsGETResponse{
+						OK: &struct{ Exists bool }{
+							Exists: false,
+						},
+					}, nil
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
 ```
 
 </TabItem>
 <TabItem value="python">
 
 ```python
-from supertokens_python.recipe.emailpassword.interfaces import APIOptions, EmailExistsGetOkResponse
+from supertokens_python.recipe.emailpassword.interfaces import APIOptions, EmailExistsGetOkResponse, APIInterface
+from supertokens_python.recipe import emailpassword
+from typing import Dict, Any
 
-def override_emailpassword_apis(original_implementation):
+def override_emailpassword_apis(original_implementation: APIInterface):
 
-    async def email_exists_get(email: str, api_options: APIOptions):
+    async def email_exists_get(email: str, api_options: APIOptions, user_context: Dict[str, Any]):
 
         # highlight-start
         # send custom response like this
-        api_options.response.set_status_code(200)  # or any other status code
+        api_options.response.set_status_code(200)  # type: ignore
         json_dict = {'message': 'Custom response'}
-        api_options.response.set_json_content(json_dict)
+        api_options.response.set_json_content(json_dict) # type: ignore
         # highlight-end
 
         # this return doesn't matter. But we must do it
@@ -115,11 +130,7 @@ def override_emailpassword_apis(original_implementation):
     return original_implementation
 
 
-emailpassword.init(config={
-    'override': {
-        'apis': override_emailpassword_apis
-    }
-})
+emailpassword.init(override=emailpassword.InputOverrideConfig(apis=override_emailpassword_apis))
 ```
 
 </TabItem>

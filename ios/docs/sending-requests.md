@@ -21,4 +21,4 @@ SuperTokensURLSession.dataTask(request: request, completionHandler: {
 })
 ```
 
-- Unlike with ```URLSession```, you cannot suspend, resume and cancel tasks as of yet. In case this is required, please [contact us](mailto:team@supertokens.io)
+- Unlike with ```URLSession```, you cannot suspend, resume and cancel tasks as of yet. In case this is required, please [contact us](mailto:team@supertokens.com)

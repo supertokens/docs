@@ -1,24 +1,79 @@
 let fs = require('fs');
 let path = require('path');
+let { addCodeSnippetToEnv, checkCodeSnippets } = require("./codeTypeChecking");
+var exec = require('child_process').exec;
+
+if (typeof String.prototype.replaceAll === "undefined") {
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+    }
+
+    String.prototype.replaceAll = function (find, replace) {
+        var target = this;
+        return target.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+    }
+}
 
 module.exports = function (context, opts) {
 
     return {
-        name: 'copy-docs',
+        name: 'copy-docs-and-code-type-checking',
 
         async loadContent() {
-            return new Promise((res, rej) => {
+            const skipCopies = process.env.SKIP_COPIES === "true";
+            const origDocs = [];
+            // copy docs..
+            await new Promise((res, rej) => {
                 walk(__dirname + "/../../", async (err, results) => {
                     if (err) {
                         return rej(err);
                     }
                     results = results.filter(r => r.endsWith(".md") || r.endsWith(".mdx"));
-                    for (let i = 0; i < results.length; i++) {
-                        await doCopyDocs(results[i]);
+                    for (const mdPath of results) {
+                        const isCopy = await doCopyDocs(mdPath);
+                        if (!skipCopies || !isCopy) {
+                            origDocs.push(mdPath);
+                        }
                     }
                     res();
                 });
             })
+
+            let check = process.env.CODE_TYPE_CHECK;
+            if (check === undefined && process.env.MODE === "production") {
+                check = "all";
+            }
+
+            if (check !== undefined && check !== "nothing") {
+                // add code snippets to their respective env..
+                for (const mdPath of origDocs) {
+                    await addCodeSnippetToEnv(mdPath);
+                }
+            }
+
+            // now we compile code snippets to make sure their types are correct..
+            try {
+                // modify this block to add a new language
+                if (check !== undefined && check !== "nothing") {
+                    let splittedCheck = check.split(",");
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                        splittedCheck.filter(i => i === "typescript").length >= 1) {
+                        await checkCodeSnippets("typescript");
+                    }
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                        splittedCheck.filter(i => i === "go").length >= 1) {
+                        await checkCodeSnippets("go");
+                    }
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                        splittedCheck.filter(i => i === "python").length >= 1) {
+                        await checkCodeSnippets("python");
+                    }
+                }
+            } catch (err) {
+                if (process.env.MODE === "production") {
+                    throw err;
+                }
+            }
         },
     };
 };
@@ -44,23 +99,27 @@ async function doCopyDocs(mdFile) {
             }
 
             if (pathLine === undefined) {
-                return res();
+                return res(false);
             }
 
-            pathLine = __dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", "");
+            pathLine = path.resolve(__dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", ""));
+
+            if (pathLine === mdFile) {
+                return res(false);
+            }
 
             let sourceData = await getDataToCopyFromFile(pathLine, lines);
 
             let destinationData = await getDataToCopyFromFile(mdFile, lines);
 
             if (sourceData === destinationData) {
-                return res();
+                return res(true);
             } else {
                 fs.writeFile(mdFile, sourceData, 'utf8', function (err) {
                     if (err) {
                         return rej(err);
                     }
-                    res();
+                    res(true);
                 });
             }
         });

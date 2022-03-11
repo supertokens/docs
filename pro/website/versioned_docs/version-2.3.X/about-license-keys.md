@@ -30,5 +30,5 @@ A license key is needed for the SuperTokens core to run:
 - In case you want to update it manually, you can use the ```supertokens load-license``` [command](./cli/load-license).
 
 <div class="specialNote">
-Please make sure that your license key is not leaked. In the event that you think it has been leaked, please <a href="mailto:team@supertokens.io">contact us</a>.
+Please make sure that your license key is not leaked. In the event that you think it has been leaked, please <a href="mailto:team@supertokens.com">contact us</a>.
 </div>

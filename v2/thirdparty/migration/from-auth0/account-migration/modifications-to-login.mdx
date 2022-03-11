@@ -1,0 +1,213 @@
+---
+id: modifications-to-login
+title: Modifications to login
+hide_title: true
+---
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+
+
+# Modifications to Login
+
+In this section we will be modifying login to enable the migrating of users with Social accounts from Auth0 to SuperTokens.
+
+:::info
+The following code is implemented for Nodejs, but, you can apply the same logic in your own tech stack.
+:::
+
+## Flow 
+
+:::tip
+If you have not stored your user's Auth0 userId in your database you can **ignore** the steps mentioned in **Box 6** and **Box 8** of the flow diagram.
+:::
+
+
+<img src="/img/thirdpartyemailpassword/tp-account-migration.png" />
+
+## Implementation
+
+We will be overriding SuperToken's login functions to enable account migration, if a user signs up, a new SuperTokens account will be created so no changes need to be made to the sign up functionality. 
+
+### Modifying the `signInUp` function on the backend:
+
+```tsx title="Nodejs"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+async function getThirdPartyUserFromAuth0(thirdPartyUserId: string) {
+    // Box 2: Get userInfo from Auth0 with Social Provider id.
+}
+
+ThirdParty.init({
+    signInAndUpFeature: {
+        providers: [],
+    },
+    override: {
+        functions: (originalImpl) => {
+            return {
+                ...originalImpl,
+                // Social Login function modification
+                signInUp: async function (input) {
+
+                    // Box 2: Get userInfo from Auth0 with Social Provider id.
+                    let auth0UserInfo = await getThirdPartyUserFromAuth0(input.thirdPartyUserId)
+
+                    // Box 3: check if userInfo exists
+                    if (auth0UserInfo !== undefined) {
+
+                        // Box 4: call the Supertokens signInUp implementation
+                        let response = await originalImpl.signInUp(input)
+
+                        if (response.status !== "OK") {
+                            return response;
+                        }
+
+                        // Box 5: check if a new SuperTokens user was created
+                        if (response.createdNewUser) {
+
+                            // Box 6: map the Auth0 userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
+                            // If you have not stored the users Auth0 userId in your tables, you can ignore this step
+                            // @ts-ignore
+                            await setUserIdMapping({ auth0UserId: auth0UserInfo.user_id, supertokensUserId: response.user.id })
+
+                            // Box 7: Set the newly created flag value to false in the response
+                            response.createdNewUser = false
+                        }
+
+                        // Box 8: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
+                        // If you have not stored the users Auth0 userId, you can ignore this step
+                        // @ts-ignore
+                        response.user.id = auth0UserInfo.user_id
+
+                        return response
+
+                    } else {
+                        // Box 9: Auth0 user does not exist
+                        return await originalImpl.signInUp(input)
+                    }
+                }
+            }
+        }
+    },
+})
+```
+### Implementing the `getThirdPartyUserFromAuth0` function
+
+In order to make the changes mentioned above, you have to decide how you would like to retrieve your user's data. 
+
+There are two methods :
+- Using Auth0's APIs
+- Using the exported user data from Auth0
+
+
+<Tabs
+    groupId="ep-migration-methods"  
+    defaultValue="migration-method-1"
+    values={[
+        {label: "Using Auth0's APIs", value: 'migration-method-1'},
+        {label: 'Using the exported Auth0 user data', value: 'migration-method-2'},
+]}>
+
+<TabItem value="migration-method-1">
+
+### Using Auth0's APIs
+
+In this method we will be using Auth0's APIs to check if the user signing in is an Auth0 user. 
+
+#### Prerequisites
+- This method assumes you have access to your Auth0 account and database for the complete duration of user migration.
+
+#### Implementation
+
+Implementation for the `getThirdPartyUserFromAuth0` function used in SuperTokens `signInUp` function:
+
+```tsx title="Nodejs"
+import axios from "axios";
+
+// generate an access_token so you can use the Auth0 management API
+let generateAccessToken = async () => {
+    let response = (await axios({
+        method: 'POST',
+        // TODO: add your Auth0 app domain
+        url: "https://YOUR_DOMAIN/oauth/token",
+        headers: { 'content-type': 'application/json' },
+        data: {
+            // TODO: add your Auth0 app client id and secret
+            client_id: "CLIENT_ID",
+            client_secret: "CLIENT_SECRET",
+            // TODO: add you Auth0 app domain
+            audience: "https://YOUR_DOMAIN/api/v2/",
+            grant_type: "client_credentials"
+        }
+    }))
+
+    return response.data.access_token
+}
+
+let access_token = generateAccessToken()
+
+// Get the social account user info from Auth0 with the input thirdPartyId.
+let getThirdPartyUserFromAuth0 = async (thirdPartyId: string) => {
+
+    // send a request to Auth0's get user API with the input thirdPartyId as the search criteria.
+    let response = await axios({
+        method: 'GET',
+        // TODO: add your Auth0 app domain
+        url: "https://YOUR_DOMAIN/api/v2/users",
+        params: { q: `identities.user_id:"${thirdPartyId}"` },
+        headers: { authorization: `Bearer ${access_token}` }
+    })
+
+    // check if user information exists in response.
+    if (response.data[0] !== undefined) {
+        // return the user's Auth0 userId
+        return response.data[0];
+    }
+
+    return undefined
+}
+```
+
+</TabItem>
+
+
+<TabItem value="migration-method-2">
+
+###  Using the exported Auth0 user data. 
+
+The Implementation below follows the following sample data structure. Please refer to Auth0's [docs](https://auth0.com/docs/support/manage-subscriptions/export-data) on how to export your user data.
+
+```json title="Exported Auth0 user data"
+{"user_id":"google|60425da93519d90068f82966","email":"test@example.com","identities": [{"user_id": "60425da93519d90068f82966","provider": "google","connection": "Username-Password-Authentication","isSocial": true}],"name":"test@example.com","nickname":"test","created_at":"2021-03-05T16:34:49.518Z","updated_at":"2021-03-05T16:34:49.518Z","email_verified":false}
+
+```
+#### Implementation
+
+
+Implementation for the `getThirdPartyUserFromAuth0` function used in SuperTokens `signInUp` function:
+
+```tsx title="Nodejs"
+import fs from "fs";
+
+// load your exported Auth0 user data
+// TODO: Add your user data file name
+let auth0UsersDataString = fs.readFileSync(__dirname + "YOUR_USER_DATA.json")
+let auth0UsersData = JSON.parse(auth0UsersDataString.toString());
+
+let getThirdPartyUserFromAuth0 = async (thirdPartyId: string) => {
+
+    for (let i = 0; i < auth0UsersData.length; i++) {
+        // check if current user has a social account and the Social Provider Id is a match to the thirdPartyId. 
+        if ((auth0UsersData[i].identities[0].isSocial) && auth0UsersData[i].identities[0].user_id === thirdPartyId) {
+            // return Auth0 user data
+            return auth0UsersData[0]
+        }
+    }
+    return undefined
+}
+```
+
+</TabItem>
+
+</Tabs>
+
+We can now move on to the next section discussing the `setUserIdMapping` function and how userId's should be mapped.

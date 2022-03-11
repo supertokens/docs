@@ -1,6 +1,7 @@
 module.exports = {
   sidebar: [
     "introduction",
+    "architecture",
     {
       type: 'category',
       label: 'Quick setup',
@@ -59,7 +60,8 @@ module.exports = {
           items: [
             "common-customizations/signup-form/built-in-providers",
             "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers"
+            "common-customizations/signup-form/custom-providers",
+            "common-customizations/getting-provider-access-token"
           ],
         },
         {
@@ -85,8 +87,10 @@ module.exports = {
         },
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
+        "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
+        "common-customizations/change-password",
         {
           type: "category",
           label: "User Roles",
@@ -120,11 +124,27 @@ module.exports = {
             "common-customizations/email-verification/changing-token-lifetime"
           ]
         },
+        "common-customizations/session-with-jwt",
         {
           type: "category",
           label: "Sessions",
           items: [
             "common-customizations/sessions/about",
+            {
+              type: "category",
+              label: "Using sessions with JWTs",
+              items: [
+                "common-customizations/sessions/with-jwt/about",
+                "common-customizations/sessions/with-jwt/enabling-jwts",
+                "common-customizations/sessions/with-jwt/custom-claims",
+                "common-customizations/sessions/with-jwt/read-jwt",
+                "common-customizations/sessions/with-jwt/read-claims",
+                "common-customizations/sessions/with-jwt/update-jwt",
+                "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
+                "common-customizations/sessions/with-jwt/get-public-key",
+                "common-customizations/sessions/with-jwt/jwt-verification"
+              ]
+            },
             "common-customizations/sessions/new-session",
             {
               type: "category",
@@ -161,6 +181,7 @@ module.exports = {
             "common-customizations/styling/shadow-dom"
           ]
         },
+        "common-customizations/translations",
         {
           type: "category",
           label: "Changing base path",
@@ -177,6 +198,7 @@ module.exports = {
             "common-customizations/core/performance",
             "common-customizations/core/logging",
             "common-customizations/core/add-ssl-via-nginx",
+            "common-customizations/core/base-path",
             {
               type: "category",
               label: "CLI",
@@ -195,7 +217,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Advanced customizations',
+      label: 'Advanced customizations / Overrides',
       items: [
         "advanced-customizations/overview",
         {
@@ -248,6 +270,7 @@ module.exports = {
             "advanced-customizations/frontend-hooks/redirection-callback"
           ],
         },
+        "advanced-customizations/user-context",
         {
           type: 'category',
           label: 'Examples',
@@ -262,6 +285,29 @@ module.exports = {
             },
           ],
         },
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Hasura',
+      customProps: {
+        logoUrl: '/img/logos/hasura-logo.png'
+      },
+      items: [
+        "hasura-integration/with-jwt",
+        "hasura-integration/without-jwt",
+      ],
+    },
+    {
+      type: 'category',
+      label: 'GraphQL',
+      customProps: {
+        logoUrl: '/img/logos/graphql-logo.png'
+      },
+      items: [
+        "graphql-integration/backend-setup",
+        "graphql-integration/making-requests",
+        "graphql-integration/access-session-info",
       ],
     },
     {
@@ -299,6 +345,16 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'RedwoodJS',
+      customProps: {
+        logoUrl: '/img/logos/redwood-logo.png',
+      },
+      items: [
+        "redwood/about"
+      ],
+    },
+    {
+      type: 'category',
       label: 'Serverless Deployment',
       items: [
         {
@@ -328,9 +384,16 @@ module.exports = {
             "serverless/with-aws-lambda/backend-config",
             "serverless/with-aws-lambda/auth-serverless",
             "serverless/with-aws-lambda/api-gateway-config",
-            "serverless/with-aws-lambda/session-verification",
+            {
+              type: 'category',
+              label: '5. Session Verification',
+              items: [
+                "serverless/with-aws-lambda/session-verification",
+                "serverless/with-aws-lambda/authorizer",
+                "serverless/with-aws-lambda/jwt-authorizer",
+              ],
+            },
             "serverless/with-aws-lambda/next-steps",
-            "serverless/with-aws-lambda/authorizer",
             "serverless/with-aws-lambda/appsync-integration"
           ],
         },
@@ -343,8 +406,31 @@ module.exports = {
         "testing/testing-with-postman"
       ],
     },
+    {
+      type: 'category',
+      label: 'Migration',
+      items: [
+        {
+          type: 'category',
+          label: 'From Auth0',
+          items: [
+            "migration/from-auth0/about",
+            {
+              type: 'category',
+              label: 'Step 1) Account Migration',
+              items: [
+                "migration/from-auth0/account-migration/modifications-to-login",
+                "migration/from-auth0/account-migration/userid-mapping",
+              ],
+            },
+            "migration/from-auth0/session-migration"
+          ],
+        }
+      ],
+    },
     "appinfo",
     "sdks",
-    "apis"
+    "apis",
+    "compatibility-table"
   ]
 };

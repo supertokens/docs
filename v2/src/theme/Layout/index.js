@@ -22,11 +22,11 @@ import supertokens from "supertokens-website";
 if (typeof window !== 'undefined') {
   let API_DOMAIN
   let API_BASE_PATH
-  if (window.location.hostname === "supertokens.io" || window.location.hostname === "www.supertokens.io") {
-    API_DOMAIN = "https://api.supertokens.io"
+  if (window.location.hostname === "supertokens.com" || window.location.hostname === "www.supertokens.com") {
+    API_DOMAIN = "https://api.supertokens.com"
     API_BASE_PATH = "/0/auth"
   } else {
-    API_DOMAIN = "https://dev.api.supertokens.io"
+    API_DOMAIN = "https://dev.api.supertokens.com"
     API_BASE_PATH = "/0/auth"
   }
 
@@ -92,8 +92,8 @@ function Layout(props) {
         <meta name="keywords" content="authentication, open source, login, authorization, security, session management, Json web tokens, anti-csrf, rotating refresh tokens, jwt tokens" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content={'https://supertokens.io' + location.pathname} />
-        <meta property="og:url" content={"https://supertokens.io" + location.pathname} />
+        <meta name="twitter:url" content={'https://supertokens.com' + location.pathname} />
+        <meta property="og:url" content={"https://supertokens.com" + location.pathname} />
       </Head>
       <OriginalLayout {...props} />
     </>
@@ -109,10 +109,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
         <meta property="og:title" content="SuperTokens Docs | Migration" />
         <meta property="og:description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/migration.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/migration.png" />
         <meta name="twitter:title" content="SuperTokens Docs | Migration" />
         <meta name="twitter:description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/migration.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/migration.png" />
       </Head>
     )
   },
@@ -122,10 +122,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
         <meta property="og:title" content="SuperTokens Docs | Migration" />
         <meta property="og:description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/migration.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/migration.png" />
         <meta name="twitter:title" content="SuperTokens Docs | Migration" />
         <meta name="twitter:description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/migration.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/migration.png" />
       </Head>
     )
   },
@@ -135,10 +135,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
         <meta property="og:title" content="SuperTokens Docs | Migration" />
         <meta property="og:description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/migration.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/migration.png" />
         <meta name="twitter:title" content="SuperTokens Docs | Migration" />
         <meta name="twitter:description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/migration.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/migration.png" />
       </Head>
     )
   },
@@ -148,10 +148,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
         <meta property="og:title" content="SuperTokens Docs | Migration" />
         <meta property="og:description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/migration.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/migration.png" />
         <meta name="twitter:title" content="SuperTokens Docs | Migration" />
         <meta name="twitter:description" content="Learn more about migrating to SuperTokens from an older version, alternate service or to a self hosted solution." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/migration.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/migration.png" />
       </Head>
     )
   },
@@ -161,10 +161,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Learn more about how to add session management to your web app using SuperTokens." />
         <meta property="og:title" content="SuperTokens Docs | Only Session Management" />
         <meta property="og:description" content="Learn more about how to add session management to your web app using SuperTokens." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/sessions_only.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/sessions_only.png" />
         <meta name="twitter:title" content="SuperTokens Docs | Only Session Management" />
         <meta name="twitter:description" content="Learn more about how to add session management to your web app using SuperTokens." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/sessions_only.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/sessions_only.png" />
       </Head>
     )
   },
@@ -174,10 +174,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Learn more about how to add third party user login to your web app using SuperTokens." />
         <meta property="og:title" content="SuperTokens Docs | Social Login" />
         <meta property="og:description" content="Learn more about how to add third party user login to your web app using SuperTokens." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/social_login.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/social_login.png" />
         <meta name="twitter:title" content="SuperTokens Docs | Social Login" />
         <meta name="twitter:description" content="Learn more about how to add third party user login to your web app using SuperTokens." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/social_login.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/social_login.png" />
       </Head>
     );
   },
@@ -187,10 +187,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Learn more about how to add email password user login to your web app using SuperTokens." />
         <meta property="og:title" content="SuperTokens Docs | Email password login" />
         <meta property="og:description" content="Learn more about how to add email password user login to your web app using SuperTokens." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/email_password.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/email_password.png" />
         <meta name="twitter:title" content="SuperTokens Docs | Email password login" />
         <meta name="twitter:description" content="Learn more about how to add email password user login to your web app using SuperTokens." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/email_password.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/email_password.png" />
       </Head>
     )
   },
@@ -200,10 +200,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Learn more about how to add third party email password user login to your web app using SuperTokens." />
         <meta property="og:title" content="SuperTokens Docs | Email password + Social Login" />
         <meta property="og:description" content="Learn more about how to add third party email password user login to your web app using SuperTokens." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/email_password_social.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/email_password_social.png" />
         <meta name="twitter:title" content="SuperTokens Docs | Email password + Social Login" />
         <meta name="twitter:description" content="Learn more about how to add third party email password user login to your web app using SuperTokens." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/email_password_social.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/email_password_social.png" />
       </Head>
     )
   },
@@ -213,36 +213,10 @@ const PATH_TO_META_TAGS = {
         <meta name="description" content="Find the right version of an SDK / core for a given tech stack." />
         <meta property="og:title" content="SuperTokens Docs | SDK Compatibility" />
         <meta property="og:description" content="Find the right version of an SDK / core for a given tech stack." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/docs_introduction.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/docs_introduction.png" />
         <meta name="twitter:title" content="SuperTokens Docs | SDK Compatibility" />
         <meta name="twitter:description" content="Find the right version of an SDK / core for a given tech stack." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/docs_introduction.png" />
-      </Head>
-    )
-  },
-  "/docs/community/recipes": () => {
-    return (
-      <Head>
-        <meta name="description" content="Get started with SuperTokens by implementing the recipe of your choice. Explore the different types of authentication methods available." />
-        <meta property="og:title" content="SuperTokens Docs | Getting Started" />
-        <meta property="og:description" content="Get started with SuperTokens by implementing the recipe of your choice. Explore the different types of authentication methods available." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/getting_started.png" />
-        <meta name="twitter:title" content="SuperTokens Docs | Getting Started" />
-        <meta name="twitter:description" content="Get started with SuperTokens by implementing the recipe of your choice. Explore the different types of authentication methods available." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/getting_started.png" />
-      </Head>
-    )
-  },
-  "/docs/community/introduction": () => {
-    return (
-      <Head>
-        <meta name="description" content="Implement user signup functionality to your web app in < 15 minutes." />
-        <meta property="og:title" content="SuperTokens Docs | Introduction" />
-        <meta property="og:description" content="Implement user signup functionality to your web app in < 15 minutes." />
-        <meta property="og:image" content="https://supertokens.io/static/assets/meta_images/docs/docs_introduction.png" />
-        <meta name="twitter:title" content="SuperTokens Docs | Introduction" />
-        <meta name="twitter:description" content="Implement user signup functionality to your web app in < 15 minutes." />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/meta_images/docs/docs_introduction.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/docs_introduction.png" />
       </Head>
     )
   },
@@ -253,10 +227,10 @@ const PATH_TO_META_TAGS = {
         <meta property="og:title" content="SuperTokens, Open Source Authentication" />
         <meta property="og:title" content="SuperTokens, Open Source Authentication" />
         <meta property="og:description" content="Add simple email and password sign up functionality to your site or app in 15 minutes" />
-        <meta property="og:image" content="https://supertokens.io/static/assets/home-meta.png" />
+        <meta property="og:image" content="https://supertokens.com/static/assets/home-meta.png" />
         <meta name="twitter:title" content="SuperTokens, Open Source Authentication" />
         <meta name="twitter:description" content="Add simple email and password sign up functionality to your site or app in 15 minutes" />
-        <meta name="twitter:image" content="https://supertokens.io/static/assets/home-meta.png" />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/home-meta.png" />
       </Head>
     )
   }

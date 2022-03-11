@@ -72,5 +72,26 @@ hide_title: true
 31. Copy and paste new command that you get in the terminal
 32. Compare and pull request on GitHub main website
 33. Test everything 
-* Then remember, only after the website has been pushed to production, you go to https://supertokens.io/update-seo-content and update the seo content. If the link navigates you to homepage, go to the website, inspect element and paste this in console : localStorage.setItem('st_antcs', 'st-team-udid1234') After that you can check the link again
+* Then remember, only after the website has been pushed to production, you go to https://supertokens.com/update-seo-content and update the seo content. If the link navigates you to homepage, go to the website, inspect element and paste this in console : localStorage.setItem('st_antcs', 'st-team-udid1234') After that you can check the link again
 * To check if everything is working fine, https://socialsharepreview.com/
+
+## Steps to detect instances of SuperTokens.io
+
+- Search for SuperTokens.io on the downloaded Webflow folder file
+- In the case, where you pushed and merged and if the deployment fails then Tell Joel
+- If Joel confirms that it is because of duplicate instances, then go to main website, and then paste “grep -r --exclude-dir={docs,supertokens-backend-website,node_modules} "supertokens.io" | wc -l” without the quotes
+- This will list by word count all the occurrences. Now to see where these occurrences took place, remove the  “| wc -l” from the above link
+- Then find the occurrences in the new page and change the Webflow file accordingly
+- Then commit the changes again on a different branch
+
+
+
+## Steps to update backend website to include urls for new pages
+
+- Open the SuperTokens backend website inside vscode
+- Go to the indexNode.ts folder
+- Copy the else if statement and change the url’s accordingly
+- Create new branch inside the SuperTokens-backend-website folder
+- Add, commit and push changes
+
+

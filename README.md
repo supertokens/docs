@@ -2,7 +2,7 @@
 
 # SuperTokens Docs
 
-<a href="https://supertokens.io/discord">
+<a href="https://supertokens.com/discord">
 <img src="https://img.shields.io/discord/603466164219281420.svg?logo=discord"
     alt="chat on Discord"></a>
     
@@ -12,8 +12,8 @@ Please refer to the [CONTRIBUTING.md](https://github.com/supertokens/docs/blob/m
 
 ## Contact us
 
-For any queries, or support requests, please email us at team@supertokens.io, or join our [Discord](supertokens.io/discord) server.
+For any queries, or support requests, please email us at team@supertokens.com, or join our [Discord](supertokens.com/discord) server.
 
 ## Authors
 
-Created with :heart: by the folks at SuperTokens.io.
+Created with :heart: by the folks at supertokens.com.

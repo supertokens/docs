@@ -11,7 +11,7 @@
 const siteConfig = {
   title: "SuperTokens Pro", // Title for your website.
   tagline: "Session management",
-  url: "https://supertokens.io", // Your website URL
+  url: "https://supertokens.com", // Your website URL
   baseUrl: "/docs/pro/", // when creating new documentation, replace initialDocs with folder name
   // Used for publishing and more, irrelevant for us
   projectName: "test-site",

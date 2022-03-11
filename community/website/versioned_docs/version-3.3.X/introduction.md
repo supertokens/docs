@@ -19,7 +19,7 @@ original_id: introduction
 
 - **Frontend SDK**: Responsible for rendering the login UI widgets and managing session tokens automatically.
 - **Backend SDK**: Provides APIs for sign-up, sign-in, signout, session refreshing etc. These are called by the frontend UI.
-- **SuperTokens Core**: This is an HTTP service that contains the core logic for auth and sessions (theses are used by the backend SDK in its APIs). It's also responsible for interfacing with the database. We have one instance of the Core running on [`https://try.supertokens.io`](https://try.supertokens.io/hello).
+- **SuperTokens Core**: This is an HTTP service that contains the core logic for auth and sessions (theses are used by the backend SDK in its APIs). It's also responsible for interfacing with the database. We have one instance of the Core running on [`https://try.supertokens.com`](https://try.supertokens.com/hello).
 
 
 # Supported tech stacks 🙌

@@ -64,7 +64,7 @@ Supertokens.init({
     - description: Pass boolean `true` if you are using this library in a serverless environment as it will help to optimise the performance. Default: `false`
   - ``recipeList``
     - type: ``array of RecipeListFunction``
-    - description: list of Recipes you want to use. You need to pass atleast one Recipe to ths array. For more info on Recipes, checkout this [link](https://supertokens.io/docs/community/recipes)
+    - description: list of Recipes you want to use. You need to pass atleast one Recipe to ths array. For more info on Recipes, checkout this [link](https://supertokens.com/docs/community/recipes)
 
 ### Throws
 - [GENERAL_ERROR](./errors/general_error)

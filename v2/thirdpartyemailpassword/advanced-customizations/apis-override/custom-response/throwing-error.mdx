@@ -28,7 +28,9 @@ First, we override the `createNewSession` function and throw an error in case a 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
-```js
+```ts
+import Session from "supertokens-node/recipe/session";
+
 Session.init({
     override: {
         functions: (originalImplementation) => {
@@ -56,35 +58,46 @@ Session.init({
 <TabItem value="go">
 
 ```go
-session.Init(&sessmodels.TypeInput{
-	Override: &sessmodels.OverrideStruct{
-		Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+import (
+	"errors"
+	"net/http"
 
-			// first we copy the original implementation
-			originalCreateNewSession := *originalImplementation.CreateNewSession
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
 
-			(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}) (sessmodels.SessionContainer, error) {
-				// highlight-start
-				existingSessions, err := session.GetAllSessionHandlesForUser(userID)
-				if err != nil {
-					return sessmodels.SessionContainer{}, err
+func main() {
+	session.Init(&sessmodels.TypeInput{
+		Override: &sessmodels.OverrideStruct{
+			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+
+				// first we copy the original implementation
+				originalCreateNewSession := *originalImplementation.CreateNewSession
+
+				(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+					// highlight-start
+					existingSessions, err := session.GetAllSessionHandlesForUserWithContext(userID, userContext)
+					if err != nil {
+						return sessmodels.SessionContainer{}, err
+					}
+
+					if len(existingSessions) > 0 {
+						// this means that the user already has a session on some other device
+						return sessmodels.SessionContainer{}, errors.New("Session already exists on another device")
+					}
+
+					// no other session exists, and so we can continue with logging in this user
+					return originalCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+					// highlight-end
 				}
 
-				if len(existingSessions) > 0 {
-					// this means that the user already has a session on some other device
-					return sessmodels.SessionContainer{}, errors.New("Session already exists on another device")
-				}
+				return originalImplementation
 
-				// no other session exists, and so we can continue with logging in this user
-				return originalCreateNewSession(res, userID, accessTokenPayload, sessionData)
-				// highlight-end
-			}
-
-			return originalImplementation
-
+			},
 		},
-	},
-})
+	})
+}
 ```
 
 </TabItem>
@@ -93,13 +106,17 @@ session.Init(&sessmodels.TypeInput{
 ```python
 from supertokens_python.recipe.session.asyncio import get_all_session_handles_for_user
 from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from typing import Any, Dict, Union
 
-def override_session_functions(original_implementation):
+def override_session_functions(original_implementation: RecipeInterface):
 
     # first we copy the original implementation
     original_create_new_session = original_implementation.create_new_session
 
-    async def create_new_session(request, user_id: str, jwt_payload=None, session_data=None):
+    async def create_new_session(request: Any, user_id: str,
+                                 access_token_payload: Union[None, Dict[str, Any]],
+                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
         # highlight-start
         existing_sessions = await get_all_session_handles_for_user(user_id)
 
@@ -108,7 +125,7 @@ def override_session_functions(original_implementation):
             raise Exception("Session already exists on another device")
 
         # no other session exists, and so we can continue with logging in this user
-        return await original_create_new_session(request, user_id, jwt_payload, session_data)
+        return await original_create_new_session(request, user_id, access_token_payload, session_data, user_context)
         # highlight-end
 
     original_implementation.create_new_session = create_new_session
@@ -116,12 +133,11 @@ def override_session_functions(original_implementation):
     return original_implementation
 
 
-session.init({
-    "override": {
-        'functions': override_session_functions
-    }
-})
-
+session.init(
+    override=session.InputOverrideConfig(
+        functions=override_session_functions
+    )
+)
 ```
 
 </TabItem>
@@ -136,14 +152,15 @@ Next, we want to catch the thrown error and then send a custom response to the c
 <NodeJSFrameworkSubTabs>
 <TabItem value="express">
 
-```js
+```ts
+import express from "express";
 
 let app = express();
 
 //...
 
 // in your app's error handler, we catch the custom error
-app.use((err, req, res, next) => {
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (err.message === "Session already exists on another device") {
         // TODO: send a custom response using res
         return;
@@ -155,14 +172,17 @@ app.use((err, req, res, next) => {
 </TabItem>
 <TabItem value="hapi">
 
-```js
+```ts
+import Hapi from "hapi";
+let server = new Hapi.Server({ port: 8000 });
+
 // first we create a plugin to handle all errors from the app
 const plugin = {
     name: "...",
     version: "...",
-    register: async function (server, _) {
+    register: async function (server: Hapi.Server) {
         server.ext("onPreResponse", async (request, h) => {
-            if (request.response.isBoom) {
+            if ("isBoom" in request.response) {
                 let err = request.response.data;
                 if (err.message === "Session already exists on another device") {
                     // TODO: send a custom response here with takeover
@@ -174,16 +194,20 @@ const plugin = {
 };
 
 // then we register this plugin
-(async() => {
+(async () => {
     await server.register(plugin);
-    
+
     await server.start();
 })();
 ```
 </TabItem>
 <TabItem value="fastify">
 
-```jsx
+```tsx
+import Fastify from "fastify";
+
+let fastify = Fastify();
+
 fastify.setErrorHandler(async (err: any, req, res) => {
     if (err.message === "Session already exists on another device") {
         // TODO: send a custom response here with takeover
@@ -195,17 +219,22 @@ fastify.setErrorHandler(async (err: any, req, res) => {
 </TabItem>
 <TabItem value="awsLambda">
 
-```js
+```ts
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+import SuperTokens from "supertokens-node";
 // this is in the auth.js file
-let { middleware } = require("supertokens-node/framework/awsLambda");
+import { middleware } from "supertokens-node/framework/awsLambda";
+// @ts-ignore
+import { getBackendConfig } from "./config";
 
 module.exports.handler = middy(middleware()).use(cors({
     origin: getBackendConfig().appInfo.websiteDomain,
     credentials: true,
-    headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+    headers: ["Content-Type", ...SuperTokens.getAllCORSHeaders()].join(", "),
     methods: "OPTIONS,POST,GET,PUT,DELETE"
 })).onError(request => {
-    if (request.error.message === "Session already exists on another device") {
+    if (request.error !== null && request.error.message === "Session already exists on another device") {
         // TODO: send a custom response here with takeover
     }
     throw request.error;
@@ -215,17 +244,18 @@ module.exports.handler = middy(middleware()).use(cors({
 </TabItem>
 <TabItem value="koa">
 
-```js
-let {middleware} = require("supertokens-node/framework/koa");
+```ts
+import Koa from "koa";
+import { middleware } from "supertokens-node/framework/koa";
 
 let app = new Koa();
 
 app.use(async (ctx, next) => {
   try {
     await next();
-  } catch (err) {
+  } catch (err: any) {
     if (err.message === "Session already exists on another device") {
-        // TODO: return a custom response
+      // TODO: return a custom response
     }
     throw err;
   }
@@ -237,29 +267,37 @@ app.use(middleware());
 </TabItem>
 <TabItem value="loopback">
 
-```js
-let {middleware} = require("supertokens-node/framework/loopback");
+```ts
+import { Next } from "@loopback/core";
+import { RestApplication, Middleware, MiddlewareContext } from "@loopback/rest";
+import { middleware } from "supertokens-node/framework/loopback";
 
-app.use(async (ctx, next) => {
+let app = new RestApplication();
+
+export const customErrorMiddleware: Middleware = async (ctx: MiddlewareContext, next: Next) => {
   try {
-    await next();
-  } catch (err) {
+    return await next();
+  } catch (err: any) {
     if (err.message === "Session already exists on another device") {
-        // TODO: return a custom response
+      // TODO: return a custom response
     }
     throw err;
   }
-})
+};
 
-app.use(middleware);
+app.middleware(middleware);
+app.middleware(customErrorMiddleware);
 ```
 
 </TabItem>
 <TabItem value="nextjs">
 
-```js
+```ts
+import { superTokensNextWrapper } from "supertokens-node/nextjs";
+import { middleware } from "supertokens-node/framework/express";
+
 // in the /auth/[[...path]].js file
-export default async function superTokens(req, res) {
+export default async function superTokens(req: any, res: any) {
     //...
     try {
         await superTokensNextWrapper(
@@ -269,7 +307,7 @@ export default async function superTokens(req, res) {
             req,
             res
         )
-    } catch (err) {
+    } catch (err: any) {
         if (err.message === "Session already exists on another device") {
             // TODO: send custom reply
         }
@@ -284,9 +322,14 @@ export default async function superTokens(req, res) {
 <TabItem value="nestjs">
 
 ```tsx
+import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
+
+import { errorHandler } from 'supertokens-node/framework/express';
+import { Error as STError } from 'supertokens-node';
+
 // we want to add our own error handler which will catch the special exception
 
-@Catch(Error)
+@Catch(STError)
 export class AppErrorHandler implements ExceptionFilter {
 
   catch(exception: Error, host: ArgumentsHost) {
@@ -305,14 +348,22 @@ export class AppErrorHandler implements ExceptionFilter {
 <TabItem value="go">
 
 ```go
-supertokens.Init(supertokens.TypeInput{
-	OnGeneralError: func(err error, req *http.Request, res http.ResponseWriter) {
-		if err.Error() == "Session already exists on another device" {
-			// TODO: send custom error
-		}
-		// TODO: send generic error
-	},
-})
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		OnGeneralError: func(err error, req *http.Request, res http.ResponseWriter) {
+			if err.Error() == "Session already exists on another device" {
+				// TODO: send custom error
+			}
+			// TODO: send generic error
+		},
+	})
+}
 ```
 
 </TabItem>
@@ -321,10 +372,14 @@ supertokens.Init(supertokens.TypeInput{
 <TabItem value="fastapi">
 
 ```python
-@app.exception_handler(Exception)
-async def exception_handler(_, exc):
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.exception_handler(Exception) # type: ignore
+async def exception_handler(_, exc: Exception):
     if str(exc) == "Session already exists on another device":
-        # TODO: send custom response
+        pass # TODO: send custom response
     
     # TODO: Send generic 500 response
 ```
@@ -333,10 +388,14 @@ async def exception_handler(_, exc):
 <TabItem value="flask">
 
 ```python
-@app.errorhandler(Exception)
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.errorhandler(Exception) # type: ignore
 def all_exception_handler(exc: Exception):
     if str(exc) == "Session already exists on another device":
-        # TODO: send custom response
+        pass # TODO: send custom response
     
     # TODO: Send generic 500 response
 ```
@@ -347,18 +406,20 @@ def all_exception_handler(exc: Exception):
 ```python
 # Add this middlware in settings.py
 
+from django.http import HttpRequest, HttpResponse
+
 class ErrorHandlerMiddleware:
 
-    def __init__(self, get_response):
+    def __init__(self, get_response):  # type: ignore
         self.get_response = get_response
 
-    def __call__(self, request):
-        response = self.get_response(request)
+    def __call__(self, request: HttpRequest):
+        response: HttpResponse = self.get_response(request)
         return response
 
-    def process_exception(self, request, exception):
+    def process_exception(self, request: HttpRequest, exception: Exception) -> HttpResponse:
         if exception and str(exception) == "Session already exists on another device":
-            # TODO: send custom response
+            pass # TODO: send custom response
             
         return HttpResponse("Error processing the request.", status=500)
 ```

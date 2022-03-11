@@ -1,6 +1,6 @@
 import React from "react"
 
-const ReactAdmonition = (props) => {
+const ReactAdmonition = (props: any) => {
   return (
     <div className={`admonition admonition-caution alert alert--${props.type}`}>
       <div className="admonition-heading">

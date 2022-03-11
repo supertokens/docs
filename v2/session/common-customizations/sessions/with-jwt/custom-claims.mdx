@@ -1,0 +1,167 @@
+---
+id: custom-claims
+title: Adding custom claims to the JWT
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./session/common-customizations/sessions/with-jwt/custom-claims.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+import BackendSDKCasing from "/src/components/BackendSDKCasing"
+
+# Adding custom claims to the JWT
+
+:::caution
+Using JWTs is optional and is only required if you want to integrate with another service that relies on JWTs or if you want to integrate with a backend framework that we do not support yet
+
+JWTs are exposed to the frontend, they should not be used as a way to store sensitive information
+:::
+
+## Adding your own claims
+
+When using the JWT feature you can add custom claims to the JWT by using our override feature.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "...",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init({
+            //highlight-start
+            jwt: {
+                enable: true,
+            },
+            override: {
+                functions: function (originalImplementation) {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async function (input) {
+                            input.accessTokenPayload = {
+                                ...input.accessTokenPayload,
+                                role: "user",
+                            };
+
+                            return originalImplementation.createNewSession(input);
+                        },
+                    };
+                }
+            },
+            //highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				//highlight-start
+				Jwt: &sessmodels.JWTInputConfig{
+					Enable: true,
+				},
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+
+						originalCreateNewSession := *originalImplementation.CreateNewSession
+
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+							if accessTokenPayload == nil {
+								accessTokenPayload = map[string]interface{}{}
+							}
+							accessTokenPayload["role"] = "user"
+
+							return originalCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from typing import Dict, Any, Union
+
+# highlight-start
+def override_functions(original_implementation: RecipeInterface):
+    original_implementation_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(request: Any, user_id: str,
+                                 access_token_payload: Union[None, Dict[str, Any]],
+                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        access_token_payload['role'] = 'user'
+
+        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        session.init(
+            # highlight-start
+            jwt=session.JWTConfig(enable=True),
+            override=session.InputOverrideConfig(
+                functions=override_functions
+            )
+            # highlight-end
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+The above example would add a `role` claim to the JWT.
+
+## Claims added by SuperTokens
+
+SuperTokens adds some claims to JWT payloads:
+
+- `sub`: The userId is stored in this claim
+- `iss`: The issuer URL is stored under this claim. Read more [here](./enabling-jwts#using-a-custom-issuer) for information on what the default value is and how to configure it.
+- `exp`: The time since epoch (in seconds) after which the JWT is considered as expired
+- `iat`: The time since epoch (in seconds) when the JWT was created

@@ -28,7 +28,7 @@ The older library was called ```supertokens-node-<db name>-ref-jwt```. Now, you 
 - The ```jwtPayload``` param must only be of type ```object```.
 - The ```sessionData``` param must only be of type ```object```.
 - ```userId``` must be of type ```string```. Earlier, we would accept ```number``` or ```string```.
-- **The return type of most of the functions have changed. Please go through all of them. If you need assistance in migration, please [contact us](mailto:team@supertokens.io)**
+- **The return type of most of the functions have changed. Please go through all of them. If you need assistance in migration, please [contact us](mailto:team@supertokens.com)**
 
 ### Errors
 - ```UNAUTHORISED_AND_TOKEN_THEFT_DETECTED``` is now called ```TOKEN_THEFT_DETECTED``` as shown [here](./error-handling/token-theft-detected).

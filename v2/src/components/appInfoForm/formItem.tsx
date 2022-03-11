@@ -5,12 +5,14 @@ import {isMobile, isTablet} from 'react-device-detect';
 import "./style.css";
 
 type FormItemType = {
-    title: string, 
+    title: string,
     placeholder: string,
     onChange: (val: string) => void,
     explanation: string,
     value: string,
-    index: number
+    index: number,
+    error?: string,
+    required?: boolean
 }
 
 export default function FormItem(props: FormItemType) {
@@ -22,7 +24,7 @@ export default function FormItem(props: FormItemType) {
     });
 
     // Refs
-    const questionIconRef = useRef(undefined);
+    const questionIconRef: any = useRef(undefined);
 
     // Did mount
     useEffect(() => {
@@ -42,14 +44,16 @@ export default function FormItem(props: FormItemType) {
         }
 
         return () => {
-            window.removeEventListener('scroll', handleMouseOutIcon);
-
-            if (isMobile || isTablet) {
-                questionIconRef.current.removeEventListener('click', handleMouseClickIcon);
-                window.removeEventListener('click', handleMouseClickOutIcon);
-            } else {
-                questionIconRef.current.removeEventListener('mouseover', handleMouseOverIcon);
-                questionIconRef.current.removeEventListener('mouseout', handleMouseOutIcon);
+            if (questionIconRef.current !== undefined && questionIconRef.current !== null) {
+                window.removeEventListener('scroll', handleMouseOutIcon);
+    
+                if (isMobile || isTablet) {
+                    questionIconRef.current.removeEventListener('click', handleMouseClickIcon);
+                    window.removeEventListener('click', handleMouseClickOutIcon);
+                } else {
+                    questionIconRef.current.removeEventListener('mouseover', handleMouseOverIcon);
+                    questionIconRef.current.removeEventListener('mouseout', handleMouseOutIcon);
+                }
             }
         }
     }, [])
@@ -67,7 +71,7 @@ export default function FormItem(props: FormItemType) {
 
         setShowExplanation(true);
     }
-    
+
     const handleMouseOutIcon = () => {
         setShowExplanation(false);
     }
@@ -75,7 +79,7 @@ export default function FormItem(props: FormItemType) {
     const handleMouseClickIcon = () => {
         handleMouseOverIcon();
     }
-    
+
     const handleMouseClickOutIcon = (event: MouseEvent) => {
         const element = event.target as HTMLElement;
 
@@ -89,10 +93,10 @@ export default function FormItem(props: FormItemType) {
     return (
         <div className="app-info-form-question">
                 <div className="app-info-form-label">
-                    <span>{props.title + ":"}<span
-                        style={{
-                            color: "#ff6161"
-                        }}>*</span></span>
+                    <span>
+                        {props.title + ":"}
+                        {props.required && (<span style={{ color: "#ff6161" }}>*</span>)}
+                    </span>
                     <div className="question">
                         <img
                             id={`app-info-form-question-icon-${props.index}`}
@@ -119,12 +123,26 @@ export default function FormItem(props: FormItemType) {
                     }}
                     placeholder={props.placeholder}
                 />
+
+                {props.error && (
+                    <p
+                        style={{
+                            color: "rgb(255, 97, 97)",
+                            margin: "0",
+                            fontSize: ".875rem",
+                            fontWeight: "500"
+                        }}
+                    >
+                        *{props.error}
+                    </p>
+                )}
+
                 <div
                     className={`app-info-form-explanation ${showExplanation ? "show" : ""}`}
                     style={{
                         top: `${explanationLocation.y}px`,
                         left: `${explanationLocation.x}px`
-                    }}    
+                    }}
                 >
                     {props.explanation}
                 </div>

@@ -19,6 +19,7 @@
  */
 
 let configuredVariables = require("./markdownVariables.json");
+let { replaceCustomPlaceholdersInLine } = require("./codeTypeChecking")
 
 module.exports = () => {
 
@@ -69,16 +70,22 @@ module.exports = () => {
     }
 
     return (data, file) => {
-        var recipeName = file.path.split("/v2/")[1].split("/")[0]
+        let recipeName = file.path.split("/v2/")[1].split("/")[0]
 
         let configObjectForRecipe = configuredVariables[recipeName];
+
+        let dataCopy = data;
+
+        if (dataCopy.children.length) {
+            dataCopy.children = dataCopy.children.map(child => {
+                return replaceCustomPlaceholdersInLine(child);
+            })
+        }
 
         // If there is no config entry for the recipe, exit early
         if (!configObjectForRecipe) {
             return data;
         }
-
-        var dataCopy = data;
 
         if (dataCopy.children.length) {
             dataCopy.children = dataCopy.children.map(child => {

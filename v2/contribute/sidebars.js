@@ -85,6 +85,7 @@ module.exports = {
           ],
         },
         "recipe-design/api-design",
+        "recipe-design/overrides",
       ],
     },
     {

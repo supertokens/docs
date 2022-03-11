@@ -11,7 +11,7 @@ let remarkPlugins = [
 
 module.exports = {
   title: 'SuperTokens Docs',
-  url: 'https://supertokens.io/',
+  url: 'https://supertokens.com',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'throw',
@@ -93,7 +93,7 @@ module.exports = {
           target: "_blank"
         },
         {
-          href: 'https://supertokens.io/discord',
+          href: 'https://supertokens.com/discord',
           label: 'Ask Questions',
           position: 'right',
         },
@@ -108,8 +108,9 @@ module.exports = {
       theme: require('prism-react-renderer/themes/vsDark'),
     },
     algolia: {
-      apiKey: '0eeffc534667153c420f239cc6c7f4fb',
+      apiKey: 'ce04a158637d345fc094ebbfa9a5156a',
       indexName: 'supertokens',
+      appId: "SBR5UR2Z16"
     },
   },
   presets: [
@@ -133,18 +134,18 @@ module.exports = {
   ],
   plugins: [
     [
-      // loads the supertokens.io react bundle for footer and analytics etc..
+      // loads the supertokens.com react bundle for footer and analytics etc..
       "./src/plugins/reactBundle",
       {
         id: "react-bundle",
       }
     ],
     [
-      // loads the supertokens.io react bundle for footer and analytics etc..
-      "./src/plugins/copyDocs",
+      "./src/plugins/copyDocsAndCodeTypeChecking",
       {
         // used for copying docs content via the <-COPY DOCS-> directive
-        id: "copy-docs",
+        // used for do code type checking as well AFTER running cop docs
+        id: "copy-docs-and-code-type-checking",
       }
     ],
     [
@@ -155,6 +156,28 @@ module.exports = {
         routeBasePath: 'docs/emailpassword',
         sidebarPath: require.resolve('./emailpassword/sidebars.js'),
         showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'passwordless',
+        path: 'passwordless',
+        routeBasePath: 'docs/passwordless',
+        sidebarPath: require.resolve('./passwordless/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'guides',
+        path: 'guides',
+        routeBasePath: 'docs/guides',
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
       },

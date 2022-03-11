@@ -1,5 +1,6 @@
 import React from 'react';
 import { isMobile } from 'react-device-detect';
+import GuidesLink from "../../components/guidesLink";
 
 export default function RecipeLabelItem(props) {
     if (isMobile) {
@@ -12,6 +13,6 @@ export default function RecipeLabelItem(props) {
                 fontStyle: "italic"
             }}>{props.label}<span style={{
                 fontStyle: "normal"
-            }}>{" | "}</span><a href="/docs/community/recipes">See All Recipes</a></span>
+            }}>{" | "}</span><GuidesLink>See All Recipes</GuidesLink></span>
     );
 }

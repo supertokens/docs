@@ -12,7 +12,7 @@ function Hello() {
                     fontSize: '20px',
                 }}>
                 <p>
-                    <a href="/docs/community/introduction">Click here</a> to see the user docs
+                    <a href="/docs/guides">Click here</a> to see the user docs
                 </p>
             </div>
 

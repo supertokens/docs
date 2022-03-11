@@ -35,5 +35,5 @@ A license key is needed for the SuperTokens core to run:
 - The downgrade will only take effect after an instance restart.
 
 <div class="specialNote">
-Please make sure that your license key is not leaked. In the event that you think it has been leaked, please <a href="mailto:team@supertokens.io">contact us</a>.
+Please make sure that your license key is not leaked. In the event that you think it has been leaked, please <a href="mailto:team@supertokens.com">contact us</a>.
 </div>

@@ -8,7 +8,7 @@ original_id: from-saas-to-on-prem
 # From managed service to self hosted
 
 ## Step 1: Database migration
-We can give you a backup of your data using which you can run restoration on your PostgreSQL or MySQL instance. Please [contact us](mailto:team@supertokens.io) to get started
+We can give you a backup of your data using which you can run restoration on your PostgreSQL or MySQL instance. Please [contact us](mailto:team@supertokens.com) to get started
 
 ## Step 2: Running SuperTokens core yourself
 - There are two ways to run the core, one with docker, and one without. Please visit the Quick Setup > Core section under your recipe docs.

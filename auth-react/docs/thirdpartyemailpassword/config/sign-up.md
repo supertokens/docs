@@ -16,8 +16,8 @@ SuperTokens.init({
             palette: {...},
             signInAndUpFeature: {
                 signUpForm: {
-                    privacyPolicyLink: "https://supertokens.io/legal/privacy-policy",
-                    termsAndConditionsLink: "https://supertokens.io/legal/terms-and-conditions",
+                    privacyPolicyLink: "https://supertokens.com/legal/privacy-policy",
+                    termsAndConditionsLink: "https://supertokens.com/legal/terms-and-conditions",
                     formFields: [{
                         id: "age",
                         label: "Your age",
@@ -43,12 +43,12 @@ SuperTokens.init({
 
 - **privacyPolicyLink**: 
     - Description: Link to your privacy policy
-    - Example: ```privacyPolicyLink: "https://supertokens.io/legal/privacy-policy"```
+    - Example: ```privacyPolicyLink: "https://supertokens.com/legal/privacy-policy"```
     - Optional
 
 - **termsAndConditionsLink**: 
     - Description: Link to your terms and conditions
-    - Example: ```termsAndConditionsLink: "https://supertokens.io/legal/terms-and-conditions"```
+    - Example: ```termsAndConditionsLink: "https://supertokens.com/legal/terms-and-conditions"```
 
 
 - **formFields**: 

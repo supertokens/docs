@@ -8,7 +8,7 @@ export function Question(props: PropsWithChildren<{
 
     const [selectedAnsTitle, setSelectedAnsTitle] = useState(undefined);
 
-    let resubmitInfoClicked = (event) => {
+    let resubmitInfoClicked = (event: any) => {
         event.preventDefault();
         setSelectedAnsTitle(undefined);
     }

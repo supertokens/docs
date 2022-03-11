@@ -37,7 +37,7 @@ params:
     - Load Balancer Protocol:
         HTTPS - 3567
     -  Availability Zones: select all
-    - Certificate: *.aws.supertokens.io (Choose a certificate from ACM  - already configured in ACM)
+    - Certificate: *.aws.supertokens.com (Choose a certificate from ACM  - already configured in ACM)
     - Security Policy: 2016-08
     - Security Groups:
         - default

@@ -1,0 +1,187 @@
+---
+id: testing-with-postman
+title: Testing with Postman
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+
+# Testing with Postman
+
+The following guide will go over the process of testing backend APIs with Postman. These APIs are automatically exposed via our backend SDK (`/auth/*` path).
+
+:::important
+- Make sure that the ^{recipeNameCapitalLetters} Recipe is correctly setup in your backend 
+- For the examples given below we will be running our backend on domain `localhost` and port `3001`
+- The Open API spec for the APIs being tested can be found [here](https://app.swaggerhub.com/apis/supertokens/FDI).
+- Postman does cookie management on its own. So you don't need to manually set cookies on each request.
+:::
+
+## 1. Signup
+We will test the `/auth/signinup/code` and `/auth/signinup/code/consume` API by creating a user with an email as `test@example.com`.
+
+### `/auth/signinup/code`
+- In Postman, set the request type to `POST`. Set the body of the request to be `raw JSON`.
+- Set the URL to `http://localhost:3001/auth/signinup/code`
+- In the Header tab, set key `rid` with value `^{rid}`.
+- Add the request JSON object to the body tab as shown in the image below
+
+- On a successful request, a new "code" will be created (which is sent to the user's email).
+
+<img width="600px" src="/img/passwordless/sp-test-signup-1.png" />
+
+### `/auth/signinup/code/consume`
+We will use the above returned info + the code from the email to sign up a new user.
+- In Postman, set the request type to `POST`. Set the body of the request to be `raw JSON`.
+- Set the URL to `http://localhost:3001/auth/signinup/code/consume`
+- In the Header tab, set key `rid` with value `^{rid}`.
+- Add the request JSON object to the body tab as shown in the image below
+
+<img width="600px" src="/img/passwordless/sp-test-signup-2.png" />
+
+You can see the session tokens set by the response by clicking on the Cookies button on the top right
+
+<img width="600px" src="/img/passwordless/st-test-signin-cookies.png" />
+
+These cookies are:
+- `sIdRefreshToken`
+- `sAccessToken`
+- `sRefreshToken`
+
+More information about these cookies can be found [here](../common-customizations/sessions/cookie-consent)
+
+
+## 2. Session Verification
+
+- We can also test APIs which require the user to be logged in.
+
+- For example, we have an API used to query user data with the `verifySession` middleware as shown below
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+
+const app = express();
+
+// highlight-start
+// The following code snippet is an example API. You do not need to 
+// implement it in your app
+app.post("/change-user-data", verifySession(), async (req, res) => {
+    let userId = req.session.getUserId();
+    // mutate some user data
+    res.send({
+        userId
+    })
+})
+// highlight-end
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+// The following code snippet is an example API. You do not need to
+// implement it in your app
+
+func main() {
+	http.ListenAndServe(":3001", supertokens.Middleware(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Handle your APIs..
+
+		if r.URL.Path == "/change-user-data" {
+			session.VerifySession(nil, func(w http.ResponseWriter, r *http.Request) {
+				sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+				w.WriteHeader(200)
+				w.Header().Add("content-type", "application/json")
+				bytes, err := json.Marshal(map[string]interface{}{
+					"userId": sessionContainer.GetUserID(),
+				})
+				if err != nil {
+					w.WriteHeader(500)
+					w.Write([]byte("error in converting to json"))
+				} else {
+					w.Write(bytes)
+				}
+
+			}).ServeHTTP(rw, r)
+			return
+		}
+	})))
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+# The following code snippet is an example API (fastapi). You do not need to 
+# implement it in your app
+
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+
+@app.post('/change-user-data') # type: ignore
+async def update_jwt(session: SessionContainer = Depends(verify_session())):
+    _ = session.get_user_id()
+	# mutate some user data
+	# send response
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+- In Postman, set the request type to `POST`.
+- Set the URL to `http://localhost:3001/change-user-data`
+- In the Header tab, set key `rid` with value `^{rid}`.
+- If you have the `antiCsrf` attribute set to `VIA_TOKEN` in your backend SuperTokens config, then, in the Postman Header tab, set the key as `anti-csrf` and value as the `anti-csrf` token retrieved from the login response.
+- On a successful response, the response body will contain user data
+
+:::important
+By default, for `GET` APIs, you don't need to provide the `anti-csrf` request header as anti-CSRF checks are only done in non-`GET` APIs
+:::
+
+<img width="600px" src="/img/^{rid}/change-user.png" />
+
+In case you query the `/change-user-data` API with an expired access token, you will get a `401` response with the message `try refresh token`. 
+
+<img width="600px" src="/img/emailpassword/st-user-unauthorized.png" />
+
+To generate new session tokens you can use the `/auth/session/refresh` API as shown in the next section.
+
+## 3. Refreshing Session Tokens
+
+In case your `access token` expires you can call the `/auth/session/refresh` api to generate a new `access token` and `refresh token`.
+- In Postman, set the request type to `POST`.
+- Set the URL as `http://localhost:3001/auth/session/refresh`
+- In the Header tab, set key `rid` with value `^{rid}`.
+- On a successful response, new session tokens will be set
+
+<img width="600px" src="/img/emailpassword/st-ep-refresh.png" />
+
+You can see the new session tokens by switching to the cookies tab
+
+<img width="600px" src="/img/emailpassword/st-ep-refresh-cookies.png" />
+
+
+## 4. Logout
+
+The `/auth/signout` API will be used to invalidate the  user sessions. This will clear the session cookies set in postman.
+- In Postman, set the request type to `POST`.
+- Set the URL as `http://localhost:3001/auth/signout`
+- In the Header tab, set key `rid` with value `session`.
+- On a successful response, the session tokens will be cleared from Postman, and from the database
+
+<img width="600px" src="/img/emailpassword/st-ep-signout.png" />

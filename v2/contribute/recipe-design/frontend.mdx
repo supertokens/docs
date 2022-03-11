@@ -8,17 +8,226 @@ hide_title: true
 - 1) Should be as decoupled from other recipes as possible so that it can be reused.
 - 2) Should be as minimal as possible.
 - 3) All sub recipes being used should be allowed to be overrided by an instance provided in the constructor. This will allow super recipes to also use these sub recipes without creating multiple instances of those sub recipes. An example of this can be found [here](https://github.com/supertokens/supertokens-auth-react/blob/master/lib/ts/recipe/thirdpartyemailpassword/recipe.tsx#L61).
-- 4) Recipe interface should follow:
-    - a) If a function has valid error states, those should be returned from the function like `{status: "OK", ...} | {status: "ERROR_1", ...} | {status: "ERROR_2", ...}`. That is, no throwing or errors unless it's a general error, or if the type system for that language allows you to clearly define error types (like in the case of Java).
-    - b) The implementaiton should take care of calling the pre API hook as well as fire the event hook.
-- 5) All components and styles in the recipe should be overridable
+- 4) All components and styles in the recipe should be overridable
     - a) All `divs` etc that are styled, should have a `data-supertokens` and a `css` prop like so `<div data-supertokens="container" css={styles.container}>`.
-- 6) Each component theme should have a globally unique name. The format should be {actualRecipeId}{Name of component}. For example `ThirdPartyEmailPasswordSignInButton`
-- 7) Each theme component must be overridable (using the `withOverride` component).
-- 8) When doing output parsing for an API call, only handle what we care about. If the user has manually added some other fields to response from the API, let them handle that.
-- 9) There should be one file where all the functions exposed by this recipe are listed and documented. This file will be linked from the docs as API documentation.
+- 5) Each component theme should have a globally unique name. The format should be {actualRecipeId}{Name of component}. For example `ThirdPartyEmailPasswordSignInButton`
+- 6) Each theme component must be overridable (using the `withOverride` component).
+- 7) When doing output parsing for an API call, only handle what we care about. If the user has manually added some other fields to response from the API, let them handle that.
+- 8) There should be one file where all the functions exposed by this recipe are listed and documented. This file will be linked from the docs as API documentation.
    - a) For functions
    - b) For component override interface
    - c) For functions override interface
-- 10) User interaction with a recipe should be isolated to that recipe, even if that recipe uses several other sub recipes. For example, if a user initialises recipeX (which uses recipeY and recipeZ underneath), the user should not have to do `recipeY.something` or `recipeZ.something`. Therefore, recipeX must re-export useful functions / components that are provided by recipeY and recipeZ.
-- 11) When implementing Recipe interfaces, make sure that if a function uses another function in the interface, it will call the user's overrided verion of that function (if the user has overriden it). See https://github.com/supertokens/supertokens-node/issues/199
+- 9) User interaction with a recipe should be isolated to that recipe, even if that recipe uses several other sub recipes. For example, if a user initialises recipeX (which uses recipeY and recipeZ underneath), the user should not have to do `recipeY.something` or `recipeZ.something`. Therefore, recipeX must re-export useful functions / components that are provided by recipeY and recipeZ.
+- 10) When implementing Recipe interfaces, make sure that if a function uses another function in the interface, it will call the user's overrided verion of that function (if the user has overriden it). See https://github.com/supertokens/supertokens-node/issues/199
+
+## React SDK Feature and Theme components
+
+Complex functionality should be implemented in feature components, and theme components should only have local, simple, and strictly UI-related states. Some examples:
+
+### Feature component state:
+- Information that is created in one step of the process and used in another. I.e., `loginAttemptInfo` in passwordless sign in/up
+- General error displayed in the sign-in screen but set in the form submit method
+
+### Theme component state:
+- Current value of each form field
+- Time left until another retry is allowed
+
+### `useReducer`
+
+You should use a reducer to manage the state of a feature component if:
+- The state is complex (i.e., more than a single error and/or status field)
+- The business logic will be extracted into a custom hook and reused elsewhere.
+- other similar 
+
+If you used a reducer to manage the state, you should:
+- Move both state and action types into `types.ts` of the recipe.
+- The "root" theme component should receive them as `featureState` and `dispatch`. Further down the component tree, they are usually event handlers and individual state variables.
+
+### Reusable feature components
+
+If the logic of the feature component is reused (i.e., the corresponding "root" theme component is used in multiple places), you should extract it into custom hooks. Check out `useFeatureReducer` and `useChildProps` in any sign-in/up component.
+
+We do this for a few reasons:
+- It's easier to compose/combine business logic from multiple recipes this way
+- It's strongly typed
+- It's the standard/recommended way of solving this issue.
+
+When building the custom hooks you should:
+- Check out other components for naming conventions
+- Keep in mind that the hook can be renamed if it's imported elsewhere (so there is no need to include the recipe/component name)
+- Remember that feature components combining multiple recipes may call them without the recipe if it's disabled. In this case, it should:
+  - still work (returning undefined is fine)
+  - call the same hooks, to not violate the rules of hooks
+  - be typed in a way so that the return value is defined if the recipe is also defined.
+
+Check out `useChildProps` of the sign-in/up feature components in auth recipes for an example
+
+## Recipe Interface Functions
+
+### Error Handling
+
+- a) If a function has valid error states, those should be returned from the function like `{status: "OK", ...} | {status: "ERROR_1", ...} | {status: "ERROR_2", ...}`. That is, no throwing or errors unless it's a `GENERAL_ERROR`, or if the type system for that language allows you to clearly define error types (like in the case of Java).
+- b) `GENERAL_ERRORS` should be thrown as a normal error (depending on the language)
+
+For example
+
+```ts
+function doSomething(status: "OK" | "ERROR") {
+    let response = makeAPICall();
+
+    if (response.status === "GENERAL_ERROR") {
+        throw new Error(response.message);
+    }
+
+    ...
+
+    return {status: response.status};
+}
+```
+
+### Network Calls
+
+- a) The recipe implementation should allow for pre-api hooks to be configured when the recipe is initialised. These hooks should be called by implementation functions before making any network request.
+- b) Each recipe interface function should allow for a "local" pre-api hook, this can be useful where users require dynamic request parameters or if for specific APIs the fields in the recipe level pre-api hook need to be changed.
+- c) Each recipe implementation should allow for post-api hooks to be configured when the recipe is initialised. These hooks should be called by the functions after network requests have completed.
+
+Recipe Level Pre + Post API Hook (Javascript example)
+
+```ts
+Recipe.init({
+    preApiHook: (req: RequestInit) => Promise<RequestInit>,
+    // Read the Custom function responses section to understand what jsonBody and fetchResponse are
+    postApiHook: (req: RequestInit, url: string, jsonBody: any, fetchResponse: Response) => Promise<void>,
+})
+```
+
+For function level pre API hooks we introduce a new `options` parameter.
+
+```ts
+function doSomething(options?: {
+    preApiHook?: (req: RequestInit) => RequestInit,
+}) {
+    ...
+    let requestConfig: RequestInit = { /* ... */ }
+    requestConfig = callRecipePreAPIHook(requestConfig);
+    
+    if (options !== undefined && options.preApiHook !== undefined) {
+        requestConfig = options.preApiHook(requestConfig);
+    }
+
+    makeAPIRequest(requestConfig);
+    ...
+}
+```
+
+:::important
+In recipe functions the API logic should follow this order:
+
+1. Create a request object (For example RequestInit in JS).
+2. Call the recipe level pre api hook.
+3. Call the function level pre api hook.
+4. Call the API
+:::
+
+### Function return types
+
+Each recipe interface function must follow a consistent return scheme:
+
+{
+    status: "OK" | "...",
+    jsonBody: any,
+    fetchResponse: Response,
+    ...
+}
+
+Functions that call APIs must always return fetchResponse, this means that parameter validations need to change accordingly. For example consider the following function
+
+```ts
+
+function verifyEmail(token?: string) {
+    // Read token from query params if undefined
+}
+```
+
+Normally you would return a validation error if no `token` was provided and one couldnt be found in the query param. But this makes the return type inconsistent because in that case no API call was made and both `jsonBody` and `fetchResponse` would need to be marked as optional (making the overall API hard to consume)
+
+Instead we set the value of `token` to something default (empty string for example) and let the API throw an error. This means that either the function will always have an API response to return or it will throw an error.
+
+**Wrong &#10060**
+```ts
+function verifyEmail(token?: string) {
+    if (token === undefined) {
+        token = readFromQueryParams();
+    }
+
+    if (token === undefined) {
+        return {status: "INVALID_TOKEN", ...}
+    }
+
+    callAPI(token);
+}
+```
+
+**Correct &#9989**
+```ts
+function verifyEmail(token?: string) {
+    if (token === undefined) {
+        token = readFromQueryParams();
+    }
+
+    if (token === undefined) {
+        token = "";
+    }
+
+    // This will throw an error
+    callAPI(token);
+}
+```
+
+### Custom function responses
+
+Because the user can override APIs in the Backend SDK and provide responses in their own formats, the recipe functions on the Frontend must always assume that API responses (and function responses) can be non-standard. The recipe functions should rely on `status` in the API responses to decide if the response is a custom one.
+
+For example consider a function `getUserInformation` that returns `{status: "OK" | "NOT_AUTHORISED"}`
+
+```ts
+async function getUserInformation(): Promise<{status: "OK" | "NOT_AUTHORISED"}> {}
+```
+
+If the user wants to return the userID from this function, they cannot do so by simply overriding the function. To accodmate this we return the json body and the response object back to the user from every recipe function. For the above example the signature of the method would then be
+
+```ts
+async function getUserInformation(): Promise<{status: "OK" | "NOT_AUTHORISED", jsonBody: any, fetchResponse: Response}> {}
+```
+
+The `jsonBody` allows the user to consume custom properties from the response body should they need it, the `fetchResponse` allows users to consume other properties such as headers from the API response.
+
+:::important
+Even though we support custom responses, users **MUST ALWAYS** provide the properties mentioned in the FDI in API responses. For example lets consider the `/user/email/verify GET` API which returns 
+
+```ts
+{
+    "status": "OK",
+    "isVerified": boolean,
+}
+```
+
+Should the user want to provide a custom response they **HAVE TO** provide `isVerified`.
+
+**Valid Response &#9989**
+```ts
+{
+    "status": "OK",
+    "isVerified": boolean,
+    "userId": string,
+}
+```
+
+**Invalid Response &#10060**
+```ts
+{
+    "status": "OK",
+    "userId": string,
+}
+```
+:::

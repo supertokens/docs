@@ -40,7 +40,7 @@ The result should be a new `auth` folder with `auth.module.ts` in it. We should 
 
 ### Add config type and injection token
 
-Add a `config.ts` file next into the `auth` folder. We will put the type and injection token for the SuperTokens config here.
+Add a `config.interface.ts` file next into the `auth` folder. We will put the type and injection token for the SuperTokens config here.
 
 ```ts
 import { AppInfo } from "supertokens-node/lib/build/types";
@@ -66,8 +66,10 @@ import {
   DynamicModule,
 } from '@nestjs/common';
 
+// @ts-ignore
 import { AuthMiddleware } from './auth.middleware';
-import { ConfigProviderToken, AuthModuleConfig } from './config.interface';
+// @ts-ignore
+import { ConfigInjectionToken, AuthModuleConfig } from './config.interface';
 
 @Module({
   providers: [],
@@ -88,7 +90,7 @@ export class AuthModule implements NestModule {
             connectionURI,
             apiKey,
           },
-          provide: ConfigProviderToken,
+          provide: ConfigInjectionToken,
         },
       ],
       exports: [],
@@ -102,36 +104,42 @@ export class AuthModule implements NestModule {
 ### Adding the module to the application
 
 <AppInfoForm
-    askForAppName={true}
-    askForAPIDomain={true}
-    askForWebsiteDomain={true}>
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+  >
 
 <CoreInjector>
 
 You need to update the `App` module to use the new dynamic module by importing the result of `forRoot` instead of the class itself.
 
 ```ts
-...
+// ...
+import { Module} from '@nestjs/common';
+// @ts-ignore
 import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     //highlight-start
     AuthModule.forRoot({
+
       ^{coreInjector_connection_uri_comment}
       connectionURI: ^{coreInjector_uri}
       ^{coreInjector_api_key_commented}apiKey: ^{coreInjector_api_key},
       appInfo: {
-        // Learn more about this on https://supertokens.io/docs/thirdpartyemailpassword/appinfo
+        // Learn more about this on https://supertokens.com/docs/session/appinfo
         appName: "^{form_appName}",
         apiDomain: "^{form_apiDomain}",
-        websiteDomain: "^{form_websiteDomain}"
+        websiteDomain: "^{form_websiteDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        websiteBasePath: "^{form_websiteBasePath}"
       },
     }),
     //highlight-end
   ],
-  controllers: [...],
-  providers: [...],
+  controllers: [/* ... */],
+  providers: [/* ... */],
 })
 export class AppModule {}
 ```
@@ -157,6 +165,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import supertokens from "supertokens-node";
 import Session from 'supertokens-node/recipe/session';
 
+// @ts-ignore
 import { ConfigInjectionToken, AuthModuleConfig } from "../config.interface";
 
 @Injectable()
@@ -207,33 +216,36 @@ We need to edit the module file to register the middleware. You can achieve this
 
 ```ts
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+// @ts-ignore
 import { AuthMiddleware } from "./auth.middleware";
-...
+// ...
 
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(AuthMiddleware).forRoutes('*');
   }
-  ...
+  // ...
 }
 ```
 
 ## 5) Update CORS settings
 
-<AppInfoForm
-    askForWebsiteDomain={true}>
+<AppInfoForm askForWebsiteDomain>
 
 You should enable and update your CORS settings in `main.ts`:
 
 ```ts
-...
+import { NestFactory } from '@nestjs/core';
+// ...
 import supertokens from 'supertokens-node';
+// @ts-ignore
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   //highlight-start
   app.enableCors({
-    origin: ['http://localhost:3000'], // TODO: URL of the website domain
+    origin: ['^{form_websiteDomain}'],
     allowedHeaders: ['content-type', ...supertokens.getAllCORSHeaders()],
     credentials: true,
   });
@@ -260,9 +272,9 @@ import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 
 import { errorHandler } from 'supertokens-node/framework/express';
-import { Error } from 'supertokens-node';
+import { Error as STError } from 'supertokens-node';
 
-@Catch(Error)
+@Catch(STError)
 export class SupertokensExceptionFilter implements ExceptionFilter {
   handler: ErrorRequestHandler;
 
@@ -273,10 +285,15 @@ export class SupertokensExceptionFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
 
+    const resp = ctx.getResponse<Response>();
+    if (resp.headersSent) {
+      return;
+    }
+
     this.handler(
       exception,
       ctx.getRequest<Request>(),
-      ctx.getResponse<Response>(),
+      resp,
       ctx.getNext<NextFunction>(),
     );
   }
@@ -289,15 +306,17 @@ We need to add this filter as a global exception filter. You can do this in `mai
 
 ```ts
 import { NestFactory } from '@nestjs/core';
+// @ts-ignore
 import { AppModule } from './app.module';
 
 import supertokens from 'supertokens-node';
+// @ts-ignore
 import { SupertokensExceptionFilter } from './auth.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: ['http://localhost:3001'], // TODO: URL of the website domain
     allowedHeaders: ['content-type', ...supertokens.getAllCORSHeaders()],
     credentials: true,
   });
@@ -318,6 +337,7 @@ Now that the library is set up, you can add a guard to protect your API. You can
 
 ```ts
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { Error as STError } from "supertokens-node";
 
 import { verifySession } from 'supertokens-node/recipe/session/framework/express';
 
@@ -327,15 +347,24 @@ export class AuthGuard implements CanActivate {
     const ctx = context.switchToHttp();
 
     let err = undefined;
+    const resp = ctx.getResponse();
+    // You can create an optional version of this by passing {sessionRequired: false} to verifySession
     await verifySession()(
       ctx.getRequest(),
-      ctx.getResponse(),
+      resp,
       (res) => {
         err = res;
       },
     );
 
-    if (err !== undefined) {
+    if (resp.headersSent) {
+      throw new STError({
+        message: "RESPONSE_SENT",
+        type: "RESPONSE_SENT",
+      });
+    }
+
+    if (err) {
       throw err;
     }
 
@@ -364,18 +393,23 @@ export const Session = createParamDecorator(
 You can add a protected method into a controller (e.g.: `App.controller.ts`) that receives the verified session as a parameter by:
 
 ```ts
-...
+import { Controller, Get, UseGuards } from '@nestjs/common';
+// ...
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
 import { AuthGuard } from './auth/auth.guard';
+// @ts-ignore
 import { Session } from './auth/session.decorator';
-...
+// ...
 
 @Controller()
 export class AppController {
-  ...
+  // ...
   @Get('test')
   @UseGuards(AuthGuard)
-  async getTest(@Session() session): Promise<string> {
+  async getTest(@Session() session: SessionContainer): Promise<string> {
     // TODO: magic
+    return "magic";
   }
 }
 ```
@@ -387,7 +421,7 @@ You should look at the Sessions section under Common Customizations to see how y
 <Question
     question={() => {
         return (
-            <span>Are you using <code>https://try.supertokens.io</code> as the connection URI in the init function?</span>
+            <span>Are you using <code>https://try.supertokens.com</code> as the connection URI in the init function?</span>
         )
     }}>
 <Answer title="Yes">
