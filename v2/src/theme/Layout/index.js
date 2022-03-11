@@ -207,6 +207,19 @@ const PATH_TO_META_TAGS = {
       </Head>
     )
   },
+  "/docs/thirdpartypasswordless/introduction": () => {
+    return (
+      <Head>
+        <meta name="description" content="Learn more about how to add third party or passwordless login to your web app using SuperTokens." />
+        <meta property="og:title" content="SuperTokens Docs | Passwordless + Social Login" />
+        <meta property="og:description" content="Learn more about how to add third party or passwordless login to your web app using SuperTokens." />
+        <meta property="og:image" content="https://supertokens.com/static/assets/meta_images/docs/passwordless_social.png" />
+        <meta name="twitter:title" content="SuperTokens Docs | Passwordless + Social Login" />
+        <meta name="twitter:description" content="Learn more about how to add third party or passwordless login to your web app using SuperTokens." />
+        <meta name="twitter:image" content="https://supertokens.com/static/assets/meta_images/docs/passwordless_social.png" />
+      </Head>
+    )
+  },
   "/docs/community/compatibility-table": () => {
     return (
       <Head>

@@ -76,7 +76,23 @@ SuperTokens.init({
                             }
                             return resp;
                         },
-                    }
+
+                        thirdPartySignInUp: async function (input) {
+                            let resp = await originalImplementation.thirdPartySignInUp(input);
+                            if (resp.status === "OK" && resp.createdNewUser) {
+                                /*
+                                 * This is called during the signInUp API for third party login,
+                                 * but before calling the createNewSession function.
+                                 * At the start of the API, we do not know if it will result in a 
+                                 * sign in or a sign up, so we cannot override the API function.
+                                 * Instead, we override the recipe function as shown here,
+                                 * and then set the relevant context only if it's a new user.
+                                 */
+                                input.userContext.isSignUp = true;
+                            }
+                            return resp;
+                        },
+                    };
                 },
             }
             // highlight-end
@@ -127,6 +143,29 @@ func main() {
 								 * sign up API, and this will tell the create_new_session function
 								 * (which will be called next)
 								 * to not create a new session in case (*userContext)["isSignUp"] == True
+								 */
+								(*userContext)["isSignUp"] = true
+							}
+							return resp, nil
+						}
+
+                        ogThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
+
+						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID string, email tpepmodels.EmailStruct, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
+							resp, err := ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+
+							if err != nil {
+								return tpepmodels.SignInUpResponse{}, err
+							}
+
+							if resp.OK != nil && resp.OK.CreatedNewUser {
+								/*
+								 * This is called during the signInUp API for third party login,
+								 * but before calling the createNewSession function.
+								 * At the start of the API, we do not know if it will result in a
+								 * sign in or a sign up, so we cannot override the API function.
+								 * Instead, we override the recipe function as shown here,
+								 * and then set the relevant context only if it's a new user.
 								 */
 								(*userContext)["isSignUp"] = true
 							}
@@ -186,6 +225,28 @@ def override_thirdpartypasswordless_functions(original_implementation: RecipeInt
         return response
 
     original_implementation.consume_code = consume_code
+
+    async def thirdparty_sign_in_up(third_party_id: str, third_party_user_id: str, email: str,
+                                    email_verified: bool, user_context: Dict[str, Any]):
+        response = await original_thirdparty_sign_in_up(
+            third_party_id, third_party_user_id, email, email_verified, user_context)
+
+        if response.is_ok:
+            if response.created_new_user is None:
+                raise Exception("Should never come here")
+            # This is called during the sign_in_up API for third party login,
+            # but before calling the create_new_session function.
+            # At the start of the API, we do not know if it will result in a
+            # sign in or a sign up, so we cannot override the API function.
+            # Instead, we override the recipe function as shown here,
+            # and then set the relevant context only if it's a new user.
+            if response.created_new_user:
+                user_context["isSignUp"] = True
+
+        return response
+
+    original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
+
     return original_implementation
 # highlight-end
 
