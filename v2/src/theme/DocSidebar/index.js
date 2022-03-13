@@ -371,7 +371,7 @@ function DocSidebar ({
             onItemClick={closeResponsiveSidebar}
             collapsible={sidebarCollapsible}
             activePath={path}
-            depth={-2}
+            depth={-1}
           />
         </ul>
       </nav>

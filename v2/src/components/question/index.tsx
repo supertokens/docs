@@ -1,6 +1,6 @@
 import React, { Children, PropsWithChildren, useState } from "react";
 
-let styles = require('./question.module.css').default;
+let styles = require("./question.module.css").default;
 
 export function Question(props: PropsWithChildren<{
     question: string | (() => JSX.Element)
@@ -11,7 +11,7 @@ export function Question(props: PropsWithChildren<{
     let resubmitInfoClicked = (event: any) => {
         event.preventDefault();
         setSelectedAnsTitle(undefined);
-    }
+    };
 
     if (selectedAnsTitle === undefined) {
         return (
@@ -24,15 +24,13 @@ export function Question(props: PropsWithChildren<{
                         const element = React.cloneElement(child, {
                             isLast: index === Children.count(props.children) - 1,
                             ...child.props,
-                            onClick: () => {
-                                setSelectedAnsTitle(child.props.title)
-                            }
+                            onClick: () => setSelectedAnsTitle(child.props.title)
                         });
-                        return element
+                        return element;
                     })}
-                </div>
-                <div className={styles.questionBoxSuggestion}>
-                    Refresh the page to undo your selection
+                    <div className={styles.questionBoxSuggestion}>
+                        Refresh the page to undo your selection
+                    </div>
                 </div>
             </div>
         );
@@ -76,7 +74,7 @@ export function Question(props: PropsWithChildren<{
                 </div>
                 {childrenComponent}
             </>
-        )
+        );
     }
 }
 
@@ -84,27 +82,24 @@ type AnswerProps = {
     title: string,
     onClick?: () => void,
     isLast: boolean
-}
+};
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
 
-    const [isMouseHover, setMouseHover] = useState(false)
+    const [isMouseHover, setMouseHover] = useState(false);
 
     return (
-        <>
-            <span
-                className={styles.questionBoxAnswer}
-                onClick={props.onClick}
-                onMouseEnter={() => {
-                    setMouseHover(true)
-                }}
-                onMouseLeave={() => {
-                    setMouseHover(false)
-                }}
-            >
-                {props.title}
-            </span>
-            {!props.isLast && (<span className={styles.questionBoxAnswerSlash}>/</span>)}
-        </>
+        <span
+            className={styles.questionBoxAnswer}
+            onClick={props.onClick}
+            onMouseEnter={() => {
+                setMouseHover(true);
+            }}
+            onMouseLeave={() => {
+                setMouseHover(false);
+            }}
+        >
+            {props.title}
+        </span>
     );
 }
