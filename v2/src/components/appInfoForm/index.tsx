@@ -285,7 +285,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                 flexDirection: "column",
                                 flex: 1,
                                 marginTop: "-2px"
-                            }}>
+                            }}
+                            className="app-info-form-submitted-container"
+                        >
                             <div
                                 style={{
                                     fontSize: "14px",
