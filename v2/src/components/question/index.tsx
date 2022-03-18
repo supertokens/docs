@@ -1,6 +1,6 @@
 import React, { Children, PropsWithChildren, useState } from "react";
 
-let styles = require("./question.module.css").default;
+const styles = require("./question.module.css").default;
 
 export function Question(props: PropsWithChildren<{
     question: string | (() => JSX.Element)
