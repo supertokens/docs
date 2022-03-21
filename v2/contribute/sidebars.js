@@ -94,7 +94,8 @@ module.exports = {
       items: [
         "dev-workflow/setting-up-dev-env",
         "dev-workflow/project-management",
-        "dev-workflow/git-organised"
+        "dev-workflow/git-organised",
+        "dev-workflow/github-action"
       ],
     },
     {
