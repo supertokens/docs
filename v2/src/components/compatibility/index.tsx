@@ -59,17 +59,6 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
         return "FREE";
     }
 
-    sortDoubleDecimalNumbers = (compatibilityObject: any) => {
-        let sortedObject = {}
-        for (let dataKey in compatibilityObject) {
-            const data = compatibilityObject[dataKey]
-            if (typeof data === 'object') {
-
-            }
-        }
-
-    }
-
     getFrameworkDropdown = () => {
         return (
             <div
@@ -593,40 +582,6 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
         });
     }
 
-    // this should take an array only
-    sortDoubleDecimalCompatibilityResponse = (compatibilityList: any) => {
-        if (Array.isArray(compatibilityList)) {
-            let compatibilitMap: any = {}
-            const compatibilityFiltered = []
-            const finalOutputArray = []
-            for (let i = 0; i < compatibilityList.length; i++) {
-                const compatibilityItem: string = compatibilityList[i]
-                const filteredNumber = parseInt(compatibilityItem.split('.').join(''))
-                compatibilitMap = {
-                    ...compatibilitMap,
-                    [filteredNumber]: compatibilityItem
-                }
-                compatibilityFiltered.push(filteredNumber)
-            }
-            const sortedCompatibilityItem = compatibilityFiltered.sort((a, b) => b - a)
-
-            for (let i = 0; i < sortedCompatibilityItem.length; i++) {
-                const currentComaptibilityElement = sortedCompatibilityItem[i]
-                finalOutputArray.push(compatibilitMap[currentComaptibilityElement])
-            }
-            return finalOutputArray
-        }
-        return this.sortCompatibilityResponse(compatibilityList)
-    }
-
-    sortCompatibilityResponse = (compatibilityList: any) => {
-        // Core Driver 
-        for (let item in compatibilityList) {
-            compatibilityList[item] = this.sortDoubleDecimalCompatibilityResponse(compatibilityList[item])
-        }
-        return compatibilityList
-    }
-
     fetchCompatibilityIfNeeded = async () => {
         if (this.state.selectedDriver === "" || this.state.selectedFrontend === "" || this.state.selectedPlugin === "") {
             return;
@@ -639,8 +594,8 @@ export default class CompatibilityMatrix extends React.PureComponent<Props, Stat
         }));
 
         try {
-            const compatibilityResponse = this.sortCompatibilityResponse(await getCompatibility(this.getCurrentPlanType(),
-                this.state.selectedDriver, this.state.selectedPlugin, this.state.selectedFrontend));
+            const compatibilityResponse = await getCompatibility(this.getCurrentPlanType(),
+                this.state.selectedDriver, this.state.selectedPlugin, this.state.selectedFrontend);
             this.setState(oldState => ({
                 ...oldState,
                 isFetchingCompatibility: false,
