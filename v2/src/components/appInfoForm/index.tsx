@@ -237,24 +237,35 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         </span>
     )
 
+    getCurrentFormValuesAsString = () => {
+        const values = [];
+        if (this.props.askForAppName) {
+            values.push(`appName: "${this.state.appName}"`);
+        }
+        if (this.props.askForAPIDomain) {
+            values.push(`apiDomain: "${this.state.apiDomain}"`);
+        }
+        if (this.props.askForWebsiteDomain) {
+            values.push(`websiteDomain: "${this.state.websiteDomain}"`);
+        }
+        if (this.state.showAPIBasePath) {
+            values.push(`apiBasePath: "${this.state.apiBasePath}"`);
+        }
+        if (this.state.showWebsiteBasePath) {
+            values.push(`websiteBasePath: "${this.state.websiteBasePath}"`);
+        }
+        return values.join(",\n");
+    }
+
+
     render() {
         if (this.state.formSubmitted) {
             return (
                 <div>
-                    <div
-                        style={{
-                            width: "100%",
-                            display: "flex",
-                            borderRadius: "6px",
-                            background: "#292929",
-                            padding: "16px",
-                            marginBottom: "20px",
-                            color: "#ffffff",
-                        }}>
+                    <div className="app-info-form-question-container">
                         <div
                             style={{
-                                width: "17px",
-                                marginRight: "10px"
+                                width: "17px"
                             }}>
                             <img
                                 style={{
@@ -268,7 +279,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                 flexDirection: "column",
                                 flex: 1,
                                 marginTop: "-2px"
-                            }}>
+                            }}
+                            className="app-info-form-submitted-container"
+                        >
                             <div
                                 style={{
                                     fontSize: "14px",
@@ -277,6 +290,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                 YOUR CONFIGURATION VALUES
                             </div>
                             <div style={{ height: "10px" }} />
+                            <div className="app-info-form__current-values-preview">
+                                <pre>
+                                    {this.getCurrentFormValuesAsString()}
+                                </pre>
+                            </div>
                             <div
                                 style={{
                                     fontSize: "16px",
@@ -328,12 +346,12 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         width: "100%",
                         display: "flex",
                         flexDirection: "column",
-                        borderRadius: "6px",
-                        background: "#292929",
+                        background: "rgb(33, 33, 33)",
                         padding: "16px",
-                        marginBottom: "10px",
                         color: "#ffffff",
-                    }}>
+                    }}
+                    className="app-info-form-container"
+                >
                     <div
                         style={{
                             fontSize: "14px",
