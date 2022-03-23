@@ -23,11 +23,11 @@ export function Question(props: PropsWithChildren<{
 
     if (unselected || props.value === undefined) {
         return (
-            <div className="questionBox question-box">
-                <div className="questionBoxText">
+            <div className="question-box">
+                <div className="question-box-text">
                     {typeof props.question === "string" ? props.question : props.question()}
                 </div>
-                <div className="questionBoxAnswers">
+                <div className="question-box-answers">
                     {props.options.map(opt => (<Answer key={opt.value} title={opt.title} onClick={() => {
                         setUnselected(false);
                         if (props.onChange !== undefined) {
@@ -45,7 +45,7 @@ export function Question(props: PropsWithChildren<{
         };
         return (
             <>
-                <div className="questionBoxSubmittedContainer question-box-submitted-container">
+                <div className="question-box-submitted-container">
                     <div
                         style={{
                             width: "17px",
@@ -88,7 +88,7 @@ export function Answer(props: PropsWithChildren<AnswerProps>) {
 
     return (
         <span
-            className="questionBoxAnswer"
+            className="question-box-answer"
             onClick={props.onClick}
             onMouseEnter={() => setMouseHover(true)}
             onMouseLeave={() => setMouseHover(false)}

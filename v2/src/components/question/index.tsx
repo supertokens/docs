@@ -15,19 +15,18 @@ export function Question(props: PropsWithChildren<{
 
     if (selectedAnsTitle === undefined) {
         return (
-            <div className="questionBox question-box">
-                <div className="questionBoxText">
+            <div className="question-box">
+                <div className="question-box-text">
                     {typeof props.question === "string" ? props.question : props.question()}
                 </div>
-                <div className="questionBoxAnswers">
+                <div className="question-box-answers">
                     {React.Children.map(props.children, (child: any, index: number) => {
                         return React.cloneElement(child, {
-                            isLast: index === Children.count(props.children) - 1,
                             ...child.props,
                             onClick: () => setSelectedAnsTitle(child.props.title)
                         });
                     })}
-                    <div className="questionBoxSuggestion">
+                    <div className="question-box-suggestion">
                         Refresh the page to undo your selection
                     </div>
                 </div>
@@ -42,7 +41,7 @@ export function Question(props: PropsWithChildren<{
         });
         return (
             <>
-                <div className="questionBoxSubmittedContainer question-box-submitted-container">
+                <div className="question-box-submitted-container">
                     <div
                         style={{
                             width: "17px",
@@ -77,8 +76,7 @@ export function Question(props: PropsWithChildren<{
 
 type AnswerProps = {
     title: string,
-    onClick?: () => void,
-    isLast: boolean
+    onClick?: () => void
 };
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
@@ -87,7 +85,7 @@ export function Answer(props: PropsWithChildren<AnswerProps>) {
 
     return (
         <span
-            className="questionBoxAnswer"
+            className="question-box-answer"
             onClick={props.onClick}
             onMouseEnter={() => setMouseHover(true)}
             onMouseLeave={() => setMouseHover(false)}
