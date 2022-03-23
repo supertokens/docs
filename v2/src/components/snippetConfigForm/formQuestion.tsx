@@ -17,35 +17,15 @@ export function Question(props: PropsWithChildren<{
     let resubmitInfoClicked = (event: any) => {
         event.preventDefault();
         setUnselected(true);
-    }
+    };
 
     if (unselected || props.value === undefined) {
         return (
-            <div
-                style={{
-                    width: "100%",
-                    borderRadius: "6px",
-                    marginBottom: "10px",
-                    border: "1px solid rgb(51, 51, 51)",
-                    overflow: "hidden"
-                }}>
-                <div style={{
-                    fontSize: "1.125rem",
-                    color: "#ffffff",
-                    fontWeight: "bold",
-                    borderBottom: "1px solid rgb(51, 51, 51)",
-                    padding: "16px"
-                }}>
+            <div className="questionBox question-box">
+                <div className="questionBoxText">
                     {typeof props.question === "string" ? props.question : props.question()}
                 </div>
-                <div
-                    style={{
-                        flexWrap: "wrap",
-                        display: "flex",
-                        padding: "16px",
-                        paddingBottom: "6px",
-                        backgroundColor: "#222"
-                    }}>
+                <div className="questionBoxAnswers">
                     {props.options.map(opt => (<Answer key={opt.value} title={opt.title} onClick={() => {
                         setUnselected(false);
                         if (props.onChange !== undefined) {
@@ -63,16 +43,7 @@ export function Question(props: PropsWithChildren<{
         };
         return (
             <>
-                <div
-                    style={{
-                        width: "100%",
-                        display: "flex",
-                        borderRadius: "6px",
-                        padding: "16px",
-                        marginBottom: "20px",
-                        color: "#ffffff",
-                        border: "1px solid rgb(51, 51, 51)"
-                    }}>
+                <div className="questionBoxSubmittedContainer question-box-submitted-container">
                     <div
                         style={{
                             width: "17px",
@@ -101,43 +72,25 @@ export function Question(props: PropsWithChildren<{
                     </div>
                 </div>
             </>
-        )
+        );
     }
 }
 
 type AnswerProps = {
     title: string,
     onClick?: () => void
-}
+};
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
-    const [isMouseHover, setMouseHover] = useState(false)
+    const [isMouseHover, setMouseHover] = useState(false);
 
     return (
         <span
+            className="questionBoxAnswer"
             onClick={props.onClick}
-            onMouseEnter={() => {
-                setMouseHover(true)
-            }}
-            onMouseLeave={() => {
-                setMouseHover(false)
-            }}
-            style={{
-                marginBottom: "10px",
-                marginRight: "30px",
-                cursor: "pointer",
-                paddingLeft: "20px",
-                paddingRight: "20px",
-                paddingTop: "5px",
-                paddingBottom: "5px",
-                background: "#363636",
-                borderRadius: "6px",
-                borderColor: isMouseHover ? "#ff9933" : "#4d4d4d",
-                borderStyle: "solid",
-                borderWidth: "1px",
-                fontWeight: "bold",
-                color: "#f93"
-            }}>
+            onMouseEnter={() => setMouseHover(true)}
+            onMouseLeave={() => setMouseHover(false)}
+        >
             {props.title}
         </span>
     );
