@@ -24,26 +24,27 @@ export function Question(props: PropsWithChildren<{
             <div
                 style={{
                     width: "100%",
-                    background: "#292929",
-                    paddingTop: "20px",
-                    paddingLeft: "24px",
-                    paddingRight: "24px",
                     borderRadius: "6px",
                     marginBottom: "10px",
+                    border: "1px solid rgb(51, 51, 51)",
+                    overflow: "hidden"
                 }}>
                 <div style={{
-                    fontSize: "24px",
+                    fontSize: "1.125rem",
                     color: "#ffffff",
-                    fontWeight: 600,
+                    fontWeight: "bold",
+                    borderBottom: "1px solid rgb(51, 51, 51)",
+                    padding: "16px"
                 }}>
                     {typeof props.question === "string" ? props.question : props.question()}
                 </div>
                 <div
                     style={{
-                        marginTop: "10px",
                         flexWrap: "wrap",
                         display: "flex",
-                        paddingBottom: "20px"
+                        padding: "16px",
+                        paddingBottom: "6px",
+                        backgroundColor: "#222"
                     }}>
                     {props.options.map(opt => (<Answer key={opt.value} title={opt.title} onClick={() => {
                         setUnselected(false);
@@ -67,10 +68,10 @@ export function Question(props: PropsWithChildren<{
                         width: "100%",
                         display: "flex",
                         borderRadius: "6px",
-                        background: "#292929",
                         padding: "16px",
                         marginBottom: "20px",
                         color: "#ffffff",
+                        border: "1px solid rgb(51, 51, 51)"
                     }}>
                     <div
                         style={{
@@ -122,7 +123,7 @@ export function Answer(props: PropsWithChildren<AnswerProps>) {
                 setMouseHover(false)
             }}
             style={{
-                marginTop: "10px",
+                marginBottom: "10px",
                 marginRight: "30px",
                 cursor: "pointer",
                 paddingLeft: "20px",
@@ -134,7 +135,8 @@ export function Answer(props: PropsWithChildren<AnswerProps>) {
                 borderColor: isMouseHover ? "#ff9933" : "#4d4d4d",
                 borderStyle: "solid",
                 borderWidth: "1px",
-                fontWeight: 600,
+                fontWeight: "bold",
+                color: "#f93"
             }}>
             {props.title}
         </span>
