@@ -1,5 +1,7 @@
 import React, { PropsWithChildren, useCallback, useEffect, useState } from "react";
 
+import "../question/question.css";
+
 type Option = {
     title: string;
     activeText?: string;
