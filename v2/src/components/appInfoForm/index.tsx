@@ -479,7 +479,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     getDomainOriginOrEmptyString = (domain: string) => {
         try {
-            return new URL(new NormalisedURLDomain(domain.trim()).getAsStringDangerous()).origin;
+            return new URL(new NormalisedURLDomain(domain.toLowerCase().trim()).getAsStringDangerous()).origin;
         } catch {
             return "";
         }
@@ -569,7 +569,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     // returns an error if the domain is not valid
     validateDomain = (domain: string, fieldName: string, pathErrorAlternateFieldName: string) => {
         try {
-            const normalisedURLDomain = new NormalisedURLDomain(domain);
+            const normalisedURLDomain = new NormalisedURLDomain(domain.toLowerCase().trim());
 
             const domainAsURL = new URL(normalisedURLDomain.getAsStringDangerous());
 
@@ -632,7 +632,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (this.props.askForAPIDomain && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))) {
             if (apiDomain.length > 0) {
                 const error = this.validateDomain(apiDomain, "apiDomain", "apiBasePath");
-                if (error.length > 0) validationErrors.apiDomain = error
+                if (error.length > 0) {
+                    validationErrors.apiDomain = error;
+                }
             } else {
                 validationErrors.apiDomain = "apiDomain cannot be empty.";
             }
@@ -642,7 +644,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (this.props.askForWebsiteDomain) {
             if (websiteDomain.length > 0) {
                 const error = this.validateDomain(websiteDomain, "websiteDomain", "websiteBasePath");
-                if (error.length > 0) validationErrors.websiteDomain = error
+                if (error.length > 0) {
+                    validationErrors.websiteDomain = error;
+                }
             } else {
                 validationErrors.websiteDomain = "websiteDomain cannot be empty.";
             }
