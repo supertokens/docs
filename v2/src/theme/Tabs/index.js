@@ -93,15 +93,18 @@ function Tabs(props) {
   };
 
   return (
-    <div className="tabs-container" style={!isSubTab ? undefined : {
-      marginTop: "-1rem"
-    }}>
+    <div
+      className={clsx(
+        'tabs-container',
+        {
+          'sub-tab': isSubTab
+        }
+      )}
+    >
       <ul
         style={{
-          backgroundColor: !isSubTab ? "#222222" : "#292929",
           borderTopLeftRadius: !isSubTab ? "10px" : undefined,
           borderTopRightRadius: !isSubTab ? "10px" : undefined,
-
         }}
         role="tablist"
         aria-orientation="horizontal"
@@ -145,7 +148,7 @@ function Tabs(props) {
           },
         )
       ) : (
-        <div className="margin-vert--md">
+        <div>
           {children.map((tabItem, i) =>
             cloneElement(tabItem, {
               key: i,

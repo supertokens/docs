@@ -257,7 +257,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         return values.join(",\n");
     }
 
-
     render() {
         if (this.state.formSubmitted) {
             return (
