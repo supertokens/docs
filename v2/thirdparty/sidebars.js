@@ -133,18 +133,6 @@ module.exports = {
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/update-jwt-payload",
             "common-customizations/sessions/update-session-data",
-            {
-              type: 'category',
-              label: 'User Metadata',
-              items: [
-                "common-customizations/usermetadata/about",
-                "common-customizations/usermetadata/setup",
-                "common-customizations/usermetadata/store-data",
-                "common-customizations/usermetadata/get-data",
-                "common-customizations/usermetadata/clear-data",
-                "common-customizations/usermetadata/overrides",
-              ],
-            },
             "common-customizations/sessions/multiple-api-endpoints",
             "common-customizations/sessions/cookies-and-https",
             "common-customizations/sessions/cookie-consent",
@@ -155,6 +143,18 @@ module.exports = {
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling"
           ]
+        },
+        {
+          type: 'category',
+          label: 'User Metadata',
+          items: [
+            "common-customizations/usermetadata/about",
+            "common-customizations/usermetadata/setup",
+            "common-customizations/usermetadata/store-data",
+            "common-customizations/usermetadata/get-data",
+            "common-customizations/usermetadata/clear-data",
+            "common-customizations/usermetadata/overrides",
+          ],
         },
         {
           type: "category",
