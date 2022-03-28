@@ -135,7 +135,7 @@ function DocSidebarItemCategory ({
         <span
           className={styles.sidebarMenuItemLinkLabel}
           style={depth > 0 ? {
-            marginLeft: `${depth * 15}px`,
+            marginLeft: `${depth * 16}px`,
           } : {}}
         >{label}</span>
         {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
@@ -196,7 +196,7 @@ function DocSidebarItemLink({
           <span
             className={styles.sidebarMenuItemLinkLabel}
             style={depth > 0 ? {
-              marginLeft: `${depth * 15}px`,
+              marginLeft: `${depth * 16}px`,
             } : {}}
           >
             {label}
@@ -205,7 +205,7 @@ function DocSidebarItemLink({
           <span
             className={styles.sidebarMenuItemLinkLabel}
             style={depth > 0 ? {
-              marginLeft: `${depth * 15}px`,
+              marginLeft: `${depth * 16}px`,
             } : {}}
           >
             {label}
