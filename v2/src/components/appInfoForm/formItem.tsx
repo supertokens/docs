@@ -32,18 +32,28 @@ export default function FormItem(props: FormItemType) {
             const { current } = questionIconRef;
 
             // Add event listeners
-            window.addEventListener("scroll", handleMouseOutIcon);
+            window.addEventListener('scroll', handleMouseOutIcon);
 
-            current.addEventListener("click", handleMouseClickIcon);
-            window.addEventListener("click", handleMouseClickOutIcon);
+            if (isMobile || isTablet) {
+                current.addEventListener('click', handleMouseClickIcon);
+                window.addEventListener('click', handleMouseClickOutIcon);
+            } else {
+                current.addEventListener('mouseover', handleMouseOverIcon);
+                current.addEventListener('mouseout', handleMouseOutIcon);
+            }
         }
 
         return () => {
             if (questionIconRef.current !== undefined && questionIconRef.current !== null) {
-                window.removeEventListener("scroll", handleMouseOutIcon);
+                window.removeEventListener('scroll', handleMouseOutIcon);
 
-                questionIconRef.current.removeEventListener("click", handleMouseClickIcon);
-                window.removeEventListener("click", handleMouseClickOutIcon);
+                if (isMobile || isTablet) {
+                    questionIconRef.current.removeEventListener('click', handleMouseClickIcon);
+                    window.removeEventListener('click', handleMouseClickOutIcon);
+                } else {
+                    questionIconRef.current.removeEventListener('mouseover', handleMouseOverIcon);
+                    questionIconRef.current.removeEventListener('mouseout', handleMouseOutIcon);
+                }
             }
         }
     }, [])
