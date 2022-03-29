@@ -46,7 +46,7 @@ export default function FormItem(props: FormItemType) {
         return () => {
             if (questionIconRef.current !== undefined && questionIconRef.current !== null) {
                 window.removeEventListener('scroll', handleMouseOutIcon);
-    
+
                 if (isMobile || isTablet) {
                     questionIconRef.current.removeEventListener('click', handleMouseClickIcon);
                     window.removeEventListener('click', handleMouseClickOutIcon);
@@ -119,7 +119,8 @@ export default function FormItem(props: FormItemType) {
                         paddingLeft: "20px",
                         paddingRight: "20px",
                         fontSize: "14px",
-                        color: "#222222"
+                        color: "#222222",
+                        border: "1px solid rgb(72, 72, 72)"
                     }}
                     placeholder={props.placeholder}
                 />
