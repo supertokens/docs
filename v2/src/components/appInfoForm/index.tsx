@@ -345,7 +345,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         width: "100%",
                         display: "flex",
                         flexDirection: "column",
-                        background: "rgb(33, 33, 33)",
                         padding: "16px",
                         color: "#ffffff",
                     }}
