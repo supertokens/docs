@@ -1,0 +1,64 @@
+---
+id: session-verification
+title: 4. Session verification / Building your APIs
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/serverless/with-netlify/session-verification.mdx -->
+
+# 4. Session verification / Building your APIs
+
+For this guide, we will assume that we want an API `/.netlify/functions/user GET` which returns the current session information.
+
+## 1) Create a new file `netlify/functions/user.js`
+An example of this is [here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-netlify/netlify/functions/user.js).
+
+## 2) Call the `supertokens.init` function
+
+Remember that whenever we want to use any functions from the `supertokens-node` lib, we have to call the `supertokens.init` function at the top of that serverless function file.
+
+
+```tsx title="netlify/functions/user.ts"
+import supertokens from "supertokens-node";
+// @ts-ignore
+import { getBackendConfig } from "../../config/supertokensConfig";
+
+supertokens.init(getBackendConfig())
+```
+
+## 3) Use session verification with your API handler
+We use the `verifySession()` middleware to verify a session.
+
+```tsx title="netlify/functions/user.ts"
+import supertokens from "supertokens-node";
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda"
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+// @ts-ignore
+import { getBackendConfig } from "../../config/supertokensConfig";
+
+supertokens.init(getBackendConfig());
+
+const handler = async (event: SessionEvent) => {
+    return {
+        body: JSON.stringify({
+            sessionHandle: event.session!.getHandle(),
+            userId: event.session!.getUserId(),
+            accessTokenPayload: event.session!.getAccessTokenPayload(),
+        }),
+    };
+};
+
+module.exports.handler = middy(verifySession(handler)).use(
+    cors({
+        origin: getBackendConfig().appInfo.websiteDomain,
+        credentials: true,
+        headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+        methods: "OPTIONS,POST,GET,PUT,DELETE",
+    })
+).onError(request => {
+    throw request.error;
+});
+```

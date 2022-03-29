@@ -74,25 +74,17 @@ module.exports = () => {
 
         let configObjectForRecipe = configuredVariables[recipeName];
 
-        let dataCopy = data;
+        if (data.children.length) {
+            // If there is no config entry for the recipe, exit early
+            if (configObjectForRecipe) {
+                data.children = data.children.map(child => {
+                    return getModifiedChild(child, configObjectForRecipe);
+                });
+            }
 
-        if (dataCopy.children.length) {
-            dataCopy.children = dataCopy.children.map(child => {
+            data.children = data.children.map(child => {
                 return replaceCustomPlaceholdersInLine(child);
-            })
-        }
-
-        // If there is no config entry for the recipe, exit early
-        if (!configObjectForRecipe) {
-            return data;
-        }
-
-        if (dataCopy.children.length) {
-            dataCopy.children = dataCopy.children.map(child => {
-                return getModifiedChild(child, configObjectForRecipe);
-            })
-
-            return dataCopy;
+            });
         }
 
         // Returning nothing is the equivalent of returning the default data, this is just a precaution

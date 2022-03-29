@@ -205,6 +205,18 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'thirdpartypasswordless',
+        path: 'thirdpartypasswordless',
+        routeBasePath: 'docs/thirdpartypasswordless',
+        sidebarPath: require.resolve('./thirdpartypasswordless/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'session',
         path: 'session',
         routeBasePath: 'docs/session',
