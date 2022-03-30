@@ -361,7 +361,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                 color: "#ff6161"
                             }}>(* = Required)</span>
                     </div>
-                    <div style={{ marginTop: "10px" }}>
+                    <div
+                        className="app-info-form-container-link"
+                        style={{ marginTop: "10px" }}
+                    >
                         To learn more about what these properties mean read <a href="/docs/thirdpartyemailpassword/appinfo">here</a>.
                     </div>
                     <div style={{ height: "25px" }} />

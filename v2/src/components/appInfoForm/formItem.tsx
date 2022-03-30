@@ -108,6 +108,7 @@ export default function FormItem(props: FormItemType) {
                 </div>
             <div className="app-info-form-field-container">
                 <input
+                    className="app-info-form-field-input"
                     value={props.value}
                     onChange={(evt) => {
                         props.onChange(evt.target.value);
@@ -119,8 +120,7 @@ export default function FormItem(props: FormItemType) {
                         paddingLeft: "20px",
                         paddingRight: "20px",
                         fontSize: "14px",
-                        color: "#222222",
-                        border: "1px solid rgb(72, 72, 72)"
+                        color: "#222222"
                     }}
                     placeholder={props.placeholder}
                 />
