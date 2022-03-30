@@ -1,13 +1,10 @@
-import React, { Children, PropsWithChildren, useState, useRef, useEffect } from "react";
+import React, { Children, PropsWithChildren, useState } from "react";
 
 import "./question.css";
 
 export function Question(props: PropsWithChildren<{
     question: string | (() => JSX.Element)
 }>) {
-    const answerBoxRef = useRef<HTMLDivElement>(null);
-
-    const [extraPaddingToAnswerBox, setExtraPaddingToAnswerBox] = useState(false);
     const [selectedAnsTitle, setSelectedAnsTitle] = useState(undefined);
 
     let resubmitInfoClicked = (event: any) => {
@@ -15,48 +12,19 @@ export function Question(props: PropsWithChildren<{
         setSelectedAnsTitle(undefined);
     };
 
-    useEffect(() => {
-        updateAnswerBoxPaddingIfAnswersOverflow();
-    }, [selectedAnsTitle]);
-
-    const updateAnswerBoxPaddingIfAnswersOverflow = () => {
-        if (answerBoxRef !== null && answerBoxRef.current !== null) {
-            const answersInsideContainer = answerBoxRef.current.getElementsByClassName("question-box-answer");
-
-            const messageWidth = 227;
-            const answerBoxWidth = answerBoxRef.current.getBoundingClientRect().width;
-            const availableWidth = answerBoxWidth - messageWidth - 36;
-
-            let totalAnswersWidth = 0;
-            for (const answer of answersInsideContainer) {
-                const width = answer.getBoundingClientRect().width;
-                totalAnswersWidth = totalAnswersWidth + width + 24;
-            }
-            setExtraPaddingToAnswerBox(totalAnswersWidth > availableWidth);
-        }
-    };
-
-    const answersBoxClass = `question-box-answers ${extraPaddingToAnswerBox ? "extra-padding" : ""}`;
-
     if (selectedAnsTitle === undefined) {
         return (
             <div className="question-box">
                 <div className="question-box-text">
                     {typeof props.question === "string" ? props.question : props.question()}
                 </div>
-                <div
-                    className={answersBoxClass}
-                    ref={answerBoxRef}
-                >
+                <div className="question-box-answers">
                     {Children.map(props.children, (child: any, index: number) => {
                         return React.cloneElement(child, {
                             ...child.props,
                             onClick: () => setSelectedAnsTitle(child.props.title)
                         });
                     })}
-                    <div className="question-box-suggestion">
-                        Refresh the page to undo your selection
-                    </div>
                 </div>
             </div>
         );
