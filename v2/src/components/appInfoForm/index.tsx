@@ -370,8 +370,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     <div style={{ height: "25px" }} />
                     <div
                         style={{
-                            paddingLeft: "2%",
-                            paddingRight: "11%",
+                            paddingLeft: "1.5rem",
+                            paddingRight: "1.5rem",
                             display: "flex",
                             flexDirection: "column"
                         }}>
