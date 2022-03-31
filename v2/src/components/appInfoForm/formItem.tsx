@@ -46,7 +46,7 @@ export default function FormItem(props: FormItemType) {
         return () => {
             if (questionIconRef.current !== undefined && questionIconRef.current !== null) {
                 window.removeEventListener('scroll', handleMouseOutIcon);
-    
+
                 if (isMobile || isTablet) {
                     questionIconRef.current.removeEventListener('click', handleMouseClickIcon);
                     window.removeEventListener('click', handleMouseClickOutIcon);
@@ -108,6 +108,7 @@ export default function FormItem(props: FormItemType) {
                 </div>
             <div className="app-info-form-field-container">
                 <input
+                    className="app-info-form-field-input"
                     value={props.value}
                     onChange={(evt) => {
                         props.onChange(evt.target.value);
