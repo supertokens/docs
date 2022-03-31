@@ -1,0 +1,258 @@
+---
+id: handling-signinup-success
+title: Post signin / signup callbacks
+hide_title: true
+---
+
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Post signin / signup callbacks
+
+## 1) On the frontend
+
+This method allows you to fire events immediately after a successful sign in. For example to send analytics events post sign in.
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```tsx
+import SuperTokens from "supertokens-auth-react";
+import ThirdPartyPasswordless from "supertokens-auth-react/recipe/thirdpartypasswordless";
+import Session from "supertokens-auth-react/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        ThirdPartyPasswordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SESSION_ALREADY_EXISTS") {
+                    // TODO:
+                } else if (context.action === "PASSWORDLESS_RESTART_FLOW") {
+                    // TODO:
+                } else if (context.action === "PASSWORDLESS_CODE_SENT") {
+                    // TODO:
+                } else if (context.action === "EMAIL_VERIFIED_SUCCESSFUL") {
+                    // TODO:
+                } else if (context.action === "VERIFY_EMAIL_SENT") {
+                    // TODO:
+                } else if (context.action === "SUCCESS") {
+                    if (context.isNewUser) {
+                        if ("phoneNumber" in context.user) {
+                            const { phoneNumber } = context.user;
+                        } else {
+                            const { email } = context.user;
+                        }
+                        // TODO: Sign up
+                    } else {
+                        // TODO: Sign in
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+
+:::info
+Please refer to [this page](../advanced-customizations/frontend-hooks/handle-event) to learn more about the `onHandleEvent` hook.
+:::
+
+</TabItem>
+</FrontendSDKTabs>
+
+
+## 2) On the backend
+
+For this, you'll have to override the `consumeCodePOST` API in the `init` function call.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        ThirdPartyPasswordless.init({
+            contactMethod: "EMAIL", // This example will work with any contactMethod
+            createAndSendCustomEmail: async (input) => console.log(input),
+            flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // This example will work with any flowType
+
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        consumeCodePOST: async (input) => {
+
+                            if (originalImplementation.consumeCodePOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+                            
+                            // First we call the original implementation of consumeCodePOST.
+                            const response = await originalImplementation.consumeCodePOST(input);
+
+                            // Post sign up response, we check if it was successful
+                            if (response.status === "OK") {
+                                if ("phoneNumber" in response.user) {
+                                    const { id, phoneNumber } = response.user;
+                                } else {
+                                    const { id, email } = response.user;
+                                }
+
+                                if (response.createdNewUser) {
+                                    // TODO: post sign up logic
+                                } else {
+                                    // TODO: post sign in logic
+                                }
+                            }
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+    "github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartypasswordless.Init(tplmodels.TypeInput{
+				// highlight-start
+				Override: &tplmodels.OverrideStruct{
+					APIs: func(originalImplementation tplmodels.APIInterface) tplmodels.APIInterface {
+
+						// create a copy of the original function
+						originalConsumeCodePOST := originalImplementation.ConsumeCodePOST
+
+						// override the sign in up API
+						(*originalImplementation.ConsumeCodePOST) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (tplmodels.ConsumeCodePOSTResponse, error) {
+
+							// First we call the original implementation of ConsumeCodeUpPOST.
+							response, err := (*originalConsumeCodePOST)(userInput, linkCode, preAuthSessionID, options, userContext)
+							if err != nil {
+								return tplmodels.ConsumeCodePOSTResponse{}, err
+							}
+
+							if response.OK != nil {
+								// sign in was successful
+
+								// user object contains the ID and email or phone number
+								user := response.OK.User
+								fmt.Println(user)
+
+								if response.OK.CreatedNewUser {
+									// TODO: Post sign up logic
+								} else {
+									// TODO: Post sign in logic
+								}
+
+							}
+							return response, nil
+						}
+
+						return originalImplementation
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdpartypasswordless
+from supertokens_python.recipe.thirdpartypasswordless.interfaces import APIInterface, PasswordlessAPIOptions
+from typing import Union, Dict, Any
+
+# highlight-start
+def override_thirdpartypasswordless_apis(original_implementation: APIInterface):
+    original_consume_code_post = original_implementation.consume_code_post
+    
+    async def consume_code_post(pre_auth_session_id: str,
+                                user_input_code: Union[str, None],
+                                device_id: Union[str, None],
+                                link_code: Union[str, None],
+                                api_options: PasswordlessAPIOptions,
+                                user_context: Dict[str, Any]):
+		# First we call the original implementation of consume_code_post.
+        response = await original_consume_code_post(pre_auth_session_id, user_input_code, device_id, link_code, api_options, user_context)
+
+        # Post sign up response, we check if it was successful
+        if response.is_ok:
+            if response.user is None:
+                raise Exception("Should never come here")
+            _ = response.user.user_id
+            __ = response.user.email
+            ___ = response.user.phone_number
+
+            if response.created_new_user:
+                pass # TODO: Post sign up logic
+            else:
+                pass # TODO: Post sign in logic
+
+        return response
+        
+    original_implementation.consume_code_post = consume_code_post
+    return original_implementation
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        thirdpartypasswordless.init(
+            contact_config=..., # type: ignore
+            flow_type="...", # type: ignore
+			# highlight-start
+            override=thirdpartypasswordless.InputOverrideConfig(
+                apis=override_thirdpartypasswordless_apis
+            ),
+			# highlight-end            
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
