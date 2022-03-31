@@ -153,6 +153,10 @@ You can even check for all languages by running
 CODE_TYPE_CHECK=all npm run start
 ```
 
+#### Adding lines for type checking only
+
+You may need to add something to the code that is necessary for type checking but shouldn't appear in the output documentation. You can do this by adding a comment to the end of the line stating: `typecheck-only, removed from output`. Lines ending with this comment will be removed from the output but kept for type checking.
+
 #### Tips JS / TS
 - If you need to purposely tell TS to ignore errors in the next line, you can add a `// @ts-ignore` comment in your code snippets. This will make the TS checker pass. The type checking engine will also remove these from the final code output so that users don't see this unnecessarily.
 - If you are working with snippets that use an older version of supertokens-node you can use a custom import for that version. For example some snippets use `supertokens-node7` as the import to fix typing. The type checking engine replaces this with `supertokens-node`. NOTE: If you need to add another node version as a custom import, please modify the type checking script to replace the import statement to use `supertokens-node`

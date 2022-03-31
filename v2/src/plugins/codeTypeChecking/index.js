@@ -411,8 +411,8 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
         let newLines = [];
         for (let i = 0; i < eachLine.length; i++) {
             let line = eachLine[i];
-            // If the line contains ts-ignore, we skip the line
-            if (line.includes("@ts-ignore")) {
+            // If the line contains ts-ignore or ends with a comment indicating it should be removed
+            if (line.includes("@ts-ignore") || /(\/\/|#) typecheck-only, removed from output$/.test(line)) {
                 continue;
             }
 
