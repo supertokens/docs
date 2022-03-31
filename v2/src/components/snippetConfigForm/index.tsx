@@ -119,13 +119,13 @@ export default class SnippetConfigForm<T extends keyof any> extends React.PureCo
               if (typeof c === "string") {
                 for (const [ind, question] of this.props.questions.entries()) {
                   const value = this.state.answers[ind];
-                  c = c.replaceAll(`^{form_${question.id}}`, value);
+                  c = c.split(`^{form_${question.id}}`).join(value);
                   const selectedAns = question.options.find((opt) => opt.value === value);
                   if (selectedAns && selectedAns.variableMap) {
                     for (const [name, value] of Object.entries<string>(selectedAns.variableMap)) {
                       const key = `form_${question.id}_${name}`;
 
-                      c = (replaceWithIndent(key, value, c) as any).replaceAll(`^{${key}}`, value);
+                      c = replaceWithIndent(key, value, c).split(`^{${key}}`).join(value);
                     }
                   }
                 }
@@ -168,7 +168,7 @@ export function ConditionalSection(props: PropsWithChildren<ConditionalSectionPr
   return props.children;
 }
 
-function replaceWithIndent(target: string, replecement: string, str: string) {
+function replaceWithIndent(target: string, replecement: string, str: string): string {
   const regex = new RegExp(`(\\n\\s*)\\^{${target}}`, "g");
 
   return str.replace(regex, (match, p1) => {
