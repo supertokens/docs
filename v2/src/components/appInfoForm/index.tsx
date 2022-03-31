@@ -237,26 +237,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         </span>
     )
 
-    getCurrentFormValuesAsString = () => {
-        const values = [];
-        if (this.props.askForAppName) {
-            values.push(`appName: "${this.state.appName}"`);
-        }
-        if (this.props.askForAPIDomain) {
-            values.push(`apiDomain: "${this.state.apiDomain}"`);
-        }
-        if (this.props.askForWebsiteDomain) {
-            values.push(`websiteDomain: "${this.state.websiteDomain}"`);
-        }
-        if (this.state.showAPIBasePath) {
-            values.push(`apiBasePath: "${this.state.apiBasePath}"`);
-        }
-        if (this.state.showWebsiteBasePath) {
-            values.push(`websiteBasePath: "${this.state.websiteBasePath}"`);
-        }
-        return values.join(",\n");
-    }
-
     render() {
         if (this.state.formSubmitted) {
             return (
@@ -289,11 +269,6 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                 YOUR CONFIGURATION VALUES
                             </div>
                             <div style={{ height: "10px" }} />
-                            <div className="app-info-form__current-values-preview">
-                                <pre>
-                                    {this.getCurrentFormValuesAsString()}
-                                </pre>
-                            </div>
                             <div
                                 style={{
                                     fontSize: "16px",
