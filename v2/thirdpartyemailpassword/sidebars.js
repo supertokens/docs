@@ -99,7 +99,7 @@ module.exports = {
             "common-customizations/user-roles/assigning-session-roles",
             "common-customizations/user-roles/reading-role-in-api",
             "common-customizations/user-roles/reading-role-in-frontend",
-            "common-customizations/user-roles/updating-session-roles"
+            "common-customizations/user-roles/updating-session-roles",
           ]
         },
         {

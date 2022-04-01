@@ -56,3 +56,6 @@ hide_title: true
 
 ### 3.9 to 3.10
 - No manual change required
+
+### 3.10 to 3.11
+- No manual change required

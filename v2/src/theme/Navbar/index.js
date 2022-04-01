@@ -159,6 +159,11 @@ const RECIPE_LABELS = [{
 }, {
   type: "recipeLabel",
   position: "left",
+  docsPluginId: "thirdpartypasswordless",
+  label: "ThirdPartyPasswordless Recipe"
+}, {
+  type: "recipeLabel",
+  position: "left",
   docsPluginId: "emailpassword",
   label: "EmailPassword Recipe"
 }, {
