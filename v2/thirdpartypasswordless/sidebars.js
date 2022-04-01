@@ -151,6 +151,18 @@ module.exports = {
           ]
         },
         {
+          type: 'category',
+          label: 'User Metadata',
+          items: [
+            "common-customizations/usermetadata/about",
+            "common-customizations/usermetadata/setup",
+            "common-customizations/usermetadata/store-data",
+            "common-customizations/usermetadata/get-data",
+            "common-customizations/usermetadata/clear-data",
+            "common-customizations/usermetadata/overrides",
+          ],
+        },
+        {
           type: "category",
           label: "Styling",
           items: [
