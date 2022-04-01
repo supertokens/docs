@@ -69,4 +69,5 @@ hide_title: true
 :::important
 - Make sure to start a dev instance in production
 - Give region SSH keys to team members
+- Add new region to SOC2 software 
 :::
