@@ -117,7 +117,8 @@ module.exports = {
           label: "Password hashing",
           items: [
             "common-customizations/password-hashing/about",
-            "common-customizations/password-hashing/bcrypt"
+            "common-customizations/password-hashing/bcrypt",
+            "common-customizations/password-hashing/argon2"
           ]
         },
         "common-customizations/session-with-jwt",
