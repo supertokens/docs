@@ -69,7 +69,7 @@ function DefaultVanillaJSTabItem() {
 
                     To add login functionality, you need to build your own UI and call the APIs exposed by the backend SDKs. You can find the API spec <a href="https://supertokens.com/docs/fdi">here</a><br/><br/>
 
-                    You can refer to <a href="https://supertokens.com/blog/adding-social-login-to-your-website-with-supertokens">this example</a> to know how this is done, the example uses social login but the same setup applies to other recipes as well.
+                    You can refer to <a href="https://supertokens.com/blog/adding-social-login-to-your-website-with-supertokens">this blog post</a> to know how this is done, the example uses social login but the same setup applies to other recipes as well.
                 </div>
             </div>
         </TabItem>
