@@ -61,11 +61,11 @@ function DefaultVanillaJSTabItem() {
                                 </path>
                             </svg>
                         </span>
-                        not supported / not applicable
+                        Note
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    If this requires a call to the backend, you will need to call <a href="/docs/thirdpartyemailpassword/apis#frontend-driver-interface">our APIs</a> yourself. Otherwise, since you are building your own login UI, you will have to handle this yourself.
+                    <code>supertokens-website</code> does not provide any UI but can handle session management for you. You can build your own UI and use the <a href="https://app.swaggerhub.com/apis/supertokens/FDI">API spec</a> to call SuperTokens APIs manually. You can refer to <a href="https://supertokens.com/blog/adding-social-login-to-your-website-with-supertokens">this example</a> to know how this is done, the example uses social login but the same setup applies to other recipes as well.
                 </div>
             </div>
         </TabItem>
