@@ -65,7 +65,11 @@ function DefaultVanillaJSTabItem() {
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    <code>supertokens-website</code> does not provide any UI but can handle session management for you. You can build your own UI and use the <a href="https://app.swaggerhub.com/apis/supertokens/FDI">API spec</a> to call SuperTokens APIs manually. You can refer to <a href="https://supertokens.com/blog/adding-social-login-to-your-website-with-supertokens">this example</a> to know how this is done, the example uses social login but the same setup applies to other recipes as well.
+                    To use SuperTokens with plain javascript you need to use the <code>supertokens-website</code> SDK. The SDK provides session management features.<br/><br/>
+
+                    To add login functionality, you need to build your own UI and call the APIs exposed by the backend SDKs. You can find the API spec <a href="https://supertokens.com/docs/fdi">here</a><br/><br/>
+
+                    You can refer to <a href="https://supertokens.com/blog/adding-social-login-to-your-website-with-supertokens">this example</a> to know how this is done, the example uses social login but the same setup applies to other recipes as well.
                 </div>
             </div>
         </TabItem>
