@@ -37,11 +37,13 @@ function DefaultRNTabItem() {
                                 </path>
                             </svg>
                         </span>
-                        not supported / not applicable
+                        Note
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    If this requires a call to the backend, you will need to call <a href="/docs/thirdpartyemailpassword/apis#frontend-driver-interface">our APIs</a> yourself. Otherwise, since you are building your own login UI, you will have to handle this yourself.
+                    To use SuperTokens with React Native you need to use the <code>supertokens-react-native</code> SDK. The SDK provides session management features.<br/><br/>
+                    
+                    To add login functionality, you need to build your own UI and call the APIs exposed by the backend SDKs. You can find the API spec <a href="https://supertokens.com/docs/fdi">here</a>
                 </div>
             </div>
         </TabItem>
