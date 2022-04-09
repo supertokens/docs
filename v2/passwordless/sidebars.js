@@ -356,6 +356,13 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Troubleshooting',
+      items: [
+        "troubleshooting/how-to-troubleshoot"
+      ],
+    },
+    {
+      type: 'category',
       label: 'Migration',
       items: [
         {
