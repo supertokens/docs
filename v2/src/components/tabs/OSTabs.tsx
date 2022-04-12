@@ -4,6 +4,7 @@ let Tabs = require("@theme/Tabs").default;
 export default function OSTabs(props: any) {
     return (
         <Tabs
+            isSubTab={props.isSubTab === undefined ? false : props.isSubTab}
             groupId="os"
             defaultValue="linux"
             values={[
