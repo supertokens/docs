@@ -85,6 +85,13 @@ module.exports = {
             "common-customizations/signin-form/custom-providers",
           ]
         },
+        {
+          type: 'category',
+          label: 'SAML',
+          items: [
+            "common-customizations/saml/what-is-saml"
+          ],
+        },
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
