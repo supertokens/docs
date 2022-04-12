@@ -89,7 +89,8 @@ module.exports = {
           type: 'category',
           label: 'SAML',
           items: [
-            "common-customizations/saml/what-is-saml"
+            "common-customizations/saml/what-is-saml",
+            "common-customizations/saml/saml-login"
           ],
         },
         "common-customizations/password-managers",
