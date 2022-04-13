@@ -108,3 +108,155 @@ In this guide, we will assume that there is only one tenant configured. If you w
 :::note
 The output of this command will provide you the `client_id` and `client_secret` for this tenant. You will need to use these values in the OAuth flow when configuring SuperTokens to talk to SAML Jackson.
 :::
+
+## 5) Modify your frontend app to add a Login with SAML button
+
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```tsx
+import React from "react";
+import SuperTokens from "supertokens-auth-react";
+import ^{recipeNameCapitalLetters} from "supertokens-auth-react/recipe/^{codeImportRecipeName}";
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        ^{recipeNameCapitalLetters}.init({
+            signInAndUpFeature: {
+                // highlight-start
+                providers: [
+                    {
+                        id: "saml-jackson",
+                        name: "SAML",
+
+                        // optional
+                        // you do not need to add a click handler to this as
+                        // we add it for you automatically.
+                        buttonComponent: <div style={{
+                            cursor: "pointer",
+                            border: "1",
+                            paddingTop: "5px",
+                            paddingBottom: "5px",
+                            borderRadius: "5px",
+                            borderStyle: "solid"
+                        }}>Login with SAML</div>
+                    }
+                ],
+                // highlight-end
+                // ...
+            },
+            // ...
+        }),
+        // ...
+    ]
+});
+```
+
+The above will add a "Login with SAML" button to your list of third party providers. Notice that the `id` used is `saml-jackson`. This same `id` will be used on the backend too, and the redirect URL will be `{websiteDomain}/{websiteBasePath}/auth/callback/saml-jackson`
+
+</TabItem>
+</FrontendSDKTabs>
+
+## 6) Add a custom OAuth provider on the backend server code
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import axios from "axios";
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ^{recipeNameCapitalLetters}.init({
+            // highlight-start
+            providers: [
+                {
+                    id: "saml-jackson",
+                    get: (redirectURI, authCodeFromRequest, userContext) => {
+                        let client_id = "TODO: From output of step 4";
+                        let client_secret = "TODO: From output of step 4";
+                        return {
+                            accessTokenAPI: {
+                                url: `http://localhost:5225/api/oauth/token`,
+                                params: {
+                                    client_id,
+                                    client_secret,
+                                    grant_type: "authorization_code",
+                                    redirect_uri: redirectURI || "",
+                                    code: authCodeFromRequest || "",
+                                }
+                            },
+                            authorisationRedirect: {
+                                url: `http://localhost:5225/api/oauth/authorize`,
+                                params: {
+                                    client_id
+                                }
+                            },
+                            getClientId: () => {
+                                return client_id;
+                            },
+                            getProfileInfo: async (accessTokenAPIResponse) => {
+                                const profile = await axios({
+                                    method: 'get',
+                                    url: `http://localhost:5225/api/oauth/userinfo`,
+                                    headers: {
+                                        Authorization: `Bearer ${accessTokenAPIResponse.access_token}`,
+                                    },
+                                });
+                                return {
+                                    id: profile.data.id,
+                                    email: {
+                                        id: profile.data.email,
+                                        isVerified: true
+                                    }
+                                };
+                            }
+                        }
+                    }
+                }
+            ]
+            // highlight-end
+        }),
+        Session.init({})
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Please see the NodeJS tab and make similar changes to the Go integration. You can see how to integrate a custom OAuth provider in the Go SDK [using this guide](../../signup-form/custom-providers#step-2-back-end).
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Please see the NodeJS tab and make similar changes to the Python integration. You can see how to integrate a custom OAuth provider in the Python SDK [using this guide](../../signup-form/custom-providers#step-2-back-end).
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+## 7) Supporting multiple tenants
+The above shows you how to get SAML Jackson + SuperTokens to work with a single tenant. If you would like to support multiple tenants, please see the next page.
