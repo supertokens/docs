@@ -70,6 +70,27 @@ module.exports = {
             "common-customizations/sign-in-and-up/toc-privacypolicy"
           ],
         },
+        {
+          type: 'category',
+          label: 'SAML',
+          items: [
+            "common-customizations/saml/what-is-saml",
+            "common-customizations/saml/saml-login",
+            {
+              type: 'category',
+              label: 'With BoxyHQ',
+              customProps: {
+                logoUrl: '/img/logos/boxyhq.png'
+              },
+              items: [
+                "common-customizations/saml/with-boxyhq/what-is-boxyhq",
+                "common-customizations/saml/with-boxyhq/flow-diagram",
+                "common-customizations/saml/with-boxyhq/integration-steps",
+                "common-customizations/saml/with-boxyhq/multi-tenant"
+              ],
+            },
+          ],
+        },
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
