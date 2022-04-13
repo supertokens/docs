@@ -90,7 +90,18 @@ module.exports = {
           label: 'SAML',
           items: [
             "common-customizations/saml/what-is-saml",
-            "common-customizations/saml/saml-login"
+            "common-customizations/saml/saml-login",
+            {
+              type: 'category',
+              label: 'With BoxyHQ',
+              customProps: {
+                logoUrl: '/img/logos/boxyhq.png'
+              },
+              items: [
+                "common-customizations/saml/with-boxyhq/what-is-boxyhq",
+                "common-customizations/saml/with-boxyhq/flow-diagram"
+              ],
+            },
           ],
         },
         "common-customizations/password-managers",
