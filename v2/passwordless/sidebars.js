@@ -343,6 +343,16 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Vercel',
+      customProps: {
+        logoUrl: '/img/logos/vercel.jpeg'
+      },
+      items: [
+        "serverless/with-vercel/about"
+      ],
+    },
+    {
+      type: 'category',
       label: 'Testing',
       items: [
         "testing/testing-with-postman"
