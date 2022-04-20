@@ -43,7 +43,10 @@ params:
         - default
         - ping-ssh
         - supertokens-nginx-port
+        - ec2-internal-team-access
     - Select Target Group created above
+    - Add load balancer access logs
+        - Create a S3 bucket with no public access
 - Update DNS Route 53
 
 

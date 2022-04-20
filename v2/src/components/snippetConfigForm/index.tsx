@@ -11,6 +11,20 @@ import { recursiveMap } from "../utils";
  *
  */
 
+// polyfill for `replaceAll` as it is not supported in Safari v12
+// @ts-ignore
+if (String.prototype.replaceAll === undefined || String.prototype.replaceAll === null) {
+    function escapeRegExp (str: string) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+    }
+
+    // @ts-ignore
+    String.prototype.replaceAll = function (find: string, replace: string) {
+        let target = this;
+        return target.replace(new RegExp(escapeRegExp(find as string), "g"), replace as string);
+    };
+}
+
 export type QuestionInfo<VarKeys extends keyof any> = {
   id: string;
   title: string;
@@ -125,7 +139,8 @@ export default class SnippetConfigForm<T extends keyof any> extends React.PureCo
                     for (const [name, value] of Object.entries<string>(selectedAns.variableMap)) {
                       const key = `form_${question.id}_${name}`;
 
-                      c = (replaceWithIndent(key, value, c) as any).replaceAll(`^{${key}}`, value);
+                      // @ts-ignore
+                      c = replaceWithIndent(key, value, c).replaceAll(`^{${key}}`, value);
                     }
                   }
                 }
@@ -168,7 +183,7 @@ export function ConditionalSection(props: PropsWithChildren<ConditionalSectionPr
   return props.children;
 }
 
-function replaceWithIndent(target: string, replecement: string, str: string) {
+function replaceWithIndent(target: string, replecement: string, str: string): string {
   const regex = new RegExp(`(\\n\\s*)\\^{${target}}`, "g");
 
   return str.replace(regex, (match, p1) => {

@@ -47,9 +47,11 @@ hide_title: true
         - dev-postgresql
             - open dev postgres server port to the internet
         - ping-ssh
-            - allow ping and ssh to instance
+            - allow ping to instance (no ssh - the name is outdated, but we still keep that)
         - default
             - Update inbound rules to allow 4243 and 5432 port for prod and dev instance
+        - ec2-internal-team-access
+            - For SSH into these instances for internal team members.
 
 - RDS
     - Create based on other regions rds
@@ -69,4 +71,5 @@ hide_title: true
 :::important
 - Make sure to start a dev instance in production
 - Give region SSH keys to team members
+- Add new region to SOC2 software 
 :::

@@ -85,6 +85,27 @@ module.exports = {
             "common-customizations/signin-form/custom-providers",
           ]
         },
+        {
+          type: 'category',
+          label: 'SAML',
+          items: [
+            "common-customizations/saml/what-is-saml",
+            "common-customizations/saml/saml-login",
+            {
+              type: 'category',
+              label: 'With BoxyHQ',
+              customProps: {
+                logoUrl: '/img/logos/boxyhq.png'
+              },
+              items: [
+                "common-customizations/saml/with-boxyhq/what-is-boxyhq",
+                "common-customizations/saml/with-boxyhq/flow-diagram",
+                "common-customizations/saml/with-boxyhq/integration-steps",
+                "common-customizations/saml/with-boxyhq/multi-tenant"
+              ],
+            },
+          ],
+        },
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
@@ -122,6 +143,15 @@ module.exports = {
             "common-customizations/email-verification/embed-in-page",
             "common-customizations/email-verification/handling-email-verification-success",
             "common-customizations/email-verification/changing-token-lifetime"
+          ]
+        },
+        {
+          type: "category",
+          label: "Password hashing",
+          items: [
+            "common-customizations/password-hashing/about",
+            "common-customizations/password-hashing/bcrypt",
+            "common-customizations/password-hashing/argon2"
           ]
         },
         "common-customizations/session-with-jwt",
@@ -367,48 +397,52 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Serverless Deployment',
+      label: 'Netlify',
+      customProps: {
+        logoUrl: '/img/logos/netlify.svg'
+      },
       items: [
+        "serverless/with-netlify/about",
+        "serverless/with-netlify/frontend",
+        "serverless/with-netlify/backend-config",
+        "serverless/with-netlify/auth-serverless",
+        "serverless/with-netlify/session-verification",
+        "serverless/with-netlify/next-steps"
+      ],
+    },
+    {
+      type: 'category',
+      label: 'AWS Lambda',
+      customProps: {
+        logoUrl: '/img/logos/aws-lambda.svg'
+      },
+      items: [
+        "serverless/with-aws-lambda/about",
+        "serverless/with-aws-lambda/frontend",
+        "serverless/with-aws-lambda/backend-config",
+        "serverless/with-aws-lambda/auth-serverless",
+        "serverless/with-aws-lambda/api-gateway-config",
         {
           type: 'category',
-          label: 'With Netlify',
-          customProps: {
-            logoUrl: '/img/logos/netlify.svg'
-          },
+          label: '5. Session Verification',
           items: [
-            "serverless/with-netlify/about",
-            "serverless/with-netlify/frontend",
-            "serverless/with-netlify/backend-config",
-            "serverless/with-netlify/auth-serverless",
-            "serverless/with-netlify/session-verification",
-            "serverless/with-netlify/next-steps"
+            "serverless/with-aws-lambda/session-verification",
+            "serverless/with-aws-lambda/authorizer",
+            "serverless/with-aws-lambda/jwt-authorizer",
           ],
         },
-        {
-          type: 'category',
-          label: 'With AWS Lambda',
-          customProps: {
-            logoUrl: '/img/logos/aws-lambda.svg'
-          },
-          items: [
-            "serverless/with-aws-lambda/about",
-            "serverless/with-aws-lambda/frontend",
-            "serverless/with-aws-lambda/backend-config",
-            "serverless/with-aws-lambda/auth-serverless",
-            "serverless/with-aws-lambda/api-gateway-config",
-            {
-              type: 'category',
-              label: '5. Session Verification',
-              items: [
-                "serverless/with-aws-lambda/session-verification",
-                "serverless/with-aws-lambda/authorizer",
-                "serverless/with-aws-lambda/jwt-authorizer",
-              ],
-            },
-            "serverless/with-aws-lambda/next-steps",
-            "serverless/with-aws-lambda/appsync-integration"
-          ],
-        },
+        "serverless/with-aws-lambda/next-steps",
+        "serverless/with-aws-lambda/appsync-integration"
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Vercel',
+      customProps: {
+        logoUrl: '/img/logos/vercel.jpeg'
+      },
+      items: [
+        "serverless/with-vercel/about"
       ],
     },
     {
@@ -416,6 +450,13 @@ module.exports = {
       label: 'Testing',
       items: [
         "testing/testing-with-postman"
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Troubleshooting',
+      items: [
+        "troubleshooting/how-to-troubleshoot"
       ],
     },
     {

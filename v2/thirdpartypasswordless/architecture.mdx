@@ -1,21 +1,26 @@
 ---
-title: Architecture
+title: "How SuperTokens works"
 hide_title: true
 ---
 
 <!-- COPY DOCS -->
 <!-- ./community/architecture.mdx -->
 
-# Architecture: How it works
+# How SuperTokens works
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import ArchitectureSignInFlowTip from "/src/components/architectureSignInFlowTip"
 
-## SDKs & Core
-There are three components to SuperTokens:
-- **Frontend SDK**: Responsible for rendering the login UI widgets and managing session tokens automatically.
-- **Backend SDK**: Provides APIs for sign-up, sign-in, signout, session refreshing etc. Your frontend will talk to these APIs.
-- **SuperTokens Core**: This is a HTTP service that contains the core logic for auth. It's responsible for interfacing with the database and is used by our backend SDK for operations that require the db.
+## SuperTokens architecture & SDKs
+
+<iframe  width="560" height="315" src="https://www.youtube.com/embed/MA5JDmUlO3E" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+- You need to integrate with our frontend and backend SDKs in your application.
+- Your app's frontend doesn't talk to the SuperTokens core directly. Instead, it talks to the auth APIs exposed via our backend SDK in your API layer. Our backend SDK then talks to the SuperTokens core.
+- The SuperTokens core can be self hosted by you, connected to your own database, or it can be managed by us.
+
+### Architecture diagram
 
 <Tabs
 defaultValue="ms"
@@ -31,9 +36,34 @@ values={[
 </TabItem>
 </Tabs>
 
-## Sign in / Sign out flow example
+- The API between the frontend and backend is called the "Frontend driver interface" (FDI). You can find [the API spec here](https://supertokens.com/docs/fdi). We have separated the APIs into sections - one per recipe that you want to use.
 
-Below is an example of how the three components interact for sign in and sign out flow (with email and password):
+- The API between the backend SDK and the core is called the "Core driver interface" (CDI). You can find [the API spec here](https://supertokens.com/docs/cdi).
+
+:::important
+If interacting with these APIs directly, do not call the CDI APIs from your frontend. The frontend should only communicate to the backend SDK which uses the FDI APIs.
+:::
+
+
+### SDKs & Core
+There are three components to SuperTokens:
+- **Frontend SDK**: Responsible for rendering the login UI widgets and managing session tokens automatically.
+- **Backend SDK**: Provides APIs for sign-up, sign-in, signout, session refreshing etc. Your frontend will talk to these APIs. These APIs are exposed on the same domain as your application's APIs.
+- **SuperTokens Core**: This is a HTTP service that contains the core logic for auth. It's responsible for interfacing with the database and is queried by our backend SDK for operations that require the db.
+
+## Sign in flow example
+
+<ArchitectureSignInFlowTip />
+
+<iframe  width="560" height="315" src="https://www.youtube.com/embed/eVBkUVqUT0M" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+- **1)** The flow starts with the frontend querying the backend SDKs API for signing in (`/auth/signin` POST) along with the user's credentials.
+- **2)** The backend SDK does input syntax validation and calls the SuperTokens core with the credentials.
+- **3)** The core replies with either an `OK` (along witht the `userId`) or a `WRONG_CREDENTIALS_ERROR` status string.
+- **4)** If it's `WRONG_CREDENTIALS_ERROR`, then the backend SDK sends that to the frontend which can display an appropriate message to the user.
+- **5)** If it's `OK`, then the backend queries the core with the `userId` to create new session tokens (Access + Refresh tokens)
+- **6)** After the core replies with new session tokens, the backend SDK attaches them to the response's cookies and sends them to the frontend.
+- **7)** The user is not logged in.
 
 <Tabs
 defaultValue="ms"
@@ -48,3 +78,49 @@ values={[
 <img src="/img/architecture/self_hosted.png" />
 </TabItem>
 </Tabs>
+
+## Session verification & refreshing flow
+
+<iframe  width="560" height="315" src="https://www.youtube.com/embed/-wgLRjELCIw" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+- **1)** After signing in, the frontend has the access token and the refresh tokens as [`HttpOnly` cookies](https://owasp.org/www-community/HttpOnly). The browser automatically stores and manages them. The access token is short lived, whilst the refresh token is long lived.
+- **2)** When you make API calls, the access token is automatically attached to the request by the browser.
+- **3)** On the backend, you can use our verify session function (from our SDK), to check the validity of the session. If valid, you get a `session` object in your API which you can use to extract user infomation and manipulate the session.
+- **4)** If unsuccessful (because the access token has expired), the verify session function will send a `401` status code to the frontend.
+- **5)** Upon receiving a `401`, the frontend calls the `/auth/session/refresh` POST API (another API exposed by our backend SDK), to refresh the session. The browser automatically attaches the refresh token to this request.
+- **6)** The API will call the core to generate a new access and a new refresh token. The API will then attach these to the response cookies and send them to the frontend.
+- **7)** The frontend will retry the original request, and this time, the new access token will be attached by the browser.
+- **8)** Since the access token is new, the session verification will succeed.
+
+:::important
+Handling of `401` status code and refreshing the session (steps **(4)** till **(8)**) happens automatically via our frontend SDK.
+:::
+
+## What about OAuth 2.0 flows?
+If you are familiar with OAuth 2.0 and its various flows, you may have noticed that we didn't mention any of them above. That is because, if your application doesn't have multiple websites all logging in via a common login portal (like how Google has a common login portal for all its services), you don't need OAuth 2.0! In fact, you don't even need OAuth 2.0 if you have multiple sub domains for your application - it can all work using session cookies.
+
+However, in case you do have different applications that are on different domains and need to login via a common site (for example, `foo.com` and `bar.com` both login via `auth.com`), then you will require OAuth. At the moment, we are not yet an OAuth 2.0 provider, but we are working towards it.
+
+## What is a recipe?
+
+Each login method is a separate recipe. So if you want email password login, you should see the [emailpassword recipe docs](/docs/emailpassword/introduction), for passwordless, you should see the [passwordless recipe docs](/docs/passwordless/introduction).
+
+We even have combination of recipes like:
+- [Email Password + Social login](/docs/thirdpartyemailpassword/introduction)
+- [Socail login + Passwordless](/docs/thirdpartypasswordless/introduction)
+
+You can use multiple recipes at once too. Most of these guides will be using the [Session recipe](/docs/session/introduction) along with one of the login recipes. 
+
+The reason we have divided SuperTokens into recipes is so that when using a recipe, you all the configurations and types are specific to that recipe's feature set. This in turn, makes it easier for you customise the auth logic over time.
+
+## Next steps
+
+- The left navigation bar has a list of frameworks mentioned. If you are using any of them, head over to that section and follow the guide there. Else head over to the "Quick Setup" section.
+- During initial setup, you will want to add our frontend and backend SDKs to your app and deploy a SuperTokens core.
+- Once you have finished the initial setup, you can see the "post login operations", "common customizations" and the "advanced customizations / override" section.
+
+## How to get help?
+- [Join our discord community](https://supertokens.com/discord) and ask questions.
+- [Email us with your questions](mailto:team@supertokens.com)
+- [Book a free call with us](https://supertokens.com/call-user) to discuss your requirements.
+- See the [troubleshooting section](./troubleshooting/how-to-troubleshoot)
