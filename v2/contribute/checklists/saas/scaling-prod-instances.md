@@ -57,6 +57,46 @@ params:
         - VantaDescription: ...
         - VantaOwner: rishabh@supertokens.com
 - Update DNS Route 53
+- Add CloudWatch Alarms
+    - HTTPCode_ELB_5XX_Count Alarm
+        - Name: <loadbalancer-name> ELB HTTPCode_ELB_5XX_Count
+        - Type: Metric alarm
+        - Namespace: AWS/ApplicationELB
+        - Metric name: HTTPCode_ELB_5XX_Count
+        - LoadBalancer: <loadbalancer-name>
+        - Statistic: Maximum
+        - Period: 5 minutes
+        - Threshold type: Static
+        - Whenever HTTPCode_ELB_5XX_Count is...: Greater/Equal
+        - than…: 1
+        - SNS
+            - Select an existing SNS topic: CloudWatch_Alarms_<Region>_ELB <!--- e.g. US_East_1, should be easy cause it will be in dropdown menu --->
+    - TargetResponseTime Alarm
+        - Name: <loadbalancer-name> ELB TargetResponseTime
+        - Type: Metric alarm
+        - Namespace: AWS/ApplicationELB
+        - Metric name: TargetResponseTime
+        - LoadBalancer: <loadbalancer-name>
+        - Statistic: Maximum
+        - Period: 5 minutes
+        - Threshold type: Static
+        - Whenever TargetResponseTime is...: Greater
+        - than…: 1.5
+        - SNS
+            - Select an existing SNS topic: CloudWatch_Alarms_<Region>_ELB <!--- e.g. US_East_1, should be easy cause it will be in dropdown menu --->
+    - UnHealthyHostCount Alarm
+        - Name: <loadbalancer-name> ELB UnHealthyHostCount
+        - Type: Metric alarm
+        - Namespace: AWS/ApplicationELB
+        - Metric name: UnHealthyHostCount
+        - LoadBalancer: <loadbalancer-name>
+        - Statistic: Maximum
+        - Period: 5 minutes
+        - Threshold type: Static
+        - Whenever UnHealthyHostCount is...: Greater/Equal
+        - than…: 1
+        - SNS
+            - Select an existing SNS topic: CloudWatch_Alarms_<Region>_ELB <!--- e.g. US_East_1, should be easy cause it will be in dropdown menu --->
 
 
 ## To make sure you cover
@@ -69,3 +109,7 @@ params:
 - [ ] Should be able to hold 1 million sessions / users in the db
 - [ ] Health check should happen for each core that is being used + the db + load balancer
 - [ ] Add load balancer error monitoring and send notif to slack
+- [ ] All CloudWatch Alarms are added
+- [ ] S3 access logs are enabled
+- [ ] S3 access logs bucket has versioning and encryption enabled
+- [ ] Tags have been added for the load balancer and S3 access logs bucket
