@@ -45,8 +45,17 @@ params:
         - supertokens-nginx-port
         - ec2-internal-team-access
     - Select Target Group created above
-    - Add load balancer access logs
-        - Create a S3 bucket with no public access
+    - Enable load balancer access logs ()
+        - Select Actions > Edit Attribute and add S3 bucket name (Select "Create this location for me")
+        - Enable bucket versioning
+        - Enable default encryption (Use default KMS key for S3)
+        - Add tags:
+            - VantaContainsUserData: true
+            - VantaDescription: store <name-to-identify-the-loadbalancer> loadbalancer logs
+            - VantaOwner: rishabh@supertokens.com
+    - Add Tags for loadbalancer
+        - VantaDescription: ...
+        - VantaOwner: rishabh@supertokens.com
 - Update DNS Route 53
 
 
