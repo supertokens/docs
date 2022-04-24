@@ -55,6 +55,68 @@ hide_title: true
 
 - RDS
     - Create based on other regions rds
+    - For each db instance withing the cluster, add tags:
+        - VantaContainsUserData: true
+        - VantaDescription: db cluster to store development/production containers data
+        - VantaOwner: rishabh@supertokens.com
+    - Add CloudWatch Alarms
+        - FreeableMemory Alarm
+            - Name: db-{{RDS-cluster-name}} FreeableMemory
+            - Type: Metric alarm
+            - Namespace: AWS/RDS
+            - Metric name: FreeableMemory
+            - DbClusterIdentifier: {{db-cluster-identifier}}
+            - EngineName: aurora
+            - Statistic: Minimum
+            - Period: 15 minutes
+            - Threshold type: Static
+            - Whenever FreeableMemory is...: Lower
+            - than…: 52428800
+            - SNS
+                - Select an existing SNS topic: CloudWatch_Alarms_{{Region}}_RDS <!--- e.g. US_East_1, should be easy cause it will be in dropdown menu --->
+        - FreeStorageSpace Alarm
+            - Name: db-{{RDS-cluster-name}} FreeStorageSpace
+            - Type: Metric alarm
+            - Namespace: AWS/RDS
+            - Metric name: FreeStorageSpace
+            - DbClusterIdentifier: {{db-cluster-identifier}}
+            - EngineName: aurora
+            - Statistic: Minimum
+            - Period: 15 minutes
+            - Threshold type: Static
+            - Whenever FreeStorageSpace is...: Lower
+            - than…: 1073741824
+            - SNS
+                - Select an existing SNS topic: CloudWatch_Alarms_{{Region}}_RDS <!--- e.g. US_East_1, should be easy cause it will be in dropdown menu --->
+        - CPUUtilization Alarm
+            - Name: db-{{RDS-cluster-name}} CPUUtilization
+            - Type: Metric alarm
+            - Namespace: AWS/RDS
+            - Metric name: CPUUtilization
+            - DbClusterIdentifier: {{db-cluster-identifier}}
+            - EngineName: aurora
+            - Statistic: Maximum
+            - Period: 15 minutes
+            - Threshold type: Static
+            - Whenever CPUUtilization is...: Greater
+            - than…: 80
+            - SNS
+                - Select an existing SNS topic: CloudWatch_Alarms_{{Region}}_RDS <!--- e.g. US_East_1, should be easy cause it will be in dropdown menu --->
+        - ReadIOPS Alarm
+            - Name: db-{{RDS-cluster-name}} ReadIOPS
+            - Type: Metric alarm
+            - Namespace: AWS/RDS
+            - Metric name: ReadIOPS
+            - DbClusterIdentifier: {{db-cluster-identifier}}
+            - EngineName: aurora
+            - Statistic: Maximum
+            - Period: 15 minutes
+            - Threshold type: Static
+            - Whenever ReadIOPS is...: Greater
+            - than…: 1000
+            - SNS
+                - Select an existing SNS topic: CloudWatch_Alarms_{{Region}}_RDS <!--- e.g. US_East_1, should be easy cause it will be in dropdown menu --->
+
 
 
 - System Manager
