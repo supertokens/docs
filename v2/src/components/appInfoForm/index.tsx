@@ -696,10 +696,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             const normalisedWebsiteBasePath = this.getNormalisedBasePath(websiteBasePath);
 
             const nextJSApiRouteUsed = this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed;
-            const areNormalisedDomainsEqual = normalisedApiDomain === normalisedWebsiteDomain
+            const areNormalisedDomainsEqual = normalisedApiDomain === normalisedWebsiteDomain;
 
+            const doNormalisedDomainsExist = normalisedApiDomain.length > 0 && normalisedWebsiteDomain.length > 0;
 
-            if (nextJSApiRouteUsed || areNormalisedDomainsEqual) {
+            if (doNormalisedDomainsExist && (nextJSApiRouteUsed || areNormalisedDomainsEqual)) {
                 if (normalisedApiBasePath === normalisedWebsiteBasePath) {
                     validationErrors.apiBasePath = "apiBasePath and websiteBasePath cannot be equal.";
                 } else if (normalisedApiBasePath.startsWith(normalisedWebsiteBasePath)) {
