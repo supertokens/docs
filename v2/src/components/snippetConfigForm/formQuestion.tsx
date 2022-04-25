@@ -52,6 +52,7 @@ export function Question(props: PropsWithChildren<{
                             marginRight: "10px"
                         }}>
                         <img
+                            alt="Answer submitted"
                             style={{
                                 width: "17px",
                             }}

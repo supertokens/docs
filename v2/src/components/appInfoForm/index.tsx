@@ -250,7 +250,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                 style={{
                                     width: "17px",
                                 }}
-                                src="/img/form-submitted-tick.png" />
+                                src="/img/form-submitted-tick.png"
+                                alt="Form submitted"
+                            />
                         </div>
                         <div
                             style={{

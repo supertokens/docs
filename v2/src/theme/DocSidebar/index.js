@@ -138,7 +138,14 @@ function DocSidebarItemCategory ({
             marginLeft: `${depth * 16}px`,
           } : {}}
         >{label}</span>
-        {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
+        {item.customProps && item.customProps.logoUrl && (
+          <img
+            className={styles.sidebarItemLogo}
+            src={item.customProps.logoUrl}
+            title={label + ' logo'}
+            alt={label + " logo"}
+          />
+        )}
         <div className={styles.spacer}></div>
       </a>
       <ul
@@ -212,7 +219,14 @@ function DocSidebarItemLink({
             <IconExternalLink />
           </span>
         )}
-        {item.customProps && item.customProps.logoUrl && <img className={styles.sidebarItemLogo} src={item.customProps.logoUrl} title={label + 'logo'} />}
+        {item.customProps && item.customProps.logoUrl && (
+          <img
+            className={styles.sidebarItemLogo}
+            src={item.customProps.logoUrl}
+            title={label + ' logo'}
+            alt={label + ' logo'}
+          />
+        )}
       </Link>
       <div className={styles.spacer}></div>
     </li>

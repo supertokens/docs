@@ -99,6 +99,7 @@ export default function FormItem(props: FormItemType) {
                     </span>
                     <div className="question">
                         <img
+                            alt="Information about the question"
                             id={`app-info-form-question-icon-${props.index}`}
                             className="app-info-form-question-icon"
                             src="/img/form-question.png"
