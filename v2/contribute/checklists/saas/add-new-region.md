@@ -53,7 +53,7 @@ hide_title: true
         - ec2-internal-team-access
             - For SSH into these instances for internal team members.
 
-- RDS
+- Add PostgreSQL RDS
     - Create based on other regions rds
     - For each db instance withing the cluster, add tags:
         - VantaContainsUserData: true
