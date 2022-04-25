@@ -1,6 +1,6 @@
 ---
 id: mysql-rds
-title: Launching new Mysql RDS Cluster
+title: Launching new Mysql RDS Cluster (For API Layer)
 hide_title: true
 ---
 
