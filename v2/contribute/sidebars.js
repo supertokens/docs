@@ -123,7 +123,9 @@ module.exports = {
           items: [
             "checklists/saas/add-new-region",
             "checklists/saas/scaling-prod-instances",
-            "checklists/saas/upgrading-users-core-version"
+            "checklists/saas/upgrading-users-core-version",
+            "checklists/saas/issues-removing-app",
+            "checklists/saas/mysql-rds"
           ],
         },
         {
