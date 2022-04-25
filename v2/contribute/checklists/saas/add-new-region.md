@@ -6,9 +6,23 @@ hide_title: true
 
 # Add new region
 
+- SNS
+    - Create the following SNS topics
+        - CloudWatch_Alarms_US_East_1_EC2
+            - Type: Standard
+        - CloudWatch_Alarms_US_East_1_ELB
+            - Type: Standard
+        - CloudWatch_Alarms_US_East_1_Lambda
+            - Type: Standard
+        - CloudWatch_Alarms_US_East_1_RDS
+            - Type: Standard
+    - Create subcription for each topic using email address address provided by slack
+    - Do confirm subscription for all 4 emails that would come on the slack channel
+
 - S3
-    - Create bucket with name supertokens-saas-{region} (use settings from supertokens-saas-us-east-1 bucket
-    - Bucket Policy:
+    - Create bucket with name supertokens-saas-{region} (use settings from supertokens-saas-us-east-1 bucket)
+    - Create bucket with name supertokens-s3-access-logs-{region} (use settings from supertokens-s3-access-logs-us-east-1 bucket)
+    - Bucket Policy for supertokens-saas-{region}:
     ```
     {
         "Version": "2012-10-17",
@@ -32,9 +46,13 @@ hide_title: true
         ]
     }
     ```
-    - Set Block all public access to false
+    - Set Block all public access to true
     - Update IAM Policy S3SSLUpdater, listBucketItems, s3crr_for_supertokens-ssl_to_supertokens-saas-us-east-1
     - Add migration policy for supertokens-ssl
+    - Add tags:
+        - VantaDescription: ...
+        - VantaOwner: rishabh@supertokens.com
+    - For supertokens-saas-{region} bucket, enable server access logging and set it to s3://supertokens-s3-access-logs-{region}/saas
 
 
 - Route 53
@@ -125,10 +143,27 @@ hide_title: true
 
 - Lambda
     - Import all functions from eu-west-1
+    - For all the functions, create cloudwatch alarm:
+        - Errors:
+            - Name: {{lambda-function-name}} Errors
+        - Type: Metric alarm
+        - Namespace: AWS/Lambda
+        - Metric name: Errors
+        - FunctionName: {{lambda-function-name}}
+        - Statistic: Maximum
+        - Period: 15 minutes
+        - Threshold type: Static
+        - Whenever HTTPCode_ELB_5XX_Count is...: Greater/Equal
+        - than…: 1
+        - SNS
+            - Select an existing SNS topic: CloudWatch_Alarms_{{Region}}_Lambda
 
 - VPC
     - Create endpoint of type gateway from s3 service
+    - Enable vpc flow logs and set it to s3://supertokens-s3-access-logs-{region}/vpc-flow-logs
 
+- Cloudwatch
+    - For all the log groups in the Logs section, change the retention period to 12 months
 
 :::important
 - Make sure to start a dev instance in production
