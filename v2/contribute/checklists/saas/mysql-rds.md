@@ -4,7 +4,7 @@ title: Launching new Mysql RDS Cluster
 hide_title: true
 ---
 
-## This needs to be executed with creating a new MySQL RDS instance. This is for API Layer (and not for SAAS)
+## This needs to be executed with migrating/creating a new MySQL RDS instance. This is for API Layer (and not for SAAS)
 - MySQL version: 8.0.23
 - Option groups: default:mysql-8-0
 - Parameter group: default.mysql8.0
