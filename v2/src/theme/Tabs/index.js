@@ -8,6 +8,8 @@ import React, { useState, cloneElement, Children } from 'react';
 import useUserPreferencesContext from '@theme/hooks/useUserPreferencesContext';
 import clsx from 'clsx';
 import styles from './styles.module.css';
+import { CSSTransition, SwitchTransition } from 'react-transition-group';
+import { useEffect } from 'react';
 
 function isInViewport(element) {
   const { top, left, bottom, right } = element.getBoundingClientRect();
@@ -27,6 +29,7 @@ function Tabs(props) {
   const [selectedValue, setSelectedValue] = useState(defaultValue);
   const children = Children.toArray(props.children);
   const tabRefs = [];
+  const [animationClassNames, setAnimationClassNames] = useState("tabs-animation");
 
   if (groupId != null) {
     const relevantTabGroupChoice = tabGroupChoices[groupId];
@@ -138,25 +141,33 @@ function Tabs(props) {
         ))}
       </ul>
 
-      {lazy ? (
-        cloneElement(
-          children.filter(
-            (tabItem) => tabItem.props.value === selectedValue,
-          )[0],
-          {
-            className: 'margin-vert--md',
-          },
-        )
-      ) : (
-        <div>
-          {children.map((tabItem, i) =>
-            cloneElement(tabItem, {
-              key: i,
-              hidden: tabItem.props.value !== selectedValue,
-            }),
+      <SwitchTransition>
+        <CSSTransition
+          key={selectedValue}
+          classNames={animationClassNames}
+          timeout={150}
+        >
+          {lazy ? (
+            cloneElement(
+              children.filter(
+                (tabItem) => tabItem.props.value === selectedValue,
+              )[0],
+              {
+                className: 'margin-vert--md',
+              },
+            )
+          ) : (
+            <div>
+              {children.map((tabItem, i) =>
+                cloneElement(tabItem, {
+                  key: i,
+                  hidden: tabItem.props.value !== selectedValue,
+                }),
+              )}
+            </div>
           )}
-        </div>
-      )}
+        </CSSTransition>
+      </SwitchTransition>
     </div>
   );
 }
