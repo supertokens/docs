@@ -422,7 +422,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     }}
                                 />
                                 <span>
-                                    I am using NextJS' <a target="_blank" href="https://nextjs.org/docs/api-routes/introduction">API route</a>
+                                    I am using NextJS' <a target="_blank" rel="nofollow noopener noreferrer" href="https://nextjs.org/docs/api-routes/introduction">API route</a>
                                 </span>
                             </label>
                         )}
