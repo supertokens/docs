@@ -518,8 +518,12 @@ Now in the `override` config instead of calling the original implementation like
 
 ```python
 from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.emailverification.interfaces import CreateEmailVerificationTokenOkResult
 from supertokens_python.recipe import thirdparty
-from supertokens_python.recipe.thirdparty.interfaces import APIInterface, SignInUpPostResponse, APIOptions, SignInUpPostFieldErrorResponse, SignInUpPostNoEmailGivenByProviderResponse, SignInUpPostOkResponse
+from supertokens_python.recipe.thirdparty.interfaces import (
+    APIInterface, APIOptions,
+    SignInUpPostFieldErrorResponse, SignInUpPostNoEmailGivenByProviderResponse, SignInUpPostOkResponse,
+    SignInUpFieldErrorResult)
 from supertokens_python.recipe.thirdparty.provider import Provider
 from typing import Union, Any, Dict
 from httpx import AsyncClient
@@ -530,7 +534,7 @@ from supertokens_python.recipe.session.asyncio import create_new_session
 # highlight-start
 def override_thirdparty_apis(original_implementation: APIInterface):
     async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: APIOptions,
-                              user_context: Dict[str, Any]) -> SignInUpPostResponse:
+                              user_context: Dict[str, Any]) -> Union[SignInUpPostOkResponse, SignInUpPostNoEmailGivenByProviderResponse, SignInUpPostFieldErrorResponse]:
         redirect_uri_from_provider = provider.get_redirect_uri(user_context)
         if redirect_uri_from_provider is not None:
             # we overwrite the redirectURI provided by the frontend
@@ -564,25 +568,16 @@ def override_thirdparty_apis(original_implementation: APIInterface):
 
         signinup_response = await api_options.recipe_implementation.sign_in_up(provider.id, user_info.user_id, email, email_verified, user_context)
 
-        if signinup_response.is_field_error:
-            if signinup_response.error is None:
-                raise Exception("Should never come here")
+        if isinstance(signinup_response, SignInUpFieldErrorResult):
             return SignInUpPostFieldErrorResponse(signinup_response.error)
-
-        if signinup_response.user is None:
-            raise Exception("Should never come here")
 
         if email_verified:
             token_response = await api_options.email_verification_recipe_implementation.create_email_verification_token(user_id=signinup_response.user.user_id, email=signinup_response.user.email, user_context=user_context)
 
-            if token_response.is_ok:
-                if token_response.token is None:
-                    raise Exception("Should never come here")
+            if isinstance(token_response, CreateEmailVerificationTokenOkResult):
                 await api_options.email_verification_recipe_implementation.verify_email_using_token(token=token_response.token, user_context=user_context)
 
         user = signinup_response.user
-        if user is None or signinup_response.created_new_user is None:
-            raise Exception("Should never come here")
         session = await create_new_session(api_options.request, user.user_id, user_context)
 
         return SignInUpPostOkResponse(
