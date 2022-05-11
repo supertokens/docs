@@ -391,7 +391,7 @@ Now in the `override` config instead of calling the original implementation like
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions, SignInPostResponse, SignInPostOkResponse, SignInPostWrongCredentialsErrorResponse, SignInResult
+from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions, SignInPostOkResult, SignInPostWrongCredentialsError, SignInWrongCredentialsError
 from supertokens_python.recipe.emailpassword.types import FormField
 from typing import Dict, List, Any, Callable, TypeVar, Union
 from supertokens_python.recipe.session.asyncio import create_new_session
@@ -409,7 +409,7 @@ def override_email_password_apis(original_implementation: APIInterface):
 	
     async def sign_in_post(form_fields: List[FormField],
                            api_options: APIOptions,
-                           user_context: Dict[str, Any]) -> SignInPostResponse:
+                           user_context: Dict[str, Any]) -> Union[SignInPostOkResult, SignInPostWrongCredentialsError]:
         passwordFormField: Union[None, FormField] = find_first_occurrence_in_list(lambda x: x.id == "password", form_fields)
         emailFormField: Union[None, FormField] = find_first_occurrence_in_list(lambda x: x.id == "email", form_fields)
         if passwordFormField is None or emailFormField is None:
@@ -417,16 +417,14 @@ def override_email_password_apis(original_implementation: APIInterface):
         password: str = passwordFormField.value
         email: str = emailFormField.value
 
-        result: SignInResult = await api_options.recipe_implementation.sign_in(email=email, password=password, user_context=user_context)
+        result = await api_options.recipe_implementation.sign_in(email=email, password=password, user_context=user_context)
 
-        if result.is_wrong_credentials_error:
-            return SignInPostWrongCredentialsErrorResponse()
+        if isinstance(result, SignInWrongCredentialsError):
+            return SignInPostWrongCredentialsError()
 
-        if result.user is None:
-            raise Exception("Should never come here")
         user = result.user
         session = await create_new_session(api_options.request, user.user_id)
-        return SignInPostOkResponse(user, session)
+        return SignInPostOkResult(user, session)
 	
     original_implementation.sign_in_post = sign_in_post
     return original_implementation
