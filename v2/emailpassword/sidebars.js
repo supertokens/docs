@@ -430,7 +430,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Troubleshooting',
+      label: 'Troubleshooting / Debug logs',
       items: [
         "troubleshooting/how-to-troubleshoot"
       ],
