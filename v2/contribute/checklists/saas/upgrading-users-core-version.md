@@ -62,3 +62,6 @@ hide_title: true
 
 ### 3.11 to 3.12
 - No manual change required
+
+### 3.12 to 3.13
+- No manual change required
