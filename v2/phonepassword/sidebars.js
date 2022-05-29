@@ -1,6 +1,7 @@
 module.exports = {
   sidebar: [
     "introduction",
-    "architecture"
+    "architecture",
+    "overview"
   ]
 };
