@@ -2,6 +2,13 @@ module.exports = {
   sidebar: [
     "introduction",
     "architecture",
-    "overview"
+    "overview",
+    {
+      type: 'category',
+      label: 'Backend Setup',
+      items: [
+        "backend/email-password-customisation"
+      ],
+    },
   ]
 };
