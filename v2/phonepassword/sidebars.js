@@ -7,7 +7,8 @@ module.exports = {
       type: 'category',
       label: 'Backend Setup',
       items: [
-        "backend/email-password-customisation"
+        "backend/email-password-customisation",
+        "backend/session-customisation"
       ],
     },
   ]
