@@ -1,0 +1,90 @@
+---
+id: backend
+title: 2. Supabase JWT creation
+hide_title: true
+---
+
+# Supabase JWT creation
+
+In this section we will be overriding SuperTokens backend to create a JWT signed with Supabase's secret which contains the user's userId. We will use this token on the frontend and backend to read and write to Supabase's database.
+
+## Step 1: Setup your Nextsjs app with SuperTokens using with the [Nextjs setup guide](../nextjs/about)
+
+## Step 2: Store Supabase's Config values in your .env file
+
+You can retrieve Supabase's config values from their dashboard and append it to your `.env` file:
+
+```
+// retrieve the following from your supabase dashboard
+
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_KEY=
+SUPABASE_SIGNING_SECRET=
+```
+
+## Step 3: Create the Supabase JWT to access Supabase
+
+- In our Nextjs app when a user signs up, we want to store the user's email in Supabase. We would then retrieve this email from Supabase and display it on our frontend.
+
+- To use the Supabase client to query the database we will need to create a JWT signed with your Supabase app's signing secret. This JWT will also need to contain the user's userId so Supabase knows an authorized user is making the request.
+
+- To create this flow we will need to modify SuperTokens so that, when a user signs up or signs in, a JWT signed with Supabase's signing secret is created and attached to the user's session. Attaching the JWT to the user's session will allow us to retrieve the Supabase JWT on the frontend and backend (post session verification), using which we can query Supabase.
+
+To create the JWT signed with Supabase's signing secret we will use the `jsonwebtoken` library.
+
+```bash
+npm install jsonwebtoken
+```
+
+We can add the JWT to the user's session by overriding the `createNewSession` function and add it to the `accessTokenPayload`
+
+```ts
+// config/backendConfig.ts
+
+import ThirdPartyEmailPasswordNode from "supertokens-node/recipe/thirdpartyemailpassword";
+import SessionNode from "supertokens-node/recipe/session";
+import { TypeInput } from "supertokens-node/lib/build/types";
+import { appInfo } from "./appInfo";
+import jwt from "jsonwebtoken";
+
+let backendConfig = (): TypeInput => {
+    return {
+        framework: "express",
+        supertokens: {
+            connectionURI: "https://try.supertokens.com",
+        },
+        appInfo,
+        recipeList: [
+            ThirdPartyEmailPasswordNode.init({/*...*/}),
+            SessionNode.init({
+                override: {
+                    functions: (originalImplementation) => {
+                        return {
+                            ...originalImplementation,
+                            // We want to create a JWT which contains the users userId signed with Supabase's secret so
+                            // it can be used by Supabase to validate the user when retrieving user data from their service.
+                            // We store this token in the accessTokenPayload so it can be accessed on the frontend and on the backend.
+                            createNewSession: async function (input) {
+                                const payload = {
+                                    userId: input.userId,
+                                    exp: Math.floor(Date.now() / 1000) + 60 * 60,
+                                };
+
+                                const supabase_jwt_token = jwt.sign(payload, process.env.SUPABASE_SIGNING_SECRET);
+
+                                input.accessTokenPayload = {
+                                    ...input.accessTokenPayload,
+                                    supabase_token: supabase_jwt_token,
+                                };
+
+                                return await originalImplementation.createNewSession(input);
+                            },
+                        };
+                    },
+                },
+            }),
+        ],
+        isInServerlessEnv: true,
+    };
+};
+```
