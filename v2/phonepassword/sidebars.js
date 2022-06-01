@@ -8,7 +8,8 @@ module.exports = {
       label: 'Backend Setup',
       items: [
         "backend/email-password-customisation",
-        "backend/session-customisation"
+        "backend/session-customisation",
+        "backend/passwordless-customisation"
       ],
     },
   ]
