@@ -436,6 +436,22 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Supabase',
+      customProps: {
+        logoUrl: '/img/logos/supabase-logo.jpg'
+      },
+      items: [
+        "supabase-intergration/about",
+        "supabase-intergration/setup",
+        "supabase-intergration/backend",
+        "supabase-intergration/supabase-client",
+        "supabase-intergration/backend-signup-override",
+        "supabase-intergration/frontend",
+        "supabase-intergration/policies"
+      ],
+    },
+    {
+      type: 'category',
       label: 'Vercel',
       customProps: {
         logoUrl: '/img/logos/vercel.jpeg'

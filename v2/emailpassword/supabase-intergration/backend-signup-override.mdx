@@ -1,0 +1,86 @@
+---
+id: backend-signup-override
+title: 4. Inserting users into Supabase when they sign up
+hide_title: true
+---
+
+
+# Inserting Users into Supabase when they sign up
+
+In our example app the user can sign up via Email-Password authentication. We will need to override both this API such that when a user signs up, their email mapped to their userId is stored in Supabase.
+
+## Step 1: Overriding the Email-Password signup function
+
+```ts
+// config/backendConfig.ts
+
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import SessionNode from "supertokens-node/recipe/session";
+import { TypeInput, AppInfo } from "supertokens-node/lib/build/types";
+import jwt from "jsonwebtoken";
+
+let appInfo: AppInfo = {
+    appName: "TODO: add your app name",
+    apiDomain: "TODO: add your website domain",
+    websiteDomain: "TODO: add your website domain"
+}
+
+// take a look at the Creating Supabase Client section to see how to define getSupabase
+let getSupabase: any;
+
+
+let backendConfig = (): TypeInput => {
+    return {
+        framework: "express",
+        supertokens: {
+            connectionURI: "https://try.supertokens.com",
+        },
+        appInfo,
+        recipeList: [
+            ^{recipeNameCapitalLetters}.init({
+                override: {
+                    apis: (originalImplementation) => {
+                        return {
+                            ...originalImplementation,
+                            // the signUpPOST function handles sign up
+                            signUpPOST: async function (input) {
+                                if (originalImplementation.signUpPOST === undefined) {
+                                    throw Error("Should never come here");
+                                }
+
+                                let response = await originalImplementation.signUpPOST(input);
+
+                                if (response.status === "OK") {
+
+                                    // retrieve the accessTokenPayload from the user's session
+                                    const accessTokenPayload = response.session.getAccessTokenPayload();
+
+                                    // create a supabase client with the supabase_token from the accessTokenPayload
+                                    const supabase = getSupabase(accessTokenPayload.supabase_token);
+
+                                    // store the user's email mapped to their userId in Supabase
+                                    const { error } = await supabase
+                                        .from("users")
+                                        .insert({ email: response.user.email, user_id: response.user.id });
+
+                                    if (error !== null) {
+
+                                        throw error;
+                                    }
+                                }
+
+                                return response;
+                            },
+                        };
+                    },
+                },
+            }),
+            SessionNode.init({/*...*/}),
+        ],
+        isInServerlessEnv: true,
+    };
+};
+
+```
+
+We will be changing the the Email-Password signup flow by overriding the `signUpPOST` api. When a user signs up we will retrieve the `supabase_token` from the user's `accessTokenPayload`(this was added in the previous step where we changed the `createNewSession` function) and use it to query Supabase to insert the new user's information.

@@ -1,0 +1,181 @@
+---
+id: backend-signup-override
+title: 4. Inserting users into Supabase when they sign up
+hide_title: true
+---
+
+# Inserting Users into Supabase when they sign up
+
+In our example app there are two ways for signing up a user. Email-Password and Social Login based authentication. We will need to override both these APIs such that when a user signs up, their email mapped to their userId is stored in Supabase.
+
+## Step 1: Overriding the Passwordless signup function
+
+```ts
+// config/backendConfig.ts
+
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import SessionNode from "supertokens-node/recipe/session";
+import { TypeInput, AppInfo } from "supertokens-node/lib/build/types";
+
+// take a look at the Creating Supabase Client section to see how to define getSupabase
+let getSupabase: any;
+
+let appInfo: AppInfo = {
+    appName: "TODO: add your app name",
+    apiDomain: "TODO: add your website domain",
+    websiteDomain: "TODO: add your website domain"
+}
+
+let backendConfig = (): TypeInput => {
+    return {
+        framework: "express",
+        supertokens: {
+            connectionURI: "https://try.supertokens.com",
+        },
+        appInfo,
+        recipeList: [
+            ^{recipeNameCapitalLetters}.init({
+                flowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
+                contactMethod: "EMAIL",
+                createAndSendCustomEmail: async (input, context) => {
+                    /*...*/
+                },
+                override: {
+                    apis: (originalImplementation) => {
+                        return {
+                            ...originalImplementation,
+                            // the consumeCodePOST function gets called when a user clicks a magic link
+                            consumeCodePOST: async function (input) {
+                                if (originalImplementation.consumeCodePOST === undefined) {
+                                    throw Error("Should never come here");
+                                }
+
+                                let response = await originalImplementation.consumeCodePOST(input);
+
+                                if (response.status === "OK" && response.createdNewUser) {
+                                    
+                                    // retrieve the accessTokenPayload from the user's session
+                                    const accessTokenPayload = response.session.getAccessTokenPayload();
+
+                                    // create a supabase client with the supabase_token from the accessTokenPayload
+                                    const supabase = getSupabase(accessTokenPayload.supabase_token);
+
+                                    // store the user's email mapped to their userId in Supabase
+                                    const { error } = await supabase
+                                        .from("users")
+                                        .insert({ email: response.user.email, user_id: response.user.id });
+
+                                    if (error !== null) {
+                                        throw error;
+                                    }
+                                }
+
+                                return response;
+                            },
+                        }
+                    }
+                }
+            }),
+            SessionNode.init({/*...*/}),
+        ],
+        isInServerlessEnv: true,
+    };
+};
+
+```
+
+We will be changing the the Passwordless flow by overriding the `consumeCodePOST` api. When a user signs up we will retrieve the `supabase_token` from the user's `accessTokenPayload`(this was added in the previous step where we changed the `createNewSession` function) and use it to query Supabase to insert the new user's information.
+
+
+## Step 2: Overriding the Social Provider login function:
+
+```ts
+// config/backendConfig.ts
+
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import SessionNode from "supertokens-node/recipe/session";
+import { TypeInput, AppInfo } from "supertokens-node/lib/build/types";
+
+// take a look at the Creating Supabase Client section to see how to define getSupabase
+let getSupabase: any;
+
+let appInfo: AppInfo = {
+    appName: "TODO: add your app name",
+    apiDomain: "TODO: add your website domain",
+    websiteDomain: "TODO: add your website domain"
+}
+
+let backendConfig = (): TypeInput => {
+    return {
+        framework: "express",
+        supertokens: {
+            connectionURI: "https://try.supertokens.com",
+        },
+        appInfo,
+        recipeList: [
+            ^{recipeNameCapitalLetters}.init({
+                contactMethod: "EMAIL",
+                flowType: "MAGIC_LINK",
+                createAndSendCustomEmail: async function(input){
+                    /*...*/
+                },
+                providers: [/*...*/],
+                override: {
+                    apis: (originalImplementation) => {
+                        return {
+                            ...originalImplementation,
+
+                            // the consumeCodePOST function gets called when a user clicks a magic link
+                            consumeCodePOST: async function (input) {
+                                if (originalImplementation.consumeCodePOST === undefined) {
+                                    throw Error("Should never come here");
+                                }
+
+                                /*Look at the previous section*/
+                                
+                                return await originalImplementation.consumeCodePOST(input)
+                            },
+
+                            // the thirdPartySignInUpPost function handles sign up/in via Social login
+                            thirdPartySignInUpPOST: async function (input) {
+                                if (originalImplementation.thirdPartySignInUpPOST === undefined) {
+                                    throw Error("Should never come here");
+                                }
+
+                                // call the sign up/in api for social login
+                                let response = await originalImplementation.thirdPartySignInUpPOST(input);
+
+                                // check that there is no issue with sign up and that a new user is created
+                                if (response.status === "OK" && response.createdNewUser) {
+
+                                    // retrieve the accessTokenPayload from the user's session
+                                    const accessTokenPayload = response.session.getAccessTokenPayload();
+
+                                    // create a supabase client with the supabase_token from the accessTokenPayload
+                                    const supabase = getSupabase(accessTokenPayload.supabase_token);
+
+                                    // store the user's email mapped to their userId in Supabase
+                                    const { error } = await supabase
+                                        .from("users")
+                                        .insert({ email: response.user.email, user_id: response.user.id });
+
+                                    if (error !== null) {
+
+                                        throw error;
+                                    }
+                                }
+
+                                return response;
+                            }
+                        };
+                    },
+                },
+            }),
+            SessionNode.init({/*...*/}),
+        ],
+        isInServerlessEnv: true,
+    };
+};
+```
+
+We will be changing the Social Login flow by overriding the `thirdPartySignInUpPost` api. We will first check that the user logging in  is a new user. If they are a new user we will retrieve the `supabase_token` from their `accessTokenPayload` and use it to map their email to userId in Supabase.
