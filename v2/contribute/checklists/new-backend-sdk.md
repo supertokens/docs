@@ -29,3 +29,4 @@ hide_title: true
 - Update all recipe docs
 - Add SDK docs on website. Follow [this](https://github.com/supertokens/docs/blob/master/v2/HOW_TO_NEW_DOCS.md#to-create-new-sdk-docs-using-an-automatic-docs-generation-tool-and-not-docusaurus)
 - Add core connection code snippet to dashboard
+- Change [references docs](https://supertokens.com/docs/community/sdks) to add link to new docs
