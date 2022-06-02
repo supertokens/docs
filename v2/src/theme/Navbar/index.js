@@ -159,6 +159,11 @@ const RECIPE_LABELS = [{
 }, {
   type: "recipeLabel",
   position: "left",
+  docsPluginId: "phonepassword",
+  label: "EmailPassword + Passwordless Recipe"
+}, {
+  type: "recipeLabel",
+  position: "left",
   docsPluginId: "thirdpartypasswordless",
   label: "ThirdPartyPasswordless Recipe"
 }, {
@@ -171,7 +176,7 @@ const RECIPE_LABELS = [{
   position: "left",
   docsPluginId: "thirdparty",
   label: "ThirdParty Recipe"
-},{
+}, {
   type: "recipeLabel",
   position: "left",
   docsPluginId: "passwordless",

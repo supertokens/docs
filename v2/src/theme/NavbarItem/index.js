@@ -110,6 +110,6 @@ export default function NavbarItem({ type, ...props }) {
   return <NavbarItemComponent {...newProps} />;
 }
 
-const DO_NOT_SHOW_GITHUB_BUTTON = ["emailpassword", "thirdparty", "thirdpartyemailpassword", "thirdpartypasswordless", "passwordless", "session", "contribute"];
+const DO_NOT_SHOW_GITHUB_BUTTON = ["emailpassword", "thirdparty", "thirdpartyemailpassword", "thirdpartypasswordless", "passwordless", "session", "contribute", "phonepassword"];
 
 const LINK_TO_OLDER_VERSIONS = ["nodejs", "auth-react", "website"];
