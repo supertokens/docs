@@ -12,5 +12,6 @@ module.exports = {
         "backend/passwordless-customisation"
       ],
     },
+    "frontend"
   ]
 };
