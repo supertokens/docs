@@ -4,24 +4,27 @@ title: 4. Inserting users into Supabase when they sign up
 hide_title: true
 ---
 
-<!-- COPY DOCS -->
-<!-- ./thirdpartyemailpassword/supabase-intergration/backend-signup-override.mdx -->
-
 # Inserting Users into Supabase when they sign up
 
 In our example app there are two ways for signing up a user. Email-Password and Social Login based authentication. We will need to override both these APIs such that when a user signs up, their email mapped to their userId is stored in Supabase.
 
-## Step 1: Overriding the Email-Password signup function
+## Step 1: Overriding the Passwordless signup function
 
 ```ts
 // config/backendConfig.ts
 
-import ThirdPartyEmailPasswordNode from "supertokens-node/recipe/thirdpartyemailpassword";
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
 import SessionNode from "supertokens-node/recipe/session";
-import { TypeInput } from "supertokens-node/lib/build/types";
-import { appInfo } from "./appInfo";
-import jwt from "jsonwebtoken";
-import { getSupabase } from "../utils/supabase";
+import { TypeInput, AppInfo } from "supertokens-node/lib/build/types";
+
+// look at the Creating Supabase Client section to see how to define getSupabase
+let getSupabase: any;
+
+let appInfo: AppInfo = {
+    appName: "TODO: add your app name",
+    apiDomain: "TODO: add your website domain",
+    websiteDomain: "TODO: add your website domain"
+}
 
 let backendConfig = (): TypeInput => {
     return {
@@ -31,22 +34,26 @@ let backendConfig = (): TypeInput => {
         },
         appInfo,
         recipeList: [
-            ThirdPartyEmailPasswordNode.init({
-                providers: [...],
+            ^{recipeNameCapitalLetters}.init({
+                flowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
+                contactMethod: "EMAIL",
+                createAndSendCustomEmail: async (input, context) => {
+                    /*...*/
+                },
                 override: {
                     apis: (originalImplementation) => {
                         return {
                             ...originalImplementation,
-                            // the emailPasswordSignUpPOST function handles sign up via Email-Password
-                            emailPasswordSignUpPOST: async function (input) {
-                                if (originalImplementation.emailPasswordSignUpPOST === undefined) {
+                            // the consumeCodePOST function gets called when a user clicks a magic link
+                            consumeCodePOST: async function (input) {
+                                if (originalImplementation.consumeCodePOST === undefined) {
                                     throw Error("Should never come here");
                                 }
 
-                                let response = await originalImplementation.emailPasswordSignUpPOST(input);
+                                let response = await originalImplementation.consumeCodePOST(input);
 
-                                if (response.status === "OK") {
-
+                                if (response.status === "OK" && response.createdNewUser) {
+                                    
                                     // retrieve the accessTokenPayload from the user's session
                                     const accessTokenPayload = response.session.getAccessTokenPayload();
 
@@ -59,16 +66,15 @@ let backendConfig = (): TypeInput => {
                                         .insert({ email: response.user.email, user_id: response.user.id });
 
                                     if (error !== null) {
-
                                         throw error;
                                     }
                                 }
 
                                 return response;
                             },
-                        };
-                    },
-                },
+                        }
+                    }
+                }
             }),
             SessionNode.init({/*...*/}),
         ],
@@ -78,18 +84,26 @@ let backendConfig = (): TypeInput => {
 
 ```
 
-We will be changing the the Email-Password signup flow by overriding the `emailPasswordSignUpPost` api. When a user signs up we will retrieve the `supabase_token` from the user's `accessTokenPayload`(this was added in the previous step where we changed the `createNewSession` function) and use it to query Supabase to insert the new user's information.
+We will be changing the the Passwordless flow by overriding the `consumeCodePOST` api. When a user signs up we will retrieve the `supabase_token` from the user's `accessTokenPayload`(this was added in the previous step where we changed the `createNewSession` function) and use it to query Supabase to insert the new user's information.
+
 
 ## Step 2: Overriding the Social Provider login function:
 
 ```ts
 // config/backendConfig.ts
 
-import ThirdPartyEmailPasswordNode from "supertokens-node/recipe/thirdpartyemailpassword";
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
 import SessionNode from "supertokens-node/recipe/session";
-import { TypeInput } from "supertokens-node/lib/build/types";
-import { appInfo } from "./appInfo";
-import { getSupabase } from "../utils/supabase";
+import { TypeInput, AppInfo } from "supertokens-node/lib/build/types";
+
+// look at the Creating Supabase Client section to see how to define getSupabase
+let getSupabase: any;
+
+let appInfo: AppInfo = {
+    appName: "TODO: add your app name",
+    apiDomain: "TODO: add your website domain",
+    websiteDomain: "TODO: add your website domain"
+}
 
 let backendConfig = (): TypeInput => {
     return {
@@ -99,15 +113,28 @@ let backendConfig = (): TypeInput => {
         },
         appInfo,
         recipeList: [
-            ThirdPartyEmailPasswordNode.init({
+            ^{recipeNameCapitalLetters}.init({
+                contactMethod: "EMAIL",
+                flowType: "MAGIC_LINK",
+                createAndSendCustomEmail: async function(input){
+                    /*...*/
+                },
                 providers: [/*...*/],
                 override: {
                     apis: (originalImplementation) => {
                         return {
                             ...originalImplementation,
 
-                            // the emailPasswordSignUpPOST function handles sign up via Email-Password
-                            emailPasswordSignUpPOST: async function (input) {/*...*/},
+                            // the consumeCodePOST function gets called when a user clicks a magic link
+                            consumeCodePOST: async function (input) {
+                                if (originalImplementation.consumeCodePOST === undefined) {
+                                    throw Error("Should never come here");
+                                }
+
+                                /*Look at the previous section*/
+                                
+                                return await originalImplementation.consumeCodePOST(input)
+                            },
 
                             // the thirdPartySignInUpPost function handles sign up/in via Social login
                             thirdPartySignInUpPOST: async function (input) {
