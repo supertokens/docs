@@ -116,6 +116,7 @@ module.exports = {
       items: [
         "checklists/new-backend-sdk",
         "checklists/new-frontend-sdk",
+        "checklists/new-github-sdk",
         "checklists/new-super-recipe",
         {
           type: 'category',
