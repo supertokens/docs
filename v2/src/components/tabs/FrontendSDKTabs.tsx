@@ -1,28 +1,35 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
-import { childContainsTabItemWithValue } from "./utils";
-let tabsUsintCopyDocs: string[] = []
+import { childContainsTabItemWithValue, COPY_TABS } from "./utils";
+let tabsUsingCopyDocs: string[] = [];
 
 export default function FrontendSDKTabs(props: any) {
-    tabsUsintCopyDocs = []
-    return (
-        <Tabs
-            groupId="frontendsdk"
-            defaultValue="reactjs"
-            values={[
-                { label: 'ReactJS', value: 'reactjs' },
-                { label: 'Plain JavaScript', value: 'vanillajs' },
-                { label: 'React Native', value: 'react-native' },
-                { label: 'Angular', value: 'angular'}
-            ]}>
-            {childContainsTabItemWithValue("reactjs", props.children) ? null : DefaultReactJSTabItem()}
-            {childContainsTabItemWithValue("vanillajs", props.children) ? null : DefaultVanillaJSTabItem()}
-            {childContainsTabItemWithValue("react-native", props.children) ? null : DefaultRNTabItem()}
-            {childContainsCopyTabs("angular", props.children)}
-            {printWithoutCopyTabs(props.children)}
-        </Tabs>
-    );
+  tabsUsingCopyDocs = [];
+  return (
+    <Tabs
+      groupId="frontendsdk"
+      defaultValue="reactjs"
+      values={[
+        { label: "ReactJS", value: "reactjs" },
+        { label: "Plain JavaScript", value: "vanillajs" },
+        { label: "React Native", value: "react-native" },
+        { label: "Angular", value: "angular" },
+      ]}
+    >
+      {childContainsTabItemWithValue("reactjs", props.children)
+        ? null
+        : DefaultReactJSTabItem()}
+      {childContainsTabItemWithValue("vanillajs", props.children)
+        ? null
+        : DefaultVanillaJSTabItem()}
+      {childContainsTabItemWithValue("react-native", props.children)
+        ? null
+        : DefaultRNTabItem()}
+      {childContainsCopyTabs("angular", props.children, DefaultAngularTabItem)}
+      {printWithoutCopyTabs(props.children)}
+    </Tabs>
+  );
 }
 
 function DefaultReactJSTabItem() {
@@ -81,55 +88,70 @@ function DefaultVanillaJSTabItem() {
     );
 }
 
-function childContainsCopyTabs(value: string, children: any) {
-    for (let child in children) {
-        if (children[child] === undefined || children[child] === null) {
-            continue;
-        }
-        if (children[child].value === value) {
-            retrieveCopyTabId(children[child])
-            return true;
-        }
-
-        if (children[child].props === undefined) {
-            continue;
-        }
-        if (children[child].props.value === value) {
-            let copyTabId = retrieveCopyTabId(children[child].props)
-            if(copyTabId){
-                tabsUsintCopyDocs.push(value)
-                return retrieveContentWithId(copyTabId, children, value)
-            }
-            return true;
-        }
-    }
-    return false;
+function DefaultAngularTabItem() {
+  return <TabItem value="angular">Default component</TabItem>;
 }
 
-function retrieveContentWithId(id: string, children: any, tabItemId: string){
-    for(let child in children){
-        if(children[child].props.value === id){
-            return ( <TabItem value={tabItemId} >
-                {children[child].props.children}
-            </TabItem>)
-        }
+function childContainsCopyTabs(
+  value: string,
+  children: any,
+  defaultOutput: any
+) {
+  for (let child in children) {
+    if (children[child] === undefined || children[child] === null) {
+      continue;
     }
-}
-function retrieveCopyTabId(children: any){
-    let content = children.children.props.children
-    let splitContent = content.split("~COPY-TABS=")
-    if(splitContent.length > 1){
-        return splitContent[1]
+    if (children[child].value === value) {
+        return copyTabs(value, children[child].children, children)
     }
-    return undefined
+    if (children[child].props === undefined) {
+      continue;
+    }
+    if (children[child].props.value === value) {
+      return copyTabs(value, children[child].props.children, children);
+    }
+  }
+  return defaultOutput();
 }
 
-function printWithoutCopyTabs(children: any){
-    let response = []
-    for(let child in children){
-        if(!tabsUsintCopyDocs.includes(children[child].props.value)){
-            response.push(children[child])
-        }
+function copyTabs(
+  copyTabId: string,
+  copyTabComponent: any,
+  allComponents: any
+) {
+  let tabToCopyId;
+  let finalCopyTabComponent: any[] = [];
+
+  for (let child in copyTabComponent) {
+    if (
+      typeof copyTabComponent[child].props.children === "string" &&
+      copyTabComponent[child].props.children.includes(COPY_TABS)
+    ) {
+      tabToCopyId = copyTabComponent[child].props.children.split(COPY_TABS)[1];
+    } else {
+      finalCopyTabComponent.push(copyTabComponent[child]);
     }
-    return response
+  }
+
+  for (let child in allComponents) {
+    if (allComponents[child].props.value === tabToCopyId) {
+      tabsUsingCopyDocs.push(copyTabId);
+      return (
+        <TabItem value={copyTabId}>
+          {finalCopyTabComponent}
+          {allComponents[child].props.children}
+        </TabItem>
+      );
+    }
+  }
+}
+
+function printWithoutCopyTabs(children: any) {
+  let response = [];
+  for (let child in children) {
+    if (!tabsUsingCopyDocs.includes(children[child].props.value)) {
+      response.push(children[child]);
+    }
+  }
+  return response;
 }
