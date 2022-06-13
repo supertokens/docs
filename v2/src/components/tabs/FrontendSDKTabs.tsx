@@ -1,8 +1,9 @@
 import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
-import { childContainsTabItemWithValue, COPY_TABS } from "./utils";
+import { childContainsTabItemWithValue } from "./utils";
 let tabsUsingCopyDocs: string[] = [];
+let COPY_TABS = "~COPY-TABS="
 
 export default function FrontendSDKTabs(props: any) {
   tabsUsingCopyDocs = [];
