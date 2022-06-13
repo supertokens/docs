@@ -2,8 +2,10 @@ import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
+let tabsUsintCopyDocs: string[] = []
 
 export default function FrontendSDKTabs(props: any) {
+    tabsUsintCopyDocs = []
     return (
         <Tabs
             groupId="frontendsdk"
@@ -12,11 +14,13 @@ export default function FrontendSDKTabs(props: any) {
                 { label: 'ReactJS', value: 'reactjs' },
                 { label: 'Plain JavaScript', value: 'vanillajs' },
                 { label: 'React Native', value: 'react-native' },
+                { label: 'Angular', value: 'angular'}
             ]}>
             {childContainsTabItemWithValue("reactjs", props.children) ? null : DefaultReactJSTabItem()}
             {childContainsTabItemWithValue("vanillajs", props.children) ? null : DefaultVanillaJSTabItem()}
             {childContainsTabItemWithValue("react-native", props.children) ? null : DefaultRNTabItem()}
-            {props.children}
+            {childContainsCopyTabs("angular", props.children)}
+            {printWithoutCopyTabs(props.children)}
         </Tabs>
     );
 }
@@ -50,7 +54,6 @@ function DefaultRNTabItem() {
     );
 }
 
-
 function DefaultVanillaJSTabItem() {
     return (
         <TabItem value="vanillajs">
@@ -76,4 +79,57 @@ function DefaultVanillaJSTabItem() {
             </div>
         </TabItem>
     );
+}
+
+function childContainsCopyTabs(value: string, children: any) {
+    for (let child in children) {
+        if (children[child] === undefined || children[child] === null) {
+            continue;
+        }
+        if (children[child].value === value) {
+            retrieveCopyTabId(children[child])
+            return true;
+        }
+
+        if (children[child].props === undefined) {
+            continue;
+        }
+        if (children[child].props.value === value) {
+            let copyTabId = retrieveCopyTabId(children[child].props)
+            if(copyTabId){
+                tabsUsintCopyDocs.push(value)
+                return retrieveContentWithId(copyTabId, children, value)
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+function retrieveContentWithId(id: string, children: any, tabItemId: string){
+    for(let child in children){
+        if(children[child].props.value === id){
+            return ( <TabItem value={tabItemId} >
+                {children[child].props.children}
+            </TabItem>)
+        }
+    }
+}
+function retrieveCopyTabId(children: any){
+    let content = children.children.props.children
+    let splitContent = content.split("~COPY-TABS=")
+    if(splitContent.length > 1){
+        return splitContent[1]
+    }
+    return undefined
+}
+
+function printWithoutCopyTabs(children: any){
+    let response = []
+    for(let child in children){
+        if(!tabsUsintCopyDocs.includes(children[child].props.value)){
+            response.push(children[child])
+        }
+    }
+    return response
 }
