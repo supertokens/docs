@@ -2,8 +2,8 @@ import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
+const COPY_TABS = "~COPY-TABS=";
 let tabsUsingCopyDocs: string[] = [];
-let COPY_TABS = "~COPY-TABS="
 
 export default function FrontendSDKTabs(props: any) {
   tabsUsingCopyDocs = [];
@@ -103,7 +103,7 @@ function childContainsCopyTabs(
       continue;
     }
     if (children[child].value === value) {
-        return copyTabs(value, children[child].children, children)
+      return copyTabs(value, children[child].children, children);
     }
     if (children[child].props === undefined) {
       continue;
@@ -123,14 +123,25 @@ function copyTabs(
   let tabToCopyId;
   let finalCopyTabComponent: any[] = [];
 
-  for (let child in copyTabComponent) {
-    if (
-      typeof copyTabComponent[child].props.children === "string" &&
-      copyTabComponent[child].props.children.includes(COPY_TABS)
-    ) {
-      tabToCopyId = copyTabComponent[child].props.children.split(COPY_TABS)[1];
-    } else {
-      finalCopyTabComponent.push(copyTabComponent[child]);
+  if (!Array.isArray(copyTabComponent)) {
+    
+      if(typeof copyTabComponent.props.children === "string"){
+        tabToCopyId = copyTabComponent.props.children.split(COPY_TABS)[1];
+      } else {
+        finalCopyTabComponent.push(copyTabComponent)
+      }
+    
+  } else {
+    for (let child in copyTabComponent) {
+      if (
+        typeof copyTabComponent[child].props.children === "string" &&
+        copyTabComponent[child].props.children.includes(COPY_TABS)
+      ) {
+        tabToCopyId =
+          copyTabComponent[child].props.children.split(COPY_TABS)[1];
+      } else {
+        finalCopyTabComponent.push(copyTabComponent[child]);
+      }
     }
   }
 
