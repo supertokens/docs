@@ -8,7 +8,7 @@ hide_title: true
 
 <div class="divider"></div>
 
-## ```init({apiDomain, apiBasePath?, sessionExpiredStatusCode?, sessionScope?, autoAddCredentials?, isInIframe?, cookieDomain?, override?, onHandleEvent?, preAPIHook?})```
+## ```init({apiDomain, apiBasePath?, sessionExpiredStatusCode?, cookieDomain?, autoAddCredentials?, isInIframe?, cookieDomain?, override?, onHandleEvent?, preAPIHook?})```
 #### Parameters
 - ```apiDomain```
     - Type: ```string```
@@ -20,7 +20,7 @@ hide_title: true
     - Type: ```number```
     - Default: ```401```
     - HTTP status code that indicates session expiry - as sent by your APIs.
-- ```sessionScope``` (Optional)
+- ```cookieDomain``` (Optional)
     - Type: ```string```
     - Default: `undefined`.
     - Set this if you want to share a session across sub domains. For example, if users login via `example.com` and are redirected to a subdomain like `xyz.example.com`, then the value of this should be `".example.com"`.

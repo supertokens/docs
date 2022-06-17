@@ -7,7 +7,7 @@ original_id: init
 
 # Initialisation
 
-### The init function: [API Reference](../api-reference#init-apidomain-apibasepath-sessionexpiredstatuscode-sessionscope-refreshapicustomheaders-autoaddcredentials)
+### The init function: [API Reference](../api-reference#init-apidomain-apibasepath-sessionexpiredstatuscode-cookieDomain-refreshapicustomheaders-autoaddcredentials)
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Via NPM-->

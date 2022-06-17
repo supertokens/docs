@@ -9,7 +9,7 @@ original_id: api-reference
 
 <div class="divider"></div>
 
-## ```init({apiDomain, apiBasePath?, sessionExpiredStatusCode?, sessionScope?, refreshAPICustomHeaders?, signoutAPICustomHeaders?, autoAddCredentials?})```
+## ```init({apiDomain, apiBasePath?, sessionExpiredStatusCode?, cookieDomain?, refreshAPICustomHeaders?, signoutAPICustomHeaders?, autoAddCredentials?})```
 #### Parameters
 - ```apiDomain```
     - Type: ```string```
@@ -21,7 +21,7 @@ original_id: api-reference
     - Type: ```number```
     - Default: ```401```
     - HTTP status code that indicates session expiry - as sent by your APIs.
-- ```sessionScope``` (Optional)
+- ```cookieDomain``` (Optional)
     - Type: ```string```
     - Default: Same as the domain in the currently loaded URL.
     - Set this to your website domain across which you want to share a session. For example, if your website domain (that is loaded by the user) is ```example.com```, then the value of this should be ```example.com```. If your site has subdomains that need to keep the same session, like ```a.example.com``` and ```b.example.com```, then the value of this should be ```example.com```.

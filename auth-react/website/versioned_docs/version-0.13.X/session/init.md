@@ -61,7 +61,7 @@ SuperTokens.init({
 
 ## Config values
 
-- ```sessionScope``` (Optional)
+- ```cookieDomain``` (Optional)
     - Type: ```string```
     - Default: Same as the domain in the currently loaded URL.
     - Set this to your website domain across which you want to share a session. For example, if your website domain (that is loaded by the user) is ```example.com```, then the value of this should be ```example.com```. If your site has subdomains that need to keep the same session, like ```a.example.com``` and ```b.example.com```, then the value of this should be ```example.com```.

@@ -14,7 +14,7 @@ original_id: migration
 - We no longer support using this library without interceptors for ease of use.
 - We have removed the `viaInterceptors` param from the `init` function call.
 - We have removed `refreshTokenUrl` param, and replaced it with `apiDomain` and `apiBasePath`. The refresh API will always be on `apiDomain + apiBasePath + "/session/refresh"`
-- We have renamed `websiteRootDomain` to `sessionScope` - as that is more clear.
+- We have renamed `websiteRootDomain` to `cookieDomain` - as that is more clear.
 
 ## From version `4.1.X` to `4.2.X`
 ### Using ```fetch```
