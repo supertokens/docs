@@ -28,7 +28,7 @@ This is achieved by calling an API provided by us (`https://api.supertokens.com`
 
 ## Send a custom email
 
-You can take full control of sending an email verification email by providing the `createAndSendCustomEmail` function during `init` function call:
+You can take full control of sending an email verification email by providing the `override` object in the `emailDelivery` config during `init` function call:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -48,12 +48,21 @@ supertokens.init({
         ^{recipeNameCapitalLetters}.init({
             ^{nodeRecipeInitDefault}
             // highlight-start
-            emailVerificationFeature: {
-                createAndSendCustomEmail: async (user, emailVerificationURLWithToken) => {
-                    let { id, email } = user;
-                    // TODO:
+            emailDelivery: {
+                override: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        sendEmail: async function (input) {
+                            if (input.type === "EMAIL_VERIFICATION") {
+                                let { user, emailVerifyLink } = input;
+                                let { id, email } = user;
+                                // TODO:
+                            }
+                            return originalImplementation.sendEmail(input);
+                        }
+                    }
                 }
-            }
+            },
             // highlight-end
         }),
         Session.init()
@@ -66,6 +75,9 @@ supertokens.init({
 ```go
 
 import (
+    "fmt"
+
+    "github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
 	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
 	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
 	"github.com/supertokens/supertokens-golang/supertokens"
@@ -77,11 +89,26 @@ func main() {
             ^{codeImportRecipeName}.Init(^{goModelNameForInit}.TypeInput{
                 ^{goRecipeInitDefault} // typecheck-only, removed from output
                 // highlight-start
-                EmailVerificationFeature: &^{goModelName}.TypeInputEmailVerificationFeature{
-                    CreateAndSendCustomEmail: func(user ^{goModelName}.User, emailVerificationURLWithToken string, userContext supertokens.UserContext) {
-                        // TODO: Create and send verification email
-                    },
-                },
+                EmailDelivery: &emaildelivery.TypeInput{
+					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
+						originalSendEmail := *originalImplementation.SendEmail
+
+						(*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
+							if input.EmailVerification != nil {
+								emailVerifyLink := input.EmailVerification.EmailVerifyLink
+								email := input.EmailVerification.User.Email
+								userId := input.EmailVerification.User.ID
+								fmt.Println(emailVerifyLink)
+								fmt.Println(email)
+								fmt.Println(userId)
+								// TODO:
+							}
+							return originalSendEmail(input, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
                 // highlight-end
             }),
         },
@@ -93,12 +120,28 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe.^{codeImportRecipeName}.types import User
+from supertokens_python.recipe.^{codeImportRecipeName}.types import Type^{recipeNameCapitalLetters}EmailDeliveryInput
 from supertokens_python.recipe import ^{codeImportRecipeName}
 from typing import Dict, Any
+from supertokens_python.recipe.emailverification.interfaces import TypeEmailVerificationEmailDeliveryInput
+from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryInterface, EmailDeliveryConfig
 
-async def create_and_send_custom_email(user: User, email_verification_url: str, user_context: Dict[str, Any]):
-    pass # TODO
+def custom_email_deliver(original_implementation: EmailDeliveryInterface[Type^{recipeNameCapitalLetters}EmailDeliveryInput]) -> EmailDeliveryInterface[Type^{recipeNameCapitalLetters}EmailDeliveryInput]:
+    original_send_email = original_implementation.send_email
+
+    async def send_email(input_: Type^{recipeNameCapitalLetters}EmailDeliveryInput, user_context: Dict[str, Any]) -> None:
+        # highlight-start
+        if isinstance(input_, TypeEmailVerificationEmailDeliveryInput):
+            _ = input_.email_verify_link
+            __ = input_.user.email
+            ___ = input_.user.id
+            # TODO: send email...
+        # highlight-end
+
+        return await original_send_email(input_, user_context)
+
+    original_implementation.send_email = send_email
+    return original_implementation
 
 ^{pythonDefaultCallbackDefs} # typecheck-only, removed from output
 init(
@@ -107,9 +150,7 @@ init(
     recipe_list=[
         ^{codeImportRecipeName}.init(
             ^{pythonRecipeInitDefault} # typecheck-only, removed from output
-            email_verification_feature=^{codeImportRecipeName}.InputEmailVerificationConfig(
-                create_and_send_custom_email=create_and_send_custom_email
-            )
+            email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
         )
     ]
 )
@@ -118,9 +159,8 @@ init(
 </TabItem>
 </BackendSDKTabs>
 
-- You can get the user's email via the `user` input param.
-- Your email must direct the user to open the `emailVerificationURLWithToken` link. This link is a full URL, with the email verification token. It points to the email verification page on your website (`/auth/email-verify` by default).
-- Any errors thrown from this function will be ignored.
+- You can get the user's email via the `user` object in the input param.
+- Your email must direct the user to open the `emailVerifyLink` link. This link is a full URL, with the email verification token. It points to the email verification page on your website (`/auth/email-verify` by default).
 
 :::important
 When using this callback, you must manage sending the email yourself.
