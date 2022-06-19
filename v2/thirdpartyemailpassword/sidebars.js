@@ -56,18 +56,19 @@ module.exports = {
         "email-delivery/about",
         {
           type: 'category',
+          label: 'Default service',
+          items: [
+            "email-delivery/default/templates"
+          ]
+        },
+        {
+          type: 'category',
           label: 'SMTP service',
           items: [
             "email-delivery/smtp/configure-smtp"
           ]
         },
-        {
-          type: 'category',
-          label: 'Custom service',
-          items: [
-            "email-delivery/custom/configure"
-          ]
-        },
+        "email-delivery/custom-method"
       ]
     },
     {
