@@ -463,6 +463,11 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
                 continue;
             }
 
+            // if the line contains "# pyright: ", then we remove that line
+            if (line.includes("# pyright:") || line.includes("#pyright:")) {
+                continue;
+            }
+
             /**
              * For snippets that use supertokens-website as an HTML script we import supertokens-website-script for types.
              * If the line contains this we skip adding the line
