@@ -66,11 +66,11 @@ module.exports = {
           label: 'SMTP service',
           items: [
             "email-delivery/smtp/configure-smtp",
-            "email-delivery/smtp/change-email-content",
-            "email-delivery/smtp/pre-post-email"
+            "email-delivery/smtp/change-email-content"
           ]
         },
-        "email-delivery/custom-method"
+        "email-delivery/custom-method",
+        "email-delivery/pre-post-email"
       ]
     },
     {
