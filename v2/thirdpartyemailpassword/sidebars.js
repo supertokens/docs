@@ -51,6 +51,27 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Email Delivery',
+      items: [
+        "email-delivery/about",
+        {
+          type: 'category',
+          label: 'SMTP service',
+          items: [
+            "email-delivery/smtp/configure-smtp"
+          ]
+        },
+        {
+          type: 'category',
+          label: 'Custom service',
+          items: [
+            "email-delivery/custom/configure"
+          ]
+        },
+      ]
+    },
+    {
+      type: 'category',
       label: 'Common customizations',
       items: [
         "common-customizations/redirect-to-auth",
