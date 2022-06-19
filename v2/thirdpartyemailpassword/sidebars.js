@@ -65,7 +65,9 @@ module.exports = {
           type: 'category',
           label: 'SMTP service',
           items: [
-            "email-delivery/smtp/configure-smtp"
+            "email-delivery/smtp/configure-smtp",
+            "email-delivery/smtp/change-email-content",
+            "email-delivery/smtp/pre-post-email"
           ]
         },
         "email-delivery/custom-method"
