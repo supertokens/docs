@@ -14,7 +14,6 @@ export default function FrontendSDKTabs(props: any) {
         { label: "ReactJS", value: "reactjs" },
         { label: "Plain JavaScript", value: "vanillajs" },
         { label: "React Native", value: "react-native" },
-        { label: "Angular", value: "angular" },
       ]}
     >
     {childContainsTabItemWithValue("reactjs", props.children)
@@ -26,9 +25,6 @@ export default function FrontendSDKTabs(props: any) {
       {childContainsTabItemWithValue("react-native", props.children)
           ? null
         : DefaultRNTabItem()}
-      {childContainsTabItemWithValue("angular", props.children)
-        ? null
-        : DefaultAngularTabItem()}
       {props.children}
     </Tabs>)
 }
