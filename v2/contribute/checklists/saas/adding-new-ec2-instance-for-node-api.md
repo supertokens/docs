@@ -18,3 +18,4 @@ The list includes all the changes that needs to be made to make sure the things 
 - Secrets need to be stored to the new server
 - Correct node process env needs to be set for the new instance
 - Inbound IP address rules must be changed for mysql db (may not be required) and for postgresql dbs in managed service (for all regions).
+- Install nvm and make node version v16.15.1 by default.
