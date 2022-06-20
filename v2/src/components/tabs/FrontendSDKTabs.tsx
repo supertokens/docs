@@ -2,23 +2,54 @@ import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
+import { recursiveMapAllChildren } from "../utils";
+
+const copyTabIdentifier = "~COPY-TABS=";
 
 export default function FrontendSDKTabs(props: any) {
-    return (
-        <Tabs
-            groupId="frontendsdk"
-            defaultValue="reactjs"
-            values={[
-                { label: 'ReactJS', value: 'reactjs' },
-                { label: 'Plain JavaScript', value: 'vanillajs' },
-                { label: 'React Native', value: 'react-native' },
-            ]}>
-            {childContainsTabItemWithValue("reactjs", props.children) ? null : DefaultReactJSTabItem()}
-            {childContainsTabItemWithValue("vanillajs", props.children) ? null : DefaultVanillaJSTabItem()}
-            {childContainsTabItemWithValue("react-native", props.children) ? null : DefaultRNTabItem()}
-            {props.children}
-        </Tabs>
-    );
+    return applyCopyTabs(<Tabs
+      groupId="frontendsdk"
+      defaultValue="reactjs"
+      values={[
+        { label: "ReactJS", value: "reactjs" },
+        { label: "Plain JavaScript", value: "vanillajs" },
+        { label: "React Native", value: "react-native" },
+      ]}
+    >
+    {childContainsTabItemWithValue("reactjs", props.children)
+        ? null
+        : DefaultReactJSTabItem()}
+      {childContainsTabItemWithValue("vanillajs", props.children)
+        ? null
+        : DefaultVanillaJSTabItem()}
+      {childContainsTabItemWithValue("react-native", props.children)
+          ? null
+        : DefaultRNTabItem()}
+      {props.children}
+    </Tabs>)
+}
+
+function applyCopyTabs(children: any): any {
+  return recursiveMapAllChildren(
+    children,
+    (child: any) => {
+      if (!React.isValidElement(child.props.children) && typeof child.props.children === "string" &&
+      child.props.children.startsWith(copyTabIdentifier)) {
+        let tabToCopyIdentifier = child.props.children.split(copyTabIdentifier)[1].trim();
+        let result = undefined;
+        recursiveMapAllChildren(children, (child: any) => {
+          if (child.props.mdxType === "TabItem" && child.props.value === tabToCopyIdentifier) {
+            result = child.props.children
+          }
+          return child
+        })
+        if (result !== undefined) {
+          return result;
+        }
+      }
+      return child;
+    },
+  );
 }
 
 function DefaultReactJSTabItem() {
