@@ -57,7 +57,7 @@ module.exports = {
         "email-delivery/default",
         {
           type: 'category',
-          label: 'SMTP service',
+          label: 'Method 2) SMTP service',
           items: [
             "email-delivery/smtp/configure-smtp",
             "email-delivery/smtp/change-email-content"
