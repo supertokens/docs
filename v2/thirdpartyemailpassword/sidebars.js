@@ -54,13 +54,7 @@ module.exports = {
       label: 'Email Delivery',
       items: [
         "email-delivery/about",
-        {
-          type: 'category',
-          label: 'Default service',
-          items: [
-            "email-delivery/default/templates"
-          ]
-        },
+        "email-delivery/default",
         {
           type: 'category',
           label: 'SMTP service',
