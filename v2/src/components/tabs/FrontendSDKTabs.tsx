@@ -4,7 +4,7 @@ let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
 import { recursiveMap } from "../utils";
 const copyTabIdentifier = "~COPY-TABS=";
-const tabValues = ["reactjs", "vanillajs", "react-native"];
+const tabValues = ["reactjs", "vanillajs", "react-native", "angular"];
 
 export default function FrontendSDKTabs(props: any) {
   let tabsUsingCopyTabs: string[] = [];
@@ -30,6 +30,11 @@ export default function FrontendSDKTabs(props: any) {
           ? applyCopyTabs("react-native", props.children)
           : null
         : DefaultRNTabItem()}
+      {childContainsTabItemWithValue("angular", props.children)
+        ? containsCopyTabs("angular", props.children, tabsUsingCopyTabs)
+          ? applyCopyTabs("angular", props.children)
+          : null
+        : DefaultAngularTabItem()}
 
       {returnTabsWithoutCopyTabs(props.children, tabsUsingCopyTabs)}
     </Tabs>
