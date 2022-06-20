@@ -2,14 +2,12 @@ import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
-import { recursiveMap } from "../utils";
+import { recursiveMap, recursiveMapAllChildren } from "../utils";
+
 const copyTabIdentifier = "~COPY-TABS=";
-const tabValues = ["reactjs", "vanillajs", "react-native"];
 
 export default function FrontendSDKTabs(props: any) {
-  let tabsUsingCopyTabs: string[] = [];
-  return (
-    <Tabs
+    return applyCopyTabs(<Tabs
       groupId="frontendsdk"
       defaultValue="reactjs"
       values={[
@@ -19,138 +17,43 @@ export default function FrontendSDKTabs(props: any) {
         { label: "Angular", value: "angular" },
       ]}
     >
-      {childContainsTabItemWithValue("reactjs", props.children)
+    {childContainsTabItemWithValue("reactjs", props.children)
         ? null
         : DefaultReactJSTabItem()}
       {childContainsTabItemWithValue("vanillajs", props.children)
         ? null
         : DefaultVanillaJSTabItem()}
       {childContainsTabItemWithValue("react-native", props.children)
-        ? containsCopyTabs("react-native", props.children, tabsUsingCopyTabs)
-          ? applyCopyTabs("react-native", props.children)
-          : null
+          ? null
         : DefaultRNTabItem()}
-
-      {returnTabsWithoutCopyTabs(props.children, tabsUsingCopyTabs)}
-    </Tabs>
-  );
+      {childContainsTabItemWithValue("angular", props.children)
+        ? null
+        : DefaultAngularTabItem()}
+      {props.children}
+    </Tabs>)
 }
 
-function returnTabsWithoutCopyTabs(children: any, tabsUsingCopyTabs: string[]) {
-  return recursiveMap(
+function applyCopyTabs(children: any): any {
+  return recursiveMapAllChildren(
     children,
     (child: any) => {
-      return child;
-    },
-    (child: any) => {
-      if (tabsUsingCopyTabs.includes(child.props.value)) {
-        return false;
-      }
-      return true;
-    }
-  );
-}
-
-function applyCopyTabs(tabId: string, children: any): any {
-  let isTabContent = false;
-  return recursiveMap(
-    children,
-    (child: any) => {
-      if (child.startsWith(copyTabIdentifier)) {
-        let tabToCopyIdentifier = child.split(copyTabIdentifier)[1];
-        let isCopyTabContent = false;
-        let contentToInsert = recursiveMap(
-          children,
-          (child: any) => {
-            return child;
-          },
-          (child) => {
-            if (
-              child.props.mdxType === "TabItem" &&
-              tabValues.includes(child.props.value)
-            ) {
-              isCopyTabContent = false;
-            }
-
-            if (
-              child.props.value !== tabToCopyIdentifier &&
-              !isCopyTabContent
-            ) {
-              return false;
-            }
-
-            isCopyTabContent = true;
-            return true;
+      if (!React.isValidElement(child.props.children) && typeof child.props.children === "string" &&
+      child.props.children.startsWith(copyTabIdentifier)) {
+        let tabToCopyIdentifier = child.props.children.split(copyTabIdentifier)[1].trim();
+        let result = undefined;
+        recursiveMapAllChildren(children, (child: any) => {
+          if (child.props.mdxType === "TabItem" && child.props.value === tabToCopyIdentifier) {
+            result = child.props.children
           }
-        );
-
-        return contentToInsert.props.children;
+          return child
+        })
+        if (result !== undefined) {
+          return result;
+        }
       }
       return child;
     },
-    (child) => {
-      if (
-        child.props.mdxType === "TabItem" &&
-        tabValues.includes(child.props.value)
-      ) {
-        isTabContent = false;
-      }
-
-      if (child.props.value !== tabId && !isTabContent) {
-        return false;
-      }
-
-      isTabContent = true;
-
-      return true;
-    }
   );
-}
-
-function containsCopyTabs(
-  tabId: string,
-  children: any,
-  tabsUsingCopyTabs: string[]
-): boolean {
-  let acceptedChildren: any[] = [];
-  recursiveMap(
-    children,
-    (child: any) => {
-      return child;
-    },
-    (child) => {
-      let accepted = false;
-      for (let i = 0; i < acceptedChildren.length; i++) {
-        let currAcceptedChild = acceptedChildren[i];
-        React.Children.forEach(currAcceptedChild, (child2: any) => {
-          accepted = accepted || child2 == child;
-        });
-      }
-      if (accepted === false && child.props.value !== tabId) {
-        return false;
-      }
-      acceptedChildren.push(child);
-      return true;
-    }
-  );
-
-  let doesChildContainCopyTabs = false;
-  for (let i = 0; i < acceptedChildren.length; i++) {
-    let currAcceptedChild = acceptedChildren[i];
-    recursiveMap(
-      currAcceptedChild,
-      (child: any) => {
-        doesChildContainCopyTabs = child.includes(copyTabIdentifier);
-      },
-      () => {
-        return !doesChildContainCopyTabs;
-      }
-    );
-  }
-  if (doesChildContainCopyTabs) {
-    tabsUsingCopyTabs.push(tabId);
-  }
-  return doesChildContainCopyTabs;
 }
 
 function DefaultReactJSTabItem() {
