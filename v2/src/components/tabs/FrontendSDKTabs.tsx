@@ -4,11 +4,10 @@ let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
 import { recursiveMap } from "../utils";
 const copyTabIdentifier = "~COPY-TABS=";
-const tabValues = ["reactjs", "vanillajs", "react-native", "angular"]
-
+const tabValues = ["reactjs", "vanillajs", "react-native"];
 
 export default function FrontendSDKTabs(props: any) {
-  let tabsUsingCopyTabs: string[] = []
+  let tabsUsingCopyTabs: string[] = [];
   return (
     <Tabs
       groupId="frontendsdk"
@@ -31,62 +30,70 @@ export default function FrontendSDKTabs(props: any) {
           ? applyCopyTabs("react-native", props.children)
           : null
         : DefaultRNTabItem()}
-        {childContainsTabItemWithValue("angular", props.children)
-        ? containsCopyTabs("angular", props.children, tabsUsingCopyTabs)
-          ? applyCopyTabs("angular", props.children)
-          : null
-        : DefaultAngularTabItem()}
-      
+
       {returnTabsWithoutCopyTabs(props.children, tabsUsingCopyTabs)}
     </Tabs>
   );
 }
 
-function returnTabsWithoutCopyTabs(children: any, tabsUsingCopyTabs: string[]){
-
-  return recursiveMap(children, (child: any) => {
-    return child
-  }, (child: any) => {
-      if(tabsUsingCopyTabs.includes(child.props.value)){
-        return false
+function returnTabsWithoutCopyTabs(children: any, tabsUsingCopyTabs: string[]) {
+  return recursiveMap(
+    children,
+    (child: any) => {
+      return child;
+    },
+    (child: any) => {
+      if (tabsUsingCopyTabs.includes(child.props.value)) {
+        return false;
       }
-    return true
-  } )
-
+      return true;
+    }
+  );
 }
 
 function applyCopyTabs(tabId: string, children: any): any {
-
   let isTabContent = false;
   return recursiveMap(
     children,
     (child: any) => {
       if (child.startsWith(copyTabIdentifier)) {
         let tabToCopyIdentifier = child.split(copyTabIdentifier)[1];
-        let isCopyTabContent = false
-        let contentToInsert = recursiveMap(children, (child: any) => {
-          return child
-        }, (child) => {
-          if(child.props.mdxType === "TabItem" && tabValues.includes(child.props.value)){
-            isCopyTabContent = false
-          }
-          
-          if(child.props.value !== tabToCopyIdentifier && !isCopyTabContent){
-            return false
-          }
+        let isCopyTabContent = false;
+        let contentToInsert = recursiveMap(
+          children,
+          (child: any) => {
+            return child;
+          },
+          (child) => {
+            if (
+              child.props.mdxType === "TabItem" &&
+              tabValues.includes(child.props.value)
+            ) {
+              isCopyTabContent = false;
+            }
 
-          isCopyTabContent = true
-          return true
-        })
-        
-        return contentToInsert.props.children
+            if (
+              child.props.value !== tabToCopyIdentifier &&
+              !isCopyTabContent
+            ) {
+              return false;
+            }
+
+            isCopyTabContent = true;
+            return true;
+          }
+        );
+
+        return contentToInsert.props.children;
       }
       return child;
     },
     (child) => {
-
-      if(child.props.mdxType === "TabItem" && tabValues.includes(child.props.value)){
-        isTabContent = false
+      if (
+        child.props.mdxType === "TabItem" &&
+        tabValues.includes(child.props.value)
+      ) {
+        isTabContent = false;
       }
 
       if (child.props.value !== tabId && !isTabContent) {
@@ -98,11 +105,13 @@ function applyCopyTabs(tabId: string, children: any): any {
       return true;
     }
   );
-
 }
 
-
-function containsCopyTabs(tabId: string, children: any, tabsUsingCopyTabs: string[]): boolean {
+function containsCopyTabs(
+  tabId: string,
+  children: any,
+  tabsUsingCopyTabs: string[]
+): boolean {
   let acceptedChildren: any[] = [];
   recursiveMap(
     children,
@@ -138,8 +147,8 @@ function containsCopyTabs(tabId: string, children: any, tabsUsingCopyTabs: strin
       }
     );
   }
-  if(doesChildContainCopyTabs){
-    tabsUsingCopyTabs.push(tabId)
+  if (doesChildContainCopyTabs) {
+    tabsUsingCopyTabs.push(tabId);
   }
   return doesChildContainCopyTabs;
 }
@@ -232,11 +241,6 @@ function DefaultVanillaJSTabItem() {
   );
 }
 
-
 function DefaultAngularTabItem() {
-  return (
-    <TabItem value="angular">
-      Default Component
-    </TabItem>
-  );
+  return <TabItem value="angular">Default Component</TabItem>;
 }
