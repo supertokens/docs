@@ -36,13 +36,21 @@ supertokens.init({
                 override: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        sendEmail: async function ({
-                            codeLifetime, // amount of time the code is alive for (in MS)
-                            email,
-                            urlWithLinkCode, // magic link
-                            userInputCode, // OTP
-                        }) {
-                            // TODO: create and send email
+                        sendEmail: async function (input) {
+                            if (input.type === "PASSWORDLESS_LOGIN") {
+                                let {
+                                    codeLifetime, // amount of time the code is alive for (in MS)
+                                    email,
+                                    urlWithLinkCode, // magic link
+                                    userInputCode, // OTP
+                                } = input;
+
+                                // TODO: create and send email
+                            } else {
+                                // Or use the original implementation which calls the default service,
+                                // or a service that you may have specified in the email_delivery object.
+                                return originalImplementation.sendEmail(input);
+                            }
                         }
                     }
                 }
@@ -76,22 +84,30 @@ func main() {
                 EmailDelivery: &emaildelivery.TypeInput{
                     Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
 
+                        originalSendEmail := *originalImplementation.SendEmail
+
                         (*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
-                            // amount of time the code is alive for (in MS)
-                            codeLifetime := input.PasswordlessLogin.CodeLifetime
-                            email := input.PasswordlessLogin.Email
+                            if input.PasswordlessLogin != nil {
+								// amount of time the code is alive for (in MS)
+								codeLifetime := input.PasswordlessLogin.CodeLifetime
+								email := input.PasswordlessLogin.Email
 
-                            // magic link
-                            urlWithLinkCode := input.PasswordlessLogin.UrlWithLinkCode
+								// magic link
+								urlWithLinkCode := input.PasswordlessLogin.UrlWithLinkCode
 
-                            // OTP
-                            userInputCode := input.PasswordlessLogin.UserInputCode
-                            fmt.Println(codeLifetime)
-                            fmt.Println(email)
-                            fmt.Println(urlWithLinkCode)
-                            fmt.Println(userInputCode)
-                            // TODO: create and send email
-                            return nil
+								// OTP
+								userInputCode := input.PasswordlessLogin.UserInputCode
+								fmt.Println(codeLifetime)
+								fmt.Println(email)
+								fmt.Println(urlWithLinkCode)
+								fmt.Println(userInputCode)
+								// TODO: create and send email
+								return nil
+							} else {
+								// Or use the original implementation which calls the default service,
+								// or a service that you may have specified in the EmailDelivery object.
+								return originalSendEmail(input, userContext)
+							}
                         }
 
                         return originalImplementation
@@ -112,16 +128,28 @@ from supertokens_python.recipe.^{codeImportRecipeName}.types import Type^{recipe
 from supertokens_python.recipe import ^{codeImportRecipeName}
 from typing import Dict, Any
 from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryInterface, EmailDeliveryConfig
+from supertokens_python.recipe.passwordless.types import TypePasswordlessEmailDeliveryInput
 
 def custom_email_deliver(original_implementation: EmailDeliveryInterface[Type^{recipeNameCapitalLetters}EmailDeliveryInput]) -> EmailDeliveryInterface[Type^{recipeNameCapitalLetters}EmailDeliveryInput]:
+
+    original_send_email = original_implementation.send_email
+
     # highlight-start
     async def send_email(input_: Type^{recipeNameCapitalLetters}EmailDeliveryInput, user_context: Dict[str, Any]) -> None:
-        _ = input_.code_life_time # amount of time the code is alive for (in MS)
-        __ = input_.email
-        ___ = input_.url_with_link_code  # magic link
-        ____ = input_.user_input_code  # OTP
+        if isinstance(input_, TypePasswordlessEmailDeliveryInput):
+            # amount of time the code is alive for (in MS)
+            _ = input_.code_life_time
+            __ = input_.email
+            ___ = input_.url_with_link_code  # magic link
+            ____ = input_.user_input_code  # OTP
 
-        # TODO: create and send email...
+            # TODO: create and send email...
+        else:
+            # email verification email
+
+            # Or use the original implementation which calls the default service,
+            # or a service that you may have specified in the email_delivery object.
+            return await original_send_email(input_, user_context)
     # highlight-end
     original_implementation.send_email = send_email
     return original_implementation
@@ -143,6 +171,8 @@ init(
 </BackendSDKTabs>
 
 If you call the original implementation function for `sendEmail`, it will use the service that you have configured. If you have not configured any service, it will use the [default service](./default).
+
+So using this method, you can for example, have your custom way of sending email verification emails, but use the [default](./default) or [SMTP](./smtp/configure-smtp) service to send the passwordless login emails.
 
 :::important
 When using this callback, you must manage sending the email yourself.
