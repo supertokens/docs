@@ -14,6 +14,7 @@ export default function FrontendSDKTabs(props: any) {
         { label: "ReactJS", value: "reactjs" },
         { label: "Plain JavaScript", value: "vanillajs" },
         { label: "React Native", value: "react-native" },
+        { label: "Angular", value: "angular" },
       ]}
     >
     {childContainsTabItemWithValue("reactjs", props.children)
@@ -25,6 +26,9 @@ export default function FrontendSDKTabs(props: any) {
       {childContainsTabItemWithValue("react-native", props.children)
           ? null
         : DefaultRNTabItem()}
+      {childContainsTabItemWithValue("angular", props.children)
+          ? null
+        : DefaulAngularTabItem()}
       {props.children}
     </Tabs>)
 }
@@ -54,6 +58,35 @@ function applyCopyTabs(children: any): any {
 
 function DefaultReactJSTabItem() {
     return <>Should never show this since we support ReactJS SDK for everything...</>;
+}
+
+function DefaulAngularTabItem() {
+    return (
+      <TabItem value="angular">
+          <div className="admonition admonition-caution alert alert--warning">
+              <div className="admonition-heading">
+                  <h5>
+                      <span className="admonition-icon">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+                              <path fillRule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z">
+                              </path>
+                          </svg>
+                      </span>
+                      Important
+                  </h5>
+              </div>
+              <div className="admonition-content">
+                  SuperTokens does not have an Angular SDK for Login UI and Authentication related flows. We will be using the React SDK to render the Login UI and handle Authentication flows.
+                  <br/><br/>
+                  If you are using <b>Custom UI</b>, follow the instructions in the Plain JavaScript section.
+              </div>
+          </div>
+          <br/>
+          <div>
+          ~COPY-TABS=reactjs
+          </div>
+      </TabItem>
+  );
 }
 
 function DefaultRNTabItem() {
