@@ -63,6 +63,10 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 - This should be used across recipe docs, when the content of the page is exactly the same across docs.
 - An example of this can be found `v2 > community > database-setup > mysql.mdx`.
 
+### Using Copy tabs
+- If your tabs have the same content as another tab you can use the copy tabs feature to copy the contents of one tab to another.
+- Add `~COPY-TAB=TAB_ID` to your snippet. This will copy the contents of the tab with id `TAB_ID` to your tab.
+
 ### Swizzling components:
 - Docusaurus allows "swizzling" of their components so that they can be modified as per our needs. Once a component is swizzled, it's placed in the v2 > src > theme folder, and can be edited freely.
 - To swizzle a component:

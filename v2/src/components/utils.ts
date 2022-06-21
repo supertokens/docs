@@ -77,6 +77,33 @@ export function recursiveMap(children: any, fn: any, filterDescendants?: (comp: 
     return result;
 }
 
+export const recursiveMapAllChildren = (
+    children: any,
+    fn: (child: React.ReactElement) => React.ReactElement
+  ): any => {
+    let result = React.Children.map(children, child => {
+      if (!React.isValidElement(child)) {
+        return child;
+      }
+  
+      if ((child as React.ReactElement).props.children) {
+        const props = {
+          children: recursiveMapAllChildren((child as React.ReactElement).props.children, fn)
+        }
+        child = React.cloneElement(child, props);
+      }
+  
+      return fn(child);
+    });
+    if (result.length === 1) {
+        if (children.props === undefined || children.props.children === undefined ||
+            !Array.isArray(children.props.children)) {
+            return result[0];
+        }
+    }
+    return result
+  }
+
 export function mockDelay(timeout = 2000) {
     return new Promise(resolve => setTimeout(resolve, timeout));
 }
