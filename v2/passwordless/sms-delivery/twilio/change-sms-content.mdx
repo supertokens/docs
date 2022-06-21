@@ -9,13 +9,9 @@ import TabItem from '@theme/TabItem';
 
 # Change SMS content
 
-To change the content of the default email templates, you can override the `getContent` function in the `emailDelivery` object. It allows you to return an object that has the following properties:
+To change the content of the default SMS templates, you can override the `getContent` function in the `smsDelivery` object. It allows you to return an object that has the following properties:
 - `body`: This is the email's body. This can be HTML or just text as well.
-- `isHtml`: If the body is HTML, then this should be `true`.
-- `subject`: This is the subject of the email to send.
-- `toEmail`: The email will be sent to this email.
-
-Other information like which email ID to send from is specified in the `smtpSettings` object.
+- `toPhoneNumber`: The phone number where the SMS will be sent to.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -24,7 +20,7 @@ Other information like which email ID to send from is specified in the `smtpSett
 import supertokens from "supertokens-node";
 import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
 import Session from "supertokens-node/recipe/session";
-import { STMPService } from "supertokens-node/recipe/^{codeImportRecipeName}/emaildelivery";
+import { TwilioService } from "supertokens-node/recipe/passwordless/smsdelivery";
 
 supertokens.init({
     appInfo: {
@@ -35,36 +31,33 @@ supertokens.init({
     recipeList: [
         ^{recipeNameCapitalLetters}.init({
             ^{nodeRecipeInitDefault}
-            emailDelivery: {
-                service: new STMPService({
+            smsDelivery: {
+                service: new TwilioService({
                     // @ts-ignore
-                    smtpSettings: { /*...*/ },
+                    twilioSettings: { /*...*/ },
                     // highlight-start
                     override: (originalImplementation) => {
                         return {
                             ...originalImplementation,
                             getContent: async function ({
                                 codeLifetime, // amount of time the code is alive for (in MS)
-                                email,
+                                phoneNumber,
                                 urlWithLinkCode, // magic link
                                 userInputCode, // OTP
                             }) {
-                                // send some custom email content
+                                // send some custom SMS content
                                 return {
-                                    body: "EMAIL BODY",
-                                    isHtml: true,
-                                    subject: "Some subject",
-                                    toEmail: email
+                                    toPhoneNumber: phoneNumber,
+                                    body: "SMS BODY"
                                 }
 
                                 // You can even call the original implementation and
                                 // modify its content:
-                                
-                                /*
-                                let originalContent = await originalImplementation.getContent(input)
-                                originalContent.subject = "My custom subject";
-                                return originalContent;
-                                */
+
+                                /*let originalContent = await originalImplementation.getContent(input)
+                                originalContent.body = "My custom body";
+                                return originalContent;*/
+
                             }
                         }
                     }
@@ -83,25 +76,24 @@ supertokens.init({
 import (
     "fmt"
 
-    "github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
+    "github.com/supertokens/supertokens-golang/ingredients/smsdelivery"
     "github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
-    "github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/emaildelivery/smtpService"
     "github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
+    "github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/smsdelivery/twilioService"
     "github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
-    smtpService := smtpService.MakeSmtpService(emaildelivery.SMTPTypeInput{
-		SMTPSettings: emaildelivery.SMTPServiceConfig{ /* ... */ },
-		// highlight-start
-		Override: func(originalImplementation emaildelivery.SMTPServiceInterface) emaildelivery.SMTPServiceInterface {
-
+    // highlight-start
+    smsService, err := twilioService.MakeTwilioService(smsdelivery.TwilioTypeInput{
+		TwilioSettings: smsdelivery.TwilioServiceConfig{ /* ... */ },
+		Override: func(originalImplementation smsdelivery.TwilioServiceInterface) smsdelivery.TwilioServiceInterface {
 			// originalGetContent := *originalImplementation.GetContent
-
-			(*originalImplementation.GetContent) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) (emaildelivery.SMTPGetContentResult, error) {
-                // amount of time the code is alive for (in MS)
+			
+            (*originalImplementation.GetContent) = func(input smsdelivery.SmsType, userContext supertokens.UserContext) (smsdelivery.TwilioGetContentResult, error) {
+				// amount of time the code is alive for (in MS)
 				codeLifetime := input.PasswordlessLogin.CodeLifetime
-				email := input.PasswordlessLogin.Email
+				phoneNumber := input.PasswordlessLogin.PhoneNumber
 
 				// magic link
 				urlWithLinkCode := input.PasswordlessLogin.UrlWithLinkCode
@@ -109,44 +101,43 @@ func main() {
 				// OTP
 				userInputCode := input.PasswordlessLogin.UserInputCode
 				fmt.Println(codeLifetime)
-				fmt.Println(email)
+				fmt.Println(phoneNumber)
 				fmt.Println(urlWithLinkCode)
 				fmt.Println(userInputCode)
 
 				// send some custom email content
-				return emaildelivery.SMTPGetContentResult{
-					Body:    "EMAIL BODY",
-					IsHtml:  true,
-					Subject: "Some subject",
-					ToEmail: email,
+				return smsdelivery.TwilioGetContentResult{
+					Body:          "SMS BODY",
+					ToPhoneNumber: phoneNumber,
 				}, nil
 
-				// you can even call the original implementation and modify that
-
-				/*
-				   originalContent, err := originalGetContent(input, userContext)
-				   if err != nil {
-				       return emaildelivery.SMTPGetContentResult{}, err
-				   }
-				   originalContent.Subject = "My custom subject"
-				   return originalContent, nil
-				*/
-
+                // Or you can call the original implemenation and change its content:
+                /*
+                originalResponse, err := originalGetContent(input, userContex)
+                if err != nil {
+                    return smsdelivery.TwilioGetContentResult{}, nil
+                }
+                originalResponse.body = "SMS Body"
+                return originalResponse
+                */
 			}
 
 			return originalImplementation
 		},
-		// highlight-end
 	})
+	if err != nil {
+		panic(err)
+	}
+    // highlight-end
 
     supertokens.Init(supertokens.TypeInput{
         RecipeList: []supertokens.Recipe{
             ^{codeImportRecipeName}.Init(^{goModelNameForInit}.TypeInput{
                 ^{goRecipeInitDefault} // typecheck-only, removed from output
                 // highlight-start
-                EmailDelivery: &emaildelivery.TypeInput{
-                    Service: &smtpService,
-                },
+                SmsDelivery: &smsdelivery.TypeInput{
+					Service: &smsService,
+				},
                 // highlight-end
             }),
         },
