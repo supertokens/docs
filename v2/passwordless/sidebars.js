@@ -79,6 +79,7 @@ module.exports = {
             "sms-delivery/twilio/change-sms-content"
           ]
         },
+        "sms-delivery/supertokens-sms-service",
         "sms-delivery/custom-method",
         "sms-delivery/pre-post-email"
       ]
