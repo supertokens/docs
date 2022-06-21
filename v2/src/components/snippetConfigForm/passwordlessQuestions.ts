@@ -10,20 +10,12 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
         activeText: "Your users will log in using a phone number.",
         value: "PHONE",
         variableMap: {
-          sendCB_Node: "createAndSendCustomTextMessage: async (input, context) => { /* See next step */ },",
           sendCB_Go:
             `ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
     Enabled: true,
-    CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
-        /* See next step */
-        return nil
-    },
 },`,
-          sendCB_Python_def:
-            "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters, user_context: Dict[str, Any]):\n    pass # See next step\n",
-          sendCB_Python: "create_and_send_custom_text_message=send_text_message",
           initialize_Python: "ContactPhoneOnlyConfig",
-          import_Python: "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig, CreateAndSendCustomTextMessageParameters"
+          import_Python: "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig"
         },
       },
       {
@@ -31,47 +23,24 @@ export const passwordlessQuestions: Record<string, QuestionInfo<any>> = {
         activeText: "Your users will log in using an email.",
         value: "EMAIL",
         variableMap: {
-          sendCB_Node: "createAndSendCustomEmail: async (input, context) => { /* See next step */ },",
           sendCB_Go:
             `ContactMethodEmail: plessmodels.ContactMethodEmailConfig{
     Enabled: true,
-    CreateAndSendCustomEmail: func(email string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
-        /* See next step */
-        return nil
-    },
 },`,
-          sendCB_Python_def:
-            "\nasync def send_email (params: CreateAndSendCustomEmailParameters, user_context: Dict[str, Any]):\n    pass # See next step\n",
-          sendCB_Python: "create_and_send_custom_email=send_email",
           initialize_Python: "ContactEmailOnlyConfig",
-          import_Python: "from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig, CreateAndSendCustomEmailParameters"
+          import_Python: "from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig"
         },
       },
       {
         title: "Email or phone number",
         activeText: "Your users will log in using an email or a phone number.",
         variableMap: {
-          sendCB_Node:
-            "createAndSendCustomEmail: async (input, context) => { /* See next step */ },\ncreateAndSendCustomTextMessage: async (input, context) => { /* See next step */ },",
           sendCB_Go:
             `ContactMethodEmailOrPhone: plessmodels.ContactMethodEmailOrPhoneConfig{
     Enabled: true,
-    CreateAndSendCustomEmail: func(email string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
-      /* See next step */
-      return nil
-    },
-    CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
-      /* See next step */
-      return nil
-    },
 },`,
-          sendCB_Python_def:
-            "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters, user_context: Dict[str, Any]):\n    pass # See next step\n" +
-            "\nasync def send_email (params: CreateAndSendCustomEmailParameters):\n    pass # See next step\n",
-          sendCB_Python:
-            "create_and_send_custom_text_message=send_text_message,\ncreate_and_send_custom_email=send_email",
           initialize_Python: "ContactEmailOrPhoneConfig",
-          import_Python: "from supertokens_python.recipe.passwordless import ContactEmailOrPhoneConfig, CreateAndSendCustomEmailParameters, CreateAndSendCustomTextMessageParameters"
+          import_Python: "from supertokens_python.recipe.passwordless import ContactEmailOrPhoneConfig"
         },
         value: "EMAIL_OR_PHONE",
       },
