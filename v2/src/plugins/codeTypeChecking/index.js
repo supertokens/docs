@@ -464,10 +464,10 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
             }
 
             /**
-             * For snippets that use supertokens-website as an HTML script we import supertokens-website-script for types.
+             * For snippets that use supertokens-web-js as an HTML script we import supertokens-web-js-script for types.
              * If the line contains this we skip adding the line
              */
-            if (line.includes("supertokens-website-script")) {
+             if (line.includes("supertokens-web-js-script")) {
                 continue;
             }
 
