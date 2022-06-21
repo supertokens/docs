@@ -76,7 +76,7 @@ function DefaulAngularTabItem() {
                   </h5>
               </div>
               <div className="admonition-content">
-                  SuperTokens does not have an Angular SDK for Login UI and Authentication related flows. We will be using the React SDK to render the Login UI and handle Authentication flows.
+                  SuperTokens does not have pre-built UI for Angular, instead  we will be using the React SDK to render the Login UI and handle authentication.
                   <br/><br/>
                   If you are using <b>Custom UI</b>, follow the instructions in the Plain JavaScript section.
               </div>
