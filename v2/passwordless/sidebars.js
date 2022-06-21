@@ -67,6 +67,24 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'SMS Delivery',
+      items: [
+        "sms-delivery/about",
+        "sms-delivery/default",
+        {
+          type: 'category',
+          label: 'Method 2) Twilio service',
+          items: [
+            "sms-delivery/twilio/configure-twilio",
+            "sms-delivery/twilio/change-sms-content"
+          ]
+        },
+        "sms-delivery/custom-method",
+        "sms-delivery/pre-post-email"
+      ]
+    },
+    {
+      type: 'category',
       label: 'Common customizations',
       items: [
         "common-customizations/redirect-to-auth",
