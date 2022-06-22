@@ -1,0 +1,179 @@
+---
+id: custom-method
+title: Method 3) Custom method
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Method 3) Custom method
+
+This method allows you provide a callback using which you can send emails however you like. The input to the callback will be email template variables, so you can freely design the email as well. Use this method if you are:
+- Using a third party email service like Mailchimp.
+- You want to do some custom spam protection before sending the email.
+- You already have an email sending infrastructure and want to use that.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import supertokens from "supertokens-node";
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import Session from "supertokens-node/recipe/session";
+
+supertokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        ^{recipeNameCapitalLetters}.init({
+            ^{nodeRecipeInitDefault}
+            // highlight-start
+            emailDelivery: {
+                override: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        sendEmail: async function (input) {
+                            if (input.type === "PASSWORDLESS_LOGIN") {
+                                let {
+                                    codeLifetime, // amount of time the code is alive for (in MS)
+                                    email,
+                                    urlWithLinkCode, // magic link
+                                    userInputCode, // OTP
+                                } = input;
+
+                                // TODO: create and send email
+                            } else {
+                                // Or use the original implementation which calls the default service,
+                                // or a service that you may have specified in the email_delivery object.
+                                return originalImplementation.sendEmail(input);
+                            }
+                        }
+                    }
+                }
+            },
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+
+import (
+    "fmt"
+
+    "github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
+    "github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
+    "github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
+    "github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+    supertokens.Init(supertokens.TypeInput{
+        RecipeList: []supertokens.Recipe{
+            ^{codeImportRecipeName}.Init(^{goModelNameForInit}.TypeInput{
+                ^{goRecipeInitDefault} // typecheck-only, removed from output
+                // highlight-start
+                EmailDelivery: &emaildelivery.TypeInput{
+                    Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
+
+                        originalSendEmail := *originalImplementation.SendEmail
+
+                        (*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
+                            if input.PasswordlessLogin != nil {
+								// amount of time the code is alive for (in MS)
+								codeLifetime := input.PasswordlessLogin.CodeLifetime
+								email := input.PasswordlessLogin.Email
+
+								// magic link
+								urlWithLinkCode := input.PasswordlessLogin.UrlWithLinkCode
+
+								// OTP
+								userInputCode := input.PasswordlessLogin.UserInputCode
+								fmt.Println(codeLifetime)
+								fmt.Println(email)
+								fmt.Println(urlWithLinkCode)
+								fmt.Println(userInputCode)
+								// TODO: create and send email
+								return nil
+							} else {
+								// Or use the original implementation which calls the default service,
+								// or a service that you may have specified in the EmailDelivery object.
+								return originalSendEmail(input, userContext)
+							}
+                        }
+
+                        return originalImplementation
+                    },
+                },
+                // highlight-end
+            }),
+        },
+    })
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.^{codeImportRecipeName}.types import Type^{recipeNameCapitalLetters}EmailDeliveryInput
+from supertokens_python.recipe import ^{codeImportRecipeName}
+from typing import Dict, Any
+from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryInterface, EmailDeliveryConfig
+from supertokens_python.recipe.passwordless.types import TypePasswordlessEmailDeliveryInput
+
+def custom_email_deliver(original_implementation: EmailDeliveryInterface[Type^{recipeNameCapitalLetters}EmailDeliveryInput]) -> EmailDeliveryInterface[Type^{recipeNameCapitalLetters}EmailDeliveryInput]:
+
+    original_send_email = original_implementation.send_email
+
+    # highlight-start
+    async def send_email(input_: Type^{recipeNameCapitalLetters}EmailDeliveryInput, user_context: Dict[str, Any]) -> None:
+        if isinstance(input_, TypePasswordlessEmailDeliveryInput):
+            # amount of time the code is alive for (in MS)
+            _ = input_.code_life_time
+            __ = input_.email
+            ___ = input_.url_with_link_code  # magic link
+            ____ = input_.user_input_code  # OTP
+
+            # TODO: create and send email...
+        else:
+            # email verification email
+
+            # Or use the original implementation which calls the default service,
+            # or a service that you may have specified in the email_delivery object.
+            return await original_send_email(input_, user_context)
+    # highlight-end
+    original_implementation.send_email = send_email
+    return original_implementation
+
+^{pythonDefaultCallbackDefs} # typecheck-only, removed from output
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        ^{codeImportRecipeName}.init(
+            ^{pythonRecipeInitDefault} # typecheck-only, removed from output
+            email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+If you call the original implementation function for `sendEmail`, it will use the service that you have configured. If you have not configured any service, it will use the [default service](./default).
+
+So using this method, you can for example, have your custom way of sending email verification emails, but use the [default](./default) or [SMTP](./smtp/configure-smtp) service to send the passwordless login emails.
+
+:::important
+When using this callback, you must manage sending the email yourself.
+:::
