@@ -39,7 +39,7 @@ SuperTokens.init({
 });
 ```
 
-# `enterEmailForm` Config values
+## `enterEmailForm` Config values
 
 - **style**: 
     - Description: An object to overwrite the Sign up form styles. Please refer to the <a href="/docs/emailpassword/common-customizations/styling/changing-style" target="_blank">common customizations guide</a> for more information about how to update the enter email form style.
@@ -58,7 +58,7 @@ SuperTokens.init({
             }
         ```
 
-# `submitNewPasswordForm` Config values
+## `submitNewPasswordForm` Config values
 
 - **style**: 
     - Description: An object to overwrite the submit new password form styles. Please refer to the  <a href="/docs/emailpassword/common-customizations/styling/changing-style" target="_blank">common customizations guide</a> for more information about how to update the sign up form style.

@@ -43,7 +43,7 @@ SuperTokens.init({
 });
 ```
 
-# `signInAndUpForm` Config values
+## `signInAndUpForm` Config values
 
 
 - **style**: 
