@@ -3,6 +3,7 @@ let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
 import { recursiveMapAllChildren } from "../utils";
+import AngularUIImplementation from "../reusableSnippets/angularUIImplementation";
 
 const copyTabIdentifier = "~COPY-TABS=";
 
@@ -63,6 +64,7 @@ function DefaultReactJSTabItem() {
 function DefaulAngularTabItem() {
     return (
       <TabItem value="angular">
+        <AngularUIImplementation>
           <div className="admonition admonition-caution alert alert--warning">
               <div className="admonition-heading">
                   <h5>
@@ -85,6 +87,8 @@ function DefaulAngularTabItem() {
           <div>
           ~COPY-TABS=reactjs
           </div>
+            
+        </AngularUIImplementation>
       </TabItem>
   );
 }
