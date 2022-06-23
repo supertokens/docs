@@ -12,9 +12,9 @@ export default function FrontendSDKTabs(props: any) {
       defaultValue="reactjs"
       values={[
         { label: "ReactJS", value: "reactjs" },
+        { label: "Angular", value: "angular" },
         { label: "Plain JavaScript", value: "vanillajs" },
         { label: "React Native", value: "react-native" },
-        { label: "Angular", value: "angular" },
       ]}
     >
     {childContainsTabItemWithValue("reactjs", props.children)
