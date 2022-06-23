@@ -12,13 +12,28 @@ export function PersistentQuestion(props: PropsWithChildren<{
         window.localStorage.removeItem(props.id)
     };
 
-    useEffect(()=>{
-        // check if localstorage key exists with props.id
-        let answer: any = window.localStorage.getItem(props.id)
+    const onQuestionAnswered = () => {
+        let answer: any = window.localStorage.getItem(props.id);
+        
         if(answer !== null){
             setSelectedAnsTitle(answer)
         }
+    }
+
+    useEffect(() => {
+        let answer: any = window.localStorage.getItem(props.id);
+
+        if(answer !== null){
+            setSelectedAnsTitle(answer)
+        }
+
+        window.addEventListener("persistentQuestionAnswered", onQuestionAnswered)
+
+        return () => {
+            window.removeEventListener("persistentQuestionAnswered", onQuestionAnswered)
+        }
     }, [])
+
 
     if (selectedAnsTitle === undefined) {
         return (
@@ -32,6 +47,7 @@ export function PersistentQuestion(props: PropsWithChildren<{
                             ...child.props,
                             onClick: () => {
                                 window.localStorage.setItem(props.id, child.props.title)
+                                window.dispatchEvent(new Event('persistentQuestionAnswered'));
                                 setSelectedAnsTitle(child.props.title)
                             }
                         });
