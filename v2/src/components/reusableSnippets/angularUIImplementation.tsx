@@ -1,14 +1,14 @@
 import React from "react";
-import { PersistentQuestion, PersistentAnswer } from "../persistentQuestion";
+import {Question, Answer} from "../question"
 
 export default function AngularUIImplementation(props: any) {
   return (
-    <PersistentQuestion
+    <Question
       question="What type of UI are you using?"
       id="angular-using-custom-ui-question"
     >
-      <PersistentAnswer title="Prebuilt UI"> {props.children} </PersistentAnswer>
-      <PersistentAnswer title="Custom UI">
+      <Answer title="Prebuilt UI"> {props.children} </Answer>
+      <Answer title="Custom UI">
       <div className="admonition admonition-caution alert alert--warning">
           <div className="admonition-heading">
               <h5>
@@ -26,7 +26,7 @@ export default function AngularUIImplementation(props: any) {
           </div>
       </div>
         
-      </PersistentAnswer>
-    </PersistentQuestion>
+      </Answer>
+    </Question>
   );
 }
