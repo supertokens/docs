@@ -12,10 +12,7 @@ export function Question(props: PropsWithChildren<{
         setSelectedAnsTitle(undefined);
 
         if(props.id !== undefined){
-            let answer: any = window.localStorage.getItem(props.id);
-            if(answer !== null){
-                setSelectedAnsTitle(answer)
-            }
+            window.localStorage.removeItem(props.id)
         }
     };
 
