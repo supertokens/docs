@@ -211,13 +211,6 @@ module.exports = {
       ],
     },
     {
-      type: 'doc',
-      id: "using-with-faunadb",
-      customProps: {
-        logoUrl: '/img/logos/fauna-db.svg'
-      }
-    },
-    {
       type: 'category',
       label: 'NestJS',
       customProps: {
