@@ -5,9 +5,11 @@ hide_title: true
 original_id: refresh-session
 ---
 
+# `refreshSession`
+
 <!--DOCUSAURUS_CODE_TABS-->
 <!--With Express-->
-# `refreshSession(req, res)`
+## `refreshSession(req, res)`
 ### Parameters
 
 - `req`
@@ -28,7 +30,7 @@ original_id: refresh-session
     - When this is thrown, all the relevant auth cookies are cleared by this function call, so you can redirect the user to a login page.
 
 <!--Without Express-->
-# `refreshSession(refreshToken)`
+## `refreshSession(refreshToken)`
 ### Parameters
 - `refreshToken`
     - **type:** `string`

@@ -33,7 +33,7 @@ __HIGHLIGHT__                    ThirdParty.Facebook({
 });
 ```
 
-# Parameters
+## Parameters
 
 - `clientSecret`
   - type: `String`
