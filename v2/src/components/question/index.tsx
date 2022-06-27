@@ -1,46 +1,18 @@
-import React, { Children, PropsWithChildren, useState, useEffect } from "react";
+
+
+import React, { Children, PropsWithChildren, useState } from "react";
 
 import "./question.css";
 
 export function Question(props: PropsWithChildren<{
-    question: string | (() => JSX.Element), id: string | undefined
+    question: string | (() => JSX.Element)
 }>) {
     const [selectedAnsTitle, setSelectedAnsTitle] = useState(undefined);
 
     let resubmitInfoClicked = (event: any) => {
         event.preventDefault();
         setSelectedAnsTitle(undefined);
-
-        if(props.id !== undefined){
-            window.localStorage.removeItem(props.id)
-        }
     };
-
-    const onQuestionAnswered = () => {
-        if(props.id !== undefined){
-            let answer: any = window.localStorage.getItem(props.id);
-        
-            if(answer !== null){
-                setSelectedAnsTitle(answer)
-            }
-        }
-    }
-
-    useEffect(() => {
-        if(props.id !== undefined){
-            let answer: any = window.localStorage.getItem(props.id);
-
-            if(answer !== null){
-                setSelectedAnsTitle(answer)
-            }
-
-            window.addEventListener("persistentQuestionAnswered", onQuestionAnswered)
-
-            return () => {
-                window.removeEventListener("persistentQuestionAnswered", onQuestionAnswered)
-            }
-        }
-    }, [])
 
     if (selectedAnsTitle === undefined) {
         return (
@@ -52,13 +24,7 @@ export function Question(props: PropsWithChildren<{
                     {Children.map(props.children, (child: any, index: number) => {
                         return React.cloneElement(child, {
                             ...child.props,
-                            onClick: () => {
-                                setSelectedAnsTitle(child.props.title)
-                                if(props.id !== undefined){
-                                    window.localStorage.setItem(props.id, child.props.title)
-                                    window.dispatchEvent(new Event('persistentQuestionAnswered'));
-                                }
-                            }
+                            onClick: () => setSelectedAnsTitle(child.props.title)
                         });
                     })}
                 </div>
