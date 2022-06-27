@@ -5,9 +5,11 @@ hide_title: true
 original_id: get-session
 ---
 
+# `getSession`
+
 <!--DOCUSAURUS_CODE_TABS-->
 <!--With Express-->
-# `getSession(req, res, enableCsrfProtection)`
+## `getSession(req, res, enableCsrfProtection)`
 ### Parameters
 - `req`
     - **type:** `Express.Request`
@@ -37,7 +39,7 @@ original_id: get-session
 - May change the access token - but this is taken care of by this function and our frontend SDKs. You do need to worry about handling this.
 
 <!--Without Express-->
-# `getSession(accessToken, antiCsrfToken, doAntiCsrfCheck, idRefreshToken)`
+## `getSession(accessToken, antiCsrfToken, doAntiCsrfCheck, idRefreshToken)`
 ### Parameters
 - `accessToken`
     - **type:** `string`

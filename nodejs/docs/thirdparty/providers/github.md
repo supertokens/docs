@@ -38,7 +38,7 @@ __HIGHLIGHT__                    ThirdParty.Github({
 });
 ```
 
-# Parameters
+## Parameters
 
 - `clientSecret`
   - type: `String`
