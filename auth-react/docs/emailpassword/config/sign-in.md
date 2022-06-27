@@ -42,7 +42,7 @@ SuperTokens.init({
 });
 ```
 
-# `signInForm` Config values
+## `signInForm` Config values
 
 - **style**: 
     - Description: An object to overwrite the Sign up form styles. Please refer to the <a href="/docs/emailpassword/common-customizations/styling/changing-style" target="_blank">common customizations guide</a> on how to update the sign in form style.
