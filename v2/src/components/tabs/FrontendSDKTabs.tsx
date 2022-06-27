@@ -38,7 +38,7 @@ function applyCopyTabs(children: any): any {
         let tabToCopyIdentifier = child.props.children.split(copyTabIdentifier)[1].trim();
         let result = undefined;
         recursiveMapAllChildren(children, (child: any) => {
-          if (child.props.mdxType === "TabItem" && child.props.value === tabToCopyIdentifier) {
+          if (child.props && (child.props.mdxType === "TabItem" || (child.type && child.type.name === "TabItem")) && child.props.value === tabToCopyIdentifier) {
             result = child.props.children
           }
           return child
