@@ -5,9 +5,11 @@ hide_title: true
 original_id: create-new-session
 ---
 
+# `createNewSession`
+
 <!--DOCUSAURUS_CODE_TABS-->
 <!--With Express-->
-# `createNewSession(res, userId, jwtPayload?, sessionData?)`
+## `createNewSession(res, userId, jwtPayload?, sessionData?)`
 ### Parameters
 - `res`
     - **type:** `Express.Response`
@@ -31,7 +33,7 @@ original_id: create-new-session
 - Creates a new access, a new refresh and a new idRefresh token for this session. These are set in the cookies and header of the `res` object.
 
 <!--Without Express-->
-# `createNewSession(userId, jwtPayload?, sessionData?)`
+## `createNewSession(userId, jwtPayload?, sessionData?)`
 ### Parameters
 - `userId`
     - **type:** `string`

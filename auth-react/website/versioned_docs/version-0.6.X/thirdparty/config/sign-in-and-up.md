@@ -45,7 +45,7 @@ SuperTokens.init({
 });
 ```
 
-# `signInAndUpForm` Config values
+## `signInAndUpForm` Config values
 
 - **disableDefaultImplementation**: 
     - Description: When true, the default route (`/auth`) for Sign-up is disabled.

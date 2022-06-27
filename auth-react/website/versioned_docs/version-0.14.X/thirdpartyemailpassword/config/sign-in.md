@@ -37,7 +37,7 @@ SuperTokens.init({
 });
 ```
 
-# `signInForm` Config values
+## `signInForm` Config values
 
 
 - **formFields**: 
