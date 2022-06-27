@@ -45,7 +45,7 @@ SuperTokens.init({
 });
 ```
 
-# `signUpForm` Config values
+## `signUpForm` Config values
 
 - **privacyPolicyLink**: 
     - Description: Link to your privacy policy

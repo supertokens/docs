@@ -16,7 +16,7 @@ original_id: supertokens-error-handler
     - This middleware function will handle all errors generated from SuperTokens.
 
 
-# Callbacks
+## Callbacks
 ```js
 supertokens.errorHandler({
     onUnauthorised?: (err, req, res, next) => void,

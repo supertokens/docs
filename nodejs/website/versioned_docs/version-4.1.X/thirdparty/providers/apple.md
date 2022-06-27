@@ -49,7 +49,7 @@ __HIGHLIGHT__                    ThirdParty.Apple({
 });
 ```
 
-# Parameters
+## Parameters
 
 - `clientSecret`
   - type: `Object`
