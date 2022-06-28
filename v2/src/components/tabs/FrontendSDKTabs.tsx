@@ -41,16 +41,18 @@ function applyCopyTabs(children: any): any {
     (child: any) => {
       if (!React.isValidElement(child.props.children) && typeof child.props.children === "string" &&
       child.props.children.startsWith(copyTabIdentifier)) {
-        let tabToCopyIdentifier = child.props.children.split(copyTabIdentifier)[1].trim();
-        let result = undefined;
-        recursiveMapAllChildren(children, (child: any) => {
-          if (child.props && (child.props.mdxType === "TabItem" || (child.type && child.type.name === "TabItem")) && child.props.value === tabToCopyIdentifier) {
-            result = child.props.children
+        let tabToCopyIdentifiers = child.props.children.split(copyTabIdentifier)[1].trim().split(",");
+        for(let i = 0; i < tabToCopyIdentifiers.length ; i++){  
+          let result = undefined;
+          recursiveMapAllChildren(children, (child: any) => {
+            if (child.props && (child.props.mdxType === "TabItem" || (child.type && child.type.name === "TabItem")) && child.props.value === tabToCopyIdentifiers[i]) {
+              result = child.props.children
+            }
+            return child
+          })
+          if (result !== undefined) {
+            return result;
           }
-          return child
-        })
-        if (result !== undefined) {
-          return result;
         }
       }
       return child;
