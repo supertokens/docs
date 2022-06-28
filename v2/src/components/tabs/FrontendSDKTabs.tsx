@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
@@ -107,7 +107,7 @@ function DefaultRNTabItem() {
 }
 
 
-function DefaultVanillaJSTabItem() {         
+function DefaultVanillaJSTabItem() {
     return (
         <TabItem value="vanillajs">
             <div className="admonition admonition-caution alert alert--warning">

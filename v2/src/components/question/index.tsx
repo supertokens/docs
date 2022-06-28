@@ -1,5 +1,3 @@
-
-
 import React, { Children, PropsWithChildren, useState } from "react";
 
 import "./question.css";
