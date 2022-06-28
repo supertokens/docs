@@ -73,7 +73,7 @@ function DefaultAngularTabItem() {
             </Answer>
             <Answer title="Custom UI">
                 <div>
-                    ~COPY-TABS=vanillajs
+                    ~COPY-TABS=npm
                 </div>
             </Answer>
         </AngularUIImplementation>
