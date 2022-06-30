@@ -290,7 +290,8 @@ module.exports = {
               label: 'Sending custom response',
               items: [
                 "advanced-customizations/apis-override/custom-response/api-override",
-                "advanced-customizations/apis-override/custom-response/throwing-error"
+                "advanced-customizations/apis-override/custom-response/throwing-error",
+                "advanced-customizations/apis-override/custom-response/general-error"
               ],
             },
             "advanced-customizations/apis-override/disabling"
