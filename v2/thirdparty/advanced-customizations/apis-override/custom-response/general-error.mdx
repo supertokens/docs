@@ -1,0 +1,195 @@
+---
+id: general-error
+title: Via GENERAL_ERROR response
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
+import TabItem from '@theme/TabItem';
+import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
+
+# Custom error response using `GENERAL_ERROR` status
+
+Sometimes, you may want to send a custom error message from your API override to display to the user on the frontend. This can be done by sending the following JSON response from the API:
+```json
+{
+    "status": "GENERAL_ERROR",
+    "message": "Some custom error message"
+}
+```
+
+If you are using our pre-built ReactJS UI, the above response will render the mesage `"Some custom error message"` on the frontend UI. For custom UI, you can read this response and display the message in an error UI. This response can be returned from most of the APIs exposed by the backend SDK.
+
+Let's take an example in which we want to prevent the user from signing up unless their email is preapproved by the app's admin. For this, we will override the sign up API to check if the input email is approved or not, and if not, we prevent the sign up, and send a custom error message.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+ThirdParty.init({
+    signInAndUpFeature: {
+        providers: [/* ... */]
+    },
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                signInUp: async function (input) {
+                    if (emailNotAllowed(input.email.id)) {
+                        // this error will signal to the API to send a GENERAL_ERROR message
+                        throw new Error("Email not allowed");
+                    }
+                    return oI.signInUp(input);
+                }
+            }
+        },
+        apis: (oI) => {
+            return {
+                ...oI,
+                signInUpPOST: async function (input) {
+                    try {
+                        return oI.signInUpPOST!(input);
+                    } catch (err: any) {
+                        if (err.message === "Email not allowed") {
+                            // highlight-start
+                            return {
+                                status: "GENERAL_ERROR",
+                                message: "You are not allowed to sign up. Please contact the app's admin to get permission"
+                            }
+                            // highlight-end
+                        }
+                        throw err;
+                    }
+                }
+            }
+        }
+    }
+})
+
+function emailNotAllowed(email: string) {
+    // TODO: your impl to check if email is allowed or not
+    return true;
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	thirdparty.Init(&tpmodels.TypeInput{
+		Override: &tpmodels.OverrideStruct{
+			Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
+				ogSignInUp := *originalImplementation.SignInUp
+
+				(*originalImplementation.SignInUp) = func(thirdPartyID, thirdPartyUserID string, email tpmodels.EmailStruct, userContext supertokens.UserContext) (tpmodels.SignInUpResponse, error) {
+					if emailNotAllowed(email.ID) {
+						// this error will signal to the API to send a GENERAL_ERROR message
+						return tpmodels.SignInUpResponse{}, errors.New("Email not allowed")
+					}
+					return ogSignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+				}
+				return originalImplementation
+			},
+			APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
+				ogSignInUpPOST := *originalImplementation.SignInUpPOST
+				(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpmodels.SignInUpPOSTResponse, error) {
+					resp, err := ogSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
+					if err != nil {
+						if err.Error() == "Email not allowed" {
+							// highlight-start
+							return tpmodels.SignInUpPOSTResponse{
+								GeneralError: &supertokens.GeneralErrorResponse{
+									Message: "You are not allowed to sign up. Please contact the app's admin to get permission",
+								},
+							}, nil
+							// highlight-end
+						}
+						return tpmodels.SignInUpPOSTResponse{}, err
+					}
+					return resp, err
+				}
+				return originalImplementation
+			},
+		},
+	})
+}
+
+func emailNotAllowed(email string) bool {
+	// TODO: your impl to check email
+	return true
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.interfaces import APIInterface, RecipeInterface, APIOptions, SignInUpPostOkResult, SignInUpPostNoEmailGivenByProviderResponse, SignInUpOkResult
+from supertokens_python.recipe.thirdparty.provider import Provider
+from typing import Any, Dict, Union
+from supertokens_python.types import GeneralErrorResponse
+
+
+def override_functions(original_implementation: RecipeInterface):
+    original_sign_in_up = original_implementation.sign_in_up
+
+    async def sign_in_up(third_party_id: str, third_party_user_id: str, email: str,
+                         email_verified: bool, user_context: Dict[str, Any]) -> SignInUpOkResult:
+        if (is_not_allowed(email)):
+            # this error will signal to the API to send a GENERAL_ERROR message
+            raise Exception("Email not allowed")
+        return await original_sign_in_up(third_party_id, third_party_user_id, email, email_verified, user_context)
+    original_implementation.sign_in_up = sign_in_up
+    return original_implementation
+
+
+def override_apis(original_implementation: APIInterface):
+    # first we copy the original implementation
+    original_sign_in_up_post = original_implementation.sign_in_up_post
+
+    async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: APIOptions,
+                              user_context: Dict[str, Any]) -> Union[SignInUpPostOkResult, SignInUpPostNoEmailGivenByProviderResponse, GeneralErrorResponse]:
+        try:
+            return await original_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+        except Exception as e:
+            if(str(e) == "Email not allowed"):
+                # highlight-start
+                return GeneralErrorResponse(message="You are not allowed to sign up. Please contact the app's admin to get permission")
+                # highlight-end
+            raise e
+
+    original_implementation.sign_in_up_post = sign_in_up_post
+
+    return original_implementation
+
+
+def is_not_allowed(email: str):
+    # TODO: your impl to check if the email is allowed
+    return True
+
+
+thirdparty.init(
+    sign_in_and_up_feature=thirdparty.SignInAndUpFeature([]),
+    override=thirdparty.InputOverrideConfig(
+        apis=override_apis,
+        functions=override_functions
+    )
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
