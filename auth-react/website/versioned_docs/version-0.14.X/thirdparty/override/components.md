@@ -4,7 +4,7 @@ title: Components
 original_id: components
 ---
 
-# ThirdParty component overrides
+## ThirdParty component overrides
 For general usage guide refer to [ThirdParty override guide](/docs/thirdparty/advanced-customizations/react-component-override/usage).
 
 ### The list of overridable components

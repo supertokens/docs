@@ -66,6 +66,7 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 ### Using Copy tabs
 - If your tabs have the same content as another tab you can use the copy tabs feature to copy the contents of one tab to another.
 - Add `~COPY-TAB=TAB_ID` to your snippet. This will copy the contents of the tab with id `TAB_ID` to your tab.
+- You can add multiple `,` seperated `TAB_ID` like `~COPY-TAB=TAB_ID_1,TAB_ID_2,TAB_ID_3` so that if the first tab id does not exist it will move on to the next one until it finds a match.
 
 ### Swizzling components:
 - Docusaurus allows "swizzling" of their components so that they can be modified as per our needs. Once a component is swizzled, it's placed in the v2 > src > theme folder, and can be edited freely.

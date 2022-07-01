@@ -11,6 +11,7 @@ import AppInfoForm from "/src/components/appInfoForm"
 import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
 import RRDVersionSubTabs from "/src/components/tabs/RRDVersionSubTabs"
 import NetworkInterceptors from "/session/reusableMD/networkInterceptors.mdx"
+import AngularUIImplementation from "/src/components/reusableSnippets/angularUIImplementation"
 
 # Frontend Integration
 
@@ -60,6 +61,33 @@ npm i -s @react-native-async-storage/async-storage
 ```
 
 </TabItem>
+
+<TabItem value="angular">
+
+<AngularUIImplementation>
+
+<Answer title="Prebuilt UI"> 
+
+SuperTokens provides ReactJS components for the auth UI. In this section we will see how to inject React components in an angular app to display the prebuilt UI.
+
+Start by installing the ReactJS SDK:
+
+```bash
+npm i -s supertokens-auth-react
+```
+
+</Answer>
+
+<Answer title="Custom UI">
+
+~COPY-TABS=npm
+
+</Answer>
+
+</AngularUIImplementation>
+
+</TabItem>
+
 </FrontendSDKTabs>
 
 ## 2) Call the `init` function
@@ -182,6 +210,194 @@ SuperTokens.init({
 </AppInfoForm>
 
 </TabItem>
+
+<TabItem value="angular">
+
+<AngularUIImplementation>
+
+<Answer title="Prebuilt UI">
+
+<AppInfoForm 
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain>
+
+Before we initialize the `supertokens-auth-react` SDK lets see how we will use it in our Angular app
+
+**Architecture**
+
+- When a user visits the `^{form_websiteBasePath}` route we load an Angular component which initializes the `supertokens-auth-react` SDK.
+- The `supertokens-auth-react` SDK is responsible for rendering login UI and handling authentication flows.
+- Other routes in our Angular app will use the `supertokens-web-js` SDK to handle session management.
+
+**Creating the `^{form_websiteBasePath}` route**
+
+- Use the Angular CLI to generate a new route
+
+```bash
+ ng generate module auth --route auth --module app.module
+```
+
+- In your `auth` component folder create a react component `supertokensAuthComponent.tsx` where we initialize the `supertokens-auth-react` SDK.
+
+```tsx title="/app/auth/supertokensAuthComponent.tsx"
+import * as React from "react";
+import * as SuperTokens from "supertokens-auth-react";
+
+// @ts-ignore
+SuperTokens.init({/*Look at next steps*/});
+
+// highlight-start
+class SuperTokensReactComponent extends React.Component {
+    override render() {
+        if (SuperTokens.canHandleRoute()) {
+            return SuperTokens.getRoutingComponent();
+        }
+        return "Route not found";
+    }
+}
+// highlight-end
+
+export default SuperTokensReactComponent;
+```
+
+- Load `superTokensAuthComponent` in the `auth` angular component
+
+```tsx title="/app/auth/auth.component.ts"
+import { AfterViewInit, Component, OnDestroy } from "@angular/core";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+// @ts-ignore
+import SuperTokensReactComponent from "./supertokensAuthComponent.tsx";
+
+@Component({
+    selector: "app-auth",
+    template: '<div [id]="rootId"></div>',
+})
+export class AuthComponent implements AfterViewInit, OnDestroy {
+    title = "angularreactapp";
+
+    public rootId = "rootId";
+
+    // highlight-start
+    // We use the ngAfterViewInit lifecycle hook to render the React component after the Angular component  view gets initialized
+    ngAfterViewInit() {
+        ReactDOM.render(React.createElement(SuperTokensReactComponent), document.getElementById(this.rootId));
+    }
+
+    // We use the ngOnDestroy lifecycle hook to unmount the React component when the Angular wrapper component is destroyed.
+    ngOnDestroy() {
+        ReactDOM.unmountComponentAtNode(document.getElementById(this.rootId) as Element);
+    }
+    // highlight-end
+}
+```
+
+- Update your angular router so that all auth related requests load the `auth` component
+
+```tsx title="/app/app-routing.module.ts"
+import { NgModule } from "@angular/core";
+import { RouterModule, Routes } from "@angular/router";
+
+const routes: Routes = [
+    // highlight-start
+    {
+        path: "^{form_websiteBasePath_withoutForwardSlash}",
+        // @ts-ignore
+        loadChildren: () => import("./auth/auth.module").then((m) => m.AuthModule),
+    },
+
+    // @ts-ignore
+    { path: "**", loadChildren: () => import("./home/home.module").then((m) => m.HomeModule) },
+    // highlight-end
+];
+
+@NgModule({
+    imports: [RouterModule.forRoot(routes)],
+    exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+
+**Initialize the `supertokens-auth-react` SDK in your `auth`  component.** This will tell SuperTokens which UI to show when the user visits the login page.
+
+
+```tsx title="/app/auth/supertokensAuthComponent.tsx"
+import * as React from "react";
+import * as SuperTokens from "supertokens-auth-react";
+import * as EmailPassword from "supertokens-auth-react/recipe/emailpassword";
+import Session from "supertokens-auth-react/recipe/session";
+
+// highlight-start
+SuperTokens.init({
+    appInfo: {
+        appName: "^{form_appName}",
+        apiDomain: "^{form_apiDomain}",
+        websiteDomain: "^{form_websiteDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        websiteBasePath: "^{form_websiteBasePath}"
+    },
+    recipeList: [
+        EmailPassword.init(),
+        Session.init(),
+    ],
+});
+// highlight-end
+
+class SuperTokensReactComponent extends React.Component {
+    override render() {
+        if (SuperTokens.canHandleRoute()) {
+            return SuperTokens.getRoutingComponent();
+        }
+        return "Route not found";
+    }
+}
+
+```
+
+**Initialize the `supertokens-web-js` SDK in your angular app's root component.** This will provide session management across your entire application.
+
+```tsx title="/app/app.component.ts "
+import { Component } from "@angular/core";
+
+import * as SuperTokens from "supertokens-web-js";
+import * as Session from "supertokens-web-js/recipe/session";
+
+SuperTokens.init({
+    // highlight-start
+    appInfo: {
+        appName: "^{form_appName}",
+        apiDomain: "^{form_apiDomain}",
+    },
+    recipeList: [Session.init()],
+    // highlight-end
+});
+
+
+@Component({
+    selector: "app-root",
+    template: "<router-outlet></router-outlet>",
+})
+export class AppComponent {
+    title = "^{form_appName}";
+}
+```
+
+</AppInfoForm>
+
+</Answer>
+
+<Answer title="Custom UI">
+
+~COPY-TABS=npm
+
+</Answer>
+
+</AngularUIImplementation>
+
+</TabItem>
+
 </FrontendSDKTabs>
 
 ## 3) Setup the login UI
@@ -301,11 +517,9 @@ class App extends React.Component {
 <TabItem value="vanillajs">
 
 :::caution Note
-To use SuperTokens with plain javascript you need to use the `supertokens-web-js` SDK. The SDK provides session management features.
+For custom UI, you need to use the `supertokens-web-js` SDK. This SDK exposes several helper functions which you can use in your own UI.
 
-To add login functionality, you need to build your own UI and call the functions exposed by the SDK.
-
-You can refer to [this blog post](https://supertokens.com/blog/adding-social-login-to-your-website-with-supertokens) to know how this is done, the example uses social login but the same setup applies to other recipes as well.
+We are working on the docs to add more details about this SDK.
 :::
 
 </TabItem>
@@ -318,6 +532,25 @@ To add login functionality, you need to build your own UI and call the APIs expo
 :::
 
 </TabItem>
+
+<TabItem value="angular">
+<AngularUIImplementation>
+
+<Answer title="Prebuilt UI">
+
+You can skip this step as it's already done in the previous ones.
+
+</Answer>
+
+<Answer title="Custom UI">
+
+~COPY-TABS=npm,vanillajs
+
+</Answer>
+
+</AngularUIImplementation>
+</TabItem>
+
 </FrontendSDKTabs>
 
 ## 4) Add API interceptors for automatic session refreshing

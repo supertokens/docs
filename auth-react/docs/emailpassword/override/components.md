@@ -3,7 +3,7 @@ id: components
 title: Components
 ---
 
-# EmailPassword component overrides
+## EmailPassword component overrides
 For general usage guide refer to [EmailPassword override guide](/docs/emailpassword/advanced-customizations/react-component-override/usage).
 
 ### The list of overridable components

@@ -3,7 +3,7 @@ id: components
 title: Components
 ---
 
-# EmailVerification component overrides
+## EmailVerification component overrides
 For general override usage guide refer to specific recipe's guide.
 
 ### The list of overridable components
