@@ -299,6 +299,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             }
                             if (this.state.showWebsiteBasePath) {
                                 c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
+
+                                c = c.split("^{form_websiteBasePath_withoutForwardSlash}").join(this.state.websiteBasePath.substring(1,this.state.websiteBasePath.length));
                             }
                             if (this.state.showWebsiteBasePath) {
                                 c = c.split("^{form_websiteBasePathForCallbacks}").join(this.state.websiteBasePath !== "/" ? this.state.websiteBasePath : "");
