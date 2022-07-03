@@ -9,7 +9,6 @@ import useUserPreferencesContext from '@theme/hooks/useUserPreferencesContext';
 import clsx from 'clsx';
 import styles from './styles.module.css';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
-import { useEffect } from 'react';
 
 function isInViewport(element) {
   const { top, left, bottom, right } = element.getBoundingClientRect();
@@ -29,7 +28,11 @@ function Tabs(props) {
   const [selectedValue, setSelectedValue] = useState(defaultValue);
   const children = Children.toArray(props.children);
   const tabRefs = [];
-  const [animationClassNames, setAnimationClassNames] = useState("tabs-animation");
+  const [tabAnimationTimeout, setTabAnimationTimeout] = useState(0);
+
+  React.useEffect(() => {
+    setTimeout(() => setTabAnimationTimeout(150), 150);
+  }, []);
 
   if (groupId != null) {
     const relevantTabGroupChoice = tabGroupChoices[groupId];
@@ -141,11 +144,11 @@ function Tabs(props) {
         ))}
       </ul>
 
-      <SwitchTransition>
+      <SwitchTransition mode="out-in">
         <CSSTransition
           key={selectedValue}
-          classNames={animationClassNames}
-          timeout={150}
+          classNames={"tabs-animation"}
+          timeout={tabAnimationTimeout}
         >
           {lazy ? (
             cloneElement(
