@@ -20,3 +20,4 @@ hide_title: true
     - Introduction page in docs
 - Update all recipe docs
 - Add SDK docs on website. Follow [this](https://github.com/supertokens/docs/blob/master/v2/HOW_TO_NEW_DOCS.md#to-create-new-sdk-docs-using-an-automatic-docs-generation-tool-and-not-docusaurus)
+- Change [references docs](https://supertokens.com/docs/community/sdks) to add link to new docs

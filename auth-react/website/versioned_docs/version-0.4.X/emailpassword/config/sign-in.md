@@ -5,7 +5,7 @@ hide_title: true
 original_id: sign-in
 ---
 
-# Sign in Form reference API
+## Sign in Form reference API
 
 Here is an example of a fully customized "EmailPassword" configuration for the Sign-in form.
 
@@ -43,7 +43,7 @@ SuperTokens.init({
 });
 ```
 
-# `signInForm` Config values
+## `signInForm` Config values
 
 - **style**: 
     - Description: An object to overwrite the Sign up form styles. Please refer to the <a href="/docs/emailpassword/common-customizations/styling/changing-style" target="_blank">common custimizations guide</a> on how to update the sign in form style.

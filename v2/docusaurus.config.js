@@ -5,7 +5,7 @@
  * Remark plugins intercept markdown content before they are parsed into HTML
  * Read more here: https://github.com/remarkjs/remark/blob/main/doc/plugins.md
  */
- let remarkPlugins = [
+let remarkPlugins = [
   require("./src/plugins/markdownVariables")
 ];
 
@@ -284,6 +284,19 @@ module.exports = {
         path: 'contribute',
         routeBasePath: 'docs/contribute',
         sidebarPath: require.resolve('./contribute/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'phonepassword',
+        path: 'phonepassword',
+        routeBasePath: 'docs/phonepassword',
+        sidebarPath: require.resolve('./phonepassword/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,

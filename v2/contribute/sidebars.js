@@ -116,6 +116,7 @@ module.exports = {
       items: [
         "checklists/new-backend-sdk",
         "checklists/new-frontend-sdk",
+        "checklists/new-github-sdk",
         "checklists/new-super-recipe",
         {
           type: 'category',
@@ -125,7 +126,8 @@ module.exports = {
             "checklists/saas/scaling-prod-instances",
             "checklists/saas/upgrading-users-core-version",
             "checklists/saas/issues-removing-app",
-            "checklists/saas/mysql-rds"
+            "checklists/saas/mysql-rds",
+            "checklists/saas/adding-new-ec2-instance-for-node-api"
           ],
         },
         {

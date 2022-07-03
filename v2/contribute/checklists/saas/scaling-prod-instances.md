@@ -4,7 +4,7 @@ title: Scaling prod instances
 hide_title: true
 ---
 
-# Scaling prod instances
+# Scaling managed service prod instances
 
 - call API:
 ```

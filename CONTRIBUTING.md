@@ -63,6 +63,11 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 - This should be used across recipe docs, when the content of the page is exactly the same across docs.
 - An example of this can be found `v2 > community > database-setup > mysql.mdx`.
 
+### Using Copy tabs
+- If your tabs have the same content as another tab you can use the copy tabs feature to copy the contents of one tab to another.
+- Add `~COPY-TAB=TAB_ID` to your snippet. This will copy the contents of the tab with id `TAB_ID` to your tab.
+- You can add multiple `,` seperated `TAB_ID` like `~COPY-TAB=TAB_ID_1,TAB_ID_2,TAB_ID_3` so that if the first tab id does not exist it will move on to the next one until it finds a match.
+
 ### Swizzling components:
 - Docusaurus allows "swizzling" of their components so that they can be modified as per our needs. Once a component is swizzled, it's placed in the v2 > src > theme folder, and can be edited freely.
 - To swizzle a component:
@@ -160,7 +165,7 @@ You may need to add something to the code that is necessary for type checking bu
 #### Tips JS / TS
 - If you need to purposely tell TS to ignore errors in the next line, you can add a `// @ts-ignore` comment in your code snippets. This will make the TS checker pass. The type checking engine will also remove these from the final code output so that users don't see this unnecessarily.
 - If you are working with snippets that use an older version of supertokens-node you can use a custom import for that version. For example some snippets use `supertokens-node7` as the import to fix typing. The type checking engine replaces this with `supertokens-node`. NOTE: If you need to add another node version as a custom import, please modify the type checking script to replace the import statement to use `supertokens-node`
-- When working with snippets that rely on supertokens-website being imported as an HTML script tag, import `supertokens-website-script` to fix typing. The type checking engine will remove this line from the final output
+- When working with snippets that rely on supertokens-web-js being imported as an HTML script tag, import `supertokens-web-js-script` to fix typing. The type checking engine will remove this line from the final output
 
 #### Loading different versions of SDK to check
 If you are writing docs for a new version of the SDK, you want to load that version and then run the `CODE_TYPE_CHECK=lang1,lang2 npm run start` command. In order to change the SDK version, you want to navigate to `v2/src/plugins/codeTypeChecking/<lang>Env` and the modify that env's dependency file, and install the new dependencies.

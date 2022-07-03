@@ -44,7 +44,7 @@ SuperTokens.init({
 });
 ```
 
-# `signInForm` Config values
+## `signInForm` Config values
 
 - **resetPasswordURL**: 
     - Description: The user gets redirected to the reset password URL when "Forgot password" is clicked. Do not override this value unless you have disabled the default implementation for reset password feature.

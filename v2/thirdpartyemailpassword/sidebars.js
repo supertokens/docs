@@ -51,6 +51,24 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Email Delivery',
+      items: [
+        "email-delivery/about",
+        "email-delivery/default",
+        {
+          type: 'category',
+          label: 'Method 2) SMTP service',
+          items: [
+            "email-delivery/smtp/configure-smtp",
+            "email-delivery/smtp/change-email-content"
+          ]
+        },
+        "email-delivery/custom-method",
+        "email-delivery/pre-post-email"
+      ]
+    },
+    {
+      type: 'category',
       label: 'Common customizations',
       items: [
         "common-customizations/redirect-to-auth",
@@ -296,7 +314,8 @@ module.exports = {
               label: 'Sending custom response',
               items: [
                 "advanced-customizations/apis-override/custom-response/api-override",
-                "advanced-customizations/apis-override/custom-response/throwing-error"
+                "advanced-customizations/apis-override/custom-response/throwing-error",
+                "advanced-customizations/apis-override/custom-response/general-error"
               ],
             },
             "advanced-customizations/apis-override/disabling"
@@ -432,6 +451,22 @@ module.exports = {
         },
         "serverless/with-aws-lambda/next-steps",
         "serverless/with-aws-lambda/appsync-integration"
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Supabase',
+      customProps: {
+        logoUrl: '/img/logos/supabase-logo.jpg'
+      },
+      items: [
+        "supabase-intergration/about",
+        "supabase-intergration/setup",
+        "supabase-intergration/backend",
+        "supabase-intergration/supabase-client",
+        "supabase-intergration/backend-signup-override",
+        "supabase-intergration/frontend",
+        "supabase-intergration/policies"
       ],
     },
     {

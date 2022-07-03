@@ -1,0 +1,99 @@
+---
+title: 2) Session customisation
+hide_title: true
+---
+
+# 2) Session customisation
+
+The [backend quick setup for the EmailPassword recipe](/docs/emailpassword/quick-setup/backend), instructs you to add `Session.init()` on the backend's `reicpeList` array as well. So when the user signs up or logs in with the emailpassword recipe, a session is created at the end of it.
+
+However, we do not want the user to be able to use the app unless they have also completed the second login challenge of verifying their phone number via an OTP. From the backend's point of view, this means that they should not be able to query any of the application's APIs route until they have finished both of the login challenges.
+
+In order to achieve this, we will store information in the session's access token payload to indicate if they have finished both the login challenges or not. Then the API routes can only give access to the user if the session payload indicates that both the challenges have been completed. The information we will store will be like:
+```json
+{
+    "phoneNumberVerified": boolean
+}
+```
+
+On session creation, after the phone password login (just the first challenge) we will set this boolean to `false`. And then once we have verified the phone number, we will mark this as `true`. The API routes will give access to the user only if this boolean is `true`.
+
+To do this, we override the `createNewSession` recipe function from the Session recipe:
+```ts
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+import supertokens from "supertokens-node";
+
+supertokens.init({
+    // @ts-ignore
+    framework: "...",
+    // @ts-ignore
+    appInfo: { /*...*/ },
+    recipeList: [
+        EmailPassword.init({ /* ... */}),
+        Session.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // highlight-start
+                        createNewSession: async function (input) {
+
+                             // we also get the phone number of the user and save it in the
+                            // session so that the OTP can be sent to it directly
+                            let userInfo = await EmailPassword.getUserById(input.userId, input.userContext);
+                            return originalImplementation.createNewSession({
+                                ...input,
+                                accessTokenPayload: {
+                                    ...input.accessTokenPayload,
+                                    phoneNumberVerified: false,
+                                    phoneNumber: userInfo?.email,
+                                },
+                            });
+                        },
+                        // highlight-end
+                    };
+                },
+            },
+        })
+    ]
+})
+```
+
+> Note that we also save the phone number belonging to this user in the session. This will be used later on in the second login challenge
+
+Next, in your app's APIs, you can protect them by checking the value of `phoneNumberVerified`:
+```ts
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+const app = express();
+
+/* ... */
+
+app.get(
+    "/someAPI",
+    // highlight-start
+    verifySession(), // we first do session verification.
+    (req: SessionRequest, res, next) => {
+        // this is a custom middleware which will make sure that the user
+        // has access to the APIs only when they have finished both the login
+        // challenges
+        let accessTokenPayload = req.session!.getAccessTokenPayload();
+        if (accessTokenPayload.phoneNumberVerified !== true) {
+            // we do not use 401 cause that is a reserved status code for supertokens in case
+            // the session doesn't exist
+            res.status(403).send("You need to verify your phone number via an OTP");
+        } else {
+            next();
+        }
+    },
+    // highlight-end
+    async (req: SessionRequest, res) => {
+        let session = req.session!;
+        
+        /* TODO: Your API logic... */
+    }
+);
+```

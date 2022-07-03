@@ -39,7 +39,7 @@ __HIGHLIGHT__                    ThirdParty.Google({
 });
 ```
 
-# Parameters
+## Parameters
 
 - `clientSecret`
   - type: `String`

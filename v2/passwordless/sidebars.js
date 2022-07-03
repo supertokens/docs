@@ -49,6 +49,43 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Email Delivery',
+      items: [
+        "email-delivery/about",
+        "email-delivery/default",
+        {
+          type: 'category',
+          label: 'Method 2) SMTP service',
+          items: [
+            "email-delivery/smtp/configure-smtp",
+            "email-delivery/smtp/change-email-content"
+          ]
+        },
+        "email-delivery/custom-method",
+        "email-delivery/pre-post-email"
+      ]
+    },
+    {
+      type: 'category',
+      label: 'SMS Delivery',
+      items: [
+        "sms-delivery/about",
+        "sms-delivery/default",
+        {
+          type: 'category',
+          label: 'Method 2) Twilio service',
+          items: [
+            "sms-delivery/twilio/configure-twilio",
+            "sms-delivery/twilio/change-sms-content"
+          ]
+        },
+        "sms-delivery/supertokens-sms-service",
+        "sms-delivery/custom-method",
+        "sms-delivery/pre-post-email"
+      ]
+    },
+    {
+      type: 'category',
       label: 'Common customizations',
       items: [
         "common-customizations/redirect-to-auth",
@@ -215,6 +252,15 @@ module.exports = {
           items: [
             "advanced-customizations/apis-override/about",
             "advanced-customizations/apis-override/usage",
+            {
+              type: 'category',
+              label: 'Sending custom response',
+              items: [
+                "advanced-customizations/apis-override/custom-response/api-override",
+                "advanced-customizations/apis-override/custom-response/throwing-error",
+                "advanced-customizations/apis-override/custom-response/general-error"
+              ],
+            },
             "advanced-customizations/apis-override/disabling"
           ],
         },
@@ -350,6 +396,22 @@ module.exports = {
         },
         "serverless/with-aws-lambda/next-steps",
         "serverless/with-aws-lambda/appsync-integration"
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Supabase',
+      customProps: {
+        logoUrl: '/img/logos/supabase-logo.jpg'
+      },
+      items: [
+        "supabase-intergration/about",
+        "supabase-intergration/setup",
+        "supabase-intergration/backend",
+        "supabase-intergration/supabase-client",
+        "supabase-intergration/backend-signup-override",
+        "supabase-intergration/frontend",
+        "supabase-intergration/policies"
       ],
     },
     {

@@ -1,0 +1,167 @@
+---
+id: general-error
+title: Via GENERAL_ERROR response
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
+import TabItem from '@theme/TabItem';
+import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
+
+# Custom error response using `GENERAL_ERROR` status
+
+Sometimes, you may want to send a custom error message from your API override to display to the user on the frontend. This can be done by sending the following JSON response from the API:
+```json
+{
+    "status": "GENERAL_ERROR",
+    "message": "Some custom error message"
+}
+```
+
+If you are using our pre-built ReactJS UI, the above response will render the mesage `"Some custom error message"` on the frontend UI. For custom UI, you can read this response and display the message in an error UI. This response can be returned from most of the APIs exposed by the backend SDK.
+
+Let's take an example in which we want to prevent the user from signing up unless their email is preapproved by the app's admin. For this, we will override the sign up API to check if the input email is approved or not, and if not, we prevent the sign up, and send a custom error message.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+
+ThirdPartyPasswordless.init({
+    // @ts-ignore
+    contactMethod: "...",
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                consumeCodePOST: async function (input) {
+                    let codesInfo = await ThirdPartyPasswordless.listCodesByPreAuthSessionId({
+                        preAuthSessionId: input.preAuthSessionId
+                    })
+
+                    let email = codesInfo?.email!
+
+                    if (emailNotAllowed(email)) {
+                        // highlight-start
+                        return {
+                            status: "GENERAL_ERROR",
+                            message: "You are not allowed to sign up. Please contact the app's admin to get permission"
+                        }
+                        // highlight-end
+                    }
+                    return oI.consumeCodePOST!(input);
+                }
+            }
+        }
+    }
+})
+
+function emailNotAllowed(email: string) {
+    // TODO: your impl to check if email is allowed or not
+    return true;
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	thirdpartypasswordless.Init(tplmodels.TypeInput{
+		Override: &tplmodels.OverrideStruct{
+			APIs: func(originalImplementation tplmodels.APIInterface) tplmodels.APIInterface {
+				ogConsumeCodePOST := *originalImplementation.ConsumeCodePOST
+
+				(*originalImplementation.ConsumeCodePOST) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (tplmodels.ConsumeCodePOSTResponse, error) {
+					codeInfo, err := passwordless.ListCodesByPreAuthSessionID(preAuthSessionID)
+					if err != nil {
+						return tplmodels.ConsumeCodePOSTResponse{}, err
+					}
+					email := *codeInfo.Email
+					if emailNotAllowed(email) {
+						// highlight-start
+						return tplmodels.ConsumeCodePOSTResponse{
+							GeneralError: &supertokens.GeneralErrorResponse{
+								Message: "You are not allowed to sign up. Please contact the app's admin to get permission",
+							},
+						}, nil
+						// highlight-end
+					}
+
+					return ogConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+
+func emailNotAllowed(email string) bool {
+	// TODO: your impl to check email
+	return true
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python.recipe import thirdpartypasswordless
+from supertokens_python.recipe.thirdpartypasswordless.interfaces import PasswordlessAPIOptions, ConsumeCodePostOkResult, ConsumeCodePostRestartFlowError, ConsumeCodePostIncorrectUserInputCodeError, ConsumeCodePostExpiredUserInputCodeError
+from typing import Dict, Any, Union
+from supertokens_python.recipe.thirdpartypasswordless.interfaces import APIInterface
+from supertokens_python.recipe.thirdpartypasswordless.asyncio import list_codes_by_pre_auth_session_id
+from supertokens_python.types import GeneralErrorResponse
+
+# typecheck-only, removed from output
+
+
+def override_passwordless_apis(original_implementation: APIInterface):
+
+    original_consume_code_post = original_implementation.consume_code_post
+
+    async def consume_code_post(pre_auth_session_id: str, user_input_code: Union[str, None], device_id: Union[str, None], link_code: Union[str, None], api_options: PasswordlessAPIOptions,
+                                user_context: Dict[str, Any]) -> Union[ConsumeCodePostOkResult, ConsumeCodePostRestartFlowError, GeneralErrorResponse, ConsumeCodePostIncorrectUserInputCodeError, ConsumeCodePostExpiredUserInputCodeError]:
+        code_info = await list_codes_by_pre_auth_session_id(pre_auth_session_id)
+        if code_info is None:
+            raise Exception("Should never come here")
+        email = code_info.email
+        if email is None:
+            # this example is focused on login via email
+            raise Exception("Should never come here")
+        if (is_not_allowed(email)):
+            # highlight-next-line
+            return GeneralErrorResponse("You are not allowed to sign up. Please contact the app's admin to get permission")
+        return await original_consume_code_post(pre_auth_session_id, user_input_code, device_id, link_code, api_options, user_context)
+
+    original_implementation.consume_code_post = consume_code_post
+    return original_implementation
+
+
+def is_not_allowed(email: str):
+    # TODO: your impl to check if the email is allowed
+    return True
+
+
+thirdpartypasswordless.init(
+    ^{pythonRecipeInitDefault} # typecheck-only, removed from output
+    override=thirdpartypasswordless.InputOverrideConfig(
+        apis=override_passwordless_apis
+    )
+)
+```
+
+</TabItem>
+</BackendSDKTabs>

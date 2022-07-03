@@ -266,18 +266,11 @@ async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBloc
 
     codeSnippet = codeSnippet.replaceAll("^{form_flowType}", "USER_INPUT_CODE_AND_MAGIC_LINK");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod}", "PHONE");
-    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Node}", "createAndSendCustomTextMessage: async (input, context) => { /* See next step */ },");
-    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python_def}", "\nasync def send_text_message (param: CreateAndSendCustomTextMessageParameters, user_context: Dict[str, Any]):\n    pass # See next step\n");
-    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Python}", "create_and_send_custom_text_message=send_text_message");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_initialize_Python}", "ContactPhoneOnlyConfig");
-    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_import_Python}", "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig, CreateAndSendCustomTextMessageParameters");
+    codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_import_Python}", "from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig");
     codeSnippet = codeSnippet.replaceAll("^{form_contactMethod_sendCB_Go}",
         `ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
 Enabled: true,
-CreateAndSendCustomTextMessage: func(phoneNumber string, userInputCode, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) error {
-  /* See next step */
-  return nil
-},
 },`);
 
     let recipeName = await getRecipeName(mdFile);
@@ -463,11 +456,16 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
                 continue;
             }
 
+            // if the line contains "# pyright: ", then we remove that line
+            if (line.includes("# pyright:") || line.includes("#pyright:")) {
+                continue;
+            }
+
             /**
-             * For snippets that use supertokens-website as an HTML script we import supertokens-website-script for types.
+             * For snippets that use supertokens-web-js as an HTML script we import supertokens-web-js-script for types.
              * If the line contains this we skip adding the line
              */
-            if (line.includes("supertokens-website-script")) {
+             if (line.includes("supertokens-web-js-script")) {
                 continue;
             }
 

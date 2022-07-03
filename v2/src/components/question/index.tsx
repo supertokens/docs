@@ -3,9 +3,42 @@ import React, { Children, PropsWithChildren, useState } from "react";
 import "./question.css";
 
 export function Question(props: PropsWithChildren<{
-    question: string | (() => JSX.Element)
+    question: string | (() => JSX.Element),
+    persistentId?: string
 }>) {
-    const [selectedAnsTitle, setSelectedAnsTitle] = useState(undefined);
+    const [selectedAnsTitle, setSelectedAnsTitle] = useState<string | undefined>(undefined);
+
+    let onQuestionAnswered = React.useCallback((answer: string) => {
+        setSelectedAnsTitle(answer);
+
+        if (props.persistentId !== undefined) {
+            localStorage.setItem("question-comp-" + props.persistentId, answer);
+            window.dispatchEvent(new Event("question-comp-" + props.persistentId));
+        }
+    }, [setSelectedAnsTitle, props.persistentId])
+
+    React.useEffect(() => {
+        const onEventReceived = () => {
+            if(props.persistentId !== undefined){
+                let answer = window.localStorage.getItem("question-comp-" + props.persistentId);
+
+                if(answer !== null){
+                    setSelectedAnsTitle(answer)
+                }
+            }
+        }
+
+        if(props.persistentId !== undefined){
+            window.addEventListener("question-comp-" + props.persistentId, onEventReceived)
+            onEventReceived() // for initial loading
+        }
+
+        return () => {
+            if (props.persistentId !== undefined) {
+                window.removeEventListener("question-comp-" + props.persistentId, onEventReceived)
+            }
+        }
+    }, [props.persistentId, setSelectedAnsTitle])
 
     let resubmitInfoClicked = (event: any) => {
         event.preventDefault();
@@ -22,7 +55,7 @@ export function Question(props: PropsWithChildren<{
                     {Children.map(props.children, (child: any, index: number) => {
                         return React.cloneElement(child, {
                             ...child.props,
-                            onClick: () => setSelectedAnsTitle(child.props.title)
+                            onClick: () => onQuestionAnswered(child.props.title)
                         });
                     })}
                 </div>

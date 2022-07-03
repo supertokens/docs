@@ -1,0 +1,158 @@
+---
+id: general-error
+title: Via GENERAL_ERROR response
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
+import TabItem from '@theme/TabItem';
+import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
+
+# Custom error response using `GENERAL_ERROR` status
+
+Sometimes, you may want to send a custom error message from your API override to display to the user on the frontend. This can be done by sending the following JSON response from the API:
+```json
+{
+    "status": "GENERAL_ERROR",
+    "message": "Some custom error message"
+}
+```
+
+If you are using our pre-built ReactJS UI, the above response will render the mesage `"Some custom error message"` on the frontend UI. For custom UI, you can read this response and display the message in an error UI. This response can be returned from most of the APIs exposed by the backend SDK.
+
+Let's take an example in which we want to prevent the user from signing up (via email / password) unless their email is preapproved by the app's admin. For this, we will override the sign up API to check if the input email is approved or not, and if not, we prevent the sign up, and send a custom error message.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+
+ThirdPartyEmailPassword.init({
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                emailPasswordSignUpPOST: async function (input) {
+                    let email = input.formFields.find(i => i.id === "email")!.value;
+
+                    if (emailNotAllowed(email)) {
+                        // highlight-start
+                        return {
+                            status: "GENERAL_ERROR",
+                            message: "You are not allowed to sign up. Please contact the app's admin to get permission"
+                        }
+                        // highlight-end
+                    }
+                    return oI.emailPasswordSignUpPOST!(input);
+                }
+            }
+        }
+    }
+})
+
+function emailNotAllowed(email: string) {
+    // TODO: your impl to check if email is allowed or not
+    return true;
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+		Override: &tpepmodels.OverrideStruct{
+			APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
+				originalSignUp := *originalImplementation.EmailPasswordSignUpPOST
+
+				(*originalImplementation.EmailPasswordSignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (tpepmodels.SignUpPOSTResponse, error) {
+					email := ""
+					for _, v := range formFields {
+						if v.ID == "email" {
+							email = v.Value
+						}
+					}
+					if emailNotAllowed(email) {
+						// highlight-start
+						return tpepmodels.SignUpPOSTResponse{
+							GeneralError: &supertokens.GeneralErrorResponse{
+								Message: "You are not allowed to sign up. Please contact the app's admin to get permission",
+							},
+						}, nil
+						// highlight-end
+					}
+					return originalSignUp(formFields, options, userContext)
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+
+func emailNotAllowed(email string) bool {
+	// TODO: your impl to check email
+	return true
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python.recipe import thirdpartyemailpassword
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, EmailPasswordSignUpPostOkResult, EmailPasswordSignUpPostEmailAlreadyExistsError, EmailPasswordAPIOptions
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import Any, Dict, Union, List
+from supertokens_python.types import GeneralErrorResponse
+
+
+def override_apis(original_implementation: APIInterface):
+
+    # first we copy the original implementation
+    original_sign_up = original_implementation.emailpassword_sign_up_post
+
+    async def sign_up(form_fields: List[FormField],
+                      api_options: EmailPasswordAPIOptions, user_context: Dict[str, Any]) -> Union[EmailPasswordSignUpPostOkResult, EmailPasswordSignUpPostEmailAlreadyExistsError, GeneralErrorResponse]:
+        email = ""
+        for i in range(len(form_fields)):
+            if form_fields[i].id == "email":
+                email = form_fields[i].value
+
+        if (is_not_allowed(email)):
+            # highlight-start
+            return GeneralErrorResponse(message="You are not allowed to sign up. Please contact the app's admin to get permission")
+            # highlight-end
+
+        return await original_sign_up(form_fields, api_options, user_context)
+
+    original_implementation.emailpassword_sign_up_post = sign_up
+
+    return original_implementation
+
+
+def is_not_allowed(email: str):
+    # TODO: your impl to check if the email is allowed
+    return True
+
+
+thirdpartyemailpassword.init(
+    override=thirdpartyemailpassword.InputOverrideConfig(
+        apis=override_apis
+    )
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
