@@ -31,7 +31,7 @@ function Tabs(props) {
   const [tabAnimationTimeout, setTabAnimationTimeout] = useState(0);
 
   React.useEffect(() => {
-    setTimeout(() => setTabAnimationTimeout(150), 150);
+    setTimeout(() => setTabAnimationTimeout(200), 300);
   }, []);
 
   if (groupId != null) {
@@ -147,7 +147,7 @@ function Tabs(props) {
       <SwitchTransition mode="out-in">
         <CSSTransition
           key={selectedValue}
-          classNames={"tabs-animation"}
+          classNames="tabs-animation"
           timeout={tabAnimationTimeout}
         >
           {lazy ? (
