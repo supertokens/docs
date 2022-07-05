@@ -45,7 +45,7 @@ function applyCopyTabs(children: any): any {
         for (let i = 0; i < tabToCopyIdentifiers.length; i++) {
           let result = undefined;
           recursiveMapAllChildren(children, (child: any) => {
-            if (child.props && (child.props.mdxType === "TabItem" || (child.type && child.type.name === "TabItem")) && child.props.value === tabToCopyIdentifiers[i]) {
+            if (child.props && child.props.mdxType === "TabItem" && child.props.value === tabToCopyIdentifiers[i]) {
               result = child.props.children
             }
             return child
@@ -66,7 +66,7 @@ function DefaultReactJSTabItem() {
 
 function DefaultAngularTabItem() {
   return (
-    <TabItem value="angular">
+    <TabItem value="angular" mdxType="TabItem">
       <AngularUIImplementation>
         <Answer title="Prebuilt UI">
           <div className="admonition admonition-caution alert alert--warning">
@@ -101,7 +101,7 @@ function DefaultAngularTabItem() {
 
 function DefaultRNTabItem() {
   return (
-    <TabItem value="react-native">
+    <TabItem value="react-native" mdxType="TabItem">
       <div className="admonition admonition-caution alert alert--warning">
         <div className="admonition-heading">
           <h5>
@@ -127,7 +127,7 @@ function DefaultRNTabItem() {
 
 function DefaultVanillaJSTabItem() {
   return (
-    <TabItem value="vanillajs">
+    <TabItem value="vanillajs" mdxType="TabItem">
       <div className="admonition admonition-caution alert alert--warning">
         <div className="admonition-heading">
           <h5>
