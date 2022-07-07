@@ -29,7 +29,7 @@ export default function NodeJSFrameworkSubTabsServerless(props: any) {
 
 function DefaultServerlessTabItem() {
     return (
-        <TabItem value="serverless">
+        <TabItem value="serverless" mdxType="TabItem">
             <div className="admonition admonition-info alert alert--info">
                 <div className="admonition-heading">
                     <h5>
@@ -51,7 +51,7 @@ function DefaultServerlessTabItem() {
 
 function DefaultNextjsTabItem() {
     return (
-        <TabItem value="nextjs">
+        <TabItem value="nextjs" mdxType="TabItem">
             <div className="admonition admonition-info alert alert--info">
                 <div className="admonition-heading">
                     <h5>
@@ -73,7 +73,7 @@ function DefaultNextjsTabItem() {
 
 function DefaultNestJSTabItem() {
     return (
-        <TabItem value="nestjs">
+        <TabItem value="nestjs" mdxType="TabItem">
             <div className="admonition admonition-info alert alert--info">
                 <div className="admonition-heading">
                     <h5>
