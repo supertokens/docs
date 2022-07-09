@@ -12,6 +12,7 @@ module.exports = {
         "adding-roles-to-session",
         "reading-role-from-session",
         "reading-role-on-frontend",
+        "protecting-apis",
         "managing-roles-and-permissions",
         "get-all-roles",
         "delete-roles",
