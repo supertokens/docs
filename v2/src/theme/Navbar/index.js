@@ -186,4 +186,9 @@ const RECIPE_LABELS = [{
   position: "left",
   docsPluginId: "session",
   label: "Session Recipe"
+}, {
+  type: "recipeLabel",
+  position: "left",
+  docsPluginId: "mfa",
+  label: "Multi factor auth"
 }]
