@@ -1,5 +1,12 @@
 module.exports = {
   sidebar: [
-    "introduction"
+    "introduction",
+    {
+      type: 'category',
+      label: 'Backend Setup',
+      items: [
+        "backend/userroles-api",
+      ],
+    },
   ]
 };
