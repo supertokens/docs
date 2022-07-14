@@ -116,7 +116,46 @@ func main() {
 </TabItem>
 <TabItem value="python">
 
-TODO
+```python
+from supertokens_python.recipe import session
+from supertokens_python import init, InputAppInfo
+from supertokens_python.framework.request import BaseRequest
+from supertokens_python.recipe.session.interfaces import RecipeInterface, SessionContainer
+from supertokens_python.recipe.userroles.asyncio import get_roles_for_user
+
+def session_functions_override(oi: RecipeInterface) -> RecipeInterface:
+    oi_create_new_session = oi.create_new_session
+
+    async def create_new_sesion(
+        request: BaseRequest,
+        user_id: str,
+        access_token_payload: Union[None, Dict[str, Any]],
+        session_data: Union[None, Dict[str, Any]],
+        user_context: Dict[str, Any]
+    ) -> SessionContainer:
+        roles = (await get_roles_for_user(user_id, user_context)).roles
+
+        if access_token_payload is None:
+            access_token_payload = {}
+        access_token_payload["roles"] = roles
+
+        return await oi_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+
+    oi.create_new_session = create_new_sesion
+
+    return oi
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        session.init(
+            override=override=session.InputOverrideConfig(functions=session_functions_override),
+        )
+    ]
+)
+```
+
 </TabItem>
 </BackendSDKTabs>
 
@@ -709,7 +748,30 @@ func setRole(w http.ResponseWriter, r *http.Request) {
 <PythonFrameworkSubTabs>
 <TabItem value="fastapi">
 
-TODO
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+from supertokens_
+
+# highlight-start
+@app.post('/set-role') # type: ignore
+async def set_role_endpoint(session: SessionContainer = Depends(verify_session())):
+    user_id = session.get_user_id()
+    res = add_role_to_user(user_id, "admin")
+
+    if isinstance(res, UnknownRoleError):
+        # No such role exists
+        return
+
+    roles = (await get_roles_for_user(user_id)).roles
+    access_token_payload = session.get_access_token_payload()
+
+    await session.update_access_token_payload({**access_token_payload, "roles": roles})
+    # highlight-end
+    print(user_id)
+
+```
 
 </TabItem>
 <TabItem value="flask">
