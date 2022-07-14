@@ -2,6 +2,7 @@ module.exports = {
   sidebar: [
     "introduction",
     "how-it-works",
-    "first-factor"
+    "first-factor",
+    "second-factor"
   ]
 };
