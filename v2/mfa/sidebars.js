@@ -3,6 +3,7 @@ module.exports = {
     "introduction",
     "how-it-works",
     "first-factor",
-    "second-factor"
+    "second-factor",
+    "protecting-api"
   ]
 };
