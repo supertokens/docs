@@ -412,11 +412,382 @@ init(
 </CoreInjector>
 </AppInfoForm>
 
+The above will expose all the APIs to the frontend that can be used to create and verify the OTP.
 
-## 2) Verifying the phone number that the OTP is being sent to
+## 2) Saving the user's phone number post second factor auth
 
-In our example app, the first step in the second factor is to send an SMS OTP to the user. This happens when the `createCodePOST` API, from the Passwordless recipe, is called.
+During sign up, once the user has completed the second factor, we want to save their phone number against their profile. For this, we will use the `UserMetadata` recipe.
 
-There are two cases here:
-- During user sign up: This is when the user has entered the phone number from the frontend for the first time. Here, we can trust this phone number. After verification, we will save this phone number against the user's profile.
-- During user sign in: This is when the frontend has picked up the phone number from the session and called this API automatically (without asking the user to re enter their phone number). Since this is coming from the frontend, we cannot trust it blindly and have to verify that this phone number is indeed the same one that the user had associated with their profile during sign up.
+:::important
+Make sure to add the User Metadata in the recipe list.
+:::
+
+The passwordless recipe will create a new `userId` for the user against which it will save the phone number. We can associate the passwordless `userId` with the `userId` of the first factor login challenge, and this way, we associate a phone number to the user:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import UserMetadata from "supertokens-node/recipe/usermetadata";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+Passwordless.init({
+    flowType: "USER_INPUT_CODE",
+    contactMethod: "PHONE",
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                // this API is called when the user enters the OTP
+                consumeCodePOST: async function (input) {
+                    // we should already have a session here since this is called
+                    // after first factor login
+                    let session = await Session.getSession(input.options.req, input.options.res);
+                    
+                    let resp = await oI.consumeCodePOST!(input);
+
+                    if (resp.status === "OK") {
+                        // OTP verification was successful. We can now associate 
+                        // the passwordless user ID with the thirdpartyemailpassword
+                        // user ID, so that later on, we can fetch the phone number.
+                        await UserMetadata.updateUserMetadata(
+                            session!.getUserId(), // this is the userId of the first factor login
+                            {
+                                passwordlessUserId: resp.user.id,
+                            }
+                        );
+                    }
+
+                    return resp;
+                },
+            };
+        },
+    }
+})
+```
+
+</TabItem>
+<TabItem value="go">
+TODO
+</TabItem>
+<TabItem value="python">
+TODO
+</TabItem>
+</BackendSDKTabs>
+
+## 3) Updating the session post second factor auth
+
+We also want to change the session's payload to indicate that the user has completed the second factor. In our example, we do this by setting the `phoneNumberVerified` property to `true` in the session's access token payload.
+
+We also have to be careful about not creating a new session after the second factor auth is completed. By default, the passwordless recipe will create a new session on successul verification, overwriting the older one. We can do this by using the `userContext` feature:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import UserMetadata from "supertokens-node/recipe/usermetadata";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+Passwordless.init({
+    flowType: "USER_INPUT_CODE",
+    contactMethod: "PHONE",
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                // this API is called when the user enters the OTP
+                consumeCodePOST: async function (input) {
+                    // we should already have a session here since this is called
+                    // after first factor login
+                    let session = await Session.getSession(input.options.req, input.options.res);
+                    
+                    // highlight-start
+                    // we add the existing session to the user context so that the createNewSession
+                    // function doesn't create a new session
+                    input.userContext.session = session;
+                    // highlight-end
+
+                    let resp = await oI.consumeCodePOST!(input);
+
+                    if (resp.status === "OK") {
+                        // highlight-start
+                        // OTP verification was successful. We can now mark the
+                        // session's payload as phoneNumberVerified: true so that
+                        // the user has access to API routes and the frontend UI
+                        await resp.session.updateAccessTokenPayload({
+                            ...resp.session.getAccessTokenPayload(),
+                            phoneNumberVerified: true,
+                        });
+                        // highlight-end
+
+                        // We can now associate 
+                        // the passwordless user ID with the thirdpartyemailpassword
+                        // user ID, so that later on, we can fetch the phone number.
+                        await UserMetadata.updateUserMetadata(
+                            session!.getUserId(), // this is the userId of the first factor login
+                            {
+                                passwordlessUserId: resp.user.id,
+                            }
+                        );
+                    }
+
+                    return resp;
+                },
+            };
+        },
+    }
+})
+
+Session.init({
+    override: {
+        functions: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                /* This function is called after signing in or signing up via the first factor */
+                createNewSession: async function (input) {
+                    // highlight-start
+                    if (input.userContext.session !== undefined) {
+                        /**
+                        * This will be true for the second factor login.
+                        * So instead of creating a new session, we return the already existing one.
+                        */
+                        return input.userContext.session;
+                    }
+                    // highlight-end
+                    return originalImplementation.createNewSession({
+                        ...input,
+                        accessTokenPayload: {
+                            ...input.accessTokenPayload,
+                            phoneNumberVerified: false
+                        },
+                    });
+                },
+            };
+        },
+    },
+})
+```
+
+</TabItem>
+<TabItem value="go">
+TODO
+</TabItem>
+<TabItem value="python">
+TODO
+</TabItem>
+</BackendSDKTabs>
+
+## 4) Verifying the phone number that the OTP is being sent to
+
+By default, the Passwordless API for sending an OTP (`createCodePOST`) sends the OTP to the input phone number, and if we don't modify that, the attack below is be possible:
+
+- Bob (user) signs up using a weak password and their phone number.
+- Alice (attacker) successfully guesses Bob's password, and queries the OTP sending API manually, to inject her phone number for the second factor auth.
+- OTP is sent to Alice's phone number and she can pass the second factor challenge.
+
+To make it secure, we override the `createCodePOST` API and check that the input phone number is the same as the phone number associated with the user. If it's not the same, we throw an error, and if it is the same, we continue:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import UserMetadata from "supertokens-node/recipe/usermetadata";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+Passwordless.init({
+    flowType: "USER_INPUT_CODE",
+    contactMethod: "PHONE",
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                /*This API is called to send an OTP*/
+                createCodePOST: async function (input) {
+                    /**
+                    * We want to make sure that the OTP being generated is for the
+                    * same number that belongs to this user.
+                    */
+
+                    // A session should already exist since this should be called after the first
+                    // factor is completed.
+                    let session = await Session.getSession(input.options.req, input.options.res);
+
+                    // We try and get the phone number associated with this user. It will be
+                    // defined if this is a sign in attempt, in which case, we will check that
+                    // it is equal to the input phone number
+                    let userMetadata = await UserMetadata.getUserMetadata(session!.getUserId());
+                    let phoneNumber: string | undefined = undefined;
+                    if (userMetadata.metadata.passwordlessUserId !== undefined) {
+                        // the flow will come here during a login attempt, since we
+                        // associate the passwordless userId to the user on sign up
+                        let passwordlessUserInfo = await Passwordless.getUserById({
+                            userId: userMetadata.metadata.passwordlessUserId as string,
+                            userContext: input.userContext,
+                        });
+                        phoneNumber = passwordlessUserInfo?.phoneNumber;
+                    }
+
+                    if (phoneNumber !== undefined) {
+                        // this means we found a phone number associated to this user.
+                        // we will check if the input phone number is the same as this one.
+                        if (!("phoneNumber" in input) || input.phoneNumber !== phoneNumber) {
+                            throw new Error("Input phone number is not the same as the one saved for this user");
+                        }
+                    }
+
+                    return oI.createCodePOST!(input);
+                },
+                consumeCodePOST: async function (input) {
+                    /*...mofications from previous step */
+                    let resp = await oI.consumeCodePOST!(input);
+                    /*...mofications from previous step */
+                    return resp;
+                },
+            };
+        },
+    }
+})
+```
+
+</TabItem>
+<TabItem value="go">
+TODO
+</TabItem>
+<TabItem value="python">
+TODO
+</TabItem>
+</BackendSDKTabs>
+
+## 5) Storing the user's phone number in the session (optional)
+
+When the session is first created (after the first factor is completed), we store the user's phone number in the session (if it exists), so that the frontend can call the `createCodePOST` API (to intiate the second factor challenge) without asking the user for their phone number again.
+
+We do this by modifying the `createNewSession` function in the `Session.init` call:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import UserMetadata from "supertokens-node/recipe/usermetadata";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+Session.init({
+    override: {
+        functions: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                /* This function is called after signing in or signing up via the first factor */
+                createNewSession: async function (input) {
+                    if (input.userContext.session !== undefined) {
+                        /**
+                        * This will be true for the second factor login.
+                        * So instead of creating a new session, we return the already existing one.
+                        */
+                        return input.userContext.session;
+                    }
+
+                    // highlight-start
+                    // we first get the passwordless userId associated with this user
+                    // using the UserMetadata recipe
+                    let userMetadata = await UserMetadata.getUserMetadata(input.userId);
+                    let phoneNumber: string | undefined = undefined;
+                    if (userMetadata.metadata.passwordlessUserId !== undefined) {
+                        // We get the phone number associated with the passwordless userId.
+                        let passwordlessUserInfo = await Passwordless.getUserById({
+                            userId: userMetadata.metadata.passwordlessUserId as string,
+                            userContext: input.userContext,
+                        });
+                        phoneNumber = passwordlessUserInfo?.phoneNumber;
+                    }
+                    // highlight-end
+
+                    return originalImplementation.createNewSession({
+                        ...input,
+                        accessTokenPayload: {
+                            ...input.accessTokenPayload,
+                            phoneNumberVerified: false,
+                            // highlight-next-line
+                            phoneNumber,
+                        },
+                    });
+                },
+            };
+        },
+    },
+})
+```
+
+</TabItem>
+<TabItem value="go">
+TODO
+</TabItem>
+<TabItem value="python">
+TODO
+</TabItem>
+</BackendSDKTabs>
+
+We can then further modify the customisation in step (4) to simply read from the session's payload making it more efficient:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import UserMetadata from "supertokens-node/recipe/usermetadata";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+Passwordless.init({
+    flowType: "USER_INPUT_CODE",
+    contactMethod: "PHONE",
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                /*This API is called to send an OTP*/
+                createCodePOST: async function (input) {
+                    /**
+                    * We want to make sure that the OTP being generated is for the
+                    * same number that belongs to this user.
+                    */
+
+                    // A session should already exist since this should be called after the first
+                    // factor is completed.
+                    let session = await Session.getSession(input.options.req, input.options.res);
+
+                    // highlight-next-line
+                    let phoneNumber: string = session!.getAccessTokenPayload().phoneNumber;
+
+                    if (phoneNumber !== undefined) {
+                        // this means we found a phone number associated to this user.
+                        // we will check if the input phone number is the same as this one.
+                        if (!("phoneNumber" in input) || input.phoneNumber !== phoneNumber) {
+                            throw new Error("Input phone number is not the same as the one saved for this user");
+                        }
+                    }
+
+                    return oI.createCodePOST!(input);
+                },
+                consumeCodePOST: async function (input) {
+                    /*...mofications from previous step */
+                    let resp = await oI.consumeCodePOST!(input);
+                    /*...mofications from previous step */
+                    return resp;
+                },
+            };
+        },
+    }
+})
+```
+
+</TabItem>
+<TabItem value="go">
+TODO
+</TabItem>
+<TabItem value="python">
+TODO
+</TabItem>
+</BackendSDKTabs>
