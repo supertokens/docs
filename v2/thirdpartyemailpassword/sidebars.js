@@ -69,6 +69,22 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'User Roles',
+      items: [
+        "user-roles/initialisation",
+        "user-roles/creating-role",
+        "user-roles/managing-roles-and-users",
+        "user-roles/managing-roles-and-sessions",
+        "user-roles/reading-role-from-session",
+        "user-roles/reading-role-on-frontend",
+        "user-roles/protecting-routes",
+        "user-roles/managing-roles-and-permissions",
+        "user-roles/get-all-roles",
+        "user-roles/delete-roles",
+      ],
+    },
+    {
+      type: 'category',
       label: 'Common customizations',
       items: [
         "common-customizations/redirect-to-auth",
@@ -130,17 +146,6 @@ module.exports = {
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         "common-customizations/change-password",
-        {
-          type: "category",
-          label: "User Roles",
-          items: [
-            "common-customizations/user-roles/assigning-users-roles",
-            "common-customizations/user-roles/assigning-session-roles",
-            "common-customizations/user-roles/reading-role-in-api",
-            "common-customizations/user-roles/reading-role-in-frontend",
-            "common-customizations/user-roles/updating-session-roles",
-          ]
-        },
         {
           type: "category",
           label: "Reset Password",

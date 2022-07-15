@@ -314,6 +314,19 @@ module.exports = {
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins
+      }
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'userroles',
+        path: 'userroles',
+        routeBasePath: 'docs/userroles',
+        sidebarPath: require.resolve('./userroles/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins
       },
     ],
     [

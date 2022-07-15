@@ -189,6 +189,11 @@ const RECIPE_LABELS = [{
 }, {
   type: "recipeLabel",
   position: "left",
+  docsPluginId: "userroles",
+  label: "User Roles Recipe"
+}, {
+  type: "recipeLabel",
+  position: "left",
   docsPluginId: "mfa",
   label: "Multi factor auth"
 }]

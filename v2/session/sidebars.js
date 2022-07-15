@@ -52,6 +52,22 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'User Roles',
+      items: [
+        "user-roles/initialisation",
+        "user-roles/creating-role",
+        "user-roles/managing-roles-and-users",
+        "user-roles/managing-roles-and-sessions",
+        "user-roles/reading-role-from-session",
+        "user-roles/reading-role-on-frontend",
+        "user-roles/protecting-routes",
+        "user-roles/managing-roles-and-permissions",
+        "user-roles/get-all-roles",
+        "user-roles/delete-roles",
+      ],
+    },
+    {
+      type: 'category',
       label: 'Common customizations',
       items: [
         "common-customizations/sessions/new-session",
@@ -73,16 +89,6 @@ module.exports = {
         "common-customizations/sessions/fetch-sessions-for-user",
         "common-customizations/sessions/update-jwt-payload",
         "common-customizations/sessions/update-session-data",
-        {
-          type: "category",
-          label: "Session and user roles",
-          items: [
-            "common-customizations/user-roles/assigning-session-roles",
-            "common-customizations/user-roles/reading-role-in-api",
-            "common-customizations/user-roles/reading-role-in-frontend",
-            "common-customizations/user-roles/updating-session-roles"
-          ]
-        },
         "common-customizations/sessions/multiple-api-endpoints",
         "common-customizations/sessions/cookies-and-https",
         "common-customizations/sessions/cookie-consent",
