@@ -24,13 +24,18 @@ function normaliseURLDomainOrThrowError(input: string, ignoreProtocol = false): 
         }
         const urlObj: URL = new URL(input);
         if (ignoreProtocol) {
-            if (urlObj.hostname.startsWith("localhost") || isAnIpAddress(urlObj.hostname)) {
+            if (
+                (urlObj.hostname.startsWith("localhost") && urlObj.host !== "localhost:443") ||
+                isAnIpAddress(urlObj.hostname)
+            ) {
                 input = "http://" + urlObj.host + urlObj.pathname;
             } else {
                 input = "https://" + urlObj.host + urlObj.pathname;
             }
-        } else {
+        } else if (!(urlObj.protocol === "http:" && urlObj.host === "localhost:443")) {
             input = urlObj.protocol + "//" + urlObj.host + urlObj.pathname;
+        } else {
+            input = "https://localhost" + urlObj.pathname;
         }
         return input;
         // eslint-disable-next-line no-empty
@@ -51,7 +56,7 @@ function normaliseURLDomainOrThrowError(input: string, ignoreProtocol = false): 
         !input.startsWith("http://") &&
         !input.startsWith("https://")
     ) {
-        input = "https://" + input;
+        input = (input.startsWith("localhost") ? "http://" : "https://") + input;
         // at this point, it should be a valid URL. So we test that before doing a recursive call
         try {
             new URL(input);
