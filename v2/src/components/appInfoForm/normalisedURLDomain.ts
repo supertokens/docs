@@ -32,7 +32,7 @@ function normaliseURLDomainOrThrowError(input: string, ignoreProtocol = false): 
             } else {
                 input = "https://" + urlObj.host + urlObj.pathname;
             }
-        } else if (!(urlObj.protocol === "http:" && urlObj.host === "localhost:443")) {
+        } else if (urlObj.protocol !== "http:" || urlObj.host !== "localhost:443") {
             input = urlObj.protocol + "//" + urlObj.host + urlObj.pathname;
         } else {
             input = "https://localhost" + urlObj.pathname;
