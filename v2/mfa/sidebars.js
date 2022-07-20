@@ -12,6 +12,13 @@ module.exports = {
         "backend/protecting-api",
       ],
     },
-    "frontend-custom"
+    "frontend-custom",
+    {
+      type: 'category',
+      label: 'Using pre-built UI',
+      items: [
+        "pre-built-ui/init"
+      ],
+    },
   ]
 };
