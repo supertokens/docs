@@ -10,7 +10,7 @@ import TabItem from '@theme/TabItem';
 
 # Building a custom UI
 
-## 1) First factor setup
+## 1) First factor recipe init
 
 Start by following the recipe guide for first factor login. To continue building our example app, we will use the [thirdpartyemailpassword recipe](https://supertokens.com/docs/thirdpartyemailpassword/introduction) as the first factor.
 
@@ -68,5 +68,256 @@ supertokens.init({
 </TabItem>
 </NpmOrScriptTabs>
 
-From here on, you can continue to build out the first factor's login form using your own UI and the functions exposed from the `supertokens-web-js` SDK. See the thirdpartyemailpassword recipe guide for more information about the flows and functions.
+From here on, you can continue to build out the first factor's login form using the functions exposed from the `supertokens-web-js` SDK. See the [thirdpartyemailpassword recipe guide](https://supertokens.com/docs/thirdpartyemailpassword/introduction) for more information about the flows and functions.
 
+## 2) Second factor recipe init
+
+For the second factor, we will be using the [passwordless recipe](https://supertokens.com/docs/passwordless/introduction). After following the [frontend quick setup section](https://supertokens.com/docs/passwordless/quick-setup/frontend), you should have the following `supertokens.init`:
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+<AppInfoForm askForAPIDomain>
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import Session from 'supertokens-web-js/recipe/session';
+import ThirdPartyEmailPassword from 'supertokens-web-js/recipe/thirdpartyemailpassword';
+// highlight-next-line
+import Passwordless from 'supertokens-web-js/recipe/passwordless';
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    recipeList: [
+        Session.init(),
+        ThirdPartyEmailPassword.init(),
+        // highlight-next-line
+        Passwordless.init(),
+    ],
+});
+```
+
+</AppInfoForm>
+
+</TabItem>
+<TabItem value="script">
+
+<AppInfoForm askForAPIDomain>
+
+```tsx
+import supertokens from "supertokens-web-js-script";
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensThirdPartyEmailPassword from "supertokens-web-js-script/recipe/thirdpartyemailpassword";
+import supertokensPasswordless from "supertokens-web-js-script/recipe/passwordless";
+supertokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    recipeList: [
+        supertokensSession.init(),
+        supertokensThirdPartyEmailPassword.init(),
+        // highlight-next-line
+        supertokensPasswordless.init()
+    ],
+});
+```
+
+</AppInfoForm>
+
+</TabItem>
+</NpmOrScriptTabs>
+
+You can use the passwordless recipe function to build the second factor UI.
+
+## 3) Reading 2FA completion information from the session for routing
+
+You will want to handle the routing of webapp to make sure that the correct login factor is being shown. This can be done by reading the session information.
+
+### Checking if the first factor login should be shown
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+
+async function shouldShowFirstFactor() {
+    return !(await Session.doesSessionExist());
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+async function shouldShowFirstFactor() {
+    return !(await supertokensSession.doesSessionExist());
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+If a session does not exist, this means that the user has not completed the first factor. In this case, you want to route them to the thirdpartyemailpassword login screen.
+
+### Checking if the second factor login should be shown
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+
+// highlight-start
+async function shouldShowSecondFactor() {
+    if(await shouldShowFirstFactor()) {
+        return false;
+    }
+    let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
+    if (accessTokenPayload.is2faComplete) {
+        return false;
+    }
+    return true;
+}
+// highlight-end
+
+async function shouldShowFirstFactor() {
+    return !(await Session.doesSessionExist());
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+// highlight-start
+async function shouldShowSecondFactor() {
+    if(await shouldShowFirstFactor()) {
+        return false;
+    }
+    let accessTokenPayload = await supertokensSession.getAccessTokenPayloadSecurely();
+    if (accessTokenPayload.is2faComplete) {
+        return false;
+    }
+    return true;
+}
+// highlight-end
+
+async function shouldShowFirstFactor() {
+    return !(await supertokensSession.doesSessionExist());
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+- If a session does not exist, it means that the user has not finished the first factor yet.
+- If a session exists, but the `accessTokenPayload.is2faComplete` is `true`, it means that the user has finished both the factors.
+- Otherwise the user has finished the first factor, but not the second one.
+
+### Protecting a website route that requires both the factors
+You can check if a user has finished both the login factors using the two functions above:
+
+```tsx
+async function areBothLoginFactorsCompleted(): Promise<boolean> {
+    // @ts-ignore
+    return !(await shouldShowFirstFactor()) && !(await shouldShowSecondFactor())
+}
+
+areBothLoginFactorsCompleted().then(async (bothFactorsCompleted) => {
+    if (bothFactorsCompleted) {
+        // update state to show UI
+    } else {
+        // @ts-ignore
+        if (await shouldShowFirstFactor()) {
+            // redirect user to first factor
+        } else {
+            // redirect user to second factor screen
+        }
+    }
+})
+```
+
+## 4) Implementing logout
+
+If the user has completed both the factors, implementing the sign out feature can be done by:
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+
+async function signOut() {
+    await Session.signOut();
+    // redirect the user to the first factor login screen
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+async function signOut() {
+    await supertokensSession.signOut();
+    // redirect the user to the first factor login screen
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+You should also implement a sign out button on the second factor screen, otherwise the user would be in a stuck state if they are unable to complete the second factor. To do this, you will need to call the `signOut` function as well as a function to clear the passwordless login state:
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+import Passwordless from 'supertokens-web-js/recipe/passwordless';
+
+async function signOut() {
+    // @ts-ignore
+    if (await shouldShowSecondFactor()) {
+        // this means we are on the second factor screen now.
+        // calling the function below clears the login attempt info that is 
+        // saved on the browser during passwordless login. This is needed so that
+        // future login attempts are not affected by the current one.
+        await Passwordless.clearLoginAttemptInfo();
+    }
+    await Session.signOut();
+    // redirect the user to the first factor login screen
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensPasswordless from "supertokens-web-js-script/recipe/passwordless";
+async function signOut() {
+    // @ts-ignore
+    if (await shouldShowSecondFactor()) {
+        // this means we are on the second factor screen now.
+        // calling the function below clears the login attempt info that is 
+        // saved on the browser during passwordless login. This is needed so that
+        // future login attempts are not affected by the current one.
+        await supertokensPasswordless.clearLoginAttemptInfo();
+    }
+    await supertokensSession.signOut();
+    // redirect the user to the first factor login screen
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
