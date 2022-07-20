@@ -17,7 +17,8 @@ module.exports = {
       type: 'category',
       label: 'Using pre-built UI',
       items: [
-        "pre-built-ui/init"
+        "pre-built-ui/init",
+        "pre-built-ui/showing-login-ui"
       ],
     },
   ]
