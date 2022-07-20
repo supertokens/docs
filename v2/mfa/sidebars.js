@@ -18,7 +18,9 @@ module.exports = {
       label: 'Using pre-built UI',
       items: [
         "pre-built-ui/init",
-        "pre-built-ui/showing-login-ui"
+        "pre-built-ui/showing-login-ui",
+        "pre-built-ui/changing-does-session-exist",
+        "pre-built-ui/second-factor-logout"
       ],
     },
   ]

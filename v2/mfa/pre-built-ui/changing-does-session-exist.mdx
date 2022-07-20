@@ -1,0 +1,161 @@
+---
+id: changing-does-session-exist
+title: "3) Overriding doesSessionExist"
+hide_title: true
+---
+
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
+import TabItem from '@theme/TabItem';
+import AppInfoForm from "/src/components/appInfoForm"
+import Disclaimer from "./disclaimer.mdx"
+
+# 3) Overriding doesSessionExist
+
+<Disclaimer />
+
+Now if you try and login using the first factor, you will be redirected to `/second-factor` screen. But immediately after that, you will be sent to the `/` screen (indicating a successful sign in). This is incorrect behaviour since we want to the user to stay on the second factor screen and keep the user there until:
+- They finish the second factor login successfully
+- Click on the "Login with another account" button (See next section)
+
+In order to achieve this, we will be overriding the `doesSessionExist` recipe function from the `Session.init` config. Internally, the `<ThirdPartyEmailPasswordAuth>` wrapper and the `<Passwordless.SignInUp />` component both use the `doesSessionExist` function to determine if a redirection is required:
+- `<ThirdPartyEmailPasswordAuth>` wrapper: If `doesSessionExist` returns `false`, it will redirect the user to the auth screen, else it will keep the user on the current screen.
+- `<Passwordless.SignInUp />` component: If `doesSessionExist` returns `false`, it will keep the user on the current screen (since this is a login screen), else it will redirect the user to `"/"` by default (or call `getRedirectionURL` with the `"SUCCESS"` context). 
+
+We want to change the behaviour of this so that:
+- `<ThirdPartyEmailPasswordAuth>` wrapper: Redirects the user to the login screen if a session does not exist, or if they have not completed both the factors.
+- `<Passwordless.SignInUp />` component: Keeps the user on this screen if a session exists and they have not yet completed the second factor login.
+
+So we modify the `Session.init` call like this:
+```tsx
+import Session from "supertokens-auth-react/recipe/session"
+
+Session.init({
+    override: {
+        functions: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                doesSessionExist: async function (input) {
+                    if (!(await originalImplementation.doesSessionExist(input))) {
+                        // The user has not finished the first factor.
+                        // So the second factor screen, nor the protected website routes
+                        // should be given access. 
+                        return false;
+                    }
+                    if (window.location.pathname.startsWith("/auth")) {
+                        // In our example, this "if condition" is true for the first factor. Here we do not
+                        // want to return false because a session exists at this point, which means
+                        // that the user finished the first factor already.
+                        return true;
+                    }
+                    let accessTokenPayload = await this.getAccessTokenPayloadSecurely(input);
+                    if (accessTokenPayload.is2faComplete !== true) {
+                        // If both the factors have not been completed, we return false.
+                        // The execution will come here when showing the /second-factor screen
+                        // or if the user tries to navigate to another route but has only completed
+                        // the first factor.
+                        return false;
+                    }
+
+                    // this means both the factors have been completed.
+                    return true;
+                },
+            };
+        },
+    },
+})
+```
+
+Now if you finish the first factor, when you are navigated to the `/second-factor`, the UI will not redirect you to `"/"`. In fact, if you try to manually visit a protected route, at this point, it should navigate you to `/second-factor`.
+
+:::caution
+If you are using the `<SuperTokensWrapper />` component to wrap your entire app, you need to pass it a `key` prop which changes if the location does `startsWith("/auth")`. This is because the wrapper needs to know if it should recalculate if a session exists (for child components to consume), and we have overriden the `doesSessionExist` function to read from the window's path.
+
+An example for how this is done can be found [in our demo app](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-thirdpartyemailpassword-2fa-passwordless/src/App.tsx#L182). 
+:::
+
+There is just one issue with the above. If you have not completed the first factor yet, and try and visit `/second-factor`, it will keep you there. In this case, we want to redirect the user back to the first factor screen. We can do this by using the [user context feature](https://supertokens.com/docs/thirdpartyemailpassword/advanced-customizations/user-context).
+
+The idea is that when we are rendering our `SecondFactor`, we want to check if a session exists (by calling `Session.doesSessionExist()`) and pass it a context that will inform our custom logic to not care about if 2fa is completed or not - we simple want to return the result of calling `await originalImplementation.doesSessionExist(input)`
+
+So we modify the `SecondFactor` component as follows:
+
+```tsx
+import React from "react"
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword"
+import Session from "supertokens-auth-react/recipe/session"
+
+export default function SecondFactor() {
+    // highlight-start
+    React.useEffect(() => {
+        // we redirect the user back to the first factor screen in case
+        // their first factor auth is not done
+        async function doCheck() {
+            if (
+                !(await Session.doesSessionExist({
+                    // We add this custom user context which will be available to us
+                    // in our override of doesSessionExist
+                    userContext: {
+                        forceOriginalCheck: true,
+                    },
+                }))
+            ) {
+                // It will come in this if block if a session does not exist (without checking for 2fa).
+                // So we should redirect the user to the first auth screen.
+                ThirdPartyEmailPassword.redirectToAuth({
+                    redirectBack: false,
+                });
+            }
+        }
+        doCheck();
+    }, []);
+    // highlight-end
+    return (
+        <div>
+            ...
+        </div>
+    );
+}
+```
+
+And finally, we modify our `doesSessionExist` override to be like:
+```tsx
+import Session from "supertokens-auth-react/recipe/session"
+
+Session.init({
+    override: {
+        functions: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                doesSessionExist: async function (input) {
+                    if (!(await originalImplementation.doesSessionExist(input))) {
+                        return false;
+                    }
+                    // highlight-start
+                    if (
+                        window.location.pathname.startsWith("/auth") ||
+                        input.userContext.forceOriginalCheck === true
+                    ) {
+                    // highlight-end
+                        // The custom userContext from the SecondFactor component is set if
+                        // when calling the doesSessionExist function from there. In this case,
+                        // we want to return true here since 
+                        // originalImplementation.doesSessionExist(input) returned true
+                        return true;
+                    }
+                    let accessTokenPayload = await this.getAccessTokenPayloadSecurely(input);
+                    if (accessTokenPayload.is2faComplete !== true) {
+                        return false;
+                    }
+
+                    return true;
+                },
+            };
+        },
+    },
+})
+```
+
+:::success
+We have now completed the routing logic to include the 2FA state.
+:::
