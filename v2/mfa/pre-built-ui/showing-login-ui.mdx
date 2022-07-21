@@ -1,0 +1,121 @@
+---
+id: showing-login-ui
+title: "2) Showing the first and second factor UI"
+hide_title: true
+---
+
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
+import TabItem from '@theme/TabItem';
+import AppInfoForm from "/src/components/appInfoForm"
+import Disclaimer from "./disclaimer.mdx"
+
+# 2) Showing the first and second factor UI
+
+<Disclaimer />
+
+<AppInfoForm
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+>
+
+## First factor UI
+
+If you have correctly followed the frontend setup guide in the [ThirdPartyEmailPassword recipe](https://supertokens.com/docs/thirdpartyemailpassword/quick-setup/frontend), you should see the login UI when you visit `^{form_websiteDomain}^{form_websiteBasePath}?rid=thirdpartyemailpassword`. 
+
+No further step is required for the first factor.
+
+## Second factor UI
+
+For this guide, we will be showing the second factor UI on `/second-factor` (you can change this to whichever path you like).
+
+### 1) Disable the default UI
+```tsx
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+
+Passwordless.init({
+    contactMethod: "PHONE",
+    // highlight-start
+    signInUpFeature: {
+        // this will prevent the passwordless UI from being rendered when you 
+        // visit ^{form_websiteDomain}^{form_websiteBasePath}?rid=passwordless
+        disableDefaultUI: true,
+    },
+    getRedirectionURL: async function (context) {
+        if (context.action === "SIGN_IN_AND_UP") {
+            // this is telling the SDK that the form for this recipe is on /second-factor
+            return "/second-factor";
+        }
+    },
+    // highlight-end
+})
+```
+
+### 2) Show the Passwordless UI on `/second-factor`
+
+Create a React component for `/second-factor` screen in which, you can render the Passwordless UI as follows:
+```tsx
+import React from "react"
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+
+export default function SecondFactor() {
+    return (
+        <div
+            style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+            }}>
+            // highlight-next-line
+            <Passwordless.SignInUp />
+            <div
+                onClick={async () => {
+                    // TODO:
+                }}
+                style={{
+                    cursor: "pointer",
+                    color: "blue",
+                    textDecoration: "underline",
+                }}>
+                Login with another account
+            </div>
+        </div>
+    );
+}
+```
+
+:::note
+Notice that we have also rendered a `"Login with another account"` button below the UI. This will help users to start the login flow again if they wish to. We will circle back to the implementation of the `onClick` handler for this.
+:::
+
+Now if you navigate to `/second-factor`, you should see the enter phone number UI box. In the next sections, we will be seeing how to fix the routing so that this screen is only accessible if the user has finished the first factor.
+
+</AppInfoForm>
+
+## Navigating to the second factor screen after the first is complete
+
+We can do this by providing the `getRedirectionURL` callback to the `ThirdPartyEmailPassword` recipe `init`:
+
+```tsx
+import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword";
+import Session from "supertokens-auth-react/recipe/session";
+
+ThirdPartyEmailPassword.init({
+    // ... previous config
+    getRedirectionURL: async function (context) {
+        if (context.action === "SUCCESS") {
+            let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
+            if (accessTokenPayload.is2faComplete === true) {
+                // we have completed both the factors and the user is going back to /auth manually for some reason.
+                return "/";
+            }
+            // we successfully logged in via google workspaces,
+            // we must now show the user sign in with passwordless
+            return "/second-factor";
+        }
+    },
+})
+```
+- This callback is called with `context.action === "SUCCESS"` after the `ThirdPartyEmailPassword` login is complete (our first factor).
+- If both the factors are done (`accessTokenPayload.is2faComplete === true`), then we can route the user to their dashboard (`/` in our example), else we send them to the second factor screen.
