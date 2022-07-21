@@ -469,7 +469,60 @@ Passwordless.init({
 
 </TabItem>
 <TabItem value="go">
-TODO
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	passwordless.Init(plessmodels.TypeInput{
+		FlowType: "USER_INPUT_CODE",
+		ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+			Enabled: true,
+		},
+		Override: &plessmodels.OverrideStruct{
+			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
+				// this API is called when the user enters the OTP
+				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+					// we should already have a session here since this is called
+					// after first factor login
+					session, err := session.GetSession(options.Req, options.Res, nil)
+					if err != nil {
+						return plessmodels.ConsumeCodePOSTResponse{}, err
+					}
+
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					if err != nil {
+						return resp, err
+					}
+
+					if resp.OK != nil {
+						// OTP verification was successful. We can now associate
+						// the passwordless user ID with the thirdpartyemailpassword
+						// user ID, so that later on, we can fetch the phone number.
+						usermetadata.UpdateUserMetadata(
+							session.GetUserID(),
+							map[string]interface{}{
+								"passwordlessUserId": resp.OK.User.ID,
+							},
+						)
+					}
+					return resp, err
+				}
+				*originalImplementation.ConsumeCodePOST = nConsumeCodePost
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
 </TabItem>
 <TabItem value="python">
 
@@ -629,7 +682,102 @@ Session.init({
 
 </TabItem>
 <TabItem value="go">
-TODO
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	passwordless.Init(plessmodels.TypeInput{
+		FlowType: "USER_INPUT_CODE",
+		ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+			Enabled: true,
+		},
+		Override: &plessmodels.OverrideStruct{
+			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
+				// this API is called when the user enters the OTP
+				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+					// we should already have a session here since this is called
+					// after first factor login
+					session, err := session.GetSession(options.Req, options.Res, nil)
+					if err != nil {
+						return plessmodels.ConsumeCodePOSTResponse{}, err
+					}
+
+					// highlight-start
+					// we add the existing session to the user context so that the createNewSession
+					// function doesn't create a new session
+					(*userContext)["session"] = *session
+					// highlight-end
+
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					if err != nil {
+						return resp, err
+					}
+
+					if resp.OK != nil {
+						// highlight-start
+						// OTP verification was successful. We can now mark the
+						// session's payload as is2faComplete: true so that
+						// the user has access to API routes and the frontend UI
+						accessTokenPayload := resp.OK.Session.GetAccessTokenPayloadWithContext(userContext)
+						accessTokenPayload["is2faComplete"] = true
+						resp.OK.Session.UpdateAccessTokenPayloadWithContext(accessTokenPayload, userContext)
+						// highlight-end
+
+						// We can now associate
+						// the passwordless user ID with the thirdpartyemailpassword
+						// user ID, so that later on, we can fetch the phone number.
+						usermetadata.UpdateUserMetadata(
+							session.GetUserID(),
+							map[string]interface{}{
+								"passwordlessUserId": resp.OK.User.ID,
+							},
+						)
+					}
+					return resp, err
+				}
+				*originalImplementation.ConsumeCodePOST = nConsumeCodePost
+				return originalImplementation
+			},
+		},
+	})
+
+	session.Init(&sessmodels.TypeInput{
+		Override: &sessmodels.OverrideStruct{
+			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+				oCreateNewSession := *originalImplementation.CreateNewSession
+				/* This function is called after signing in or signing up via the first factor */
+				nCreateNewSession := func(res http.ResponseWriter, userID string, accessTokenPayload map[string]interface{}, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+					// highlight-start
+					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
+						/**
+						 * This will be true for the second factor login.
+						 * So instead of creating a new session, we return the already existing one.
+						 */
+						return session, nil
+					}
+					// highlight-end
+					accessTokenPayload["is2faComplete"] = false
+					return oCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+				}
+				*originalImplementation.CreateNewSession = nCreateNewSession
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
 </TabItem>
 <TabItem value="python">
 
@@ -809,7 +957,88 @@ Passwordless.init({
 
 </TabItem>
 <TabItem value="go">
-TODO
+
+```go
+import (
+	"errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	passwordless.Init(plessmodels.TypeInput{
+		FlowType: "USER_INPUT_CODE",
+		ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+			Enabled: true,
+		},
+		Override: &plessmodels.OverrideStruct{
+			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
+				/*This API is called to send an OTP*/
+				oCreateCodePOST := *originalImplementation.CreateCodePOST
+                // highlight-start
+				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+					/**
+					 * We want to make sure that the OTP being generated is for the
+					 * same number that belongs to this user.
+					 */
+
+					// A session should already exist since this should be called after the first
+					// factor is completed.
+					session, err := session.GetSession(options.Req, options.Res, nil)
+					if err != nil {
+						return plessmodels.CreateCodePOSTResponse{}, err
+					}
+
+					// We try and get the phone number associated with this user. It will be
+					// defined if this is a sign in attempt, in which case, we will check that
+					// it is equal to the input phone number
+					userMetadata, err := usermetadata.GetUserMetadataWithContext(session.GetUserID(), userContext)
+					if err != nil {
+						return plessmodels.CreateCodePOSTResponse{}, err
+					}
+					var userPhoneNumber *string
+					if passwordlessUserId, ok := userMetadata["passwordlessUserId"].(string); ok {
+						// the flow will come here during a login attempt, since we
+						// associate the passwordless userId to the user on sign up
+						passwordlessUserInfo, err := passwordless.GetUserByIDWithContext(passwordlessUserId, userContext)
+						if err != nil {
+							return plessmodels.CreateCodePOSTResponse{}, err
+						}
+						userPhoneNumber = passwordlessUserInfo.PhoneNumber
+					}
+					if userPhoneNumber != nil {
+						// this means we found a phone number associated to this user.
+						// we will check if the input phone number is the same as this one.
+						if phoneNumber == nil || *phoneNumber != *userPhoneNumber {
+							return plessmodels.CreateCodePOSTResponse{}, errors.New("Input phone number is not the same as the one saved for this user")
+						}
+					}
+
+					return oCreateCodePOST(email, phoneNumber, options, userContext)
+				}
+                // highlight-end
+				*originalImplementation.CreateCodePOST = nCreateCodePOST
+
+				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+					/*...mofications from previous step */
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					/*...mofications from previous step */
+					return resp, err
+				}
+				*originalImplementation.ConsumeCodePOST = nConsumeCodePost
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
 </TabItem>
 <TabItem value="python">
 
@@ -960,7 +1189,66 @@ Session.init({
 
 </TabItem>
 <TabItem value="go">
-TODO
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	session.Init(&sessmodels.TypeInput{
+		Override: &sessmodels.OverrideStruct{
+			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+				oCreateNewSession := *originalImplementation.CreateNewSession
+				/* This function is called after signing in or signing up via the first factor */
+				nCreateNewSession := func(res http.ResponseWriter, userID string, accessTokenPayload map[string]interface{}, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
+						/**
+						 * This will be true for the second factor login.
+						 * So instead of creating a new session, we return the already existing one.
+						 */
+						return session, nil
+					}
+
+					// highlight-start
+					// we first get the passwordless userId associated with this user
+					// using the UserMetadata recipe
+					userMetadata, err := usermetadata.GetUserMetadataWithContext(userID, userContext)
+					if err != nil {
+						return sessmodels.SessionContainer{}, err
+					}
+					var userPhoneNumber *string
+					if passwordlessUserId, ok := userMetadata["passwordlessUserId"].(string); ok {
+						passwordlessUserInfo, err := passwordless.GetUserByIDWithContext(passwordlessUserId, userContext)
+						if err != nil {
+							return sessmodels.SessionContainer{}, err
+						}
+						userPhoneNumber = passwordlessUserInfo.PhoneNumber
+					}
+					// highlight-end
+
+					accessTokenPayload["is2faComplete"] = false
+					// highlight-start
+					if userPhoneNumber != nil {
+						accessTokenPayload["phoneNumber"] = *userPhoneNumber
+					}
+					// highlight-end
+					return oCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+				}
+				*originalImplementation.CreateNewSession = nCreateNewSession
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
 </TabItem>
 <TabItem value="python">
 
@@ -1081,7 +1369,75 @@ Passwordless.init({
 
 </TabItem>
 <TabItem value="go">
-TODO
+
+```go
+import (
+	"errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	passwordless.Init(plessmodels.TypeInput{
+		FlowType: "USER_INPUT_CODE",
+		ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+			Enabled: true,
+		},
+		Override: &plessmodels.OverrideStruct{
+			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
+				/*This API is called to send an OTP*/
+				oCreateCodePOST := *originalImplementation.CreateCodePOST
+				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+					/**
+					 * We want to make sure that the OTP being generated is for the
+					 * same number that belongs to this user.
+					 */
+
+					// A session should already exist since this should be called after the first
+					// factor is completed.
+					session, err := session.GetSession(options.Req, options.Res, nil)
+					if err != nil {
+						return plessmodels.CreateCodePOSTResponse{}, err
+					}
+
+					// highlight-start
+					var userPhoneNumber *string
+					if phoneNumber, ok := session.GetAccessTokenPayloadWithContext(userContext)["phoneNumber"].(string); ok {
+						userPhoneNumber = &phoneNumber
+					}
+					// highlight-end
+
+					if userPhoneNumber != nil {
+						// this means we found a phone number associated to this user.
+						// we will check if the input phone number is the same as this one.
+						if phoneNumber == nil || *phoneNumber != *userPhoneNumber {
+							return plessmodels.CreateCodePOSTResponse{}, errors.New("Input phone number is not the same as the one saved for this user")
+						}
+					}
+
+					return oCreateCodePOST(email, phoneNumber, options, userContext)
+				}
+				*originalImplementation.CreateCodePOST = nCreateCodePOST
+
+				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+					/*...mofications from previous step */
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					/*...mofications from previous step */
+					return resp, err
+				}
+				*originalImplementation.ConsumeCodePOST = nConsumeCodePost
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
 </TabItem>
 <TabItem value="python">
 
