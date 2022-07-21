@@ -40,7 +40,28 @@ module.exports = {
       type: "category",
       label: "Integrations",
       customProps: {
-        logoUrl: '/img/logos/aws-lambda.svg'
+        logoUrl: [
+          {
+            url: '/img/logos/aws-lambda.svg',
+            label: "AWS",
+          },
+          {
+            label: "NextJS",
+            url: '/img/logos/next-logo.png'
+          },
+          {
+            label: "NestJS",
+            url: '/img/logos/nest-logo.svg'
+          },
+          {
+            url: '/img/logos/hasura-logo.png',
+            label: "Hasura",
+          },
+          {
+            label: "GraphQL",
+            url: '/img/logos/graphql-logo.png'
+          },
+        ]
       },
       items: [
         {
