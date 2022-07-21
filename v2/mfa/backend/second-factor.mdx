@@ -950,7 +950,66 @@ Session.init({
 
 </TabItem>
 <TabItem value="go">
-TODO
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	session.Init(&sessmodels.TypeInput{
+		Override: &sessmodels.OverrideStruct{
+			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+				oCreateNewSession := *originalImplementation.CreateNewSession
+				/* This function is called after signing in or signing up via the first factor */
+				nCreateNewSession := func(res http.ResponseWriter, userID string, accessTokenPayload map[string]interface{}, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
+						/**
+						 * This will be true for the second factor login.
+						 * So instead of creating a new session, we return the already existing one.
+						 */
+						return session, nil
+					}
+
+					// highlight-start
+					// we first get the passwordless userId associated with this user
+					// using the UserMetadata recipe
+					userMetadata, err := usermetadata.GetUserMetadataWithContext(userID, userContext)
+					if err != nil {
+						return sessmodels.SessionContainer{}, err
+					}
+					var userPhoneNumber *string
+					if passwordlessUserId, ok := userMetadata["passwordlessUserId"].(string); ok {
+						passwordlessUserInfo, err := passwordless.GetUserByIDWithContext(passwordlessUserId, userContext)
+						if err != nil {
+							return sessmodels.SessionContainer{}, err
+						}
+						userPhoneNumber = passwordlessUserInfo.PhoneNumber
+					}
+					// highlight-end
+
+					accessTokenPayload["is2faComplete"] = false
+					// highlight-start
+					if userPhoneNumber != nil {
+						accessTokenPayload["phoneNumber"] = *userPhoneNumber
+					}
+					// highlight-end
+					return oCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+				}
+				*originalImplementation.CreateNewSession = nCreateNewSession
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
 </TabItem>
 <TabItem value="python">
 TODO
