@@ -4,7 +4,7 @@ import "./question.css";
 
 export function Question(props: PropsWithChildren<{
     question: string | (() => JSX.Element),
-    persistentId?: string
+    persistentId?: string,
 }>) {
     const [selectedAnsTitle, setSelectedAnsTitle] = useState<string | undefined>(undefined);
 
