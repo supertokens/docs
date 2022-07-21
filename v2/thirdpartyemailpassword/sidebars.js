@@ -37,6 +37,152 @@ module.exports = {
       ],
     },
     {
+      type: "category",
+      label: "Using Custom UI",
+      items: [
+        {
+          type: 'category',
+          label: 'Third Party Providers',
+          items: [
+            "common-customizations/signup-form/built-in-providers",
+            "common-customizations/signup-form/changing-oauth-scopes",
+            "common-customizations/signup-form/custom-providers",
+            "common-customizations/getting-provider-access-token",
+          ],
+        },
+        {
+          type: "category",
+          label: "Sign Up",
+          items: [
+            "custom-ui/signup/signup",
+            "common-customizations/signup-form/adding-fields",
+            "common-customizations/signup-form/field-validators",
+          ],
+        },
+        {
+          type: "category",
+          label: "Sign In",
+          items: [
+            "custom-ui/signin/signin",
+            "common-customizations/signup-form/field-validators",
+            "common-customizations/signin-form/built-in-providers",
+            "common-customizations/signin-form/custom-providers",
+          ],
+        },
+        {
+          type: "category",
+          label: "Reset Password",
+          items: [
+            "common-customizations/reset-password/about",
+            "common-customizations/reset-password/password-reset-email",
+            "common-customizations/reset-password/embed-in-page",
+            "common-customizations/reset-password/post-reset-password",
+            "common-customizations/reset-password/changing-token-lifetime"
+          ]
+        },
+        {
+          type: "category",
+          label: "Email Verification",
+          items: [
+            "common-customizations/email-verification/about",
+            "common-customizations/email-verification/email-verification-email",
+            "common-customizations/email-verification/embed-in-page",
+            "common-customizations/email-verification/handling-email-verification-success",
+            "common-customizations/email-verification/changing-token-lifetime"
+          ]
+        },
+        "common-customizations/change-password",
+        {
+          type: "category",
+          label: "Changing base path",
+          items: [
+            "common-customizations/changing-base-path/api-base-path"
+          ]
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Using Pre Built UI",
+      items: [
+        "common-customizations/redirect-to-auth",
+        {
+          type: 'category',
+          label: 'Third Party Providers',
+          items: [
+            "common-customizations/signup-form/built-in-providers",
+            "common-customizations/signup-form/changing-oauth-scopes",
+            "common-customizations/signup-form/custom-providers",
+            "common-customizations/getting-provider-access-token"
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Sign Up Form',
+          items: [
+            "common-customizations/signup-form/adding-fields",
+            "common-customizations/signup-form/changing-field-labels",
+            "common-customizations/signup-form/field-validators",
+            "common-customizations/signup-form/toc-privacypolicy",
+            "common-customizations/signup-form/default-to-sign-up"
+          ],
+        },
+        {
+          type: "category",
+          label: "Sign In Form",
+          items: [
+            "common-customizations/signin-form/changing-field-labels",
+            "common-customizations/signin-form/field-validators",
+            "common-customizations/signin-form/built-in-providers",
+            "common-customizations/signin-form/custom-providers",
+          ]
+        },
+        "common-customizations/password-managers",
+        "common-customizations/embed-sign-in-up-form",
+        {
+          type: "category",
+          label: "Reset Password",
+          items: [
+            "common-customizations/reset-password/about",
+            "common-customizations/reset-password/password-reset-email",
+            "common-customizations/reset-password/embed-in-page",
+            "common-customizations/reset-password/post-reset-password",
+            "common-customizations/reset-password/changing-token-lifetime"
+          ]
+        },
+        {
+          type: "category",
+          label: "Email Verification",
+          items: [
+            "common-customizations/email-verification/about",
+            "common-customizations/email-verification/email-verification-email",
+            "common-customizations/email-verification/embed-in-page",
+            "common-customizations/email-verification/handling-email-verification-success",
+            "common-customizations/email-verification/changing-token-lifetime"
+          ]
+        },
+        "common-customizations/change-password",
+        {
+          type: "category",
+          label: "Styling",
+          items: [
+            "common-customizations/styling/changing-colours",
+            "common-customizations/styling/changing-style",
+            "common-customizations/styling/shadow-dom"
+          ]
+        },
+        "common-customizations/translations",
+        {
+          type: "category",
+          label: "Changing base path",
+          items: [
+            "common-customizations/changing-base-path/website-base-path",
+            "common-customizations/changing-base-path/api-base-path"
+          ]
+        },
+      ],
+    },
+    {
       type: 'category',
       label: 'Post login operations',
       items: [
@@ -85,146 +231,40 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Common customizations',
+      label: 'SAML',
       items: [
-        "common-customizations/redirect-to-auth",
+        "common-customizations/saml/what-is-saml",
+        "common-customizations/saml/saml-login",
         {
           type: 'category',
-          label: 'Third Party Providers',
+          label: 'With BoxyHQ',
+          customProps: {
+            logoUrl: '/img/logos/boxyhq.png'
+          },
           items: [
-            "common-customizations/signup-form/built-in-providers",
-            "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers",
-            "common-customizations/getting-provider-access-token"
+            "common-customizations/saml/with-boxyhq/what-is-boxyhq",
+            "common-customizations/saml/with-boxyhq/flow-diagram",
+            "common-customizations/saml/with-boxyhq/integration-steps",
+            "common-customizations/saml/with-boxyhq/multi-tenant"
           ],
         },
-        {
-          type: 'category',
-          label: 'Sign Up Form',
-          items: [
-            "common-customizations/signup-form/adding-fields",
-            "common-customizations/signup-form/changing-field-labels",
-            "common-customizations/signup-form/field-validators",
-            "common-customizations/signup-form/toc-privacypolicy",
-            "common-customizations/signup-form/default-to-sign-up"
-          ],
-        },
-        {
-          type: "category",
-          label: "Sign In Form",
-          items: [
-            "common-customizations/signin-form/changing-field-labels",
-            "common-customizations/signin-form/field-validators",
-            "common-customizations/signin-form/built-in-providers",
-            "common-customizations/signin-form/custom-providers",
-          ]
-        },
-        {
-          type: 'category',
-          label: 'SAML',
-          items: [
-            "common-customizations/saml/what-is-saml",
-            "common-customizations/saml/saml-login",
-            {
-              type: 'category',
-              label: 'With BoxyHQ',
-              customProps: {
-                logoUrl: '/img/logos/boxyhq.png'
-              },
-              items: [
-                "common-customizations/saml/with-boxyhq/what-is-boxyhq",
-                "common-customizations/saml/with-boxyhq/flow-diagram",
-                "common-customizations/saml/with-boxyhq/integration-steps",
-                "common-customizations/saml/with-boxyhq/multi-tenant"
-              ],
-            },
-          ],
-        },
-        "common-customizations/password-managers",
+      ],
+    },
+    {
+      type: "category",
+      label: "Password hashing",
+      items: [
+        "common-customizations/password-hashing/about",
+        "common-customizations/password-hashing/bcrypt",
+        "common-customizations/password-hashing/argon2"
+      ]
+    },
+    {
+      type: "category",
+      label: "User Management",
+      items: [
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
-        "common-customizations/embed-sign-in-up-form",
-        "common-customizations/account-linking",
-        "common-customizations/change-password",
-        {
-          type: "category",
-          label: "Reset Password",
-          items: [
-            "common-customizations/reset-password/about",
-            "common-customizations/reset-password/password-reset-email",
-            "common-customizations/reset-password/embed-in-page",
-            "common-customizations/reset-password/post-reset-password",
-            "common-customizations/reset-password/changing-token-lifetime"
-          ]
-        },
-        {
-          type: "category",
-          label: "Email Verification",
-          items: [
-            "common-customizations/email-verification/about",
-            "common-customizations/email-verification/email-verification-email",
-            "common-customizations/email-verification/embed-in-page",
-            "common-customizations/email-verification/handling-email-verification-success",
-            "common-customizations/email-verification/changing-token-lifetime"
-          ]
-        },
-        {
-          type: "category",
-          label: "Password hashing",
-          items: [
-            "common-customizations/password-hashing/about",
-            "common-customizations/password-hashing/bcrypt",
-            "common-customizations/password-hashing/argon2"
-          ]
-        },
-        "common-customizations/session-with-jwt",
-        {
-          type: "category",
-          label: "Sessions",
-          items: [
-            "common-customizations/sessions/about",
-            {
-              type: "category",
-              label: "Using sessions with JWTs",
-              items: [
-                "common-customizations/sessions/with-jwt/about",
-                "common-customizations/sessions/with-jwt/enabling-jwts",
-                "common-customizations/sessions/with-jwt/custom-claims",
-                "common-customizations/sessions/with-jwt/read-jwt",
-                "common-customizations/sessions/with-jwt/read-claims",
-                "common-customizations/sessions/with-jwt/update-jwt",
-                "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
-                "common-customizations/sessions/with-jwt/get-public-key",
-                "common-customizations/sessions/with-jwt/jwt-verification"
-              ]
-            },
-            "common-customizations/sessions/new-session",
-            {
-              type: "category",
-              label: "Session Verification in API",
-              items: [
-                "common-customizations/sessions/session-verification-in-api/verify-session",
-                "common-customizations/sessions/session-verification-in-api/get-session"
-              ]
-            },
-            "common-customizations/sessions/revoke-session",
-            "common-customizations/sessions/change-session-timeout",
-            "common-customizations/sessions/checking-session-front-end",
-            "common-customizations/sessions/handling-session-expiry",
-            "common-customizations/sessions/fetch-sessions-for-user",
-            "common-customizations/sessions/update-jwt-payload",
-            "common-customizations/sessions/update-session-data",
-            "common-customizations/sessions/multiple-api-endpoints",
-            "common-customizations/sessions/cookies-and-https",
-            "common-customizations/sessions/cookie-consent",
-            "common-customizations/sessions/share-sessions-across-sub-domains",
-            "common-customizations/sessions/anti-csrf",
-            "common-customizations/sessions/same-site-cookie",
-            "common-customizations/sessions/jwt-signing-key-rotation",
-            "common-customizations/sessions/in-iframe",
-            "common-customizations/sessions/error-handling"
-          ]
-        },
         {
           type: 'category',
           label: 'User Metadata',
@@ -236,47 +276,83 @@ module.exports = {
             "common-customizations/usermetadata/clear-data"
           ],
         },
+        "common-customizations/account-linking",
+      ],
+    },
+    {
+      type: "category",
+      label: "Sessions",
+      items: [
+        "common-customizations/sessions/about",
         {
           type: "category",
-          label: "Styling",
+          label: "Using sessions with JWTs",
           items: [
-            "common-customizations/styling/changing-colours",
-            "common-customizations/styling/changing-style",
-            "common-customizations/styling/shadow-dom"
+            "common-customizations/sessions/with-jwt/about",
+            "common-customizations/sessions/with-jwt/enabling-jwts",
+            "common-customizations/sessions/with-jwt/custom-claims",
+            "common-customizations/sessions/with-jwt/read-jwt",
+            "common-customizations/sessions/with-jwt/read-claims",
+            "common-customizations/sessions/with-jwt/update-jwt",
+            "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
+            "common-customizations/sessions/with-jwt/get-public-key",
+            "common-customizations/sessions/with-jwt/jwt-verification"
           ]
         },
-        "common-customizations/translations",
+        "common-customizations/sessions/new-session",
         {
           type: "category",
-          label: "Changing base path",
+          label: "Session Verification in API",
           items: [
-            "common-customizations/changing-base-path/website-base-path",
-            "common-customizations/changing-base-path/api-base-path"
+            "common-customizations/sessions/session-verification-in-api/verify-session",
+            "common-customizations/sessions/session-verification-in-api/get-session"
           ]
         },
+        "common-customizations/sessions/revoke-session",
+        "common-customizations/sessions/change-session-timeout",
+        "common-customizations/sessions/checking-session-front-end",
+        "common-customizations/sessions/handling-session-expiry",
+        "common-customizations/sessions/fetch-sessions-for-user",
+        "common-customizations/sessions/update-jwt-payload",
+        "common-customizations/sessions/update-session-data",
+        "common-customizations/sessions/multiple-api-endpoints",
+        "common-customizations/sessions/cookies-and-https",
+        "common-customizations/sessions/cookie-consent",
+        "common-customizations/sessions/share-sessions-across-sub-domains",
+        "common-customizations/sessions/anti-csrf",
+        "common-customizations/sessions/same-site-cookie",
+        "common-customizations/sessions/jwt-signing-key-rotation",
+        "common-customizations/sessions/in-iframe",
+        "common-customizations/sessions/error-handling"
+      ]
+    },
+    {
+      type: "category",
+      label: "Customizing SuperTokens Core",
+      items: [
+        "common-customizations/core/api-keys",
+        "common-customizations/core/performance",
+        "common-customizations/core/logging",
+        "common-customizations/core/add-ssl-via-nginx",
+        "common-customizations/core/base-path",
         {
           type: "category",
-          label: "Core",
+          label: "CLI",
           items: [
-            "common-customizations/core/api-keys",
-            "common-customizations/core/performance",
-            "common-customizations/core/logging",
-            "common-customizations/core/add-ssl-via-nginx",
-            "common-customizations/core/base-path",
-            {
-              type: "category",
-              label: "CLI",
-              items: [
-                "common-customizations/cli/overview",
-                "common-customizations/cli/start",
-                "common-customizations/cli/list",
-                "common-customizations/cli/stop",
-                "common-customizations/cli/uninstall"
-              ]
-            },
+            "common-customizations/cli/overview",
+            "common-customizations/cli/start",
+            "common-customizations/cli/list",
+            "common-customizations/cli/stop",
+            "common-customizations/cli/uninstall"
           ]
         },
-
+      ]
+    },
+    {
+      type: 'category',
+      label: 'Common customizations',
+      items: [
+        "common-customizations/session-with-jwt",
       ],
     },
     {
