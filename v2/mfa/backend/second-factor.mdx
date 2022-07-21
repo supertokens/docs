@@ -472,7 +472,64 @@ Passwordless.init({
 TODO
 </TabItem>
 <TabItem value="python">
-TODO
+
+```python
+from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions, ConsumeCodePostOkResult
+from typing import Union, Dict, Any
+from supertokens_python.recipe.session.asyncio import get_session
+from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
+from supertokens_python.recipe import passwordless
+
+def override_passwordless_apis(original_implementation: APIInterface):
+    original_consume_code_post = original_implementation.consume_code_post
+
+    async def consume_code_post(
+        pre_auth_session_id: str,
+        user_input_code: Union[str, None],
+        device_id: Union[str, None],
+        link_code: Union[str, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        # this API is called when the user enters the OTP
+
+        # we should already have a session here since this is called
+        # after first factor login
+        _session = await get_session(api_options.request)
+        assert _session is not None
+
+        res = await original_consume_code_post(
+            pre_auth_session_id,
+            user_input_code,
+            device_id,
+            link_code,
+            api_options,
+            user_context,
+        )
+
+        if isinstance(res, ConsumeCodePostOkResult):
+            # OTP verification was successful. We can now associate
+            # the passwordless user ID with the thirdpartyemailpassword
+            # user ID, so that later on, we can fetch the phone number.
+            await update_user_metadata(
+                _session.get_user_id(),  # this is the userId of the first factor login
+                {"passwordlessUserId": res.user.user_id}
+            )
+
+        return res
+
+    original_implementation.consume_code_post = consume_code_post
+    return original_implementation
+
+passwordless.init(
+    flow_type="USER_INPUT_CODE",
+    contact_config=passwordless.ContactPhoneOnlyConfig(),
+    override=passwordless.InputOverrideConfig(
+        apis=override_passwordless_apis
+    ),
+)
+```
+
 </TabItem>
 </BackendSDKTabs>
 
@@ -575,7 +632,105 @@ Session.init({
 TODO
 </TabItem>
 <TabItem value="python">
-TODO
+
+```python
+from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions, ConsumeCodePostOkResult
+from typing import Union, Dict, Any
+from supertokens_python.recipe.session.asyncio import get_session
+from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
+from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+
+def override_passwordless_apis(original_implementation: APIInterface):
+    original_consume_code_post = original_implementation.consume_code_post
+
+    async def consume_code_post(
+        pre_auth_session_id: str,
+        user_input_code: Union[str, None],
+        device_id: Union[str, None],
+        link_code: Union[str, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        # this API is called when the user enters the OTP
+
+        # we should already have a session here since this is called
+        # after first factor login
+        _session = await get_session(api_options.request)
+        assert _session is not None
+
+        # we should add the existing session to the user_context
+        # so that the create_new_session function
+        # doesn't create a new session
+        # highlight-next-line
+        user_context["session"] = _session
+
+        res = await original_consume_code_post(
+            pre_auth_session_id,
+            user_input_code,
+            device_id,
+            link_code,
+            api_options,
+            user_context,
+        )
+
+        if isinstance(res, ConsumeCodePostOkResult):
+            # highlight-start
+            # OTP verification was successful. We can now mark the
+            # session's payload as {"is2faComplete": True} so that
+            # the user has access to API routes and the frontend UI
+            await _session.update_access_token_payload(
+                {**_session.get_access_token_payload(), "is2faComplete": True}
+            )
+            # highlight-end
+
+            # We can now associate
+            # the passwordless user ID with the thirdpartyemailpassword
+            # user ID, so that later on, we can fetch the phone number.
+            await update_user_metadata(
+                _session.get_user_id(), # userId of the first factor login
+                {"passwordlessUserId": res.user.user_id}
+            )
+
+        return res
+
+    original_implementation.consume_code_post = consume_code_post
+    return original_implementation
+
+def override_session_functions(original_implementation: RecipeInterface):
+    original_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(
+        request: Any,
+        user_id: str,
+        access_token_payload: Union[None, Dict[str, Any]],
+        session_data: Union[None, Dict[str, Any]],
+        user_context: Dict[str, Any],
+    ):
+        # This function is called after signing in or
+        # signing up via the first factor
+
+        # highlight-start
+        _session = user_context.get("session")
+        if _session and isinstance(_session, SessionContainer):
+            # This will be true for the second factor login.
+            # So instead of creating a new session, we return the already existing one.
+            return _session
+        # highlight-end
+
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        # Insert "is2faComplete" in access token payload
+        access_token_payload = {**access_token_payload, "is2faComplete": False}
+        return await original_create_new_session(
+            request, user_id, access_token_payload, session_data, user_context
+        )
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+```
+
 </TabItem>
 </BackendSDKTabs>
 
@@ -641,9 +796,9 @@ Passwordless.init({
                     return oI.createCodePOST!(input);
                 },
                 consumeCodePOST: async function (input) {
-                    /*...mofications from previous step */
+                    /*...Modifications from previous step */
                     let resp = await oI.consumeCodePOST!(input);
-                    /*...mofications from previous step */
+                    /*...Modifications from previous step */
                     return resp;
                 },
             };
@@ -657,7 +812,89 @@ Passwordless.init({
 TODO
 </TabItem>
 <TabItem value="python">
-TODO
+
+```python
+from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions
+from typing import Union, Dict, Any, Optional
+from supertokens_python.recipe.session.asyncio import get_session
+from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
+from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
+
+
+def override_passwordless_apis(original_implementation: APIInterface):
+    original_consume_code_post = original_implementation.consume_code_post
+    original_create_code_post = original_implementation.create_code_post
+
+    # highlight-start
+    async def create_code_post(
+        email: Union[str, None],
+        phone_number: Union[str, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        # This API is called to send an OTP
+
+        # We want to make sure that the OTP being generated is for the
+        # same number that belongs to this user.
+
+        # A session should already exist since this should be called after the first
+        # factor is completed
+        _session = await get_session(api_options.request)
+        assert _session is not None
+
+        # We try to get the phone number associated with this user. It will be
+        # defined if this is a sign in attempt, in which case, we will check that
+        # it is equal to the input phone number
+        user_metadata = await get_user_metadata(_session.get_user_id())
+        user_metadata_phone_number: Optional[str] = None
+        if user_metadata.metadata.get("passwordlessUserId"):
+            # the flow will come here during a login attempt, since we
+            # associate the passwordless userId to the user on sign up
+            passwordless_user_info = await get_user_by_id(
+                user_metadata.metadata["passwordlessUserId"], user_context
+            )
+            if passwordless_user_info is not None:
+                user_metadata_phone_number = passwordless_user_info.phone_number
+
+        if user_metadata_phone_number is not None:
+            # this means we found a phone number associated to this user
+            # we will check if the input phone number is the same as this one.
+            if (phone_number is None) or (phone_number != user_metadata_phone_number):
+                raise Exception(
+                    "Input phone number is not the same as the one saved for this user"
+                )
+
+        return await original_create_code_post(
+            email, phone_number, api_options, user_context
+        )
+    # highlight-end
+
+    async def consume_code_post(
+        pre_auth_session_id: str,
+        user_input_code: Union[str, None],
+        device_id: Union[str, None],
+        link_code: Union[str, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        # ...Modifications from previous step
+        res = await original_consume_code_post(
+            pre_auth_session_id,
+            user_input_code,
+            device_id,
+            link_code,
+            api_options,
+            user_context,
+        )
+        # ...Modifications from previous step
+        return res
+
+    original_implementation.create_code_post = create_code_post
+    original_implementation.consume_code_post = consume_code_post
+    return original_implementation
+
+```
+
 </TabItem>
 </BackendSDKTabs>
 
@@ -726,7 +963,66 @@ Session.init({
 TODO
 </TabItem>
 <TabItem value="python">
-TODO
+
+```python
+from typing import Union, Dict, Any, Optional
+from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
+from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
+from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+
+
+def override_session_functions(original_implementation: RecipeInterface):
+    original_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(
+        request: Any,
+        user_id: str,
+        access_token_payload: Union[None, Dict[str, Any]],
+        session_data: Union[None, Dict[str, Any]],
+        user_context: Dict[str, Any],
+    ):
+        # This function is called after signing in
+        # or signing up via the first factor
+
+        _session = user_context.get("session")
+        if _session and isinstance(_session, SessionContainer):
+            # This will be true for the second factor login.
+            # So instead of creating a new session, we return the already existing one.
+            return _session
+
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        # highlight-start
+        # we first get the passwordless user id associated with this user
+        # using the user_metadata recipe
+        user_metadata = await get_user_metadata(user_id)
+        phone_number: Optional[str] = None
+        if user_metadata.metadata.get("passwordlessUserId") is not None:
+            # We get the phone number associated with the passwordless userId
+            passwordless_user_info = await get_user_by_id(
+                user_metadata.metadata["passwordlessUserId"], user_context
+            )
+            if passwordless_user_info is not None:
+                phone_number = passwordless_user_info.phone_number
+        # highlight-end
+
+        # Insert "is2faComplete" and "phoneNumber" in the access token payload
+        access_token_payload = {
+            **access_token_payload,
+            "is2faComplete": False,
+            # highlight-next-line
+            "phoneNumber": phone_number,
+        }
+        return await original_create_new_session(
+            request, user_id, access_token_payload, session_data, user_context
+        )
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+```
+
 </TabItem>
 </BackendSDKTabs>
 
@@ -772,9 +1068,9 @@ Passwordless.init({
                     return oI.createCodePOST!(input);
                 },
                 consumeCodePOST: async function (input) {
-                    /*...mofications from previous step */
+                    /*...Modifications from previous step */
                     let resp = await oI.consumeCodePOST!(input);
-                    /*...mofications from previous step */
+                    /*...Modifications from previous step */
                     return resp;
                 },
             };
@@ -788,6 +1084,50 @@ Passwordless.init({
 TODO
 </TabItem>
 <TabItem value="python">
-TODO
+
+```python
+from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions
+from typing import Union, Dict, Any
+from supertokens_python.recipe.session.asyncio import get_session
+
+
+def override_passwordless_apis(original_implementation: APIInterface):
+    original_create_code_post = original_implementation.create_code_post
+
+    async def create_code_post(
+        email: Union[str, None],
+        phone_number: Union[str, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        # This API is called to send an OTP
+
+        # We want to make sure that the OTP being generated is for the
+        # same number that belongs to this user.
+
+        # A session should already exist since this should be called after the first
+        # factor is completed
+        _session = await get_session(api_options.request)
+        assert _session is not None
+
+        # highlight-next-line
+        payload_phone_number = _session.get_access_token_payload().get("phoneNumber")
+
+        if payload_phone_number is not None:
+            # this means we found a phone number associated to this user
+            # we will check if the input phone number is the same as this one.
+            if (phone_number is None) or (phone_number != payload_phone_number):
+                raise Exception(
+                    "Input phone number is not the same as the one saved for this user"
+                )
+
+        return await original_create_code_post(
+            email, phone_number, api_options, user_context
+        )
+    
+    original_implementation.create_code_post = create_code_post
+
+```
+
 </TabItem>
 </BackendSDKTabs>
