@@ -474,7 +474,7 @@ TODO
 <TabItem value="python">
 
 ```python
-from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions
+from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions, ConsumeCodePostOkResult
 from typing import Union, Dict, Any
 from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
@@ -495,6 +495,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # we should already have a session here since this is called
         # after first factor login
         _session = await get_session(api_options.request)
+        assert _session is not None
+
         res = await original_consume_code_post(
             pre_auth_session_id,
             user_input_code,
@@ -504,7 +506,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
             user_context,
         )
 
-        if res.status == "OK":
+        if isinstance(res, ConsumeCodePostOkResult):
             await update_user_metadata(
                 _session.get_user_id(), {"passwordlessUserId": res.user.user_id}
             )
@@ -620,10 +622,11 @@ TODO
 <TabItem value="python">
 
 ```python
-from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions
+from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions, ConsumeCodePostOkResult
 from typing import Union, Dict, Any
 from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
+from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
 
 
 def override_passwordless_apis(original_implementation: APIInterface):
@@ -641,6 +644,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # we should already have a session here since this is called
         # after first factor login
         _session = await get_session(api_options.request)
+        assert _session is not None
 
         # we should add the existing session to the user_context
         # so that the create_new_session function doesn't
@@ -657,7 +661,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
             user_context,
         )
 
-        if res.status == "OK":
+        if isinstance(res, ConsumeCodePostOkResult):
             # highlight-start
             # OTP verification was successful. We can now mark the
             # session's payload as {"is2faComplete": True} so that
@@ -687,11 +691,15 @@ def override_session_functions(original_implementation: RecipeInterface):
         user_context: Dict[str, Any],
     ):
         # highlight-start
-        if user_context.get("session"):
+        _session = user_context.get("session")
+        if _session and isinstance(_session, SessionContainer):
             # This condition will be true for the second factor login.
             # So instead of creating a new session, we return the already existing one.
-            return user_context["session"]
+            return _session
         # highlight-end
+
+        if access_token_payload is None:
+            access_token_payload = {}
 
         # Insert "is2faComplete" in access token payload
         access_token_payload = {**access_token_payload, "is2faComplete": False}
@@ -796,6 +804,7 @@ from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
 
 def override_passwordless_apis(original_implementation: APIInterface):
     original_consume_code_post = original_implementation.consume_code_post
+    original_create_code_post = original_implementation.create_code_post
 
     async def create_code_post(
         email: Union[str, None],
@@ -810,6 +819,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # A session should already exist since this should be called after the first
         # factor is completed
         _session = await get_session(api_options.request)
+        assert _session is not None
 
         # We try to get the phone number associated with this user. It will be
         # defined if this is a sign in attempt, in which case, we will check that
@@ -833,7 +843,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
                     "Input phone number is not the same as the one saved for this user"
                 )
 
-        return original_implementation.create_code_post(
+        return await original_create_code_post(
             email, phone_number, api_options, user_context
         )
 
@@ -936,6 +946,7 @@ TODO
 from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
 from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
+from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
 
 
 def override_session_functions(original_implementation: RecipeInterface):
@@ -948,10 +959,14 @@ def override_session_functions(original_implementation: RecipeInterface):
         session_data: Union[None, Dict[str, Any]],
         user_context: Dict[str, Any],
     ):
-        if user_context.get("session"):
+        _session = user_context.get("session")
+        if _session and isinstance(_session, SessionContainer):
             # This condition will be true for the second factor login.
             # So instead of creating a new session, we return the already existing one.
-            return user_context["session"]
+            return _session
+
+        if access_token_payload is None:
+            access_token_payload = {}
 
         # highlight-start
         # we first get the passwordless user id associated with this user
@@ -1051,7 +1066,7 @@ from supertokens_python.recipe.session.asyncio import get_session
 
 
 def override_passwordless_apis(original_implementation: APIInterface):
-    original_consume_code_post = original_implementation.consume_code_post
+    original_create_code_post = original_implementation.create_code_post
 
     async def create_code_post(
         email: Union[str, None],
@@ -1066,6 +1081,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # A session should already exist since this should be called after the first
         # factor is completed
         _session = await get_session(api_options.request)
+        assert _session is not None
 
         # highlight-next-line
         payload_phone_number = _session.get_access_token_payload().get("phone_number")
@@ -1078,9 +1094,11 @@ def override_passwordless_apis(original_implementation: APIInterface):
                     "Input phone number is not the same as the one saved for this user"
                 )
 
-        return original_implementation.create_code_post(
+        return await original_create_code_post(
             email, phone_number, api_options, user_context
         )
+    
+    original_implementation.create_code_post = create_code_post
 
 ```
 
