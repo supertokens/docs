@@ -200,42 +200,83 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Frontend Setup",
+      label: "Building Authentication Flows",
+      collapsed: false,
       items: [
         {
           type: 'category',
-          label: 'Third Party Providers',
+          label: 'Sign Up/In',
           items: [
-            "common-customizations/signup-form/built-in-providers",
-            "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers",
-            "common-customizations/getting-provider-access-token"
+            "common-customizations/signup-form/adding-social-login",
+            "common-customizations/signup-form/adding-email-login",
           ],
         },
-        "common-customizations/signup-form/sign-up",
-        // {
-        //   type: 'category',
-        //   label: 'Sign Up Form',
-        //   items: [
-        //     "common-customizations/signup-form/sign-up",
-        //     "common-customizations/signup-form/adding-fields",
-        //     "common-customizations/signup-form/changing-field-labels",
-        //     "common-customizations/signup-form/field-validators",
-        //     "common-customizations/signup-form/toc-privacypolicy",
-        //     "common-customizations/signup-form/default-to-sign-up"
-        //   ],
-        // },
         {
           type: "category",
-          label: "Sign In Form",
+          label: "Reset Password",
           items: [
-            "common-customizations/signin-form/changing-field-labels",
-            "common-customizations/signin-form/field-validators",
-            "common-customizations/signin-form/built-in-providers",
-            "common-customizations/signin-form/custom-providers",
+            "common-customizations/reset-password/perform-password-reset",
+            "common-customizations/reset-password/password-reset-email",
           ]
         },
-        "common-customizations/embed-sign-in-up-form",
+        {
+          type: "category",
+          label: "Email Verification",
+          items: [
+            "common-customizations/email-verification/perform-email-verification",
+            "common-customizations/email-verification/email-verification-email",
+          ]
+        },
+        "common-customizations/verify-session",
+        "common-customizations/sessions/securing-component",
+        "common-customizations/sign-out",
+      ],
+    },
+    {
+      type: "category",
+      label: "Additional Features and Customizations",
+      items: [
+        {
+          type: 'category',
+          label: 'Sign Up/In',
+          items: [
+            {
+              type: 'category',
+              label: 'Configure Third Party Providers',
+              items: [
+                "common-customizations/signup-form/built-in-providers",
+                "common-customizations/signup-form/changing-oauth-scopes",
+                "common-customizations/signup-form/custom-providers",
+                "common-customizations/getting-provider-access-token"
+              ],
+            },
+            "common-customizations/signup-form/modify-form",
+            "common-customizations/signup-form/adding-fields",
+            // "common-customizations/signup-form/changing-field-labels",
+            "common-customizations/signup-form/field-validators",
+            // "common-customizations/signup-form/toc-privacypolicy",
+            // "common-customizations/signup-form/default-to-sign-up",
+            "common-customizations/embed-sign-in-up-form",
+          ],
+        },
+        {
+          type: "category",
+          label: "Reset Password",
+          items: [
+            "common-customizations/reset-password/embed-in-page",
+            "common-customizations/reset-password/post-reset-password",
+            "common-customizations/reset-password/changing-token-lifetime"
+          ]
+        },
+        {
+          type: "category",
+          label: "Email Verification",
+          items: [
+            "common-customizations/email-verification/embed-in-page",
+            "common-customizations/email-verification/handling-email-verification-success",
+            "common-customizations/email-verification/changing-token-lifetime"
+          ]
+        },
         {
           type: "category",
           label: "Styling",
@@ -246,30 +287,6 @@ module.exports = {
           ]
         },
         "common-customizations/redirect-to-auth",
-        {
-          type: "category",
-          label: "Reset Password",
-          items: [
-            "common-customizations/reset-password/about",
-            "common-customizations/reset-password/password-reset-email",
-            "common-customizations/reset-password/embed-in-page",
-            "common-customizations/reset-password/post-reset-password",
-            "common-customizations/reset-password/changing-token-lifetime"
-          ]
-        },
-        {
-          type: "category",
-          label: "Email Verification",
-          items: [
-            "common-customizations/email-verification/about",
-            "common-customizations/email-verification/email-verification-email",
-            "common-customizations/email-verification/embed-in-page",
-            "common-customizations/email-verification/handling-email-verification-success",
-            "common-customizations/email-verification/changing-token-lifetime"
-          ]
-        },
-        "common-customizations/sessions/securing-component",
-        "common-customizations/sign-out",
         "common-customizations/redirecting-post-login",
         "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
@@ -284,75 +301,6 @@ module.exports = {
             "common-customizations/changing-base-path/website-base-path",
           ]
         },
-      ],
-    },
-    {
-      type: "category",
-      label: "Backend Setup",
-      items: [
-        {
-          type: 'category',
-          label: 'Third Party Providers',
-          items: [
-            "common-customizations/signup-form/built-in-providers",
-            "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers",
-            "common-customizations/getting-provider-access-token"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Sign Up Form',
-          items: [
-            "common-customizations/signup-form/adding-fields",
-            "common-customizations/signup-form/field-validators",
-          ],
-        },
-        {
-          type: "category",
-          label: "Sign In Form",
-          items: [
-            "common-customizations/signin-form/field-validators",
-            "common-customizations/signin-form/built-in-providers",
-            "common-customizations/signin-form/custom-providers",
-          ]
-        },
-        {
-          type: "category",
-          label: "Reset Password",
-          items: [
-            "common-customizations/reset-password/about",
-            "common-customizations/reset-password/password-reset-email",
-            "common-customizations/reset-password/changing-token-lifetime"
-          ]
-        },
-        {
-          type: "category",
-          label: "Email Verification",
-          items: [
-            "common-customizations/email-verification/about",
-            "common-customizations/email-verification/email-verification-email",
-            "common-customizations/email-verification/changing-token-lifetime"
-          ]
-        },
-        "common-customizations/verify-session",
-        "common-customizations/sign-out",
-        "common-customizations/get-user-info",
-        "post-login/getting-provider-access-token",
-        "common-customizations/account-linking",
-        {
-          type: "category",
-          label: "Changing base path",
-          items: [
-            "common-customizations/changing-base-path/api-base-path"
-          ]
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Additional Features and Customizations",
-      items: [
         {
           type: "category",
           label: "Session Management",
