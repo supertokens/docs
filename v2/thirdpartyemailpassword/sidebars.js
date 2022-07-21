@@ -4,7 +4,7 @@ module.exports = {
     "architecture",
     {
       type: 'category',
-      label: 'Quick setup',
+      label: 'Initialization',
       collapsed: false,
       items: [
         "quick-setup/video-tutorial",
@@ -200,7 +200,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Frontend Flows",
+      label: "Frontend Setup",
       items: [
         {
           type: 'category',
@@ -288,7 +288,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Backend Flows",
+      label: "Backend Setup",
       items: [
         {
           type: 'category',
