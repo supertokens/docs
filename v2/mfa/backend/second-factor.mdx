@@ -1071,7 +1071,75 @@ Passwordless.init({
 
 </TabItem>
 <TabItem value="go">
-TODO
+
+```go
+import (
+	"errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	passwordless.Init(plessmodels.TypeInput{
+		FlowType: "USER_INPUT_CODE",
+		ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+			Enabled: true,
+		},
+		Override: &plessmodels.OverrideStruct{
+			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
+				/*This API is called to send an OTP*/
+				oCreateCodePOST := *originalImplementation.CreateCodePOST
+				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+					/**
+					 * We want to make sure that the OTP being generated is for the
+					 * same number that belongs to this user.
+					 */
+
+					// A session should already exist since this should be called after the first
+					// factor is completed.
+					session, err := session.GetSession(options.Req, options.Res, nil)
+					if err != nil {
+						return plessmodels.CreateCodePOSTResponse{}, err
+					}
+
+					// highlight-start
+					var userPhoneNumber *string
+					if phoneNumber, ok := session.GetAccessTokenPayloadWithContext(userContext)["phoneNumber"].(string); ok {
+						userPhoneNumber = &phoneNumber
+					}
+					// highlight-end
+
+					if userPhoneNumber != nil {
+						// this means we found a phone number associated to this user.
+						// we will check if the input phone number is the same as this one.
+						if phoneNumber != nil && *phoneNumber != *userPhoneNumber {
+							return plessmodels.CreateCodePOSTResponse{}, errors.New("Input phone number is not the same as the one saved for this user")
+						}
+					}
+
+					return oCreateCodePOST(email, phoneNumber, options, userContext)
+				}
+				*originalImplementation.CreateCodePOST = nCreateCodePOST
+
+				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+					/*...mofications from previous step */
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					/*...mofications from previous step */
+					return resp, err
+				}
+				*originalImplementation.ConsumeCodePOST = nConsumeCodePost
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
 </TabItem>
 <TabItem value="python">
 TODO
