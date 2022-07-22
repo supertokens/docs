@@ -138,7 +138,10 @@ function DocSidebarItemCategory ({
             marginLeft: `${depth * 16}px`,
           } : {}}
         >{label}</span>
-        {item.customProps && item.customProps.logoUrl && (
+        {item.customProps && 
+        item.customProps.logoUrl && 
+        typeof item.customProps.logoUrl === "string" && 
+        (
           <img
             className={styles.sidebarItemLogo}
             src={item.customProps.logoUrl}
@@ -146,6 +149,40 @@ function DocSidebarItemCategory ({
             alt={label + " logo"}
           />
         )}
+        {
+          item.customProps &&
+          item.customProps.logoUrl &&
+          Array.isArray(item.customProps.logoUrl) &&
+          (
+            <div style={{
+              display: "flex",
+              flexFlow: "row wrap",
+              flexWrap: "wrap",
+              rowGap: "8px",
+              marginRight: "4px",
+              marginLeft: "-12px",
+            }}>
+              {
+                Array.from(item.customProps.logoUrl).map(logoInfo => {
+                  return (
+                    <img
+                      className={styles.sidebarItemLogo}
+                      src={logoInfo.url}
+                      title={logoInfo.label + ' logo'}
+                      alt={logoInfo.label + " logo"}
+                      key={logoInfo.label + " logo"}
+                      style={{
+                        marginLeft: "8px",
+                        width: "20px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  );
+                })
+              }
+            </div>
+          )
+        }
         <div className={styles.spacer}></div>
       </a>
       <ul
