@@ -207,8 +207,13 @@ module.exports = {
           type: 'category',
           label: 'Sign Up/In',
           items: [
-            "common-customizations/signup-form/adding-social-login",
-            "common-customizations/signup-form/adding-email-login",
+            "common-customizations/signup-form/adding-social-login-question",
+            // "common-customizations/signup-form/adding-social-login-duplication",
+            // "common-customizations/signup-form/adding-social-login-custom-tabs",
+            // "common-customizations/signup-form/adding-social-login",
+            "common-customizations/signup-form/adding-email-login-question",
+            // "common-customizations/signup-form/adding-email-login-duplication",
+            // "common-customizations/signup-form/adding-email-login-custom-tabs",
           ],
         },
         {
