@@ -480,6 +480,7 @@ module.exports = {
       ],
     },
     "appinfo",
+    "cors",
     "sdks",
     "apis",
     "compatibility-table"
