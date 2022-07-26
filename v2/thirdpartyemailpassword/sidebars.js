@@ -550,9 +550,15 @@ module.exports = {
         }
       ],
     },
-    "appinfo",
-    "sdks",
-    "apis",
-    "compatibility-table"
+    {
+      type: "category",
+      label: "References and Compatibility",
+      items: [
+        "appinfo",
+        "sdks",
+        "apis",
+        "compatibility-table"
+      ],
+    },
   ]
 };
