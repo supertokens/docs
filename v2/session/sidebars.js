@@ -183,7 +183,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Common customizations',
+      label: 'Additional features and customizations',
       items: [
         "common-customizations/sessions/new-session",
         {
