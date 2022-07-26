@@ -37,6 +37,121 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Integrations",
+      customProps: {
+        logoUrl: [
+          {
+            url: '/img/logos/hasura-logo.png',
+            label: 'Hasura',
+          },
+          {
+            url: '/img/logos/graphql-logo.png',
+            label: 'GraphQL',
+          },
+          {
+            url: '/img/logos/nest-logo.svg',
+            label: 'NestJS',
+          },
+          {
+            url: '/img/logos/netlify.svg',
+            label: 'Netlify',
+          },
+          {
+            url: '/img/logos/aws-lambda.svg',
+            label: 'AWS Lambda',
+          },
+        ],
+      },
+      items: [
+        {
+          type: 'category',
+          label: 'Hasura',
+          customProps: {
+            logoUrl: '/img/logos/hasura-logo.png'
+          },
+          items: [
+            "hasura-integration/with-jwt",
+            "hasura-integration/without-jwt",
+          ],
+        },
+        {
+          type: 'category',
+          label: 'GraphQL',
+          customProps: {
+            logoUrl: '/img/logos/graphql-logo.png'
+          },
+          items: [
+            "graphql-integration/backend-setup",
+            "graphql-integration/making-requests",
+            "graphql-integration/access-session-info",
+            "graphql-integration/create-session",
+            "graphql-integration/revoke-session",
+          ],
+        },
+        {
+          type: 'category',
+          label: 'NestJS',
+          customProps: {
+            logoUrl: '/img/logos/nest-logo.svg'
+          },
+          items: [
+            "nestjs/guide",
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Netlify',
+          customProps: {
+            logoUrl: '/img/logos/netlify.svg'
+          },
+          items: [
+            "serverless/with-netlify/about",
+            "serverless/with-netlify/frontend",
+            "serverless/with-netlify/backend-config",
+            "serverless/with-netlify/auth-serverless",
+            "serverless/with-netlify/session-verification",
+            "serverless/with-netlify/next-steps"
+          ],
+        },
+        {
+          type: 'category',
+          label: 'AWS Lambda',
+          customProps: {
+            logoUrl: '/img/logos/aws-lambda.svg'
+          },
+          items: [
+            "serverless/with-aws-lambda/about",
+            "serverless/with-aws-lambda/frontend",
+            "serverless/with-aws-lambda/backend-config",
+            "serverless/with-aws-lambda/auth-serverless",
+            "serverless/with-aws-lambda/api-gateway-config",
+            {
+              type: 'category',
+              label: '5. Session Verification',
+              items: [
+                "serverless/with-aws-lambda/session-verification",
+                "serverless/with-aws-lambda/authorizer",
+                "serverless/with-aws-lambda/jwt-authorizer",
+              ],
+            },
+            "serverless/with-aws-lambda/next-steps",
+            "serverless/with-aws-lambda/appsync-integration"
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Vercel',
+          customProps: {
+            logoUrl: '/img/logos/vercel.jpeg'
+          },
+          items: [
+            "serverless/with-vercel/about"
+          ],
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "Using sessions with JWTs",
       items: [
         "common-customizations/sessions/with-jwt/about",
@@ -68,7 +183,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Common customizations',
+      label: 'Additional features and customizations',
       items: [
         "common-customizations/sessions/new-session",
         {
@@ -193,91 +308,6 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Hasura',
-      customProps: {
-        logoUrl: '/img/logos/hasura-logo.png'
-      },
-      items: [
-        "hasura-integration/with-jwt",
-        "hasura-integration/without-jwt",
-      ],
-    },
-    {
-      type: 'category',
-      label: 'GraphQL',
-      customProps: {
-        logoUrl: '/img/logos/graphql-logo.png'
-      },
-      items: [
-        "graphql-integration/backend-setup",
-        "graphql-integration/making-requests",
-        "graphql-integration/access-session-info",
-        "graphql-integration/create-session",
-        "graphql-integration/revoke-session",
-      ],
-    },
-    {
-      type: 'category',
-      label: 'NestJS',
-      customProps: {
-        logoUrl: '/img/logos/nest-logo.svg'
-      },
-      items: [
-        "nestjs/guide",
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Netlify',
-      customProps: {
-        logoUrl: '/img/logos/netlify.svg'
-      },
-      items: [
-        "serverless/with-netlify/about",
-        "serverless/with-netlify/frontend",
-        "serverless/with-netlify/backend-config",
-        "serverless/with-netlify/auth-serverless",
-        "serverless/with-netlify/session-verification",
-        "serverless/with-netlify/next-steps"
-      ],
-    },
-    {
-      type: 'category',
-      label: 'AWS Lambda',
-      customProps: {
-        logoUrl: '/img/logos/aws-lambda.svg'
-      },
-      items: [
-        "serverless/with-aws-lambda/about",
-        "serverless/with-aws-lambda/frontend",
-        "serverless/with-aws-lambda/backend-config",
-        "serverless/with-aws-lambda/auth-serverless",
-        "serverless/with-aws-lambda/api-gateway-config",
-        {
-          type: 'category',
-          label: '5. Session Verification',
-          items: [
-            "serverless/with-aws-lambda/session-verification",
-            "serverless/with-aws-lambda/authorizer",
-            "serverless/with-aws-lambda/jwt-authorizer",
-          ],
-        },
-        "serverless/with-aws-lambda/next-steps",
-        "serverless/with-aws-lambda/appsync-integration"
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Vercel',
-      customProps: {
-        logoUrl: '/img/logos/vercel.jpeg'
-      },
-      items: [
-        "serverless/with-vercel/about"
-      ],
-    },
-    {
-      type: 'category',
       label: 'Testing',
       items: [
         "testing/testing-with-postman"
@@ -303,9 +333,15 @@ module.exports = {
         }
       ],
     },
-    "appinfo",
-    "sdks",
-    "apis",
-    "compatibility-table"
+    {
+      type: "category",
+      label: "References and Compatibility",
+      items: [
+        "appinfo",
+        "sdks",
+        "apis",
+        "compatibility-table"
+      ],
+    },
   ]
 };
