@@ -4,7 +4,7 @@ module.exports = {
     "architecture",
     {
       type: 'category',
-      label: 'Initialization',
+      label: 'Quick Setup',
       collapsed: false,
       items: [
         "quick-setup/video-tutorial",
