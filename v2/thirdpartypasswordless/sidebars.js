@@ -57,8 +57,8 @@ module.exports = {
             label: 'NestJS',
           },
           {
-            url: '/img/logos/redwood-logo.png',
-            label: 'RedwoodJS',
+            url: '/img/logos/aws-lambda.svg',
+            label: 'AWS Lambda',
           },
         ],
       },
