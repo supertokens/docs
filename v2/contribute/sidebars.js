@@ -128,7 +128,8 @@ module.exports = {
             "checklists/saas/issues-removing-app",
             "checklists/saas/mysql-rds",
             "checklists/saas/adding-new-ec2-instance-for-node-api",
-            "checklists/saas/db-restore"
+            "checklists/saas/db-restore",
+            "checklists/saas/adding-instances-to-load-blancer"
           ],
         },
         {
