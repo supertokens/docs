@@ -127,7 +127,8 @@ module.exports = {
             "checklists/saas/upgrading-users-core-version",
             "checklists/saas/issues-removing-app",
             "checklists/saas/mysql-rds",
-            "checklists/saas/adding-new-ec2-instance-for-node-api"
+            "checklists/saas/adding-new-ec2-instance-for-node-api",
+            "checklists/saas/db-restore"
           ],
         },
         {
