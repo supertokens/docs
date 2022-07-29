@@ -1,3 +1,8 @@
+---
+id: db-restore
+title: DB restore using automated backups
+hide_title: true
+---
 # Restoring API/Saas related DBs using automated backups
 
 ### Database - Development API Server
@@ -24,7 +29,7 @@
 - restart production node api server containers
 - remove old cluster
 
-### Database - API Saas DB
+### Database - API Saas DB (saas users db used to store active users)
 
 - get the latest automated backup of the saas db
 - use restore snapshot option
@@ -36,7 +41,7 @@
 - remove old cluster
 
 
-## Restoring Saas users' containers related DBs using automated backups
+# Restoring Saas users' containers related DBs using automated backups
 
 ### Database - Saas Postgresql DB (any region)
 
