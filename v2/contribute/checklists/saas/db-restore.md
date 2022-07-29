@@ -1,4 +1,4 @@
-## Restoring API/Saas related DBs using automated backups
+# Restoring API/Saas related DBs using automated backups
 
 ### Database - Development API Server
 
