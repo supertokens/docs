@@ -335,7 +335,7 @@ module.exports = {
         id: 'microservice_auth',
         path: 'microservice_auth',
         routeBasePath: 'docs/microservice_auth',
-        sidebarPath: require.resolve('./change_me/sidebars.js'),
+        sidebarPath: require.resolve('./microservice_auth/sidebars.js'),
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
