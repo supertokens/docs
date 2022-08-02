@@ -35,7 +35,7 @@ export default function FrontendSDKTabs(props: any) {
   </Tabs>)
 }
 
-function applyCopyTabs(children: any): any {
+export function applyCopyTabs(children: any): any {
   return recursiveMapAllChildren(
     children,
     (child: any) => {

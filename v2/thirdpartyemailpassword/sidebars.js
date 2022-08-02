@@ -199,50 +199,41 @@ module.exports = {
       ],
     },
     {
-      type: 'category',
-      label: 'Post login operations',
+      type: "category",
+      label: "Building authentication flows",
+      collapsed: false,
       items: [
-        "common-customizations/sessions/securing-component",
-        "common-customizations/verify-session",
-        "common-customizations/sign-out",
+        "building-authentication-flows/adding-email-login",
         "common-customizations/redirecting-post-login",
-        "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
-        "post-login/getting-provider-access-token"
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Email Delivery',
-      items: [
-        "email-delivery/about",
-        "email-delivery/default",
+        "common-customizations/verify-session",
+        "common-customizations/sessions/securing-component",
+        "common-customizations/sign-out",
         {
-          type: 'category',
-          label: 'Method 2) SMTP service',
+          type: "category",
+          label: "Reset Password",
           items: [
-            "email-delivery/smtp/configure-smtp",
-            "email-delivery/smtp/change-email-content"
-          ]
+            "common-customizations/reset-password/reset-password-flow",
+            "common-customizations/reset-password/password-reset-email",
+          ],
         },
-        "email-delivery/custom-method",
-        "email-delivery/pre-post-email"
-      ]
-    },
-    {
-      type: 'category',
-      label: 'User Roles',
-      items: [
-        "user-roles/initialisation",
-        "user-roles/creating-role",
-        "user-roles/managing-roles-and-users",
-        "user-roles/managing-roles-and-sessions",
-        "user-roles/reading-role-from-session",
-        "user-roles/reading-role-on-frontend",
-        "user-roles/protecting-routes",
-        "user-roles/managing-roles-and-permissions",
-        "user-roles/get-all-roles",
-        "user-roles/delete-roles",
+        {
+          type: "category",
+          label: "Email Verification",
+          items: [
+            "common-customizations/email-verification/email-verification-flow",
+            "common-customizations/email-verification/email-verification-email",
+          ],
+        },
+        {
+          type: "category",
+          label: "Session Management",
+          items: [
+            "common-customizations/sessions/checking-session-front-end",
+            "common-customizations/sessions/handling-session-expiry",
+            "building-authentication-flows/session-management/adding-network-interceptors"
+          ],
+        },
+        "common-customizations/get-user-info",
       ],
     },
     {
@@ -281,6 +272,8 @@ module.exports = {
             "common-customizations/signin-form/custom-providers",
           ]
         },
+        "common-customizations/handling-signinup-success",
+        "post-login/getting-provider-access-token",
         {
           type: 'category',
           label: 'SAML',
@@ -302,6 +295,40 @@ module.exports = {
             },
           ],
         },
+        {
+          type: 'category',
+          label: 'Email Delivery',
+          items: [
+            "email-delivery/about",
+            "email-delivery/default",
+            {
+              type: 'category',
+              label: 'Method 2) SMTP service',
+              items: [
+                "email-delivery/smtp/configure-smtp",
+                "email-delivery/smtp/change-email-content"
+              ]
+            },
+            "email-delivery/custom-method",
+            "email-delivery/pre-post-email"
+          ]
+        },
+        {
+          type: 'category',
+          label: 'User Roles',
+          items: [
+            "user-roles/initialisation",
+            "user-roles/creating-role",
+            "user-roles/managing-roles-and-users",
+            "user-roles/managing-roles-and-sessions",
+            "user-roles/reading-role-from-session",
+            "user-roles/reading-role-on-frontend",
+            "user-roles/protecting-routes",
+            "user-roles/managing-roles-and-permissions",
+            "user-roles/get-all-roles",
+            "user-roles/delete-roles",
+          ],
+        },
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
@@ -312,8 +339,6 @@ module.exports = {
           type: "category",
           label: "Reset Password",
           items: [
-            "common-customizations/reset-password/about",
-            "common-customizations/reset-password/password-reset-email",
             "common-customizations/reset-password/embed-in-page",
             "common-customizations/reset-password/post-reset-password",
             "common-customizations/reset-password/changing-token-lifetime"
@@ -323,8 +348,6 @@ module.exports = {
           type: "category",
           label: "Email Verification",
           items: [
-            "common-customizations/email-verification/about",
-            "common-customizations/email-verification/email-verification-email",
             "common-customizations/email-verification/embed-in-page",
             "common-customizations/email-verification/handling-email-verification-success",
             "common-customizations/email-verification/changing-token-lifetime"
@@ -342,7 +365,7 @@ module.exports = {
         "common-customizations/session-with-jwt",
         {
           type: "category",
-          label: "Sessions",
+          label: "Session Management",
           items: [
             "common-customizations/sessions/about",
             {
@@ -371,8 +394,6 @@ module.exports = {
             },
             "common-customizations/sessions/revoke-session",
             "common-customizations/sessions/change-session-timeout",
-            "common-customizations/sessions/checking-session-front-end",
-            "common-customizations/sessions/handling-session-expiry",
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/update-jwt-payload",
             "common-customizations/sessions/update-session-data",
