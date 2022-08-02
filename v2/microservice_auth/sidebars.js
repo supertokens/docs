@@ -9,7 +9,14 @@ module.exports = {
         "jwt-creation",
         "user-based",
         "user-independent",
-        "jwt-verification"
+        {
+          type: "category",
+          label: "JWT Verification",
+          items: [
+            "jwt-verification/index",
+            "jwt-verification/get-public-key"
+          ]
+        },
       ]
     },
     "security-analysis"

@@ -4,6 +4,7 @@ let Tabs = require("@theme/Tabs").default;
 export default function BackendSDKTabs(props: any) {
     return (
         <Tabs
+            isSubTab={props.isSubTab}
             groupId="backendsdk"
             defaultValue="nodejs"
             values={[
