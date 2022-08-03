@@ -265,7 +265,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Additional features and customizations',
+      label: 'Additional customizations',
       collapsed: false,
       items: [
         "common-customizations/redirect-to-auth",

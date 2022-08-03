@@ -7,7 +7,6 @@ module.exports = {
       label: 'Quick setup',
       collapsed: false,
       items: [
-        "quick-setup/video-tutorial",
         "quick-setup/frontend",
         "quick-setup/backend",
         {
@@ -247,7 +246,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Additional features and customizations',
+      label: 'Additional customizations',
       collapsed: false,
       items: [
         "common-customizations/redirect-to-auth",
