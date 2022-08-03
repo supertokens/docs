@@ -7,7 +7,6 @@ module.exports = {
       label: 'Quick setup',
       collapsed: false,
       items: [
-        "quick-setup/video-tutorial",
         "quick-setup/frontend",
         "quick-setup/backend",
         {

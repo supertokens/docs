@@ -7,7 +7,6 @@ module.exports = {
       label: 'Quick setup',
       collapsed: false,
       items: [
-        "quick-setup/overview",
         "quick-setup/frontend",
         "quick-setup/backend",
         {
