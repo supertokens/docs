@@ -332,6 +332,19 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'microservice_auth',
+        path: 'microservice_auth',
+        routeBasePath: 'docs/microservice_auth',
+        sidebarPath: require.resolve('./microservice_auth/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'change_me',
         path: 'change_me',
         routeBasePath: 'docs/change_me',

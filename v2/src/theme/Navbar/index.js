@@ -196,4 +196,9 @@ const RECIPE_LABELS = [{
   position: "left",
   docsPluginId: "mfa",
   label: "Multi factor auth"
+}, {
+  type: "recipeLabel",
+  position: "left",
+  docsPluginId: "microservice_auth",
+  label: "Microservice Auth"
 }]
