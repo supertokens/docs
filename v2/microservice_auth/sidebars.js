@@ -7,8 +7,6 @@ module.exports = {
       collapsed: false,
       items: [
         "jwt-creation",
-        "user-based",
-        "user-independent",
         {
           type: "category",
           label: "JWT Verification",

@@ -4,10 +4,27 @@ title: Security Analysis
 hide_title: true
 ---
 
-# Security Analysis
+# Security Analysis of microservice auth
 
-TODO
+## Who can query the microservices?
+Anyone or any service that has direct access to the SuperTokens core can produce a valid JWT and query your microservices. If the core is being exposed to the internet, you *must* add an API key to protect it.
 
-- Why end user can't query microservice (even if logged in)
-- Current loopholes -> can't reliably id microservice being queried
-- Need to store supertokens core api-key => but can have multiple api keys per microservice.
+Even though end users may be issued a JWT for their session (that is signed by the core), they cannot query a microservice directly since their JWT *should* not have the `source: "microservice"` claim in it.
+
+## What happens if the core's API key is compromised?
+Then the attacker can issue their own JWTs to be able to query your microservices. To limit this protection, you may want to add firewall rules to allow access to the core only from services on your backend.
+
+You can also provide multiple API keys to the core and give a unique key to each microservice in your infrastructure. This way, it would be easier to track where a leak came from.
+
+## What happens if the JWT signing key is compromised?
+In this case, the attacker could fabricate their own JWT to be able to query your microservices. To limit this risk, we plan on implementing JWT signing key rotation methodology, but until then, you can limit the reachability of your microservices based on the request's IP address.
+
+## How to limit which microservice can query another one?
+If an organisation has several teams and several microservices, it is common to limit which other services a given microservice can query. For example, if there exists `M1`, `M2` and `M3` microservices, we may have a situation in which we want `M1` to only be able to query `M2` and not `M3`.
+
+With just one SuperTokens core deployment, it is not possible to have this type of restriction, since all the microservices create and verify their JWTs using that same public / private keys. So if `M3` recieves a request, it has no way of reliably knowing if the request is from `M1` or `M2` (assuming that IP based access control is not implemented).
+
+We can achieve this type of restriction by deploying multiple cores connected to their own databases. In our example, we can deploy a dedicated SuperTokens core for `M3`'s auth, such that only `M3` uses that to verify the incoming JWTs. Then, only other services that have access to that core can create JWTs that `M3` will accept. So if `M1` doesn't have access to `M3`'s core's API key, then we can be assured that successful requests to `M3` are not from `M1`.
+
+## What about OAuth 2.0 client credential flow?
+The common way to achieve microservice auth is via [OAuth's client credential flow](https://oauth.net/2/grant-types/client-credentials/). We are in the process of becoming an OAuth 2.0 provider and would be implmenting this flow.

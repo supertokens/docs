@@ -12,27 +12,18 @@ import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs"
 # Creating a JWT
 
 ## When to create a JWT?
-The first step is to create a JWT from the microservice that will be sending the request (let's call this microservice `M1`). Depending on the context, this JWT can be created at different times:
-- When handling a request from the frontend: A new JWT needs to be created on each request, containing the user ID of the user who sent the request from the frontend.
-- On process start: A new JWT is created when `M1` starts. The contents of this JWT are not tied to a specific end user, and this JWT remains static until `M1` restarts.
+The first step is to create a JWT from the microservice that will be sending the request (let's call this microservice `M1`). This JWT will be verified by other microservices when `M1` sends them a request. Since this JWT remains statis per microservice, the best time to create this is on process starts - i.e. when `M1` starts.
 
 ## What to add in the JWT?
-In either case, the JWT needs to contain some information identifying `M1` so that the target microservice (let's call this `M2`) can verify the source of the request. We have two choices here:
-- Add `M1` specific informatoin in the JWT: For example, we could add:
-    ```json
-    {..., "microservice_id": "M1", ...}
-    ```
+The JWT can contain any information you like, but at a minimum, it needs to contain information proving that it is a microservice that is allowed to query other microservices in your infrastructure. This is needed since you may issue a JWT to an end user as well, and they should not be able to query any microservice directly.
 
-    `M2` could have a list of IDs that it can accept requests from. After [JWT verification](./jwt-verification/index), `M2` would check if the value of `microservice_id` is whitelisted in its ID list. If not, it would reject the request.
-- Allow any microservice to talk to `M2`. In this case, we could add:
-    ```json
-    {..., "source": "microservice", ...}
-    ```
-    Here `M2` would check that the value of `source` is `"microservice"` before serving the request. Else it would reject the request.
+We can add the following claim in the JWT to "mark" the JWT as one that is meant for microservice auth only:
+```json
+{..., "source": "microservice", ...}
+```
 
-The advantage of the first method is that it is more secure. In a large microservice environment, working across several teams, it makes sense to isolate micorservices to create a stronger zero trust network.
+In the receiving microservice (`M2`), we can then [verify the JWT](./jwt-verification/index) and check that this claim is present before serving the request. 
 
-The disadvantage is that each time a new microservice is added, the ID whitelist for `M2` would need to be updated (if necessary). The second method solves this disadvantage, but at the cost of slightly lower security.
 
 ## Code for creating a JWT
 
@@ -137,7 +128,7 @@ import jwt from "supertokens-node/recipe/jwt"
 async function createJWT(payload: any) {
     let jwtResposne = await jwt.createJWT({
         ...payload,
-        microservice_id: "M1" // we add this to identify the current microservice to the target one
+        source: "microservice"
     });
     if (jwtResposne.status === "OK") {
         // Send JWT as Authorization header to M2
@@ -159,7 +150,7 @@ import (
 
 func main() {
 	jwtResponse, err := jwt.CreateJWT(map[string]interface{}{
-		"microservice_id": "M1",
+		"source": "microservice",
 		// ...additional payload
 	}, nil)
 	if err != nil {
@@ -183,7 +174,7 @@ from supertokens_python.recipe.jwt.interfaces import CreateJwtOkResult
 
 async def create_jwt():
     jwtResponse = await asyncio.create_jwt({
-        "microservice_id": "M1",
+        "source": "microservice",
         # ... extra payload
     })
 
@@ -202,7 +193,7 @@ from supertokens_python.recipe.jwt.syncio import create_jwt
 from supertokens_python.recipe.jwt.interfaces import CreateJwtOkResult
 
 jwtResponse = create_jwt({
-    "microservice_id": "M1",
+    "source": "microservice",
     # ... extra payload
 })
 
@@ -235,7 +226,7 @@ curl --location --request POST '${connectionURI}/recipe/jwt' \
 --header 'Content-Type: application/json' \
 --data-raw '{
   "payload": {
-    "microservice_id": "M1",
+    "source": "microservice",
     ...
   },
   "algorithm": "RS256",
@@ -252,10 +243,22 @@ An example response is as follows:
 ```json
 {
     "status": "OK",
-    "jwt": "eyJraWQiOiI0YTE5MjM5My05MTcxLTQyYzktOWRhNy0yYTE2OGVkMzdlYjEiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS50ZXN0LmNvbS8iLCJleHAiOjQ4MTMwMzE5MDEsImlhdCI6MTY1OTQzMTkwMCwibWljcm9zZXJ2aWNlX2lkIjoiTTEifQ.ja1Qy4EcslRpcVLAxJJFr8s_PmrqgCpaCUonaZd6JHwfsV-CA876vroQEwhstT8bednjJqGn-uJDmWI3cJRte4zvyNygK6hmJYVleka7Ae8scqdv6cRiM4ZPoHh0-sflaiXBiJHH3rjKTkuj1CBrzifgcCmg6f2X7iDqL3P0Kvw2dpvx-nm26I3jeAKELsm2DuuwZ0hsLzCGiWQhmc5EKJRK8UOYROXzsUAgvUk04KYYsbN8_t22L3H9fAWEKKDkxtTzlQiYMVc7xFH_F_ZxQyN8JESiyye-vkd5KXiaVYword0CdVTres5RrWUlDOP0DkrCFPcIRgzu_bChIIpFdA"
+    "jwt": "eyJraWQiOiI0YTE...rCFPcIRgzu_bChIIpFdA"
 }
 
 ```
 
 </TabItem>
 </WithWithoutSDK>
+
+## What to do with the JWT?
+Once the JWT is created, you can store it in a (globally accessible) variable and access it when you want to talk to a microservice. You can add the JWT as an `Authorization: Bearer` token like so:
+
+```bash
+curl --location --request POST 'https://microservice_location/path' \
+--header 'Authorization: Bearer eyJraWQiOiI0YTE...rCFPcIRgzu_bChIIpFdA' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "request": "payload"
+}'
+```
