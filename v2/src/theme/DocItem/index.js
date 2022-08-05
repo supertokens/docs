@@ -50,6 +50,7 @@ function PreBuiltCustomUISelector() {
         top: "var(--ifm-navbar-height)",
         marginBottom: 40,
         backgroundColor: "var(--ifm-background-color)",
+        zIndex: 10,
       }}>
       <div
         style={{
