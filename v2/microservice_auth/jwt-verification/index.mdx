@@ -1,0 +1,101 @@
+---
+id: index
+title: Verify JWTs
+hide_title: true
+---
+
+# Verify JWTs
+
+When a target microservice receives a JWT, it must first verify it before proceeding to serve the request. There are two steps here:
+- A standard verification of the JWT
+- Checking the JWT claim to make sure that another microservice has queried it.
+
+## Standard verification of a JWT
+### Method 1) Using JWKS endpoint
+
+#### a) Get JWKS endpoint
+
+The JWKS endpoint is `{apiDomain}/{apiBasePath}/jwt/jwks.json`. Here the `apiDomain` and `apiBasePath` are values pointing to the server in which you have initalised SuperTokens using our backend SDK.
+
+#### b) Verify the JWT
+
+Some libraries let you provide a JWKS endpoint to verify a JWT. For example for NodeJS you can use `jsonwebtoken` and `jwks-rsa` together to achieve this.
+
+```ts
+import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+var client = jwksClient({
+  jwksUri: '{apiDomain}/{apiBasePath}/jwt/jwks.json'
+});
+
+function getKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    var signingKey = key!.getPublicKey();
+    callback(err, signingKey);
+  });
+}
+
+let jwt = "...";
+JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
+  let decodedJWT = decoded;
+  // Use JWT
+});
+```
+
+For other languages, [jwt.io](https://jwt.io/libraries) recommends some libraries that you can use for JWT verification
+
+### Method 2) Using public key string
+
+#### a) Getting a certificate string
+
+Refer to [this](./get-public-key) to know how to retrieve a key string to use
+
+#### b) Verify the JWT
+
+Some libraries/services let you configure a secret that can be used for JWT verification. Using the same example as above you can use a key when using `jsonwebtoken`.
+
+```ts
+import JsonWebToken from 'jsonwebtoken';
+
+// Truncated for display
+let certificate = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----";
+let jwt = "...";
+JsonWebToken.verify(jwt, certificate, function (err, decoded) {
+    let decodedJWT = decoded;
+    // Use JWT
+});
+```
+
+For other languages, [jwt.io](https://jwt.io/libraries) recommends some libraries that you can use for JWT verification
+
+## Claim verification
+The second step is to get the JWT payload and check that it has the `"source": "microservice"` claim:
+
+```tsx
+import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+var client = jwksClient({
+  jwksUri: '{apiDomain}/{apiBasePath}/jwt/jwks.json'
+});
+
+function getKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    var signingKey = key!.getPublicKey();
+    callback(err, signingKey);
+  });
+}
+
+let jwt = "...";
+JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
+  // highlight-start
+  let decodedJWT = decoded;
+  if (decodedJWT === undefined || typeof decodedJWT === "string" || decodedJWT.source === undefined || decodedJWT.source !== "microservice") {
+    // return a 401 unauthorised error
+  } else {
+    // handle API request...
+  }
+  // highlight-end
+});
+```

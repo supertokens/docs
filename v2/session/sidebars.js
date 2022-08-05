@@ -4,7 +4,7 @@ module.exports = {
     "architecture",
     {
       type: 'category',
-      label: 'Initialization',
+      label: 'Quick setup',
       collapsed: false,
       items: [
         "quick-setup/frontend",
@@ -183,7 +183,8 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Additional features and customizations',
+      label: 'Additional customizations',
+      collapsed: false,
       items: [
         "common-customizations/sessions/new-session",
         {

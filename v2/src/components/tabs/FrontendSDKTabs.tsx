@@ -141,12 +141,9 @@ function DefaultVanillaJSTabItem() {
           </h5>
         </div>
         <div className="admonition-content">
-          This section may not be relevant to you because you are making your own UI.<br /><br />
+          You can use the <code>supertokens-web-js</code> SDK which exposes several helper functions that query the <a target="_blank" href="https://app.swaggerhub.com/apis/supertokens/FDI">APIs exposed by the SuperTokens backend SDK</a>.<br /><br />
 
-
-          That being said, we recommend that you use the <code>supertokens-web-js</code> SDK which exposes several helper functions that query the <a target="_blank" href="https://app.swaggerhub.com/apis/supertokens/FDI">APIs exposed by SuperTokens backend SDK</a>.<br /><br />
-
-          We are working on the docs to add more details about this SDK. In the meantime, you can  <a target="_blank" href="https://supertokens.com/docs/web-js/modules.html">checkout the SDKs reference docs</a>.
+          You can refer to <a target="_blank" href="https://github.com/supertokens/supertokens-web-js/tree/master/examples/vuejs/with-thirdpartyemailpassword">this example app</a> as a reference for using the <code>supertokens-web-js</code> SDK.
         </div>
       </div>
     </TabItem>
