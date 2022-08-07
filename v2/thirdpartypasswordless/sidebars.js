@@ -325,7 +325,8 @@ module.exports = {
             "common-customizations/email-verification/email-verification-email",
             "common-customizations/email-verification/embed-in-page",
             "common-customizations/email-verification/handling-email-verification-success",
-            "common-customizations/email-verification/changing-token-lifetime"
+            "common-customizations/email-verification/changing-token-lifetime",
+            "common-customizations/email-verification/changing-style"
           ]
         },
         "common-customizations/session-with-jwt",
