@@ -12,7 +12,7 @@ import TabItem from '@theme/TabItem';
 
 ## Backend change
 
-You can change the URL of Magic Links by providing a callback on the backend.
+You can change the URL of Magic Links by providing provinding an override in email delivery config
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -20,6 +20,7 @@ You can change the URL of Magic Links by providing a callback on the backend.
 ```tsx
 import SuperTokens from "supertokens-node";
 import Passwordless from "supertokens-node/recipe/passwordless";
+import { STMPService } from "supertokens-node/recipe/passwordless/emaildelivery";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
@@ -35,11 +36,31 @@ SuperTokens.init({
             flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", 
 
             // highlight-start
-            // Customize information in the URL.
-            // By default: `${websiteDomain}/${websiteBasePath}/verify`
-            getLinkDomainAndPath: async (contactInfo, context) => {
-                // contactInfo is {email: string} | {phoneNumber: string}
-                return "https://example.com/custom/auth/verify"
+            emailDelivery: {
+                service: new STMPService({
+                    // @ts-ignore
+                    smtpSettings: { /*...*/ },
+                    // highlight-start
+                    override: (originalImplementation) => {
+                        return {
+                            ...originalImplementation,
+                            getContent: async function (input) {
+                                if (input.type === "PASSWORDLESS_LOGIN") {
+                                    return originalImplementation.getContent({
+                                        ...input,
+                                        urlWithLinkCode: input.urlWithLinkCode?.replace(
+                                            // This is: `${websiteDomain}${websiteBasePath}/verify`
+                                            "http://localhost:3000/auth/verify",
+                                            "http://your.domain.com/your/path"
+                                            )
+                                    })
+                                }
+                                return originalImplementation.getContent(input);
+                            }
+                        }
+                    }
+                    // highlight-end
+                })
             }
             // highlight-end
         }),

@@ -212,24 +212,6 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Email Delivery',
-      items: [
-        "email-delivery/about",
-        "email-delivery/default",
-        {
-          type: 'category',
-          label: 'Method 2) SMTP service',
-          items: [
-            "email-delivery/smtp/configure-smtp",
-            "email-delivery/smtp/change-email-content"
-          ]
-        },
-        "email-delivery/custom-method",
-        "email-delivery/pre-post-email"
-      ]
-    },
-    {
-      type: 'category',
       label: 'User Roles',
       items: [
         "user-roles/initialisation",
@@ -292,17 +274,6 @@ module.exports = {
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
-        {
-          type: "category",
-          label: "Email Verification",
-          items: [
-            "common-customizations/email-verification/about",
-            "common-customizations/email-verification/email-verification-email",
-            "common-customizations/email-verification/embed-in-page",
-            "common-customizations/email-verification/handling-email-verification-success",
-            "common-customizations/email-verification/changing-token-lifetime"
-          ]
-        },
         "common-customizations/session-with-jwt",
         {
           type: "category",
