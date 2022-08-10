@@ -1,10 +1,10 @@
 ---
 id: scaling-prod-instances
-title: Scaling prod instances
+title: Adding Load Balancer for production deployment
 hide_title: true
 ---
 
-# Scaling managed service prod instances
+# Adding Load Balancer for production deployment
 
 - call API:
 ```
@@ -98,6 +98,8 @@ params:
         - than…: 1
         - SNS
             - Select an existing SNS topic: CloudWatch_Alarms_{{Region}}_ELB <!--- e.g. US_East_1, should be easy cause it will be in dropdown menu --->
+- Add app id to database
+    - add appId to `apps_with_load_balancer` table
 
 
 ## To make sure you cover
