@@ -16,11 +16,11 @@ import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs"
 
 # Managing roles and sessions
 
-After you create a role and assign it to as user, you can add the role information to their session. You can then use this information to read and verify the role and permissions in your API and website routes
+After you create a role and assign it to as user, the role and permission information is automatically added during session creation. You can then use this information to read and verify the role and permissions in your API and website routes
 
-## Adding roles to a session
+## Disable automatically adding roles
 
-We can set the user's role in the access token by overriding the `createNewSession` function in the `init` function:
+You can disable adding role information into the access token payload during session creation in the recipe config:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -40,29 +40,13 @@ SuperTokens.init({
         websiteDomain: "..."
     },
     recipeList: [
-        Session.init({
+        UserRoles.init({
             // highlight-start
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        createNewSession: async function (input) {
-                            let userId = input.userId;
-
-                            let roles = await UserRoles.getRolesForUser(userId);
-
-                            input.accessTokenPayload = {
-                                ...input.accessTokenPayload,
-                                roles
-                            };
-
-                            return originalImplementation.createNewSession(input);
-                        },
-                    };
-                },
-            },
+            skipAddingRolesToAccessToken: true,
+            skipAddingPermissionsToAccessToken: true,
             // highlight-end
-        })
+        }),
+        Session.init()
     ]
 });
 ```
@@ -221,11 +205,9 @@ init(
 </TabItem>
 </BackendSDKTabs>
 
-You can also set the permissions to their session directly by fetching the list of permissions assigned to a role (refer to the [Managing Roles and Permissions Page](./managing-roles-and-permissions))
-
 ## Updating roles in a session
 
-Post session verification, you can use the `updateAccessTokenPayload` function to update the user's role:
+After session verification, you can use the `fetchAndSetClaim` function to update the user's roles and permissions:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -253,14 +235,10 @@ app.post("/set-role", verifySession(), async (req: SessionRequest, res) => {
         return;
     }
 
-    // Get the updated list of roles that the user is assigned
-    let roles = (await UserRoles.getRolesForUser(userId)).roles;
-
-    let currAccessTokenPayload = req.session!.getAccessTokenPayload();
-
-    await req.session!.updateAccessTokenPayload(
-        { ...currAccessTokenPayload, roles }
-    );
+    // Load and save the updated list of roles that the user is assigned
+    await req.session!.fetchAndSetClaim(UserRoles.UserRoleClaim);
+    // Load and save the updated list of permissions that the user is assigned
+    await req.session!.fetchAndSetClaim(UserRoles.PermissionClaim);
     // highlight-end
 
     //....
@@ -299,14 +277,12 @@ server.route({
             return;
         }
 
-        // Get the updated list of roles that the user is assigned
-        let roles = (await UserRoles.getRolesForUser(userId)).roles;
 
-        let currAccessTokenPayload = req.session!.getAccessTokenPayload();
-
-        await req.session!.updateAccessTokenPayload(
-            { ...currAccessTokenPayload, roles }
-        );
+        // Load and save the updated list of roles that the user is assigned
+        await req.session!.fetchAndSetClaim(UserRoles.UserRoleClaim);
+        // Load and save the updated list of permissions that the user is assigned
+        await req.session!.fetchAndSetClaim(UserRoles.PermissionClaim);
+        
         // highlight-end
 
         //....
@@ -339,13 +315,12 @@ fastify.post("/set-role", {
     }
 
     // Get the updated list of roles that the user is assigned
-    let roles = (await UserRoles.getRolesForUser(userId)).roles;
 
-    let currAccessTokenPayload = req.session!.getAccessTokenPayload();
+    // Load and save the updated list of roles that the user is assigned
+    await req.session!.fetchAndSetClaim(UserRoles.UserRoleClaim);
+    // Load and save the updated list of permissions that the user is assigned
+    await req.session!.fetchAndSetClaim(UserRoles.PermissionClaim);
 
-    await req.session!.updateAccessTokenPayload(
-        { ...currAccessTokenPayload, roles }
-    );
     // highlight-end
 
     //....
@@ -372,14 +347,12 @@ async function setRole(awsEvent: SessionEvent) {
         return;
     }
 
-    // Get the updated list of roles that the user is assigned
-    let roles = (await UserRoles.getRolesForUser(userId)).roles;
 
-    let currAccessTokenPayload = awsEvent.session!.getAccessTokenPayload();
+    // Load and save the updated list of roles that the user is assigned
+    await awsEvent.session!.fetchAndSetClaim(UserRoles.UserRoleClaim);
+    // Load and save the updated list of permissions that the user is assigned
+    await awsEvent.session!.fetchAndSetClaim(UserRoles.PermissionClaim);
 
-    await awsEvent.session!.updateAccessTokenPayload(
-        { ...currAccessTokenPayload, roles }
-    );
     // highlight-end
 
     //....
@@ -411,14 +384,11 @@ router.post("/set-role", verifySession(), async (ctx: SessionContext, next) => {
         return;
     }
 
-    // Get the updated list of roles that the user is assigned
-    let roles = (await UserRoles.getRolesForUser(userId)).roles;
+    // Load and save the updated list of roles that the user is assigned
+    await ctx.session!.fetchAndSetClaim(UserRoles.UserRoleClaim);
+    // Load and save the updated list of permissions that the user is assigned
+    await ctx.session!.fetchAndSetClaim(UserRoles.PermissionClaim);
 
-    let currAccessTokenPayload = ctx.session!.getAccessTokenPayload();
-
-    await ctx.session!.updateAccessTokenPayload(
-        {...currAccessTokenPayload, roles}
-    );
     // highlight-end
     
     //....
@@ -441,7 +411,8 @@ class SetRole {
     @intercept(verifySession())
     @response(200)
     async handler() {
-        let userId = ((this.ctx as any).session as Session.SessionContainer).getUserId();
+        const session = ((this.ctx as any).session as Session.SessionContainer)
+        let userId = session.getUserId();
 
         // highlight-start
         // Add the "admin" role to the user
@@ -452,14 +423,11 @@ class SetRole {
             return;
         }
 
-        // Get the updated list of roles that the user is assigned
-        let roles = (await UserRoles.getRolesForUser(userId)).roles;
+        // Load and save the updated list of roles that the user is assigned
+        await session.fetchAndSetClaim(UserRoles.UserRoleClaim);
+        // Load and save the updated list of permissions that the user is assigned
+        await session.fetchAndSetClaim(UserRoles.PermissionClaim);
 
-        let currAccessTokenPayload = (this.ctx as any).session!.getAccessTokenPayload();
-
-        await ((this.ctx as any).session as Session.SessionContainer).updateAccessTokenPayload(
-            { ...currAccessTokenPayload, roles }
-        );
         // highlight-end
 
         //....
@@ -497,14 +465,11 @@ export default async function setRole(req: SessionRequest, res: any) {
         return;
     }
 
-    // Get the updated list of roles that the user is assigned
-    let roles = (await UserRoles.getRolesForUser(userId)).roles;
+    // Load and save the updated list of roles that the user is assigned
+    await req.session!.fetchAndSetClaim(UserRoles.UserRoleClaim);
+    // Load and save the updated list of permissions that the user is assigned
+    await req.session!.fetchAndSetClaim(UserRoles.PermissionClaim);
 
-    let currAccessTokenPayload = req.session!.getAccessTokenPayload();
-
-    await req.session!.updateAccessTokenPayload(
-        { ...currAccessTokenPayload, roles }
-    );
     // highlight-end
 
     //....
@@ -538,13 +503,10 @@ export class ExampleController {
     }
 
     // Get the updated list of roles that the user is assigned
-    let roles = (await UserRoles.getRolesForUser(userId)).roles;
-
-    const currAccessTokenPayload = session.getAccessTokenPayload();
-    
-    await session.updateAccessTokenPayload(
-        {...currAccessTokenPayload, roles}
-    );
+    // Load and save the updated list of roles that the user is assigned
+    await session.fetchAndSetClaim(UserRoles.UserRoleClaim);
+    // Load and save the updated list of permissions that the user is assigned
+    await session.fetchAndSetClaim(UserRoles.PermissionClaim);
 
     // highlight-end
     //....
