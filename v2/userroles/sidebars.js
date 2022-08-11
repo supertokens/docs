@@ -9,7 +9,6 @@ module.exports = {
         "initialisation",
         "creating-role",
         "managing-roles-and-users",
-        "reading-role-from-session",
         "protecting-routes",
         "managing-roles-and-permissions",
         "get-all-roles",
