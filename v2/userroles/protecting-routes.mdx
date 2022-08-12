@@ -809,38 +809,65 @@ async def get_user_info_api(request: HttpRequest):
 On your frontend:
 
 1. Verify that a session exists
-2. Use the roles / permissions claim validators to enforce certain roles and permissions
+2. Use the roles / permissions claim validators to enforce certain roles and permissions.
+3. If the user doesn't have the right roles, we show them an error message indicating they don't have access.
 
 <FrontendSDKTabs>
 <TabItem value="reactjs">
 
 ```tsx
 import React from "react";
-import { SessionAuth } from 'supertokens-auth-react/recipe/session';
+import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session';
 import { UserRoleClaim, /*PermissionClaim*/ } from 'supertokens-auth-react/recipe/userroles';
-// @ts-ignore
-import ProtectedComponent from "./dashboard";
 
-const ProtectedRoute = () => {
+const AdminRoute = (props: React.PropsWithChildren) => {
     return (
         <SessionAuth
-            overrideGlobalClaimValidators={(globalValidators) => 
+            overrideGlobalClaimValidators={(globalValidators) =>
                 [...globalValidators,
-                    UserRoleClaim.validators.includes("admin"),
-                 /* PermissionClaim.validators.includes("modify") */
+                UserRoleClaim.validators.includes("admin"),
+                    /* PermissionClaim.validators.includes("modify") */
                 ]
             }
         >
-            {/* ProtectedComponent will only render if the user has the admin role */}
-            <ProtectedComponent />
+            <InvalidClaimHandler>
+                {props.children}
+            </InvalidClaimHandler>
         </SessionAuth>
     );
 }
-```
 
-- We add the `UserRoleClaim` validator to the `<SessionAuth>` function which makes sure that the user has an `admin` role.
-- The `globalValidators` represents other validators that apply to all routes protected by `SessionAuth`. This may include a validator that enforces that the user's email is verified (if enabled by you).
-- We can also add a `PermissionClaim` validator to enforce a permission.
+function InvalidClaimHandler(props: React.PropsWithChildren) {
+    let sessionContext = useSessionContext();
+    if (sessionContext.loading) {
+        return null;
+    }
+    if (sessionContext.invalidClaims.length > 0) {
+        if (sessionContext.invalidClaims.some(i => i.validatorId === UserRoleClaim.id)) {
+            return <div>You cannot access this page because you are not an admin.</div>
+        } else {
+            // You need to handle other invalid claims that you may have
+            // added, or you can show a generic error and ask the user to relogin.
+            return <div>Something seems wrong. Please contact support.</div>
+        }
+    }
+
+    // We show the protected route since all claims validators have
+    // passed implying that the user is an admin.
+    return <div>{props.children}</div>;
+}
+```
+Above we are creating a generic component called `AdminRoute` which enforces that its child components can only be rendered if the user has the admin role.
+
+In the `AdminRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. We also add the `UserRoleClaim` validator to the `<SessionAuth>` component which checks if the validators pass or not.
+
+Finally, we check the result of the validation in the `InvalidClaimHandler` component which displays `"You cannot access this page because you are not an admin."` if the `UserRoleClaim` claim failed. In case some other validator failed (for example email verification valditor in case you have enabled email verification), then we display a `"Something seems wrong. Please contact support."` message. If this happens, it means that something is wrong with how you have done access control in your application.
+
+Finally, if all validation passes, we render the `props.children` component.
+
+:::note
+You can extend the `AdminRoute` component to check for other types of validators as well. This component can then be reused to protect all of your app's components (In this case, you may want to rename this component to something more appropriate, like `ProtectedRoute`).
+:::
 
 <details><summary>Manually checking roles</summary>
 
