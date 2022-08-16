@@ -557,6 +557,7 @@ module.exports = {
         "appinfo",
         "sdks",
         "apis",
+        "cors",
         "compatibility-table"
       ],
     },
