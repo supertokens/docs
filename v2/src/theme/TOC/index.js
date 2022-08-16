@@ -111,102 +111,100 @@ function TOC({toc}) {
 
   return (
     <div className={clsx(styles.tableOfContents, 'thin-scrollbar')}>
-      { _toc.length > 0 && 
-        <div
-          style={{
-            width: "100%",
-            backgroundColor: "var(--ui-selector-bacgkground)",
-            padding: 18,
-            paddingLeft: 24,
-            marginBottom: 18,
-            display: "flex",
-            flexDirection: "column",
-            boxSizing: "border-box",
-            MozBoxSizing: "border-box",
-            WebkitBoxSizing: "border-box",
-            borderRadius: 6,
-            fontFamily: "Rubik",
-            overflow: "clip",
-            position: "relative",
-          }}>
-            <div style={{
-              width: 6,
-              backgroundColor: selectedColorString,
-              position: "absolute",
-              top: 0,
-              left: 0,
-              bottom: 0,
-            }}/>
-            <span
-              style={{
-                color: "white",
-                fontWeight: "500",
-                fontSize: 16,
-              }}>
-            What type of UI do you plan to use?
-            </span>
-            <div
-              onClick={() => {
-                updateUIMode("custom")
-              }}
-              style={{
-                marginTop: 24,
-                width: "100%",
-                cursor: isCustomSelected ? "default" : "pointer",
-                backgroundColor: isCustomSelected ? selectedColorString: unselectedColorString,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxSizing: "border-box",
-                MozBoxSizing: "border-box",
-                WebkitBoxSizing: "border-box",
-                borderRadius: 6,
-                borderWidth: 1,
-                borderColor: isCustomSelected ? selectedBorderColorString : unselectedBorderColorString,
-                borderStyle: "solid",
-              }}>
-                <span
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "500",
-                    marginTop: 6,
-                    marginBottom: 6,
-                  }}>
-                  Custom UI
-                </span>
-            </div>
-            <div
-              onClick={() => {
-                updateUIMode("prebuilt")
-              }}
-              style={{
-                marginTop: 12,
-                width: "100%",
-                cursor: !isCustomSelected ? "default" : "pointer",
-                backgroundColor: !isCustomSelected ? selectedColorString : unselectedColorString,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxSizing: "border-box",
-                MozBoxSizing: "border-box",
-                WebkitBoxSizing: "border-box",
-                borderRadius: 6,
-                borderWidth: 1,
-                borderColor: !isCustomSelected ? selectedBorderColorString : unselectedBorderColorString,
-                borderStyle: "solid",
-              }}>
-                <span
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "500",
-                    marginTop: 6,
-                    marginBottom: 6,
-                  }}>
-                  Pre built UI
-                </span>
-            </div>
-        </div>
-      }
+      <div
+        style={{
+          width: "100%",
+          backgroundColor: "var(--ui-selector-bacgkground)",
+          padding: 18,
+          paddingLeft: 24,
+          marginBottom: 18,
+          display: "flex",
+          flexDirection: "column",
+          boxSizing: "border-box",
+          MozBoxSizing: "border-box",
+          WebkitBoxSizing: "border-box",
+          borderRadius: 6,
+          fontFamily: "Rubik",
+          overflow: "clip",
+          position: "relative",
+        }}>
+          <div style={{
+            width: 6,
+            backgroundColor: selectedColorString,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            bottom: 0,
+          }}/>
+          <span
+            style={{
+              color: "white",
+              fontWeight: "500",
+              fontSize: 16,
+            }}>
+          What type of UI do you plan to use?
+          </span>
+          <div
+            onClick={() => {
+              updateUIMode("custom")
+            }}
+            style={{
+              marginTop: 24,
+              width: "100%",
+              cursor: isCustomSelected ? "default" : "pointer",
+              backgroundColor: isCustomSelected ? selectedColorString: unselectedColorString,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxSizing: "border-box",
+              MozBoxSizing: "border-box",
+              WebkitBoxSizing: "border-box",
+              borderRadius: 6,
+              borderWidth: 1,
+              borderColor: isCustomSelected ? selectedBorderColorString : unselectedBorderColorString,
+              borderStyle: "solid",
+            }}>
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: "500",
+                  marginTop: 6,
+                  marginBottom: 6,
+                }}>
+                Custom UI
+              </span>
+          </div>
+          <div
+            onClick={() => {
+              updateUIMode("prebuilt")
+            }}
+            style={{
+              marginTop: 12,
+              width: "100%",
+              cursor: !isCustomSelected ? "default" : "pointer",
+              backgroundColor: !isCustomSelected ? selectedColorString : unselectedColorString,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxSizing: "border-box",
+              MozBoxSizing: "border-box",
+              WebkitBoxSizing: "border-box",
+              borderRadius: 6,
+              borderWidth: 1,
+              borderColor: !isCustomSelected ? selectedBorderColorString : unselectedBorderColorString,
+              borderStyle: "solid",
+            }}>
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: "500",
+                  marginTop: 6,
+                  marginBottom: 6,
+                }}>
+                Pre built UI
+              </span>
+          </div>
+      </div>
       <Headings toc={_toc} />
     </div>
   );

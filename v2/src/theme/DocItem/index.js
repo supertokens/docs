@@ -46,11 +46,11 @@ function PreBuiltCustomUISelector() {
       className='ui-selector-mobile'
       style={{
         width: "100%",
-        position: "sticky",
-        top: "var(--ifm-navbar-height)",
+        // position: "sticky",
+        // top: "var(--ifm-navbar-height)",
         marginBottom: 40,
         backgroundColor: "var(--ifm-background-color)",
-        zIndex: 10,
+        // zIndex: 10,
       }}>
       <div
         style={{
@@ -190,8 +190,6 @@ function DocItem(props) {
           image,
         }}
       />
-      
-      <PreBuiltCustomUISelector/>
 
       <div className="row">
         <div
@@ -213,6 +211,8 @@ function DocItem(props) {
                 </> : null}
 
               <div className="markdown">
+                <PreBuiltCustomUISelector/>
+
                 {/*
                 Title can be declared inside md content or declared through frontmatter and added manually
                 To make both cases consistent, the added title is added under the same div.markdown block
