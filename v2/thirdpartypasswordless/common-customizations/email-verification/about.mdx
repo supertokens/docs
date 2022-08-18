@@ -7,17 +7,174 @@ hide_title: true
 <!-- COPY DOCS -->
 <!-- ./thirdpartyemailpassword/common-customizations/email-verification/about.mdx -->
 
-import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
-import TabItem from '@theme/TabItem';
+import {Answer} from "/src/components/question"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs";
+import TabItem from "@theme/TabItem";
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import AngularUIImplementation from "/src/components/reusableSnippets/angularUIImplementation"
 
 # Enable email verification
 
 :::info
 - Email verification is turned off by default. It is strongly encouraged to enable it to ensure the authenticity of your users.
-- If you are already using SuperTokens in production and turn on email verification, your users will be redirected to the email verification screen next time they use your application.
+- If you are already using SuperTokens in production and turn on email verification, your users may be redirected to the email verification screen the next time they use your application.
+- By default, thirdparty users are verified if the provider marks the email as verified in the profile info.
+- By default, passwordless users are marked as verified when they sign in.
+- When a users changes their email, the new address will not be verified.
 :::
 
-## Switch on Email Verification
+## The `REQUIRED` vs `OPTIONAL` modes
+
+#### Mode set to `OPTIONAL`
+
+- On the backend: it enables the email verification related APIs and checks the status of email verification during session creation.
+- In React: it checks email verification and add it to the `invalidClaims` array on the session context inside `SessionAuth`, but it will do no redirection.
+
+#### Mode set to `REQUIRED`
+
+- Apply everything from `OPTIONAL`
+- On the backend: Add an email verification check into the default `verifySession` that throws an error for users with unverified email addresses.
+- In React: It will redirect the user to the email verification page if the email verification check fails after success in our prebuilt UI components and when `SessionAuth` mounts.
+
+## Backend
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import EmailVerification from "supertokens-node/recipe/emailverification";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // highlight-start
+    EmailVerification.init({
+      mode: "REQUIRED",
+    }),
+    // highlight-end
+    Session.init(),
+  ],
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+TODO
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			^{codeImportRecipeName}.Init(^{goModelNameForInit}.TypeInput{
+                ^{goRecipeInitDefault} // typecheck-only, removed from output
+				// highlight-start
+				Override: &^{goModelName}.OverrideStruct{
+					EmailVerificationFeature: &evmodels.OverrideStruct{
+						APIs: func(originalImplementation evmodels.APIInterface) evmodels.APIInterface {
+							// First we create a copy of the original implementation
+							originalVerifyEmailPOST := *originalImplementation.VerifyEmailPOST
+
+							// we override the API for verifying an email
+							(*originalImplementation.VerifyEmailPOST) = func(token string, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
+
+								// First we call the original implementation
+								resp, err := originalVerifyEmailPOST(token, options, userContext)
+
+								if err != nil {
+									return evmodels.VerifyEmailPOSTResponse{}, err
+								}
+
+								if resp.OK != nil {
+									// contains the user's ID and email
+									user := resp.OK.User
+									fmt.Println(user)
+
+									// TODO: post email verification logic
+								}
+
+								return resp, nil
+							}
+
+							return originalImplementation
+						},
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import ^{codeImportRecipeName}
+from supertokens_python.recipe.emailverification import InputOverrideConfig as EVInputOverrideConfig
+from supertokens_python.recipe.emailverification.interfaces import APIInterface, APIOptions, EmailVerifyPostOkResult
+from typing import Dict, Any
+
+TODO
+# highlight-start
+def override_email_verification_apis(original_implementation_email_verification: APIInterface):
+    original_email_verify_post = original_implementation_email_verification.email_verify_post
+
+    async def email_verify_post(token: str, api_options: APIOptions, user_context: Dict[str, Any]):
+        response = await original_email_verify_post(token, api_options, user_context)
+
+        # Then we check if it was successfully completed
+        if isinstance(response, EmailVerifyPostOkResult):
+            _ = response.user
+            # TODO: post email verification logic
+        return response
+
+    original_implementation_email_verification.email_verify_post = email_verify_post
+    return original_implementation_email_verification
+# highlight-end
+
+^{pythonDefaultCallbackDefs} # typecheck-only, removed from output
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        ^{codeImportRecipeName}.init(
+            ^{pythonRecipeInitDefault} # typecheck-only, removed from output
+            # highlight-start
+            override=^{codeImportRecipeName}.InputOverrideConfig(
+                email_verification_feature=EVInputOverrideConfig(
+                    apis=override_email_verification_apis
+                )
+            )
+            # highlight-end
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+## Frontend
+
+### Switch on Email Verification
 
 <FrontendSDKTabs>
 <TabItem value="reactjs">
@@ -28,30 +185,154 @@ import EmailVerification from "supertokens-auth-react/recipe/emailverification";
 import Session from "supertokens-auth-react/recipe/session";
 
 SuperTokens.init({
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // highlight-start
+    EmailVerification.init({
+      mode: "REQUIRED",
+    }),
+    // highlight-end
+    Session.init(),
+  ],
+});
+```
+
+</TabItem>
+
+<TabItem value="angular">
+<AngularUIImplementation>
+
+<Answer title="Prebuilt UI">
+
+- In `supertokensAuthComponent.tsx` (where we initialize the `supertokens-auth-react` SDK) add the `EmailVerification` recipe to the `recipeList`.
+
+```tsx title="/app/auth/supertokensAuthComponent.tsx "
+import SuperTokens from "supertokens-auth-react";
+import EmailVerification from "supertokens-auth-react/recipe/emailverification";
+import Session from "supertokens-auth-react/recipe/session";
+
+SuperTokens.init({
     appInfo: {
         apiDomain: "...",
         appName: "...",
-        websiteDomain: "..."
+        websiteDomain: "...",
     },
     recipeList: [
+        // highlight-start
         EmailVerification.init({
-            // highlight-start
-            mode: "REQUIRED"
-            // highlight-end
+            mode: "REQUIRED",
         }),
-        Session.init()
-    ]
+        // highlight-end
+        Session.init(),
+    ],
 });
 ```
+
+- In your angular app's root component (where we initialize the `supertokens-web-js` SDK) add the `EmailVerification` recipe to the `recipeList`.
+
+```tsx title="/app/app.component.ts "
+import { Component } from "@angular/core";
+
+import SuperTokens from "supertokens-web-js";
+import Session from "supertokens-web-js/recipe/session";
+import EmailVerification from "supertokens-web-js/recipe/emailverification";
+
+SuperTokens.init({
+    appInfo: {
+        appName: "^{form_appName}",
+        apiDomain: "^{form_apiDomain}",
+    },
+    recipeList: [
+        // highlight-start
+        EmailVerification.init(),
+        // highlight-end
+        Session.init()],
+});
+```
+
+</Answer>
+
+<Answer title="Custom UI">
+
+~COPY-TABS=npm,vanillajs
+
+</Answer>
+
+</AngularUIImplementation>
 </TabItem>
+
+<TabItem value="vanillajs">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import Session from 'supertokens-web-js/recipe/session';
+import EmailVerification from "supertokens-web-js/recipe/emailverification";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    recipeList: [
+        // highlight-start
+        EmailVerification.init(),
+        // highlight-end
+        Session.init(),
+    ],
+});
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens from "supertokens-web-js-script";
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensEmailVerification from "supertokens-web-js-script/recipe/emailverification";
+supertokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    recipeList: [
+        // highlight-start
+        supertokensEmailVerification.init(),
+        // highlight-end
+        supertokensSession.init(),
+    ],
+});
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
 </FrontendSDKTabs>
 
-## The default UI
+### The default UI
 
 When a new user signs up with an unverified email, they will receive an email to verify their address and be redirected to the following screen:
 
-<img alt="Email verification UI when the link in email is not clicked" width="500px" src="/img/emailpassword/verify-email-screen.png" />
+<img
+  alt="Email verification UI when the link in email is not clicked"
+  width="500px"
+  src="/img/emailpassword/verify-email-screen.png"
+/>
 
 After they have clicked on the email, they will see this screen:
 
-<img alt="Email verification UI once the link in email is clicked" width="500px" src="/img/emailpassword/email-verification-successful.png" />
+<img
+  alt="Email verification UI once the link in email is clicked"
+  width="500px"
+  src="/img/emailpassword/email-verification-successful.png"
+/>

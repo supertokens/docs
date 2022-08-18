@@ -271,6 +271,19 @@ module.exports = {
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
+        {
+          type: "category",
+          label: "Email Verification",
+          items: [
+            "common-customizations/email-verification/about",
+            "common-customizations/email-verification/protecting-routes",
+            "common-customizations/email-verification/email-verification-email",
+            "common-customizations/email-verification/embed-in-page",
+            "common-customizations/email-verification/handling-email-verification-success",
+            "common-customizations/email-verification/changing-token-lifetime",
+            "common-customizations/email-verification/changing-style"
+          ]
+        },
         "common-customizations/session-with-jwt",
         {
           type: "category",
