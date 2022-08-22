@@ -1,13 +1,13 @@
 ---
 id: modifications-to-login
-title: Modifications to login
+title: Step 1) Account Migration
 hide_title: true
 ---
 import TabItem from '@theme/TabItem';
 import Tabs from '@theme/Tabs';
 
 
-# Modifications to Login
+# Account Migration
 
 In this section we will be modifying login to enable the migrating of users with Email Password accounts from Auth0 to SuperTokens.
 
@@ -30,6 +30,7 @@ We will be overriding SuperToken's login functions to enable account migration, 
 ### Modifying the `signIn` function on the backend:
 
 ```tsx title="Nodejs"
+import SuperTokens from "supertokens-node"
 import EmailPassword from "supertokens-node/recipe/emailpassword";
 import fs from 'fs';
 
@@ -49,26 +50,6 @@ let validateAndGetUserInfoFromAuth0 = async (email: string, password: string): P
     return {
         user_id: "...",
         email: "...",
-    };
-}
-
-let setUserIdMapping = async (
-    input: {
-        auth0UserId: string,
-        supertokensUserId: string
-    }): Promise<void> => {
-    // set the mapping in your data store
-}
-
-let getUserIdMapping = async (
-    input: {
-        auth0UserId?: string,
-        supertokensUserId?: string
-    }): Promise<{ auth0UserId: string, supertokensUserId: string } | undefined> => {
-    // Refer to user id mapping
-    return {
-        auth0UserId: "...",
-        supertokensUserId: "...",
     };
 }
 
@@ -111,23 +92,17 @@ EmailPassword.init({
 
                             // Box 8: map the Auth0 userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
                             // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                            await setUserIdMapping({ auth0UserId: auth0UsersData.sub, supertokensUserId: response.user.id })
+                            await SuperTokens.createUserIdMapping({ superTokensUserId: response.user.id, externalUserId: auth0UserInfo.user_id})
 
                             // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
                             // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                            response.user.id = response.user.id
+                            response.user.id = auth0UserInfo.user_id
+                            
                             return response;
                         } else {
                             // Box 4: EmailPassword User with the input credentials exists in SuperTokens, so call the original signIn implementation
                             let response = await originalImpl.signIn(input)
 
-                            if (response.status !== "OK") {
-                                return response;
-                            }
-
-                            // Box 5: Set the userId in the response to use the Auth0 userId, to learn more about user mapping please check the User Id  Mapping section.
-                            // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                            response.user.id = (await getUserIdMapping({ supertokensUserId: supertokensUser.id }))!.auth0UserId
                             return response;
                         }
 
