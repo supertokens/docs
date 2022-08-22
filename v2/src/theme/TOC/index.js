@@ -24,19 +24,25 @@ function Headings({toc, isChild}) {
       className={
         isChild ? '' : 'table-of-contents table-of-contents__left-border'
       }>
-      {toc.map((heading) => (
-        <li key={heading.id}>
-          <a
-            href={`#${heading.id}`}
-            className={LINK_CLASS_NAME} // Developer provided the HTML, so assume it's safe.
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{
-              __html: heading.value,
-            }}
-          />
-          <Headings isChild toc={heading.children} />
-        </li>
-      ))}
+      {toc.map((heading) => {
+        if (heading.visible === false) {
+          return <div key={heading.id} style={{display: "none"}}/>
+        }
+
+        return (
+          <li key={heading.id}>
+            <a
+              href={`#${heading.id}`}
+              className={LINK_CLASS_NAME} // Developer provided the HTML, so assume it's safe.
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{
+                __html: heading.value,
+              }}
+            />
+            <Headings isChild toc={heading.children} />
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -60,48 +66,50 @@ function TOC({toc}) {
     }
   }, []);
 
-  function getTOCWithoutUIPostfix(contentTitle, isChild) {
-    if (isChild === true) {
-      return {
-        ...contentTitle,
-        value: contentTitle.value.replace("[[prebuilt]]", "").replace("[[custom]]", "").trim(),
-      };
-    }
-
+  function getTOCWithoutUIPostfix(contentTitle) {
     // Check if the title contains [[...]]
     if (contentTitle.value.includes("[[")) {
       // This means that the title should only be displayed for either custom or prebuilt ui
-      if (contentTitle.value.includes("prebuilt") && !isCustomSelected) {
+      if (contentTitle.value.includes("[[pre]]") && !isCustomSelected) {
         return {
           ...contentTitle,
-          value: contentTitle.value.replace("[[prebuilt]]", "").trim(),
+          value: contentTitle.value.replace("[[pre]]", "").trim(),
+          visible: true,
         };
-      } else if (contentTitle.value.includes("custom") && isCustomSelected) {
+      } else if (contentTitle.value.includes("[[cust]]") && isCustomSelected) {
         return {
           ...contentTitle,
-          value: contentTitle.value.replace("[[custom]]", "").trim(),
+          value: contentTitle.value.replace("[[cust]]", "").trim(),
+          visible: true,
         };
       }
   
-      return undefined;
+      return {
+        ...contentTitle,
+        visible: false,
+      };
     }
 
-    return contentTitle;
+    return {
+      ...contentTitle,
+    };
   }
 
-  let _toc = toc.map(contentTitle => {
-    if (contentTitle.children && contentTitle.children.length) {
-      contentTitle.children = contentTitle.children.map(child => {
-        return getTOCWithoutUIPostfix(child, true);
-      })
+  let _toc = [];
 
-      contentTitle.children = contentTitle.children.filter(item => item !== undefined);
+  for (let i = 0; i < toc.length; i++) {
+    let contentTitle = {
+      ...toc[i],
     }
 
-    return getTOCWithoutUIPostfix(contentTitle);
-  })
+    if (contentTitle.children && contentTitle.children.length) {
+      contentTitle.children = contentTitle.children.map(child => {
+        return getTOCWithoutUIPostfix(child);
+      })
+    }
 
-  _toc = _toc.filter(item => item !== undefined);
+    _toc.push(getTOCWithoutUIPostfix(contentTitle))
+  }
 
   const selectedColorString = "var(--ui-selector-active)";
   const selectedBorderColorString = "var(--ui-selector-active-border)";

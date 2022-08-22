@@ -5,8 +5,8 @@ module.exports = () => {
                 child.children = child.children.map(headingChild => {
                     if (headingChild.type === "text") {
                         headingChild.value = headingChild.value
-                            .replace("[[prebuilt]]", "")
-                            .replace("[[custom]]", "")
+                            .replace("[[pre]]", "")
+                            .replace("[[cust]]", "")
                             .trim();
                     }
 

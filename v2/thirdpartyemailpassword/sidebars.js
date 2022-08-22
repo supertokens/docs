@@ -203,6 +203,7 @@ module.exports = {
       collapsed: false,
       items: [
         "building-authentication-flows/adding-email-login",
+        "building-authentication-flows/adding-third-party-login",
         "common-customizations/redirecting-post-login",
         "common-customizations/verify-session",
         "common-customizations/sessions/securing-component",

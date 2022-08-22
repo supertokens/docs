@@ -15,12 +15,17 @@ module.exports = () => {
                     isInCustomUIContent = false;
                 } else if (child.type === "heading") {
                     if (isInPreBuiltContent || isInCustomUIContent) {
-                        let valuePostFix = isInPreBuiltContent ? " [[prebuilt]]" : " [[custom]]";
+                        let valuePostFix = isInPreBuiltContent ? " [[pre]]" : " [[cust]]";
 
                         child.children = child.children.map(headingChild => {
                             if (headingChild.type === "text") {
-                                const id = headingChild.value.toLowerCase().split(" ").join("-").trim();
-                                headingChild.value = headingChild.value + valuePostFix + ` {#${id}}`;
+                                const customId = headingChild.value.toLowerCase().split(" ").join("-").trim();
+                                const _temp = headingChild.value;
+
+                                return {
+                                    ...headingChild,
+                                    value: `${_temp} ${valuePostFix} {#${customId}}`,
+                                };
                             }
 
                             return headingChild;

@@ -1,0 +1,327 @@
+---
+id: adding-third-party-login
+title: Adding Social Login
+hide_title: true
+---
+
+import PreBuiltUITabs from "/src/components/tabs/PreBuiltUITabs";
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import TabItem from "@theme/TabItem";
+import CustomUITabs, { FrontendMobileSubTabs, FrontendWebSubTabs } from "/src/components/tabs/CustomUITabs";
+
+<PreBuiltOrCustomUISwitcher>
+
+# Adding Social Login
+
+## On the frontend
+
+<PreBuiltUIContent>
+
+:::important
+Refer to the quick setup guide for [frontend](../quick-setup/frontend#2-call-the-init-function) and [backend](../quick-setup/backend#3-initialise-social-login-providers) to learn how to configure social providers
+:::
+
+### Redirecting to the social provider
+
+<PreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+SuperTokens provides a ready to use form for social login that you can use when signing up/in users.
+
+By default SuperTokens renders this on the `/auth` route, you can change this by providing a value for `websiteBasePath` [when calling the `init` function](../quick-setup/frontend#2-call-the-init-function)
+
+<img width="600px" alt="Social Login" src="/img/thirdpartyemailpassword/signup-light.png" />
+
+When the user clicks any of the social login buttons the SuperTokens SDK first calls the [`/authorisationurl`](https://supertokens.com/docs/fdi#/ThirdParty%20Recipe/authorisationUrl) API with the identifier for the clicked provider (For example `"google"` if the user clicks on the Google login button)
+
+This API returns the full URL to which the user is redirected to, where they can enter their credentials.
+
+</TabItem>
+
+</PreBuiltUITabs>
+
+### Handling the social callback
+
+<PreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+By default the frontend SDK handles the social callback on the `/auth/callback/{providerId}` route (`/auth/callback/google` for example), you can change this by providing a value for `websiteBasePath` [when calling the `init` function](../quick-setup/frontend#2-call-the-init-function)
+
+When the social provider redirects back to your frontend application, the frontend SDK calls the [`/signinup`](https://supertokens.com/docs/fdi#/ThirdParty%20Recipe/signInUp) API using the query params in the URL. When the `/signinup` API succeeds, it sets the session information to the browser cookies and a session is created. Every network request that requires auth then relies on these tokens to verify that a session exists.
+
+:::info Styling
+You can change the way the SuperTokens form looks, to know more refer to the [Styling section](../common-customizations/styling/changing-colours.mdx)
+:::
+
+:::info Language Translation
+SuperTokens supports multiple languages, to learn how to use your own language for the form refer to the [Language Translation Section](../common-customizations/translations.mdx)
+:::
+
+</TabItem>
+
+</PreBuiltUITabs>
+
+### Post login redirection
+
+<PreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+By default the SDK redirects to the `/` route of your frontend application after the user sucesfully logs in, refer to the [redirecting post login page](../common-customizations//redirecting-post-login.mdx) to learn how to change this behaviour
+
+</TabItem>
+
+</PreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+:::important
+Refer to the quick setup guide for [backend](../quick-setup/backend#3-initialise-social-login-providers) to learn how to configure social providers
+:::
+
+### Logging in with the social provider
+
+<CustomUITabs>
+
+<TabItem value="web">
+
+<FrontendWebSubTabs>
+
+<TabItem value="npm">
+
+#### Redirecting to the social provider
+
+You can use the `getAuthorisationURLWithQueryParamsAndSetState` function which returns the full URL that should be used to redirect users to the social login provider's login page
+
+```tsx
+import ^{recipeNameCapitalLetters} from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+import STGeneralError from "supertokens-web-js/utils/error";
+
+async function getSocialProviderLoginURL() {
+    try {
+        const socialLoginUrl = await ^{recipeNameCapitalLetters}.getAuthorisationURLWithQueryParamsAndSetState({
+            providerId: "google", // apple | github | etc
+            authorisationURL: "...",
+        });
+    } catch (e) {
+        if (STGeneralError.isThisError(e)) {
+            const errorMessage: string = e.message;
+            // Handle general error
+        }
+    }
+}
+```
+
+The `getAuthorisationURLWithQueryParamsAndSetState` function accepts a parameter `providerId` which is the identifier for the social provider you want to use (`"google"`, `"apple"` etc). This value must match one of the providers [configured in the backend SDK](../quick-setup/backend#3-initialise-social-login-providers).
+
+The `authorisationURL` parameter is used to set the URL that should be used by the social provider when redirecting the user after they successfully log in. The value provided to this function is ignored if you have configured a `redirect_uri` when adding the provider in the backend.
+
+This function may throw a `STGeneralError`, these errors usually signify a flow error that need to be handled. `STGeneralError.isThisError` can be used as a way of identifying whether or not a given error is a general error thrown by SuperTokens. You can use the error message to identify the issue. You can also leverage this behaviour to add custom error handling with SuperTokens, read the [custom error response](../advanced-customizations/apis-override/custom-response/general-error.mdx) page to learn more.
+
+#### Handling the social callback
+
+You can use the `thirdPartySignInAndUp` function to sign the user in after they are redirected from the social provider to your frontend application. This function internally reads `state`, `code` etc from the URL.
+
+```tsx
+import ^{recipeNameCapitalLetters} from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+import STGeneralError from "supertokens-web-js/utils/error";
+
+async function signInOrUp() {
+    try {
+        const response = await ^{recipeNameCapitalLetters}.thirdPartySignInAndUp();
+
+        if (response.status === "NO_EMAIL_GIVEN_BY_PROVIDER") {
+            // TODO: Invalid scope configured for provider
+        }
+
+        if (response.status === "OK") {
+            // Success
+            const isNewUser = response.createdNewUser;
+            const user = response.user;
+        }
+    } catch (e) {
+        if (STGeneralError.isThisError(e)) {
+            const errorMessage: string = e.message;
+            // Handle general error
+        }
+    }
+}
+```
+
+Is the server responds with `{status: "NO_EMAIL_GIVEN_BY_PROVIDER"}`, this means that the social provider did not return the user's email.
+
+The server responds with `{status: "OK"}` on successful sign up/in. You can use the `createdNewUser` property from the response to know if this is a new or existing user.
+
+This function may throw a `STGeneralError`, these errors usually signify a flow error that need to be handled. `STGeneralError.isThisError` can be used as a way of identifying whether or not a given error is a general error thrown by SuperTokens. You can use the error message to identify the issue. You can also leverage this behaviour to add custom error handling with SuperTokens, read the [custom error response](../advanced-customizations/apis-override/custom-response/general-error.mdx) page to learn more.
+
+</TabItem>
+
+<TabItem value="script">
+
+#### Redirecting to the social provider
+
+You can use the `getAuthorisationURLWithQueryParamsAndSetState` function which returns the full URL that should be used to redirect users to the social login provider's login page
+
+```tsx
+import ^{recipeNameBundle} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function getSocialProviderLoginURL() {
+    const socialLoginUrl = await ^{recipeNameBundle}.getAuthorisationURLWithQueryParamsAndSetState({
+        providerId: "google", // apple | github | etc
+        authorisationURL: "...",
+    });
+}
+```
+
+The `getAuthorisationURLWithQueryParamsAndSetState` function accepts a parameter `providerId` which is the identifier for the social provider you want to use (`"google"`, `"apple"` etc). This value must match one of the providers [configured in the backend SDK](../quick-setup/backend#3-initialise-social-login-providers).
+
+The `authorisationURL` parameter is used to set the URL that should be used by the social provider when redirecting the user after they successfully log in. The value provided to this function is ignored if you have configured a `redirect_uri` when adding the provider in the backend.
+
+#### Handling the social callback
+
+You can use the `thirdPartySignInAndUp` function to sign the user in after they are redirected from the social provider to your frontend application. This function internally reads `state`, `code` etc from the URL.
+
+```tsx
+import ^{recipeNameBundle} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function signInOrUp() {
+    const response = await ^{recipeNameBundle}.thirdPartySignInAndUp();
+
+    if (response.status === "NO_EMAIL_GIVEN_BY_PROVIDER") {
+        // TODO: Invalid scope configured for provider
+    }
+
+    if (response.status === "OK") {
+        // Success
+        const isNewUser = response.createdNewUser;
+        const user = response.user;
+    }
+}
+```
+
+Is the server responds with `{status: "NO_EMAIL_GIVEN_BY_PROVIDER"}`, this means that the social provider did not return the user's email.
+
+The server responds with `{status: "OK"}` on successful sign up/in. You can use the `createdNewUser` property from the response to know if this is a new or existing user.
+
+</TabItem>
+
+</FrontendWebSubTabs>
+
+</TabItem>
+<TabItem value="mobile">
+
+<FrontendMobileSubTabs>
+
+<TabItem value="reactnative">
+
+To use social login with react native we will do the following steps:
+- Log in with the social provider
+- Fetch the OAuth tokens from the social provider
+- Query SuperTokens APIs with the OAuth tokens to create a session
+
+#### Log in with the social provider
+
+For react native you need to log in with the social provider using the method recommended by the provider, you can use [our example app](https://github.com/supertokens/supertokens-react-native/tree/master/examples/with-thirdpartyemailpassword) as a reference of how this can be done. Note in our example app we use external libraries to log in with different providers
+
+For example to log in with Google we use the `react-native-app-auth` library:
+
+```tsx
+import { authorize } from "react-native-app-auth";
+
+async function loginWithGoogle() {
+    // Full configuration options here: https://github.com/FormidableLabs/react-native-app-auth#config
+    const config = {
+        issuer: "https://accounts.google.com",
+        clientId: "...",
+        redirectUrl: "...",
+        scopes: ["https://www.googleapis.com/auth/userinfo.email"]
+    };
+
+    let authResult = await authorize(config);
+}
+```
+
+#### Fetching OAuth tokens
+
+After the user logs in with the provider, you need to retrieve the OAuth tokens from the provider. SuperTokens needs the `access_token` and `id_token` to create a session. Continuing with the example mentioned above, in the case of Google login:
+
+```tsx
+import { authorize } from "react-native-app-auth";
+
+async function loginWithGoogle() {
+    // Refer to example above
+    const config = {
+        issuer: "...",
+        clientId: "...",
+        redirectUrl: "...",
+        scopes: ["..."]
+    };
+
+    let authResult = await authorize(config);
+
+    // highlight-start
+    const access_token = authResult.accessToken;
+    const id_token = authResult.idToken;
+    // highlight-end
+}
+```
+
+#### Create a session with SuperTokens
+
+Using the tokens in the previous step, you can call the [signinup](https://supertokens.com/docs/fdi#/ThirdParty%20Recipe/signInUp) API to create a session with SuperTokens. This API uses the tokens to fetch user information from the provider and returns the session information. Every network request that requires auth then relies on these tokens to verify that a session exists.
+
+```tsx
+import { authorize } from "react-native-app-auth";
+import axios from "axios"
+
+async function loginWithGoogle() {
+    // Refer to example above
+    const config = {
+        issuer: "...",
+        clientId: "...",
+        redirectUrl: "...",
+        scopes: ["..."]
+    };
+
+    let authResult = await authorize(config);
+
+    const access_token = authResult.accessToken;
+    const id_token = authResult.idToken;
+
+    let signInUpResponse = await axios.post(
+        `${API_DOMAIN}/auth/signinup`,
+        {
+            redirectURI: "...",
+            thirdPartyId: "google",
+            authCodeResponse: {
+                access_token,
+                id_token,
+            },
+            clientId: "..."
+        },
+        {
+            headers: {
+                rid: "thirdpartyemailpassword"
+            }
+        }
+    );
+}
+```
+
+Note: The example above uses axios but the same step applies when using `fetch`.
+
+If the sign in up API succeeds
+
+</TabItem>
+
+</FrontendMobileSubTabs>
+
+</TabItem>
+
+</CustomUITabs>
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
