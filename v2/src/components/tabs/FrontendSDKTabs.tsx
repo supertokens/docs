@@ -10,7 +10,8 @@ import { Answer } from "../question"
 const copyTabIdentifier = "~COPY-TABS=";
 
 export default function FrontendSDKTabs(props: any) {
-  return applyCopyTabs(<Tabs
+  // this is done twice since vue has a copy tabs pointing at angular and angular also has copy tabs
+  return applyCopyTabs(applyCopyTabs(<Tabs
     groupId="frontendsdk"
     defaultValue="reactjs"
     values={[
@@ -37,7 +38,7 @@ export default function FrontendSDKTabs(props: any) {
       ? null
       : DefaultVueTabItem()}
     {props.children}
-  </Tabs>)
+  </Tabs>))
 }
 
 function applyCopyTabs(children: any): any {
