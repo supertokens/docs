@@ -319,6 +319,7 @@ module.exports = {
           label: "Email Verification",
           items: [
             "common-customizations/email-verification/about",
+            "common-customizations/email-verification/protecting-routes",
             "common-customizations/email-verification/email-verification-email",
             "common-customizations/email-verification/embed-in-page",
             "common-customizations/email-verification/handling-email-verification-success",

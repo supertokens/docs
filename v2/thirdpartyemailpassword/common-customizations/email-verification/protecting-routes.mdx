@@ -1,0 +1,920 @@
+---
+sidebar_position: 1
+title: Protecting API and website routes
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/common-customizations/email-verification/protecting-routes.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
+import TabItem from '@theme/TabItem';
+import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
+import FrontendReactContextSubTabs from "/src/components/tabs/FrontendReactContextSubTabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+
+# Protecting API and website routes
+
+## Protecting API routes
+
+### Add checking to all API routes
+
+#### Set `mode` to `REQUIRED` in the `EmailVerification` config
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from 'supertokens-node';
+import EmailVerification from "supertokens-node/recipe/emailverification";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // highlight-start
+        EmailVerification.init({
+            // This means that verifySession will now only allow calls if the user has verified their email
+            mode: "REQUIRED",
+        }),
+        // highlight-end
+        Session.init()
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+TODO
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			^{codeImportRecipeName}.Init(^{goModelNameForInit}.TypeInput{
+                ^{goRecipeInitDefault} // typecheck-only, removed from output
+				// highlight-start
+				Override: &^{goModelName}.OverrideStruct{
+					EmailVerificationFeature: &evmodels.OverrideStruct{
+						APIs: func(originalImplementation evmodels.APIInterface) evmodels.APIInterface {
+							// First we create a copy of the original implementation
+							originalVerifyEmailPOST := *originalImplementation.VerifyEmailPOST
+
+							// we override the API for verifying an email
+							(*originalImplementation.VerifyEmailPOST) = func(token string, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
+
+								// First we call the original implementation
+								resp, err := originalVerifyEmailPOST(token, options, userContext)
+
+								if err != nil {
+									return evmodels.VerifyEmailPOSTResponse{}, err
+								}
+
+								if resp.OK != nil {
+									// contains the user's ID and email
+									user := resp.OK.User
+									fmt.Println(user)
+
+									// TODO: post email verification logic
+								}
+
+								return resp, nil
+							}
+
+							return originalImplementation
+						},
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import ^{codeImportRecipeName}
+from supertokens_python.recipe.emailverification import InputOverrideConfig as EVInputOverrideConfig
+from supertokens_python.recipe.emailverification.interfaces import APIInterface, APIOptions, EmailVerifyPostOkResult
+from typing import Dict, Any
+
+TODO
+# highlight-start
+def override_email_verification_apis(original_implementation_email_verification: APIInterface):
+    original_email_verify_post = original_implementation_email_verification.email_verify_post
+
+    async def email_verify_post(token: str, api_options: APIOptions, user_context: Dict[str, Any]):
+        response = await original_email_verify_post(token, api_options, user_context)
+
+        # Then we check if it was successfully completed
+        if isinstance(response, EmailVerifyPostOkResult):
+            _ = response.user
+            # TODO: post email verification logic
+        return response
+
+    original_implementation_email_verification.email_verify_post = email_verify_post
+    return original_implementation_email_verification
+# highlight-end
+
+^{pythonDefaultCallbackDefs} # typecheck-only, removed from output
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        ^{codeImportRecipeName}.init(
+            ^{pythonRecipeInitDefault} # typecheck-only, removed from output
+            # highlight-start
+            override=^{codeImportRecipeName}.InputOverrideConfig(
+                email_verification_feature=EVInputOverrideConfig(
+                    apis=override_email_verification_apis
+                )
+            )
+            # highlight-end
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+#### Disable email verification for specific routes (for `REQUIRED` mode)
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+let app = express();
+
+app.post(
+    "/update-blog",
+    verifySession({
+        // highlight-next-line
+        overrideGlobalClaimValidators: async (globalValidators) => globalValidators.filter(v => v.id !== EmailVerificationClaim.key),
+    }),
+    async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user has a verified email address
+    }
+);
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    // highlight-next-line
+                    overrideGlobalClaimValidators: async (globalValidators) => globalValidators.filter(v => v.id !== EmailVerificationClaim.key),
+                }),
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user has a verified email address
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession({
+        // highlight-next-line
+        overrideGlobalClaimValidators: async (globalValidators) => globalValidators.filter(v => v.id !== EmailVerificationClaim.key),
+    }),
+}, async (req: SessionRequest, res) => {
+    // All validator checks have passed and the user has a verified email address
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+async function updateBlog(awsEvent: SessionEvent) {
+    // All validator checks have passed and the user has a verified email address
+};
+
+exports.handler = verifySession(updateBlog, {
+    // highlight-next-line
+    overrideGlobalClaimValidators: async (globalValidators) => globalValidators.filter(v => v.id !== EmailVerificationClaim.key)
+});
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import {SessionContext} from "supertokens-node/framework/koa";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession({
+        // highlight-next-line
+        overrideGlobalClaimValidators: async (globalValidators) => globalValidators.filter(v => v.id !== EmailVerificationClaim.key)
+    }), async (ctx: SessionContext, next) => {
+    // All validator checks have passed and the user has a verified email address
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+class SetRole {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/update-blog")
+    @intercept(verifySession({
+        // highlight-next-line
+        overrideGlobalClaimValidators: async (globalValidators) => globalValidators.filter(v => v.id !== EmailVerificationClaim.key)
+    }))
+    @response(200)
+    async handler() {
+        // All validator checks have passed and the user has a verified email address
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+// highlight-start
+export default async function setRole(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                // highlight-next-line
+                overrideGlobalClaimValidators: async (globalValidators) => globalValidators.filter(v => v.id !== EmailVerificationClaim.key)
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+    // All validator checks have passed and the user has a verified email address
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard({
+    // highlight-next-line
+    overrideGlobalClaimValidators: async (globalValidators: SessionClaimValidator[]) => globalValidators.filter(v => v.id !== EmailVerificationClaim.key)
+  }))
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    // All validator checks have passed and the user has a verified email address
+    return true;
+  }
+}
+```
+</TabItem>
+
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+```go
+TODO
+```
+
+</TabItem>
+<TabItem value="gin">
+
+```go
+TODO
+```
+
+</TabItem>
+<TabItem value="chi">
+
+```go
+TODO
+```
+
+</TabItem>
+<TabItem value="mux">
+
+```go
+TODO
+```
+
+</TabItem>
+</GoFrameworkSubTabs>
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+TODO
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+TODO
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+TODO
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+### Add checking to a single route (for `OPTIONAL` mode)
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+let app = express();
+
+app.post(
+    "/update-blog",
+    verifySession({
+        // highlight-next-line
+        overrideGlobalClaimValidators: async (globalValidators) => [...globalValidators, EmailVerificationClaim.validators.isVerified()],
+    }),
+    async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user has a verified email address
+    }
+);
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    // highlight-next-line
+                    overrideGlobalClaimValidators: async (globalValidators) => [...globalValidators, EmailVerificationClaim.validators.isVerified()],
+                }),
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user has a verified email address
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession({
+        // highlight-next-line
+        overrideGlobalClaimValidators: async (globalValidators) => [...globalValidators, EmailVerificationClaim.validators.isVerified()],
+    }),
+}, async (req: SessionRequest, res) => {
+    // All validator checks have passed and the user has a verified email address
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+async function updateBlog(awsEvent: SessionEvent) {
+    // All validator checks have passed and the user has a verified email address
+};
+
+exports.handler = verifySession(updateBlog, {
+    // highlight-next-line
+    overrideGlobalClaimValidators: async (globalValidators) => [...globalValidators, EmailVerificationClaim.validators.isVerified()]
+});
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import {SessionContext} from "supertokens-node/framework/koa";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession({
+        // highlight-next-line
+        overrideGlobalClaimValidators: async (globalValidators) => [...globalValidators, EmailVerificationClaim.validators.isVerified()]
+    }), async (ctx: SessionContext, next) => {
+    // All validator checks have passed and the user has a verified email address
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+class SetRole {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/update-blog")
+    @intercept(verifySession({
+        // highlight-next-line
+        overrideGlobalClaimValidators: async (globalValidators) => [...globalValidators, EmailVerificationClaim.validators.isVerified()]
+    }))
+    @response(200)
+    async handler() {
+        // All validator checks have passed and the user has a verified email address
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+// highlight-start
+export default async function setRole(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                // highlight-next-line
+                overrideGlobalClaimValidators: async (globalValidators) => [...globalValidators, EmailVerificationClaim.validators.isVerified()]
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+    // All validator checks have passed and the user has a verified email address
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import { EmailVerificationClaim } from "supertokens-node/recipe/emailverification";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard({
+    // highlight-next-line
+    overrideGlobalClaimValidators: async (globalValidators: SessionClaimValidator[]) => [...globalValidators, EmailVerificationClaim.validators.isVerified()]
+  }))
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    // All validator checks have passed and the user has a verified email address
+    return true;
+  }
+}
+```
+</TabItem>
+
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+```go
+TODO
+```
+
+</TabItem>
+<TabItem value="gin">
+
+```go
+TODO
+```
+
+</TabItem>
+<TabItem value="chi">
+
+```go
+TODO
+```
+
+</TabItem>
+<TabItem value="mux">
+
+```go
+TODO
+```
+
+</TabItem>
+</GoFrameworkSubTabs>
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+TODO
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+TODO
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+TODO
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+## Protecting frontend routes
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+### If using `REQUIRED` mode
+
+Wrapping your website routes using `<SessionAuth />` should be enough for this to work. If the user's email is not verified, SuperTokens will automatically redirect the user to the email verification screen.
+
+### If using `OPTIONAL` mode
+
+```tsx
+import React from "react";
+import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session';
+import { EmailVerificationClaim } from 'supertokens-auth-react/recipe/emailverification';
+
+const VerifiedRoute = (props: React.PropsWithChildren) => {
+    return (
+        <SessionAuth>
+            <InvalidClaimHandler>
+                {props.children}
+            </InvalidClaimHandler>
+        </SessionAuth>
+    );
+}
+
+function InvalidClaimHandler(props: React.PropsWithChildren) {
+    let sessionContext = useSessionContext();
+    if (sessionContext.loading) {
+        return null;
+    }
+
+    if (sessionContext.invalidClaims.some(i => i.validatorId === EmailVerificationClaim.id)) {
+        return <div>You cannot access this page because your email address is not verified.</div>
+    }
+
+    // We show the protected route since all claims validators have
+    // passed implying that the user has verified their email.
+    return <div>{props.children}</div>;
+}
+```
+Above we are creating a generic component called `VerifiedRoute` which enforces that its child components can only be rendered if the user has a verified email address.
+
+In the `VerifiedRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. The `EmailVerificationClaim` validator is automatically added to the `<SessionAuth>` component if the `EmailVerification` recipe has been initialized.
+
+Finally, we check the result of the validation in the `InvalidClaimHandler` component which displays `"You cannot access this page because your email address is not verified."` if the `EmailVerificationClaim` validator failed.
+
+If all validation passes, we render the `props.children` component.
+
+:::note
+You can extend the `VerifiedRoute` component to check for other types of validators as well. This component can then be reused to protect all of your app's components (In this case, you may want to rename this component to something more appropriate, like `ProtectedRoute`).
+:::
+
+<details><summary>Manually checking roles</summary>
+
+If you want to have more complex access control, you can either create your own validator, or you can get the boolean from the session as follows, and check it yourself:
+
+```tsx
+import Session from "supertokens-auth-react/recipe/session";
+import {EmailVerificationClaim} from "supertokens-auth-react/recipe/emailverification"
+
+function ProtectedComponent() {
+    let claimValue = Session.useClaimValue(EmailVerificationClaim)
+    if (claimValue.loading || !claimValue.doesSessionExist) {
+        return null;
+    }
+    let isEmailVerified = claimValue.value;
+    if (isEmailVerified !== undefined && isEmailVerified) {
+        //...
+    } else {
+        //...
+    }
+}
+```
+
+</details>
+
+</TabItem>
+
+<TabItem value="vanillajs">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims();
+
+        if (validationErrors.length === 0) {
+            // user has verified their email address
+            return true;
+        }
+        // highlight-end
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+We call the `validateClaims` function. If you initialized the `EmailVerification` recipe, this will include the `EmailVerificationClaim` validator in the `globalValidators`.
+
+<details><summary>Checking validation error</summary>
+
+In case the `validationErrors` array is not empty, you can loop through the errors to know which claim has failed:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
+
+async function shouldLoadRoute() {
+    let validationErrors = await Session.validateClaims(/*{...}*/);
+    // highlight-start
+    for (const err of validationErrors) {
+        if (err.validatorId === EmailVerificationClaim.id) {
+            // email verification claim check failed
+        } else {
+            // some other claim check failed (from the global validators list)
+        }
+    }
+    // highlight-end
+}
+```
+
+</details>
+
+<details><summary>Manually checking verification status</summary>
+If you want to have more complex access control, you can either create your own validator, or you can get the boolean from the session as follows, and check it yourself:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let isVerified = await Session.getClaimValue({claim: EmailVerificationClaim});
+        if (isVerified) {
+            // user has verified their email address
+            return true;
+        }
+        // highlight-end
+    }
+    // either a session does not exist, or the user has not verified their email address
+    return false
+}
+```
+
+</details>
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensEmailVerification from "supertokens-web-js-script/recipe/emailverification";
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await supertokensSession.validateClaims();
+
+        if (validationErrors.length === 0) {
+            // user has verified their email address
+            return true;
+        }
+        // highlight-end
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+We call the `validateClaims` function. If you initialized the `EmailVerification` recipe, this will include the `EmailVerificationClaim` validator in the `globalValidators`.
+
+<details><summary>Checking validation error</summary>
+
+In case the `validationErrors` array is not empty, you can loop through the erros to know which claim has failed:
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensEmailVerification from "supertokens-web-js-script/recipe/emailverification";
+async function shouldLoadRoute() {
+    let validationErrors = await supertokensSession.validateClaims(/*{...}*/);
+    // highlight-start
+    for (const err of validationErrors) {
+        if (err.validatorId === supertokensEmailVerification.EmailVerificationClaim.id) {
+            // email verification claim check failed
+        } else {
+            // some other claim check failed
+        }
+    }
+    // highlight-end
+}
+```
+
+</details>
+
+<details><summary>Manually checking verification status</summary>
+If you want to have more complex access control, you can either create your own validator, or you can get the boolean from the session as follows, and check it yourself:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let isVerified = await Session.getClaimValue({claim: EmailVerificationClaim});
+        if (isVerified) {
+            // user has verified their email address
+            return true;
+        }
+        // highlight-end
+    }
+    // either a session does not exist, or the user has not verified their email address
+    return false
+}
+```
+
+</details>
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+<TabItem value="react-native">
+
+```tsx
+import SuperTokens from 'supertokens-react-native';
+
+async function getRole() {
+    if (await SuperTokens.doesSessionExist()) {
+
+        // highlight-start
+        let isVerified: string[] = (await SuperTokens.getAccessTokenPayloadSecurely())["st-ev"].v;
+
+        if (isVerified) {
+            // TODO..
+        } else {
+            // TODO..
+        }
+        // highlight-end
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="angular">
+
+~COPY-TABS=npm,vanillajs
+
+</TabItem>
+
+</FrontendSDKTabs>
