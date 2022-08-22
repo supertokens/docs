@@ -71,3 +71,6 @@ hide_title: true
 
 ### 3.14 to 3.15
 - No manual change required
+
+### 3.15 to 3.16
+- No manual change required
