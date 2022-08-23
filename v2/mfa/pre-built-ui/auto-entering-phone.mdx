@@ -18,75 +18,63 @@ The final piece of the puzzle is to modify the Passwordless UI to:
 - Remove the change phone number button on the OTP screen if the phone number is in their session.
 - Change the "Sign Up or Log In" header to say "Second factor auth". 
 
-All of these can be achieved by using [React component override feature](https://supertokens.com/docs/passwordless/advanced-customizations/react-component-override/about) in the `Passwordless.init` call.
+All of these can be achieved by using [React component override feature](https://supertokens.com/docs/passwordless/advanced-customizations/react-component-override/about) in the `Passwordless.init` call and by customizing the `<SignInUpTheme>` component in the `/second-factor` route.
 
 ## Sending the OTP automatically
 
-We start by overriding the React component that asks the user to input their phone number (called `PasswordlessPhoneForm_Override`). In our custom override component, we use the `useEffect` hook to check if a phone number already exists in the session (implying that this is a sign in), and if it does, we send it an OTP. 
+We start by customizing the sign in/up component of the Passwordless recipe. In our custom component, we use the `useEffect` hook to check if a phone number already exists in the session (implying that this is a sign in), and if it does, we send it an OTP. 
+We also set `successInAnotherTab` to false, since the original component would show a success screen if it detects that the user has an active session.
 
-We can send it an OTP using the `createCode` recipe function. On success, it will change the UI to the enter OTP form. While the `createCode` funciton is making a network call, we show an empty screen to the user. This is not a problem since network calls like these are very quick anyway.
+We can send an OTP using the `createCode` recipe function. On success, it will change the UI to the enter OTP form. While the `createCode` funciton is making a network call, we show an empty screen to the user. This is not a problem since network calls like these are very quick anyway.
 
 ```tsx
-import React, {useEffect, useState} from "react"
-import SuperTokens from "supertokens-auth-react";
+import { useEffect, useState } from "react";
+import { redirectToAuth } from "supertokens-auth-react";
 import Passwordless from "supertokens-auth-react/recipe/passwordless";
-import Session from "supertokens-auth-react/recipe/session";
-import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword";
+import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
 
-Passwordless.init({
-    signInUpFeature: {
-        disableDefaultUI: true,
-    },
-    contactMethod: "PHONE",
-    override: {
-        components: {
-            // highlight-start
-            // we override the component which asks the user for their phone number
-            PasswordlessPhoneForm_Override: ({ DefaultComponent, ...props }) => {
-                // state used to decide if we should show the default UI or not.
-                let [showDefaultUI, setShowDefaultUI] = useState(false);
+const CustomSignInUpTheme: typeof Passwordless.SignInUpTheme = (props) => {
+    let [showDefaultUI, setShowDefaultUI] = useState(false);
+    const session = useSessionContext();
 
-                useEffect(() => {
-                    Session.getAccessTokenPayloadSecurely()
-                        .then(async (accessTokenPayload) => {
-                            // we see if the access token has the phoneNumber in it
-                            let phoneNumber = accessTokenPayload.phoneNumber;
-                            if (phoneNumber !== undefined) {
-                                // This will send the user an OTP and also change the UI to the "enter OTP screen".
-                                await props.recipeImplementation.createCode({
-                                    phoneNumber: phoneNumber,
-                                    userContext: {},
-                                });
-                            } else {
-                                // phone number does not exist in the session, so we 
-                                // ask the user for their phone number.
-                                setShowDefaultUI(true);
-                            }
-                        })
-                        .catch((err) => {
-                            // it can come here if a session doesn't exist.
-                            // in this case, the screen should redirect to the
-                            // first login challenge
-                            SuperTokens.redirectToAuth({
-                                redirectBack: false,
-                            });
-                        });
-                }, [props.recipeImplementation]);
+    useEffect(() => {
+        let aborting = false;
+        async function effect() {
+            if (session.loading === true) {
+                return;
+            }
 
-                if (showDefaultUI) {
-                    // returning this will render the UI which asks the user
-                    // for their phone number. This is true if the session doesn't already have a phone
-                    // number in it implying that the user never setup their second factor.
-                    return <DefaultComponent {...props} />;
+            const phoneNumber = session.accessTokenPayload.phoneNumber;
+            // If don't have a phone number we show the default UI (which should be the phone form)
+            if (phoneNumber === undefined) {
+                setShowDefaultUI(true);
+            } else {
+                // we start the OTP flow if it's not started already
+                if (props.featureState.loginAttemptInfo === undefined) {
+                    await props.recipeImplementation.createCode({ phoneNumber, userContext: props.userContext });
                 }
 
-                // we show an empty screen whilst we are in a loading state for this
-                return null;
-            },
-            // highlight-end
-        },
-    },
-})
+                if (aborting) {
+                    return;
+                }
+                // if we have an OTP flow (or we just started one) we show the default UI which should be the OTP input
+                setShowDefaultUI(true);
+            }
+        }
+        effect();
+        return () => {
+            aborting = true;
+        };
+    }, []);
+
+    // If this was active, we'd not show the OTP screen because it'd detect an active session.
+    props.featureState.successInAnotherTab = false;
+
+    if (showDefaultUI) {
+        return <Passwordless.SignInUpTheme {...props} />;
+    }
+    return <></>;
+};
 ```
 
 ## Removing the "change phone number button" based on if the session has a phone number.
@@ -94,10 +82,10 @@ Passwordless.init({
 By default, there is a button on the enter OTP screen which allows the user to change their phone number entered in the previous screen. In the case that the phone number exists in the session, we do not want to show this button since we do not allow the user to enter a phone number in the first place.
 
 ```tsx
-import React, {useEffect, useState} from "react"
+import React, { useEffect, useState } from "react"
 import SuperTokens from "supertokens-auth-react";
 import Passwordless from "supertokens-auth-react/recipe/passwordless";
-import Session from "supertokens-auth-react/recipe/session";
+import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
 import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword";
 
 Passwordless.init({
@@ -110,28 +98,9 @@ Passwordless.init({
             // highlight-start
             // we override the component which shows the change phone number button
             PasswordlessUserInputCodeFormFooter_Override: ({ DefaultComponent, ...props }) => {
-                // the logic here is very similar to the previous step's logic
-                let [showDefaultUI, setShowDefaultUI] = useState(false);
-                useEffect(() => {
-                    Session.getAccessTokenPayloadSecurely()
-                        .then(async (accessTokenPayload) => {
-                            let phoneNumber = accessTokenPayload.phoneNumber;
-                            if (phoneNumber === undefined) {
-                                // since the phone number does not exist in the access token's
-                                // payload, we want to show the button
-                                setShowDefaultUI(true);
-                            }
-                        })
-                        .catch((err) => {
-                            // it can come here if a session doesn't exist.
-                            // in this case, the screen we should redirect to the
-                            // first login challenge
-                            SuperTokens.redirectToAuth({
-                                redirectBack: false,
-                            });
-                        });
-                }, []);
-                if (showDefaultUI) {
+                const session = useSessionContext();
+
+                if (session.loading !== true && session.accessTokenPayload.phoneNumber === undefined) {
                     // this will show the change phone number button
                     return <DefaultComponent {...props} />;
                 }
@@ -140,10 +109,6 @@ Passwordless.init({
                 return null;
             },
             // highlight-end
-            // @ts-ignore
-            PasswordlessPhoneForm_Override: ({ DefaultComponent, ...props }) => {
-                /* ...From previous step */
-            },
         },
     },
 })
@@ -154,7 +119,7 @@ Passwordless.init({
 We can do this by overriding the header component for the Passwordless login UI. We will show "Second factor auth" as the title if the user is being shown the form to enter their phone number, else we will not render anything
 
 ```tsx
-import React, {useEffect, useState} from "react"
+import React, { useEffect, useState } from "react"
 import SuperTokens from "supertokens-auth-react";
 import Passwordless from "supertokens-auth-react/recipe/passwordless";
 import Session from "supertokens-auth-react/recipe/session";
@@ -171,44 +136,15 @@ Passwordless.init({
             PasswordlessUserInputCodeFormFooter_Override: ({ DefaultComponent, ...props }) => {
                 /* ...From previous step */
             },
-            // @ts-ignore
-            PasswordlessPhoneForm_Override: ({ DefaultComponent, ...props }) => {
-                /* ...From previous step */
-            },
             // highlight-start
             PasswordlessSignInUpHeader_Override: ({ DefaultComponent, ...props }) => {
-                // the logic here is again very similar to the previous steps.
-                let [showHeader, setShowHeader] = useState(false);
-                useEffect(() => {
-                    Session.getAccessTokenPayloadSecurely()
-                        .then(async (accessTokenPayload) => {
-                            let phoneNumber = accessTokenPayload.phoneNumber;
-                            if (phoneNumber === undefined) {
-                                setShowHeader(true);
-                            }
-                        })
-                        .catch((err) => {
-                            // it can come here if a session doesn't exist.
-                            // in this case, the screen we will should redirect to the
-                            // first login challenge
-                            SuperTokens.redirectToAuth({
-                                redirectBack: false,
-                            });
-                        });
-                }, []);
-                if (!showHeader) {
-                    return null;
-                }
-                return (
-                    <>
-                        <div
-                            style={{
-                                fontSize: "30px",
-                                marginBottom: "10px",
-                            }}>
-                            Second factor auth
-                        </div>
-                    </>
+                return (<div
+                        style={{
+                            fontSize: "30px",
+                            marginBottom: "10px",
+                        }}>
+                        Second factor auth
+                    </div>
                 );
             },
             // highlight-end

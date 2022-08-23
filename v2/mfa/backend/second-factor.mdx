@@ -441,9 +441,11 @@ Passwordless.init({
                 ...oI,
                 // this API is called when the user enters the OTP
                 consumeCodePOST: async function (input) {
-                    // we should already have a session here since this is called
-                    // after first factor login
-                    let session = await Session.getSession(input.options.req, input.options.res);
+                    // we should already have a session here since this is called after first factor login
+                    // We remove claim checking here, since this needs to be callable without the second factor completed
+                    let session = await Session.getSession(input.options.req, input.options.res, {
+                        overrideGlobalClaimValidators: () => [],
+                    });
                     
                     let resp = await oI.consumeCodePOST!(input);
 
@@ -478,7 +480,7 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
-
+TODO
 func main() {
 	passwordless.Init(plessmodels.TypeInput{
 		FlowType: "USER_INPUT_CODE",
@@ -588,7 +590,7 @@ passwordless.init(
 
 ## 3) Updating the session post second factor auth
 
-We also want to change the session's payload to indicate that the user has completed the second factor. In our example, we do this by setting the `is2faComplete` property to `true` in the session's access token payload.
+We also want to change the session's payload to indicate that the user has completed the second factor. In our example, we do this by setting the `SecondFactorClaim` to `true` in the session.
 
 We also have to be careful about not creating a new session after the second factor auth is completed. By default, the passwordless recipe will create a new session on successul verification, overwriting the older one. We can do this by using the `userContext` feature:
 
@@ -599,6 +601,8 @@ We also have to be careful about not creating a new session after the second fac
 import Session from "supertokens-node/recipe/session";
 import UserMetadata from "supertokens-node/recipe/usermetadata";
 import Passwordless from "supertokens-node/recipe/passwordless";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 Passwordless.init({
     flowType: "USER_INPUT_CODE",
@@ -609,9 +613,11 @@ Passwordless.init({
                 ...oI,
                 // this API is called when the user enters the OTP
                 consumeCodePOST: async function (input) {
-                    // we should already have a session here since this is called
-                    // after first factor login
-                    let session = await Session.getSession(input.options.req, input.options.res);
+                    // A session should already exist since this should be called after the first factor is completed.
+                    // We remove claim checking here, since this needs to be callable without the second factor completed
+                    let session = await Session.getSession(input.options.req, input.options.res, {
+                        overrideGlobalClaimValidators: () => [],
+                    });
                     
                     // highlight-start
                     // we add the existing session to the user context so that the createNewSession
@@ -623,13 +629,10 @@ Passwordless.init({
 
                     if (resp.status === "OK") {
                         // highlight-start
-                        // OTP verification was successful. We can now mark the
-                        // session's payload as is2faComplete: true so that
+                        // OTP verification was successful. 
+                        // We can now set the SecondFactorClaim in the session to true.
                         // the user has access to API routes and the frontend UI
-                        await resp.session.updateAccessTokenPayload({
-                            ...resp.session.getAccessTokenPayload(),
-                            is2faComplete: true,
-                        });
+                        await resp.session.setClaimValue(SecondFactorClaim, true);
                         // highlight-end
 
                         // We can now associate 
@@ -670,7 +673,7 @@ Session.init({
                         ...input,
                         accessTokenPayload: {
                             ...input.accessTokenPayload,
-                            is2faComplete: false
+                            ...SecondFactorClaim.build(input.userId, input.userContext),
                         },
                     });
                 },
@@ -695,6 +698,7 @@ import (
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
+TODO
 func main() {
 	passwordless.Init(plessmodels.TypeInput{
 		FlowType: "USER_INPUT_CODE",
@@ -788,6 +792,7 @@ from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
 from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
 
+TODO
 def override_passwordless_apis(original_implementation: APIInterface):
     original_consume_code_post = original_implementation.consume_code_post
 
@@ -914,9 +919,11 @@ Passwordless.init({
                     * same number that belongs to this user.
                     */
 
-                    // A session should already exist since this should be called after the first
-                    // factor is completed.
-                    let session = await Session.getSession(input.options.req, input.options.res);
+                    // A session should already exist since this should be called after the first factor is completed.
+                    // We remove claim checking here, since this needs to be callable without the second factor completed
+                    let session = await Session.getSession(input.options.req, input.options.res, {
+                        overrideGlobalClaimValidators: () => [],
+                    });
 
                     // We try and get the phone number associated with this user. It will be
                     // defined if this is a sign in attempt, in which case, we will check that
@@ -959,6 +966,7 @@ Passwordless.init({
 <TabItem value="go">
 
 ```go
+TODO
 import (
 	"errors"
 
@@ -1140,6 +1148,8 @@ We do this by modifying the `createNewSession` function in the `Session.init` ca
 import Session from "supertokens-node/recipe/session";
 import UserMetadata from "supertokens-node/recipe/usermetadata";
 import Passwordless from "supertokens-node/recipe/passwordless";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 Session.init({
     override: {
@@ -1175,7 +1185,7 @@ Session.init({
                         ...input,
                         accessTokenPayload: {
                             ...input.accessTokenPayload,
-                            is2faComplete: false,
+                            ...SecondFactorClaim.build(input.userId, input.userContext),
                             // highlight-next-line
                             phoneNumber,
                         },
@@ -1200,7 +1210,7 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
-
+TODO
 func main() {
 	session.Init(&sessmodels.TypeInput{
 		Override: &sessmodels.OverrideStruct{
@@ -1253,6 +1263,7 @@ func main() {
 <TabItem value="python">
 
 ```python
+TODO
 from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
 from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
@@ -1338,9 +1349,11 @@ Passwordless.init({
                     * same number that belongs to this user.
                     */
 
-                    // A session should already exist since this should be called after the first
-                    // factor is completed.
-                    let session = await Session.getSession(input.options.req, input.options.res);
+                    // A session should already exist since this should be called after the first factor is completed.
+                    // We remove claim checking here, since this needs to be callable without the second factor completed
+                    let session = await Session.getSession(input.options.req, input.options.res, {
+                        overrideGlobalClaimValidators: () => [],
+                    });
 
                     // highlight-next-line
                     let phoneNumber: string = session!.getAccessTokenPayload().phoneNumber;
@@ -1398,6 +1411,7 @@ func main() {
 
 					// A session should already exist since this should be called after the first
 					// factor is completed.
+                    TODO
 					session, err := session.GetSession(options.Req, options.Res, nil)
 					if err != nil {
 						return plessmodels.CreateCodePOSTResponse{}, err
