@@ -56,7 +56,7 @@ async function addCodeSnippetToEnv(mdFile) {
                             currentCodeLanguage = "python";
                         } else if (currLineTrimmed.includes("bash") || currLineTrimmed.includes("yaml") || currLineTrimmed.includes("cql") || currLineTrimmed.includes("sql") || currLineTrimmed.includes("batch") ||
                             currLineTrimmed.includes("text") || currLineTrimmed.includes("json")
-                            || currLineTrimmed.includes("vue"))  {
+                            || currLineTrimmed.includes("html"))  {
                             currentCodeLanguage = "ignore"
                         } else {
                             return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE in file ${mdFile}.`));
