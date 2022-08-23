@@ -14,7 +14,7 @@
  * NOTE: There may be markdown elements that do not have a direct 'value' property [For example links have 'url'],
  * in such a case this script will need to be modified to accomodate using variables for that element.
  * 
- * NOTE: Changes to this file require restarting the docusaurus process, hot reload wont reflect the changes.
+ * NOTE: Changes to this file require restarting the docusaurus process, hot reload won't reflect the changes.
  * This is because of how docusaurus handles its cache for plugins
  */
 
