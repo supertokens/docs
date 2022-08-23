@@ -88,7 +88,7 @@ function DefaultAngularTabItem() {
               </h5>
             </div>
             <div className="admonition-content">
-              SuperTokens does not provide prebuilt UI for Angular. Instead we will be using the <code>supertokens-auth-react</code> SDK to render login UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
+            SuperTokens does not provide a dedicated Angular SDK.. Instead we will be using the <code>supertokens-auth-react</code> SDK to render login UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
             </div>
           </div>
           <div>
@@ -123,7 +123,7 @@ function DefaultVueTabItem() {
               </h5>
             </div>
             <div className="admonition-content">
-              SuperTokens does not provide prebuilt UI for Vue. Instead we will be using the <code>supertokens-auth-react</code> SDK to render login UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
+            SuperTokens does not provide a dedicated Vue SDK.. Instead we will be using the <code>supertokens-auth-react</code> SDK to render login UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
             </div>
           </div>
           <div>
