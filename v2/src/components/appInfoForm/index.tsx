@@ -38,12 +38,18 @@ type State = {
 
 const PLACEHOLDER_WEBSITE_DOMAIN = "e.g. http://localhost:3000";
 const PLACEHOLDER_API_DOMAIN = "e.g. http://localhost:8080";
+const CONTAINER_ATTRIBUTE_NAME = 'display-form';
+const CONTAINER_CLASSNAME = "app-info-form-outer";
+const isAttributeDisplayChanges = (mutations: MutationRecord[]) => {
+    return mutations.some(mutation => {
+        const attributeName = mutation.attributeName;
+        return mutation.type === 'attributes' && attributeName === CONTAINER_ATTRIBUTE_NAME && (mutation.target as HTMLElement).getAttribute(attributeName) === 'true';
+    });
+}
 
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
-    private readonly containerDisplayAttrName = 'display-form';
-    private readonly containerClassName = "app-info-form-outer";
-    private readonly attributesChangesObserver = this.getAttributesChangesObserver();
-    containerRef: React.RefObject<HTMLDivElement>
+    private readonly attributesChangesObserver = new MutationObserver(this.attributeObserverCallback.bind(this));
+    private readonly containerRef: React.RefObject<HTMLDivElement>
 
     constructor(props: PropsWithChildren<Props>) {
         super(props);
@@ -166,7 +172,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     readonly resubmitFirstAppInfoForm = (event?: Pick<Event, 'preventDefault'>) => {
         event?.preventDefault()
-        document.querySelector(`.${this.containerClassName}`)?.setAttribute(this.containerDisplayAttrName, 'true')
+        document.querySelector(`.${CONTAINER_CLASSNAME}`)?.setAttribute(CONTAINER_ATTRIBUTE_NAME, 'true')
     }
 
     resubmitInfoClicked = (event?: Pick<Event, 'preventDefault'>) => {
@@ -255,8 +261,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     )
 
     render() {
-        const attributes = {[this.containerDisplayAttrName]: `${!this.state.formSubmitted}`}
-        return <div className={this.containerClassName} ref={this.containerRef} {...attributes}>{this.state.formSubmitted ? this.renderInfo() : this.renderForm()}</div>;        
+        const attributes = {[CONTAINER_ATTRIBUTE_NAME]: `${!this.state.formSubmitted}`}
+        return <div className={CONTAINER_CLASSNAME} ref={this.containerRef} {...attributes}>{this.state.formSubmitted ? this.renderInfo() : this.renderForm()}</div>;        
     }
 
     renderInfo() {
@@ -756,16 +762,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
-    private getAttributesChangesObserver() {
-        return new MutationObserver((mutations, _) => {
-            const shouldDisplayForm = mutations.some(mutation => {
-                const attributeName = mutation.attributeName;
-                return mutation.type === 'attributes' && attributeName === this.containerDisplayAttrName && (mutation.target as HTMLElement).getAttribute(attributeName) === 'true';
-            });
-            if (shouldDisplayForm) {
-                this.resubmitInfoClicked();
-                this.scrollToElement();
-            }
-        });
+    private attributeObserverCallback(mutations: MutationRecord[]) {
+        const shouldDisplayForm = isAttributeDisplayChanges(mutations);
+        if (shouldDisplayForm) {
+            this.resubmitInfoClicked();
+            this.scrollToElement();
+        }
     }
 }
