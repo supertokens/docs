@@ -36,6 +36,9 @@ type State = {
     // TODO: Add more fields here
 };
 
+const PLACEHOLDER_WEBSITE_DOMAIN = "e.g. http://localhost:3000";
+const PLACEHOLDER_API_DOMAIN = "e.g. http://localhost:8080";
+
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
     private readonly containerDisplayAttrName = 'display-form';
     private readonly containerClassName = "app-info-form-outer";
@@ -51,7 +54,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             throw new Error("You must ask for at least one item in the form")
         }
         this.state = {
-            formSubmitted: false,
+            formSubmitted: true,
             appName: "",
             apiDomain: "",
             websiteDomain: "",
@@ -80,7 +83,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     componentDidMount() {
         // we reset this value because maybe the form is partially completed cause of another form completion
         // which could have taken a subset of the info for this form.
-        const canContinue = this.canContinue(true)
+        const canContinue = this.canContinue(false)
 
         this.setState(oldState => ({
             ...oldState,
@@ -301,13 +304,13 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     if (typeof c === "string") {
                         // TODO: Add more fields here.
                         if (this.props.askForAppName) {
-                            c = c.split("^{form_appName}").join(this.state.appName);
+                            c = c.split("^{form_appName}").join(this.state.appName || '[YOUR_APP_NAME]');
                         }
                         if (this.props.askForAPIDomain) {
-                            c = c.split("^{form_apiDomain}").join(this.state.apiDomain);
+                            c = c.split("^{form_apiDomain}").join(this.state.apiDomain || `[YOUR_API_DOMAIN, ${PLACEHOLDER_API_DOMAIN}]`);
                         }
                         if (this.props.askForWebsiteDomain) {
-                            c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
+                            c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain|| `[YOUR_WEB_DOMAIN, ${PLACEHOLDER_WEBSITE_DOMAIN}]`);
                         }
                         if (this.state.showAPIBasePath) {
                             c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
@@ -392,7 +395,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         required
                         index={1}
                         title="API Domain"
-                        placeholder="e.g. http://localhost:8080"
+                        placeholder={PLACEHOLDER_API_DOMAIN}
                         onChange={(value) => this.updateFieldStateAndRemoveError("apiDomain", value)}
                         explanation="This is the URL of your app's API server."
                         value={this.state.apiDomain}
@@ -411,7 +414,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         required
                         index={2}
                         title="Website Domain"
-                        placeholder="e.g. http://localhost:3000"
+                        placeholder={PLACEHOLDER_WEBSITE_DOMAIN}
                         onChange={(value) => this.updateFieldStateAndRemoveError("websiteDomain", value)}
                         explanation="This is the URL of your website."
                         value={this.state.websiteDomain}
@@ -642,7 +645,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
         // validate appName field
         if (this.props.askForAppName && appName.length === 0) {
-            validationErrors.appName = "appName cannot be empty.";
+            // validationErrors.appName = "appName cannot be empty.";
         }
 
         // validate apiDomain field
@@ -653,7 +656,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     validationErrors.apiDomain = error;
                 }
             } else {
-                validationErrors.apiDomain = "apiDomain cannot be empty.";
+                // validationErrors.apiDomain = "apiDomain cannot be empty.";
             }
         }
 
@@ -665,7 +668,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     validationErrors.websiteDomain = error;
                 }
             } else {
-                validationErrors.websiteDomain = "websiteDomain cannot be empty.";
+                // validationErrors.websiteDomain = "websiteDomain cannot be empty.";
             }
         }
 
