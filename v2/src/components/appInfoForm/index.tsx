@@ -44,7 +44,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     constructor(props: PropsWithChildren<Props>) {
         super(props);
-         this.containerRef = React.createRef<HTMLDivElement>();
+        this.containerRef = React.createRef<HTMLDivElement>();
         // TODO: Add more fields here
         if (!props.askForAPIDomain && !props.askForAppName &&
             !props.askForWebsiteDomain && !props.askForWebsiteBasePath && !props.askForAPIBasePath) {
