@@ -47,7 +47,7 @@ const isAttributeDisplayChanges = (mutations: MutationRecord[]) => {
 }
 
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
-    private readonly attributesChangesObserver = new MutationObserver(this.attributeObserver.bind(this));
+    private readonly attributesChangesObserver = new MutationObserver(this.attributeObserverCallback.bind(this));
     private readonly containerRef: React.RefObject<HTMLDivElement>
 
     constructor(props: PropsWithChildren<Props>) {
@@ -761,7 +761,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
-    private attributeObserver(mutations: MutationRecord[]) {
+    private attributeObserverCallback(mutations: MutationRecord[]) {
         const shouldDisplayForm = isAttributeDisplayChanges(mutations);
         if (shouldDisplayForm) {
             this.resubmitInfoClicked();
