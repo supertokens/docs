@@ -37,9 +37,14 @@ type State = {
 };
 
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
+    private readonly containerDisplayAttrName = 'display-form';
+    private readonly containerClassName = "app-info-form-outer";
+    private readonly attributesChangesObserver = this.getAttributesChangesObserver();
+    containerRef: React.RefObject<HTMLDivElement>
 
     constructor(props: PropsWithChildren<Props>) {
         super(props);
+         this.containerRef = React.createRef<HTMLDivElement>();
         // TODO: Add more fields here
         if (!props.askForAPIDomain && !props.askForAppName &&
             !props.askForWebsiteDomain && !props.askForWebsiteBasePath && !props.askForAPIBasePath) {
@@ -83,6 +88,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }), () => {
             this.setDefaultApiBasePathBasedOnToggles()
         })
+
+        // listen to DOM attribute changes
+        this.attributesChangesObserver.observe(this.containerRef.current!, { attributes: true });
     }
 
     replacePathPrefixWithNewPrefix = (path: string, oldPrefix: string, newPrefix: string) => {
@@ -150,10 +158,16 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (typeof window !== 'undefined') {
             window.removeEventListener("appInfoFormFilled", this.anotherFormFilled);
         }
+        this.attributesChangesObserver.disconnect()
+    }    
+
+    readonly resubmitFirstAppInfoForm = (event?: Pick<Event, 'preventDefault'>) => {
+        event?.preventDefault()
+        document.querySelector(`.${this.containerClassName}`)?.setAttribute(this.containerDisplayAttrName, 'true')
     }
 
-    resubmitInfoClicked = (event: any) => {
-        event.preventDefault();
+    resubmitInfoClicked = (event?: Pick<Event, 'preventDefault'>) => {
+        event?.preventDefault();
         this.setState(oldState => ({
             ...oldState,
             formSubmitted: false
@@ -238,241 +252,246 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     )
 
     render() {
-        if (this.state.formSubmitted) {
-            return (
-                <div>
-                    <div className="app-info-form-question-container">
-                        <div
+        const attributes = {[this.containerDisplayAttrName]: `${!this.state.formSubmitted}`}
+        return <div className={this.containerClassName} ref={this.containerRef} {...attributes}>{this.state.formSubmitted ? this.renderInfo() : this.renderForm()}</div>;        
+    }
+
+    renderInfo() {
+        return (
+            <div>
+                <div className="app-info-form-question-container">
+                    <div
+                        style={{
+                            width: "17px"
+                        }}>
+                        <img
                             style={{
-                                width: "17px"
-                            }}>
-                            <img
-                                style={{
-                                    width: "17px",
-                                }}
-                                src="/img/form-submitted-tick.png"
-                                alt="Form submitted"
-                            />
-                        </div>
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                flex: 1,
-                                marginTop: "-2px"
+                                width: "17px",
                             }}
-                            className="app-info-form-submitted-container"
-                        >
-                            <div
-                                style={{
-                                    fontSize: "14px",
-                                    fontWeight: 600
-                                }}>
-                                YOUR CONFIGURATION VALUES
-                            </div>
-                            <div style={{ height: "10px" }} />
-                            <div
-                                style={{
-                                    fontSize: "16px",
-                                }}>
-                                Your provided information is displayed in the code below. <a href="" onClick={this.resubmitInfoClicked}>Resubmit info?</a>
-                            </div>
-                        </div>
+                            src="/img/form-submitted-tick.png"
+                            alt="Form submitted"
+                        />
                     </div>
-                    {recursiveMap(this.props.children, (c: any) => {
-                        if (typeof c === "string") {
-                            // TODO: Add more fields here.
-                            if (this.props.askForAppName) {
-                                c = c.split("^{form_appName}").join(this.state.appName);
-                            }
-                            if (this.props.askForAPIDomain) {
-                                c = c.split("^{form_apiDomain}").join(this.state.apiDomain);
-                            }
-                            if (this.props.askForWebsiteDomain) {
-                                c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
-                            }
-                            if (this.state.showAPIBasePath) {
-                                c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
-                            }
-                            if (this.state.showAPIBasePath) {
-                                c = c.split("^{form_apiBasePathForCallbacks}").join(this.state.apiBasePath !== "/" ? this.state.apiBasePath : "");
-                            }
-                            if (this.state.showWebsiteBasePath) {
-                                c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
-
-                                c = c.split("^{form_websiteBasePath_withoutForwardSlash}").join(this.state.websiteBasePath.substring(1,this.state.websiteBasePath.length));
-                            }
-                            if (this.state.showWebsiteBasePath) {
-                                c = c.split("^{form_websiteBasePathForCallbacks}").join(this.state.websiteBasePath !== "/" ? this.state.websiteBasePath : "");
-                            }
-                            if (this.props.addNetlifyPathExplanation && c === "^{form_netlifyPathExplanation}") {
-                                c = this.getNetlifyPathExplanationString();
-                            }
-                            if (this.props.addVisitWebsiteBasePathText && c === "^{form_addVisitWebsiteBasePathText}") {
-                                c = this.getVisitWebsiteBasePathText()
-                            }
-                        }
-                        return c;
-                    })}
-                </div>)
-        } else {
-            const canContinue = Object.keys(this.state.fieldErrors).length === 0;
-
-            return (
-                <div
-                    style={{
-                        width: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                        padding: "16px",
-                        color: "#ffffff",
-                    }}
-                    className="app-info-form-container"
-                >
                     <div
                         style={{
-                            fontSize: "14px",
-                            fontWeight: 600,
-                            textTransform: "uppercase"
-                        }}>
-                        Please fill the form below to see the code snippet <span
-                            style={{
-                                color: "#ff6161"
-                            }}>(* = Required)</span>
-                    </div>
-                    <div
-                        className="app-info-form-container-link"
-                        style={{ marginTop: "10px" }}
-                    >
-                        To learn more about what these properties mean read <a href="/docs/thirdpartyemailpassword/appinfo">here</a>.
-                    </div>
-                    <div style={{ height: "25px" }} />
-                    <div
-                        style={{
-                            paddingLeft: "1.5rem",
-                            paddingRight: "1.5rem",
                             display: "flex",
-                            flexDirection: "column"
-                        }}>
-                        {this.props.askForAppName && <FormItem
-                            required
-                            index={0}
-                            title="Your app's name"
-                            placeholder="e.g. My awesome App"
-                            onChange={(value) => this.updateFieldStateAndRemoveError("appName", value)}
-                            explanation="This is the name of your application"
-                            value={this.state.appName}
-                            error={this.state.fieldErrors.appName}
-                        />}
-                        {/* show apiDomain field if it is not a NextJS form */}
-                        {/* show apiDomain field if it is a nextJS form and the `nextJS api route used` checkbox is not checked */}
-                        {this.props.askForAPIDomain
-                            && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))
-                            && <FormItem
-                            required
-                            index={1}
-                            title="API Domain"
-                            placeholder="e.g. http://localhost:8080"
-                            onChange={(value) => this.updateFieldStateAndRemoveError("apiDomain", value)}
-                            explanation="This is the URL of your app's API server."
-                            value={this.state.apiDomain}
-                            error={this.state.fieldErrors.apiDomain}
-                        />}
-                        {(this.state.showAPIBasePath) && <FormItem
-                            index={3}
-                            title="API Base Path"
-                            placeholder="e.g. /auth"
-                            onChange={(value) => this.updateFieldStateAndRemoveError("apiBasePath", value)}
-                            explanation="SuperTokens will expose it's APIs scoped by this base API path."
-                            value={this.state.apiBasePath}
-                            error={this.state.fieldErrors.apiBasePath}
-                            />}
-                        {this.props.askForWebsiteDomain && <FormItem
-                            required
-                            index={2}
-                            title="Website Domain"
-                            placeholder="e.g. http://localhost:3000"
-                            onChange={(value) => this.updateFieldStateAndRemoveError("websiteDomain", value)}
-                            explanation="This is the URL of your website."
-                            value={this.state.websiteDomain}
-                            error={this.state.fieldErrors.websiteDomain}
-                        />}
-                        {this.state.showWebsiteBasePath && <FormItem
-                            index={4}
-                            title="Website Base Path"
-                            placeholder="e.g. /auth"
-                            onChange={(value) => this.updateFieldStateAndRemoveError("websiteBasePath", value)}
-                            explanation="SuperTokens UI will be shown on this website route."
-                            value={this.state.websiteBasePath}
-                            error={this.state.fieldErrors.websiteBasePath}
-                        />}
-
-                        {this.props.showNextJSAPIRouteCheckbox && (
-                            <label style={{
-                                display: "flex",
-                                alignItems: "center",
-                                cursor: "pointer",
-                                width: "fit-content"
-                            }}>
-                                <input
-                                    name="nextjs-api-route"
-                                    type="checkbox"
-                                    checked={this.state.nextJSApiRouteUsed}
-                                    onChange={() => this.handleNextNetlifyRouteToggle("nextJSApiRouteUsed", "/api")}
-                                    style={{
-                                        marginRight: "10px"
-                                    }}
-                                />
-                                <span>
-                                    I am using NextJS' <a target="_blank" rel="nofollow noopener noreferrer" href="https://nextjs.org/docs/api-routes/introduction">API route</a>
-                                </span>
-                            </label>
-                        )}
-
-                        {this.props.showNetlifyAPIRouteCheckbox && (
-                            <label style={{
-                                display: "flex",
-                                alignItems: "center",
-                                cursor: "pointer",
-                                width: "fit-content"
-                            }}>
-                                <input
-                                    name="nextjs-api-route"
-                                    type="checkbox"
-                                    checked={this.state.netlifyApiRouteUsed}
-                                    onChange={() => this.handleNextNetlifyRouteToggle("netlifyApiRouteUsed", "/.netlify/functions")}
-                                    style={{
-                                        marginRight: "10px"
-                                    }}
-                                />
-                                <span>
-                                    I am using Netlify Serverless Functions
-                                </span>
-                            </label>
-                        )}
-
-                        {/* TODO: Add more fields here */}
-                        <div style={{ height: "16px" }} />
+                            flexDirection: "column",
+                            flex: 1,
+                            marginTop: "-2px"
+                        }}
+                        className="app-info-form-submitted-container"
+                    >
                         <div
                             style={{
-                                display: "flex",
-                                flexDirection: "row",
+                                fontSize: "14px",
+                                fontWeight: 600
                             }}>
-                            <div style={{
-                                flex: 1
-                            }} />
-                            <div
-                                onClick={() => this.handleContinueClicked(true)}
-                                className="button" style={canContinue ? {} : {
-                                    cursor: "not-allowed"
-                                }}>
-                                {canContinue ? "Submit form" : "Fill form to submit"}
-                            </div>
+                            YOUR CONFIGURATION VALUES
+                        </div>
+                        <div style={{ height: "10px" }} />
+                        <div
+                            style={{
+                                fontSize: "16px",
+                            }}>
+                            Your provided information is displayed in the code below. <a href="" onClick={this.resubmitFirstAppInfoForm}>Resubmit info?</a>
                         </div>
                     </div>
                 </div>
-            );
-        }
+                {recursiveMap(this.props.children, (c: any) => {
+                    if (typeof c === "string") {
+                        // TODO: Add more fields here.
+                        if (this.props.askForAppName) {
+                            c = c.split("^{form_appName}").join(this.state.appName);
+                        }
+                        if (this.props.askForAPIDomain) {
+                            c = c.split("^{form_apiDomain}").join(this.state.apiDomain);
+                        }
+                        if (this.props.askForWebsiteDomain) {
+                            c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain);
+                        }
+                        if (this.state.showAPIBasePath) {
+                            c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
+                        }
+                        if (this.state.showAPIBasePath) {
+                            c = c.split("^{form_apiBasePathForCallbacks}").join(this.state.apiBasePath !== "/" ? this.state.apiBasePath : "");
+                        }
+                        if (this.state.showWebsiteBasePath) {
+                            c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
+
+                            c = c.split("^{form_websiteBasePath_withoutForwardSlash}").join(this.state.websiteBasePath.substring(1,this.state.websiteBasePath.length));
+                        }
+                        if (this.state.showWebsiteBasePath) {
+                            c = c.split("^{form_websiteBasePathForCallbacks}").join(this.state.websiteBasePath !== "/" ? this.state.websiteBasePath : "");
+                        }
+                        if (this.props.addNetlifyPathExplanation && c === "^{form_netlifyPathExplanation}") {
+                            c = this.getNetlifyPathExplanationString();
+                        }
+                        if (this.props.addVisitWebsiteBasePathText && c === "^{form_addVisitWebsiteBasePathText}") {
+                            c = this.getVisitWebsiteBasePathText()
+                        }
+                    }
+                    return c;
+                })}
+            </div>)
+    }
+
+    renderForm() {
+        const canContinue = Object.keys(this.state.fieldErrors).length === 0;
+
+        return (
+            <div
+                style={{
+                    width: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    padding: "16px",
+                    color: "#ffffff",
+                }}
+                className="app-info-form-container"
+            >
+                <div
+                    style={{
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        textTransform: "uppercase"
+                    }}>
+                    Please fill the form below to see the code snippet <span
+                        style={{
+                            color: "#ff6161"
+                        }}>(* = Required)</span>
+                </div>
+                <div
+                    className="app-info-form-container-link"
+                    style={{ marginTop: "10px" }}
+                >
+                    To learn more about what these properties mean read <a href="/docs/thirdpartyemailpassword/appinfo">here</a>.
+                </div>
+                <div style={{ height: "25px" }} />
+                <div
+                    style={{
+                        paddingLeft: "1.5rem",
+                        paddingRight: "1.5rem",
+                        display: "flex",
+                        flexDirection: "column"
+                    }}>
+                    {this.props.askForAppName && <FormItem
+                        required
+                        index={0}
+                        title="Your app's name"
+                        placeholder="e.g. My awesome App"
+                        onChange={(value) => this.updateFieldStateAndRemoveError("appName", value)}
+                        explanation="This is the name of your application"
+                        value={this.state.appName}
+                        error={this.state.fieldErrors.appName}
+                    />}
+                    {/* show apiDomain field if it is not a NextJS form */}
+                    {/* show apiDomain field if it is a nextJS form and the `nextJS api route used` checkbox is not checked */}
+                    {this.props.askForAPIDomain
+                        && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))
+                        && <FormItem
+                        required
+                        index={1}
+                        title="API Domain"
+                        placeholder="e.g. http://localhost:8080"
+                        onChange={(value) => this.updateFieldStateAndRemoveError("apiDomain", value)}
+                        explanation="This is the URL of your app's API server."
+                        value={this.state.apiDomain}
+                        error={this.state.fieldErrors.apiDomain}
+                    />}
+                    {(this.state.showAPIBasePath) && <FormItem
+                        index={3}
+                        title="API Base Path"
+                        placeholder="e.g. /auth"
+                        onChange={(value) => this.updateFieldStateAndRemoveError("apiBasePath", value)}
+                        explanation="SuperTokens will expose it's APIs scoped by this base API path."
+                        value={this.state.apiBasePath}
+                        error={this.state.fieldErrors.apiBasePath}
+                        />}
+                    {this.props.askForWebsiteDomain && <FormItem
+                        required
+                        index={2}
+                        title="Website Domain"
+                        placeholder="e.g. http://localhost:3000"
+                        onChange={(value) => this.updateFieldStateAndRemoveError("websiteDomain", value)}
+                        explanation="This is the URL of your website."
+                        value={this.state.websiteDomain}
+                        error={this.state.fieldErrors.websiteDomain}
+                    />}
+                    {this.state.showWebsiteBasePath && <FormItem
+                        index={4}
+                        title="Website Base Path"
+                        placeholder="e.g. /auth"
+                        onChange={(value) => this.updateFieldStateAndRemoveError("websiteBasePath", value)}
+                        explanation="SuperTokens UI will be shown on this website route."
+                        value={this.state.websiteBasePath}
+                        error={this.state.fieldErrors.websiteBasePath}
+                    />}
+
+                    {this.props.showNextJSAPIRouteCheckbox && (
+                        <label style={{
+                            display: "flex",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            width: "fit-content"
+                        }}>
+                            <input
+                                name="nextjs-api-route"
+                                type="checkbox"
+                                checked={this.state.nextJSApiRouteUsed}
+                                onChange={() => this.handleNextNetlifyRouteToggle("nextJSApiRouteUsed", "/api")}
+                                style={{
+                                    marginRight: "10px"
+                                }}
+                            />
+                            <span>
+                                I am using NextJS' <a target="_blank" rel="nofollow noopener noreferrer" href="https://nextjs.org/docs/api-routes/introduction">API route</a>
+                            </span>
+                        </label>
+                    )}
+
+                    {this.props.showNetlifyAPIRouteCheckbox && (
+                        <label style={{
+                            display: "flex",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            width: "fit-content"
+                        }}>
+                            <input
+                                name="nextjs-api-route"
+                                type="checkbox"
+                                checked={this.state.netlifyApiRouteUsed}
+                                onChange={() => this.handleNextNetlifyRouteToggle("netlifyApiRouteUsed", "/.netlify/functions")}
+                                style={{
+                                    marginRight: "10px"
+                                }}
+                            />
+                            <span>
+                                I am using Netlify Serverless Functions
+                            </span>
+                        </label>
+                    )}
+
+                    {/* TODO: Add more fields here */}
+                    <div style={{ height: "16px" }} />
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "row",
+                        }}>
+                        <div style={{
+                            flex: 1
+                        }} />
+                        <div
+                            onClick={() => this.handleContinueClicked(true)}
+                            className="button" style={canContinue ? {} : {
+                                cursor: "not-allowed"
+                            }}>
+                            {canContinue ? "Submit form" : "Fill form to submit"}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     getDomainOriginOrEmptyString = (domain: string) => {
@@ -723,5 +742,27 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         return Object.keys(validationErrors).length === 0;
+    }
+
+    scrollToElement() {
+        if (Boolean(this.containerRef.current)) {
+            window.scrollBy({
+                top: this.containerRef.current?.parentElement?.getBoundingClientRect().top,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    private getAttributesChangesObserver() {
+        return new MutationObserver((mutations, _) => {
+            const shouldDisplayForm = mutations.some(mutation => {
+                const attributeName = mutation.attributeName;
+                return mutation.type === 'attributes' && attributeName === this.containerDisplayAttrName && (mutation.target as HTMLElement).getAttribute(attributeName) === 'true';
+            });
+            if (shouldDisplayForm) {
+                this.resubmitInfoClicked();
+                this.scrollToElement();
+            }
+        });
     }
 }
