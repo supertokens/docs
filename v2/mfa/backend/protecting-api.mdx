@@ -12,9 +12,129 @@ import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs"
 
 # Protecting API routes
 
-In the previous steps, we saw the a session is created after the first factor, with `is2faComplete: false`, and then after the second factor is completed, we set the payload to have `is2faComplete: true`.
+In the previous steps, we saw the a session is created after the first factor, with `SecondFactorClaim` set to false, and then after the second factor is completed, we update that value to true.
 
-Using this, we can protect an API such that it's only callable when the user has completed both the login factors:
+## Protecting all APIs
+
+We can add this check to all APIs by overriding the `getGlobalClaimValidators` function in the Session recipe.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+Session.init({
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                getGlobalClaimValidators: (input) => [
+                    ...input.claimValidatorsAddedByOtherRecipes,
+                    SecondFactorClaim.validators.hasValue(true),
+                ],
+            };
+        },
+    }
+})
+
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+TODO
+func main() {
+	session.Init(&sessmodels.TypeInput{
+		Override: &sessmodels.OverrideStruct{
+			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+				oCreateNewSession := *originalImplementation.CreateNewSession
+				/* This function is called after signing in or signing up via the first factor */
+				nCreateNewSession := func(res http.ResponseWriter, userID string, accessTokenPayload map[string]interface{}, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+					// highlight-start
+					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
+						/**
+						 * This will be true for the second factor login.
+						 * So instead of creating a new session, we return the already existing one.
+						 */
+						return session, nil
+					}
+					// highlight-end
+					accessTokenPayload["is2faComplete"] = false
+					return oCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+				}
+				*originalImplementation.CreateNewSession = nCreateNewSession
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from typing import Union, Dict, Any
+from supertokens_python.recipe.session.asyncio import get_session
+from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+
+TODO
+def override_session_functions(original_implementation: RecipeInterface):
+    original_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(
+        request: Any,
+        user_id: str,
+        access_token_payload: Union[None, Dict[str, Any]],
+        session_data: Union[None, Dict[str, Any]],
+        user_context: Dict[str, Any],
+    ):
+        # This function is called after signing in or
+        # signing up via the first factor
+
+        # highlight-start
+        _session = user_context.get("session")
+        if _session and isinstance(_session, SessionContainer):
+            # This will be true for the second factor login.
+            # So instead of creating a new session, we return the already existing one.
+            return _session
+        # highlight-end
+
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        # Insert "is2faComplete" in access token payload
+        access_token_payload = {**access_token_payload, "is2faComplete": False}
+        return await original_create_new_session(
+            request, user_id, access_token_payload, session_data, user_context
+        )
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+## Protecting specific API routes
+
+:::important
+You can also use this method to remove a validator you have added to the global validators for a specific route.
+:::
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -25,22 +145,19 @@ Using this, we can protect an API such that it's only callable when the user has
 import express from "express";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 let app = express();
 
-app.post("/like-comment", verifySession(), (req: SessionRequest, res) => {
+app.post("/like-comment", verifySession({
     // highlight-start
-    let accessTokenPayload = req.session!.getAccessTokenPayload();
-    if (accessTokenPayload.is2faComplete) {
-        // both the login factors have been completed
-    } else {
-        /* 
-            Only one factor has been completed.
-            You can either allow limited access, or
-            return a 403 error.
-        */
-    }
+    overrideGlobalClaimValidators: (globalValidators) => [
+        ...globalValidators, 
+        SecondFactorClaim.validators.hasValue(true),
+    ]
     // highlight-end
+}), (req: SessionRequest, res) => {
     //....
 });
 ```
@@ -52,6 +169,8 @@ app.post("/like-comment", verifySession(), (req: SessionRequest, res) => {
 import Hapi from "@hapi/hapi";
 import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
 import { SessionRequest } from "supertokens-node/framework/hapi";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 let server = Hapi.server({ port: 8000 });
 
@@ -61,23 +180,18 @@ server.route({
     options: {
         pre: [
             {
-                method: verifySession()
+                method: verifySession({
+                    // highlight-start
+                    overrideGlobalClaimValidators: (globalValidators) => [
+                        ...globalValidators, 
+                        SecondFactorClaim.validators.hasValue(true),
+                    ]
+                    // highlight-end
+                })
             },
         ],
     },
     handler: async (req: SessionRequest, res) => {
-        // highlight-start
-        let accessTokenPayload = req.session!.getAccessTokenPayload();
-        if (accessTokenPayload.is2faComplete) {
-            // both the login factors have been completed
-        } else {
-            /* 
-                Only one factor has been completed.
-                You can either allow limited access, or
-                return a 403 error.
-            */
-        }
-        // highlight-end
         //...
     }
 })
@@ -89,25 +203,22 @@ server.route({
 import Fastify from "fastify";
 import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
 import { SessionRequest } from "supertokens-node/framework/fastify";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 let fastify = Fastify();
 
 //highlight-start
 fastify.post("/like-comment", {
-    preHandler: verifySession(),
+    preHandler: verifySession({
+        // highlight-start
+        overrideGlobalClaimValidators: (globalValidators) => [
+            ...globalValidators, 
+            SecondFactorClaim.validators.hasValue(true),
+        ]
+        // highlight-end
+    }),
 }, (req: SessionRequest, res) => {
-    // highlight-start
-    let accessTokenPayload = req.session!.getAccessTokenPayload();
-    if (accessTokenPayload.is2faComplete) {
-        // both the login factors have been completed
-    } else {
-        /* 
-            Only one factor has been completed.
-            You can either allow limited access, or
-            return a 403 error.
-        */
-    }
-    // highlight-end
     //....
 });
 ```
@@ -118,25 +229,21 @@ fastify.post("/like-comment", {
 ```tsx
 import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
 import { SessionEventV2 } from "supertokens-node/framework/awsLambda";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 async function likeComment(awsEvent: SessionEventV2) {
-    // highlight-start
-    let accessTokenPayload = awsEvent.session!.getAccessTokenPayload();
-    if (accessTokenPayload.is2faComplete) {
-        // both the login factors have been completed
-    } else {
-        /* 
-            Only one factor has been completed.
-            You can either allow limited access, or
-            return a 403 error.
-        */
-    }
-    // highlight-end
     //....
 };
 
-//highlight-next-line
-exports.handler = verifySession(likeComment);
+exports.handler = verifySession(likeComment, {
+    // highlight-start
+    overrideGlobalClaimValidators: (globalValidators) => [
+        ...globalValidators, 
+        SecondFactorClaim.validators.hasValue(true),
+    ]
+    // highlight-end
+});
 ```
 
 </TabItem>
@@ -146,23 +253,20 @@ exports.handler = verifySession(likeComment);
 import KoaRouter from "koa-router";
 import { verifySession } from "supertokens-node/recipe/session/framework/koa";
 import { SessionContext } from "supertokens-node/framework/koa";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 let router = new KoaRouter();
 
 //highlight-start
-router.post("/like-comment", verifySession(), (ctx: SessionContext, next) => {
+router.post("/like-comment", verifySession({
     // highlight-start
-    let accessTokenPayload = ctx.session!.getAccessTokenPayload();
-    if (accessTokenPayload.is2faComplete) {
-        // both the login factors have been completed
-    } else {
-        /* 
-            Only one factor has been completed.
-            You can either allow limited access, or
-            return a 403 error.
-        */
-    }
+    overrideGlobalClaimValidators: (globalValidators) => [
+        ...globalValidators, 
+        SecondFactorClaim.validators.hasValue(true),
+    ]
     // highlight-end
+}), (ctx: SessionContext, next) => {
     //....
 });
 ```
@@ -175,25 +279,22 @@ import { inject, intercept } from "@loopback/core";
 import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
 import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
 import { SessionContext } from "supertokens-node/framework/loopback";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 class LikeComment {
     constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
     @post("/like-comment")
-    @intercept(verifySession())
+    @intercept(verifySession({
+        // highlight-start
+        overrideGlobalClaimValidators: (globalValidators) => [
+            ...globalValidators, 
+            SecondFactorClaim.validators.hasValue(true),
+        ]
+        // highlight-end
+    }))
     @response(200)
     handler() {
-        // highlight-start
-        let accessTokenPayload = (this.ctx as SessionContext).session!.getAccessTokenPayload();
-        if (accessTokenPayload.is2faComplete) {
-            // both the login factors have been completed
-        } else {
-            /* 
-                Only one factor has been completed.
-                You can either allow limited access, or
-                return a 403 error.
-            */
-        }
-        // highlight-end
         //....
     }
 }
@@ -206,28 +307,24 @@ class LikeComment {
 import { superTokensNextWrapper } from 'supertokens-node/nextjs'
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 export default async function likeComment(req: SessionRequest, res: any) {
     await superTokensNextWrapper(
         async (next) => {
-            await verifySession()(req, res, next);
+            await verifySession({
+                // highlight-start
+                overrideGlobalClaimValidators: (globalValidators) => [
+                    ...globalValidators, 
+                    SecondFactorClaim.validators.hasValue(true),
+                ]
+                // highlight-end
+            })(req, res, next);
         },
         req,
         res
     )
-
-    // highlight-start
-    let accessTokenPayload = req.session!.getAccessTokenPayload();
-    if (accessTokenPayload.is2faComplete) {
-        // both the login factors have been completed
-    } else {
-        /* 
-            Only one factor has been completed.
-            You can either allow limited access, or
-            return a 403 error.
-        */
-    }
-    // highlight-end
     //....
 }
 ```
@@ -240,25 +337,24 @@ import { Controller, Post, UseGuards, Session } from "@nestjs/common";
 import { SessionContainer } from "supertokens-node/recipe/session";
 // @ts-ignore
 import { AuthGuard } from './auth/auth.guard';
+import { VerifySessionOptions } from "supertokens-node/recipe/session"; // typecheck-only, removed from output
+declare class AuthGuard { constructor(verifyOpts: VerifySessionOptions); canActivate: any } // typecheck-only, removed from output
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 @Controller()
 export class ExampleController {
   @Post('example')
-  @UseGuards(AuthGuard) // For more information about this guard please read our NestJS guide.
-  async postExample(@Session() session: SessionContainer): Promise<boolean> {
-    // highlight-start
-    let accessTokenPayload = session.getAccessTokenPayload();
-    if (accessTokenPayload.is2faComplete) {
-        // both the login factors have been completed
-    } else {
-        /* 
-            Only one factor has been completed.
-            You can either allow limited access, or
-            return a 403 error.
-        */
-    }
+  // For more information about this guard please read our NestJS guide.
+  @UseGuards(new AuthGuard({
+      // highlight-start
+      overrideGlobalClaimValidators: (globalValidators) => [
+        ...globalValidators,
+        SecondFactorClaim.validators.hasValue(true),
+      ]
     // highlight-end
-    //....
+  })) 
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
     return true;
   }
 }
@@ -531,7 +627,5 @@ async def like_comment_api(request: HttpRequest):
 </BackendSDKTabs>
 
 :::important
-If the user has not finished both the factors, we have to be careful to not return a `401` status code, since a `401` indicates a missing session or an expired access token.
-
-In this case, the session exists, but the user has not completed both the factors, so we return a different status code - `403` (Or any other that you like)
+If the user has a session but hasn't finished both factors before calling an endpoint protected by the appropriate `SecondFactorClaim` validator, then the SDK will send a `403` response.
 :::
