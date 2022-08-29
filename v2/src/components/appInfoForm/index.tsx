@@ -276,8 +276,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     )
 
     render() {        
-        return <div id={this.elementId.toString()} className={CONTAINER_CLASSNAME} ref={this.containerRef}>
-            <b>{this.elementId}</b>
+        return <div id={this.elementId.toString()} className={CONTAINER_CLASSNAME} ref={this.containerRef}>            
             {(!this.state.formSubmitted && this.state.firstAppInfoForm) && this.renderForm()}
             {this.renderInfo()}
         </div>;        
