@@ -7,7 +7,6 @@ module.exports = () => {
                         headingChild.value = headingChild.value
                             .replace("[[pre]]", "")
                             .replace("[[cust]]", "")
-                            .trim();
                     }
 
                     return headingChild;

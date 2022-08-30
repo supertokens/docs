@@ -45,6 +45,7 @@ function PreBuiltCustomUISelector() {
     <div
       className='ui-selector-mobile'
       style={{
+        display: "none",
         width: "100%",
         // position: "sticky",
         // top: "var(--ifm-navbar-height)",
