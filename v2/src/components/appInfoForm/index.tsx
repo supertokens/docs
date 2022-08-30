@@ -43,25 +43,32 @@ type ResubmitParams = {
 };
 
 const CONTAINER_ATTRIBUTE_DISPLAY = 'display-form';
+const CONTAINER_ATTRIBUTE_FIRST_FORM = 'display-form';
 const CONTAINER_CLASSNAME = "app-info-form-outer";
-const isReceivingDisplayAttr = (mutations: MutationRecord[]) => {
+const isReceivingAttr = (mutations: MutationRecord[], attributeName: string, attributeValue?: string) => {
     return mutations.some(mutation => {
-        const attributeName = mutation.attributeName;
+        const mutationAttributeName = mutation.attributeName;
         return mutation.type === 'attributes' 
-            && attributeName === CONTAINER_ATTRIBUTE_DISPLAY 
-            && (mutation.target as HTMLElement).getAttribute(CONTAINER_ATTRIBUTE_DISPLAY) === 'true';
+            && mutationAttributeName === attributeName 
+            && (attributeValue == null || (mutation.target as HTMLElement).getAttribute(attributeName) === attributeValue);
     });
 }
+const isReceivingDisplayAttr = (mutations: MutationRecord[]) => isReceivingAttr(mutations, CONTAINER_ATTRIBUTE_DISPLAY, 'true')
+const isReceivingFirstFormAttr = (mutations: MutationRecord[]) => isReceivingAttr(mutations, CONTAINER_ATTRIBUTE_FIRST_FORM)
+
+const isElementVisible = (element?: Element | null): boolean => element != null && element?.clientWidth > 0 && element.clientHeight > 0;
 const getFirstAppInfoForm = () => {
-    return Array.from(document.querySelectorAll(`.${CONTAINER_CLASSNAME}`)).find(element => element.clientWidth > 0 && element.clientHeight > 0);
+    return Array.from(document.querySelectorAll(`.${CONTAINER_CLASSNAME}`)).find(isElementVisible);
 }
 const isFirstAppInfoForm = (id: string) => getFirstAppInfoForm()?.id === id
 
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
     private readonly elementId = (new Date()).getTime()
     private readonly containerRef: React.RefObject<HTMLDivElement>
-    private readonly displayAttributeObserver = new MutationObserver(this.onReceiveDisplayAttr.bind(this));
-    private readonly firstFormObserver = new IntersectionObserver(() => this.setState({ firstAppInfoForm:  isFirstAppInfoForm(`${this.elementId}`)}))
+    private readonly attributeObserver = new MutationObserver(this.onReceiveAttribute.bind(this));
+    private readonly visibilityObserver = new IntersectionObserver(() => this.setState({ 
+        firstAppInfoForm: this.isFirstVisibleAppInfoForm()
+    }))
 
     constructor(props: PropsWithChildren<Props>) {
         super(props);
@@ -104,8 +111,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         const canContinue = this.canContinue(true)
 
         // listen to DOM changes 
-        this.displayAttributeObserver.observe(this.containerRef.current!, { attributes: true });
-        this.firstFormObserver.observe(this.containerRef.current!);
+        this.attributeObserver.observe(this.containerRef.current!, { attributes: true });
+        this.visibilityObserver.observe(this.containerRef.current!);
 
         this.setState(oldState => ({
             ...oldState,
@@ -180,12 +187,15 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (typeof window !== 'undefined') {
             window.removeEventListener("appInfoFormFilled", this.anotherFormFilled);
         }
-        this.displayAttributeObserver.disconnect()
-        this.firstFormObserver.disconnect()
+        this.attributeObserver.disconnect()
+        this.visibilityObserver.disconnect()
     }
 
     readonly resubmitFirstAppInfoForm = (event?: ResubmitParams['event']) => {
         event?.preventDefault()
+        document.querySelectorAll(`.${CONTAINER_CLASSNAME}[${CONTAINER_ATTRIBUTE_FIRST_FORM}]`).forEach(element => {
+            element.setAttribute(CONTAINER_ATTRIBUTE_FIRST_FORM, '')
+        })
         getFirstAppInfoForm()?.setAttribute(CONTAINER_ATTRIBUTE_DISPLAY, 'true')
     }
 
@@ -276,6 +286,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     )
 
     render() {        
+        const customAttributes: Record<string, string | undefined> = {}
+        if (this.state.firstAppInfoForm) { customAttributes[CONTAINER_ATTRIBUTE_FIRST_FORM] = undefined }
         return <div id={this.elementId.toString()} className={CONTAINER_CLASSNAME} ref={this.containerRef}>            
             {(!this.state.formSubmitted && this.state.firstAppInfoForm) && this.renderForm()}
             {this.renderInfo()}
@@ -331,13 +343,13 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     if (typeof c === "string") {
                         // TODO: Add more fields here.
                         if (this.props.askForAppName) {
-                            c = c.split("^{form_appName}").join(this.state.appName || '<YOUR_APP_NAME>');
+                            c = c.split("^{form_appName}").join(this.state.appName || 'YOUR_APP_NAME');
                         }
                         if (this.props.askForAPIDomain) {
-                            c = c.split("^{form_apiDomain}").join(this.state.apiDomain || `<YOUR_API_DOMAIN>`);
+                            c = c.split("^{form_apiDomain}").join(this.state.apiDomain || `YOUR_API_DOMAIN`);
                         }
                         if (this.props.askForWebsiteDomain) {
-                            c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain|| `<YOUR_WEB_DOMAIN>`);
+                            c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain|| `YOUR_WEB_DOMAIN`);
                         }
                         if (this.state.showAPIBasePath) {
                             c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
@@ -783,9 +795,16 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
-    private onReceiveDisplayAttr(mutations: MutationRecord[]) {
+    private onReceiveAttribute(mutations: MutationRecord[]) {
+        if (isReceivingFirstFormAttr(mutations)) {
+            this.setState({ firstAppInfoForm: this.isFirstVisibleAppInfoForm() })
+        }
         if (isReceivingDisplayAttr(mutations)) {
             this.resubmitInfoClicked({scrollToElement: true});
         }
+    }
+
+    private isFirstVisibleAppInfoForm(): boolean {
+        return Boolean(isElementVisible(this.containerRef?.current) && isFirstAppInfoForm(`${this.elementId}`));
     }
 }
