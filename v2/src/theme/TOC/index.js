@@ -47,7 +47,7 @@ function Headings({ toc, isChild }) {
   );
 }
 
-function TOC({ toc }) {
+function TOC({ toc, showUISwitcher }) {
   let [selectedUIMode, setSelectedUIMode] = useState(getUIModeFromStorage())
 
   useTOCHighlight(LINK_CLASS_NAME, ACTIVE_LINK_CLASS_NAME, TOP_OFFSET);
@@ -126,7 +126,7 @@ function TOC({ toc }) {
           padding: 18,
           paddingLeft: 24,
           marginBottom: 18,
-          display: "none", // "flex",
+          display: showUISwitcher ? "flex" : "none",
           flexDirection: "column",
           boxSizing: "border-box",
           MozBoxSizing: "border-box",

@@ -18,7 +18,7 @@ import { useActivePlugin, useVersions } from '@theme/hooks/useDocs';
 import { useLocation } from '@docusaurus/router';
 import { getUIModeFromStorage, updateUIMode } from "../../components/preBuiltOrCustomUISwitcher";
 
-function PreBuiltCustomUISelector() {
+function PreBuiltCustomUISelector({ showUISwitcher }) {
   let [selectedUIMode, setSelectedUIMode] = useState(getUIModeFromStorage())
 
   const isCustomSelected = selectedUIMode === "custom";
@@ -40,18 +40,20 @@ function PreBuiltCustomUISelector() {
 
   const unselectedColorString = "var(--ui-selector-inactive)";
   const unselectedBorderColorString = "var(--ui-selector-inactive-border)";
-
+  let commonStyle = {
+    width: "100%",
+    // position: "sticky",
+    // top: "var(--ifm-navbar-height)",
+    marginBottom: 40,
+    backgroundColor: "var(--ifm-background-color)",
+    // zIndex: 10,
+  }
   return (
     <div
       className='ui-selector-mobile'
-      style={{
+      style={showUISwitcher ? commonStyle : {
         display: "none",
-        width: "100%",
-        // position: "sticky",
-        // top: "var(--ifm-navbar-height)",
-        marginBottom: 40,
-        backgroundColor: "var(--ifm-background-color)",
-        // zIndex: 10,
+        ...commonStyle
       }}>
       <div
         style={{
@@ -212,7 +214,7 @@ function DocItem(props) {
                 </> : null}
 
               <div className="markdown">
-                <PreBuiltCustomUISelector />
+                <PreBuiltCustomUISelector showUISwitcher={props.content.frontMatter.show_ui_switcher === true} />
 
                 {/*
                  Title can be declared inside md content or declared through frontmatter and added manually
@@ -248,7 +250,7 @@ function DocItem(props) {
         </div>
         {!hideTableOfContents && DocContent.toc && (
           <div className="col col--3">
-            <TOC toc={DocContent.toc} />
+            <TOC toc={DocContent.toc} showUISwitcher={props.content.frontMatter.show_ui_switcher === true} />
           </div>
         )}
       </div>
