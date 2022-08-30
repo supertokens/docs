@@ -58,9 +58,8 @@ function TOC({ toc, showUISwitcher }) {
     setSelectedUIMode(getUIModeFromStorage());
   }
 
-  window.addEventListener("uiModeChanged", onUIModeChanged)
-
   useEffect(() => {
+    window.addEventListener("uiModeChanged", onUIModeChanged)
     return () => {
       window.removeEventListener("uiModeChanged", onUIModeChanged);
     }
