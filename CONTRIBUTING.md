@@ -145,15 +145,21 @@ You can then continue to use `PreBuiltOrCustomUISwitcher` component:
 import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
 
 <PreBuiltOrCustomUISwitcher>
-   <PreBuiltUIContent>
-      Content for Pre built UI
-   </PreBuiltUIContent>
-      
-      Some content shown in both UIs
 
-   <CustomUIContent>
-      Content for Custom UI
-   </CustomUIContent>
+<PreBuiltUIContent>
+
+Content for Pre built UI
+
+</PreBuiltUIContent>
+      
+Some content shown in both UIs
+
+<CustomUIContent>
+
+Content for Custom UI
+
+</CustomUIContent>
+
 </PreBuiltOrCustomUISwitcher>
 ```
 

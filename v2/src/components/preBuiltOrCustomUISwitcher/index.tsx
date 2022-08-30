@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 
 const preBuiltValue = "prebuilt";
 const customUIValue = "custom";
@@ -7,7 +7,7 @@ const uiStorageKey = "ui";
 export function getUIModeFromStorage(): typeof preBuiltValue | typeof customUIValue {
     let uiFromStorage = window.localStorage.getItem(uiStorageKey);
 
-    if (uiFromStorage === null || (uiFromStorage !== preBuiltValue && uiFromStorage !== customUIValue )) {
+    if (uiFromStorage === null || (uiFromStorage !== preBuiltValue && uiFromStorage !== customUIValue)) {
         uiFromStorage = customUIValue;
         window.localStorage.setItem(uiStorageKey, uiFromStorage);
     }
@@ -33,9 +33,8 @@ export function PreBuiltOrCustomUISwitcher(props: any) {
         setUIMode(getUIModeFromStorage());
     }
 
-    window.addEventListener("uiModeChanged", onUIModeChanged);
-
     useEffect(() => {
+        window.addEventListener("uiModeChanged", onUIModeChanged);
         return () => {
             window.removeEventListener("uiModeChanged", onUIModeChanged);
         }
@@ -71,7 +70,7 @@ function PreBuiltCustomUITabChild(props: {
     selectedValue: string,
     children: any,
 }) {
-    const {value, selectedValue, children} = props;
+    const { value, selectedValue, children } = props;
 
     if (value !== selectedValue) {
         return null;

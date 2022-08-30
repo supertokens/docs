@@ -122,7 +122,7 @@ function TOC({ toc, showUISwitcher }) {
       <div
         style={{
           width: "100%",
-          backgroundColor: "var(--ui-selector-bacgkground)",
+          backgroundColor: "var(--ui-selector-background)",
           padding: 18,
           paddingLeft: 24,
           marginBottom: 18,
@@ -150,7 +150,7 @@ function TOC({ toc, showUISwitcher }) {
             fontWeight: "500",
             fontSize: 16,
           }}>
-          What type of UI do you plan to use?
+          What type of UI do you want to use?
         </span>
         <div
           onClick={() => {

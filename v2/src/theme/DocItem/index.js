@@ -65,7 +65,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "Rubik",
-          backgroundColor: "var(--ui-selector-bacgkground)",
+          backgroundColor: "var(--ui-selector-background)",
           fontFamily: "Rubik",
           overflow: "clip",
           position: "relative",
@@ -84,7 +84,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
             fontWeight: "500",
             fontSize: 16,
           }}>
-          What type of UI do you plan to use?
+          What type of UI do you want to use?
         </span>
         <div
           style={{
