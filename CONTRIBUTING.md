@@ -132,6 +132,31 @@ import {Question, Answer}from "/src/components/question"
 - It can also be used to guide for showing optional content. For example, some part of docs is only relevant if the user is using axios on their frontend. So we ask them if they are using axios, and if they say yes, only then we render the content, else we render something else.
 - Note that using this too much might affect SEO since the useful content is hidden behind a user interaction.
 
+### Using custom UI / pre built UI switcher
+There may be pages where you want to switch between explaining how it works for pre built vs custom UI. In that case, you can display a switcher which allows the user to choose between these options. To display the switcher, update the front matter section of the mdx file to have:
+```
+---
+show_ui_switcher: true
+---
+```
+
+You can then continue to use `PreBuiltOrCustomUISwitcher` component:
+```
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+
+<PreBuiltOrCustomUISwitcher>
+   <PreBuiltUIContent>
+      Content for Pre built UI
+   </PreBuiltUIContent>
+      
+      Some content shown in both UIs
+
+   <CustomUIContent>
+      Content for Custom UI
+   </CustomUIContent>
+</PreBuiltOrCustomUISwitcher>
+```
+
 ## Building for deployment
 - This only works if have access to the `supertokens-backend-website` and `main-website` repo.
 - Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
