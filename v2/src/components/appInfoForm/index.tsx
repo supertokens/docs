@@ -45,6 +45,9 @@ type ResubmitParams = {
 const CONTAINER_ATTRIBUTE_DISPLAY = 'display-form';
 const CONTAINER_ATTRIBUTE_FIRST_FORM = 'display-form';
 const CONTAINER_CLASSNAME = "app-info-form-outer";
+/**
+ * Check if the mutations receive the matched attribute name & value
+ */
 const isReceivingAttr = (mutations: MutationRecord[], attributeName: string, attributeValue?: string) => {
     return mutations.some(mutation => {
         const mutationAttributeName = mutation.attributeName;
@@ -193,9 +196,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     readonly resubmitFirstAppInfoForm = (event?: ResubmitParams['event']) => {
         event?.preventDefault()
-        document.querySelectorAll(`.${CONTAINER_CLASSNAME}[${CONTAINER_ATTRIBUTE_FIRST_FORM}]`).forEach(element => {
-            element.setAttribute(CONTAINER_ATTRIBUTE_FIRST_FORM, '')
-        })
+        this.recheckCurrentFirstAppInfoForm();
         getFirstAppInfoForm()?.setAttribute(CONTAINER_ATTRIBUTE_DISPLAY, 'true')
     }
 
@@ -796,9 +797,11 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     }
 
     private onReceiveAttribute(mutations: MutationRecord[]) {
+        // listen event triggered by recheckCurrentFirstAppInfoForm()
         if (isReceivingFirstFormAttr(mutations)) {
             this.setState({ firstAppInfoForm: this.isFirstVisibleAppInfoForm() })
         }
+        // listen event triggered by resubmitFirstAppInfoForm()
         if (isReceivingDisplayAttr(mutations)) {
             this.resubmitInfoClicked({scrollToElement: true});
         }
@@ -806,5 +809,16 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     private isFirstVisibleAppInfoForm(): boolean {
         return Boolean(isElementVisible(this.containerRef?.current) && isFirstAppInfoForm(`${this.elementId}`));
+    }
+
+    /**
+     * Trigger rechecking on current first app info form
+     ** This is to solve when there is form is inside a details element, 
+     and then there is another form that share same parent with the details 
+     */
+    private recheckCurrentFirstAppInfoForm() {
+        document.querySelectorAll(`.${CONTAINER_CLASSNAME}[${CONTAINER_ATTRIBUTE_FIRST_FORM}]`).forEach(element => {
+            element.setAttribute(CONTAINER_ATTRIBUTE_FIRST_FORM, '');
+        });
     }
 }
