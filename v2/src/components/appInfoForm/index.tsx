@@ -33,17 +33,21 @@ type State = {
     netlifyApiRouteUsed: boolean,
     showWebsiteBasePath: boolean,
     showAPIBasePath: boolean
+    /** Whether current element is the first visible AppInfoForm */
     firstAppInfoForm?: boolean
     // TODO: Add more fields here
 };
 
 type ResubmitParams = {
     event?: Pick<Event, 'preventDefault'>;
+    /** Scroll page to current form when its resubmitted */
     scrollToElement?: boolean;
 };
 
+/** attribute name that is used to trigger resubmitting the form */
 const CONTAINER_ATTRIBUTE_DISPLAY = 'display-form';
-const CONTAINER_ATTRIBUTE_FIRST_FORM = 'display-form';
+/** attribute name that is used to indicate current first form */
+const CONTAINER_ATTRIBUTE_FIRST_FORM = 'first-form';
 const CONTAINER_CLASSNAME = "app-info-form-outer";
 /**
  * Check if the mutations receive the matched attribute name & value
@@ -56,13 +60,20 @@ const isReceivingAttr = (mutations: MutationRecord[], attributeName: string, att
             && (attributeValue == null || (mutation.target as HTMLElement).getAttribute(attributeName) === attributeValue);
     });
 }
+/** Check whether it contains element attributes that triggers resubmitting the form */
 const isReceivingDisplayAttr = (mutations: MutationRecord[]) => isReceivingAttr(mutations, CONTAINER_ATTRIBUTE_DISPLAY, 'true')
+/** Check whether its contains element attributes that triggers rechecking current first form */
 const isReceivingFirstFormAttr = (mutations: MutationRecord[]) => isReceivingAttr(mutations, CONTAINER_ATTRIBUTE_FIRST_FORM)
 
 const isElementVisible = (element?: Element | null): boolean => element != null && element?.clientWidth > 0 && element.clientHeight > 0;
 const getFirstAppInfoForm = () => {
     return Array.from(document.querySelectorAll(`.${CONTAINER_CLASSNAME}`)).find(isElementVisible);
 }
+/** 
+ * Check first AppInfoForm by element's id 
+ * @param id AppInfoForm.elementId 
+ * @returns 
+ */
 const isFirstAppInfoForm = (id: string) => getFirstAppInfoForm()?.id === id
 
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
