@@ -54,10 +54,6 @@ export function PreBuiltOrCustomUISwitcher(props: any) {
 }
 
 export function PreBuiltUIContent(props: any) {
-    if (!Array.isArray(props.children) && props.children.props.originalType === "h2") {
-        console.log(props.children);
-    }
-
     return <PreBuiltCustomUITabChild value={preBuiltValue} {...props} />;
 }
 
