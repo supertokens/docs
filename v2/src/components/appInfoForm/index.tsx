@@ -79,10 +79,8 @@ const isFirstAppInfoForm = (id: string) => getFirstAppInfoForm()?.id === id
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
     private readonly elementId = (new Date()).getTime()
     private readonly containerRef: React.RefObject<HTMLDivElement>
-    private readonly attributeObserver = new MutationObserver(this.onReceiveAttribute.bind(this));
-    private readonly visibilityObserver = new IntersectionObserver(() => this.setState({ 
-        firstAppInfoForm: this.isFirstVisibleAppInfoForm()
-    }))
+    private attributeObserver?: MutationObserver;
+    private visibilityObserver?: IntersectionObserver;
 
     constructor(props: PropsWithChildren<Props>) {
         super(props);
@@ -125,6 +123,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         const canContinue = this.canContinue(true)
 
         // listen to DOM changes 
+        this.attributeObserver = new MutationObserver(this.onReceiveAttribute.bind(this));
+        this.visibilityObserver = new IntersectionObserver(() => this.setState({ 
+            firstAppInfoForm: this.isFirstVisibleAppInfoForm()
+        }))
         this.attributeObserver.observe(this.containerRef.current!, { attributes: true });
         this.visibilityObserver.observe(this.containerRef.current!);
 
@@ -201,8 +203,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (typeof window !== 'undefined') {
             window.removeEventListener("appInfoFormFilled", this.anotherFormFilled);
         }
-        this.attributeObserver.disconnect()
-        this.visibilityObserver.disconnect()
+        this.attributeObserver?.disconnect()
+        this.visibilityObserver?.disconnect()
     }
 
     readonly resubmitFirstAppInfoForm = (event?: ResubmitParams['event']) => {
