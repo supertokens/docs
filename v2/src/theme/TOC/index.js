@@ -26,7 +26,7 @@ function Headings({ toc, isChild }) {
       }>
       {toc.map((heading) => {
         if (heading.visible === false) {
-          return <div key={heading.id} style={{ display: "none" }} />
+          return <div key={heading.id + "-hidden"} style={{ display: "none" }} />
         }
 
         return (
@@ -115,7 +115,6 @@ function TOC({ toc, showUISwitcher }) {
 
   const unselectedColorString = "var(--ui-selector-inactive)";
   const unselectedBorderColorString = "var(--ui-selector-inactive-border)";
-
   return (
     <div className={clsx(styles.tableOfContents, 'thin-scrollbar')}>
       <div

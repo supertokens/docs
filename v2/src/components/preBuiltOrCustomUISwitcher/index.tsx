@@ -25,7 +25,7 @@ export function PreBuiltOrCustomUISwitcher(props: any) {
 
     const children = React.Children.map(props.children, child => {
         return React.cloneElement(child, {
-            selectedValue: uiMode,
+            selectedvalue: uiMode,
         });
     });
 
@@ -63,12 +63,12 @@ export function CustomUIContent(props: any) {
 
 function PreBuiltCustomUITabChild(props: {
     value: typeof preBuiltValue | typeof customUIValue,
-    selectedValue: string,
+    selectedvalue: string,
     children: any,
 }) {
-    const { value, selectedValue, children } = props;
+    const { value, selectedvalue, children } = props;
 
-    if (value !== selectedValue) {
+    if (value !== selectedvalue) {
         return null;
     }
 
