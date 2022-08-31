@@ -404,21 +404,13 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     color: "#ffffff",
                 }}
                 className="app-info-form-container"
-            >
+            >                
                 <div
+                    className="app-info-form-container-link"
                     style={{
                         fontSize: "14px",
                         fontWeight: 600,
-                        textTransform: "uppercase"
-                    }}>
-                    Please fill the form below to see the code snippet <span
-                        style={{
-                            color: "#ff6161"
-                        }}>(* = Required)</span>
-                </div>
-                <div
-                    className="app-info-form-container-link"
-                    style={{ marginTop: "10px" }}
+                    }}
                 >
                     To learn more about what these properties mean read <a href="/docs/thirdpartyemailpassword/appinfo">here</a>.
                 </div>
@@ -801,9 +793,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     }
 
     scrollToElement() {
-        if (Boolean(this.containerRef.current)) {
+        if (Boolean(this.containerRef.current)) {            
+            const topPositionAfterNavbar = window.scrollY + (this.containerRef.current?.getBoundingClientRect().top ?? 0) - (document.querySelector('nav.navbar')?.clientHeight ?? 0);
             window.scrollTo({
-                top: window.scrollY + (this.containerRef.current?.parentElement?.getBoundingClientRect().top ?? 0),
+                top: topPositionAfterNavbar,
                 behavior: 'smooth'
             });
         }
