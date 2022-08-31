@@ -5,6 +5,9 @@ const customUIValue = "custom";
 const uiStorageKey = "ui";
 
 export function getUIModeFromStorage(): typeof preBuiltValue | typeof customUIValue {
+    if (typeof window === "undefined") {
+        return "custom";
+    }
     let uiFromStorage = window.localStorage.getItem(uiStorageKey);
 
     if (uiFromStorage === null || (uiFromStorage !== preBuiltValue && uiFromStorage !== customUIValue)) {
@@ -16,6 +19,9 @@ export function getUIModeFromStorage(): typeof preBuiltValue | typeof customUIVa
 }
 
 export function updateUIMode(value: typeof preBuiltValue | typeof customUIValue) {
+    if (typeof window === "undefined") {
+        return;
+    }
     window.localStorage.setItem(uiStorageKey, value);
     window.dispatchEvent(new Event("uiModeChanged"));
 }
