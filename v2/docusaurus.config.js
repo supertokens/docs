@@ -6,7 +6,15 @@
  * Read more here: https://github.com/remarkjs/remark/blob/main/doc/plugins.md
  */
 let remarkPlugins = [
-  require("./src/plugins/markdownVariables")
+  require("./src/plugins/markdownVariables"),
+  require("./src/plugins/tocHeaderProcessor/postHeaderFixer"),
+];
+
+/**
+ * These are remark plugins that run specifically before the default ones docusaurus adds
+ */
+let beforeDefaultRemarkPlugins = [
+  require("./src/plugins/tocHeaderProcessor"),
 ];
 
 let rehypePlugins = [
@@ -124,7 +132,8 @@ module.exports = {
           showLastUpdateTime: true,
           editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
           remarkPlugins: remarkPlugins,
-          rehypePlugins: rehypePlugins
+          rehypePlugins: rehypePlugins,
+          beforeDefaultRemarkPlugins,
         },
         theme: {
           // this is applied to all docs.. not just the community one.
@@ -159,7 +168,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -172,7 +182,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -183,7 +194,8 @@ module.exports = {
         routeBasePath: 'docs/guides',
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -196,7 +208,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -209,7 +222,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -222,7 +236,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -235,7 +250,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -248,7 +264,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -261,7 +278,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -274,7 +292,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -287,7 +306,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -300,7 +320,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -313,7 +334,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       }
     ],
     [
@@ -326,7 +348,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ],
     [
@@ -352,7 +375,8 @@ module.exports = {
         showLastUpdateTime: true,
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
       },
     ]
   ],

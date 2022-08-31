@@ -34,14 +34,14 @@ export default function FrontendSDKTabs(props: any) {
     {childContainsTabItemWithValue("angular", props.children)
       ? null
       : DefaultAngularTabItem()}
-      {childContainsTabItemWithValue("vue", props.children)
+    {childContainsTabItemWithValue("vue", props.children)
       ? null
       : DefaultVueTabItem()}
     {props.children}
   </Tabs>))
 }
 
-function applyCopyTabs(children: any): any {
+export function applyCopyTabs(children: any): any {
   return recursiveMapAllChildren(
     children,
     (child: any) => {
@@ -88,7 +88,7 @@ function DefaultAngularTabItem() {
               </h5>
             </div>
             <div className="admonition-content">
-            SuperTokens does not provide a dedicated Angular SDK. Instead we will be using the <code>supertokens-auth-react</code> SDK to render login UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
+              SuperTokens does not provide a dedicated Angular SDK. Instead we will be using the <code>supertokens-auth-react</code> SDK to render login UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
             </div>
           </div>
           <div>
@@ -123,7 +123,7 @@ function DefaultVueTabItem() {
               </h5>
             </div>
             <div className="admonition-content">
-            SuperTokens does not provide a dedicated Vue SDK. Instead we will be using the <code>supertokens-auth-react</code> SDK to render login UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
+              SuperTokens does not provide a dedicated Vue SDK. Instead we will be using the <code>supertokens-auth-react</code> SDK to render login UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
             </div>
           </div>
           <div>
