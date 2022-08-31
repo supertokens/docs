@@ -6,12 +6,14 @@ const uiStorageKey = "ui";
 
 export function getUIModeFromStorage(): typeof preBuiltValue | typeof customUIValue {
     if (typeof window === "undefined") {
-        return "custom";
+        return preBuiltValue;
     }
     let uiFromStorage = window.localStorage.getItem(uiStorageKey);
 
     if (uiFromStorage === null || (uiFromStorage !== preBuiltValue && uiFromStorage !== customUIValue)) {
-        uiFromStorage = customUIValue;
+        uiFromStorage = preBuiltValue;
+        // we do not want to call updateUIMode cause this will be called on page refresh
+        // for each tab anyway.
         window.localStorage.setItem(uiStorageKey, uiFromStorage);
     }
 
