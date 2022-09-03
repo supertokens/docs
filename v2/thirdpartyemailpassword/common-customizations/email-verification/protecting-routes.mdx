@@ -54,54 +54,23 @@ SuperTokens.init({
 
 ```go
 import (
-	"fmt"
-
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
-	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
-	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
-TODO
 func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			^{codeImportRecipeName}.Init(^{goModelNameForInit}.TypeInput{
-                ^{goRecipeInitDefault} // typecheck-only, removed from output
-				// highlight-start
-				Override: &^{goModelName}.OverrideStruct{
-					EmailVerificationFeature: &evmodels.OverrideStruct{
-						APIs: func(originalImplementation evmodels.APIInterface) evmodels.APIInterface {
-							// First we create a copy of the original implementation
-							originalVerifyEmailPOST := *originalImplementation.VerifyEmailPOST
-
-							// we override the API for verifying an email
-							(*originalImplementation.VerifyEmailPOST) = func(token string, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
-
-								// First we call the original implementation
-								resp, err := originalVerifyEmailPOST(token, options, userContext)
-
-								if err != nil {
-									return evmodels.VerifyEmailPOSTResponse{}, err
-								}
-
-								if resp.OK != nil {
-									// contains the user's ID and email
-									user := resp.OK.User
-									fmt.Println(user)
-
-									// TODO: post email verification logic
-								}
-
-								return resp, nil
-							}
-
-							return originalImplementation
-						},
-					},
-				},
-				// highlight-end
+			// highlight-start
+			emailverification.Init(evmodels.TypeInput{
+                // This means that VerifySession will now only allow calls if the user has verified their email
+				Mode: evmodels.ModeRequired,
 			}),
+			// highlight-end
+			session.Init(&sessmodels.TypeInput{}),
 		},
 	})
 }
@@ -350,28 +319,176 @@ export class ExampleController {
 <TabItem value="http">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			// highlight-start
+			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+				filtered := []claims.SessionClaimValidator{}
+				for _, v := range globalClaimValidators {
+					// we keep all claim validators except for
+					// the email verification claim validator.
+					if v.ID != evclaims.EmailVerificationClaim.Key {
+						filtered = append(filtered, v)
+					}
+				}
+				return filtered
+			},
+			// highlight-end
+		}, exampleAPI).ServeHTTP(rw, r)
+	})
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all validators have passed..
+}
 ```
 
 </TabItem>
 <TabItem value="gin">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := gin.New()
+
+	// Wrap the API handler in session.VerifySession
+	router.POST("/likecomment", verifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+			filtered := []claims.SessionClaimValidator{}
+			for _, v := range globalClaimValidators {
+				// we keep all claim validators except for
+				// the email verification claim validator.
+				if v.ID != evclaims.EmailVerificationClaim.Key {
+					filtered = append(filtered, v)
+				}
+			}
+			return filtered
+		},
+		// highlight-end
+	}), exampleAPI)
+}
+
+// This is a function that wraps the supertokens verification function
+// to work the gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func exampleAPI(c *gin.Context) {
+	// TODO: session is verified and all claim validators pass.
+}
 ```
 
 </TabItem>
 <TabItem value="chi">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	r.Post("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+			filtered := []claims.SessionClaimValidator{}
+			for _, v := range globalClaimValidators {
+				// we keep all claim validators except for
+				// the email verification claim validator.
+				if v.ID != evclaims.EmailVerificationClaim.Key {
+					filtered = append(filtered, v)
+				}
+			}
+			return filtered
+		},
+		// highlight-end
+	}, exampleAPI))
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
+
 ```
 
 </TabItem>
 <TabItem value="mux">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	router.HandleFunc("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+			filtered := []claims.SessionClaimValidator{}
+			for _, v := range globalClaimValidators {
+				// we keep all claim validators except for
+				// the email verification claim validator.
+				if v.ID != evclaims.EmailVerificationClaim.Key {
+					filtered = append(filtered, v)
+				}
+			}
+			return filtered
+		},
+		// highlight-end
+	}, exampleAPI)).Methods(http.MethodPost)
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
 ```
 
 </TabItem>
@@ -600,28 +717,147 @@ export class ExampleController {
 <TabItem value="http">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			// highlight-start
+			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+				globalClaimValidators = append(globalClaimValidators, evclaims.EmailVerificationClaimValidators.IsVerified(nil, nil))
+				return globalClaimValidators
+			},
+			// highlight-end
+		}, exampleAPI).ServeHTTP(rw, r)
+	})
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all validators have passed..
+}
 ```
 
 </TabItem>
 <TabItem value="gin">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := gin.New()
+
+	// Wrap the API handler in session.VerifySession
+	router.POST("/likecomment", verifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+			globalClaimValidators = append(globalClaimValidators, evclaims.EmailVerificationClaimValidators.IsVerified(nil, nil))
+			return globalClaimValidators
+		},
+		// highlight-end
+	}), exampleAPI)
+}
+
+// This is a function that wraps the supertokens verification function
+// to work the gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func exampleAPI(c *gin.Context) {
+	// TODO: session is verified and all claim validators pass.
+}
 ```
 
 </TabItem>
 <TabItem value="chi">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	r.Post("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+			globalClaimValidators = append(globalClaimValidators, evclaims.EmailVerificationClaimValidators.IsVerified(nil, nil))
+			return globalClaimValidators
+		},
+		// highlight-end
+	}, exampleAPI))
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
 ```
 
 </TabItem>
 <TabItem value="mux">
 
 ```go
-TODO
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	router.HandleFunc("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+			globalClaimValidators = append(globalClaimValidators, evclaims.EmailVerificationClaimValidators.IsVerified(nil, nil))
+			return globalClaimValidators
+		},
+		// highlight-end
+	}, exampleAPI)).Methods(http.MethodPost)
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
 ```
 
 </TabItem>
