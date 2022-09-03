@@ -9,8 +9,6 @@ import TabItem from '@theme/TabItem';
 
 # How to use
 
-## Method 1: Pre / Post API logic change:
-
 If you would like to change something pre or post our API logic, then use this method.
 
 <BackendSDKTabs>
@@ -91,11 +89,11 @@ func main() {
 						originalSignOutPOST := *originalImplementation.SignOutPOST
 
 						// Then we override the default impl
-						(*originalImplementation.SignOutPOST) = func(options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
+						(*originalImplementation.SignOutPOST) = func(sessionContainer *sessmodels.SessionContainer, options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
 							// TODO: some custom logic
 
 							// or call the default behaviour as show below
-							return originalSignOutPOST(options, userContext)
+							return originalSignOutPOST(sessionContainer, options, userContext)
 						}
 
 						return originalImplementation
@@ -158,202 +156,3 @@ init(
 
 </TabItem>
 </BackendSDKTabs>
-
-## Method 2: Change API logic by copy / paste:
-
-If you need to change our implementation of the API logic you should use this method.
-
-In this example we will be overriding the sign out API.
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
-
-### Step 1: Copy the API code from the SDK.
-
-You first need to find the implementation for the API you would like to change in the backend SDK.
-- All the APIs you can override can be found [here](https://supertokens.com/docs/nodejs/modules/recipe_session.html#APIInterface), copy the name of the function you would like to override.
-- You can find the API code for this recipe [here](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/api/implementation.ts).
-- In this example we want to override the `signOutPOST` API, so we can search for a function with that name in the page mentioned above and copy the code.
-
-### Step 2: Add the API code to the `override` config.
-
-Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `signOutPOST` code we copied earlier and modify it.
-
-```tsx
-import SuperTokens from "supertokens-node";
-import Session from "supertokens-node/recipe/session";
-
-SuperTokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    supertokens: {
-        connectionURI: "...",
-    },
-    recipeList: [
-        Session.init({
-            // highlight-start
-            override: {
-                apis: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-
-                        signOutPOST: async function ({ options, userContext }) {
-
-                            let session;
-                            try {
-                                session = await options.recipeImplementation.getSession({ req: options.req, res: options.res, userContext });
-                            } catch (err) {
-                                if (Session.Error.isErrorFromSuperTokens(err) && err.type === Session.Error.UNAUTHORISED) {
-                                    // The session is expired / does not exist anyway. So we return OK
-                                    return {
-                                        status: "OK",
-                                    };
-                                }
-                                throw err;
-                            }
-
-                            if (session === undefined) {
-                                throw new Error("Session is undefined. Should not come here.");
-                            }
-
-                            await session.revokeSession();
-
-                            return {
-                                status: "OK",
-                            };
-                        },
-                    }
-                }
-            }
-            // highlight-end
-        })
-    ]
-});
-```
-</TabItem>
-<TabItem value="go">
-
-### Step 1: Copy the API code from the SDK.
-
-You first need to find the implementation for the API you would like to change in the backend SDK.
-- All the APIs you can override can be found [here](https://pkg.go.dev/github.com/supertokens/supertokens-golang/recipe/session/sessmodels#APIInterface), copy the name of the function you would like to override.
-- You can find the API code for this recipe [here](https://github.com/supertokens/supertokens-golang/blob/master/recipe/session/api/implementation.go).
-- In this example we want to override the `SignOutPOST` API, so we can search for a function with that name in the page mentioned above and copy the code.
-
-### Step 2: Add the API code to the `Override` config.
-
-Now in the `Override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `SignOutPOST` code we copied earlier and modify it.
-
-```go
-import (
-	defaultErrors "errors"
-
-	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/session/errors"
-	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-	"github.com/supertokens/supertokens-golang/supertokens"
-)
-
-func main() {
-	supertokens.Init(supertokens.TypeInput{
-		RecipeList: []supertokens.Recipe{
-			session.Init(&sessmodels.TypeInput{
-				//highlight-start
-				Override: &sessmodels.OverrideStruct{
-					APIs: func(originalImplementation sessmodels.APIInterface) sessmodels.APIInterface {
-						// We override the default impl
-						(*originalImplementation.SignOutPOST) = func(options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
-							session, err := (*options.RecipeImplementation.GetSession)(options.Req, options.Res, nil, userContext)
-							if err != nil {
-								if defaultErrors.As(err, &errors.UnauthorizedError{}) {
-									return sessmodels.SignOutPOSTResponse{
-										OK: &struct{}{},
-									}, nil
-								}
-								return sessmodels.SignOutPOSTResponse{}, err
-							}
-							if session == nil {
-								return sessmodels.SignOutPOSTResponse{}, defaultErrors.New("session is nil. Should not come here.")
-							}
-
-							err = session.RevokeSession()
-							if err != nil {
-								return sessmodels.SignOutPOSTResponse{}, err
-							}
-
-							return sessmodels.SignOutPOSTResponse{
-								OK: &struct{}{},
-							}, nil
-						}
-
-						return originalImplementation
-					},
-				},
-				//highlight-end
-			}),
-		},
-	})
-}
-```
-</TabItem>
-<TabItem value="python">
-
-
-### Step 1: Copy the API code from the SDK.
-
-You first need to find the implementation for the API you would like to change in the backend SDK.
-- All the APIs you can override can be found [here](https://supertokens.com/docs/nodejs/modules/recipe_session.html#APIInterface), copy the name of the function you would like to override.
-- You can find the API code for this recipe [here](https://github.com/supertokens/supertokens-python/blob/0.1/supertokens_python/recipe/session/api/implementation.py).
-- In this example we want to override the `sign_out_post` API, so we can search for a function with that name in the page mentioned above and copy the code.
-
-### Step 2: Add the API code to the `override` config.
-
-Now in the `override` config instead of calling the original implementation like we did in [Method 1](#method-1-pre--post-api-logic-change) we can paste the `sign_out_post` code we copied earlier and modify it.
-
-```python
-from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import session
-from supertokens_python.recipe.session.interfaces import APIInterface, APIOptions, SignOutOkayResponse
-from supertokens_python.recipe.session import exceptions
-from typing import Dict, Any
-
-# highlight-start
-def override_session_apis(original_implementation: APIInterface):
-    
-    async def signout_post(api_options: APIOptions, user_context: Dict[str, Any]):
-        try:
-            session = await api_options.recipe_implementation.get_session(api_options.request, None, True, user_context)
-        except exceptions.UnauthorisedError:
-            return SignOutOkayResponse()
-        
-        if session is None:
-            raise Exception('Session is undefined. Should not come here.')
-        await session.revoke_session()
-        return SignOutOkayResponse()
-    
-    original_implementation.signout_post = signout_post
-    return original_implementation
-# highlight-end
-
-init(
-    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    framework='...', # type: ignore
-    recipe_list=[
-        session.init(
-            # highlight-start
-            override=session.InputOverrideConfig(
-                apis=override_session_apis
-            )
-            # highlight-end
-        )
-    ]
-)
-```
-
-</TabItem>
-</BackendSDKTabs>
-
-You can now freely modify any step in the API.
