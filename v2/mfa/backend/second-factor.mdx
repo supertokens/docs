@@ -703,13 +703,19 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
-TODO
 func main() {
+	// highlight-start
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
+
 	passwordless.Init(plessmodels.TypeInput{
 		FlowType: "USER_INPUT_CODE",
 		ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
@@ -720,9 +726,15 @@ func main() {
 				// this API is called when the user enters the OTP
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
 				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
-					// we should already have a session here since this is called
+					// - We should already have a session here since this is called
 					// after first factor login
-					session, err := session.GetSession(options.Req, options.Res, nil)
+					// - We set the claims to check to be [] here, since this needs to be callable
+					// without the second factor completed
+					session, err := session.GetSession(options.Req, options.Res, &sessmodels.VerifySessionOptions{
+						OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+							return []claims.SessionClaimValidator{}
+						},
+					})
 					if err != nil {
 						return plessmodels.ConsumeCodePOSTResponse{}, err
 					}
@@ -743,9 +755,7 @@ func main() {
 						// OTP verification was successful. We can now mark the
 						// session's payload as is2faComplete: true so that
 						// the user has access to API routes and the frontend UI
-						resp.OK.Session.MergeIntoAccessTokenPayloadWithContext(map[]interface{}{
-                            "is2faComplete": true,
-                        }, userContext)
+						resp.OK.Session.SetClaimValue(SecondFactorClaim, true)
 						// highlight-end
 
 						// We can now associate
@@ -781,7 +791,17 @@ func main() {
 						return session, nil
 					}
 					// highlight-end
-					accessTokenPayload["is2faComplete"] = false
+
+					if accessTokenPayload == nil {
+						accessTokenPayload = map[string]interface{}{}
+					}
+					accessTokenPayloadUpdate, err := SecondFactorClaim.Build(userID, userContext)
+					if err != nil {
+						return sessmodels.SessionContainer{}, err
+					}
+					for k, v := range accessTokenPayloadUpdate {
+						accessTokenPayload[k] = v
+					}
 					return oCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
 				}
 				*originalImplementation.CreateNewSession = nCreateNewSession
@@ -977,13 +997,14 @@ Passwordless.init({
 <TabItem value="go">
 
 ```go
-TODO
 import (
 	"errors"
 
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
@@ -998,16 +1019,21 @@ func main() {
 			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 				/*This API is called to send an OTP*/
 				oCreateCodePOST := *originalImplementation.CreateCodePOST
-                // highlight-start
+				// highlight-start
 				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
 					/**
 					 * We want to make sure that the OTP being generated is for the
 					 * same number that belongs to this user.
 					 */
 
-					// A session should already exist since this should be called after the first
-					// factor is completed.
-					session, err := session.GetSession(options.Req, options.Res, nil)
+					// A session should already exist since this should be called after the first factor is completed.
+					// We set the claims to check to be [] here, since this needs to be callable
+					// without the second factor completed
+					session, err := session.GetSession(options.Req, options.Res, &sessmodels.VerifySessionOptions{
+						OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+							return []claims.SessionClaimValidator{}
+						},
+					})
 					if err != nil {
 						return plessmodels.CreateCodePOSTResponse{}, err
 					}
@@ -1039,7 +1065,7 @@ func main() {
 
 					return oCreateCodePOST(email, phoneNumber, options, userContext)
 				}
-                // highlight-end
+				// highlight-end
 				*originalImplementation.CreateCodePOST = nCreateCodePOST
 
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
@@ -1217,12 +1243,17 @@ import (
 
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
-TODO
+
 func main() {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+
 	session.Init(&sessmodels.TypeInput{
 		Override: &sessmodels.OverrideStruct{
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
@@ -1254,7 +1285,17 @@ func main() {
 					}
 					// highlight-end
 
-					accessTokenPayload["is2faComplete"] = false
+					if accessTokenPayload == nil {
+						accessTokenPayload = map[string]interface{}{}
+					}
+					accessTokenPayloadUpdate, err := SecondFactorClaim.Build(userID, userContext)
+					if err != nil {
+						return sessmodels.SessionContainer{}, err
+					}
+					for k, v := range accessTokenPayloadUpdate {
+						accessTokenPayload[k] = v
+					}
+
 					// highlight-start
 					if userPhoneNumber != nil {
 						accessTokenPayload["phoneNumber"] = *userPhoneNumber
@@ -1401,6 +1442,8 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -1420,10 +1463,14 @@ func main() {
 					 * same number that belongs to this user.
 					 */
 
-					// A session should already exist since this should be called after the first
-					// factor is completed.
-                    TODO
-					session, err := session.GetSession(options.Req, options.Res, nil)
+					// A session should already exist since this should be called after the first factor is completed.
+					// We set the claims to check to be [] here, since this needs to be callable
+					// without the second factor completed
+					session, err := session.GetSession(options.Req, options.Res, &sessmodels.VerifySessionOptions{
+						OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer *sessmodels.SessionContainer, userContext supertokens.UserContext) []claims.SessionClaimValidator {
+							return []claims.SessionClaimValidator{}
+						},
+					})
 					if err != nil {
 						return plessmodels.CreateCodePOSTResponse{}, err
 					}
