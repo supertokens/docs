@@ -107,11 +107,13 @@ import (
 	"fmt"
 
 	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
+    "github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
 	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
 	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
-TODO
+
 func main() {
 
 	supertokens.Init(supertokens.TypeInput{
@@ -125,49 +127,67 @@ func main() {
 						// highlight-start
 						Override: func(originalImplementation emaildelivery.SMTPInterface) emaildelivery.SMTPInterface {
 
-							originalGetContent := *originalImplementation.GetContent
-
 							(*originalImplementation.GetContent) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) (emaildelivery.EmailContent, error) {
-								if input.PasswordlessLogin != nil {
-									// amount of time the code is alive for (in MS)
-									codeLifetime := input.PasswordlessLogin.CodeLifetime
-									email := input.PasswordlessLogin.Email
+                                // amount of time the code is alive for (in MS)
+                                codeLifetime := input.PasswordlessLogin.CodeLifetime
+                                email := input.PasswordlessLogin.Email
 
-									// magic link
-									urlWithLinkCode := input.PasswordlessLogin.UrlWithLinkCode
+                                // magic link
+                                urlWithLinkCode := input.PasswordlessLogin.UrlWithLinkCode
 
-									// OTP
-									userInputCode := input.PasswordlessLogin.UserInputCode
-									fmt.Println(codeLifetime)
-									fmt.Println(email)
-									fmt.Println(urlWithLinkCode)
-									fmt.Println(userInputCode)
+                                // OTP
+                                userInputCode := input.PasswordlessLogin.UserInputCode
+                                fmt.Println(codeLifetime)
+                                fmt.Println(email)
+                                fmt.Println(urlWithLinkCode)
+                                fmt.Println(userInputCode)
 
-									// send some custom email content
-									return emaildelivery.EmailContent{
-										Body:    "EMAIL BODY",
-										IsHtml:  true,
-										Subject: "Some subject",
-										ToEmail: email,
-									}, nil
-								} else {
-									// email verification email
-									// you can even call the original implementation and modify that
-
-									originalContent, err := originalGetContent(input, userContext)
-									if err != nil {
-										return emaildelivery.EmailContent{}, err
-									}
-									originalContent.Subject = "My custom subject"
-									return originalContent, nil
-								}
-
+                                // send some custom email content
+                                return emaildelivery.EmailContent{
+                                    Body:    "EMAIL BODY",
+                                    IsHtml:  true,
+                                    Subject: "Some subject",
+                                    ToEmail: email,
+                                }, nil
 							}
 
 							return originalImplementation
 						},
 						// highlight-end
 
+					}),
+				},
+			}),
+
+            // if email verification is enabled
+            emailverification.Init(evmodels.TypeInput{
+				EmailDelivery: &emaildelivery.TypeInput{
+					Service: emailverification.MakeSMTPService(emaildelivery.SMTPServiceConfig{
+						Settings: emaildelivery.SMTPSettings{ /* ... */ },
+
+						// highlight-start
+						Override: func(originalImplementation emaildelivery.SMTPInterface) emaildelivery.SMTPInterface {
+							originalGetContent := *originalImplementation.GetContent
+
+							(*originalImplementation.GetContent) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) (emaildelivery.EmailContent, error) {
+								// email verification email content
+								emailVerificationLink := input.EmailVerification.EmailVerifyLink
+								user := input.EmailVerification.User
+								fmt.Println(emailVerificationLink)
+								fmt.Println(user)
+
+								// you can even call the original implementation and modify that
+								originalContent, err := originalGetContent(input, userContext)
+								if err != nil {
+									return emaildelivery.EmailContent{}, err
+								}
+								originalContent.Subject = "My custom subject"
+								return originalContent, nil
+							}
+
+							return originalImplementation
+						},
+						// highlight-end
 					}),
 				},
 			}),
