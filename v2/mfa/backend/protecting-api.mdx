@@ -47,35 +47,32 @@ Session.init({
 
 ```go
 import (
-	"net/http"
-
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
-TODO
 func main() {
+
+	// highlight-start
+	_, SecondFactorClaimValidator := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
+
 	session.Init(&sessmodels.TypeInput{
 		Override: &sessmodels.OverrideStruct{
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
-				oCreateNewSession := *originalImplementation.CreateNewSession
-				/* This function is called after signing in or signing up via the first factor */
-				nCreateNewSession := func(res http.ResponseWriter, userID string, accessTokenPayload map[string]interface{}, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
-					// highlight-start
-					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
-						/**
-						 * This will be true for the second factor login.
-						 * So instead of creating a new session, we return the already existing one.
-						 */
-						return session, nil
-					}
-					// highlight-end
-					accessTokenPayload["is2faComplete"] = false
-					return oCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+                
+				// highlight-start
+				(*originalImplementation.GetGlobalClaimValidators) = func(userId string, claimValidatorsAddedByOtherRecipes []claims.SessionClaimValidator, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+					claimValidatorsAddedByOtherRecipes = append(claimValidatorsAddedByOtherRecipes,
+						SecondFactorClaimValidator.HasValue(true, nil, nil))
+					return claimValidatorsAddedByOtherRecipes, nil
 				}
-				*originalImplementation.CreateNewSession = nCreateNewSession
+				// highlight-end
+
 				return originalImplementation
 			},
 		},
