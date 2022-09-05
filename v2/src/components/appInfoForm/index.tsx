@@ -5,6 +5,23 @@ import NormalisedURLDomain from "./normalisedURLDomain";
 import NormalisedURLPath from "./normalisedURLPath";
 import { recursiveMap } from "../utils";
 
+/**
+ * The AppInfoForm component is now designed to allow only open the first visible form on the page. 
+ * When a user tried to resubmit a second, third or fourth form, then it will not open the selected AppInfoForm. Instead, it will open the first AppInfoFormand scroll to it.
+ * We use DOM attribute CONTAINER_ATTRIBUTE_DISPLAY as the way to communicate to the first AppInfoForm. This is done by calling AppInfoForm.resubmitFirstAppInfoForm().
+ * When a form is receiving "CONTAINER_ATTRIBUTE_DISPLAY=true", then it will open the form.
+ * The form is listening to this attribute's changes by using `AppInfoForm.attributeObserver:MutationObserver` that is utilizing isReceivingFirstFormAttr() and AppInfoForm.onReceiveAttribute().
+ * 
+ * Beside the above event, we also have a way to recognize which is the first visible form. The form considered to be the first visible form when its height and width are not zero(function isElementVisible()). 
+ * Then, we use isFirstAppInfoForm() and getFirstAppInfoForm() to indicate whether a form is a first visible one. The first form will also have attribut CONTAINER_ATTRIBUTE_FIRST_FORM attached in the DOM.
+ * 
+ * There is also case when user switches between tabs, which will affect the visibility of the form.
+ * We expect this will triggers re-updating which one is the first visible form. Therefore, `AppInfoForm.visibilityObserver: IntersectionObserver` is created to listen to any visibility changes on the form.
+ * 
+ * There is also an edge case where a form is located inside a `details` element. When `details` opens or closes, it will not notify the IntersectionObserver. 
+ * So, we add AppInfoForm.recheckCurrentFirstAppInfoForm() to trigger the visibilty status update by sending an event to element that has CONTAINER_ATTRIBUTE_FIRST_FORM attribute.
+ */
+
 type Props = {
     askForAppName: boolean,
     askForAPIDomain: boolean,
@@ -614,9 +631,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 }
 
                 const newLocalStorageFormData = {
-                    appName: this.props.askForAppName ? this.state.appName : currentLocalStorageParsedFormData.appName,
-                    apiDomain: this.props.askForAPIDomain ? this.state.apiDomain : currentLocalStorageParsedFormData.apiDomain,
-                    websiteDomain: this.props.askForWebsiteDomain ? this.state.websiteDomain : currentLocalStorageParsedFormData.websiteDomain,
+                    appName: this.state.appName || currentLocalStorageParsedFormData.appName,
+                    apiDomain: this.state.apiDomain || currentLocalStorageParsedFormData.apiDomain,
+                    websiteDomain: this.state.websiteDomain || currentLocalStorageParsedFormData.websiteDomain,
                     websiteBasePath: this.state.showWebsiteBasePath ? this.state.websiteBasePath : currentLocalStorageParsedFormData.websiteBasePath,
                     apiBasePath: this.state.showAPIBasePath ? this.state.apiBasePath : currentLocalStorageParsedFormData.apiBasePath,
                     nextJSApiRouteUsed: this.state.nextJSApiRouteUsed,
