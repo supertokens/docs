@@ -168,9 +168,10 @@ async function getDataToCopySectionFromFile(lines, copyPathsAndIDs) {
     for (let k = 0; k < copyPathsAndIDs.length; k++) {
         await new Promise((res, rej) => {
             let ogPathLine = copyPathsAndIDs[k].path
+            let ogId = copyPathsAndIDs[k].id
             let pathLine = ogPathLine
             pathLine = path.resolve(__dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", ""));
-            fs.readFile(pathLine, 'utf8', function (err, toCopyData) {
+            fs.readFile(pathLine, 'utf8', async function (err, toCopyData) {
                 if (err) {
                     return rej(err);
                 }
@@ -179,45 +180,45 @@ async function getDataToCopySectionFromFile(lines, copyPathsAndIDs) {
 
                 finalDataIndex = 0;
 
-                for (let copyIdIndex = 0; copyIdIndex < copyPathsAndIDs.length; copyIdIndex++) {
-                    finalDataIndex = 0;
-                    for (let i = 0; i < lines.length; i++, finalDataIndex++) {
-                        if (lines[i].trim() === "<!-- COPY SECTION -->") {
-                            finalData[finalDataIndex] = lines[i]
-                            if (lines[i + 1].trim() === ogPathLine && lines[i + 2].trim() === copyPathsAndIDs[copyIdIndex].id) {
-                                finalData[finalDataIndex + 1] = lines[i + 1];
-                                finalData[finalDataIndex + 2] = lines[i + 2];
-                                finalDataIndex += 3;
-                                break;
-                            } else {
-                                // do nothing..
-                            }
-                        } else {
-                            finalData[finalDataIndex] = lines[i];
-                        }
-                    }
-
-                    let copyLines = toCopyData.split("\n");
-                    let startCopying = false;
-                    for (let i = 0; i < copyLines.length; i++) {
-                        if (startCopying && copyLines[i].trim() === "<!-- !COPY SECTION -->") {
-                            finalData[finalDataIndex] = copyLines[i];
+                for (; finalDataIndex < finalData.length; finalDataIndex++) {
+                    if (finalData[finalDataIndex].trim() === "<!-- COPY SECTION -->") {
+                        if (finalData[finalDataIndex + 1].trim() === ogPathLine && finalData[finalDataIndex + 2].trim() === ogId) {
+                            finalDataIndex += 3;
                             break;
+                        } else {
+                            // do nothing..
                         }
-                        if (copyLines[i].trim() === "<!-- COPY SECTION -->" &&
-                            copyLines[i + 1].trim() === ogPathLine &&
-                            copyLines[i + 2].trim() === copyPathsAndIDs[copyIdIndex].id) {
-                            startCopying = true;
-                            i++;
-                            i++;
-                            continue;
-                        }
-                        if (!startCopying) {
-                            continue;
-                        }
-                        finalData[finalDataIndex] = copyLines[i];
-                        finalDataIndex++
                     }
+                }
+
+                let toRemoveIndex = finalDataIndex;
+                for (let i = finalDataIndex; i < finalData.length; i++) {
+                    if (finalData[i] === "<!-- !COPY SECTION -->") {
+                        toRemoveIndex = i;
+                        break;
+                    }
+                }
+                finalData = [...finalData.slice(0, finalDataIndex), ...finalData.slice(toRemoveIndex)]
+
+                let copyLines = toCopyData.split("\n");
+                let startCopying = false;
+                for (let i = 0; i < copyLines.length; i++) {
+                    if (startCopying && copyLines[i].trim() === "<!-- !COPY SECTION -->") {
+                        break;
+                    }
+                    if (copyLines[i].trim() === "<!-- COPY SECTION -->" &&
+                        copyLines[i + 1].trim() === ogPathLine &&
+                        copyLines[i + 2].trim() === ogId) {
+                        startCopying = true;
+                        i++;
+                        i++;
+                        continue;
+                    }
+                    if (!startCopying) {
+                        continue;
+                    }
+                    finalData = [...finalData.slice(0, finalDataIndex), copyLines[i], ...finalData.slice(finalDataIndex)]
+                    finalDataIndex++
                 }
                 res();
             });
