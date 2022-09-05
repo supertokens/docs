@@ -142,9 +142,9 @@ async function doCopyDocs(mdFile) {
                 let destinationData = await new Promise((res, rej) => {
                     fs.readFile(mdFile, 'utf8', function (err, toCopyData) {
                         if (err) {
-                            return rej(err);
+                            return rej(err)
                         }
-                        res(toCopyData);
+                        res(toCopyData)
                     })
                 });
 
@@ -167,8 +167,8 @@ async function getDataToCopySectionFromFile(lines, copyPathsAndIDs) {
     let finalData = [...lines];
     for (let k = 0; k < copyPathsAndIDs.length; k++) {
         await new Promise((res, rej) => {
-            const pathLineOg = copyPathsAndIDs[k].path
-            let pathLine = pathLineOg
+            let ogPathLine = copyPathsAndIDs[k].path
+            let pathLine = ogPathLine
             pathLine = path.resolve(__dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", ""));
             fs.readFile(pathLine, 'utf8', function (err, toCopyData) {
                 if (err) {
@@ -184,7 +184,7 @@ async function getDataToCopySectionFromFile(lines, copyPathsAndIDs) {
                     for (let i = 0; i < lines.length; i++, finalDataIndex++) {
                         if (lines[i].trim() === "<!-- COPY SECTION -->") {
                             finalData[finalDataIndex] = lines[i]
-                            if (lines[i + 1].trim() == pathLineOg && lines[i + 2].trim() === copyPathsAndIDs[copyIdIndex].id) {
+                            if (lines[i + 1].trim() === ogPathLine && lines[i + 2].trim() === copyPathsAndIDs[copyIdIndex].id) {
                                 finalData[finalDataIndex + 1] = lines[i + 1];
                                 finalData[finalDataIndex + 2] = lines[i + 2];
                                 finalDataIndex += 3;
@@ -205,7 +205,7 @@ async function getDataToCopySectionFromFile(lines, copyPathsAndIDs) {
                             break;
                         }
                         if (copyLines[i].trim() === "<!-- COPY SECTION -->" &&
-                            copyLines[i + 1].trim() == pathLineOg &&
+                            copyLines[i + 1].trim() === ogPathLine &&
                             copyLines[i + 2].trim() === copyPathsAndIDs[copyIdIndex].id) {
                             startCopying = true;
                             i++;
