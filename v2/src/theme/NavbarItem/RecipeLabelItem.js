@@ -1,9 +1,10 @@
 import React from 'react';
-import { BrowserView, isMobile } from 'react-device-detect';
+import { isMobile } from 'react-device-detect';
+import BrowserOnly from '@docusaurus/BrowserOnly';
 import GuidesLink from "../../components/guidesLink";
 
 export default function RecipeLabelItem(props) {
-    return <BrowserView>{
+    return <BrowserOnly>{
         !isMobile && <span
         style={{
             fontSize: "16px",
@@ -11,5 +12,5 @@ export default function RecipeLabelItem(props) {
         }}>{props.label}<span style={{
             fontStyle: "normal"
         }}>{" | "}</span><GuidesLink>See All Recipes</GuidesLink></span>
-    }</BrowserView>
+    }</BrowserOnly>
 }
