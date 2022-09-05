@@ -62,6 +62,17 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 - A file that uses `<!-- COPY DOCS -->` is utilising this plugin.
 - This should be used across recipe docs, when the content of the page is exactly the same across docs.
 - An example of this can be found `v2 > community > database-setup > mysql.mdx`.
+- A file can also contain a `<!-- COPY SECTION -->` comment like this:
+```
+<!-- COPY SECTION -->
+<!-- ./emailpassword/introduction.mdx -->
+<!-- 1 -->
+
+.....
+
+<!-- END COPY SECTION -->
+```
+And the contents of `./emailpassword/introduction.mdx` with the ID `1` will get copied over into that section.
 
 ### Using Copy tabs
 - If your tabs have the same content as another tab you can use the copy tabs feature to copy the contents of one tab to another.
