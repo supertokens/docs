@@ -91,10 +91,19 @@ async function doCopyDocs(mdFile) {
             let lines = originalData.split("\n");
 
             let pathLine = undefined;
+            let copyType = undefined;
+            // TODO: there can be multiple sources for each section as well..
+            let copyIDs = [];
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
-                if (line.trim() === "<!-- COPY DOCS -->") {
+                if (line.trim() === "<!-- COPY DOCS -->" || line.trim() === "<!-- COPY SECTION -->") {
                     pathLine = lines[i + 1]
+                    if (line.trim() === "<!-- COPY SECTION -->") {
+                        copyType = "SECTION"
+                        copyIDs.push(lines[i + 2])
+                    } else {
+                        copyType = "DOCS"
+                    }
                 }
             }
 
@@ -108,20 +117,93 @@ async function doCopyDocs(mdFile) {
                 return res(false);
             }
 
-            let sourceData = await getDataToCopyFromFile(pathLine, lines);
+            if (copyType === "DOCS") {
+                let sourceData = await getDataToCopyFromFile(pathLine, lines);
 
-            let destinationData = await getDataToCopyFromFile(mdFile, lines);
+                let destinationData = await getDataToCopyFromFile(mdFile, lines);
 
-            if (sourceData === destinationData) {
-                return res(true);
+                if (sourceData === destinationData) {
+                    return res(true);
+                } else {
+                    fs.writeFile(mdFile, sourceData, 'utf8', function (err) {
+                        if (err) {
+                            return rej(err);
+                        }
+                        res(true);
+                    });
+                }
             } else {
-                fs.writeFile(mdFile, sourceData, 'utf8', function (err) {
-                    if (err) {
-                        return rej(err);
-                    }
-                    res(true);
-                });
+                let sourceData = await getDataToCopySectionFromFile(pathLine, lines, copyIDs);
+
+                let destinationData = await getDataToCopySectionFromFile(mdFile, lines, copyIDs);
+
+                if (sourceData === destinationData) {
+                    return res(false);
+                } else {
+                    fs.writeFile(mdFile, sourceData, 'utf8', function (err) {
+                        if (err) {
+                            return rej(err);
+                        }
+                        res(false);
+                    });
+                }
             }
+        });
+    });
+}
+
+async function getDataToCopySectionFromFile(pathLine, lines, copyIDs) {
+    return new Promise((res, rej) => {
+        fs.readFile(pathLine, 'utf8', function (err, toCopyData) {
+            if (err) {
+                return rej(err);
+            }
+
+            toCopyData = toCopyData.trim();
+
+            let finalData = [];
+            finalDataIndex = 0;
+
+            for (let copyIdIndex = 0; copyIdIndex < copyIDs.length; copyIdIndex++) {
+                finalDataIndex = 0;
+                for (let i = 0; i < lines.length; i++, finalDataIndex++) {
+                    if (lines[i].trim() === "<!-- COPY SECTION -->") {
+                        finalData[finalDataIndex] = lines[i]
+                        if (lines[i + 2].trim() === copyIDs[copyIdIndex]) {
+                            finalData[finalDataIndex + 1] = lines[i + 1];
+                            finalData[finalDataIndex + 2] = lines[i + 2];
+                            finalDataIndex += 3;
+                            break;
+                        } else {
+                            // do nothing..
+                        }
+                    } else {
+                        finalData[finalDataIndex] = lines[i];
+                    }
+                }
+
+                let copyLines = toCopyData.split("\n");
+                let startCopying = false;
+                for (let i = 0; i < copyLines.length; i++) {
+                    if (startCopying && copyLines[i].trim() === "<!-- !COPY SECTION -->") {
+                        finalData[finalDataIndex] = copyLines[i];
+                        break;
+                    }
+                    if (copyLines[i].trim() === "<!-- COPY SECTION -->" &&
+                        copyLines[i + 2].trim() === copyIDs[copyIdIndex]) {
+                        startCopying = true;
+                        i++;
+                        i++;
+                        continue;
+                    }
+                    if (!startCopying) {
+                        continue;
+                    }
+                    finalData[finalDataIndex] = copyLines[i];
+                    finalDataIndex++
+                }
+            }
+            res(finalData.join("\n"));
         });
     });
 }
