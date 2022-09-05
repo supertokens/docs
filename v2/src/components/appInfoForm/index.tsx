@@ -319,7 +319,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     render() {        
         const customAttributes: Record<string, string | undefined> = {}
         if (this.state.firstAppInfoForm) { customAttributes[CONTAINER_ATTRIBUTE_FIRST_FORM] = undefined }
-        return <div id={this.elementId.toString()} className={CONTAINER_CLASSNAME} ref={this.containerRef}>            
+        return <div id={this.elementId.toString()} className={CONTAINER_CLASSNAME} ref={this.containerRef}> 
             {(!this.state.formSubmitted && this.state.firstAppInfoForm) && this.renderForm()}
             {this.renderInfo()}
         </div>;        
@@ -634,8 +634,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     appName: this.state.appName || currentLocalStorageParsedFormData.appName,
                     apiDomain: this.state.apiDomain || currentLocalStorageParsedFormData.apiDomain,
                     websiteDomain: this.state.websiteDomain || currentLocalStorageParsedFormData.websiteDomain,
-                    websiteBasePath: this.state.showWebsiteBasePath ? this.state.websiteBasePath : currentLocalStorageParsedFormData.websiteBasePath,
-                    apiBasePath: this.state.showAPIBasePath ? this.state.apiBasePath : currentLocalStorageParsedFormData.apiBasePath,
+                    websiteBasePath: this.state.websiteBasePath || currentLocalStorageParsedFormData.websiteBasePath,
+                    apiBasePath: this.state.apiBasePath || currentLocalStorageParsedFormData.apiBasePath,
                     nextJSApiRouteUsed: this.state.nextJSApiRouteUsed,
                     netlifyApiRouteUsed: this.state.netlifyApiRouteUsed,
                     formSubmitted: this.state.formSubmitted
@@ -711,7 +711,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         // validate apiDomain field
-        if (this.props.askForAPIDomain && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))) {
+        if ((this.props.askForAPIDomain || apiDomain) && (!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))) {
             if (apiDomain.length > 0) {
                 const error = this.validateDomain(apiDomain, "apiDomain", "apiBasePath");
                 if (error.length > 0) {
@@ -723,7 +723,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
 
         // validate websiteDomain field
-        if (this.props.askForWebsiteDomain) {
+        if (this.props.askForWebsiteDomain || websiteDomain) {
             if (websiteDomain.length > 0) {
                 const error = this.validateDomain(websiteDomain, "websiteDomain", "websiteBasePath");
                 if (error.length > 0) {
@@ -734,7 +734,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }
 
-        if (this.state.showAPIBasePath) {
+        if (this.state.showAPIBasePath || apiBasePath) {
             const netlifyApiRouteUsed = this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed;
             const nextJSApiRouteUsed = this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed;
 
@@ -767,7 +767,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }
 
-        if (this.state.showWebsiteBasePath) {
+        if (this.state.showWebsiteBasePath || websiteBasePath) {
             if (preventErrorUpdateInState && (!localFormDataParsed || localFormDataParsed.websiteBasePath === undefined)) {
                 // we do this check in case the user has not submitted the form
                 // in which case the base path fields will have the default '/auth'
@@ -777,7 +777,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             }
         }
 
-        if (this.state.showAPIBasePath && this.state.showWebsiteBasePath && !validationErrors.apiBasePath && !validationErrors.websiteBasePath) {
+        if ((this.state.showAPIBasePath || apiBasePath) && (this.state.showWebsiteBasePath || websiteBasePath) && !validationErrors.apiBasePath && !validationErrors.websiteBasePath) {
             const normalisedApiDomain = this.getDomainOriginOrEmptyString(apiDomain);
             const normalisedWebsiteDomain = this.getDomainOriginOrEmptyString(websiteDomain);
             const normalisedApiBasePath = this.getNormalisedBasePath(apiBasePath);
@@ -804,7 +804,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 ...oldState,
                 fieldErrors: validationErrors
             }))
-        }
+        }        
 
         return Object.keys(validationErrors).length === 0;
     }
