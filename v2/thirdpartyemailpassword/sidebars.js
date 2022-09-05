@@ -550,7 +550,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "References and Compatibility",
+      label: "References",
       items: [
         "architecture",
         "appinfo",
