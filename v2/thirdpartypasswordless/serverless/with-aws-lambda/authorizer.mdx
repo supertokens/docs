@@ -7,6 +7,8 @@ hide_title: true
 <!-- COPY DOCS -->
 <!-- ./session/serverless/with-aws-lambda/authorizer.mdx -->
 
+import AppInfoForm from "/src/components/appInfoForm"
+
 # Using Lambda Authorizers
 
 You can use a lambda as an Authorizer in API Gateways. This will enable you to use SuperTokens in a lambda to authorize requests to other integrations (e.g., AppSync). An Authorizer pointed to this lambda will add `context.authorizer.principalId` that you can map to a header. For example, you can map this to an "x-user-id" header which will be set to the id of the logged-in user. If there is no valid session for the request, this header won't exist.
@@ -52,6 +54,15 @@ exports.handler = async function (event: AuthorizerEvent) {
     } catch (ex: any) {
         if (ex.type === "TRY_REFRESH_TOKEN") {
             throw new Error("Unauthorized");
+        }
+        if (ex.type === "INVALID_CLAIMS") {
+            return generateDeny("", event.methodArn, {
+                body: JSON.stringify({
+                    message: "invalid claim",
+                    claimValidationErrors: ex.payload,
+                }),
+                setCookie: event.supertokens.response.cookies.join(", "),
+            });
         }
         throw ex;
     }
@@ -104,6 +115,9 @@ const generateDeny = function (principalId: string, resource: string, context?: 
 
 
 ## 4) Configure API Gateway
+
+<AppInfoForm askForWebsiteDomain>
+
 - In your API Gateway, create the resources and methods you require, enabling CORS if necessary (see [step 4](./api-gateway-config) for details)
 - Select each Method you want to enable the Authorizer on and configure it to use the new Authorizer
     - Click on "Method Request"
@@ -124,4 +138,22 @@ const generateDeny = function (principalId: string, resource: string, context?: 
         - Open the dropdown
         - Open "Header Mappings"
         - Add "Set-Cookie" mapped to "context.authorizer.setCookie"
+- In the API Gateway left menu, select "Gateway Responses"
+    - Select "Access Denied"
+        - Click "Edit"
+        - Add response headers:
+            - Add `Access-Control-Allow-Origin` with value `'^{form_websiteDomain}'`
+            - Add `Access-Control-Allow-Credentials` with value `'true'`. **Don't miss out on those quotes else it won't get configured correctly.**
+            - Add "Set-Cookie" with value `context.authorizer.setCookie` **no quotes**
+        - Under response templates:
+            - Select `application/json`:
+            - Set "Response template body" to `$context.authorizer.body`
+        - Click "Save"
+    - Select "Unauthorized"
+        - Add response headers:
+            - Add `Access-Control-Allow-Origin` with value `'^{form_websiteDomain}'`
+            - Add `Access-Control-Allow-Credentials` with value `'true'`. **Don't miss out on those quotes else it won't get configured correctly.**
+        - Click "Save"
 - Deploy your API and test it
+
+</AppInfoForm>
