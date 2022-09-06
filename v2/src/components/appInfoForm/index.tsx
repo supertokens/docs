@@ -463,7 +463,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         value={this.state.apiDomain}
                         error={this.state.fieldErrors.apiDomain}
                     />}
-                    {(this.state.showAPIBasePath) && <FormItem
+                    <FormItem
                         index={3}
                         title="API Base Path"
                         placeholder="e.g. /auth"
@@ -471,7 +471,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         explanation="SuperTokens will expose it's APIs scoped by this base API path."
                         value={this.state.apiBasePath}
                         error={this.state.fieldErrors.apiBasePath}
-                        />}
+                    />
                     <FormItem
                         required
                         index={2}
