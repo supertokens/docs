@@ -91,39 +91,140 @@ async function doCopyDocs(mdFile) {
             let lines = originalData.split("\n");
 
             let pathLine = undefined;
+            let copyType = undefined;
+            let copyPathsAndIDs = [];
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
-                if (line.trim() === "<!-- COPY DOCS -->") {
-                    pathLine = lines[i + 1]
+                if (line.trim() === "<!-- COPY DOCS -->" || line.trim() === "<!-- COPY SECTION -->") {
+                    if (line.trim() === "<!-- COPY SECTION -->") {
+                        copyType = "SECTION"
+                        copyPathsAndIDs.push({
+                            path: lines[i + 1],
+                            id: lines[i + 2]
+                        })
+                    } else {
+                        pathLine = lines[i + 1]
+                        copyType = "DOCS"
+                        break;
+                    }
                 }
             }
 
-            if (pathLine === undefined) {
+            if (copyType === undefined) {
                 return res(false);
             }
 
-            pathLine = path.resolve(__dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", ""));
+            if (copyType === "DOCS") {
 
-            if (pathLine === mdFile) {
-                return res(false);
-            }
+                pathLine = path.resolve(__dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", ""));
 
-            let sourceData = await getDataToCopyFromFile(pathLine, lines);
+                if (pathLine === mdFile) {
+                    return res(false);
+                }
 
-            let destinationData = await getDataToCopyFromFile(mdFile, lines);
+                let sourceData = await getDataToCopyFromFile(pathLine, lines);
 
-            if (sourceData === destinationData) {
-                return res(true);
+                let destinationData = await getDataToCopyFromFile(mdFile, lines);
+
+                if (sourceData === destinationData) {
+                    return res(true);
+                } else {
+                    fs.writeFile(mdFile, sourceData, 'utf8', function (err) {
+                        if (err) {
+                            return rej(err);
+                        }
+                        res(true);
+                    });
+                }
             } else {
-                fs.writeFile(mdFile, sourceData, 'utf8', function (err) {
-                    if (err) {
-                        return rej(err);
-                    }
-                    res(true);
+                let sourceData = await getDataToCopySectionFromFile(lines, copyPathsAndIDs);
+
+                let destinationData = await new Promise((res, rej) => {
+                    fs.readFile(mdFile, 'utf8', function (err, toCopyData) {
+                        if (err) {
+                            return rej(err)
+                        }
+                        res(toCopyData)
+                    })
                 });
+
+                if (sourceData === destinationData) {
+                    return res(false);
+                } else {
+                    fs.writeFile(mdFile, sourceData, 'utf8', function (err) {
+                        if (err) {
+                            return rej(err);
+                        }
+                        res(false);
+                    });
+                }
             }
         });
     });
+}
+
+async function getDataToCopySectionFromFile(lines, copyPathsAndIDs) {
+    let finalData = [...lines];
+    for (let k = 0; k < copyPathsAndIDs.length; k++) {
+        await new Promise((res, rej) => {
+            let ogPathLine = copyPathsAndIDs[k].path
+            let ogId = copyPathsAndIDs[k].id
+            let pathLine = ogPathLine
+            pathLine = path.resolve(__dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", ""));
+            fs.readFile(pathLine, 'utf8', async function (err, toCopyData) {
+                if (err) {
+                    return rej(err);
+                }
+
+                toCopyData = toCopyData.trim();
+
+                finalDataIndex = 0;
+
+                for (; finalDataIndex < finalData.length; finalDataIndex++) {
+                    if (finalData[finalDataIndex].trim() === "<!-- COPY SECTION -->") {
+                        if (finalData[finalDataIndex + 1].trim() === ogPathLine && finalData[finalDataIndex + 2].trim() === ogId) {
+                            finalDataIndex += 3;
+                            break;
+                        } else {
+                            // do nothing..
+                        }
+                    }
+                }
+
+                let toRemoveIndex = finalDataIndex;
+                for (let i = finalDataIndex; i < finalData.length; i++) {
+                    if (finalData[i] === "<!-- END COPY SECTION -->") {
+                        toRemoveIndex = i;
+                        break;
+                    }
+                }
+                finalData = [...finalData.slice(0, finalDataIndex), ...finalData.slice(toRemoveIndex)]
+
+                let copyLines = toCopyData.split("\n");
+                let startCopying = false;
+                for (let i = 0; i < copyLines.length; i++) {
+                    if (startCopying && copyLines[i].trim() === "<!-- END COPY SECTION -->") {
+                        break;
+                    }
+                    if (copyLines[i].trim() === "<!-- COPY SECTION -->" &&
+                        copyLines[i + 1].trim() === ogPathLine &&
+                        copyLines[i + 2].trim() === ogId) {
+                        startCopying = true;
+                        i++;
+                        i++;
+                        continue;
+                    }
+                    if (!startCopying) {
+                        continue;
+                    }
+                    finalData = [...finalData.slice(0, finalDataIndex), copyLines[i], ...finalData.slice(finalDataIndex)]
+                    finalDataIndex++
+                }
+                res();
+            });
+        });
+    }
+    return finalData.join("\n")
 }
 
 async function getDataToCopyFromFile(pathLine, lines) {

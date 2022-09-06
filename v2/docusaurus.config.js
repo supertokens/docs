@@ -30,7 +30,7 @@ module.exports = {
   favicon: 'img/favicon.ico',
   trailingSlash: false,
   stylesheets: [
-    "https://fonts.googleapis.com/css?family=Rubik:300,400,500,700&amp;display=swap"
+    "https://fonts.googleapis.com/css?family=Rubik|Roboto:300,400,500,700&amp;display=swap"
   ],
   themeConfig: {
     colorMode: {
