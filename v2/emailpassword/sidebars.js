@@ -3,34 +3,39 @@ module.exports = {
     "introduction",
     {
       type: 'category',
-      label: 'Quick setup',
-      collapsed: false,
+      label: '⭐ Quick setup with Pre built UI',
       items: [
-        "quick-setup/frontend",
-        "quick-setup/backend",
         {
           type: 'category',
-          label: 'Core',
+          label: 'Setup',
           items: [
+            "pre-built-ui/setup/frontend",
+            "pre-built-ui/setup/backend",
             {
               type: 'category',
-              label: 'Self hosted',
+              label: 'Step 3: Core',
               items: [
-                "quick-setup/core/with-docker",
-                "quick-setup/core/without-docker",
                 {
                   type: 'category',
-                  label: 'Database Setup',
+                  label: 'Self hosted',
                   items: [
-                    "quick-setup/database-setup/mysql",
-                    "quick-setup/database-setup/postgresql",
-                    "quick-setup/database-setup/rename-database-tables"
+                    "pre-built-ui/setup/core/with-docker",
+                    "pre-built-ui/setup/core/without-docker",
+                    {
+                      type: 'category',
+                      label: 'Database Setup',
+                      items: [
+                        "pre-built-ui/setup/database-setup/mysql",
+                        "pre-built-ui/setup/database-setup/postgresql",
+                        "pre-built-ui/setup/database-setup/rename-database-tables"
+                      ],
+                    }
                   ],
-                }
+                },
+                "pre-built-ui/setup/core/saas-setup"
               ],
             },
-            "quick-setup/core/saas-setup"
-          ],
+          ]
         },
       ],
     },
