@@ -37,6 +37,7 @@ module.exports = {
             },
           ]
         },
+        "pre-built-ui/securing-routes"
       ],
     },
     {
