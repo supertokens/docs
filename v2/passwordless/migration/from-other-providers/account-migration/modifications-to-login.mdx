@@ -9,7 +9,7 @@ import Tabs from '@theme/Tabs';
 
 # Modifications to Login
 
-In this section we will be modifying login to enable the migrating of users with Email Password accounts from another provider to SuperTokens.
+In this section we will be modifying login to enable the migrating of users with Passwordless accounts from an external auth provider to SuperTokens.
 
 :::info
 The following code is implemented for Nodejs, but, you can apply the same logic in your own tech stack.
@@ -21,7 +21,7 @@ The following code is implemented for Nodejs, but, you can apply the same logic 
 If you have not stored your user's  pre-existing `userId` in your database you can **ignore** the steps mentioned in **Box 7** and **Box 8** of the flow diagram.
 :::
 
-<img alt="Flow of login to migrate users with email-password accounts in Auth0 to SuperTokens" src="/img/thirdpartyemailpassword/ep-account-migration-agnostic.png" />
+<img alt="Flow of login to migrate users with passwordless accounts from an external provider to SuperTokens" src="/img/thirdpartyemailpassword/ep-account-migration-agnostic.png" />
 
 ## Implementation
 
@@ -30,81 +30,81 @@ We will be overriding SuperToken's login functions to enable account migration, 
 ### Modifying the `signIn` function on the backend:
 
 ```tsx title="Nodejs"
-import SuperTokens from "supertokens-node"
-import EmailPassword from "supertokens-node/recipe/emailpassword";
 
-async function doesUserExistInProvider(email: string): Promise<boolean> {
-    return true;
-}
+import Passwordless from "supertokens-node/recipe/passwordless";
 
-let validateAndGetUserInfoFromProvider = async (email: string, password: string): Promise<{
-    user_id: string,
-    email: string,
-} | undefined> => {
-    // ...
+async function getUserInfoFromProvider(input :{
+    email: string | undefined,
+     phoneNumber: string | undefined }){
+    // Box 2: Get userInfo from Provider with phone number or email.
+    // refer to the next section to define this function
     return {
-        user_id: "...",
-        email: "...",
-    };
+        user_id: "providerUserId"
+    }
 }
 
-EmailPassword.init({
+Passwordless.init({
+    flowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
+    contactMethod: "EMAIL_OR_PHONE",
     override: {
-        functions: (originalImpl) => {
+        functions: (originalImplementation) => {
             return {
-                ...originalImpl,
-                // EmailPassword Login function modification
-                signIn: async function (input) {
+                ...originalImplementation,
+                consumeCode: async (input) => {
 
-                    // Box 2: check if the User exists in the provider
-                    if (await doesUserExistInAuth0(input.email)) {
-                        
-                        // retrieve user from SuperTokens
-                        let supertokensUser = await this.getUserByEmail({ email: input.email,
-                        userContext: input.userContext });
+                    // use listCodesByPreAuthSessionId to retrieve details about the current user
+                    let codeResponse = await Passwordless.listCodesByPreAuthSessionId({
+                        preAuthSessionId: input.preAuthSessionId
+                    })
 
-                        // Box 3: check if user exists in SuperTokens
-                        if (supertokensUser === undefined) {
-                            // EmailPassword User with the input credentials does not exist in SuperTokens
+                    // if both email and phoneNumber are undefined throw RESTART_FLOW_ERROR
+                    if (codeResponse?.email === undefined && codeResponse?.phoneNumber === undefined) {
 
-                            // Box 5: validate users credentials in provider
-                            let auth0UserInfo = await validateAndGetUserInfoFromAuth0(input.email, input.password)
+                        return {
+                            status: "RESTART_FLOW_ERROR"
+                        }
+                    }
+                    
+                    // Box 2: retrieve the user data with the input email and phone number from the external auth provider
+                    let auth0UserInfo = await getUserInfoFromProvider({
+                        email: codeResponse?.email,
+                        phoneNumber: codeResponse?.phoneNumber
+                    })
 
-                            if (auth0UserInfo === undefined) {
-                                // Box 9: credentials are incorrect
-                                return {
-                                    status: "WRONG_CREDENTIALS_ERROR"
-                                }
-                            }
+                    // Box 3: check if a user with the email or phoneNumber exists in the external auth provider
+                    if (auth0UserInfo !== undefined) {
 
-                            // Box 6: call the signup function to create a new SuperTokens user.
-                            let response = await this.signUp(input)
+                        // Box 4: call the SuperTokens consumeCode implementation
+                        let response = await originalImplementation.consumeCode(input);
 
-                            if (response.status !== "OK") {
-                                return {
-                                    status: "WRONG_CREDENTIALS_ERROR",
-                                };
-                            }
-
-                            // Box 7: map the providers userId to the SuperTokens userId, to learn more about user mapping please check the User Id  Mapping section.
-                            // If you have not stored the users provider userId in your tables, you can ignore this step
-                            await SuperTokens.createUserIdMapping({ superTokensUserId: response.user.id, externalUserId: auth0UserInfo.user_id})
-
-                            // Box 8: Set the userId in the response to use the providers userId, to learn more about user mapping please check the User Id  Mapping section.
-                            // If you have not stored the users Auth0 userId in your tables, you can ignore this step
-                            response.user.id = auth0UserInfo.user_id
-                            
-                            return response;
+                        if (response.status != "OK") {
+                            return response
                         }
 
-                    } 
-                    // Box 4: EmailPassword User with the input credentials exists in SuperTokens, so call the original signIn implementation
-                    return originalImpl.signIn(input)
-                    
-                },
+                        // Box 5: is the user in the response a new Supertokens user
+                        if (response.createdNewUser) {
+                            // Box 6: map the user's provider userId to their SuperTokens userId, to learn more about userId mapping please check the User Id  Mapping section.
+                            // If you have not stored the users provider userId in your tables, you can ignore this step
+                            await SuperTokens.createUserIdMapping({ superTokensUserId: response.user.id, externalUserId: auth0UserInfo.user_id}); 
+
+                            // Box 7: Set the newly created flag value to false in the response
+                            response.createdNewUser = false
+                            // Box 8: Set the userId in the response to use the provider userId, to learn more about user mapping please check the User Id Mapping section.
+                            // If you have not stored the provider userId, you can ignore this step.
+                            response.user.id = auth0UserInfo.user_id
+                        }
+                        
+                        // Box 9: return response
+                        return response
+
+                    } else {
+                        // Box 10: User does not exist in the external provider, call the default implementation 
+                        return originalImplementation.consumeCode(input)
+                    }
+                }
             }
         }
-    },
+    }
 })
 
 ```

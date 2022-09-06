@@ -493,6 +493,22 @@ module.exports = {
             },
             "migration/from-auth0/session-migration"
           ],
+        },
+        {
+          type: 'category',
+          label: 'From Other Providers',
+          items: [
+            "migration/from-other-providers/about",
+            {
+              type: 'category',
+              label: 'Step 1) Account Migration',
+              items: [
+                "migration/from-other-providers/account-migration/modifications-to-login",
+                "migration/from-other-providers/account-migration/userid-mapping",
+              ],
+            },
+            "migration/from-auth0/session-migration",
+          ],
         }
       ],
     },
