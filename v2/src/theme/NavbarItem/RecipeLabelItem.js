@@ -4,7 +4,7 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 import GuidesLink from "../../components/guidesLink";
 
 export default function RecipeLabelItem(props) {
-    return <BrowserOnly>{
+    return <BrowserOnly>{() =>
         !isMobile && <span
         style={{
             fontSize: "16px",
