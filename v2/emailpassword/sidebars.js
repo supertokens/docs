@@ -37,6 +37,7 @@ module.exports = {
             },
           ]
         },
+        "pre-built-ui/securing-routes"
       ],
     },
     {
@@ -205,8 +206,6 @@ module.exports = {
       type: 'category',
       label: 'Post login operations',
       items: [
-        "common-customizations/sessions/securing-component",
-        "common-customizations/verify-session",
         "common-customizations/sign-out",
         "common-customizations/redirecting-post-login",
         "common-customizations/get-user-info",
