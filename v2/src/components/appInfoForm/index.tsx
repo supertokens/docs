@@ -82,7 +82,7 @@ const isReceivingDisplayAttr = (mutations: MutationRecord[]) => isReceivingAttr(
 /** Check whether its contains element attributes that triggers rechecking current first form */
 const isReceivingFirstFormAttr = (mutations: MutationRecord[]) => isReceivingAttr(mutations, CONTAINER_ATTRIBUTE_FIRST_FORM)
 
-const isElementVisible = (element?: Element | null): boolean => element != null && element?.clientWidth > 0 && element.clientHeight > 0;
+const isElementVisible = (element?: Element | null): boolean => element != null && element.clientWidth > 0 && element.clientHeight > 0;
 const getFirstAppInfoForm = () => {
     return Array.from(document.querySelectorAll(`.${CONTAINER_CLASSNAME}`)).find(isElementVisible);
 }
@@ -91,7 +91,15 @@ const getFirstAppInfoForm = () => {
  * @param id AppInfoForm.elementId 
  * @returns 
  */
-const isFirstAppInfoForm = (id: string) => getFirstAppInfoForm()?.id === id
+const isFirstAppInfoForm = (id: string) => {
+    let firstAppInfoForm = getFirstAppInfoForm();
+
+    if (firstAppInfoForm === undefined) {
+        return false;
+    }
+
+    return firstAppInfoForm.id === id
+}
 
 export default class AppInfoForm extends React.PureComponent<PropsWithChildren<Props>, State> {
     private readonly elementId = (new Date()).getTime()
@@ -220,18 +228,35 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (typeof window !== 'undefined') {
             window.removeEventListener("appInfoFormFilled", this.anotherFormFilled);
         }
-        this.attributeObserver?.disconnect()
-        this.visibilityObserver?.disconnect()
+        
+        if (this.attributeObserver !== undefined) {
+            this.attributeObserver.disconnect()
+        }
+
+        if (this.visibilityObserver !== undefined) {
+            this.visibilityObserver.disconnect()
+        }
     }
 
     readonly resubmitFirstAppInfoForm = (event?: ResubmitParams['event']) => {
-        event?.preventDefault()
+        if (event !== undefined) {
+            event.preventDefault()
+        }
+
         this.recheckCurrentFirstAppInfoForm();
-        getFirstAppInfoForm()?.setAttribute(CONTAINER_ATTRIBUTE_DISPLAY, 'true')
+
+        let firstInfoForm = getFirstAppInfoForm();
+
+        if (firstInfoForm !== undefined) {
+            firstInfoForm.setAttribute(CONTAINER_ATTRIBUTE_DISPLAY, 'true')
+        }
     }
 
     resubmitInfoClicked = ({event, scrollToElement} : ResubmitParams) => {
-        event?.preventDefault();
+        if (event !== undefined) {
+            event.preventDefault();
+        }
+
         this.setState(oldState => ({
             ...oldState,
             formSubmitted: false
@@ -381,7 +406,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             c = c.split("^{form_apiDomain}").join(this.state.apiDomain || `<YOUR_API_DOMAIN>`);
                         }
                         if (this.props.askForWebsiteDomain) {
-                            c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain|| `<YOUR_WEB_DOMAIN>`);
+                            c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain|| `<YOUR_WEBSITE_DOMAIN>`);
                         }
                         if (this.state.showAPIBasePath) {
                             c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
@@ -487,7 +512,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                         title="Website Base Path"
                         placeholder="e.g. /auth"
                         onChange={(value) => this.updateFieldStateAndRemoveError("websiteBasePath", value)}
-                        explanation="SuperTokens UI will be shown on this website route."
+                        explanation="The path where the login UI will be rendered"
                         value={this.state.websiteBasePath}
                         error={this.state.fieldErrors.websiteBasePath}
                     />
@@ -807,8 +832,21 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     }
 
     scrollToElement() {
-        if (Boolean(this.containerRef.current)) {            
-            const topPositionAfterNavbar = window.scrollY + (this.containerRef.current?.getBoundingClientRect().top ?? 0) - (document.querySelector('nav.navbar')?.clientHeight ?? 0);
+        if (Boolean(this.containerRef.current)) {     
+            let top = 0;
+
+            if (this.containerRef.current !== undefined && this.containerRef.current !== null) {
+                top = this.containerRef.current.getBoundingClientRect().top;
+            }
+
+            let navbarHeight = 0;
+            let navbar = document.querySelector('nav.navbar');
+
+            if (navbar !== undefined && navbar !== null) {
+                navbarHeight = navbar.clientHeight;
+            }
+            
+            const topPositionAfterNavbar = window.scrollY + top - navbarHeight;
             window.scrollTo({
                 top: topPositionAfterNavbar,
                 behavior: 'smooth'
@@ -828,7 +866,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     }
 
     private isFirstVisibleAppInfoForm(): boolean {
-        return Boolean(isElementVisible(this.containerRef?.current) && isFirstAppInfoForm(`${this.elementId}`));
+        return Boolean(isElementVisible(this.containerRef.current) && isFirstAppInfoForm(`${this.elementId}`));
     }
 
     /**
