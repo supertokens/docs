@@ -317,16 +317,16 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     )
 
     render() {        
-        const customAttributes: Record<string, string | undefined> = {}
+        const customAttributes: Record<string, string | undefined> = {}        
         if (this.state.firstAppInfoForm) { customAttributes[CONTAINER_ATTRIBUTE_FIRST_FORM] = undefined }
 
         return <div id={this.elementId.toString()} className={CONTAINER_CLASSNAME} ref={this.containerRef}> 
             {(!this.state.formSubmitted && this.state.firstAppInfoForm) && this.renderForm()}
-            {this.renderInfo()}
+            {this.renderResubmitAndChildren()}
         </div>;        
     }
 
-    renderSubmittedButton() {
+    renderResubmitButton() {
         return <div className="app-info-form-question-container">
             <div
                 style={{
@@ -367,10 +367,10 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         </div>;
     }
 
-    renderInfo() {
+    renderResubmitAndChildren() {
         return (
             <div>
-                {(this.state.formSubmitted || !this.state.firstAppInfoForm) && this.renderSubmittedButton()}
+                {this.state.formSubmitted && this.state.firstAppInfoForm && this.renderResubmitButton()}
                 {recursiveMap(this.props.children, (c: any) => {
                     if (typeof c === "string") {
                         // TODO: Add more fields here.
