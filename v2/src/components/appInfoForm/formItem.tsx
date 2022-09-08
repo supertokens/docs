@@ -121,7 +121,6 @@ export default function FormItem(props: FormItemType) {
                         paddingLeft: "20px",
                         paddingRight: "20px",
                         fontSize: "14px",
-                        color: "#222222"
                     }}
                     placeholder={props.placeholder}
                 />
