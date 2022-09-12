@@ -38,7 +38,8 @@ module.exports = {
           ]
         },
         "pre-built-ui/securing-routes",
-        "pre-built-ui/sign-out"
+        "pre-built-ui/sign-out",
+        "pre-built-ui/auth-redirection"
       ],
     },
     {
@@ -207,7 +208,6 @@ module.exports = {
       type: 'category',
       label: 'Post login operations',
       items: [
-        "common-customizations/redirecting-post-login",
         "common-customizations/get-user-info",
         "common-customizations/handling-signup-success",
         "common-customizations/handling-signin-success",
@@ -249,7 +249,6 @@ module.exports = {
       label: 'Additional customizations',
       collapsed: false,
       items: [
-        "common-customizations/redirect-to-auth",
         {
           type: 'category',
           label: 'Sign Up Form',
@@ -257,8 +256,7 @@ module.exports = {
             "common-customizations/signup-form/adding-fields",
             "common-customizations/signup-form/changing-field-labels",
             "common-customizations/signup-form/field-validators",
-            "common-customizations/signup-form/toc-privacypolicy",
-            "common-customizations/signup-form/default-to-sign-up"
+            "common-customizations/signup-form/toc-privacypolicy"
           ],
         },
         {

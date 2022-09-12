@@ -38,7 +38,8 @@ module.exports = {
           ]
         },
         "pre-built-ui/securing-routes",
-        "pre-built-ui/sign-out"
+        "pre-built-ui/sign-out",
+        "pre-built-ui/auth-redirection"
       ],
     },
     {
@@ -207,7 +208,6 @@ module.exports = {
       type: 'category',
       label: 'Post login operations',
       items: [
-        "common-customizations/redirecting-post-login",
         "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
         "post-login/getting-provider-access-token"
@@ -268,7 +268,6 @@ module.exports = {
       label: 'Additional customizations',
       collapsed: false,
       items: [
-        "common-customizations/redirect-to-auth",
         {
           type: "category",
           label: "Sign In / Up form",
