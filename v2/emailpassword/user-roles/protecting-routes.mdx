@@ -393,21 +393,63 @@ func exampleAPI(w http.ResponseWriter, r *http.Request) {
 <TabItem value="fastapi">
 
 ```python
-TODO
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+
+@app.post('/like_comment')  # type: ignore
+async def like_comment(session: SessionContainer = Depends(
+        verify_session(
+            # highlight-start
+            # We add the UserRoleClaim's includes validator
+            override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+            [UserRoleClaim.validators.includes("admin")]
+            # highlight-end
+        )
+)):
+    # All validator checks have passed and the user has a verified email address
+    pass
 ```
 
 </TabItem>
 <TabItem value="flask">
 
 ```python
-TODO
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@app.route('/update-jwt', methods=['POST'])  # type: ignore
+@verify_session(
+    # highlight-start
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+    # highlight-end
+)
+def like_comment():
+    # All validator checks have passed and the user has a verified email address
+    pass
 ```
 
 </TabItem>
 <TabItem value="django">
 
 ```python
-TODO
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@verify_session(
+    # highlight-start
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+    # highlight-end
+)
+async def like_comment(request: HttpRequest):
+    # All validator checks have passed and the user has a verified email address
+    pass
 ```
 
 </TabItem>
@@ -745,7 +787,7 @@ func postExample(w http.ResponseWriter, r *http.Request) {
 	sessionContainer := session.GetSessionFromRequestContext(r.Context())
 	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
 
-	if roles != nil && !contains(roles.([]interface{}), "admin") {
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
 		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
 			Msg:           "User is not an admin",
 			InvalidClaims: []claims.ClaimValidationError{
@@ -811,7 +853,7 @@ func postExample(c *gin.Context) {
 	sessionContainer := session.GetSessionFromRequestContext(c.Request.Context())
 	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
 
-	if roles != nil && !contains(roles.([]interface{}), "admin") {
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
 		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
 			Msg:           "User is not an admin",
 			InvalidClaims: []claims.ClaimValidationError{
@@ -864,7 +906,7 @@ func postExample(w http.ResponseWriter, r *http.Request) {
 	sessionContainer := session.GetSessionFromRequestContext(r.Context())
 	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
 
-	if roles != nil && !contains(roles.([]interface{}), "admin") {
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
 		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
 			Msg:           "User is not an admin",
 			InvalidClaims: []claims.ClaimValidationError{
@@ -916,7 +958,7 @@ func postExample(w http.ResponseWriter, r *http.Request) {
 	sessionContainer := session.GetSessionFromRequestContext(r.Context())
 	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
 
-	if roles != nil && !contains(roles.([]interface{}), "admin") {
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
 		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
 			Msg: "User is not an admin",
 			InvalidClaims: []claims.ClaimValidationError{
@@ -951,15 +993,18 @@ func contains(s []interface{}, e string) bool {
 ```python
 from fastapi import Depends
 from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.userroles.asyncio import get_roles_for_user
+from supertokens_python.recipe.userroles import UserRoleClaim
 
-@app.post('/update-blog') # type: ignore
+@app.post('/update-blog')  # type: ignore
 async def update_blog_api(session: SessionContainer = Depends(verify_session())):
-    user_id = session.get_user_id()
-    # highlight-next-line
-    TODO
-
+    # highlight-start
+    roles = await session.get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
 ```
 
 </TabItem>
@@ -969,18 +1014,21 @@ async def update_blog_api(session: SessionContainer = Depends(verify_session()))
 from flask import Flask, g
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.userroles.syncio import get_roles_for_user
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.userroles import UserRoleClaim
 
 app = Flask(__name__)
 
-@app.route('/update-blog', methods=['POST']) # type: ignore
+@app.route('/update-blog', methods=['POST'])  # type: ignore
 @verify_session()
 def set_role_api():
-    session: SessionContainer = g.supertokens # type: ignore
-    user_id = session.get_user_id()
-    # highlight-next-line
-    TODO
-
+    session: SessionContainer = g.supertokens  # type: ignore
+    # highlight-start
+    roles = session.sync_get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
 ```
 
 </TabItem>
@@ -990,16 +1038,18 @@ def set_role_api():
 from django.http import HttpRequest
 from supertokens_python.recipe.session.framework.django.asyncio import verify_session
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.userroles.asyncio import get_roles_for_user
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.userroles import UserRoleClaim
 
 @verify_session()
 async def get_user_info_api(request: HttpRequest):
-    session: SessionContainer = request.supertokens # type: ignore
-    user_id = session.get_user_id()
-
-    # highlight-next-line
-    TODO
-
+    session: SessionContainer = request.supertokens  # type: ignore
+    # highlight-start
+    roles = await session.get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
 ```
 
 </TabItem>

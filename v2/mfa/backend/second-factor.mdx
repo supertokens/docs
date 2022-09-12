@@ -742,7 +742,7 @@ func main() {
 					// highlight-start
 					// we add the existing session to the user context so that the createNewSession
 					// function doesn't create a new session
-					(*userContext)["session"] = *session
+					(*userContext)["session"] = session
 					// highlight-end
 
 					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
@@ -818,8 +818,12 @@ from typing import Union, Dict, Any
 from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
 from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+from supertokens_python.recipe.session.claims import BooleanClaim
 
-TODO
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __: False)
+
+
 def override_passwordless_apis(original_implementation: APIInterface):
     original_consume_code_post = original_implementation.consume_code_post
 
@@ -833,9 +837,10 @@ def override_passwordless_apis(original_implementation: APIInterface):
     ):
         # this API is called when the user enters the OTP
 
-        # we should already have a session here since this is called
-        # after first factor login
-        _session = await get_session(api_options.request)
+        # A session should already exist since this should be called after the first factor is completed.
+        # We set the claims to check to be [] here, since this needs to be callable
+        # without the second factor completed
+        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
         assert _session is not None
 
         # we should add the existing session to the user_context
@@ -858,16 +863,14 @@ def override_passwordless_apis(original_implementation: APIInterface):
             # OTP verification was successful. We can now mark the
             # session's payload as {"is2faComplete": True} so that
             # the user has access to API routes and the frontend UI
-            await _session.merge_into_access_token_payload(
-                {"is2faComplete": True}
-            )
+            await _session.set_claim_value(SecondFactorClaim, True)
             # highlight-end
 
             # We can now associate
             # the passwordless user ID with the thirdpartyemailpassword
             # user ID, so that later on, we can fetch the phone number.
             await update_user_metadata(
-                _session.get_user_id(), # userId of the first factor login
+                _session.get_user_id(),  # userId of the first factor login
                 {"passwordlessUserId": res.user.user_id}
             )
 
@@ -875,6 +878,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
 
     original_implementation.consume_code_post = consume_code_post
     return original_implementation
+
 
 def override_session_functions(original_implementation: RecipeInterface):
     original_create_new_session = original_implementation.create_new_session
@@ -900,15 +904,13 @@ def override_session_functions(original_implementation: RecipeInterface):
         if access_token_payload is None:
             access_token_payload = {}
 
-        # Insert "is2faComplete" in access token payload
-        access_token_payload = {**access_token_payload, "is2faComplete": False}
+        access_token_payload = {**access_token_payload, **(await SecondFactorClaim.build(user_id, user_context))}
         return await original_create_new_session(
             request, user_id, access_token_payload, session_data, user_context
         )
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
-
 ```
 
 </TabItem>
@@ -1091,7 +1093,6 @@ from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
 from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
 
-
 def override_passwordless_apis(original_implementation: APIInterface):
     original_consume_code_post = original_implementation.consume_code_post
     original_create_code_post = original_implementation.create_code_post
@@ -1108,9 +1109,10 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # We want to make sure that the OTP being generated is for the
         # same number that belongs to this user.
 
-        # A session should already exist since this should be called after the first
-        # factor is completed
-        _session = await get_session(api_options.request)
+        # A session should already exist since this should be called after the first factor is completed.
+        # We set the claims to check to be [] here, since this needs to be callable
+        # without the second factor completed
+        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
         assert _session is not None
 
         # We try to get the phone number associated with this user. It will be
@@ -1308,12 +1310,14 @@ func main() {
 <TabItem value="python">
 
 ```python
-TODO
 from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
 from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
 from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+from supertokens_python.recipe.session.claims import BooleanClaim
 
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __: False)
 
 def override_session_functions(original_implementation: RecipeInterface):
     original_create_new_session = original_implementation.create_new_session
@@ -1354,7 +1358,7 @@ def override_session_functions(original_implementation: RecipeInterface):
         # Insert "is2faComplete" and "phoneNumber" in the access token payload
         access_token_payload = {
             **access_token_payload,
-            "is2faComplete": False,
+            **(await SecondFactorClaim.build(user_id, user_context)),
             # highlight-next-line
             "phoneNumber": phone_number,
         }
@@ -1364,7 +1368,6 @@ def override_session_functions(original_implementation: RecipeInterface):
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
-
 ```
 
 </TabItem>
@@ -1511,7 +1514,6 @@ from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIO
 from typing import Union, Dict, Any
 from supertokens_python.recipe.session.asyncio import get_session
 
-
 def override_passwordless_apis(original_implementation: APIInterface):
     original_create_code_post = original_implementation.create_code_post
 
@@ -1526,9 +1528,10 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # We want to make sure that the OTP being generated is for the
         # same number that belongs to this user.
 
-        # A session should already exist since this should be called after the first
-        # factor is completed
-        _session = await get_session(api_options.request)
+        # A session should already exist since this should be called after the first factor is completed.
+        # We set the claims to check to be [] here, since this needs to be callable
+        # without the second factor completed
+        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
         assert _session is not None
 
         # highlight-next-line
