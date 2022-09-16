@@ -46,7 +46,8 @@ module.exports = {
           label: 'Further Reading',
           items: [
             "pre-built-ui/further-reading/email-password-login",
-            "pre-built-ui/further-reading/password-reset"
+            "pre-built-ui/further-reading/password-reset",
+            "pre-built-ui/further-reading/email-verification"
           ]
         },
       ],

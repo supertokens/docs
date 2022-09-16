@@ -40,7 +40,14 @@ module.exports = {
         "pre-built-ui/securing-routes",
         "pre-built-ui/sign-out",
         "pre-built-ui/auth-redirection",
-        "pre-built-ui/enable-email-verification"
+        "pre-built-ui/enable-email-verification",
+        {
+          type: 'category',
+          label: 'Further Reading',
+          items: [
+            "pre-built-ui/further-reading/email-verification"
+          ]
+        },
       ],
     },
     {
