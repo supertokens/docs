@@ -45,6 +45,7 @@ module.exports = {
           type: 'category',
           label: 'Further Reading',
           items: [
+            "pre-built-ui/further-reading/passwordless-login",
             "pre-built-ui/further-reading/email-verification"
           ]
         },
