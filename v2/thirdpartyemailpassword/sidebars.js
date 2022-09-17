@@ -55,6 +55,48 @@ module.exports = {
       ],
     },
     {
+      type: 'category',
+      label: '⭐ Setup with web, mobile and native custom UI',
+      items: [
+        {
+          type: 'category',
+          label: 'Initialisation',
+          collapsed: false,
+          items: [
+            "custom-ui/init/frontend",
+            "custom-ui/init/backend",
+            {
+              type: 'category',
+              label: 'Step 3: Core',
+              items: [
+                {
+                  type: 'category',
+                  label: 'Self hosted',
+                  items: [
+                    "custom-ui/init/core/with-docker",
+                    "custom-ui/init/core/without-docker",
+                    {
+                      type: 'category',
+                      label: 'Database Setup',
+                      items: [
+                        "custom-ui/init/database-setup/mysql",
+                        "custom-ui/init/database-setup/postgresql",
+                        "custom-ui/init/database-setup/rename-database-tables"
+                      ],
+                    }
+                  ],
+                },
+                "custom-ui/init/core/saas-setup"
+              ],
+            },
+          ]
+        },
+        "custom-ui/securing-routes",
+        "custom-ui/sign-out",
+        "custom-ui/enable-email-verification",
+      ],
+    },
+    {
       type: "category",
       label: "Integrations",
       customProps: {
