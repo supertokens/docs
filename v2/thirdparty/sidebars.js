@@ -8,6 +8,7 @@ module.exports = {
         {
           type: 'category',
           label: 'Setup',
+          collapsed: false,
           items: [
             "pre-built-ui/setup/frontend",
             "pre-built-ui/setup/backend",
