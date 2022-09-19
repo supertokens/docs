@@ -55,7 +55,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: '⭐ Setup with web, mobile and native custom UI',
+      label: '⭐ Setup custom UI with web, mobile and native apps',
       items: [
         {
           type: 'category',
