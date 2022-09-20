@@ -74,3 +74,6 @@ hide_title: true
 
 ### 3.15 to 3.16
 - No manual change required
+
+### 3.16 to 4.0
+- Run: `ALTER TABLE thirdparty_users MODIFY third_party_user_id VARCHAR(256); ALTER TABLE emailpassword_users MODIFY password_hash VARCHAR(256);`
