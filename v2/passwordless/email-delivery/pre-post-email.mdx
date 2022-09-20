@@ -13,7 +13,7 @@ import TabItem from '@theme/TabItem';
 # Pre / Post Hooks / Override
 
 We provide you funtionality to run code before and after an email is sent. You can use this for:
-- Logging putposes
+- Logging purposes
 - Spam protection purposes
 - Modifying the email template variables before sending the emails
 
@@ -24,6 +24,7 @@ We provide you funtionality to run code before and after an email is sent. You c
 import supertokens from "supertokens-node";
 import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
 import Session from "supertokens-node/recipe/session";
+import EmailVerification from "supertokens-node/recipe/emailverification"
 
 supertokens.init({
     appInfo: {
@@ -51,6 +52,27 @@ supertokens.init({
             },
             // highlight-end
         }),
+
+        // if email verification is enabled
+        EmailVerification.init({
+            ^{nodeEmailverificationDefaultInit}
+            // highlight-start
+            emailDelivery: {
+                override: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        sendEmail: async function (input) {
+                            // TODO: run some logic before sending the email
+                            
+                            await originalImplementation.sendEmail(input);
+
+                            // TODO: run some logic post sending the email
+                        }
+                    }
+                }
+            },
+            // highlight-end
+        }),
         Session.init()
     ]
 });
@@ -59,11 +81,12 @@ supertokens.init({
 <TabItem value="go">
 
 ```go
-
 import (
     "github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
     "github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
     "github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
+    "github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
     "github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -79,14 +102,13 @@ func main() {
 
                         (*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
                             // TODO: run some logic before sending the email
-                            
+
                             err := originalSendEmail(input, userContext)
                             if err != nil {
                                 return err
                             }
 
                             // TODO: run some logic post sending the email
-
                             return nil
                         }
 
@@ -95,6 +117,32 @@ func main() {
                 },
                 // highlight-end
             }),
+
+            // if email verification is enabled
+			emailverification.Init(evmodels.TypeInput{
+				Mode: evmodels.ModeRequired,
+				// highlight-start
+				EmailDelivery: &emaildelivery.TypeInput{
+					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
+						originalSendEmail := *originalImplementation.SendEmail
+
+						(*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
+							// TODO: run some logic before sending the email
+
+                            err := originalSendEmail(input, userContext)
+                            if err != nil {
+                                return err
+                            }
+
+                            // TODO: run some logic post sending the email
+                            return nil
+						}
+
+						return originalImplementation
+					},
+				},
+				// highlight-end
+			}),
         },
     })
 }
@@ -108,29 +156,55 @@ from supertokens_python.recipe.^{codeImportRecipeName}.types import EmailDeliver
 from supertokens_python.recipe import ^{codeImportRecipeName}
 from typing import Dict, Any
 from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig
+from supertokens_python.recipe.emailverification.types import EmailDeliveryOverrideInput as EVEmailDeliveryOverrideInput, EmailTemplateVars as EVEmailTemplateVars
+from supertokens_python.recipe import emailverification
 
 def custom_email_deliver(original_implementation: EmailDeliveryOverrideInput) -> EmailDeliveryOverrideInput:
     original_send_email = original_implementation.send_email
 
     async def send_email(template_vars: EmailTemplateVars, user_context: Dict[str, Any]) -> None:
         # TODO: run some logic before sending the email
-        
-        await original_send_email(template_vars, user_context)
 
-        # TODO: run some logic post sending the email
+        resp = await original_send_email(template_vars, user_context)
+
+        # TODO: run some logic after sending the email
+        return resp
+    
+    original_implementation.send_email = send_email
+    return original_implementation
+
+def custom_emailverification_delivery(original_implementation: EVEmailDeliveryOverrideInput) -> EVEmailDeliveryOverrideInput:
+    original_send_email = original_implementation.send_email
+
+    async def send_email(template_vars: EVEmailTemplateVars, user_context: Dict[str, Any]) -> None:
+
+        # TODO: run some logic before sending the email
+
+        resp = await original_send_email(template_vars, user_context)
+
+        # TODO: run some logic after sending the email
+
+        return resp
 
     original_implementation.send_email = send_email
     return original_implementation
 
-^{pythonDefaultCallbackDefs} # typecheck-only, removed from output
 init(
-    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    framework='...', # type: ignore
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
     recipe_list=[
-        ^{codeImportRecipeName}.init(
+         ^{codeImportRecipeName}.init(
             ^{pythonRecipeInitDefault} # typecheck-only, removed from output
+            # highlight-next-line
             email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
-        )
+        ),
+
+        # If email verification is enabled
+        emailverification.init(
+            mode="OPTIONAL",
+            # highlight-next-line
+            email_delivery=EmailDeliveryConfig(override=custom_emailverification_delivery))
     ]
 )
 ```

@@ -441,9 +441,12 @@ Passwordless.init({
                 ...oI,
                 // this API is called when the user enters the OTP
                 consumeCodePOST: async function (input) {
-                    // we should already have a session here since this is called
-                    // after first factor login
-                    let session = await Session.getSession(input.options.req, input.options.res);
+                    // - We should already have a session here since this is called after first factor login
+                    // - We set the claims to check to be [] here, since this needs to be callable 
+                    // without the second factor completed
+                    let session = await Session.getSession(input.options.req, input.options.res, {
+                        overrideGlobalClaimValidators: () => [],
+                    });
                     
                     let resp = await oI.consumeCodePOST!(input);
 
@@ -475,6 +478,8 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
@@ -490,9 +495,15 @@ func main() {
 				// this API is called when the user enters the OTP
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
 				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
-					// we should already have a session here since this is called
+					// - We should already have a session here since this is called
 					// after first factor login
-					session, err := session.GetSession(options.Req, options.Res, nil)
+					// - We set the claims to check to be [] here, since this needs to be callable
+					// without the second factor completed
+					session, err := session.GetSession(options.Req, options.Res, &sessmodels.VerifySessionOptions{
+						OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+							return []claims.SessionClaimValidator{}, nil
+						},
+					})
 					if err != nil {
 						return plessmodels.ConsumeCodePOSTResponse{}, err
 					}
@@ -588,9 +599,9 @@ passwordless.init(
 
 ## 3) Updating the session post second factor auth
 
-We also want to change the session's payload to indicate that the user has completed the second factor. In our example, we do this by setting the `is2faComplete` property to `true` in the session's access token payload.
+We also want to change the session's payload to indicate that the user has completed the second factor. We do this by setting the `SecondFactorClaim` to `true` in the session.
 
-We also have to be careful about not creating a new session after the second factor auth is completed. By default, the passwordless recipe will create a new session on successul verification, overwriting the older one. We can do this by using the `userContext` feature:
+We also have to be careful about not creating a new session after the second factor auth is completed. By default, the passwordless recipe will create a new session on successul verification, overwriting the older one. We can prevent this, by using the `userContext` feature:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -599,6 +610,8 @@ We also have to be careful about not creating a new session after the second fac
 import Session from "supertokens-node/recipe/session";
 import UserMetadata from "supertokens-node/recipe/usermetadata";
 import Passwordless from "supertokens-node/recipe/passwordless";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 Passwordless.init({
     flowType: "USER_INPUT_CODE",
@@ -609,9 +622,12 @@ Passwordless.init({
                 ...oI,
                 // this API is called when the user enters the OTP
                 consumeCodePOST: async function (input) {
-                    // we should already have a session here since this is called
-                    // after first factor login
-                    let session = await Session.getSession(input.options.req, input.options.res);
+                    // A session should already exist since this should be called after the first factor is completed.
+                    // We set the claims to check to be [] here, since this needs to be callable 
+                    // without the second factor completed
+                    let session = await Session.getSession(input.options.req, input.options.res, {
+                        overrideGlobalClaimValidators: () => [],
+                    });
                     
                     // highlight-start
                     // we add the existing session to the user context so that the createNewSession
@@ -623,13 +639,10 @@ Passwordless.init({
 
                     if (resp.status === "OK") {
                         // highlight-start
-                        // OTP verification was successful. We can now mark the
-                        // session's payload as is2faComplete: true so that
+                        // OTP verification was successful. 
+                        // We can now set the SecondFactorClaim in the session to true.
                         // the user has access to API routes and the frontend UI
-                        await resp.session.updateAccessTokenPayload({
-                            ...resp.session.getAccessTokenPayload(),
-                            is2faComplete: true,
-                        });
+                        await resp.session.setClaimValue(SecondFactorClaim, true);
                         // highlight-end
 
                         // We can now associate 
@@ -670,7 +683,7 @@ Session.init({
                         ...input,
                         accessTokenPayload: {
                             ...input.accessTokenPayload,
-                            is2faComplete: false
+                            ...SecondFactorClaim.build(input.userId, input.userContext),
                         },
                     });
                 },
@@ -690,12 +703,19 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
+	// highlight-start
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
+
 	passwordless.Init(plessmodels.TypeInput{
 		FlowType: "USER_INPUT_CODE",
 		ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
@@ -706,9 +726,15 @@ func main() {
 				// this API is called when the user enters the OTP
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
 				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
-					// we should already have a session here since this is called
+					// - We should already have a session here since this is called
 					// after first factor login
-					session, err := session.GetSession(options.Req, options.Res, nil)
+					// - We set the claims to check to be [] here, since this needs to be callable
+					// without the second factor completed
+					session, err := session.GetSession(options.Req, options.Res, &sessmodels.VerifySessionOptions{
+						OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+							return []claims.SessionClaimValidator{}, nil
+						},
+					})
 					if err != nil {
 						return plessmodels.ConsumeCodePOSTResponse{}, err
 					}
@@ -716,7 +742,7 @@ func main() {
 					// highlight-start
 					// we add the existing session to the user context so that the createNewSession
 					// function doesn't create a new session
-					(*userContext)["session"] = *session
+					(*userContext)["session"] = session
 					// highlight-end
 
 					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
@@ -729,9 +755,7 @@ func main() {
 						// OTP verification was successful. We can now mark the
 						// session's payload as is2faComplete: true so that
 						// the user has access to API routes and the frontend UI
-						accessTokenPayload := resp.OK.Session.GetAccessTokenPayloadWithContext(userContext)
-						accessTokenPayload["is2faComplete"] = true
-						resp.OK.Session.UpdateAccessTokenPayloadWithContext(accessTokenPayload, userContext)
+						resp.OK.Session.SetClaimValue(SecondFactorClaim, true)
 						// highlight-end
 
 						// We can now associate
@@ -767,7 +791,14 @@ func main() {
 						return session, nil
 					}
 					// highlight-end
-					accessTokenPayload["is2faComplete"] = false
+
+					if accessTokenPayload == nil {
+						accessTokenPayload = map[string]interface{}{}
+					}
+					accessTokenPayload, err := SecondFactorClaim.Build(userID, accessTokenPayload, userContext)
+					if err != nil {
+						return nil, err
+					}
 					return oCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
 				}
 				*originalImplementation.CreateNewSession = nCreateNewSession
@@ -787,6 +818,11 @@ from typing import Union, Dict, Any
 from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
 from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+from supertokens_python.recipe.session.claims import BooleanClaim
+
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __: False)
+
 
 def override_passwordless_apis(original_implementation: APIInterface):
     original_consume_code_post = original_implementation.consume_code_post
@@ -801,9 +837,10 @@ def override_passwordless_apis(original_implementation: APIInterface):
     ):
         # this API is called when the user enters the OTP
 
-        # we should already have a session here since this is called
-        # after first factor login
-        _session = await get_session(api_options.request)
+        # A session should already exist since this should be called after the first factor is completed.
+        # We set the claims to check to be [] here, since this needs to be callable
+        # without the second factor completed
+        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
         assert _session is not None
 
         # we should add the existing session to the user_context
@@ -826,16 +863,14 @@ def override_passwordless_apis(original_implementation: APIInterface):
             # OTP verification was successful. We can now mark the
             # session's payload as {"is2faComplete": True} so that
             # the user has access to API routes and the frontend UI
-            await _session.update_access_token_payload(
-                {**_session.get_access_token_payload(), "is2faComplete": True}
-            )
+            await _session.set_claim_value(SecondFactorClaim, True)
             # highlight-end
 
             # We can now associate
             # the passwordless user ID with the thirdpartyemailpassword
             # user ID, so that later on, we can fetch the phone number.
             await update_user_metadata(
-                _session.get_user_id(), # userId of the first factor login
+                _session.get_user_id(),  # userId of the first factor login
                 {"passwordlessUserId": res.user.user_id}
             )
 
@@ -843,6 +878,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
 
     original_implementation.consume_code_post = consume_code_post
     return original_implementation
+
 
 def override_session_functions(original_implementation: RecipeInterface):
     original_create_new_session = original_implementation.create_new_session
@@ -868,15 +904,13 @@ def override_session_functions(original_implementation: RecipeInterface):
         if access_token_payload is None:
             access_token_payload = {}
 
-        # Insert "is2faComplete" in access token payload
-        access_token_payload = {**access_token_payload, "is2faComplete": False}
+        access_token_payload = {**access_token_payload, **(await SecondFactorClaim.build(user_id, user_context))}
         return await original_create_new_session(
             request, user_id, access_token_payload, session_data, user_context
         )
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
-
 ```
 
 </TabItem>
@@ -914,9 +948,12 @@ Passwordless.init({
                     * same number that belongs to this user.
                     */
 
-                    // A session should already exist since this should be called after the first
-                    // factor is completed.
-                    let session = await Session.getSession(input.options.req, input.options.res);
+                    // A session should already exist since this should be called after the first factor is completed.
+                    // We set the claims to check to be [] here, since this needs to be callable 
+                    // without the second factor completed
+                    let session = await Session.getSession(input.options.req, input.options.res, {
+                        overrideGlobalClaimValidators: () => [],
+                    });
 
                     // We try and get the phone number associated with this user. It will be
                     // defined if this is a sign in attempt, in which case, we will check that
@@ -965,6 +1002,8 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
@@ -979,16 +1018,21 @@ func main() {
 			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 				/*This API is called to send an OTP*/
 				oCreateCodePOST := *originalImplementation.CreateCodePOST
-                // highlight-start
+				// highlight-start
 				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
 					/**
 					 * We want to make sure that the OTP being generated is for the
 					 * same number that belongs to this user.
 					 */
 
-					// A session should already exist since this should be called after the first
-					// factor is completed.
-					session, err := session.GetSession(options.Req, options.Res, nil)
+					// A session should already exist since this should be called after the first factor is completed.
+					// We set the claims to check to be [] here, since this needs to be callable
+					// without the second factor completed
+					session, err := session.GetSession(options.Req, options.Res, &sessmodels.VerifySessionOptions{
+						OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+							return []claims.SessionClaimValidator{}, nil
+						},
+					})
 					if err != nil {
 						return plessmodels.CreateCodePOSTResponse{}, err
 					}
@@ -1020,7 +1064,7 @@ func main() {
 
 					return oCreateCodePOST(email, phoneNumber, options, userContext)
 				}
-                // highlight-end
+				// highlight-end
 				*originalImplementation.CreateCodePOST = nCreateCodePOST
 
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
@@ -1049,7 +1093,6 @@ from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
 from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
 
-
 def override_passwordless_apis(original_implementation: APIInterface):
     original_consume_code_post = original_implementation.consume_code_post
     original_create_code_post = original_implementation.create_code_post
@@ -1066,9 +1109,10 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # We want to make sure that the OTP being generated is for the
         # same number that belongs to this user.
 
-        # A session should already exist since this should be called after the first
-        # factor is completed
-        _session = await get_session(api_options.request)
+        # A session should already exist since this should be called after the first factor is completed.
+        # We set the claims to check to be [] here, since this needs to be callable
+        # without the second factor completed
+        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
         assert _session is not None
 
         # We try to get the phone number associated with this user. It will be
@@ -1140,6 +1184,8 @@ We do this by modifying the `createNewSession` function in the `Session.init` ca
 import Session from "supertokens-node/recipe/session";
 import UserMetadata from "supertokens-node/recipe/usermetadata";
 import Passwordless from "supertokens-node/recipe/passwordless";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
 
 Session.init({
     override: {
@@ -1175,7 +1221,7 @@ Session.init({
                         ...input,
                         accessTokenPayload: {
                             ...input.accessTokenPayload,
-                            is2faComplete: false,
+                            ...SecondFactorClaim.build(input.userId, input.userContext),
                             // highlight-next-line
                             phoneNumber,
                         },
@@ -1196,12 +1242,17 @@ import (
 
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+
 	session.Init(&sessmodels.TypeInput{
 		Override: &sessmodels.OverrideStruct{
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
@@ -1221,19 +1272,25 @@ func main() {
 					// using the UserMetadata recipe
 					userMetadata, err := usermetadata.GetUserMetadataWithContext(userID, userContext)
 					if err != nil {
-						return sessmodels.SessionContainer{}, err
+						return nil, err
 					}
 					var userPhoneNumber *string
 					if passwordlessUserId, ok := userMetadata["passwordlessUserId"].(string); ok {
 						passwordlessUserInfo, err := passwordless.GetUserByIDWithContext(passwordlessUserId, userContext)
 						if err != nil {
-							return sessmodels.SessionContainer{}, err
+							return nil, err
 						}
 						userPhoneNumber = passwordlessUserInfo.PhoneNumber
 					}
 					// highlight-end
 
-					accessTokenPayload["is2faComplete"] = false
+					if accessTokenPayload == nil {
+						accessTokenPayload = map[string]interface{}{}
+					}
+					accessTokenPayload, err = SecondFactorClaim.Build(userID, accessTokenPayload, userContext)
+					if err != nil {
+						return nil, err
+					}
 					// highlight-start
 					if userPhoneNumber != nil {
 						accessTokenPayload["phoneNumber"] = *userPhoneNumber
@@ -1257,7 +1314,10 @@ from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
 from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
 from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+from supertokens_python.recipe.session.claims import BooleanClaim
 
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __: False)
 
 def override_session_functions(original_implementation: RecipeInterface):
     original_create_new_session = original_implementation.create_new_session
@@ -1298,7 +1358,7 @@ def override_session_functions(original_implementation: RecipeInterface):
         # Insert "is2faComplete" and "phoneNumber" in the access token payload
         access_token_payload = {
             **access_token_payload,
-            "is2faComplete": False,
+            **(await SecondFactorClaim.build(user_id, user_context)),
             # highlight-next-line
             "phoneNumber": phone_number,
         }
@@ -1308,7 +1368,6 @@ def override_session_functions(original_implementation: RecipeInterface):
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
-
 ```
 
 </TabItem>
@@ -1338,9 +1397,11 @@ Passwordless.init({
                     * same number that belongs to this user.
                     */
 
-                    // A session should already exist since this should be called after the first
-                    // factor is completed.
-                    let session = await Session.getSession(input.options.req, input.options.res);
+                    // A session should already exist since this should be called after the first factor is completed.
+                    // We remove claim checking here, since this needs to be callable without the second factor completed
+                    let session = await Session.getSession(input.options.req, input.options.res, {
+                        overrideGlobalClaimValidators: () => [],
+                    });
 
                     // highlight-next-line
                     let phoneNumber: string = session!.getAccessTokenPayload().phoneNumber;
@@ -1377,6 +1438,8 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -1396,9 +1459,14 @@ func main() {
 					 * same number that belongs to this user.
 					 */
 
-					// A session should already exist since this should be called after the first
-					// factor is completed.
-					session, err := session.GetSession(options.Req, options.Res, nil)
+					// A session should already exist since this should be called after the first factor is completed.
+					// We set the claims to check to be [] here, since this needs to be callable
+					// without the second factor completed
+					session, err := session.GetSession(options.Req, options.Res, &sessmodels.VerifySessionOptions{
+						OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+							return []claims.SessionClaimValidator{}, nil
+						},
+					})
 					if err != nil {
 						return plessmodels.CreateCodePOSTResponse{}, err
 					}
@@ -1446,7 +1514,6 @@ from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIO
 from typing import Union, Dict, Any
 from supertokens_python.recipe.session.asyncio import get_session
 
-
 def override_passwordless_apis(original_implementation: APIInterface):
     original_create_code_post = original_implementation.create_code_post
 
@@ -1461,9 +1528,10 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # We want to make sure that the OTP being generated is for the
         # same number that belongs to this user.
 
-        # A session should already exist since this should be called after the first
-        # factor is completed
-        _session = await get_session(api_options.request)
+        # A session should already exist since this should be called after the first factor is completed.
+        # We set the claims to check to be [] here, since this needs to be callable
+        # without the second factor completed
+        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
         assert _session is not None
 
         # highlight-next-line

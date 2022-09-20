@@ -12,15 +12,15 @@ import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs"
 # Managing roles and users
 
 With the UserRoles recipe you can:
-- Assign roles to users
-- Remove roles from users
+- Assign roles to users and their sessions
+- Remove roles from users and their sessions
 - Get a list of all roles assigned to a specific user
 - Get a list of all users that are assigned a specific role
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import TabItem from '@theme/TabItem';
 
-## Assign roles to a user
+## Assign roles to a user and their session
 
 You can assign roles to users before hand or immediately after they sign up. *The role must be created before you can assign it.*
 
@@ -129,29 +129,23 @@ def add_role_to_user_func(user_id: str, role: str):
 </TabItem>
 </BackendSDKTabs>
 
-## Remove role from a user
+Normally, you would do the above in the sign up function override. This way, SuperTokens would automatically add the roles & permissions of the user to their session.
 
-You can remove roles from a user, the role you provide will be removed only if the user was assigned that role.
+However, in case you associate the roles to a user after the session has already been created, then you can also manually add the roles and permissions to a session using in the following way:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
-import UserRoles from "supertokens-node/recipe/userroles";
+import {UserRoleClaim, PermissionClaim} from "supertokens-node/recipe/userroles";
+import {SessionContainer} from "supertokens-node/recipe/session"
 
-async function removeRoleFromUser(userId: string) {
-    // highlight-start
-    const response = await UserRoles.removeUserRole(userId, "user");
+async function addRolesAndPermissionsToSession(session: SessionContainer) {
+    // we add the user's roles to the user's session
+	await session.fetchAndSetClaim(UserRoleClaim)
 
-    if (response.status === "UNKNOWN_ROLE_ERROR") {
-        // No such role exists
-        return;
-    }
-
-    if (response.didUserHaveRole === false) {
-        // The user was never assigned the role
-    }
-    // highlight-end
+	// we add the permissions of a user to the user's session
+	await session.fetchAndSetClaim(PermissionClaim)
 }
 ```
 
@@ -160,13 +154,108 @@ async function removeRoleFromUser(userId: string) {
 
 ```go
 import (
-	"github.com/supertokens/supertokens-golang/recipe/userroles"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
 )
 
-func removeRoleFromUser(userId string) {
-	// highlight-start
-	// const response = await UserRoles.removeUserRole(userId, "user");
-	response, err := userroles.RemoveUserRole(userId, "user", nil)
+func addRolesAndPermissionsToSession(session sessmodels.SessionContainer) error {
+	// we add the user's roles to the user's session
+	err := session.FetchAndSetClaim(userrolesclaims.UserRoleClaim)
+	if err != nil {
+		return err
+	}
+
+	// we add the user's permissions to the user's session
+	err = session.FetchAndSetClaim(userrolesclaims.PermissionClaim)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.userroles import UserRoleClaim, PermissionClaim
+
+
+async def add_roles_and_permissions_to_session(session: SessionContainer):
+    # we add the user's roles to the user's session
+    await session.fetch_and_set_claim(UserRoleClaim)
+
+    # we add the user's permissions to the user's session
+    await session.fetch_and_set_claim(PermissionClaim)
+```
+</TabItem>
+
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.userroles import UserRoleClaim, PermissionClaim
+
+
+def add_roles_and_permissions_to_session(session: SessionContainer):
+    # we add the user's roles to the user's session
+	session.sync_fetch_and_set_claim(UserRoleClaim)
+    
+    # we add the user's permissions to the user's session
+	session.sync_fetch_and_set_claim(PermissionClaim)
+```
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+## Remove role from a user and their sessions
+
+You can remove roles from a user, the role you provide will be removed only if the user was assigned that role.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import UserRoles from "supertokens-node/recipe/userroles";
+import { SessionContainer } from "supertokens-node/recipe/session"
+
+async function removeRoleFromUserAndTheirSession(session: SessionContainer) {
+    const response = await UserRoles.removeUserRole(session.getUserId(), "user");
+
+    if (response.status === "UNKNOWN_ROLE_ERROR") {
+        // No such role exists
+        return;
+    }
+
+    if (response.didUserHaveRole === false) {
+        // The user was never assigned the role
+    } else {
+        // We also want to update the session of this user to reflect this change.
+        await session.fetchAndSetClaim(UserRoles.UserRoleClaim);
+        await session.fetchAndSetClaim(UserRoles.PermissionClaim);
+    }
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+)
+
+func removeRoleFromUserAndTheirSession(session sessmodels.SessionContainer) {
+	response, err := userroles.RemoveUserRole(session.GetUserID(), "user", nil)
 	if err != nil {
 		// TODO: Handle error
 		return
@@ -179,8 +268,11 @@ func removeRoleFromUser(userId string) {
 
 	if response.OK.DidUserHaveRole == false {
 		// The user was never assigned the role
+	} else {
+		// We also want to update the session of this user to reflect this change.
+		session.FetchAndSetClaim(userrolesclaims.UserRoleClaim)
+		session.FetchAndSetClaim(userrolesclaims.PermissionClaim)
 	}
-	// highlight-end
 }
 ```
 
@@ -193,10 +285,11 @@ func removeRoleFromUser(userId string) {
 ```python
 from supertokens_python.recipe.userroles.asyncio import remove_user_role
 from supertokens_python.recipe.userroles.interfaces import UnknownRoleError
+from supertokens_python.recipe.userroles import UserRoleClaim, PermissionClaim
+from supertokens_python.recipe.session import SessionContainer
 
-async def remove_user_role_func(user_id: str, role: str):
-    # highlight-start
-    res = await remove_user_role(user_id, role)
+async def remove_role_from_user_and_their_session(session: SessionContainer):
+    res = await remove_user_role(session.get_user_id(), "user")
     if isinstance(res, UnknownRoleError):
         # No such role exists
         return
@@ -204,8 +297,10 @@ async def remove_user_role_func(user_id: str, role: str):
     if res.did_user_have_role == False:
         # The user was never assigned the role
         pass
-    # highlight-end
-
+    else:
+        # We also want to update the session of this user to reflect this change.
+        await session.fetch_and_set_claim(UserRoleClaim)
+        await session.fetch_and_set_claim(PermissionClaim)
 ```
 
 </TabItem>
@@ -214,19 +309,22 @@ async def remove_user_role_func(user_id: str, role: str):
 ```python
 from supertokens_python.recipe.userroles.syncio import remove_user_role
 from supertokens_python.recipe.userroles.interfaces import UnknownRoleError
+from supertokens_python.recipe.userroles import UserRoleClaim, PermissionClaim
+from supertokens_python.recipe.session import SessionContainer
 
-def remove_user_role_func(user_id: str, role: str):
-    # highlight-start
-    res = remove_user_role(user_id, role)
+def remove_role_from_user_and_their_session(session: SessionContainer):
+    res = remove_user_role(session.get_user_id(), "user")
     if isinstance(res, UnknownRoleError):
         # No such role exists
         return
 
-    if res.did_user_have_role:
-        # User actually had this role
+    if res.did_user_have_role == False:
+        # The user was never assigned the role
         pass
-    # highlight-end
-
+    else:
+        # We also want to update the session of this user to reflect this change.
+        session.sync_fetch_and_set_claim(UserRoleClaim)
+        session.sync_fetch_and_set_claim(PermissionClaim)
 ```
 
 </TabItem>

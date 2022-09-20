@@ -85,6 +85,7 @@ If you are displaying this at some custom path, then you need add additional con
 ```tsx
 import SuperTokens from "supertokens-node";
 import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{docsLinkRecipeName}";
+import { SMTPService } from "supertokens-node/recipe/^{docsLinkRecipeName}/emaildelivery";
 
 SuperTokens.init({
     supertokens: { 
@@ -97,16 +98,28 @@ SuperTokens.init({
     },
     recipeList: [
         ^{recipeNameCapitalLetters}.init({
-            //highlight-start
-            resetPasswordUsingTokenFeature: {
-
-                // This function is used to generate the password reset link
-                getResetPasswordURL: async (user) => {
-                    let { email, id } = user;
-                    return "https://example.com/custom-reset-password-path"
+            // highlight-start
+            emailDelivery: {
+                override: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        sendEmail: async function (input) {
+                            if (input.type === "PASSWORD_RESET") {
+                                return originalImplementation.sendEmail({
+                                    ...input,
+                                    passwordResetLink: input.passwordResetLink.replace(
+                                        // This is: `${websiteDomain}${websiteBasePath}/reset-password`
+                                        "http://localhost:3000/auth/reset-password",
+                                        "http://localhost:3000/your/path"
+                                        )
+                                })
+                            }
+                            return originalImplementation.sendEmail(input);
+                        }
+                    }
                 }
             }
-            //highlight-end
+            // highlight-end
         })
     ]
 });
@@ -116,7 +129,8 @@ SuperTokens.init({
 
 ```go
 import (
-	^{goEPModelsImport}
+    "strings"
+    "github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
 	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
 	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
 	"github.com/supertokens/supertokens-golang/supertokens"
@@ -128,9 +142,20 @@ func main() {
 			^{codeImportRecipeName}.Init(^{goModelNameForInit}.TypeInput{
 
 				//highlight-start
-				ResetPasswordUsingTokenFeature: &epmodels.TypeInputResetPasswordUsingTokenFeature{
-					GetResetPasswordURL: func(user epmodels.User, userContext supertokens.UserContext) (string, error) {
-						return "https://example.com/custom-reset-password-path", nil
+				EmailDelivery: &emaildelivery.TypeInput{
+					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
+						ogSendEmail := *originalImplementation.SendEmail
+
+						(*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
+							// This is: `${websiteDomain}${websiteBasePath}/reset-password`
+							input.PasswordReset.PasswordResetLink = strings.Replace(
+								input.PasswordReset.PasswordResetLink,
+								"http://localhost:3000/auth/reset-password",
+								"http://localhost:3000/your/path", 1,
+							)
+							return ogSendEmail(input, userContext)
+						}
+						return originalImplementation
 					},
 				},
 				//highlight-end
@@ -145,27 +170,32 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.^{codeImportRecipeName}.types import EmailDeliveryOverrideInput, EmailTemplateVars
 from supertokens_python.recipe import ^{codeImportRecipeName}
-from supertokens_python.recipe.emailpassword.types import User
 from typing import Dict, Any
+from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig
 
-# highlight-start
-async def get_reset_password_url (user: User, user_context: Dict[str, Any]):
-    # This function is used to generate the password reset link
-    return "https://example.com/custom-reset-password-path"
-# highlight-end
+def custom_email_deliver(original_implementation: EmailDeliveryOverrideInput) -> EmailDeliveryOverrideInput:
+    original_send_email = original_implementation.send_email
+
+    # highlight-start
+    async def send_email(template_vars: EmailTemplateVars, user_context: Dict[str, Any]) -> None:
+        # This is: `${websiteDomain}${websiteBasePath}/reset-password`
+        template_vars.password_reset_link = template_vars.password_reset_link.replace(
+            "http://localhost:3000/auth/reset-password", "http://localhost:3000/your/path")
+        return await original_send_email(template_vars, user_context)
+    # highlight-end
+
+    original_implementation.send_email = send_email
+    return original_implementation
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    
     framework='...', # type: ignore
     recipe_list=[
         ^{codeImportRecipeName}.init(
-            # highlight-start
-            reset_password_using_token_feature=^{codeImportRecipeName}.InputResetPasswordUsingTokenFeature(
-                get_reset_password_url=get_reset_password_url
-            )
-            # highlight-end
+            ^{pythonRecipeInitDefault} # typecheck-only, removed from output
+            email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
         )
     ]
 )

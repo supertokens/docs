@@ -31,34 +31,48 @@ For this guide, we will be showing the second factor UI on `/second-factor` (you
 
 ### 1) Disable the default UI
 ```tsx
+import SuperTokens from "supertokens-auth-react";
 import Passwordless from "supertokens-auth-react/recipe/passwordless";
 
-Passwordless.init({
-    contactMethod: "PHONE",
-    // highlight-start
-    signInUpFeature: {
-        // this will prevent the passwordless UI from being rendered when you 
-        // visit ^{form_websiteDomain}^{form_websiteBasePath}?rid=passwordless
-        disableDefaultUI: true,
+SuperTokens.init({
+    appInfo: {
+        appName: "^{form_appName}",
+        apiDomain: "^{form_apiDomain}",
+        websiteDomain: "^{form_websiteDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        websiteBasePath: "^{form_websiteBasePath}"
     },
-    getRedirectionURL: async function (context) {
-        if (context.action === "SIGN_IN_AND_UP") {
-            // this is telling the SDK that the form for this recipe is on /second-factor
-            return "/second-factor";
-        }
-    },
-    // highlight-end
+    recipeList: [
+        Passwordless.init({
+            contactMethod: "PHONE",
+            // highlight-start
+            signInUpFeature: {
+                // this will prevent the passwordless UI from being rendered when you 
+                // visit ^{form_websiteDomain}^{form_websiteBasePath}?rid=passwordless
+                disableDefaultUI: true,
+            },
+            // highlight-end
+        })
+    ],
 })
+
 ```
 
 ### 2) Show the Passwordless UI on `/second-factor`
 
 Create a React component for `/second-factor` screen in which, you can render the Passwordless UI as follows:
 ```tsx
-import React from "react"
+import { useEffect, useState } from "react";
+import { redirectToAuth } from "supertokens-auth-react";
 import Passwordless from "supertokens-auth-react/recipe/passwordless";
+import Session, { useSessionContext, SessionAuth } from "supertokens-auth-react/recipe/session";
 
-export default function SecondFactor() {
+const CustomSignInUpTheme: typeof Passwordless.SignInUpTheme = (props) => {
+    // TODO, we will customize this later.
+    return <Passwordless.SignInUpTheme {...props} />;
+};
+
+function SecondFactor() {
     return (
         <div
             style={{
@@ -67,8 +81,14 @@ export default function SecondFactor() {
                 alignItems: "center",
                 justifyContent: "center",
             }}>
-            // highlight-next-line
-            <Passwordless.SignInUp />
+            // highlight-start
+            <Passwordless.SignInUp redirectOnSessionExists={false}>
+                {
+                    // @ts-ignore We ignore the error about missing props, since they'll be set by the feature component
+                    <CustomSignInUpTheme />
+                }
+            </Passwordless.SignInUp>
+            // highlight-end
             <div
                 onClick={async () => {
                     // TODO:
@@ -83,6 +103,14 @@ export default function SecondFactor() {
         </div>
     );
 }
+
+export default function SecondFactorWrapper() {
+    return (
+        <SessionAuth>
+            <SecondFactor />
+        </SessionAuth>
+    );
+}
 ```
 
 :::note
@@ -93,7 +121,7 @@ Now if you navigate to `/second-factor`, you should see the enter phone number U
 
 </AppInfoForm>
 
-## Navigating to the second factor screen after the first is complete
+### 3) Navigating to the second factor screen after the first is complete
 
 We can do this by providing the `getRedirectionURL` callback to the `ThirdPartyEmailPassword` recipe `init`:
 
@@ -105,17 +133,54 @@ ThirdPartyEmailPassword.init({
     // ... previous config
     getRedirectionURL: async function (context) {
         if (context.action === "SUCCESS") {
-            let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
-            if (accessTokenPayload.is2faComplete === true) {
-                // we have completed both the factors and the user is going back to /auth manually for some reason.
-                return "/";
-            }
-            // we successfully logged in via google workspaces,
+            // we successfully logged in,
             // we must now show the user sign in with passwordless
             return "/second-factor";
         }
     },
 })
 ```
-- This callback is called with `context.action === "SUCCESS"` after the `ThirdPartyEmailPassword` login is complete (our first factor).
-- If both the factors are done (`accessTokenPayload.is2faComplete === true`), then we can route the user to their dashboard (`/` in our example), else we send them to the second factor screen.
+
+This callback is called with `context.action === "SUCCESS"` after the `ThirdPartyEmailPassword` login is complete (our first factor).
+
+### 4) Turn off checking for a session in the Passwordless Sign In/Up component
+
+By default, the passwordless sign in / up component checks if a session exists and if it does, it shows a UI indicating to "close this tab since you are already logged in" (since the user could have opened a magic link on another tab). To prevent this behaviour, modify one of its props as follows:
+
+```tsx
+import { useEffect, useState } from "react";
+import { redirectToAuth } from "supertokens-auth-react";
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+import Session from "supertokens-auth-react/recipe/session";
+
+const CustomSignInUpTheme: typeof Passwordless.SignInUpTheme = (props) => {
+    // If this was active, we'd not show the OTP screen because it'd detect an active session.
+    props.featureState.successInAnotherTab = false;
+
+    return <Passwordless.SignInUpTheme {...props} />;
+};
+```
+
+### 5) Navigate to `/` if both factors are completed
+
+```tsx
+import { useEffect } from "react";
+import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
+
+function SecondFactor() {
+    const session = useSessionContext();
+
+    useEffect(() => {
+        if (!session.loading) {
+            if (session.invalidClaims.length === 0) {
+                // navigate to "/"
+            }
+        }
+
+        // We intentionally skip session.invalidClaims from the dependency array since that would mean we may navigate to / twice
+    }, [session.loading]);
+
+    // The rest of SecondFactor component from above..
+    return <></>;
+}
+```

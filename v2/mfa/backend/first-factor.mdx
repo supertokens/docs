@@ -19,7 +19,7 @@ import CoreInjector from "/src/components/coreInjector"
 
 Start by following the recipe guide for the first factor. In this guide, we will take the example of [thirdpartyemailpassword recipe](https://supertokens.com/docs/thirdpartyemailpassword/introduction) as being the first factor.
 
-After following the [backend quick setup section](https://supertokens.com/docs/thirdpartyemailpassword/quick-setup/backend) (or any of the framework specific integration guides), you should have all the auth APIs exposed by the SuperTokens middleware. The `supertokens.init` code on the server would look like this:
+After following the [backend quick setup section](https://supertokens.com/docs/thirdpartyemailpassword/quick-setup/backend) (or any of the framework specific integration guides), you should have all the auth APIs exposed to the frontend via the SuperTokens middleware. The `supertokens.init` code on the server would look like this:
 
 <AppInfoForm
     askForAppName
@@ -347,9 +347,9 @@ init(
 You should have also added the SuperTokens `middleware` and `errorHandler` (depending on your framework) to your application. We are not showing it in the above code snippet for brevity, but it is explained in the ThirdPartyEmailPassword recipe guide. 
 :::
 
-## 2) Storing first factor completion information in the session
+## 2) Adding SecondFactorClaim
 
-After sign up or sign in of the first factor, we want to modify the session to reflect that the first factor is completed. This can be done by overriding the `createNewSession` function in the `session.init` config:
+After sign up or sign in of the first factor, the existence of the session signifies the completion of the first factor, but we want to explicitly mark the second factor as incomplete. This can be done by overriding the `createNewSession` function in the `Session.init` config:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -358,6 +358,18 @@ After sign up or sign in of the first factor, we want to modify the session to r
 import Session from "supertokens-node/recipe/session";
 import UserMetadata from "supertokens-node/recipe/usermetadata";
 import Passwordless from "supertokens-node/recipe/passwordless";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims";
+
+/*
+This will be used to modify the session's access token payload
+to add {"2fa-completed": false} into it.
+*/
+// highlight-start
+export const SecondFactorClaim = new BooleanClaim({
+    fetchValue: () => false,
+    key: "2fa-completed",
+});
+// highlight-end
 
 Session.init({
     override: {
@@ -370,7 +382,8 @@ Session.init({
                         ...input,
                         accessTokenPayload: {
                             ...input.accessTokenPayload,
-                            is2faComplete: false
+                            // highlight-next-line
+                            ...SecondFactorClaim.build(input.userId, input.userContext),
                         },
                     });
                 },
@@ -388,18 +401,33 @@ import (
 	"net/http"
 
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
+    // highlight-start
+    SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+        return false, nil
+    }, nil)
+    // highlight-end
+
 	session.Init(&sessmodels.TypeInput{
 		Override: &sessmodels.OverrideStruct{
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 				oCreateNewSession := *originalImplementation.CreateNewSession
 				/* This function is called after signing in or signing up via the first factor */
 				nCreateNewSession := func(res http.ResponseWriter, userID string, accessTokenPayload map[string]interface{}, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
-					accessTokenPayload["is2faComplete"] = false
+					// highlight-start
+					if accessTokenPayload == nil {
+						accessTokenPayload = map[string]interface{}{}
+					}
+					accessTokenPayload, err := SecondFactorClaim.Build(userID, accessTokenPayload, userContext)
+					if err != nil {
+						return nil, err
+					}
+					// highlight-end
 					return oCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
 				}
 				*originalImplementation.CreateNewSession = nCreateNewSession
@@ -415,10 +443,17 @@ func main() {
 
 ```python
 from supertokens_python.recipe import session
+from supertokens_python.recipe.session.claims import BooleanClaim
 from supertokens_python.recipe.session.interfaces import RecipeInterface
 from typing import Any, Dict, Union
 
+# This will be used to modify the session's access token payload
+# to add {"2fa-completed": false} into it.
 # highlight-start
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __: False)
+# highlight-end
+
 def override_session_functions(original_implementation: RecipeInterface):
     original_create_new_session = original_implementation.create_new_session
 
@@ -431,27 +466,26 @@ def override_session_functions(original_implementation: RecipeInterface):
     ):
         # This function is called after signing in or signing up via the first factor
 
-        # Insert "is2faComplete" in access token payload
         if access_token_payload is None:
             access_token_payload = {}
 
-        access_token_payload = {**access_token_payload, "is2faComplete": False}
+        # highlight-next-line
+        access_token_payload = {**access_token_payload, **(await SecondFactorClaim.build(user_id, user_context))}
         return await original_create_new_session(
             request, user_id, access_token_payload, session_data, user_context
         )
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
-# highlight-end
+
 
 session.init(
     # highlight-next-line
     override=session.InputOverrideConfig(functions=override_session_functions)
 )
-
 ```
 
 </TabItem>
 </BackendSDKTabs>
 
-We add `is2faComplete: false` into the access token payload. This will indicate to the API routes and to the frontend that only the first factor has been completed. You can change the key to some other name as well.
+We add `SecondFactorClaim` into the access token payload. This will be set to false on session creation (see `fetchValue` in the claim definition).

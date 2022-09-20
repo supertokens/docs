@@ -19,7 +19,7 @@ module.exports = {
       items: [
         "pre-built-ui/init",
         "pre-built-ui/showing-login-ui",
-        "pre-built-ui/changing-does-session-exist",
+        "pre-built-ui/protecting-routes",
         "pre-built-ui/second-factor-logout",
         "pre-built-ui/auto-entering-phone"
       ],

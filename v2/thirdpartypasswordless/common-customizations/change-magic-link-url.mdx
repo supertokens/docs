@@ -4,6 +4,9 @@ title: Changing the Magic Link URL
 hide_title: true
 ---
 
+<!-- COPY DOCS -->
+<!-- ./thirdpartypasswordless/common-customizations/change-magic-link-url.mdx -->
+
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
 import TabItem from '@theme/TabItem';
@@ -12,14 +15,14 @@ import TabItem from '@theme/TabItem';
 
 ## Backend change
 
-You can change the URL of Magic Links by providing a callback on the backend.
+You can change the URL of Magic Links by providing overriding the email delivery config on the backend.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
@@ -29,17 +32,32 @@ SuperTokens.init({
         websiteDomain: "..."
     },
     recipeList: [
-        ThirdPartyPasswordless.init({
+        ^{recipeNameCapitalLetters}.init({
             contactMethod: "EMAIL", // This example will work with any contactMethod
             // This example works with the "USER_INPUT_CODE_AND_MAGIC_LINK" and "MAGIC_LINK" flows.
             flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", 
 
             // highlight-start
-            // Customize information in the URL.
-            // By default: `${websiteDomain}/${websiteBasePath}/verify`
-            getLinkDomainAndPath: async (contactInfo, context) => {
-                // contactInfo is {email: string} | {phoneNumber: string}
-                return "https://example.com/custom/auth/verify"
+            emailDelivery: {
+                // highlight-start
+                override: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        sendEmail: async function (input) {
+                            if (input.type === "PASSWORDLESS_LOGIN") {
+                                return originalImplementation.sendEmail({
+                                    ...input,
+                                    urlWithLinkCode: input.urlWithLinkCode?.replace(
+                                        // This is: `${websiteDomain}${websiteBasePath}/verify`
+                                        "http://localhost:3000/auth/verify",
+                                        "http://your.domain.com/your/path"
+                                        )
+                                })
+                            }
+                            return originalImplementation.sendEmail(input);
+                        }
+                    }
+                }
             }
             // highlight-end
         }),
@@ -52,19 +70,36 @@ SuperTokens.init({
 
 ```go
 import (
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
+    "strings"
+
+    "github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			thirdpartypasswordless.Init(tplmodels.TypeInput{
-				// Customize information in the URL.
-				// By default: `${websiteDomain}/${websiteBasePath}/verify`
-				GetLinkDomainAndPath: func(email, phoneNumber *string, userContext supertokens.UserContext) (string, error) {
-					return "https://example.com/custom/auth/verify", nil
+			^{codeImportRecipeName}.Init(^{goModelName}.TypeInput{
+				EmailDelivery: &emaildelivery.TypeInput{
+					// highlight-start
+					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
+						ogSendEmail := *originalImplementation.SendEmail
+						(*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
+							// By default: `${websiteDomain}/${websiteBasePath}/verify`
+							newUrl := strings.Replace(
+								*input.PasswordlessLogin.UrlWithLinkCode,
+								"http://localhost:3000/auth/verify",
+								"http://localhost:3000/custom/path",
+								1,
+							)
+							input.PasswordlessLogin.UrlWithLinkCode = &newUrl
+							return ogSendEmail(input, userContext)
+						}
+						return originalImplementation
+					},
+					// highlight-end
 				},
 			}),
 		},
@@ -76,26 +111,34 @@ func main() {
 <TabItem value="python">
 
 ```python
-from supertokens_python.recipe import thirdpartypasswordless
-from supertokens_python import InputAppInfo, init
-from supertokens_python.recipe.passwordless.utils import PhoneOrEmailInput
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.^{codeImportRecipeName}.types import EmailDeliveryOverrideInput, EmailTemplateVars
+from supertokens_python.recipe import ^{codeImportRecipeName}
 from typing import Dict, Any
+from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig
 
-async def get_link_domain_and_path(config: PhoneOrEmailInput, user_context: Dict[str, Any]) -> str:
-    return "https://example.com/custom/auth/verify"
+def custom_email_deliver(original_implementation: EmailDeliveryOverrideInput) -> EmailDeliveryOverrideInput:
+    original_send_email = original_implementation.send_email
+
+    # highlight-start
+    async def send_email(template_vars: EmailTemplateVars, user_context: Dict[str, Any]) -> None:
+        assert template_vars.url_with_link_code is not None
+        # By default: `${websiteDomain}/${websiteBasePath}/verify`
+        template_vars.url_with_link_code = template_vars.url_with_link_code.replace(
+            "http://localhost:3000/auth/verify", "http://localhost:3000/custom/path")
+        return await original_send_email(template_vars, user_context)
+    # highlight-end
+
+    original_implementation.send_email = send_email
+    return original_implementation
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
     framework='...', # type: ignore
     recipe_list=[
-        thirdpartypasswordless.init(
-            contact_config=..., # type: ignore
-            flow_type="...", # type: ignore
-            # highlight-start
-            # Customize information in the URL.
-			# By default: `${websiteDomain}/${websiteBasePath}/verify`
-            get_link_domain_and_path=get_link_domain_and_path
-            # highlight-end
+        ^{codeImportRecipeName}.init(
+            ^{pythonRecipeInitDefault} # typecheck-only, removed from output
+            email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
         )
     ]
 )
@@ -113,9 +156,9 @@ When the user clicks the magic link, you need to render the `LinkClicked` compon
 
 ### 1) Disable the default UI for the link clicked screen:
 ```tsx
-import ThirdPartyPasswordless from "supertokens-auth-react/recipe/thirdpartypasswordless";
+import ^{recipeNameCapitalLetters} from "supertokens-auth-react/recipe/^{codeImportRecipeName}";
 
-ThirdPartyPasswordless.init({
+^{recipeNameCapitalLetters}.init({
     contactMethod: "EMAIL", // This example will work with any contactMethod
     linkClickedScreenFeature: {
         disableDefaultUI: true
@@ -126,9 +169,9 @@ ThirdPartyPasswordless.init({
 ### 2) Render the link clicked screen on your custom route:
 ```tsx
 import React from "react";
-import { PasswordlessLinkClicked } from "supertokens-auth-react/recipe/thirdpartypasswordless";
+import { ^{reactLinkClickedComponent} } from "supertokens-auth-react/recipe/^{codeImportRecipeName}";
 function CustomLinkClickedScreen () {
-    return <PasswordlessLinkClicked />
+    return <^{reactLinkClickedComponent} />
 }
 ```
 
