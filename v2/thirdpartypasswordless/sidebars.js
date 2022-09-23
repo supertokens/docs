@@ -464,6 +464,7 @@ module.exports = {
           label: "Core",
           items: [
             "common-customizations/core/api-keys",
+            "common-customizations/core/ip-allow-deny",
             "common-customizations/core/performance",
             "common-customizations/core/logging",
             "common-customizations/core/add-ssl-via-nginx",
