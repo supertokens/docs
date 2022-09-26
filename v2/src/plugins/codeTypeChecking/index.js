@@ -5,6 +5,10 @@ var exec = require('child_process').exec;
 var crypto = require('crypto');
 let mdVars = require("../markdownVariables.json");
 
+function hash(input) {
+    return crypto.createHash('md5').update(input).digest('hex');
+}
+
 async function addCodeSnippetToEnv(mdFile) {
     if (mdFile.includes("/v2/change_me/") || mdFile.includes("/v2/contribute/") ||
         mdFile.includes("/v2/nodejs") || mdFile.includes("/v2/golang") || mdFile.includes("/v2/python") ||
@@ -54,9 +58,11 @@ async function addCodeSnippetToEnv(mdFile) {
                             currentCodeLanguage = "go";
                         } else if (currLineTrimmed === "```python" || currLineTrimmed.startsWith("```python ")) {
                             currentCodeLanguage = "python";
+                        } else if (currLineTrimmed === "```kotlin" || currLineTrimmed.startsWith("```kotlin ")) {
+                            currentCodeLanguage = "kotlin";
                         } else if (currLineTrimmed.includes("bash") || currLineTrimmed.includes("yaml") || currLineTrimmed.includes("cql") || currLineTrimmed.includes("sql") || currLineTrimmed.includes("batch") ||
                             currLineTrimmed.includes("text") || currLineTrimmed.includes("json")
-                            || currLineTrimmed.includes("html") || currLineTrimmed.includes("java")) {
+                            || currLineTrimmed.includes("html")) {
                             currentCodeLanguage = "ignore"
                         } else {
                             return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE in file ${mdFile}.`));
@@ -223,6 +229,20 @@ async function checkCodeSnippets(language) {
                 res();
             });
         })
+    } else if (language === "kotlin") {
+        await new Promise((res, rej) => {
+            exec("cd src/plugins/codeTypeChecking/kotlinEnv/ && find . -name '*.kt' | xargs kotlinc", async function (err, stdout, stderr) {
+                if (err) {
+                    console.log('\x1b[31m%s\x1b[0m', stdout);
+                    console.log('\x1b[31m%s\x1b[0m', err);
+                    console.log("=======SETUP INSTRS========\n");
+                    console.log('\x1b[36m%s\x1b[0m', `Make sure that you have kotlin installed on your system and try this command again`)
+                    console.log("==========================\n");
+                    return rej(err);
+                }
+                res();
+            });
+        })
     } else {
         throw new Error("Unsupported language in checkCodeSnippets");
     }
@@ -288,7 +308,7 @@ Enabled: true,
     // this block is there so that the dev knows that the resulting block should use variable code snippets.
     if (ogCodeSnippet !== codeSnippet) {
         for (let i = 0; i < 50; i++) {
-            if (language === "typescript" || language === "go") {
+            if (language === "typescript" || language === "go" || language === "kotlin") {
                 codeSnippet = "// THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE\n" + codeSnippet;
             } else if (language === "python") {
                 codeSnippet = "# THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE\n" + codeSnippet;
@@ -363,6 +383,25 @@ Enabled: true,
                 } else {
                     await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName + "/main.py", codeSnippet);
                     fs.writeFile('src/plugins/codeTypeChecking/pythonEnv/snippets/' + folderName + "/main.py", codeSnippet, function (err) {
+                        if (err) {
+                            rej(err);
+                        } else {
+                            res();
+                        }
+                    });
+                }
+            });
+        });
+    } else if (language === "kotlin") {
+        let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+        let filename = hash(folderName)
+        await new Promise(async (res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/kotlinEnv/snippets/' + folderName, { recursive: true }, async (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/kotlinEnv/snippets/' + folderName + "/" + filename + ".kt", codeSnippet);
+                    fs.writeFile('src/plugins/codeTypeChecking/kotlinEnv/snippets/' + folderName + "/" + filename + ".kt", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
                         } else {
