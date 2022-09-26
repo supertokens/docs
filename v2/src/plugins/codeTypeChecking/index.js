@@ -56,7 +56,7 @@ async function addCodeSnippetToEnv(mdFile) {
                             currentCodeLanguage = "python";
                         } else if (currLineTrimmed.includes("bash") || currLineTrimmed.includes("yaml") || currLineTrimmed.includes("cql") || currLineTrimmed.includes("sql") || currLineTrimmed.includes("batch") ||
                             currLineTrimmed.includes("text") || currLineTrimmed.includes("json")
-                            || currLineTrimmed.includes("html"))  {
+                            || currLineTrimmed.includes("html") || currLineTrimmed.includes("java")) {
                             currentCodeLanguage = "ignore"
                         } else {
                             return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE in file ${mdFile}.`));
@@ -466,7 +466,7 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
              * For snippets that use supertokens-web-js as an HTML script we import supertokens-web-js-script for types.
              * If the line contains this we skip adding the line
              */
-             if (line.includes("supertokens-web-js-script")) {
+            if (line.includes("supertokens-web-js-script")) {
                 continue;
             }
 
