@@ -24,7 +24,8 @@ Other information like which email ID to send from is specified in the `smtpSett
 import supertokens from "supertokens-node";
 import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
 import Session from "supertokens-node/recipe/session";
-import { STMPService } from "supertokens-node/recipe/^{codeImportRecipeName}/emaildelivery";
+import EmailVerification from "supertokens-node/recipe/emailverification"
+import { SMTPService as EmailVerificationSMTPService } from "supertokens-node/recipe/emailverification/emaildelivery";
 
 supertokens.init({
     appInfo: {
@@ -35,8 +36,13 @@ supertokens.init({
     recipeList: [
         ^{recipeNameCapitalLetters}.init({
             ^{nodeRecipeInitDefault}
+        }),
+
+        // if email verification is enabled
+        EmailVerification.init({
+            ^{nodeEmailverificationDefaultInit}
             emailDelivery: {
-                service: new STMPService({
+                service: new EmailVerificationSMTPService({
                     // @ts-ignore
                     smtpSettings: { /*...*/ },
                     // highlight-start
@@ -47,22 +53,10 @@ supertokens.init({
                                 // email verification content
                                 let { emailVerifyLink, user } = input;
 
-                                // send some custom email content
-                                return {
-                                    body: "EMAIL BODY",
-                                    isHtml: true,
-                                    subject: "Some subject",
-                                    toEmail: user.email
-                                }
-
-                                // You can even call the original implementation and
-                                // modify its content:
-                                
-                                /*
+                                // you can even call the original implementation and modify that
                                 let originalContent = await originalImplementation.getContent(input)
                                 originalContent.subject = "My custom subject";
                                 return originalContent;
-                                */
                             }
                         }
                     }
@@ -79,65 +73,50 @@ supertokens.init({
 
 ```go
 import (
-	"fmt"
+    "fmt"
 
-	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
-	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
-	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+    "github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
-	supertokens.Init(supertokens.TypeInput{
-		RecipeList: []supertokens.Recipe{
-			thirdparty.Init(&tpmodels.TypeInput{
-				// typecheck-only, removed from output
+    supertokens.Init(supertokens.TypeInput{
+        RecipeList: []supertokens.Recipe{
+            emailverification.Init(evmodels.TypeInput{
 				EmailDelivery: &emaildelivery.TypeInput{
-					Service: thirdparty.MakeSMTPService(emaildelivery.SMTPServiceConfig{
+					Service: emailverification.MakeSMTPService(emaildelivery.SMTPServiceConfig{
 						Settings: emaildelivery.SMTPSettings{ /* ... */ },
 
 						// highlight-start
 						Override: func(originalImplementation emaildelivery.SMTPInterface) emaildelivery.SMTPInterface {
-
-							// originalGetContent := *originalImplementation.GetContent
+							originalGetContent := *originalImplementation.GetContent
 
 							(*originalImplementation.GetContent) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) (emaildelivery.EmailContent, error) {
-								// email verification content
-								emailVerifyLink := input.EmailVerification.EmailVerifyLink
+								// email verification email content
+								emailVerificationLink := input.EmailVerification.EmailVerifyLink
 								user := input.EmailVerification.User
-								fmt.Println(emailVerifyLink)
+								fmt.Println(emailVerificationLink)
 								fmt.Println(user)
 
-								// send some custom email content
-								return emaildelivery.EmailContent{
-									Body:    "EMAIL BODY",
-									IsHtml:  true,
-									Subject: "Some subject",
-									ToEmail: user.Email,
-								}, nil
-
 								// you can even call the original implementation and modify that
-
-								/*
-								   originalContent, err := originalGetContent(input, userContext)
-								   if err != nil {
-								       return emaildelivery.EmailContent{}, err
-								   }
-								   originalContent.Subject = "My custom subject"
-								   return originalContent, nil
-								*/
-
+								originalContent, err := originalGetContent(input, userContext)
+								if err != nil {
+									return emaildelivery.EmailContent{}, err
+								}
+								originalContent.Subject = "My custom subject"
+								return originalContent, nil
 							}
 
 							return originalImplementation
 						},
 						// highlight-end
-
 					}),
 				},
 			}),
-		},
-	})
+        },
+    })
 }
 ```
 </TabItem>
@@ -145,48 +124,43 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import thirdparty
-from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig, SMTPSettings, EmailContent
-from supertokens_python.recipe.thirdparty.types import SMTPOverrideInput, EmailTemplateVars
+from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig, EmailContent, SMTPSettings
 from typing import Dict, Any
+from supertokens_python.recipe.emailverification.types import SMTPOverrideInput as EVSMTPOverrideInput, EmailTemplateVars as EVEmailTemplateVars
+from supertokens_python.recipe import emailverification
 
-
-def custom_smtp_content_override(original_implementation: SMTPOverrideInput) -> SMTPOverrideInput:
-
-    # original_get_content = original_implementation.get_content
+def custom_smtp_email_verification_content_override(original_implementation: EVSMTPOverrideInput) -> EVSMTPOverrideInput:
+    original_get_content = original_implementation.get_content
 
     # highlight-start
-    async def get_content(template_vars: EmailTemplateVars, user_context: Dict[str, Any]) -> EmailContent:
+    async def get_content(template_vars: EVEmailTemplateVars, user_context: Dict[str, Any]) -> EmailContent:
         # email verification content
         _ = template_vars.email_verify_link
-        user = template_vars.user
-
-        # send some custom email content
-        return EmailContent(body="EMAIL BODY", subject="Some subject", is_html=True, to_email=user.email)
+        __ = template_vars.user
 
         # you can even call the original implementation and modify that
-
-        # original_content = await original_get_content(input_, user_context)
-        # original_content.subject = "My custom subject"
-        # return original_content
+        original_content = await original_get_content(template_vars, user_context)
+        original_content.subject = "My custom subject"
+        return original_content
     # highlight-end
 
     original_implementation.get_content = get_content
     return original_implementation
+
 
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
     framework='...',  # type: ignore
     recipe_list=[
-        thirdparty.init(
-            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(
-                []),  # typecheck-only, removed from output
+        # If email verification is enabled
+        emailverification.init(
+            mode="OPTIONAL",
             # highlight-start
             email_delivery=EmailDeliveryConfig(
-                service=thirdparty.SMTPService(
+                service=emailverification.SMTPService(
                     smtp_settings=SMTPSettings(...),  # type: ignore
-                    override=custom_smtp_content_override
+                    override=custom_smtp_email_verification_content_override
                 )
             )
             # highlight-end

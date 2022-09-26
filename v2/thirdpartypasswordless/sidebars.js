@@ -254,9 +254,6 @@ module.exports = {
         "user-roles/initialisation",
         "user-roles/creating-role",
         "user-roles/managing-roles-and-users",
-        "user-roles/managing-roles-and-sessions",
-        "user-roles/reading-role-from-session",
-        "user-roles/reading-role-on-frontend",
         "user-roles/protecting-routes",
         "user-roles/managing-roles-and-permissions",
         "user-roles/get-all-roles",
@@ -322,10 +319,12 @@ module.exports = {
           label: "Email Verification",
           items: [
             "common-customizations/email-verification/about",
+            "common-customizations/email-verification/protecting-routes",
             "common-customizations/email-verification/email-verification-email",
             "common-customizations/email-verification/embed-in-page",
             "common-customizations/email-verification/handling-email-verification-success",
-            "common-customizations/email-verification/changing-token-lifetime"
+            "common-customizations/email-verification/changing-token-lifetime",
+            "common-customizations/email-verification/changing-style"
           ]
         },
         "common-customizations/session-with-jwt",
@@ -410,6 +409,7 @@ module.exports = {
           label: "Core",
           items: [
             "common-customizations/core/api-keys",
+            "common-customizations/core/ip-allow-deny",
             "common-customizations/core/performance",
             "common-customizations/core/logging",
             "common-customizations/core/add-ssl-via-nginx",
