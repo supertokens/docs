@@ -13,7 +13,7 @@ function Hello() {
                     fontSize: '20px',
                 }}>
                 <p>
-                    <a href="https://supertokens.com/blog">Click here X</a> to see the blog posts.
+                    <a href="https://supertokens.com/blog">Click here</a> to see the blog posts.
                 </p>
             </div>
         </Layout>
