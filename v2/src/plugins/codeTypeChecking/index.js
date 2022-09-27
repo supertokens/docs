@@ -231,7 +231,7 @@ async function checkCodeSnippets(language) {
         })
     } else if (language === "kotlin") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/kotlinEnv/ && find . -name '*.kt' | xargs kotlinc", async function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/kotlinEnv/ && ./gradlew build", async function (err, stdout, stderr) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
@@ -395,13 +395,21 @@ Enabled: true,
     } else if (language === "kotlin") {
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
         let filename = hash(folderName)
+        let packageNameSplitted = folderName.split("/");
+        packageNameSplitted = packageNameSplitted.map(i => {
+            if (i.includes("-")) {
+                return "`" + i + "`"
+            }
+            return i;
+        })
+        codeSnippet = `package com.example.myapplication${packageNameSplitted.join(".")}\n${codeSnippet}`;
         await new Promise(async (res, rej) => {
-            fs.mkdir('src/plugins/codeTypeChecking/kotlinEnv/snippets/' + folderName, { recursive: true }, async (err) => {
+            fs.mkdir('src/plugins/codeTypeChecking/kotlinEnv/app/src/main/java/com/example/myapplication/' + folderName, { recursive: true }, async (err) => {
                 if (err) {
                     rej(err);
                 } else {
-                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/kotlinEnv/snippets/' + folderName + "/" + filename + ".kt", codeSnippet);
-                    fs.writeFile('src/plugins/codeTypeChecking/kotlinEnv/snippets/' + folderName + "/" + filename + ".kt", codeSnippet, function (err) {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/kotlinEnv/app/src/main/java/com/example/myapplication/' + folderName + "/" + filename + ".kt", codeSnippet);
+                    fs.writeFile('src/plugins/codeTypeChecking/kotlinEnv/app/src/main/java/com/example/myapplication/' + folderName + "/" + filename + ".kt", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
                         } else {
