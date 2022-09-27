@@ -394,7 +394,6 @@ Enabled: true,
         });
     } else if (language === "kotlin") {
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
-        let filename = hash(folderName)
         let packageNameSplitted = folderName.split("/");
         packageNameSplitted = packageNameSplitted.map(i => {
             if (i.includes("-")) {
@@ -402,14 +401,14 @@ Enabled: true,
             }
             return i;
         })
-        codeSnippet = `package com.example.myapplication${packageNameSplitted.join(".")}\n${codeSnippet}`;
+        codeSnippet = `package com.example.myapplication${packageNameSplitted.join(".")}\n\n// Original: ${mdFile}\n${codeSnippet}`;
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/kotlinEnv/app/src/main/java/com/example/myapplication/' + folderName, { recursive: true }, async (err) => {
                 if (err) {
                     rej(err);
                 } else {
-                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/kotlinEnv/app/src/main/java/com/example/myapplication/' + folderName + "/" + filename + ".kt", codeSnippet);
-                    fs.writeFile('src/plugins/codeTypeChecking/kotlinEnv/app/src/main/java/com/example/myapplication/' + folderName + "/" + filename + ".kt", codeSnippet, function (err) {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/kotlinEnv/app/src/main/java/com/example/myapplication/' + folderName + "/Code.kt", codeSnippet);
+                    fs.writeFile('src/plugins/codeTypeChecking/kotlinEnv/app/src/main/java/com/example/myapplication/' + folderName + "/Code.kt", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
                         } else {
