@@ -1,0 +1,103 @@
+---
+id: session-migration
+title: Step 2) Session Migration
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/migration/session-migration.mdx -->
+
+# Session Migration
+
+In this section we will go over how to migrate your user sessions from you previous authentication provider to SuperTokens.
+
+There are two steps to this process
+ - Adding a new `/migrate-session` API to your backend which will create a new SuperTokens session
+ - Checking if a session associated with you previous auth proviedr for your user already exists on your frontend and calling the `/migrate-session` API so that a SuperTokens session is created and their existing session is revoked.
+
+## Flow
+
+<img src="/img/migration/session-migration-diagram.png" />
+
+### Frontend Changes:
+
+- On your frontend, on page load, check if a session with your previous session exists. If a valid session exists send a request to the API defined in the next section with the access token. You can then revoke the session.
+
+```tsx title="Frontend changes"
+import axios from "axios";
+
+// You will need to add the SuperTokens axios interceptor so cookies are properly set.
+import Session from "supertokens-web-js/recipe/session";
+Session.addAxiosInterceptors(axios)
+
+async function getAccessTokenForUser() {
+    // Check if a session with your exists and return the access_token. Return undefined otherwise
+}
+
+async function revokeOldSession() {
+    // Revoke the session associated with the previous provider
+}
+
+// Call this function on page load
+async function migrateUserSessions() {
+    let apiDomain = "...";
+    // On page load retrieve the users access token if a session exists
+    // TODO: getAccessTokenForUser is a function defined by you
+    let accessToken = await getAccessTokenForUser()
+
+    if (accessToken !== undefined) {
+
+        // send a request to your migrate session endpoint with the bearer token
+        let response = await axios.post(`${apiDomain}/migrate-session`, {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`
+            }
+        })
+        if (response.data.status === "OK") {
+            // revoke users session
+            // TODO: revokeOldSession is a function defined by you
+            await revokeOldSession()
+        }
+    }
+}
+
+```
+
+
+### Backend Changes:
+
+- Create a new API on your backend, this will be called by the frontend to migrate a user's existing session to a SuperTokens session:
+
+```tsx title="Backend changes"
+import express from "express";
+import Session from "supertokens-node/recipe/session";
+import jsonWebToken from "jsonwebtoken";
+
+let app = express();
+
+async function verifyAccessToken(access_token: string) {
+    // TODO: verification of the access token will require access to your previous provider's JWKS endpoint.
+    // If you wont have access to your previous provider you can take the JWKS public keys and provide them as a secret to the JWT verification function.
+    // You can follow our guide on how to do this https://supertokens.com/docs/thirdpartyemailpassword/common-customizations/sessions/with-jwt/get-public-key#2-jwt-verification-using-a-key-string
+}
+
+app.post("/migrate-session", async (req, res) => {
+
+    // extract the access token from  the request object
+    let access_token = req.headers.authorization
+
+    // verify the access token
+    await verifyAccessToken(access_token);
+
+    // Decode the users access_token and retrive their userId
+    let customUserId = jsonWebToken.decode(access_token)!.sub
+
+    // create a new SuperTokens session using the customUserId
+    // the createNewSession function will attach the SuperTokens session cookies to the response object.
+    // @ts-ignore
+    await Session.createNewSession(res, customUserId)
+    res.send({
+        status: "OK"
+    })
+})
+```
