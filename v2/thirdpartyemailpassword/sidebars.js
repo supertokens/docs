@@ -91,6 +91,7 @@ module.exports = {
             },
           ]
         },
+        "custom-ui/email-password-login",
         "custom-ui/securing-routes",
         "custom-ui/sign-out",
         "custom-ui/enable-email-verification",
