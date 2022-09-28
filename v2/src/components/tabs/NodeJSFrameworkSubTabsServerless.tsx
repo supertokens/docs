@@ -42,7 +42,7 @@ function DefaultServerlessTabItem() {
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    <p>Please refer the <strong>Serverless Deployment</strong> section (Towards the bottom of the navigation index)</p>
+                    <p>Please refer the <strong>AWS lambda, Vercel or Netlify</strong> sections (In the Integrations section on the left nav bar)</p>
                 </div>
             </div>
         </TabItem>
@@ -64,7 +64,7 @@ function DefaultNextjsTabItem() {
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    <p>Please refer the <strong>NextJS</strong> section (Towards the bottom of the navigation index)</p>
+                    <p>Please refer the <strong>NextJS</strong> section (In the Integrations section on the left nav bar)</p>
                 </div>
             </div>
         </TabItem>
@@ -86,7 +86,7 @@ function DefaultNestJSTabItem() {
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    <p>Please refer the <strong>NestJS</strong> section (Towards the bottom of the navigation index)</p>
+                    <p>Please refer the <strong>NestJS</strong> section (In the Integrations section on the left nav bar)</p>
                 </div>
             </div>
         </TabItem>
