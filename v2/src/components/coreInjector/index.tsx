@@ -4,7 +4,9 @@ import { recursiveMap } from "../utils";
 import { getSaasApp } from "../api/saas/app";
 import { MOCK_ENABLED } from "../constants";
 
-type Props = {};
+type Props = {
+    defaultValue?: string
+};
 
 type State = {
     sessionState: "NOT_EXISTS" | "UNKNOWN"
@@ -61,14 +63,15 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
             });
         }
         return recursiveMap(this.props.children, (c: any) => {
+            let defaultValue = this.props.defaultValue || "https://try.supertokens.com";
             if (typeof c === "string") {
-                c = c.split("^{coreInjector_connection_uri_comment}").join('// try.supertokens.com is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.')
-                c = c.split("^{coreInjector_connection_uri_comment_with_hash}").join('# try.supertokens.com is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.')
-                c = c.split("^{coreInjector_uri}").join('"https://try.supertokens.com",');
+                c = c.split("^{coreInjector_connection_uri_comment}").join('// ' + defaultValue + ' is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.')
+                c = c.split("^{coreInjector_connection_uri_comment_with_hash}").join('# ' + defaultValue + ' is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.')
+                c = c.split("^{coreInjector_uri}").join('"' + defaultValue + '",');
                 c = c.split("^{coreInjector_api_key}").join('"IF YOU HAVE AN API KEY FOR THE CORE, ADD IT HERE"')
                 c = c.split("^{coreInjector_api_key_commented}").join('// ')
                 c = c.split("^{coreInjector_api_key_commented_with_hash}").join('# ')
-                c = c.split("^{coreInjector_uri_without_quotes}").join(`http://localhost:3567`)
+                c = c.split("^{coreInjector_uri_without_quotes}").join(defaultValue)
             }
             return c;
         });
