@@ -510,22 +510,17 @@ module.exports = {
       type: 'category',
       label: 'Migration',
       items: [
+        "migration/about",
         {
           type: 'category',
-          label: 'From Auth0',
+          label: 'Step 1) Account Creation',
           items: [
-            "migration/from-auth0/about",
-            {
-              type: 'category',
-              label: 'Step 1) Account Migration',
-              items: [
-                "migration/from-auth0/account-migration/modifications-to-login",
-                "migration/from-auth0/account-migration/userid-mapping",
-              ],
-            },
-            "migration/from-auth0/session-migration",
+            "migration/account-creation/user-creation",
+            "migration/account-creation/user-id-mapping",
+            "migration/account-creation/email-verification",
           ],
-        }
+        },
+        "migration/session-migration"
       ],
     },
     {

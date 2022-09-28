@@ -311,13 +311,7 @@ module.exports = {
       type: 'category',
       label: 'Migration',
       items: [
-        {
-          type: 'category',
-          label: 'From Auth0',
-          items: [
-            "migration/from-auth0/session-migration"
-          ],
-        }
+        "migration/session-migration",
       ],
     },
     {
