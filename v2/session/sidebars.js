@@ -301,9 +301,10 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Troubleshooting / Debug logs',
+      label: 'Troubleshooting',
       items: [
-        "troubleshooting/how-to-troubleshoot"
+        "troubleshooting/how-to-troubleshoot",
+        "troubleshooting/cors-issues"
       ],
     },
     {
