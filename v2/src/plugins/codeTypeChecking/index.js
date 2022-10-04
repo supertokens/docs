@@ -394,6 +394,7 @@ Enabled: true,
         });
     } else if (language === "kotlin") {
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+        folderName = folderName.replace(".mdx", "");
         let packageNameSplitted = folderName.split("/");
         packageNameSplitted = packageNameSplitted.map(i => {
             if (i.includes("-")) {
