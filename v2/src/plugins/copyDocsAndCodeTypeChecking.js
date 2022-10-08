@@ -79,7 +79,7 @@ module.exports = function (context, opts) {
 };
 
 
-async function doCopyDocs(mdFile) {
+async function doCopyDocs(mdFile, ignore) {
     return new Promise((res, rej) => {
         fs.readFile(mdFile, 'utf8', async (err, data) => {
             if (err) {
@@ -92,26 +92,51 @@ async function doCopyDocs(mdFile) {
 
             let pathLine = undefined;
             let copyType = undefined;
+            let containsBoth = false;
             let copyPathsAndIDs = [];
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
                 if (line.trim() === "<!-- COPY DOCS -->" || line.trim() === "<!-- COPY SECTION -->") {
+                    if (line.trim() === "<!-- COPY SECTION -->" && ignore === "SECTION") {
+                        continue;
+                    }
+                    if (line.trim() === "<!-- COPY DOCS -->" && ignore === "DOCS") {
+                        continue;
+                    }
                     if (line.trim() === "<!-- COPY SECTION -->") {
-                        copyType = "SECTION"
-                        copyPathsAndIDs.push({
-                            path: lines[i + 1],
-                            id: lines[i + 2]
-                        })
+                        if (copyType === "DOCS") {
+                            containsBoth = true;
+                        } else {
+                            copyType = "SECTION"
+                            copyPathsAndIDs.push({
+                                path: lines[i + 1],
+                                id: lines[i + 2]
+                            })
+                        }
                     } else {
-                        pathLine = lines[i + 1]
-                        copyType = "DOCS"
-                        break;
+                        if (copyType === "SECTION") {
+                            containsBoth = true;
+                            pathLine = lines[i + 1]
+                        } else {
+                            pathLine = lines[i + 1]
+                            copyType = "DOCS"
+                        }
                     }
                 }
             }
 
             if (copyType === undefined) {
                 return res(false);
+            }
+
+            if (containsBoth && ignore === undefined) {
+                let originalDocsPath = path.resolve(__dirname + "/../../" + pathLine.replace(/ /g, '').replace("<!--", "").replace("-->", ""));
+                // first we want to resolve all the sections of the originalDocs
+                await doCopyDocs(originalDocsPath, "DOCS"); // ignore copy docs..
+
+                // then we want to do copy docs on this file
+                let resp = await doCopyDocs(mdFile, "SECTION"); // ignore copy section.
+                return res(resp);
             }
 
             if (copyType === "DOCS") {
