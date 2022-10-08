@@ -1,7 +1,6 @@
 module.exports = {
   sidebar: [
     "introduction",
-    "architecture",
     {
       type: 'category',
       label: 'Quick setup',
@@ -11,7 +10,7 @@ module.exports = {
         "quick-setup/backend",
         {
           type: 'category',
-          label: 'Core',
+          label: 'Step 3) Core',
           items: [
             {
               type: 'category',
@@ -541,6 +540,7 @@ module.exports = {
       type: "category",
       label: "References and Compatibility",
       items: [
+        "architecture",
         "appinfo",
         "sdks",
         "apis",
