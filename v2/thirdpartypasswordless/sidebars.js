@@ -91,6 +91,8 @@ module.exports = {
             },
           ]
         },
+        "custom-ui/login-magic-link",
+        "custom-ui/login-otp",
         "custom-ui/thirdparty-login",
         "custom-ui/handling-session-tokens",
         "custom-ui/securing-routes",

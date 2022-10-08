@@ -90,6 +90,8 @@ module.exports = {
             },
           ]
         },
+        "custom-ui/login-magic-link",
+        "custom-ui/login-otp",
         "custom-ui/handling-session-tokens",
         "custom-ui/securing-routes",
         "custom-ui/sign-out",
