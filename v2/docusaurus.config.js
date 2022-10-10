@@ -104,6 +104,7 @@ module.exports = {
           href: 'https://supertokens.com/discord',
           label: 'Ask Questions',
           position: 'right',
+          className: "navbar__item_discord"
         },
         {
           href: 'https://github.com/supertokens/supertokens-to_replace',

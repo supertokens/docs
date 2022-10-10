@@ -1,7 +1,6 @@
 module.exports = {
   sidebar: [
     "introduction",
-    "architecture",
     {
       type: 'category',
       label: 'Quick setup',
@@ -11,7 +10,7 @@ module.exports = {
         "quick-setup/backend",
         {
           type: 'category',
-          label: 'Core',
+          label: 'Step 3) Core',
           items: [
             {
               type: 'category',
@@ -488,37 +487,34 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Troubleshooting / Debug logs',
+      label: 'Troubleshooting',
       items: [
-        "troubleshooting/how-to-troubleshoot"
+        "troubleshooting/how-to-troubleshoot",
+        "troubleshooting/cors-issues"
       ],
     },
     {
       type: 'category',
       label: 'Migration',
       items: [
+        "migration/about",
         {
           type: 'category',
-          label: 'From Auth0',
+          label: 'Step 1) Account Creation',
           items: [
-            "migration/from-auth0/about",
-            {
-              type: 'category',
-              label: 'Step 1) Account Migration',
-              items: [
-                "migration/from-auth0/account-migration/modifications-to-login",
-                "migration/from-auth0/account-migration/userid-mapping",
-              ],
-            },
-            "migration/from-auth0/session-migration"
+            "migration/account-creation/user-creation",
+            "migration/account-creation/user-id-mapping",
+            "migration/account-creation/email-verification",
           ],
-        }
+        },
+        "migration/session-migration"
       ],
     },
     {
       type: "category",
       label: "References and Compatibility",
       items: [
+        "architecture",
         "appinfo",
         "sdks",
         "apis",

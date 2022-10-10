@@ -4,6 +4,7 @@ let Tabs = require("@theme/Tabs").default;
 export default function SelfHostedTabs(props: any) {
     return (
         <Tabs
+            isSubTab={props.isSubTab || false}
             groupId="self-hosted"
             defaultValue="with-docker"
             values={[

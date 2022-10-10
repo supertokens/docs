@@ -1,0 +1,218 @@
+---
+id: cors-issues
+title: CORS Issues
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./emailpassword/troubleshooting/cors-issues.mdx -->
+
+# CORS Issues 
+
+## Introduction
+
+Let's talk about Cross-Origin Resource Sharing (CORS)!
+
+Cross-Origin Resource Sharing (CORS) is a mechanism that supports secure cross-origin requests and data transfers, allowing resources such as loading web fonts or making API calls from new domains.
+
+For example, `example.com` uses a font that's hosted on `fonts.com`. When visiting `example.com`, the user's browser will make a request for the font from `fonts.com`. If `fonts.com` allows cross-origin resource sharing from `example.com`, then the browser will proceed with loading the font. Otherwise, the browser will cancel the request.
+
+More concretely, CORS is a way for web servers to say "Accept cross-origin requests from this origin" or "Do not accept cross-origin requests from this origin".
+
+This is important because cross-origin requests can be quite scary. I could be logged into my bank account and a malicious site could make an AJAX request to the bank site to retrieve my bank balance.
+
+CORS ensures that we can still make cross-origin requests while still maintaining a high level of security. By specifying which origin domains are allowed to make requests and which methods and headers are allowed, CORS makes sure that malicious actors can't retrieve sensitive data with cross-origin requests.
+
+
+## CORS with Supertokens
+
+CORS is an essential part to getting your Supertokens integration working!
+
+Below is a quick example of how to add CORS to work with Supertokens in an NodeJS (express) app.
+
+```tsx
+import SuperTokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+let app = express();
+
+// ...other middlewares
+
+app.use(
+  cors({
+    origin: "http://127.0.0.1:3000",
+    allowedHeaders: ["content-type", ...SuperTokens.getAllCORSHeaders()],
+    methods: ["GET", "PUT", "POST", "DELETE"],
+    credentials: true,
+  })  
+);
+
+// ...your API routes
+```
+
+## Different parts of CORS
+
+Let's take a step back and talk about what each of these fields mean.
+
+### `origin` [must have]
+
+This configures the `Access-Control-Allow-Origin` CORS header. It can take inputs such as `http://localhost:3000` or `https://myapp.com`.
+
+This is important because Supertokens has both a frontend and backend SDK. The frontend SDK calls the APIs exposed by the backend SDK. As a result, if the origin to set to false (disables CORS) or the wrong origin, we'll find an error such as the following -
+
+```bash
+Origin http://localhost:3000 is not allowed by Access-Control-Allow-Origin. Status code: 204
+```
+
+### `allowedHeaders` [optional]
+
+This configures the `Access-Control-Allow-Headers` CORS header. It expects one of two input types.
+
+- Comma-delimited string - `'X-Custom-Header, Content-Type'`
+- Array - `['X-Custom-Header', 'Content-Type']`
+
+For Supertokens projects, we can use the `SuperTokens.getCORSAllowedHeaders()` function which returns the following list - `["anti-csrf", "rid", "fdi-version"]`
+
+This is important because the header tells the browser what HTTP headers are allowed to be used when making a cross-origin request.
+
+### `methods` [optional]
+
+This configures the Access-Control-Allow-Methods CORS header. It expects one of two input types.
+
+- Comma-delimited string - `'GET,PUT,POST'`
+- Array - `['GET', 'PUT', 'POST']`
+
+This is important because the header tells the browser what HTTP methods are allowed to be used when making a cross-origin request. Supertokens in particular uses `GET`, `POST` and `PUT` for functions such as creating new accounts, signing in/out etc.
+
+### `credentials` [must have]
+
+This configures the `Access-Control-Allow-Credentials` CORS header. It expects a boolean.
+
+If you set this header to true, then the browser will allow cookies to be sent in cross-origin requests. This is important because SuperTokens, by default uses cookies for sessions in the browser.
+
+## Common CORS Issues
+
+### `[Error] Credentials flag is true, but Access-Control-Allow-Credentials is not "true".`
+
+This happens when the CORS credentials field is not set to true.
+
+We can remedy this issue by setting credentials to `true` in our cors setting.
+
+```tsx
+import SuperTokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+let app = express();
+
+// ...other middlewares
+
+app.use(
+  cors({
+      origin: "http://localhost:3000",
+    allowedHeaders: ["content-type", ...SuperTokens.getAllCORSHeaders()],
+    methods: ["GET", "PUT", "POST", "DELETE"],
+    //highlight-start
+    credentials: true, // Make sure credentials is set to true
+    //highlight-end
+
+  })  
+);
+```
+
+<br/>
+
+### `[Error] Origin http://localhost:3000 is not allowed by Access-Control-Allow-Origin. Status code: 204`
+      
+There are a couple of cases where this might happen. 
+
+1. When the `Access-Control-Allow-Origin` doesn't have `http://localhost:3000` (website domain) in its values and the website request is being blocked. We can remedy this issue by ensuring the `origin` field lines up with the website domain located in other parts of the code.  
+
+2. The CORS middleware is after the Supertokens middleware - in this case, the OPTIONS API will have the right value for `Access-Control-Allow-Origin`, but the actual `GET` / `POST` / `PUT` API won't since the Supertokens middleware will return a response before the CORS middleware is even called. To fix this, simply put the CORS middleware before the Supertokens middleware.
+
+3. Another varient of this error is when the OPTIONS API returns a 404 error. If the `origin` field is set up correctly, then the error is likely a misconfigured API gateway or reverse proxy. 
+
+```tsx
+import supertokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+
+supertokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+
+  appInfo: {
+    appName: "...",
+    apiDomain: "...", 
+    // highlight-next-line
+    websiteDomain: "http://localhost:3000",
+  },
+   recipeList: [/* ... */],
+});
+
+const app = express();
+app.use(
+   cors({
+      //highlight-start
+      origin: "http://localhost:3000", // Make sure this is the same as the website domain
+      //highlight-end
+      allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+      methods: ["GET", "PUT", "POST", "DELETE"],
+      credentials: true,
+   })
+);
+```
+
+<br />
+
+### `[Error] Cannot use wildcard in Access-Control-Allow-Origin when credentials flag is true.`
+
+This appears when `Access-Control-Allow-Origin` header is set to `*`. To fix, add in the correct origin value in the CORS settings.
+
+```tsx
+import supertokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+
+const app = express();
+
+app.use(
+   cors({
+      //highlight-start
+      origin: "http://localhost:3000",  // Make sure this is the same as the website domain
+      //highlight-end
+      allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+      methods: ["GET", "PUT", "POST", "DELETE"],
+      credentials: true,
+   })
+);
+```
+
+<br />
+
+### `[Error] from origin 'http://localhost:3000' has been blocked by CORS policy ... the value of 'Access-Control-Allow-Origin' header in the response must not be the wildcard '*' when the request's crednetial mode is 'include'`
+
+Similar to our previous issue, this appears when `Access-Control-Allow-Origin` header includes `*`. To fix, add in the correct origin value, `http://localhost:3000` in this case, in the CORS settings.
+
+```tsx
+import supertokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+
+const app = express();
+
+app.use(
+   cors({
+      //highlight-start
+      origin: "http://localhost:3000",  // Make sure this is the same as the website domain
+      //highlight-end
+      allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+      methods: ["GET", "PUT", "POST", "DELETE"],
+      credentials: true,
+   })
+);
+```
+
+---
+
+Have an error not mentioned above? Join our [discord server](https://supertokens.com/discord) and we'll help you debug the error!

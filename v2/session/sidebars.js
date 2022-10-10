@@ -1,7 +1,6 @@
 module.exports = {
   sidebar: [
     "introduction",
-    "architecture",
     {
       type: 'category',
       label: 'Quick setup',
@@ -11,7 +10,7 @@ module.exports = {
         "quick-setup/backend",
         {
           type: 'category',
-          label: 'Core',
+          label: 'Step 3) Core',
           items: [
             {
               type: 'category',
@@ -301,28 +300,24 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Troubleshooting / Debug logs',
+      label: 'Troubleshooting',
       items: [
-        "troubleshooting/how-to-troubleshoot"
+        "troubleshooting/how-to-troubleshoot",
+        "troubleshooting/cors-issues"
       ],
     },
     {
       type: 'category',
       label: 'Migration',
       items: [
-        {
-          type: 'category',
-          label: 'From Auth0',
-          items: [
-            "migration/from-auth0/session-migration"
-          ],
-        }
+        "migration/session-migration",
       ],
     },
     {
       type: "category",
       label: "References and Compatibility",
       items: [
+        "architecture",
         "appinfo",
         "sdks",
         "apis",
