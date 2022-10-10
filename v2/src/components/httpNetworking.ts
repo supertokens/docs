@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const WEBSITE_VERSION = "0.0.1";
+
 export enum HTTP_REQUEST_ERROR {
     SESSION_EXPIRED,
     UNKNOWN,
@@ -97,7 +99,8 @@ export async function simpleGETRequest(url: string, userConfig: any = {}, versio
         ...userConfig,
         headers: {
             ...userConfig.headers,
-            "api-version": version + ""
+            "api-version": version + "",
+            "website-version": WEBSITE_VERSION
         }
     };
 
@@ -116,7 +119,8 @@ export async function simplePOSTRequest(url: string, data: any, userConfig: POST
         ...userConfig,
         headers: {
             ...userConfig.headers,
-            "api-version": version + ""
+            "api-version": version + "",
+            "website-version": WEBSITE_VERSION
         }
     };
     let response = await axios.post(url, data, userConfig);
@@ -134,7 +138,8 @@ export async function simplePATCHRequest(url: string, data: any, userConfig: PAT
         ...userConfig,
         headers: {
             ...userConfig.headers,
-            "api-version": version + ""
+            "api-version": version + "",
+            "website-version": WEBSITE_VERSION
         }
     };
 
@@ -153,7 +158,8 @@ export async function simplePUTRequest(url: string, data: any, userConfig: POSTR
         ...userConfig,
         headers: {
             ...userConfig.headers,
-            "api-version": version + ""
+            "api-version": version + "",
+            "website-version": WEBSITE_VERSION
         }
     };
 
@@ -175,7 +181,8 @@ export async function simpleDELETERequest(url: string, userConfig: DELETERequest
         ...userConfig,
         headers: {
             ...userConfig.headers,
-            "api-version": version + ""
+            "api-version": version + "",
+            "website-version": WEBSITE_VERSION
         }
     };
 
