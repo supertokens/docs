@@ -107,7 +107,6 @@ module.exports = {
       type: "category",
       label: "Integrations",
       customProps: {
-        superColour: true,
         logoUrl: [
           {
             url: '/img/logos/hasura-logo.png',
