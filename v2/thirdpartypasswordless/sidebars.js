@@ -38,6 +38,7 @@ module.exports = {
             },
           ]
         },
+        "pre-built-ui/handling-session-tokens",
         "pre-built-ui/securing-routes",
         "pre-built-ui/sign-out",
         "pre-built-ui/auth-redirection",
@@ -90,7 +91,10 @@ module.exports = {
             },
           ]
         },
+        "custom-ui/login-magic-link",
+        "custom-ui/login-otp",
         "custom-ui/thirdparty-login",
+        "custom-ui/handling-session-tokens",
         "custom-ui/securing-routes",
         "custom-ui/sign-out",
         "custom-ui/enable-email-verification",

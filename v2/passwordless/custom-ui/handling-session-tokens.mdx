@@ -1,0 +1,111 @@
+---
+id: handling-session-tokens
+title: Handling session tokens
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/custom-ui/handling-session-tokens.mdx -->
+
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
+import AppInfoForm from "/src/components/appInfoForm"
+
+# Handling session tokens
+
+## If using our frontend SDK
+
+### For Web & React-Native
+
+<!-- COPY SECTION -->
+<!-- ./thirdpartyemailpassword/pre-built-ui/handling-session-tokens.mdx -->
+<!-- 1 -->
+
+import NetworkInterceptors from "/session/reusableMD/networkInterceptors.mdx"
+
+Our frontend SDK handles everything for you. You only need to make sure that you have added our network interceptors as shown below
+
+<NetworkInterceptors />
+
+<!-- END COPY SECTION -->
+
+### For Android
+
+TODO Nemi
+
+### For iOS
+
+Coming soon
+
+## If not using our frontend SDK (not recommended)
+
+:::caution
+We highly recommend using our frontend SDK to handle session token management. It will save you a lot of time.
+:::
+
+In this case, you will need to manually handle the tokens and session refreshing:
+
+### On login
+The login API will return the following headers:
+- `Set-Cookie`: This will contain the `sAccessToken`, `sRefreshToken`, `sIdRefreshToken` cookies which will be `httpOnly` and will be automatically mananaged by the browser. For mobile apps, you will need to setup cookie handling yourself (or use our SDK - which does all this for you).
+- `id-refresh-token` header: The value of this token is meaningless, but it changes whenever a session refreshes. This is useful when synchronising session refreshes (read later).
+- `front-token` header: This contains information about the access token:
+    - The userID
+    - The expiry time of the access token
+    - The payload added by you in the access token.
+    
+    Here is the structure of the token:
+    ```tsx
+    let frontTokenFromRequestHeader = "...";
+    let frontTokenDecoded = JSON.parse(decodeURIComponent(escape(atob(frontTokenFromRequestHeader))));
+    console.log(frontTokenDecoded);
+    /*
+    {
+        ate: 1665226412455, // time in milliseconds for when the access token will expire, and then a refresh is required
+        uid: "....", // user ID
+        up: {
+            ...
+        } // custom payload added to the access token by you on the backend
+    }
+    
+    */
+    ```
+
+    This is required because you don't have access to the actual access token on the frontend (for security reasons), but may want to read its payload (for example to know the user's role). This token itself is not signed and hence can't be used in place of the access token itself.
+
+    You want to save this token in localstorage or in frontend cookies (using `document.cookies`).
+- `anti-csrf` header (optional): By default it's not required, so it's not sent. But if this is sent, you should save this token as well for use when making requests.
+
+### Making network requests to protected APIs
+The `sAccessToken` and `sIdRefreshToken` will get attached to the request automatically by the browser. Other than that, you need to add the following headers to the request:
+- `rid: "anti-csrf"` - this prevents against anti-CSRF requests. If your `apiDomain` and `websiteDomain` values are exactly the same, then this is not necessary.
+- `anti-csrf` header (optional): If this was provided to you during login, then you need to add that token as the value of this header.
+- You need to set the `credentials` header to `true` or `include`. This is achieved different based on the library you are using to make requests.
+
+An API call can potentially update the `sAccessToken` and `front-token` tokens, for example if you call the `mergeIntoAccessTokenPayload` function on the `session` object on the backend. This kind of update is reflected in the response headers for your API calls. The headers will contain new values for:
+- `sAccessToken`: This will be as a new `Set-Cookie` header and will be managed by the browser automatically.
+- `front-token`: This should be read and saved by you in the same way as it's being done during login.
+
+### Handling session refreshing
+If any of your API calls return with a status code of `401`, it means that the access token has expired. This will require you to refresh the session before retrying the same API call.
+
+You can call the refresh API as follows:
+
+<AppInfoForm askForAPIDomain>
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/session/refresh' \
+--header 'rid: session' \
+--header 'Cookie: sRefreshToken=...; sIdRefreshToken=...'
+```
+
+:::note
+You may also need to add the `anti-csrf` header to the request if that was provided to you during sign in.
+:::
+
+</AppInfoForm>
+
+The result of a session refresh will be either:
+- Status code `200`: This implies a succesful refresh. The set of tokens returned here will be the same as when the user logs in, so you can handle them in the same way.
+- Status code `401`: This means that the refresh token is invalid, or has been revoked. You must ask the user to relogin. Remember to clear the `front-token` and `id-refresh-token` that you saved on the frontend eariler.

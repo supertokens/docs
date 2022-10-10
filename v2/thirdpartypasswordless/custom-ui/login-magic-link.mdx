@@ -1,0 +1,606 @@
+---
+id: login-magic-link
+title: Magic link login
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartypasswordless/custom-ui/login-magic-link.mdx -->
+
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import TabItem from '@theme/TabItem';
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import AppInfoForm from "/src/components/appInfoForm"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+
+# Magic link login
+
+There are three parts to Magic link based login:
+- Creating and sending the magic link to the user's email.
+- Allowing the user to resend a (new) magic link if they want.
+- Consuming the link (when clicked) to login the user.
+
+:::note
+The same flow applies during sign up and sign in. If the user is signing up, the `createdNewUser` boolean on the frontend and backend will be `true` (as the result of the consume code API call).
+:::
+
+## Step 1: Sending the Magic link
+SuperTokens allows you to send a magic link to a user's email or phone number. You have already configured this setting on the backend SDK `init` function call in "Initialisation" section.
+
+Start by making a form which asks the user for their email or phone, and then call the following API to create and send them a magic link
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsCreatePasswordlessCode} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function sendMagicLink(email: string) {
+    try {
+        let response = await ^{webJsCreatePasswordlessCode}({
+            email
+        });
+        /**
+         * For phone number, use this:
+            
+            let response = await ^{webJsCreatePasswordlessCode}({
+                phoneNumber: "+1234567890"
+            });
+         
+        */
+
+        // Magic link sent successfully.
+        window.alert("Please check your email for the magic link");
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you,
+            // or if the input email / phone number is not valid.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function sendMagicLink(email: string) {
+    try {
+        let response = await supertokens^{recipeNameCapitalLetters}.^{webJsCreatePasswordlessCode}({
+            email
+        });
+        /**
+         * For phone number, use this:
+            
+            let response = await supertokens^{recipeNameCapitalLetters}.^{webJsCreatePasswordlessCode}({
+                phoneNumber: "+1234567890"
+            });
+         
+        */
+
+        // Magic link sent successfully.
+        window.alert("Please check your email for the magic link");
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you,
+            // or if the input email / phone number is not valid.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+For email based login
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup/code' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "email": "johndoe@gmail.com"
+}'
+```
+
+For phone number based login
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup/code' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "phoneNumber": "+1234567890"
+}'
+```
+
+</AppInfoForm>
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: This means that the magic link was successfully sent.
+- `status: "GENERAL_ERROR"`: This is possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend, or if the input email or password failed the backend validation logic.
+
+The response from the API call is the following object (in case of `status: "OK"`):
+```json
+{
+    status: "OK";
+    deviceId: string;
+    preAuthSessionId: string;
+    flowType: "USER_INPUT_CODE" | "MAGIC_LINK" | "USER_INPUT_CODE_AND_MAGIC_LINK";
+    fetchResponse: Response; // raw fetch response from the API call
+}
+```
+
+You want to save the `deviceId` and `preAuthSessionId` on the frontend storage. These will be useful to:
+- Resend a new magic link.
+- Detect if the user has already sent a magic link before or if this is an entirely new login attempt. This distinction can be important if you have different UI for these two states. For example, if this info already exists, you do not want to show the user an input box to enter their email / phone, and instead want to show them the resend link button.
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+### Changing the magic link URL, or deep linking it to your app
+By default, the magic link will point to the `websiteDomain` that is configured on the backend, on the `/auth/verify` route (where `/auth` is the default value of `websiteBasePath`).
+
+If you want to change this to a different path, a different domain, or deep link it to your mobile / desktop app, then you can do so on the backend in the following way:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        ^{recipeNameCapitalLetters}.init({
+            contactMethod: "EMAIL", // This example will work with any contactMethod
+            // This example works with the "USER_INPUT_CODE_AND_MAGIC_LINK" and "MAGIC_LINK" flows.
+            flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", 
+
+            // highlight-start
+            emailDelivery: {
+                // highlight-start
+                override: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        sendEmail: async function (input) {
+                            if (input.type === "PASSWORDLESS_LOGIN") {
+                                return originalImplementation.sendEmail({
+                                    ...input,
+                                    urlWithLinkCode: input.urlWithLinkCode?.replace(
+                                        // This is: `${websiteDomain}${websiteBasePath}/verify`
+                                        "http://localhost:3000/auth/verify",
+                                        "http://your.domain.com/your/path"
+                                        )
+                                })
+                            }
+                            return originalImplementation.sendEmail(input);
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+    "strings"
+
+    "github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			^{codeImportRecipeName}.Init(^{goModelName}.TypeInput{
+				EmailDelivery: &emaildelivery.TypeInput{
+					// highlight-start
+					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
+						ogSendEmail := *originalImplementation.SendEmail
+						(*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
+							// By default: `${websiteDomain}/${websiteBasePath}/verify`
+							newUrl := strings.Replace(
+								*input.PasswordlessLogin.UrlWithLinkCode,
+								"http://localhost:3000/auth/verify",
+								"http://localhost:3000/custom/path",
+								1,
+							)
+							input.PasswordlessLogin.UrlWithLinkCode = &newUrl
+							return ogSendEmail(input, userContext)
+						}
+						return originalImplementation
+					},
+					// highlight-end
+				},
+			}),
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.^{codeImportRecipeName}.types import EmailDeliveryOverrideInput, EmailTemplateVars
+from supertokens_python.recipe import ^{codeImportRecipeName}
+from typing import Dict, Any
+from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig
+
+def custom_email_deliver(original_implementation: EmailDeliveryOverrideInput) -> EmailDeliveryOverrideInput:
+    original_send_email = original_implementation.send_email
+
+    # highlight-start
+    async def send_email(template_vars: EmailTemplateVars, user_context: Dict[str, Any]) -> None:
+        assert template_vars.url_with_link_code is not None
+        # By default: `${websiteDomain}/${websiteBasePath}/verify`
+        template_vars.url_with_link_code = template_vars.url_with_link_code.replace(
+            "http://localhost:3000/auth/verify", "http://localhost:3000/custom/path")
+        return await original_send_email(template_vars, user_context)
+    # highlight-end
+
+    original_implementation.send_email = send_email
+    return original_implementation
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        ^{codeImportRecipeName}.init(
+            ^{pythonRecipeInitDefault} # typecheck-only, removed from output
+            email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+## Step 2: Resending a (new) Magic link
+After sending the initial magic link to the user, you may want to display a resend button to them. When the user clicks on this button, you should call the following API
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsResendPasswordlessCode} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function resendMagicLink(email: string) {
+    try {
+        let response = await ^{webJsResendPasswordlessCode}();
+
+        if (response.status === "RESTART_FLOW_ERROR") {
+            // this can happen if the user has already successfully logged in into
+            // another device whilst also trying to login to this one.
+            window.alert("Login failed. Please try again");
+            window.location.assign("/auth")
+        } else {
+            // Magic link resent successfully.
+            window.alert("Please check your email for the magic link");
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function resendMagicLink(email: string) {
+    try {
+        let response = await supertokens^{recipeNameCapitalLetters}.^{webJsResendPasswordlessCode}();
+
+        if (response.status === "RESTART_FLOW_ERROR") {
+            // this can happen if the user has already successfully logged in into
+            // another device whilst also trying to login to this one.
+            window.alert("Login failed. Please try again");
+            window.location.assign("/auth")
+        } else {
+            // Magic link resent successfully.
+            window.alert("Please check your email for the magic link");
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup/code/resend' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "deviceId": "...",
+  "preAuthSessionId": "...."
+}'
+```
+
+</AppInfoForm>
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: This means that the magic link was successfully sent.
+- `status: "RESTART_FLOW_ERROR"`: This can happen if the user has already successfully logged in into another device whilst also trying to login to this one. You want to take the user back to the login screen where they can enter their email / phone number again. Be sure to remove the stored `deviceId` and `preAuthSessionId` from the frontend storage.
+- `status: "GENERAL_ERROR"`: This is possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+### How to detect if the user is in (Step 1) or in (Step 2) state?
+If you are building the UI for (Step 1) and (Step 2) on the same page, and if the user refreshes the page, you need a way to know which UI to show - the enter email / phone number form; or the resend magic link form.
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsGetPasswordlessLoginAttemptInfo} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function hasInitialMagicLinkBeenSent() {
+    return await ^{webJsGetPasswordlessLoginAttemptInfo}() !== undefined;
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function hasInitialMagicLinkBeenSent() {
+    return await supertokens^{recipeNameCapitalLetters}.^{webJsGetPasswordlessLoginAttemptInfo}() !== undefined;
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+If `hasInitialMagicLinkBeenSent` returns `true`, it means that the user has already sent the initial magic link to themselves, and you can show the resend link UI (Step 2). Else show a form asking them to enter their email / phone number (Step 1).
+
+</TabItem>
+
+<TabItem value="mobile">
+
+Since you save the `preAuthSessionId` and `deviceId` after the initial magic link is sent, you can know if the user is in (Step 1) vs (Step 2) by simply checking if these tokens are stored on the device.
+
+If they aren't, you should follow (Step 1), else follow (Step 2).
+
+:::important
+You need to clear these tokens if the user navigates away from the (Step 2) page, or if you get a `RESTART_FLOW_ERROR` at any point in time from an API call, or if the user has successfully logged in.
+:::
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+## Step 3: Consuming the Magic link
+This section talks about what needs to be done when the user clicks on the Magic link. There are two situations here:
+- The user clicks the Magic link on the same browser & device as the one they had started the flow on.
+- The user clicks the link on a different browser or device.
+
+In order to detect which it is, you can do the following:
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsGetPasswordlessLoginAttemptInfo} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function isThisSameBrowserAndDevice() {
+    return await ^{webJsGetPasswordlessLoginAttemptInfo}() !== undefined;
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function isThisSameBrowserAndDevice() {
+    return await supertokens^{recipeNameCapitalLetters}.^{webJsGetPasswordlessLoginAttemptInfo}() !== undefined;
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+Since you save the `preAuthSessionId` and `deviceId`, you can check if they exist on the app. If they do, then it's the same device that the user has opened the link on, else it's a different device.
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+### If on the same device & browser
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+On page load, you can consume the magic link by calling the following function
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsConsumePasswordlessCode} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function handleMagicLinkClicked(email: string) {
+    try {
+        let response = await ^{webJsConsumePasswordlessCode}();
+
+        if (response.status === "OK") {
+            if (response.createdNewUser) {
+                // user sign up success
+            } else {
+                // user sign in success
+            }
+            window.location.assign("/home")
+        } else {
+            // this can happen if the magic link has expired or is invalid
+            window.alert("Login failed. Please try again");
+            window.location.assign("/auth")
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function handleMagicLinkClicked(email: string) {
+    try {
+        let response = await supertokens^{recipeNameCapitalLetters}.^{webJsConsumePasswordlessCode}();
+
+        if (response.status === "OK") {
+            if (response.createdNewUser) {
+                // user sign up success
+            } else {
+                // user sign in success
+            }
+            window.location.assign("/home")
+        } else {
+            // this can happen if the magic link has expired or is invalid
+            window.alert("Login failed. Please try again");
+            window.location.assign("/auth")
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+You need to extract the `linkCode` and `preAuthSessionId` from the Magic link. For example, if the Magic link is 
+
+```text
+https://example.com/auth/verify?rid=^{codeImportRecipeName}&preAuthSessionId=PyIwyA6VjdjNF5ggMV960rs3QXupRP2PEg2KcN5oi8s=#s4hxpBPnRC3xwBsCkFU228lh_CWe5HUBMRPowajsrgs=
+```
+
+Then the `preAuthSessionId` is the value of the query param `preAuthSessionId` (`PyIwyA6VjdjNF5ggMV960rs3QXupRP2PEg2KcN5oi8s=` in the example), and the `linkCode` is the part after the `#` (`s4hxpBPnRC3xwBsCkFU228lh_CWe5HUBMRPowajsrgs=` in our example).
+
+We can then use these to call the consume API
+
+<AppInfoForm askForAPIDomain>
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup/code/consume' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "linkCode": "s4hxpBPnRC3xwBsCkFU228lh_CWe5HUBMRPowajsrgs=",
+  "preAuthSessionId": "PyIwyA6VjdjNF5ggMV960rs3QXupRP2PEg2KcN5oi8s="
+}'
+```
+
+</AppInfoForm>
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user. 
+- `status: "INCORRECT_USER_INPUT_CODE_ERROR" | "EXPIRED_USER_INPUT_CODE_ERROR" | "RESTART_FLOW_ERROR"`: These responses indicate that the Magic link was invalid or expired.
+- `status: "GENERAL_ERROR"`: This is possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+:::note
+On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
+:::
+
+### If on a different device or browser
+In this case, you want to show some UI that requires a user interaction before consuming the magic link. This is to protect against email clients opening the magic link on their servers and consuming the link. For example, you could show a button with text like - "Click here to login into this device".
+
+On click, you can consume the magic link to log the user into that device. Follow the instructions in the above section to know which function / API to call.
+
+## See also
+- [Post sign in / sign up action](TODO)
+- [Changing the magic link lifetime](TODO)
+- Changing [the content of](TODO) or how [emails and / or SMS are sent](TODO)
+- [Generating magic links without user action](TODO)
+- [Chaning email or phone number validation logic](TODO)
+- [Customising user ID format](TODO)
