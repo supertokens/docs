@@ -268,14 +268,6 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Post login operations',
-      items: [
-        "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
-      ],
-    },
-    {
-      type: 'category',
       label: 'Email Delivery',
       items: [
         "email-delivery/about",
@@ -340,6 +332,8 @@ module.exports = {
             "common-customizations/sign-in-up/toc-privacypolicy",
           ],
         },
+        "common-customizations/get-user-info",
+        "common-customizations/handling-signinup-success",
         "common-customizations/user-pagination",
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",

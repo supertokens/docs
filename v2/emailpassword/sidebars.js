@@ -269,15 +269,6 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Post login operations',
-      items: [
-        "common-customizations/get-user-info",
-        "common-customizations/handling-signup-success",
-        "common-customizations/handling-signin-success",
-      ],
-    },
-    {
-      type: 'category',
       label: 'Email Delivery',
       items: [
         "email-delivery/about",
@@ -330,6 +321,9 @@ module.exports = {
             "common-customizations/signin-form/field-validators",
           ]
         },
+        "common-customizations/get-user-info",
+        "common-customizations/handling-signup-success",
+        "common-customizations/handling-signin-success",
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",

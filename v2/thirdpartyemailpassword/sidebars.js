@@ -271,15 +271,6 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Post login operations',
-      items: [
-        "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
-        "post-login/getting-provider-access-token"
-      ],
-    },
-    {
-      type: 'category',
       label: 'Email Delivery',
       items: [
         "email-delivery/about",
@@ -365,6 +356,9 @@ module.exports = {
             },
           ],
         },
+        "common-customizations/get-user-info",
+        "common-customizations/handling-signinup-success",
+        "post-login/getting-provider-access-token",
         "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
