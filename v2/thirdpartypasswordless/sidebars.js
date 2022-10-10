@@ -3,7 +3,10 @@ module.exports = {
     "introduction",
     {
       type: 'category',
-      label: '⭐ Quick setup with Pre built UI',
+      label: 'Quick setup with Pre built UI',
+      customProps: {
+        superColour: true,
+      },
       items: [
         {
           type: 'category',
@@ -56,7 +59,10 @@ module.exports = {
     },
     {
       type: 'category',
-      label: '⭐ Using custom UI',
+      label: 'Using custom UI',
+      customProps: {
+        superColour: true,
+      },
       items: [
         {
           type: 'category',
@@ -104,6 +110,7 @@ module.exports = {
       type: "category",
       label: "Integrations",
       customProps: {
+        superColour: true,
         logoUrl: [
           {
             url: '/img/logos/hasura-logo.png',
@@ -324,7 +331,7 @@ module.exports = {
     {
       type: 'category',
       label: 'Additional customizations',
-      collapsed: false,
+      collapsed: true,
       items: [
         {
           type: "category",

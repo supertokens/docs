@@ -167,7 +167,7 @@ module.exports = {
     {
       type: 'category',
       label: 'Additional customizations',
-      collapsed: false,
+      collapsed: true,
       items: [
         "common-customizations/sessions/new-session",
         {
