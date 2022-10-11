@@ -298,7 +298,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Additional customizations',
+      label: 'Customizations',
       collapsed: true,
       items: [
         {
@@ -356,7 +356,9 @@ module.exports = {
             "common-customizations/email-verification/embed-in-page",
             "common-customizations/email-verification/handling-email-verification-success",
             "common-customizations/email-verification/changing-token-lifetime",
-            "common-customizations/email-verification/changing-style"
+            "common-customizations/email-verification/changing-style",
+            "common-customizations/email-verification/changing-email-verification-status",
+            "common-customizations/email-verification/generate-link-manually"
           ]
         },
         "common-customizations/session-with-jwt",
@@ -404,7 +406,8 @@ module.exports = {
             "common-customizations/sessions/same-site-cookie",
             "common-customizations/sessions/jwt-signing-key-rotation",
             "common-customizations/sessions/in-iframe",
-            "common-customizations/sessions/error-handling"
+            "common-customizations/sessions/error-handling",
+            "common-customizations/sessions/session-validators"
           ]
         },
         {
@@ -436,6 +439,7 @@ module.exports = {
             "common-customizations/changing-base-path/api-base-path"
           ]
         },
+        "common-customizations/userid-format",
         {
           type: "category",
           label: "Core",
