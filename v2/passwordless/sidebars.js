@@ -3,35 +3,105 @@ module.exports = {
     "introduction",
     {
       type: 'category',
-      label: 'Quick setup',
-      collapsed: false,
+      label: 'Quick setup with Pre built UI',
+      customProps: {
+        superColour: true,
+      },
       items: [
-        "quick-setup/frontend",
-        "quick-setup/backend",
         {
           type: 'category',
-          label: 'Step 3) Core',
+          label: 'Setup',
+          collapsed: false,
           items: [
+            "pre-built-ui/setup/frontend",
+            "pre-built-ui/setup/backend",
             {
               type: 'category',
-              label: 'Self hosted',
+              label: 'Step 3: Core',
               items: [
-                "quick-setup/core/with-docker",
-                "quick-setup/core/without-docker",
                 {
                   type: 'category',
-                  label: 'Database Setup',
+                  label: 'Self hosted',
                   items: [
-                    "quick-setup/database-setup/mysql",
-                    "quick-setup/database-setup/postgresql",
-                    "quick-setup/database-setup/rename-database-tables"
+                    "pre-built-ui/setup/core/with-docker",
+                    "pre-built-ui/setup/core/without-docker",
+                    {
+                      type: 'category',
+                      label: 'Database Setup',
+                      items: [
+                        "pre-built-ui/setup/database-setup/mysql",
+                        "pre-built-ui/setup/database-setup/postgresql",
+                        "pre-built-ui/setup/database-setup/rename-database-tables"
+                      ],
+                    }
                   ],
-                }
+                },
+                "pre-built-ui/setup/core/saas-setup"
               ],
             },
-            "quick-setup/core/saas-setup"
-          ],
+          ]
         },
+        "pre-built-ui/handling-session-tokens",
+        "pre-built-ui/securing-routes",
+        "pre-built-ui/sign-out",
+        "pre-built-ui/auth-redirection",
+        "pre-built-ui/enable-email-verification",
+        {
+          type: 'category',
+          label: 'Further Reading',
+          items: [
+            "pre-built-ui/further-reading/passwordless-login",
+            "pre-built-ui/further-reading/email-verification"
+          ]
+        },
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Using custom UI',
+      customProps: {
+        superColour: true,
+      },
+      items: [
+        {
+          type: 'category',
+          label: 'Initialisation',
+          collapsed: false,
+          items: [
+            "custom-ui/init/frontend",
+            "custom-ui/init/backend",
+            {
+              type: 'category',
+              label: 'Step 3: Core',
+              items: [
+                {
+                  type: 'category',
+                  label: 'Self hosted',
+                  items: [
+                    "custom-ui/init/core/with-docker",
+                    "custom-ui/init/core/without-docker",
+                    {
+                      type: 'category',
+                      label: 'Database Setup',
+                      items: [
+                        "custom-ui/init/database-setup/mysql",
+                        "custom-ui/init/database-setup/postgresql",
+                        "custom-ui/init/database-setup/rename-database-tables"
+                      ],
+                    }
+                  ],
+                },
+                "custom-ui/init/core/saas-setup"
+              ],
+            },
+          ]
+        },
+        "custom-ui/login-magic-link",
+        "custom-ui/login-otp",
+        "custom-ui/handling-session-tokens",
+        "custom-ui/securing-routes",
+        "custom-ui/sign-out",
+        "custom-ui/enable-email-verification",
       ],
     },
     {
@@ -198,18 +268,6 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Post login operations',
-      items: [
-        "common-customizations/sessions/securing-component",
-        "common-customizations/verify-session",
-        "common-customizations/sign-out",
-        "common-customizations/redirecting-post-login",
-        "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
-      ],
-    },
-    {
-      type: 'category',
       label: 'Email Delivery',
       items: [
         "email-delivery/about",
@@ -260,10 +318,9 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Additional customizations',
-      collapsed: false,
+      label: 'Customizations',
+      collapsed: true,
       items: [
-        "common-customizations/redirect-to-auth",
         {
           type: "category",
           label: "Sign In / Up form",
@@ -273,8 +330,12 @@ module.exports = {
             "common-customizations/sign-in-up/change-maximum-retries",
             "common-customizations/sign-in-up/change-otp-format",
             "common-customizations/sign-in-up/toc-privacypolicy",
+            "common-customizations/sign-in-up/change-email-phone-validation"
           ],
         },
+        "common-customizations/generating-magic-link-manually",
+        "common-customizations/get-user-info",
+        "common-customizations/handling-signinup-success",
         "common-customizations/user-pagination",
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",
@@ -289,7 +350,9 @@ module.exports = {
             "common-customizations/email-verification/embed-in-page",
             "common-customizations/email-verification/handling-email-verification-success",
             "common-customizations/email-verification/changing-token-lifetime",
-            "common-customizations/email-verification/changing-style"
+            "common-customizations/email-verification/changing-style",
+            "common-customizations/email-verification/changing-email-verification-status",
+            "common-customizations/email-verification/generate-link-manually"
           ]
         },
         "common-customizations/session-with-jwt",
@@ -337,7 +400,8 @@ module.exports = {
             "common-customizations/sessions/same-site-cookie",
             "common-customizations/sessions/jwt-signing-key-rotation",
             "common-customizations/sessions/in-iframe",
-            "common-customizations/sessions/error-handling"
+            "common-customizations/sessions/error-handling",
+            "common-customizations/sessions/session-validators"
           ]
         },
         {
@@ -369,6 +433,7 @@ module.exports = {
             "common-customizations/changing-base-path/api-base-path"
           ]
         },
+        "common-customizations/userid-format",
         {
           type: "category",
           label: "Core",
@@ -504,7 +569,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "References and Compatibility",
+      label: "References",
       items: [
         "architecture",
         "appinfo",

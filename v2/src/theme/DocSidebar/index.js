@@ -63,7 +63,7 @@ function DocSidebarItem(props) {
   }
 }
 
-function DocSidebarItemCategory ({
+function DocSidebarItemCategory({
   item,
   onItemClick,
   collapsible,
@@ -115,6 +115,25 @@ function DocSidebarItemCategory ({
   if (items.length === 0) {
     return null;
   }
+  let labelStyle = depth > 0 ? {
+    marginLeft: `${depth * 16}px`,
+  } : {};
+  if (item.customProps && item.customProps.superColour === true) {
+    labelStyle = {
+      ...labelStyle,
+      background: "linear-gradient(to right, #FF9933, #DD5500)",
+      color: "#000000",
+      fontWeight: "bold",
+      marginRight: "6px",
+      paddingTop: "3px",
+      paddingBottom: "3px",
+      paddingLeft: "8px",
+      marginLeft: "-8px",
+      paddingRight: "8px",
+      borderRadius: "20px",
+    }
+  }
+
   return (
     <li
       className={clsx('menu__list-item', {
@@ -134,21 +153,19 @@ function DocSidebarItemCategory ({
       >
         <span
           className={styles.sidebarMenuItemLinkLabel}
-          style={depth > 0 ? {
-            marginLeft: `${depth * 16}px`,
-          } : {}}
+          style={labelStyle}
         >{label}</span>
-        {item.customProps && 
-        item.customProps.logoUrl && 
-        typeof item.customProps.logoUrl === "string" && 
-        (
-          <img
-            className={styles.sidebarItemLogo}
-            src={item.customProps.logoUrl}
-            title={label + ' logo'}
-            alt={label + " logo"}
-          />
-        )}
+        {item.customProps &&
+          item.customProps.logoUrl &&
+          typeof item.customProps.logoUrl === "string" &&
+          (
+            <img
+              className={styles.sidebarItemLogo}
+              src={item.customProps.logoUrl}
+              title={label + ' logo'}
+              alt={label + " logo"}
+            />
+          )}
         {
           item.customProps &&
           item.customProps.logoUrl &&
@@ -160,7 +177,7 @@ function DocSidebarItemCategory ({
               flexWrap: "wrap",
               rowGap: "8px",
               marginRight: "4px",
-              marginLeft: "-12px",
+              marginLeft: "-12px"
             }}>
               {
                 Array.from(item.customProps.logoUrl).map(logoInfo => {
