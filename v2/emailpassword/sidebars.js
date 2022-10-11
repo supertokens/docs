@@ -337,7 +337,8 @@ module.exports = {
             "common-customizations/reset-password/password-reset-email",
             "common-customizations/reset-password/embed-in-page",
             "common-customizations/reset-password/post-reset-password",
-            "common-customizations/reset-password/changing-token-lifetime"
+            "common-customizations/reset-password/changing-token-lifetime",
+            "common-customizations/reset-password/generate-link-manually"
 
           ]
         },
