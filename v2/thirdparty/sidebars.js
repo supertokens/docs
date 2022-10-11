@@ -507,6 +507,7 @@ module.exports = {
             "migration/account-creation/email-verification",
           ],
         },
+        "migration/data-migration",
         "migration/session-migration"
       ],
     },
