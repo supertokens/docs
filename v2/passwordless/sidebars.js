@@ -330,8 +330,10 @@ module.exports = {
             "common-customizations/sign-in-up/change-maximum-retries",
             "common-customizations/sign-in-up/change-otp-format",
             "common-customizations/sign-in-up/toc-privacypolicy",
+            "common-customizations/sign-in-up/change-email-phone-validation"
           ],
         },
+        "common-customizations/generating-magic-link-manually",
         "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
         "common-customizations/user-pagination",
