@@ -115,6 +115,7 @@ module.exports = {
     },
     prism: {
       theme: require('prism-react-renderer/themes/vsDark'),
+      additionalLanguages: ["kotlin", "java"],
     },
     algolia: {
       apiKey: 'ce04a158637d345fc094ebbfa9a5156a',

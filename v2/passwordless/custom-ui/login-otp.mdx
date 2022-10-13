@@ -1,0 +1,434 @@
+---
+id: login-otp
+title: OTP login
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartypasswordless/custom-ui/login-otp.mdx -->
+
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import TabItem from '@theme/TabItem';
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import AppInfoForm from "/src/components/appInfoForm"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+
+# OTP login
+
+There are three parts to OTP login:
+- Creating and sending the OTP to the user.
+- Allowing the user to resend a (new) OTP if they want.
+- Validating the user's input OTP to login the user.
+
+:::note
+The same flow applies during sign up and sign in. If the user is signing up, the `createdNewUser` boolean on the frontend and backend will be `true` (as the result of the consume code API call).
+:::
+
+## Step 1: Creating and sending the OTP
+SuperTokens allows you to send an OTP to a user's email or phone number. You have already configured this setting on the backend SDK `init` function call in "Initialisation" section.
+
+Start by making a form which asks the user for their email or phone, and then call the following API to create and send them an OTP.
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsCreatePasswordlessCode} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function sendOTP(email: string) {
+    try {
+        let response = await ^{webJsCreatePasswordlessCode}({
+            email
+        });
+        /**
+         * For phone number, use this:
+            
+            let response = await ^{webJsCreatePasswordlessCode}({
+                phoneNumber: "+1234567890"
+            });
+         
+        */
+
+        // OTP sent successfully.
+        window.alert("Please check your email for an OTP");
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you,
+            // or if the input email / phone number is not valid.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function sendOTP(email: string) {
+    try {
+        let response = await supertokens^{recipeNameCapitalLetters}.^{webJsCreatePasswordlessCode}({
+            email
+        });
+        /**
+         * For phone number, use this:
+            
+            let response = await supertokens^{recipeNameCapitalLetters}.^{webJsCreatePasswordlessCode}({
+                phoneNumber: "+1234567890"
+            });
+         
+        */
+
+        // OTP sent successfully.
+        window.alert("Please check your email for an OTP");
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you,
+            // or if the input email / phone number is not valid.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+For email based login
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup/code' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "email": "johndoe@gmail.com"
+}'
+```
+
+For phone number based login
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup/code' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "phoneNumber": "+1234567890"
+}'
+```
+
+</AppInfoForm>
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: This means that the OTP was successfully sent.
+- `status: "GENERAL_ERROR"`: This is possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend, or if the input email or password failed the backend validation logic.
+
+The response from the API call is the following object (in case of `status: "OK"`):
+```json
+{
+    status: "OK";
+    deviceId: string;
+    preAuthSessionId: string;
+    flowType: "USER_INPUT_CODE" | "MAGIC_LINK" | "USER_INPUT_CODE_AND_MAGIC_LINK";
+    fetchResponse: Response; // raw fetch response from the API call
+}
+```
+
+You want to save the `deviceId` and `preAuthSessionId` on the frontend storage. These will be useful to:
+- Resend a new OTP.
+- Detect if the user has already sent an OTP before or if this is an entirely new login attempt. This distinction can be important if you have different UI for these two states. For example, if this info already exists, you do not want to show the user an input box to enter their email / phone, and instead want to show them the enter OTP form with a resend button.
+- Verify the user's input OTP.
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+## Step 2: Resending a (new) OTP
+After sending the initial OTP to the user, you may want to display a resend button to them. When the user clicks on this button, you should call the following API
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsResendPasswordlessCode} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function resendOTP() {
+    try {
+        let response = await ^{webJsResendPasswordlessCode}();
+
+        if (response.status === "RESTART_FLOW_ERROR") {
+            // this can happen if the user has already successfully logged in into
+            // another device whilst also trying to login to this one.
+            window.alert("Login failed. Please try again");
+            window.location.assign("/auth")
+        } else {
+            // OTP resent successfully.
+            window.alert("Please check your email for the OTP");
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function resendOTP() {
+    try {
+        let response = await supertokens^{recipeNameCapitalLetters}.^{webJsResendPasswordlessCode}();
+
+        if (response.status === "RESTART_FLOW_ERROR") {
+            // this can happen if the user has already successfully logged in into
+            // another device whilst also trying to login to this one.
+            window.alert("Login failed. Please try again");
+            window.location.assign("/auth")
+        } else {
+            // OTP resent successfully.
+            window.alert("Please check your email for the OTP");
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup/code/resend' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "deviceId": "...",
+  "preAuthSessionId": "...."
+}'
+```
+
+</AppInfoForm>
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: This means that the OTP was successfully sent.
+- `status: "RESTART_FLOW_ERROR"`: This can happen if the user has already successfully logged in into another device whilst also trying to login to this one. You want to take the user back to the login screen where they can enter their email / phone number again. Be sure to remove the stored `deviceId` and `preAuthSessionId` from the frontend storage.
+- `status: "GENERAL_ERROR"`: This is possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+### How to detect if the user is in (Step 1) or in (Step 2) state?
+If you are building the UI for (Step 1) and (Step 2) on the same page, and if the user refreshes the page, you need a way to know which UI to show - the enter email / phone number form; or enter OTP + resend OTP form.
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsGetPasswordlessLoginAttemptInfo} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function hasInitialOTPBeenSent() {
+    return await ^{webJsGetPasswordlessLoginAttemptInfo}() !== undefined;
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function hasInitialOTPBeenSent() {
+    return await supertokens^{recipeNameCapitalLetters}.^{webJsGetPasswordlessLoginAttemptInfo}() !== undefined;
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+If `hasInitialOTPBeenSent` returns `true`, it means that the user has already sent the initial OTP to themselves, and you can show the enter OTP form + resend OTP button (Step 2). Else show a form asking them to enter their email / phone number (Step 1).
+
+</TabItem>
+
+<TabItem value="mobile">
+
+Since you save the `preAuthSessionId` and `deviceId` after the initial OTP is sent, you can know if the user is in (Step 1) vs (Step 2) by simply checking if these tokens are stored on the device.
+
+If they aren't, you should follow (Step 1), else follow (Step 2).
+
+:::important
+You need to clear these tokens if the user navigates away from the (Step 2) page, or if you get a `RESTART_FLOW_ERROR` at any point in time from an API call, or if the user has successfully logged in.
+:::
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+## Step 3: Verifying the input OTP
+When the user enters an OTP, you want to call the following API to verify it
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webJsConsumePasswordlessCode} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function handleOTPInput(otp: string) {
+    try {
+        let response = await ^{webJsConsumePasswordlessCode}({
+            userInputCode: otp
+        });
+
+        if (response.status === "OK") {
+            if (response.createdNewUser) {
+                // user sign up success
+            } else {
+                // user sign in success
+            }
+            window.location.assign("/home")
+        } else if (response.status === "INCORRECT_USER_INPUT_CODE_ERROR") {
+            // the user entered an invalid OTP
+            window.alert("Wrong OTP! Please try again. Number of attempts left: " + (response.maximumCodeInputAttempts - response.failedCodeInputAttemptCount));
+        } else if (response.status === "EXPIRED_USER_INPUT_CODE_ERROR") {
+            // it can come here if the entered OTP was correct, but has expired because
+            // it was generated too long ago.
+            window.alert("Old OTP entered. Please regenerate a new one and try again");
+        } else {
+            // this can happen if the user tried an incorrect OTP too many times.
+            window.alert("Login failed. Please try again");
+            window.location.assign("/auth")
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function handleOTPInput(otp: string) {
+    try {
+        let response = await supertokens^{recipeNameCapitalLetters}.^{webJsConsumePasswordlessCode}({
+            userInputCode: otp
+        });
+
+        if (response.status === "OK") {
+            if (response.createdNewUser) {
+                // user sign up success
+            } else {
+                // user sign in success
+            }
+            window.location.assign("/home")
+        } else if (response.status === "INCORRECT_USER_INPUT_CODE_ERROR") {
+            // the user entered an invalid OTP
+            window.alert("Wrong OTP! Please try again. Number of attempts left: " + (response.maximumCodeInputAttempts - response.failedCodeInputAttemptCount));
+        } else if (response.status === "EXPIRED_USER_INPUT_CODE_ERROR") {
+            // it can come here if the entered OTP was correct, but has expired because
+            // it was generated too long ago.
+            window.alert("Old OTP entered. Please regenerate a new one and try again");
+        } else {
+            // this can happen if the user tried an incorrect OTP too many times.
+            window.alert("Login failed. Please try again");
+            window.location.assign("/auth")
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup/code/consume' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "deviceId": "...",
+  "preAuthSessionId": "...",
+  "userInputCode": "<Entered OTP>"
+}'
+```
+
+</AppInfoForm>
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user. 
+- `status: "INCORRECT_USER_INPUT_CODE_ERROR"`: The entered OTP is invalid. The response also contains information about the maximum number of retries and the number of failed attempts so far.
+- `status: "EXPIRED_USER_INPUT_CODE_ERROR"`: The entered OTP is too old. You should ask the user to resend a new OTP and try again.
+- `status: "RESTART_FLOW_ERROR"`: These responses that the user tried invalid OTPs too many times.
+- `status: "GENERAL_ERROR"`: This is possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+:::note
+On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
+:::
+
+## See also
+- [Post sign in / sign up action](../common-customizations/handling-signinup-success)
+- [Changing the OTP's lifetime](../common-customizations/change-code-lifetime)
+- [Changing OTP format](../common-customizations/sign-in-up/change-otp-format)
+- [Changing the number of max retries for an OTP](../common-customizations/sign-in-up/change-maximum-retries) 
+- Changing [the content of](../email-delivery/about) or how [emails and / or SMS are sent](../email-delivery/about)
+- [Changing email or phone number validation logic](../common-customizations/sign-in-up/change-email-phone-validation)
+- [Customising user ID format](../common-customizations/userid-format)

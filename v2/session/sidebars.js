@@ -166,8 +166,8 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Additional customizations',
-      collapsed: false,
+      label: 'Customizations',
+      collapsed: true,
       items: [
         "common-customizations/sessions/new-session",
         {
@@ -197,6 +197,7 @@ module.exports = {
         "common-customizations/sessions/jwt-signing-key-rotation",
         "common-customizations/sessions/in-iframe",
         "common-customizations/sessions/error-handling",
+        "common-customizations/sessions/session-validators",
         {
           type: "category",
           label: "Changing base path",
@@ -315,7 +316,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "References and Compatibility",
+      label: "References",
       items: [
         "architecture",
         "appinfo",
