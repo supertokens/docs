@@ -15,63 +15,54 @@ import TabItem from '@theme/TabItem';
 
 # 2. Backend config
 
-## 1) Create Lambda layer for required libraries
+## 1) Create Lambda layer with required libraries
 
-<BackendSDKTabs>
+<BackendSDKTabs disableGolang>
 <TabItem value="nodejs">
 
 ```bash
 mkdir lambda && cd lambda
-touch lambdaFunction.js
 
-# Run these commands
 npm i -s supertokens-node @middy/core @middy/http-cors
-cp -r node_modules nodejs # TODO: Verify this
-zip -r supertokens-layer.zip nodejs/
+cp -r node_modules nodejs
+zip -r supertokens-node.zip nodejs/
 ```
 
 </TabItem>
 <TabItem value="python">
 
 ```bash
-# Run these commands:  
 mkdir lambda && cd lambda
-touch lambda_function.py requirements.txt
 
-# TODO: Add lambda_function.py content for boilerplate:
-
-# Create requirements.txt file with the following content:
-fastapi
-uvicorn
-mangum
-nest_asyncio
-supertokens-python
-
-# Run these commands:
-pip install --target ./python -r requirements.txt
+pip install --target ./python fastapi uvicorn mangum nest_asyncio supertokens-python
 cd python && rm -r *dist-info **/__pycache__ && cd ..
-zip -r supertokens-layer.zip python/
+zip -r supertokens-python.zip python/
 ```
 
 </TabItem>
 </BackendSDKTabs>
 
 ## 2) Upload supertokens lambda layer
-<!-- TODO: Fix images: -->
 - Open AWS Lambda dashboard and click on layers:
 <img src="https://user-images.githubusercontent.com/20884782/190074706-3d1b6420-e812-48d9-aa04-8ea2d4a4c62d.png" height="300" />
 
 - Click "Create Layer" button:
 <img src="https://user-images.githubusercontent.com/20884782/190075143-57768a61-7efc-4b3d-a865-0d68e84f3005.png" width="600" />
 
-<!-- TODO: Add selector for python/node? -->
-
-- Give a name for your layer, upload the zip and select the nodejs 16 runtime
+- Give a name for your layer, upload the zip and select the runtime
 <img src="https://user-images.githubusercontent.com/20884782/190076214-47e1ba13-3f17-4dcb-afc9-90b3e8c0f53c.png" height="600" />
+
+## 3) Link lambda layer with lambda function
+
+- Scroll to the bottom and look for the `Layers` tab. Click on `Add a layer`
+<img src="https://user-images.githubusercontent.com/20884782/190076987-02e9f585-d870-4dac-bd96-d55ce71596c4.png" width="700"/>
+
+- Select `Custom Layer` and then select the layer we created in the first step:
+<img src="https://user-images.githubusercontent.com/20884782/190077385-55f9db2f-190b-42ed-ab09-70d94ec3b7a3.jpg" height="500" />
 
 <!-- END COPY SECTION -->
 
-## 3) Create a backend config function
+## 4) Create a backend config file
 
 <AppInfoForm
     askForAppName
@@ -79,16 +70,18 @@ zip -r supertokens-layer.zip python/
     askForWebsiteDomain
 >
 
+Write the following code in the lambda function (using the editor provided by AWS):
+
 <CoreInjector>
 
-<!-- TODO: Remove Session.init() and session.init() if rid=session -->
-<BackendSDKTabs>
+<BackendSDKTabs disableGolang>
 <TabItem value="nodejs">
 
-```tsx
+<!-- TODO: Add link to lambda example app so user has the corresponding (index.js) code to copy -->
 
-import EmailPassword from 'supertokens-node/recipe/emailpassword';
-import Session from 'supertokens-node/recipe/session'
+```tsx title="config.js"
+const EmailPassword = require("supertokens-node/recipe/emailpassword");
+const Session = require("supertokens-node/recipe/session");
 
 function getBackendConfig() {
   return {
@@ -121,56 +114,35 @@ module.exports.getBackendConfig = getBackendConfig;
 
 <TabItem value="python">
 
-```python
-import nest_asyncio
-nest_asyncio.apply()
-
-from fastapi import FastAPI, Depends
-from starlette.middleware.cors import CORSMiddleware
-from mangum import Mangum
-
-from supertokens_python import init, SupertokensConfig, InputAppInfo, get_all_cors_headers
-from supertokens_python.framework.fastapi import get_middleware
-from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.session.framework.fastapi import verify_session
-from supertokens_python.recipe import session, emailpassword
-
-init(
-    supertokens_config=SupertokensConfig(
-        ^{coreInjector_connection_uri_comment_with_hash}
-        connection_uri=^{coreInjector_uri}
-        ^{coreInjector_api_key_commented_with_hash}api_key=^{coreInjector_api_key}
-    ),
-    app_info=InputAppInfo(
-        # learn more about this on https://supertokens.com/docs/emailpassword/appinfo
-        app_name="^{form_appName}",
-        api_domain="^{form_apiDomain}",
-        website_domain="^{form_websiteDomain}",
-        api_base_path="^{form_apiBasePath}",
-        website_base_path="^{form_websiteBasePath}",
-        api_gateway_path="/dev",
-    ),
-    framework="fastapi",
-    recipe_list=[
-        session.init(),
-        emailpassword.init(),
-    ],
-    mode="asgi",
+```python title="config.py"
+from supertokens_python.recipe import emailpassword, session
+from supertokens_python import (
+    InputAppInfo,
+    SupertokensConfig,
 )
 
-
-app = FastAPI(title="^{form_appName}")
-app.add_middleware(get_middleware())
-
-app = CORSMiddleware(
-    app=app,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["Content-Type"] + get_all_cors_headers(),
+supertokens_config = SupertokensConfig(
+    ^{coreInjector_connection_uri_comment_with_hash}
+    connection_uri=^{coreInjector_uri}
+    ^{coreInjector_api_key_commented_with_hash}api_key=^{coreInjector_api_key}
 )
 
-handler = Mangum(app)
+app_info = InputAppInfo(
+    # learn more about this on https://supertokens.com/docs/emailpassword/appinfo
+    app_name="^{form_appName}",
+    api_domain="^{form_apiDomain}",
+    website_domain="^{form_websiteDomain}",
+    api_base_path="^{form_apiBasePath}",
+    website_base_path="^{form_websiteBasePath}",
+    api_gateway_path="/dev",
+)
+
+framework = "fastapi"
+
+recipe_list = [
+    session.init(),
+    emailpassword.init(),
+]
 ```
 
 </TabItem>
@@ -181,18 +153,5 @@ handler = Mangum(app)
 
 </AppInfoForm>
 
-<!-- COPY SECTION -->
-<!-- ./emailpassword/serverless/with-aws-lambda/backend-config.mdx -->
-<!-- 2 -->
 
-## 4) Link lambda layer with lambda function
-
-<!-- TODO: Fix images: -->
-
-- Scroll to the bottom and look for the `Layers` tab. Click on `Add a layer`
-<img src="https://user-images.githubusercontent.com/20884782/190076987-02e9f585-d870-4dac-bd96-d55ce71596c4.png" width="700"/>
-
-- Select `Custom Layer` and then select the layer we created in the first step:
-<img src="https://user-images.githubusercontent.com/20884782/190077385-55f9db2f-190b-42ed-ab09-70d94ec3b7a3.jpg" height="500" />
-
-<!-- END COPY SECTION -->
+### Check [next steps](./auth-serverless) 
