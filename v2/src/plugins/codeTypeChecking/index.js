@@ -4,6 +4,7 @@ let path = require('path');
 var exec = require('child_process').exec;
 var crypto = require('crypto');
 let mdVars = require("../markdownVariables.json");
+const { execSync } = require('child_process');
 
 function hash(input) {
     return crypto.createHash('md5').update(input).digest('hex');
@@ -447,16 +448,20 @@ Enabled: true,
             return i;
         })
         codeSnippet = `// Original: ${mdFile}\n${codeSnippet}`;
+        const folderNameSplit = folderName.split("/");
+        const lastFolderPath = folderNameSplit[folderNameSplit.length - 1]
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/' + folderName, { recursive: true }, async (err) => {
                 if (err) {
                     rej(err);
                 } else {
                     await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/' + folderName + "/Code.swift", codeSnippet);
-                    fs.writeFile('src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/' + folderName + "/Code.swift", codeSnippet, function (err) {
+                    const filename = 'src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/' + folderName + `/${lastFolderPath}.swift`;
+                    fs.writeFile(filename, codeSnippet, function (err) {
                         if (err) {
                             rej(err);
                         } else {
+                            execSync(`./src/plugins/codeTypeChecking/iosenv/createFile.rb "${filename}"`)
                             res();
                         }
                     });
