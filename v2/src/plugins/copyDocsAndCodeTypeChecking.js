@@ -52,6 +52,11 @@ module.exports = function (context, opts) {
                 splittedCheck.filter(i => i === "swift").length >= 1) {
                     // Reset iosenv
                     execSync("./src/plugins/codeTypeChecking/iosenv/resetenv.rb")
+
+                    if (!fs.existsSync("src/plugins/codeTypeChecking/iosenv/iosenv/Snippets")) {
+                        fs.mkdirSync("src/plugins/codeTypeChecking/iosenv/iosenv/Snippets");
+                    }
+
                     fs.readdirSync("src/plugins/codeTypeChecking/iosenv/iosenv/Snippets").forEach(file => {
                         fs.rmSync("src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/" + file, {
                             recursive: true,
