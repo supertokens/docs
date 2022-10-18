@@ -129,7 +129,8 @@ module.exports = {
             "checklists/saas/mysql-rds",
             "checklists/saas/adding-new-ec2-instance-for-node-api",
             "checklists/saas/db-restore",
-            "checklists/saas/adding-instances-to-load-blancer"
+            "checklists/saas/adding-instances-to-load-blancer",
+            "checklists/saas/custom-core-deployment"
           ],
         },
         {
