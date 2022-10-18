@@ -449,7 +449,7 @@ Enabled: true,
         })
         codeSnippet = `// Original: ${mdFile}\n${codeSnippet}`;
         const folderNameSplit = folderName.split("/");
-        const lastFolderPath = folderNameSplit[folderNameSplit.length - 1]
+        const lastFolderPath = folderNameSplit[folderNameSplit.length - 1] + new Date().getTime()
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/' + folderName, { recursive: true }, async (err) => {
                 if (err) {

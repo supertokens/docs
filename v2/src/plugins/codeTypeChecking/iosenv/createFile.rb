@@ -22,7 +22,7 @@ split = new_file_path.strip.split("/").reject { |s| s.empty? }
 split.each do |path|
     if path[".swift"]
         # Path is a swift file, create a new file
-        file = group.new_file(new_file_path)
+        file = group.new_file(Dir.pwd + "/" + new_file_path)
         main_target = project.targets.first
         main_target.add_file_references([file])
     else
