@@ -72,6 +72,10 @@ module.exports = function (context, opts) {
                         splittedCheck.filter(i => i === "kotlin").length >= 1) {
                         await checkCodeSnippets("kotlin");
                     }
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                        splittedCheck.filter(i => i === "swift").length >= 1) {
+                        await checkCodeSnippets("swift");
+                    }
                 }
             } catch (err) {
                 if (process.env.MODE === "production") {
