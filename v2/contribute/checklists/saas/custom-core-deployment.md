@@ -23,3 +23,6 @@ hide_title: true
 
 ## Deploying in user's SaaS
 TODO
+
+## Post deployment
+- Remove those version tags from git
