@@ -4,6 +4,7 @@ let path = require('path');
 var exec = require('child_process').exec;
 var crypto = require('crypto');
 let mdVars = require("../markdownVariables.json");
+const { execSync } = require('child_process');
 
 function hash(input) {
     return crypto.createHash('md5').update(input).digest('hex');
@@ -60,6 +61,8 @@ async function addCodeSnippetToEnv(mdFile) {
                             currentCodeLanguage = "python";
                         } else if (currLineTrimmed === "```kotlin" || currLineTrimmed.startsWith("```kotlin ")) {
                             currentCodeLanguage = "kotlin";
+                        } else if (currLineTrimmed === "```swift" || currLineTrimmed.startsWith("```swift ")) {
+                            currentCodeLanguage = "swift"
                         } else if (currLineTrimmed.includes("bash") || currLineTrimmed.includes("yaml") || currLineTrimmed.includes("cql") || currLineTrimmed.includes("sql") || currLineTrimmed.includes("batch") ||
                             currLineTrimmed.includes("text") || currLineTrimmed.includes("json")
                             || currLineTrimmed.includes("html")) {
@@ -243,6 +246,21 @@ async function checkCodeSnippets(language) {
                 res();
             });
         })
+    } else if (language === "swift") {
+        await new Promise((res, rej) => {
+            exec("cd src/plugins/codeTypeChecking/iosenv/ && set -o pipefail && xcodebuild -workspace iosenv.xcworkspace -scheme iosenv build CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO -quiet | ./Pods/xcbeautify/xcbeautify", async function (err, stdout, stderr) {
+                if (err) {
+                    console.log('\x1b[31m%s\x1b[0m', stdout);
+                    console.log('\x1b[31m%s\x1b[0m', err);
+                    console.log("=======SETUP INSTRS========\n");
+                    console.log('\x1b[36m%s\x1b[0m', `Make sure that you have Xcode installed on your system and try this command again`)
+                    console.log('\x1b[36m%s\x1b[0m', `Make sure that you have run 'pod install' inside iosenv and try this command again`)
+                    console.log("==========================\n");
+                    return rej(err);
+                }
+                res();
+            });
+        })
     } else {
         throw new Error("Unsupported language in checkCodeSnippets");
     }
@@ -413,6 +431,37 @@ Enabled: true,
                         if (err) {
                             rej(err);
                         } else {
+                            res();
+                        }
+                    });
+                }
+            });
+        });
+    } else if (language === "swift") {
+        let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+        folderName = folderName.replace(".mdx", "");
+        let packageNameSplitted = folderName.split("/");
+        packageNameSplitted = packageNameSplitted.map(i => {
+            if (i.includes("-")) {
+                return "`" + i + "`"
+            }
+            return i;
+        })
+        codeSnippet = `// Original: ${mdFile}\n${codeSnippet}`;
+        const folderNameSplit = folderName.split("/");
+        const lastFolderPath = folderNameSplit[folderNameSplit.length - 1] + new Date().getTime()
+        await new Promise(async (res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/' + folderName, { recursive: true }, async (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/' + folderName + "/Code.swift", codeSnippet);
+                    const filename = 'src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/' + folderName + `/${lastFolderPath}.swift`;
+                    fs.writeFile(filename, codeSnippet, function (err) {
+                        if (err) {
+                            rej(err);
+                        } else {
+                            execSync(`./src/plugins/codeTypeChecking/iosenv/createFile.rb "${filename}"`)
                             res();
                         }
                     });

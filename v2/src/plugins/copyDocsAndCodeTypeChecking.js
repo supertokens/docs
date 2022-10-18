@@ -1,3 +1,4 @@
+const { execSync } = require('child_process');
 let fs = require('fs');
 let path = require('path');
 let { addCodeSnippetToEnv, checkCodeSnippets } = require("./codeTypeChecking");
@@ -45,6 +46,20 @@ module.exports = function (context, opts) {
             }
 
             if (check !== undefined && check !== "nothing") {
+                let splittedCheck = check.split(",");
+
+                if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                splittedCheck.filter(i => i === "swift").length >= 1) {
+                    // Reset iosenv
+                    execSync("./src/plugins/codeTypeChecking/iosenv/resetenv.rb")
+                    fs.readdirSync("src/plugins/codeTypeChecking/iosenv/iosenv/Snippets").forEach(file => {
+                        fs.rmSync("src/plugins/codeTypeChecking/iosenv/iosenv/Snippets/" + file, {
+                            recursive: true,
+                            force: true,
+                        });
+                    });
+                }
+
                 // add code snippets to their respective env..
                 for (const mdPath of origDocs) {
                     await addCodeSnippetToEnv(mdPath);
@@ -71,6 +86,12 @@ module.exports = function (context, opts) {
                     if (splittedCheck.filter(i => i === "all").length >= 1 ||
                         splittedCheck.filter(i => i === "kotlin").length >= 1) {
                         await checkCodeSnippets("kotlin");
+                    }
+
+                    // We do not do this in the case of "all" intentionally because
+                    // iOS code checking needs MacOS
+                    if (splittedCheck.filter(i => i === "swift").length >= 1) {
+                        await checkCodeSnippets("swift");
                     }
                 }
             } catch (err) {
