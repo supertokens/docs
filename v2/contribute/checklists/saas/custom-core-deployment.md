@@ -87,6 +87,3 @@ hide_title: true
 - Update the code in the backend for the image version tag name and version number in `APP_ID_TO_CUSTOM_IMAGE` variable in [this file](https://github.com/supertokens/supertokens-backend-apis/blob/master/app/0/ts/helpers/saas/deployment.ts).
 - Push the backend code to production
 - Restart all the dev / prod containers for that app.
-
-## Post deployment
-- Remove those version tags from git
