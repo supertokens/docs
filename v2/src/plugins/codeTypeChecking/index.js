@@ -566,6 +566,16 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
                 continue;
             }
 
+            /**
+             * For iOS snippets we need to use fileprivate class to avoid build errors in Xcode due to duplicate declarations.
+             * This replaces the fileprivate declaration with a simple class declaration in the final output
+             */
+            if (line.includes("fileprivate class")) {
+                line = line.split("fileprivate class").join("class");
+                newLines.push(line);
+                continue;
+            }
+
             newLines.push(eachLine[i]);
         }
 
