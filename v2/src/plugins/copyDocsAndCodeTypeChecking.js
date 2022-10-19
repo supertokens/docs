@@ -48,8 +48,7 @@ module.exports = function (context, opts) {
             if (check !== undefined && check !== "nothing") {
                 let splittedCheck = check.split(",");
 
-                if (splittedCheck.filter(i => i === "all").length >= 1 ||
-                splittedCheck.filter(i => i === "swift").length >= 1) {
+                if (splittedCheck.filter(i => i === "swift").length >= 1) {
                     // Reset iosenv
                     execSync("./src/plugins/codeTypeChecking/iosenv/resetenv.rb")
 
