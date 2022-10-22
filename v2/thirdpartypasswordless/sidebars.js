@@ -39,6 +39,7 @@ module.exports = {
                 "pre-built-ui/setup/core/saas-setup"
               ],
             },
+            "pre-built-ui/setup/dashboard",
           ]
         },
         "pre-built-ui/handling-session-tokens",
@@ -95,6 +96,7 @@ module.exports = {
                 "custom-ui/init/core/saas-setup"
               ],
             },
+            "custom-ui/init/dashboard",
           ]
         },
         "custom-ui/login-magic-link",

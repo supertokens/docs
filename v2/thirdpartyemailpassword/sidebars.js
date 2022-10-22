@@ -97,6 +97,7 @@ module.exports = {
                 "custom-ui/init/core/saas-setup"
               ],
             },
+            "custom-ui/init/dashboard",
           ]
         },
         "custom-ui/email-password-login",
