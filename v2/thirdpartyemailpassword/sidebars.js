@@ -39,6 +39,7 @@ module.exports = {
                 "pre-built-ui/setup/core/saas-setup"
               ],
             },
+            "pre-built-ui/setup/dashboard",
           ]
         },
         "pre-built-ui/handling-session-tokens",
@@ -60,7 +61,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Using custom UI',
+      label: 'Using your own UI',
       customProps: {
         superColour: true,
       },

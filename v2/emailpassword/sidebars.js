@@ -59,7 +59,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Using custom UI',
+      label: 'Using your own UI',
       customProps: {
         superColour: true,
       },
