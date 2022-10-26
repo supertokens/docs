@@ -170,10 +170,14 @@ function TOC({ toc, showUISwitcher }) {
             borderColor: isCustomSelected ? selectedBorderColorString : unselectedBorderColorString,
             borderStyle: "solid",
           }}>
+          {isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
+            marginRight: "8px",
+            marginLeft: "-18px" // 10 px is the width of the tick, and 8 is to account for marginRight
+          }} />}
           <span
             style={{
               fontSize: 16,
-              fontWeight: "500",
+              fontWeight: "700",
               marginTop: 6,
               marginBottom: 6,
             }}>
@@ -200,10 +204,14 @@ function TOC({ toc, showUISwitcher }) {
             borderColor: !isCustomSelected ? selectedBorderColorString : unselectedBorderColorString,
             borderStyle: "solid",
           }}>
+          {!isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
+            marginRight: "8px",
+            marginLeft: "-18px" // 10 px is the width of the tick, and 8 is to account for marginRight
+          }} />}
           <span
             style={{
               fontSize: 16,
-              fontWeight: "500",
+              fontWeight: "700",
               marginTop: 6,
               marginBottom: 6,
             }}>
