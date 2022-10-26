@@ -177,7 +177,7 @@ function TOC({ toc, showUISwitcher }) {
               marginTop: 6,
               marginBottom: 6,
             }}>
-            Custom UI
+            Your own UI
           </span>
         </div>
         <div

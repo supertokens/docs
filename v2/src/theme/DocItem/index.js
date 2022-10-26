@@ -117,7 +117,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
               paddingTop: 8,
               paddingBottom: 8,
             }}>
-            Custom UI
+            Your own UI
           </div>
 
           <div
