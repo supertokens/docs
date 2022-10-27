@@ -72,13 +72,13 @@ function TOC({ toc, showUISwitcher }) {
       if (contentTitle.value.includes("[[pre]]") && !isCustomSelected) {
         return {
           ...contentTitle,
-          value: contentTitle.value.replace("[[pre]]", "").trim(),
+          value: contentTitle.value.split("[[pre]]").join("").trim(),
           visible: true,
         };
       } else if (contentTitle.value.includes("[[cust]]") && isCustomSelected) {
         return {
           ...contentTitle,
-          value: contentTitle.value.replace("[[cust]]", "").trim(),
+          value: contentTitle.value.split("[[cust]]").join("").trim(),
           visible: true,
         };
       }
