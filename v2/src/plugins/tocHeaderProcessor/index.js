@@ -19,12 +19,11 @@ module.exports = () => {
 
                         child.children = child.children.map(headingChild => {
                             if (headingChild.type === "text") {
-                                const customId = headingChild.value.toLowerCase().split(" ").join("-").trim();
                                 const _temp = headingChild.value;
 
                                 return {
                                     ...headingChild,
-                                    value: `${_temp} ${valuePostFix} {#${customId}}`,
+                                    value: `${_temp} ${valuePostFix}`,
                                 };
                             }
 
