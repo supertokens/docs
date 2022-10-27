@@ -83,6 +83,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
             fontWeight: "700",
             fontSize: 18,
             marginLeft: 17,
+            marginRight: 5,
           }}>
           What type of UI do you want to use?
         </span>
@@ -146,6 +147,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
               paddingTop: 5,
               paddingBottom: 5,
               marginLeft: 24,
+              marginRight: 5,
               cursor: "pointer"
             }}>
             {!isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
