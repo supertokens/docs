@@ -5,9 +5,12 @@ hide_title: true
 ---
 
 <!-- COPY DOCS -->
-<!-- ./session/serverless/with-aws-lambda/authorizer.mdx -->
+<!-- ./emailpassword/serverless/with-aws-lambda/authorizer.mdx -->
 
 import AppInfoForm from "/src/components/appInfoForm"
+import CoreInjector from "/src/components/coreInjector"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
 
 # Using Lambda Authorizers
 
@@ -20,7 +23,124 @@ Follow [step 1](./frontend) and [step 2](./backend-config).
 ## 2) Create a new file `index.js`
 Use the code below as the handler for the lambda. Remember that whenever we want to use any functions from the `supertokens-node` lib, we have to call the `supertokens.init` function at the top of that serverless function file. We can then use `getSession()` to get the session.
 
-```tsx title="index.ts"
+<CoreInjector>
+<BackendSDKTabs disableGolang>
+<TabItem value="python">
+
+```python title="auth.py"
+import nest_asyncio
+nest_asyncio.apply()
+
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from mangum import Mangum
+
+from supertokens_python import init, get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
+
+import config
+
+init(
+    supertokens_config=config.supertokens_config,
+    app_info=config.app_info,
+    framework=config.framework,
+    recipe_list=config.recipe_list,
+    mode="asgi",
+)
+app = FastAPI(title="SuperTokens Example")
+app.add_middleware(get_middleware())
+
+app = CORSMiddleware(
+    app=app,
+    allow_origins=[config.app_info.website_domain],
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+# highlight-start
+def generate_policy(principal_id, effect, resource, context):
+    policy_document = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {"Action": "execute-api:Invoke", "Effect": effect, "Resource": resource}
+        ],
+    }
+    auth_response = {
+        "principalId": principal_id,
+        "policyDocument": policy_document,
+        "context": context or {},
+    }
+
+    return auth_response
+
+
+def generate_allow(principal_id, resource, context=None):
+    return generate_policy(principal_id, "Allow", resource, context)
+
+
+def generate_deny(principal_id, resource, context=None):
+    return generate_policy(principal_id, "Deny", resource, context)
+
+
+from fastapi import Request
+from supertokens_python.recipe.session.syncio import get_session
+from supertokens_python.recipe.session.exceptions import (InvalidClaimsError,
+                                                          TryRefreshTokenError)
+
+# This route will act as the authorizer for API Gateway
+@app.get("/{full_path:path}")
+def handle_auth(request: Request, full_path: str):
+    event = request.scope["aws.event"]
+    method_arn = event.get("methodArn")
+
+    try:
+        session = get_session(request, session_required=False)
+        if session:
+            return generate_allow(session.get_user_id(), method_arn)
+        else:
+            # You can allow requests without sessions
+            return generate_allow("", method_arn)
+            # You can also return explicit deny with additional context, but you should configure these as 401s so the frontend SDK can handle them.
+            # return generate_deny(None, method_arn)
+            # raise Exception("Unauthorized")
+    except Exception as e:
+        if isinstance(e, TryRefreshTokenError):
+            raise Exception("Unauthorized")
+        if isinstance(e, InvalidClaimsError):
+            claim_validation_errors = [err.to_json() for err in e.payload]
+            return generate_deny(
+                "",
+                method_arn,
+                {
+                    "body": {
+                        "message": "invalid claims",
+                        "claimValidationErrors": claim_validation_errors,
+                    }
+                },
+            )
+
+        raise e
+
+def handler(event, context):
+    mangum_handler = Mangum(app)
+    response = mangum_handler(event, context)
+
+    if event.get("methodArn"):
+        gateway_response = json.loads(response["body"])
+        # We need to add setCookie to the context, since later we will be mapping this to a Set-Cookie header on the response
+        # get_session has to set cookies on the first call after a refresh.
+        gateway_response["context"]["setCookie"] = response["headers"]["set-cookie"]
+        return gateway_response
+
+    return response
+# highlight-end
+```
+
+</TabItem>
+<TabItem value="nodejs">
+
+```tsx title="auth.ts"
 import supertokens from "supertokens-node";
 import { SessionEvent } from "supertokens-node/framework/awsLambda";
 import { APIGatewayAuthorizerEvent, PolicyDocument, Statement, AuthResponse } from "aws-lambda";
@@ -102,6 +222,10 @@ const generateDeny = function (principalId: string, resource: string, context?: 
     return generatePolicy(principalId, 'Deny', resource, context);
 };
 ```
+
+</TabItem>
+</BackendSDKTabs>
+</CoreInjector>
 
 ## 3) Configure the Authorizer
 
