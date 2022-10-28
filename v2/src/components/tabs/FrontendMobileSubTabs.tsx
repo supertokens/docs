@@ -13,7 +13,7 @@ export default function FrontendMobileSubTabs(props: any) {
             values={[
                 { label: 'React Native', value: 'reactnative' },
                 { label: 'Android', value: 'android' },
-                // { label: 'iOS', value: 'ios' }
+                { label: 'iOS', value: 'ios' }
             ]}>
             {/* {childContainsTabItemWithValue("ios", props.children)
                 ? null

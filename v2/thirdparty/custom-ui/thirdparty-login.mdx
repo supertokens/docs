@@ -245,7 +245,9 @@ Coming Soon
 
 <TabItem value="ios">
 
-TODO
+:::info
+Coming Soon
+:::
 
 </TabItem>
 
@@ -361,7 +363,70 @@ On Google's dashboard, you should create a Web client to use for your Android ap
 
 <TabItem value="ios">
 
-TODO
+<h3>Step 1) Fetching the OAuth / access tokens on the frontend</h3>
+
+For iOS, you use the [official guide](https://developers.google.com/identity/sign-in/ios/start-integrating) for setting up Sign in with Google in your app. After the user successfully signs in, you can access the access token and id token from the Google signin result.
+
+```swift
+import UIKit
+import GoogleSignIn
+
+fileprivate class ViewController: UIViewController {
+    func signInWithGoogle() {
+        let config = GIDConfiguration(clientID: "<CLIENT_ID>")
+
+        GIDSignIn.sharedInstance.signIn(with: config, presenting: self) {
+            user, error in
+            guard error == nil, let _user: GIDGoogleUser = user else {
+                // Sign in failed
+                return
+            }
+
+            let accessToken = _user.authentication.accessToken
+            let idToken = _user.authentication.idToken
+
+            // TODO: See next step
+        }
+    }
+}
+```
+
+<h3>Step 2) Calling the signinup API to use the OAuth tokens</h3>
+
+<AppInfoForm askForAPIDomain>
+
+Once you have the `access_token` or the `id_token` from the auth provider, you need to call the signinup API exposed by our backend SDK as shown below:
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "redirectURI": "",
+    "thirdPartyId": "apple",
+    "authCodeResponse": {
+        "access_token": "..."
+    },
+    "clientId": "..."
+}'
+```
+
+:::important
+- The `clientId` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
+- In this flow, the value of `redirectURI` isn't used on the backend, so we give the API an empty string.
+- If you have the `id_token`, you can also just send that inplace of the `access_token`.
+:::
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This is returned if the social / SSO provider did not provider an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+
+:::note
+On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
+:::
+
+</AppInfoForm>
 
 </TabItem>
 

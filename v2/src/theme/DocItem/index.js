@@ -62,13 +62,12 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
           flexDirection: "column",
           paddingTop: 18,
           paddingBottom: 18,
-          alignItems: "center",
-          justifyContent: "center",
           fontFamily: "Rubik",
           backgroundColor: "var(--ui-selector-background)",
           fontFamily: "Rubik",
           overflow: "clip",
           position: "relative",
+          borderRadius: 6
         }}>
         <div style={{
           width: 6,
@@ -81,8 +80,10 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
         <span
           style={{
             color: "white",
-            fontWeight: "500",
-            fontSize: 16,
+            fontWeight: "700",
+            fontSize: 18,
+            marginLeft: 17,
+            marginRight: 5,
           }}>
           What type of UI do you want to use?
         </span>
@@ -90,9 +91,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
           style={{
             display: "flex",
             flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-            marginTop: 24,
+            marginTop: 22,
           }}>
           <div
             onClick={() => {
@@ -111,13 +110,18 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
               borderRadius: 6,
               borderWidth: 1,
               borderStyle: "solid",
-              fontWeight: "500",
-              paddingLeft: 25,
-              paddingRight: 25,
-              paddingTop: 8,
-              paddingBottom: 8,
+              fontWeight: "700",
+              paddingLeft: 20,
+              paddingRight: 20,
+              paddingTop: 5,
+              paddingBottom: 5,
+              marginLeft: 17,
+              cursor: "pointer"
             }}>
-            Custom UI
+            {isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
+              marginRight: "8px",
+            }} />}
+            Your own UI
           </div>
 
           <div
@@ -137,13 +141,18 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
               borderRadius: 6,
               borderWidth: 1,
               borderStyle: "solid",
-              fontWeight: "500",
-              paddingLeft: 25,
-              paddingRight: 25,
-              paddingTop: 8,
-              paddingBottom: 8,
-              marginLeft: 22,
+              fontWeight: "700",
+              paddingLeft: 20,
+              paddingRight: 20,
+              paddingTop: 5,
+              paddingBottom: 5,
+              marginLeft: 24,
+              marginRight: 5,
+              cursor: "pointer"
             }}>
+            {!isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
+              marginRight: "8px",
+            }} />}
             Pre built UI
           </div>
         </div>

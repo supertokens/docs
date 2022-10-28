@@ -1,7 +1,7 @@
 import React, { PropsWithChildren } from "react";
 import supertokens from "supertokens-website";
 import { recursiveMap } from "../utils";
-import { getSaasApp } from "../api/saas/app";
+import { getSaasApp } from "../api/saas/apps";
 import { MOCK_ENABLED } from "../constants";
 
 type Props = {
@@ -125,10 +125,10 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
         if (this.isUnmounting) {
             return undefined;
         }
-        if (app.exists && app.devDeployment.connectionInfo !== undefined) {
+        if (app.length > 0 && app[0].devDeployment.connectionInfo !== undefined) {
             return {
-                uri: app.devDeployment.connectionInfo.host,
-                key: app.devDeployment.connectionInfo.apiKey,
+                uri: app[0].devDeployment.connectionInfo.host,
+                key: app[0].devDeployment.connectionInfo.apiKeys[0],
             }
         }
         return undefined;
