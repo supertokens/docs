@@ -72,7 +72,7 @@ module.exports = () => {
     return (data, file) => {
         let recipeName = file.path.split("/v2/")[1].split("/")[0]
 
-        let configObjectForRecipe = configuredVariables[recipeName];
+        let configObjectForRecipe = { ...configuredVariables["common"], ...configuredVariables[recipeName] };
 
         if (data.children.length) {
             // If there is no config entry for the recipe, exit early
