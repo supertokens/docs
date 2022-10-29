@@ -153,7 +153,6 @@ module.exports = {
       type: "category",
       label: "Using sessions with JWTs",
       items: [
-        "common-customizations/sessions/with-jwt/about",
         "common-customizations/sessions/with-jwt/enabling-jwts",
         "common-customizations/sessions/with-jwt/custom-claims",
         "common-customizations/sessions/with-jwt/read-jwt",
