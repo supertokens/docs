@@ -410,6 +410,14 @@ module.exports = {
             "common-customizations/sessions/about",
             {
               type: "category",
+              label: "Session Verification in API",
+              items: [
+                "common-customizations/sessions/session-verification-in-api/verify-session",
+                "common-customizations/sessions/session-verification-in-api/get-session"
+              ]
+            },
+            {
+              type: "category",
               label: "Using sessions with JWTs",
               items: [
                 "common-customizations/sessions/with-jwt/enabling-jwts",
@@ -419,14 +427,6 @@ module.exports = {
               ]
             },
             "common-customizations/sessions/new-session",
-            {
-              type: "category",
-              label: "Session Verification in API",
-              items: [
-                "common-customizations/sessions/session-verification-in-api/verify-session",
-                "common-customizations/sessions/session-verification-in-api/get-session"
-              ]
-            },
             "common-customizations/sessions/revoke-session",
             "common-customizations/sessions/change-session-timeout",
             "common-customizations/sessions/checking-session-front-end",
