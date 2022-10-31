@@ -375,8 +375,6 @@ module.exports = {
                 "common-customizations/sessions/with-jwt/enabling-jwts",
                 "common-customizations/sessions/with-jwt/custom-claims",
                 "common-customizations/sessions/with-jwt/read-jwt",
-                "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
-                "common-customizations/sessions/with-jwt/get-public-key",
                 "common-customizations/sessions/with-jwt/jwt-verification"
               ]
             },
