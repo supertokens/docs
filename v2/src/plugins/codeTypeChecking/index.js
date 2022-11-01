@@ -62,7 +62,8 @@ async function addCodeSnippetToEnv(mdFile) {
                         } else if (currLineTrimmed === "```kotlin" || currLineTrimmed.startsWith("```kotlin ")) {
                             currentCodeLanguage = "kotlin";
                         } else if (currLineTrimmed === "```swift" || currLineTrimmed.startsWith("```swift ")) {
-                            currentCodeLanguage = "swift"
+                            currentCodeLanguage = "ignore"
+                            // TODO: Nemi -> fix -> we can keep it ignore unless CODE_TYPE_CHECK=swift is given in the process env
                         } else if (currLineTrimmed.includes("bash") || currLineTrimmed.includes("yaml") || currLineTrimmed.includes("cql") || currLineTrimmed.includes("sql") || currLineTrimmed.includes("batch") ||
                             currLineTrimmed.includes("text") || currLineTrimmed.includes("json")
                             || currLineTrimmed.includes("html")) {

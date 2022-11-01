@@ -167,19 +167,18 @@ module.exports = {
         "common-customizations/sessions/new-session",
         {
           type: "category",
-          label: "Session Verification in API",
+          label: "Protecting API routes",
           items: [
             "common-customizations/sessions/session-verification-in-api/verify-session",
             "common-customizations/sessions/session-verification-in-api/get-session"
           ]
         },
+        "common-customizations/sessions/protecting-frontend-routes",
         "common-customizations/sign-out",
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/change-session-timeout",
-        "common-customizations/sessions/checking-session-front-end",
         "common-customizations/sessions/user-information-front-end",
         "common-customizations/sessions/handling-session-expiry",
-        "common-customizations/sessions/securing-component",
         "common-customizations/sessions/fetch-sessions-for-user",
         "common-customizations/sessions/update-jwt-payload",
         "common-customizations/sessions/update-session-data",
