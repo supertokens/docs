@@ -47,8 +47,9 @@ module.exports = function (context, opts) {
 
             if (check !== undefined && check !== "nothing") {
                 let splittedCheck = check.split(",");
+                const isSwiftEnabled = splittedCheck.filter(i => i === "swift").length >= 1;
 
-                if (splittedCheck.filter(i => i === "swift").length >= 1) {
+                if (isSwiftEnabled) {
                     // Reset iosenv
                     execSync("./src/plugins/codeTypeChecking/iosenv/resetenv.rb")
 
@@ -66,7 +67,7 @@ module.exports = function (context, opts) {
 
                 // add code snippets to their respective env..
                 for (const mdPath of origDocs) {
-                    await addCodeSnippetToEnv(mdPath);
+                    await addCodeSnippetToEnv(mdPath, isSwiftEnabled);
                 }
             }
 
