@@ -174,14 +174,18 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/protecting-frontend-routes",
+        {
+          type: "category",
+          label: "Reading / modifying session claims",
+          items: [
+            "common-customizations/sessions/claims/access-token-payload"
+          ]
+        },
         "common-customizations/sign-out",
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/change-session-timeout",
-        "common-customizations/sessions/user-information-front-end",
         "common-customizations/sessions/handling-session-expiry",
         "common-customizations/sessions/fetch-sessions-for-user",
-        "common-customizations/sessions/update-jwt-payload",
-        "common-customizations/sessions/update-session-data",
         "common-customizations/sessions/multiple-api-endpoints",
         "common-customizations/sessions/cookies-and-https",
         "common-customizations/sessions/cookie-consent",
