@@ -385,7 +385,8 @@ module.exports = {
               type: "category",
               label: "Reading / modifying session claims",
               items: [
-                "common-customizations/sessions/claims/access-token-payload"
+                "common-customizations/sessions/claims/access-token-payload",
+                "common-customizations/sessions/claims/claim-validators"
               ]
             },
             "common-customizations/sessions/revoke-session",
@@ -401,7 +402,6 @@ module.exports = {
             "common-customizations/sessions/jwt-signing-key-rotation",
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling",
-            "common-customizations/sessions/session-validators"
           ]
         },
         {
