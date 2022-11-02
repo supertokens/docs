@@ -1,0 +1,981 @@
+---
+id: access-token-payload
+title: Option 1. Using the access token payload
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import TabItem from "@theme/TabItem";
+
+# Option 1. Using the access token payload
+
+## Add custom claims to the access token payload
+
+There are two ways to add custom claims to the access token payload:
+- During session creation
+- Post session creation
+
+### During session creation
+This is the most typical method of adding custom claims. A session is created when a user signs in or signs up, and we can add custom claims to their session by overriding the `createNewSession` function as shown below:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "...",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        Session.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async function (input) {
+                            let userId = input.userId;
+
+                            // This goes in the access token, and is availble to read on the frontend.
+                            input.accessTokenPayload = {
+                                ...input.accessTokenPayload,
+                                someKey: "someValue",
+                            };
+
+                            return originalImplementation.createNewSession(input);
+                        },
+                    };
+                },
+            },
+            // highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				// highlight-start
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+						// First we copy the original implementation func
+						originalCreateNewSession := *originalImplementation.CreateNewSession
+
+						// Now we override the CreateNewSession function
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+
+							// This goes in the access token, and is availble to read on the frontend.
+							if accessTokenPayload == nil {
+								accessTokenPayload = map[string]interface{}{}
+							}
+							accessTokenPayload["someKey"] = "someValue"
+
+							return originalCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from typing import Any, Dict, Union
+
+def override_functions(original_implementation: RecipeInterface):
+    original_implementation_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(request: Any, user_id: str,
+                                 access_token_payload: Union[None, Dict[str, Any]],
+                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        # This goes in the access token, and is availble to read on the frontend.
+        access_token_payload["someKey"] = 'someValue'
+
+        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    
+    framework='...', # type: ignore
+    recipe_list=[
+        session.init(
+            # highlight-start
+            override=session.InputOverrideConfig(
+                functions=override_functions
+            )
+            # highlight-end
+        )
+    ]
+)
+```
+</TabItem>
+</BackendSDKTabs>
+
+### Post session creation
+In this method, you can modify the access token payload of an existing session. There are two modes in this:
+- With session verification (online mode)
+- Without session verification (offline mode)
+
+#### With session verification (online mode)
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+let app = express();
+
+app.post("/updateinfo", verifySession(), async (req: SessionRequest, res) => {
+
+    let session = req.session;
+
+    // highlight-start
+    await session!.mergeIntoAccessTokenPayload(
+        { newKey: "newValue" }
+    );
+    // highlight-end
+
+    res.json({ message: "successfully updated access token payload" })
+});
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import { SessionRequest } from "supertokens-node/framework/hapi";
+
+let server = Hapi.server({ port: 8000 })
+
+server.route({
+    path: "/updateinfo",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession()
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        let session = req.session;
+
+        // highlight-start
+        await session!.mergeIntoAccessTokenPayload(
+            { newKey: "newValue" }
+        );
+        // highlight-end
+        return res.response({ message: "successfully updated access token payload" }).code(200);
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+
+let fastify = Fastify();
+
+fastify.post("/updateinfo", {
+    preHandler: verifySession(),
+}, async (req: SessionRequest, res) => {
+    let session = req.session;
+
+    // highlight-start
+    await session!.mergeIntoAccessTokenPayload(
+        { newKey: "newValue" }
+    );
+    // highlight-end
+    res.send({ message: "successfully updated access token payload" });
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+
+async function updateinfo(awsEvent: SessionEvent) {
+    let session = awsEvent.session;
+
+    // highlight-start
+    await session!.mergeIntoAccessTokenPayload(
+        { newKey: "newValue" }
+    );
+    // highlight-end
+
+    return {
+        body: JSON.stringify({ message: "successfully updated access token payload" }),
+        statusCode: 200,
+    };
+};
+
+exports.handler = verifySession(updateinfo);
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+
+let router = new KoaRouter();
+
+router.post("/updateinfo", verifySession(), async (ctx: SessionContext, next) => {
+    let session = ctx.session;
+
+    // highlight-start
+    await session!.mergeIntoAccessTokenPayload(
+        { newKey: "newValue" }
+    );
+    // highlight-end
+    ctx.body = { message: "successfully updated access token payload" };
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import { SessionContext } from "supertokens-node/framework/loopback";
+
+class UpdateInfo {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: SessionContext) { }
+    @post("/updateinfo")
+    @intercept(verifySession())
+    @response(200)
+    async handler() {
+        let session = this.ctx.session;
+
+        // highlight-start
+        await session!.mergeIntoAccessTokenPayload(
+            { newKey: "newValue" }
+        );
+        // highlight-end
+        return { message: "successfully updated access token payload" };
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+export default async function updateInfo(req: any, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession()(req, res, next);
+        },
+        req,
+        res
+    )
+    let session = (req as SessionRequest).session;
+
+    // highlight-start
+    await session!.mergeIntoAccessTokenPayload(
+        { newKey: "newValue" }
+    );
+    // highlight-end
+    res.json({ message: "successfully updated access token payload" })
+}
+```
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard())
+  async postExample(@Session() session: SessionContainer): Promise<{ message: string }> {
+    //highlight-start
+    // For more information about "AuthGuard" and the "Session" decorator please read our NestJS guide.
+    await session.mergeIntoAccessTokenPayload({ 
+        newKey: "newValue",
+    });
+    //highlight-end
+    return { message: "successfully updated access token payload" };
+  }
+}
+```
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+// We assume that you have wrapped this handler with session.VerifySession
+func updateInfo(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	// highlight-next-line
+	err := sessionContainer.MergeIntoAccessTokenPayload(map[string]interface{}{"newKey": "newValue"})
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			// TODO: Send 500 to client
+		}
+		return
+	}
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+from fastapi.responses import PlainTextResponse
+
+@app.post('/update-access-token-payload') # type: ignore
+async def merge_into_access_token_payload(session: SessionContainer = Depends(verify_session())):
+    # highlight-next-line
+    await session.merge_into_access_token_payload({ 'newKey': 'newValue' })
+
+    return PlainTextResponse(content='success')
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from flask import g
+
+@app.route('/update-access-token-payload', methods=['POST']) # type: ignore
+@verify_session()
+def update_access_token_payload():
+    session: SessionContainer = g.supertokens # type: ignore
+
+    # highlight-next-line
+    session.sync_merge_into_access_token_payload({ 'newKey': 'newValue' })
+
+    return 'success'
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.session import SessionContainer
+
+@verify_session()
+async def update_access_token_payload(request: HttpRequest):
+    session: SessionContainer = request.supertokens # type: ignore
+
+    # highlight-next-line
+    await session.merge_into_access_token_payload({ 'newKey': 'newValue' })
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+- We first require session verification in order to get the session object
+- Using that object, we call the `mergeIntoAccessTokenPayload` with new content. This merges the update into the existing object, removing keys set to null in the root of the update object.
+- The result is that the access token is updated in the user's browser cookies. The change is instantly visible on the frontend and the subsequent backend API calls.
+
+#### Without session verification (offline mode)
+
+This method can be used to update the access token payload even if the user is not online.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+
+async function updateAccessTokenPayload() {
+      let userId = "...";
+      // we first get all the sessionHandles (string[]) for a user
+      let sessionHandles = await Session.getAllSessionHandlesForUser(userId);
+
+      // we update all the session's Access Token payloads for this user
+      sessionHandles.forEach(async (handle) => {
+            let currSessionInfo = await Session.getSessionInformation(handle);
+            if (currSessionInfo === undefined) {
+                  return;
+            }
+
+            //highlight-start
+            await Session.mergeIntoAccessTokenPayload(handle,
+                  { newKey: "newValue" }
+            );
+            //highlight-end
+      })
+}
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import "github.com/supertokens/supertokens-golang/recipe/session"
+
+func main() {
+	// we first get all the sessionHandles (string[]) for a user
+	sessionHandles, err := session.GetAllSessionHandlesForUser("userId")
+	if err != nil {
+		// TODO: handle error
+		return
+	}
+
+	// we update all the session's access token payloads for this user
+	for _, handle := range sessionHandles {
+		sessionInfo, err := session.GetSessionInformation(handle)
+		if err != nil {
+			// TODO: handle error
+			return
+		}
+
+		if sessionInfo == nil {
+			continue
+		}
+
+		//highlight-next-line
+		_, err = session.MergeIntoAccessTokenPayload(handle, map[string]interface{}{"newKey": "newValue"})
+		if err != nil {
+			// TODO: handle error
+			return
+		}
+	}
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_all_session_handles_for_user, merge_into_access_token_payload, get_session_information
+
+async def some_func():
+    # we first get all the session_handles (List[string]) for a user
+    session_handles = await get_all_session_handles_for_user("userId")
+
+    for handle in session_handles:
+        session_information = await get_session_information(handle)
+        if session_information is None:
+            continue
+
+        await merge_into_access_token_payload(handle, { 'newKey': 'newValue' })
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.session.syncio import get_all_session_handles_for_user, merge_into_access_token_payload, get_session_information
+
+# we first get all the session_handles (List[string]) for a user
+session_handles = get_all_session_handles_for_user("userId")
+
+for handle in session_handles:
+    session_information = get_session_information(handle)
+    if session_information is None:
+        continue
+
+    merge_into_access_token_payload(handle, { 'newKey': 'newValue' })
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+:::caution
+Changes to the access token payload via this method are reflected in the session only once the session is refreshed.
+:::
+
+## Read the access token payload
+
+Once the custom payload has been added to the session, you can access it on the backend and frontend in the following ways:
+
+### Reading the payload on the backend
+
+#### With session verification (online mode)
+
+This method can be used when the user is online and has sent an API request with their session tokens
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+
+let app = express();
+
+app.get("/myApi", verifySession(), async (req, res) => {
+
+    let session = req.session;
+
+    // highlight-start
+    let accessTokenPayload = session.getAccessTokenPayload();
+    let customClaimValue = accessTokenPayload.customClaim
+    // highlight-end
+});
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import { SessionRequest } from "supertokens-node/framework/hapi";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/myApi",
+    method: "get",
+    options: {
+        pre: [
+            {
+                method: verifySession()
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        let session = req.session;
+
+        // highlight-start
+        let accessTokenPayload = session!.getAccessTokenPayload();
+        let customClaimValue = accessTokenPayload.customClaim
+        // highlight-end
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+
+let fastify = Fastify();
+
+fastify.get("/myApi", {
+    preHandler: verifySession(),
+}, (req, res) => {
+    let session = req.session;
+
+    // highlight-start
+    let accessTokenPayload = session.getAccessTokenPayload();
+    let customClaimValue = accessTokenPayload.customClaim
+    // highlight-end
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+
+async function myApi(awsEvent: SessionEvent) {
+    let session = awsEvent.session;
+
+    // highlight-start
+    let accessTokenPayload = session!.getAccessTokenPayload();
+    let customClaimValue = accessTokenPayload.customClaim
+    // highlight-end
+
+};
+
+exports.handler = verifySession(myApi);
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+
+let router = new KoaRouter();
+
+router.get("/myApi", verifySession(), (ctx: SessionContext, next) => {
+    let session = ctx.session;
+
+    // highlight-start
+    let accessTokenPayload = session!.getAccessTokenPayload();
+    let customClaimValue = accessTokenPayload.customClaim
+    // highlight-end
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, get, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import { SessionContext } from "supertokens-node/framework/loopback";
+
+class GetJWT {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: SessionContext) { }
+    @get("/myApi")
+    @intercept(verifySession())
+    @response(200)
+    handler() {
+        let session = this.ctx.session;
+
+        // highlight-start
+        let accessTokenPayload = session!.getAccessTokenPayload();
+        let customClaimValue = accessTokenPayload.customClaim
+        // highlight-end
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+export default async function myApi(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession()(req, res, next);
+        },
+        req,
+        res
+    )
+    let session = req.session;
+
+    // highlight-start
+    let accessTokenPayload = session!.getAccessTokenPayload();
+    let customClaimValue = accessTokenPayload.customClaim
+    // highlight-end
+}
+```
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Get, UseGuards, Session } from "@nestjs/common";
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+
+@Controller()
+export class ExampleController {
+  @Get('example')
+  @UseGuards(new AuthGuard())
+  async postExample(@Session() session: SessionContainer): Promise<any> {
+    // highlight-start
+    let accessTokenPayload = session.getAccessTokenPayload();
+    let customClaimValue = accessTokenPayload.customClaim
+    // highlight-end
+  }
+}
+```
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+// We assume that you have wrapped this handler with session.VerifySession
+func myApi(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+    // highlight-start
+	currAccessTokenPayload := sessionContainer.GetAccessTokenPayload()
+	customClaimValue := currAccessTokenPayload["customClaim"]
+	// highlight-end
+
+	fmt.Println(customClaimValue)
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from fastapi import Depends
+from supertokens_python.recipe.session import SessionContainer
+
+@app.get('/myApi') # type: ignore
+async def my_api(session: SessionContainer = Depends(verify_session())):
+    # highlight-start
+    access_token_payload = session.get_access_token_payload()
+    custom_claim_value = access_token_payload["customClaim"]
+    # highlight-end
+
+    print(custom_claim_value) # TODO...
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from flask import g
+
+@app.route('/myApi', methods=['GET']) # type: ignore
+@verify_session()
+def my_api():
+    session: SessionContainer = g.supertokens # type: ignore
+
+    # highlight-start
+    access_token_payload = session.get_access_token_payload()
+    custom_claim_value = access_token_payload["customClaim"]
+    # highlight-end
+
+    print(custom_claim_value) # TODO...
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.session import SessionContainer
+
+@verify_session()
+async def my_api(request: HttpRequest):
+    session: SessionContainer = request.supertokens # type: ignore
+
+    # highlight-start
+    access_token_payload = session.get_access_token_payload()
+    custom_claim_value = access_token_payload["customClaim"]
+    # highlight-end
+
+    print(custom_claim_value) # TODO...
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+#### Without session verification (offline mode)
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+
+async function someFunc() {
+      let userId = "...";
+      // we first get all the sessionHandles (string[]) for a user
+      let sessionHandles = await Session.getAllSessionHandlesForUser(userId);
+
+      sessionHandles.forEach(async (handle) => {
+            // highlight-start
+            let currSessionInfo = await Session.getSessionInformation(handle)
+            if (currSessionInfo === undefined) {
+                  return;
+            }
+            let accessTokenPayload = currSessionInfo.accessTokenPayload;
+            let customClaimValue = accessTokenPayload.customClaim;
+            // highlight-end
+      })
+}
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	// we first get all the sessionHandles (string[]) for a user
+	sessionHandles, err := session.GetAllSessionHandlesForUser("userId")
+	if err != nil {
+		// TODO: handle error
+		return
+	}
+
+	// we update all the session's access token payloads for this user
+	for _, handle := range sessionHandles {
+		sessionInfo, err := session.GetSessionInformation(handle)
+		if err != nil {
+			// TODO: handle error
+			return
+		}
+
+		// highlight-start
+		accessTokenPayload := sessionInfo.AccessTokenPayload
+        currClaimValue := accessTokenPayload["currClaim"]
+        // highlight-end
+
+		fmt.Println(currClaimValue)
+	}
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_all_session_handles_for_user, get_session_information
+
+async def some_func():
+    # we first get all the session_handles (List[string]) for a user
+    session_handles = await get_all_session_handles_for_user("userId")
+
+    for handle in session_handles:
+        session_information = await get_session_information(handle)
+        if session_information is None:
+            continue
+
+        # highlight-start
+        current_access_token_payload = session_information.access_token_payload
+        custom_claim_value = current_access_token_payload["customClaim"]
+        # highlight-end
+        
+        print(custom_claim_value) # TODO..
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.session.syncio import get_all_session_handles_for_user, get_session_information
+
+# we first get all the session_handles (List[string]) for a user
+session_handles = get_all_session_handles_for_user("userId")
+
+for handle in session_handles:
+    session_information = get_session_information(handle)
+    if session_information is None:
+        continue
+
+    # highlight-start
+    current_access_token_payload = session_information.access_token_payload
+    custom_claim_value = current_access_token_payload["customClaim"]
+    # highlight-end
+    
+    print(custom_claim_value) # TODO..
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+### Reading the payload on the frontend
+
+TODO

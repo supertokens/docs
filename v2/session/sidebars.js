@@ -174,6 +174,13 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/protecting-frontend-routes",
+        {
+          type: "category",
+          label: "Reading / modifying session claims",
+          items: [
+            "common-customizations/sessions/claims/access-token-payload"
+          ]
+        },
         "common-customizations/sign-out",
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/change-session-timeout",
