@@ -29,8 +29,11 @@ Follow [step 1](./frontend) and [step 2](./backend-config).
 Use the code below as the handler for the lambda. Remember that whenever we want to use any functions from the `supertokens-python` lib, we have to call the `init` function at the top of that serverless function file. We can then use `get_session()` to get the session.
 
 ```python title="auth.py"
-import nest_asyncio
-nest_asyncio.apply()
+import nest_asyncio # type: ignore
+import json
+nest_asyncio.apply() # type: ignore
+
+from typing import Optional, Dict, Any
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
@@ -39,28 +42,19 @@ from mangum import Mangum
 from supertokens_python import init, get_all_cors_headers
 from supertokens_python.framework.fastapi import get_middleware
 
-import config
+import config # type: ignore
 
 init(
-    supertokens_config=config.supertokens_config,
-    app_info=config.app_info,
-    framework=config.framework,
-    recipe_list=config.recipe_list,
+    supertokens_config=config.supertokens_config, # type: ignore
+    app_info=config.app_info, # type: ignore
+    framework=config.framework, # type: ignore
+    recipe_list=config.recipe_list, # type: ignore
     mode="asgi",
 )
 app = FastAPI(title="SuperTokens Example")
-app.add_middleware(get_middleware())
-
-app = CORSMiddleware(
-    app=app,
-    allow_origins=[config.app_info.website_domain],
-    allow_credentials=True,
-    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["Content-Type"] + get_all_cors_headers(),
-)
 
 # highlight-start
-def generate_policy(principal_id, effect, resource, context):
+def generate_policy(principal_id: str, effect: str, resource: str, context: Optional[Dict[str, Any]]):
     policy_document = {
         "Version": "2012-10-17",
         "Statement": [
@@ -76,11 +70,11 @@ def generate_policy(principal_id, effect, resource, context):
     return auth_response
 
 
-def generate_allow(principal_id, resource, context=None):
+def generate_allow(principal_id: str, resource: str, context: Optional[Dict[str, Any]] = None):
     return generate_policy(principal_id, "Allow", resource, context)
 
 
-def generate_deny(principal_id, resource, context=None):
+def generate_deny(principal_id: str, resource: str, context: Optional[Dict[str, Any]] = None):
     return generate_policy(principal_id, "Deny", resource, context)
 
 
@@ -123,9 +117,22 @@ def handle_auth(request: Request, full_path: str):
 
         raise e
 
-def handler(event, context):
+
+app.add_middleware(get_middleware())
+
+app = CORSMiddleware(
+    app=app,
+    allow_origins=[
+        config.app_info.website_domain  # type: ignore
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+def handler(event: Dict[str, Any], context: Any):
     mangum_handler = Mangum(app)
-    response = mangum_handler(event, context)
+    response: Dict[str, Any] = mangum_handler(event, context)
 
     if event.get("methodArn"):
         gateway_response = json.loads(response["body"])
