@@ -10,7 +10,7 @@ function hash(input) {
     return crypto.createHash('md5').update(input).digest('hex');
 }
 
-async function addCodeSnippetToEnv(mdFile) {
+async function addCodeSnippetToEnv(mdFile, isSwiftEnabled) {
     if (mdFile.includes("/v2/change_me/") || mdFile.includes("/v2/contribute/") ||
         mdFile.includes("/v2/nodejs") || mdFile.includes("/v2/golang") || mdFile.includes("/v2/python") ||
         mdFile.includes("/v2/auth-react") || mdFile.includes("/v2/website") || mdFile.includes("/v2/react-native") || mdFile.includes("/codeTypeChecking/")) {
@@ -62,7 +62,7 @@ async function addCodeSnippetToEnv(mdFile) {
                         } else if (currLineTrimmed === "```kotlin" || currLineTrimmed.startsWith("```kotlin ")) {
                             currentCodeLanguage = "kotlin";
                         } else if (currLineTrimmed === "```swift" || currLineTrimmed.startsWith("```swift ")) {
-                            currentCodeLanguage = "swift"
+                            currentCodeLanguage = isSwiftEnabled ? "swift" : "ignore"
                         } else if (currLineTrimmed.includes("bash") || currLineTrimmed.includes("yaml") || currLineTrimmed.includes("cql") || currLineTrimmed.includes("sql") || currLineTrimmed.includes("batch") ||
                             currLineTrimmed.includes("text") || currLineTrimmed.includes("json")
                             || currLineTrimmed.includes("html")) {

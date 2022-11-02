@@ -393,7 +393,6 @@ module.exports = {
             "common-customizations/email-verification/generate-link-manually"
           ]
         },
-        "common-customizations/session-with-jwt",
         {
           type: "category",
           label: "Sessions",
@@ -401,35 +400,35 @@ module.exports = {
             "common-customizations/sessions/about",
             {
               type: "category",
-              label: "Using sessions with JWTs",
-              items: [
-                "common-customizations/sessions/with-jwt/about",
-                "common-customizations/sessions/with-jwt/enabling-jwts",
-                "common-customizations/sessions/with-jwt/custom-claims",
-                "common-customizations/sessions/with-jwt/read-jwt",
-                "common-customizations/sessions/with-jwt/read-claims",
-                "common-customizations/sessions/with-jwt/update-jwt",
-                "common-customizations/sessions/with-jwt/get-jwks-and-issuer",
-                "common-customizations/sessions/with-jwt/get-public-key",
-                "common-customizations/sessions/with-jwt/jwt-verification"
-              ]
-            },
-            "common-customizations/sessions/new-session",
-            {
-              type: "category",
-              label: "Session Verification in API",
+              label: "Protecting API routes",
               items: [
                 "common-customizations/sessions/session-verification-in-api/verify-session",
                 "common-customizations/sessions/session-verification-in-api/get-session"
               ]
             },
+            "common-customizations/sessions/protecting-frontend-routes",
+            {
+              type: "category",
+              label: "Using sessions with JWTs",
+              items: [
+                "common-customizations/sessions/with-jwt/enabling-jwts",
+                "common-customizations/sessions/with-jwt/custom-claims",
+                "common-customizations/sessions/with-jwt/read-jwt",
+                "common-customizations/sessions/with-jwt/jwt-verification"
+              ]
+            },
+            {
+              type: "category",
+              label: "Reading / modifying session claims",
+              items: [
+                "common-customizations/sessions/claims/access-token-payload",
+                "common-customizations/sessions/claims/claim-validators"
+              ]
+            },
             "common-customizations/sessions/revoke-session",
             "common-customizations/sessions/change-session-timeout",
-            "common-customizations/sessions/checking-session-front-end",
             "common-customizations/sessions/handling-session-expiry",
             "common-customizations/sessions/fetch-sessions-for-user",
-            "common-customizations/sessions/update-jwt-payload",
-            "common-customizations/sessions/update-session-data",
             "common-customizations/sessions/multiple-api-endpoints",
             "common-customizations/sessions/cookies-and-https",
             "common-customizations/sessions/cookie-consent",
@@ -439,7 +438,6 @@ module.exports = {
             "common-customizations/sessions/jwt-signing-key-rotation",
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling",
-            "common-customizations/sessions/session-validators"
           ]
         },
         {

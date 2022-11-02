@@ -1,30 +1,34 @@
 ---
 id: jwt-verification
-title: Verify JWTs
+title: JWT verification
 hide_title: true
 ---
 
 <!-- COPY DOCS -->
 <!-- ./session/common-customizations/sessions/with-jwt/jwt-verification.mdx -->
 
-# Verify JWTs
+import AppInfoForm from "/src/components/appInfoForm"
+
+# JWT verification
+
+<AppInfoForm askForAPIDomain>
 
 ## Method 1) Using JWKS endpoint
 
-### a) Get JWKS endpoint
+Some libraries let you provide a JWKS endpoint to verify a JWT. The JWKS endpoint exposed by SuperTokens is availble at the following URL:
 
-Refer to [this](./get-jwks-and-issuer#jwks-url) page to get the JWKS endpoint for your backend
+```bash
+curl --location --request GET '^{form_apiDomain}^{form_apiBasePath}/jwt/jwks.json'
+```
 
-### b) Verify the JWT
-
-Some libraries let you provide a JWKS endpoint to verify a JWT. For example for NodeJS you can use `jsonwebtoken` and `jwks-rsa` together to achieve this.
+Below is an example for NodeJS showing how you can use `jsonwebtoken` and `jwks-rsa` together to achieve JWT verification using the `jwks.json` endpoint.
 
 ```ts
 import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 
 var client = jwksClient({
-  jwksUri: '{apiDomain}/{apiBasePath}/jwt/jwks.json'
+  jwksUri: '^{form_apiDomain}^{form_apiBasePath}/jwt/jwks.json'
 });
 
 function getKey(header: JwtHeader, callback: SigningKeyCallback) {
@@ -41,28 +45,71 @@ JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
 });
 ```
 
-For other languages, [jwt.io](https://jwt.io/libraries) recommends some libraries that you can use for JWT verification
-
 ## Method 2) Using public key string
 
-### a) Getting a certificate string
+Some JWT verification libraries require you to provide the JWT secret / public key for verification. You can obtain the JWT secret from SuperTokens in the following way:
 
-Refer to [this](./get-public-key) to know how to retrieve a key string to use
+- First, we query the `JWKS.json` endpoint:
+  ```bash
+  curl --location --request GET '^{form_apiDomain}^{form_apiBasePath}/jwt/jwks.json'
 
-### b) Verify the JWT
+  {
+    "keys": [
+      {
+        "kty": "RSA",
+        "kid": "2de612a5-a5ba-413e-9216-4c43e2e78c86",
+        "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
+        "e": "AQAB",
+        "alg": "RS256",
+        "use": "sig"
+      }
+    ]
+  }
+  ```
 
-Some libraries/services let you configure a secret that can be used for JWT verification. Using the same example as above you can use a key when using `jsonwebtoken`.
+- Next, we run the NodeJS script below to convert the above output to a `PEM` file format.
+  ```tsx
+  import jwkToPem from 'jwk-to-pem';
 
-```ts
-import JsonWebToken from 'jsonwebtoken';
+  // This JWK is copied from the result of the above SuperTokens core request
+  let jwk = {
+    "kty": "RSA",
+    "kid": "2de612a5-a5ba-413e-9216-4c43e2e78c86",
+    "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
+    "e": "AQAB",
+    "alg": "RS256",
+    "use": "sig"
+  };
 
-// Truncated for display
-let certificate = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----";
-let jwt = "...";
-JsonWebToken.verify(jwt, certificate, function (err, decoded) {
-    let decodedJWT = decoded;
-    // Use JWT
-});
-```
+  // @ts-ignore
+  let certString = jwkToPem(jwk);
+  ```
 
-For other languages, [jwt.io](https://jwt.io/libraries) recommends some libraries that you can use for JWT verification
+  The above snippet would generate the following certificate string:
+
+  ```text
+  -----BEGIN PUBLIC KEY-----
+  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9I
+  QQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm
+  lVYdE7Oq34WOHxMCqh1rKE8lW5m3bl5CJiupxor92e4eubyrBSr6GSjqrWjWj00g
+  hlY19QERVaY2HIAkWTluLekvC0o9itRDNUtxN0NR7hIiW2+9+lgdtUWdi3GQFWao
+  7ryPuwjyS2ZNcz+F5qWz5bpaajNpsOQL38hMJ5Fq3Z/sDaXS3hDM7RkLNlwl+G6w
+  XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStT
+  xwIDAQAB
+  -----END PUBLIC KEY-----
+  ```
+
+- Now you can use the generated PEM string in your code like shown below:
+  ```ts
+  import JsonWebToken from 'jsonwebtoken';
+
+  // Truncated for display
+  let certificate = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----";
+  let jwt = "...";
+  JsonWebToken.verify(jwt, certificate, function (err, decoded) {
+      let decodedJWT = decoded;
+      // Use JWT
+  });
+  ```
+
+</AppInfoForm>
