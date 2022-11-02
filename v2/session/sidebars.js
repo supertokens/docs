@@ -186,8 +186,6 @@ module.exports = {
         "common-customizations/sessions/change-session-timeout",
         "common-customizations/sessions/handling-session-expiry",
         "common-customizations/sessions/fetch-sessions-for-user",
-        "common-customizations/sessions/update-jwt-payload",
-        "common-customizations/sessions/update-session-data",
         "common-customizations/sessions/multiple-api-endpoints",
         "common-customizations/sessions/cookies-and-https",
         "common-customizations/sessions/cookie-consent",
