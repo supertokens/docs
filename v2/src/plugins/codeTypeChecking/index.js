@@ -313,7 +313,7 @@ Enabled: true,
 },`);
 
     let recipeName = await getRecipeName(mdFile);
-    let replaceMap = mdVars[recipeName];
+    let replaceMap = { ...mdVars["common"], ...mdVars[recipeName] };
     if (replaceMap !== undefined) {
         let keys = Object.keys(replaceMap);
         for (let i = 0; i < keys.length; i++) {

@@ -5,11 +5,13 @@ hide_title: true
 ---
 
 <!-- COPY DOCS -->
-<!-- ./session/serverless/with-aws-lambda/jwt-authorizer.mdx -->
+<!-- ./thirdpartyemailpassword/serverless/with-aws-lambda/jwt-authorizer.mdx -->
 
 import AppInfoForm from "/src/components/appInfoForm"
 import CoreInjector from "/src/components/coreInjector"
 import BackendSDKCasing from "/src/components/BackendSDKCasing"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
 
 # Using JWT Authorizers
 
@@ -21,7 +23,16 @@ AWS supports JWT authorizers for HTTP APIs and not REST APIs on the API Gateway 
 
 Update the backend config, created [here](./backend-config#3-create-a-backend-config-function), to enable the JWT feature.
 
+<AppInfoForm
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+>
+
 <CoreInjector>
+<BackendSDKTabs disableGolang>
+
+<TabItem value="nodejs">
 
 ```tsx title="config.ts"
 
@@ -32,12 +43,17 @@ function getBackendConfig(): SuperTokensTypes.TypeInput {
   return {
     framework: "awsLambda",
     supertokens: {
-      connectionURI: "..."
+        ^{coreInjector_connection_uri_comment}
+        connectionURI: ^{coreInjector_uri}
+        ^{coreInjector_api_key_commented}apiKey: ^{coreInjector_api_key},
     },
     appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
+        // learn more about this on https://supertokens.com/docs/session/appinfo
+        appName: "^{form_appName}",
+        apiDomain: "^{form_apiDomain}",
+        websiteDomain: "^{form_websiteDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        websiteBasePath: "^{form_websiteBasePath}",
     },
     recipeList: [
         // highlight-start
@@ -76,8 +92,81 @@ function getBackendConfig(): SuperTokensTypes.TypeInput {
 module.exports.getBackendConfig = getBackendConfig;
 
 ```
+</TabItem>
 
+<TabItem value="python">
+
+```python title="config.py"
+from supertokens_python.recipe import session
+from supertokens_python import (
+    InputAppInfo,
+    SupertokensConfig,
+)
+
+from typing import Any, Dict, Optional
+
+supertokens_config = SupertokensConfig(
+    ^{coreInjector_connection_uri_comment_with_hash}
+    connection_uri=^{coreInjector_uri}
+    ^{coreInjector_api_key_commented_with_hash}api_key=^{coreInjector_api_key}
+)
+
+app_info = InputAppInfo(
+    # learn more about this on https://supertokens.com/docs/session/appinfo
+    app_name="^{form_appName}",
+    api_domain="^{form_apiDomain}",
+    website_domain="^{form_websiteDomain}",
+    api_base_path="^{form_apiBasePath}",
+    website_base_path="^{form_websiteBasePath}",
+    api_gateway_path="/dev",
+)
+
+framework = "fastapi"
+
+# highlight-start
+from supertokens_python.recipe.session.interfaces import RecipeInterface as SessionRecipeInterface, SessionContainer
+
+def override_session_functions(oi: SessionRecipeInterface) -> SessionRecipeInterface:
+    oi_create_new_session = oi.create_new_session
+
+    async def create_new_session(
+            request: Any, user_id: str, access_token_payload: Optional[Dict[str, Any]], 
+            session_data: Optional[Dict[str, Any]], user_context: Dict[str, Any]
+        ) -> SessionContainer:
+        # AWS requires JWTs to contain an audience (aud) claim
+        # The value for this claim should be the same as the
+        # value you set when creating the authorizer
+
+        # highlight-next-line
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        access_token_payload["aud"] = "jwtAuthorizers"
+        return await oi_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+    
+    oi.create_new_session = create_new_session
+    return oi
+# highlight-end
+
+recipe_list = [
+    # highlight-start
+    session.init(
+        jwt=session.JWTConfig(enable=True),
+        override=session.InputOverrideConfig(
+            functions=override_session_functions,
+        )
+    ),
+    # highlight-end
+]
+```
+
+</TabItem>
+
+
+</BackendSDKTabs>
 </CoreInjector>
+
+</AppInfoForm>
 
 ## 2) Configure your authorizer
 

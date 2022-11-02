@@ -8,33 +8,28 @@ hide_title: true
 <!-- ./thirdpartyemailpassword/serverless/with-aws-lambda/session-verification.mdx -->
 
 import AppInfoForm from "/src/components/appInfoForm"
+import CoreInjector from "/src/components/coreInjector"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
 
 # 5. Session verification / Building your APIs
 
-For this guide, we will assume that we want an API `/user GET` which returns the current session information.
+For this guide, we will assume that we want a new API Gateway endpoint `/user GET` invoked by the same lambda function and it returns the current session information.
 
-## 1) Create a new file `user.js`
+## 1) Copy this snippet to your handler file
+
+We use the verify session function to get the session information.
+
+<CoreInjector>
+<BackendSDKTabs disableGolang>
+<TabItem value="nodejs">
+
 An example of this is [here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-aws-lambda/backend/user.js).
 
-## 2) Call the `supertokens.init` function
-Remember that whenever we want to use any functions from the `supertokens-node` lib, we have to call the `supertokens.init` function at the top of that serverless function file.
-
-```tsx title="user.ts"
+```tsx title="auth.ts"
 import supertokens from "supertokens-node";
 // @ts-ignore
 import { getBackendConfig } from "./config";
-
-supertokens.init(getBackendConfig())
-```
-
-
-## 3) Use session verification with your handler
-We use the `verifySession()` to verify a session.
-
-```tsx title="user.ts"
-import supertokens from "supertokens-node";
-// @ts-ignore
-import { getBackendConfig } from "../../config/supertokensConfig";
 import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
 import { SessionEvent } from "supertokens-node/framework/awsLambda";
 import middy from "@middy/core";
@@ -64,7 +59,68 @@ module.exports.handler = middy(verifySession(handler)).use(cors({
 //highlight-end
 ```
 
-## 4) Configure API Gateway
+
+</TabItem>
+<TabItem value="python">
+
+```python title="auth.py"
+import nest_asyncio # type: ignore
+nest_asyncio.apply() # type: ignore
+
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from mangum import Mangum
+
+from supertokens_python import init, get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
+
+import config # type: ignore
+
+init(
+    supertokens_config=config.supertokens_config, # type: ignore
+    app_info=config.app_info, # type: ignore
+    framework=config.framework, # type: ignore
+    recipe_list=config.recipe_list, # type: ignore
+    mode="asgi",
+)
+
+app = FastAPI(title="SuperTokens Example")
+
+# highlight-start
+from fastapi import Depends
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+
+@app.get("/user")
+def user(s: SessionContainer = Depends(verify_session())):
+    return {
+        "sessionHandle": s.get_handle(),
+        "userId": s.get_user_id(),
+        "accessTokenPayload": s.get_access_token_payload()
+    }
+# highlight-end
+
+app.add_middleware(get_middleware())
+
+app = CORSMiddleware(
+    app=app,
+    allow_origins=[
+        config.app_info.website_domain  # type: ignore
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+handler = Mangum(app)
+```
+
+</TabItem>
+
+</BackendSDKTabs>
+</CoreInjector>
+
+## 2) Configure API Gateway
 
 <AppInfoForm
     askForWebsiteDomain
