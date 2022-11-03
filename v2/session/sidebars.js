@@ -196,12 +196,19 @@ module.exports = {
             "common-customizations/sessions/access-token-blacklisting"
           ]
         },
-        "common-customizations/sessions/handling-session-expiry",
-        "common-customizations/sessions/fetch-sessions-for-user",
-        "common-customizations/sessions/multiple-api-endpoints",
         "common-customizations/sessions/share-sessions-across-sub-domains",
-        "common-customizations/sessions/in-iframe",
-        "common-customizations/sessions/error-handling",
+        {
+          type: "category",
+          label: "Other operations",
+          items: [
+            "common-customizations/sessions/handling-session-expiry",
+            "common-customizations/sessions/multiple-api-endpoints",
+            "common-customizations/sessions/fetch-sessions-for-user",
+            "common-customizations/sessions/in-iframe",
+            "common-customizations/sessions/error-handling",
+
+          ]
+        },
         {
           type: "category",
           label: "Changing base path",
