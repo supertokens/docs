@@ -182,7 +182,6 @@ module.exports = {
             "common-customizations/sessions/claims/claim-validators"
           ]
         },
-        "common-customizations/sign-out",
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/change-session-timeout",
         "common-customizations/sessions/handling-session-expiry",
