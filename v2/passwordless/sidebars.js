@@ -390,6 +390,13 @@ module.exports = {
               ]
             },
             "common-customizations/sessions/revoke-session",
+            {
+              type: "category",
+              label: "Session security",
+              items: [
+                "common-customizations/sessions/access-token-blacklisting"
+              ]
+            },
             "common-customizations/sessions/change-session-timeout",
             "common-customizations/sessions/handling-session-expiry",
             "common-customizations/sessions/fetch-sessions-for-user",
