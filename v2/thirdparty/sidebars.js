@@ -400,19 +400,19 @@ module.exports = {
               type: "category",
               label: "Session security",
               items: [
+                "common-customizations/sessions/cookies-and-https",
+                "common-customizations/sessions/cookie-consent",
+                "common-customizations/sessions/anti-csrf",
+                "common-customizations/sessions/same-site-cookie",
+                "common-customizations/sessions/jwt-signing-key-rotation",
+                "common-customizations/sessions/change-session-timeout",
                 "common-customizations/sessions/access-token-blacklisting"
               ]
             },
-            "common-customizations/sessions/change-session-timeout",
             "common-customizations/sessions/handling-session-expiry",
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/multiple-api-endpoints",
-            "common-customizations/sessions/cookies-and-https",
-            "common-customizations/sessions/cookie-consent",
             "common-customizations/sessions/share-sessions-across-sub-domains",
-            "common-customizations/sessions/anti-csrf",
-            "common-customizations/sessions/same-site-cookie",
-            "common-customizations/sessions/jwt-signing-key-rotation",
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling",
           ]
