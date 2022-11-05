@@ -182,10 +182,199 @@ In all of the above claim validators, the `maxAgeInSeconds` input (which is opti
 
 ## How to add or modify a claim in a session?
 
+Once you have made your own session claim object, you need to add it to a session. There are two ways in which you can add them:
+- During session creation
+- Updating the session to add a claim after session creation
+
 ### During session creation
-TODO
+You need to override the `createNewSession` function to modify the access token payload like shown below:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import { UserRoleClaim } from "supertokens-node/recipe/userroles";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "...",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        Session.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async function (input) {
+                            let userId = input.userId;
+
+                            // This goes in the access token, and is availble to read on the frontend.
+                            input.accessTokenPayload = {
+                                ...input.accessTokenPayload,
+                                // highlight-next-line
+                                ...(await UserRoleClaim.build(input.userId, input.userContext))
+                            };
+
+                            /*
+                            At this step, the access token paylaod looks like this:
+                            {
+                                ...input.accessTokenPayload,
+                                st-roles: {
+                                    v: ["admin"],
+                                    t: <current time in MS>
+                                }
+                            }
+                            */
+
+                            return originalImplementation.createNewSession(input);
+                        },
+                    };
+                },
+            },
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+						// First we copy the original implementation func
+						originalCreateNewSession := *originalImplementation.CreateNewSession
+
+						// Now we override the CreateNewSession function
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+
+							if accessTokenPayload == nil {
+								accessTokenPayload = map[string]interface{}{}
+							}
+
+							// highlight-start
+							accessTokenPayload, err := userrolesclaims.UserRoleClaim.Build(userID, accessTokenPayload, userContext)
+
+							if err != nil {
+								return nil, err
+							}
+                            // highlight-end
+
+							/*
+							   At this step, the access token paylaod looks like this:
+							   {
+							       st-roles: {
+							           v: ["admin"],
+							           t: <current time in MS>
+							       }
+							   }
+							*/
+
+							return originalCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from supertokens_python.recipe.userroles import UserRoleClaim
+from typing import Any, Dict, Union
+
+
+def override_functions(original_implementation: RecipeInterface):
+    original_implementation_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(request: Any, user_id: str,
+                                 access_token_payload: Union[None, Dict[str, Any]],
+                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        access_token_payload = {
+            **access_token_payload,
+            # highlight-next-line
+            **(await UserRoleClaim.build(user_id, user_context))
+        }
+
+        # At this step, the access token paylaod looks like this:
+        # {
+        #    st-roles: {
+        #        v: ["admin"],
+        #        t: < current time in MS >
+        #    }
+        # }
+
+        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+
+    framework='...',  # type: ignore
+    recipe_list=[
+        session.init(
+            override=session.InputOverrideConfig(
+                functions=override_functions
+            )
+        )
+    ]
+)
+```
+</TabItem>
+</BackendSDKTabs>
+
+In the above code snippet, we take an example of manually adding the user roles claim to the session (note that this is done automatically for you if you initialise the user roles recipe). 
+
+The `build` function is a helper function which all claims have that does the following:
+```text
+class Claim {
+    // other functions like fetchValue, getValueFromPayload etc..
+    function build(userId) {
+        claimValue = this.fetchValue(userId);
+        return this.addToPayload_internal({}, claimValue)
+    }
+}
+```
 
 ### Post session creation
+TODO
+
+### Manually setting a claim's value in a session
 TODO
 
 ## How to add a claim validator?
