@@ -43,3 +43,104 @@ The claims in the payload represent the state of the user's access properties. S
 For example, if during sign in, the user has the role of `"user"`, this will be added to their session by SuperTokens. If during the course of their session, the user is upgraded to an `"admin"` role, then the session claim needs to be updated to reflect this as well. To do this automatically, the claim validator for roles will auto refresh the role in the session periodically. You can even specify that you want to force refresh the state when using the validator in your APIs.
 
 Without a special construct of session claim validators, the updating of the session claims would have to be done manually by you (the developer), so to save you the time and effort, we introduced this concept.
+
+## Session claim interface
+
+Before we dive deep into claim validators, let's talk about session claim objects. These are objects that conform to an interface that allows SuperTokens to automatically add session claims to the access token payload. Here is the interface:
+
+```text
+interface SessionClaim<T> {
+    constructor(public readonly key: string) {}
+
+    fetchValue(userId: string, userContext: any): Promise<T | undefined> | T | undefined;
+
+    addToPayload_internal(payload: JSONObject, value: T, userContext: any): JSONObject;
+
+    removeFromPayloadByMerge_internal(payload: JSONObject, userContext?: any): JSONObject;
+
+    removeFromPayload(payload: JSONObject, userContext?: any): JSONObject;
+
+    getValueFromPayload(payload: JSONObject, userContext: any): T | undefined;
+}
+```
+- `T` represents a generic type. For a `boolean` claim (for example if the email is verified or not), the type of `T` is a `boolean`.
+- `fetchValue` is responsible for fetching the value of the claim from its source. For example, the email verification claim uses the `EmailVerification.isEmailVerified` function from the email verification recipe to return a `boolean` from this function.
+- `addToPayload_internal` function is responsible for adding the claim value to the input `payload` and returning the modified payload. The payload here represents the access token's payload. Some of the in built claims in the SDK modify the payload in the following way:
+    ```text
+    {
+        ...payload,
+        "<key>": {
+            "t": <current time in milliseconds>,
+            "v": <value>
+        }
+    }
+    ```
+
+    The `key` variable is an input to the `constructor`. For the in built email verification claim, the value of `key` is `"st-ev"`.
+- `removeFromPayloadByMerge_internal` function is responsible for modifying the input `payload` to remove the claim in such a way that if `mergeIntoAccessTokenPayload` is called, then it would remove that claim from the payload. This usually means modifying the payload like:
+    ```text
+    {
+        ...payload,
+        "<key>": null
+    }
+    ```
+- `removeFromPayload` function is similar to the previous function, except that it deletes the `key` from the input `payload` entirely.
+- `getValueFromPayload` function is supposed to return the claim's value given the input `payload`. For the in built claims, it's usually `payload[<key>][v]` or `undefined` of the `key` doesn't exist in the `payload`.
+
+The SDK provides a few base claim classes which make it easy for you to implement your own claims:
+- [`PrimitiveClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveClaim.ts): Can be used to add any primitive type value (`boolean`, `string`, `number`) to the session payload.
+- [`PrimitiveArrayClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts): Can be used to add any primitive array type value (`boolean[]`, `string[]`, `number[]`) to the session payload.
+- [`BooleanClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/booleanClaim.ts): A special case of the `PrimitiveClaim`, used to add a `boolean` type claim.
+
+Using these, we have built a few useful claims:
+- [`EmailVerificationClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/emailverification/emailVerificationClaim.ts): This is used to store info about if the user has verified their email.
+- [`RolesClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/userroles/userRoleClaim.ts): This is used to store the list of roles associated with a user.
+- [`PermissionClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/userroles/permissionClaim.ts): This is used to store the list of permissions associated with the user.
+
+You can image all sorts of claims that can be built further:
+- If the user has completed 2FA or not
+- If the user has filled in all the profile info post sign up or not
+- The last time the user authenticated themselves (useful for if you want to ask the user for their password after a certain time period).
+
+## Claim validator interface
+
+Once a claim is added to the session, 
+
+TODO
+
+## How to add or modify a claim in a session?
+
+### During session creation
+TODO
+
+### Post session creation
+TODO
+
+## How to add a claim validator?
+
+### Adding a validator check globally
+
+#### On the backend
+TODO
+
+#### On the frontend
+TODO
+
+### Adding a validator check to a specific route
+
+#### On the backend
+TODO
+
+#### On the frontend
+TODO
+
+### Handling claim validation failures
+
+#### On the backend
+TODO
+
+#### On the frontend
+TODO
+
+### Example of making your own claim
+TODO: Example of if the user has finished the sign up process or not.
