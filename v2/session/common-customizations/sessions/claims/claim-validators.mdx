@@ -52,7 +52,7 @@ Before we dive deep into claim validators, let's talk about session claim object
 interface SessionClaim<T> {
     constructor(public readonly key: string) {}
 
-    fetchValue(userId: string, userContext: any): Promise<T | undefined> | T | undefined;
+    fetchValue(userId: string, userContext: any): Promise<T | undefined>;
 
     addToPayload_internal(payload: JSONObject, value: T, userContext: any): JSONObject;
 
@@ -104,9 +104,81 @@ You can image all sorts of claims that can be built further:
 
 ## Claim validator interface
 
-Once a claim is added to the session, 
+Once a claim is added to the session, we must specify the checks that need to run on them during session verification. For example, if we want an API to be guarded so that only `admin` roles can access them, we need a way to tell SuperTokens to do that check. This is where claim validators come into the picture. Here is the shape for a claim validator object:
 
-TODO
+```text
+type SessionClaimValidator {
+    id: string,
+
+    claim: SessionClaim<any>,
+
+    shouldRefetch: (payload: any, userContext: any) => Promise<boolean>,
+
+    validate: (payload: any, userContext: any) => Promise<ClaimValidationResult>;
+}
+
+type ClaimValidationResult = { isValid: true } | { isValid: false; reason?: {...} };
+```
+
+- The `id` is used to identify the session claim validator. This is useful to know which validator failed in case several of them are being checked at the same time. The value of this is usually the same as the claim object's `key`, but it can be set to anything else.
+
+- The `claim` property is a reference to the claim object that's associated with this validator. The `shouldRefetch` and `validate` functions will use `claim.getValueFromPayload` to fetch the claim value from the input `payload`.
+
+- `shouldRefetch` is a function which determines if the value of the claim should be fetched again. In the in built validators, this function usually returns `true` if the claim does not exist in the `payload`, or if it's too old.
+
+- `validate` function extracts the claim value from the input `payload` (usually using `claim.getValueFromPayload`), and determines if the validator check has passed or not. For example, if the validator is supposed to enforce that the user's email is verified, and if the claim value is `false`, then this function would return:
+    ```text
+    {
+        isValid: false,
+        message: "wrong value",
+        expectedValue: true,
+        actualValue: false
+    }
+    ```
+
+Using this interface and the claims interface, SuperTokens runs the following session claim validation process during session verification:
+```text
+function validateSessionClaims(accessToken, claimValidators[]) {
+    payload = accessToken.getPayload();
+    
+    // Step 1: refetch claims if required
+    foreach validator in claimValidators {
+        if (validator.shouldRefetch(payload)) {
+            claimValue = validator.claim.fetchValue(accessToken.userId)
+            payload = validator.claim.addToPayload_internal(payload, claimValue) 
+        }
+    }
+
+    failedClaims = []
+
+    // Step 2: Validate all claims
+    foreach validator in claimValidators {
+        validationResult = validator.validate(payload)
+        if (!validationResult.isValid) {
+            failedClaims.push({id: validator.id, reason: validationResult.reason})
+        }
+    }
+
+    return failedClaims
+}
+```
+
+The built-in base claims (`PrimitiveClaim`, `PrimitiveArrayClaim`, `BooleanClaim`) all expose a set of useful validators:
+- [`PrimitiveClaim.validators.hasValue(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveClaim.ts#L50): This function call returns a validator object that enforces that the session claim has the specified `val`.
+
+- [`PrimitiveArrayClaim.validators.includes(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L50): This checks if the the session claims value, which is an array, includes the input `val`.
+
+- [`PrimitiveArrayClaim.validators.excludes(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L91): This checks if the the session claims value, which is an array, excludes the input `val`.
+
+- [`PrimitiveArrayClaim.validators.includesAll(val[], maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L136): This checks if the the session claims value, which is an array, includes all of the items in the input `val[]`.
+
+- [`PrimitiveArrayClaim.validators.excludesAll(val[], maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L178): This checks if the the session claims value, which is an array, excludes all of the items in the input `val[]`.
+
+- The `BooleanClaim` is built on top of the `PrimitiveClaim` class, so it has the same `hasValue` function, but also has additional `isTrue(maxAgeInSeconds?)` and `isFalse(maxAgeInSeconds?)` functions.
+
+In all of the above claim validators, the `maxAgeInSeconds` input (which is optional) governs how often the session claim value should be refetched 
+- A value of `0` will make it refetch the claim value each time a check happens.
+- If not passed, the claim will only be refetched if it's missing in the session. The in built claims like email verification or user roles claims have a default value of five mins, meaning that those claim values are refreshed from the database after every five mins.
 
 ## How to add or modify a claim in a session?
 
