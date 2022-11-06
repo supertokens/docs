@@ -47,6 +47,8 @@ Without a special construct of session claim validators, the updating of the ses
 
 ## Session claim interface
 
+### On the backend
+
 Before we dive deep into claim validators, let's talk about session claim objects. These are objects that conform to an interface that allows SuperTokens to automatically add session claims to the access token payload. Here is the interface:
 
 ```text
@@ -103,7 +105,35 @@ You can image all sorts of claims that can be built further:
 - If the user has filled in all the profile info post sign up or not
 - The last time the user authenticated themselves (useful for if you want to ask the user for their password after a certain time period).
 
+### On the frontend
+
+Just like the backend, the frontend also has the concept of Session claim objects which need to confirm to the following interface:
+
+```text
+type SessionClaim<T> = {
+    refresh(): Promise<void>;
+
+    getValueFromPayload(payload: any): T | undefined;
+    
+    getLastFetchedTime(payload: any): number | undefined;
+};
+```
+- The `refresh` function is responsible for refreshing the claim values in the session via an API call. The API call is expected to update the claim values if required.
+
+- `getValueFromPayload` helps with reading the value from the session claim. 
+
+- `getLastFetchedTime` reads the claim to return the timestamp (in milliseconds) of the last time the claim was refreshed. 
+
+When used, these objects provide a way for the SuperTokens SDK to update the claim values as and when needed. For example, in the built-in email verification claim, the `refresh` function calls the backend API to check if the email is verified. That API in turn updates the session claim to reflect the email verification status. This way, even if the email was marked as verified in offline mode, the frontend will be able to get the email verification status update automatically.
+
+Just like the backend SDK, the frontend SDK also exposes a few base claims:
+- [`BooleanClaim`](https://github.com/supertokens/supertokens-website/blob/master/lib/ts/claims/booleanClaim.ts)
+- [`PrimitiveClaim`](https://github.com/supertokens/supertokens-website/blob/master/lib/ts/claims/primitiveClaim.ts)
+- [`PrimitiveArrayClaim`](https://github.com/supertokens/supertokens-website/blob/master/lib/ts/claims/primitiveArrayClaim.ts)
+
 ## Claim validator interface
+
+### On the backend
 
 Once a claim is added to the session, we must specify the checks that need to run on them during session verification. For example, if we want an API to be guarded so that only `admin` roles can access them, we need a way to tell SuperTokens to do that check. This is where claim validators come into the picture. Here is the shape for a claim validator object:
 
@@ -180,6 +210,37 @@ The built-in base claims (`PrimitiveClaim`, `PrimitiveArrayClaim`, `BooleanClaim
 In all of the above claim validators, the `maxAgeInSeconds` input (which is optional) governs how often the session claim value should be refetched 
 - A value of `0` will make it refetch the claim value each time a check happens.
 - If not passed, the claim will only be refetched if it's missing in the session. The in built claims like email verification or user roles claims have a default value of five mins, meaning that those claim values are refreshed from the database after every five mins.
+
+### On the frontend
+
+Just like the backend, the frontend too has session claim validators that conform to the following shape
+```text
+class SessionClaimValidator {
+    constructor(public readonly id: string) {}
+
+    refresh(): Promise<void>;
+
+    shouldRefresh(accessTokenPayload: any): Promise<boolean> | boolean;
+
+    validate(
+        accessTokenPayload: any
+    ): Promise<ClaimValidationResult> | ClaimValidationResult;
+}
+
+type ClaimValidationResult = { isValid: true } | { isValid: false; reason?: any };
+```
+
+- The `refresh` function is the same as the one in the frontend claim interface.
+- `shouldRefresh` is function which determines if the claim should be checked against the backend before calling `validate`. This usually returns `true` if the claim value is too old or if it is not present in the `accessTokenPayload`.
+- The `validate` function checks the `accessTokenPayload` for the value of the claim and returns an appropriate response. 
+
+The logic for how validators are run on the frontend is the same as on the backend:
+- First we `refresh` the claim if that claim's `shouldRefresh` returns `true` (and we do this for all the claims)
+- Then we call the `validate` function on the claims one by one to return a array of validation result.
+
+In case validation fails, you can choose to render a certain UI or redirect the user. In certain claim validators, like the email verification validator, the frontend SDK (for pre built UI) automatically redirects the user to the email verification screen.
+
+And once again, just like in the backend, the frontend too exposes several helper functions like `hasValue`, `includes`, `excludes`, `isTrue` etc for the base claim classes.
 
 ## How to add or modify a claim in a session?
 
