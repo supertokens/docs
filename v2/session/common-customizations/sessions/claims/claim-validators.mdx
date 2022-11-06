@@ -10,6 +10,7 @@ show_ui_switcher: true
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
 import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
 import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
 import TabItem from "@theme/TabItem";
@@ -22,6 +23,2429 @@ import FrontendReactContextSubTabs from "/src/components/tabs/FrontendReactConte
 
 # Option 2. Using claim validators
 
-:::important
-The documentation for this feature is coming soon.
+## What are session claims?
+SuperTokens session has a property called `accessTokenPayload`. This is a `JSON` object that's stored in a user's session which can be accessed on the frontend and backend. The key-values in this JSON payload are called claims.
+
+## What are session claim validators?
+
+Session claim validators check if the the claims in the session meet a certain criteria before giving access to a resource.
+
+Let's take two examples:
+- 2FA session claim validator: This validator checks if the session claims indicates that the user has completed both the auth factors or not.
+- Email verification claim validator: This checks if the user's session indicates if they have verified their email or not.
+
+In either case, the claim validators base their checks on the claims (or properties) present in the session's access token payload. These claims can be added by you or by the SuperTokens SDK (ex, the user roles recipe adds the roles claims to the session).
+
+This document will guide you through how to use prebuilt session claims and session claims validators as well as how to build your own.
+
+## Why do we need session claim validators?
+The claims in the payload represent the state of the user's access properties. Session claim validators ensure that the state is up to date when the claims are being checked.
+
+For example, if during sign in, the user has the role of `"user"`, this will be added to their session by SuperTokens. If during the course of their session, the user is upgraded to an `"admin"` role, then the session claim needs to be updated to reflect this as well. To do this automatically, the claim validator for roles will auto refresh the role in the session periodically. You can even specify that you want to force refresh the state when using the validator in your APIs.
+
+Without a special construct of session claim validators, the updating of the session claims would have to be done manually by you (the developer), so to save you the time and effort, we introduced this concept.
+
+## Session claim interface
+
+Before we dive deep into claim validators, let's talk about session claim objects. These are objects that conform to an interface that allows SuperTokens to automatically add session claims to the access token payload. Here is the interface:
+
+```text
+interface SessionClaim<T> {
+    constructor(public readonly key: string) {}
+
+    fetchValue(userId: string, userContext: any): Promise<T | undefined>;
+
+    addToPayload_internal(payload: JSONObject, value: T, userContext: any): JSONObject;
+
+    removeFromPayloadByMerge_internal(payload: JSONObject, userContext?: any): JSONObject;
+
+    removeFromPayload(payload: JSONObject, userContext?: any): JSONObject;
+
+    getValueFromPayload(payload: JSONObject, userContext: any): T | undefined;
+}
+```
+- `T` represents a generic type. For a `boolean` claim (for example if the email is verified or not), the type of `T` is a `boolean`.
+- `fetchValue` is responsible for fetching the value of the claim from its source. For example, the email verification claim uses the `EmailVerification.isEmailVerified` function from the email verification recipe to return a `boolean` from this function.
+- `addToPayload_internal` function is responsible for adding the claim value to the input `payload` and returning the modified payload. The payload here represents the access token's payload. Some of the in built claims in the SDK modify the payload in the following way:
+    ```text
+    {
+        ...payload,
+        "<key>": {
+            "t": <current time in milliseconds>,
+            "v": <value>
+        }
+    }
+    ```
+
+    The `key` variable is an input to the `constructor`. For the in built email verification claim, the value of `key` is `"st-ev"`.
+- `removeFromPayloadByMerge_internal` function is responsible for modifying the input `payload` to remove the claim in such a way that if `mergeIntoAccessTokenPayload` is called, then it would remove that claim from the payload. This usually means modifying the payload like:
+    ```text
+    {
+        ...payload,
+        "<key>": null
+    }
+    ```
+- `removeFromPayload` function is similar to the previous function, except that it deletes the `key` from the input `payload` entirely.
+- `getValueFromPayload` function is supposed to return the claim's value given the input `payload`. For the in built claims, it's usually `payload[<key>][v]` or `undefined` of the `key` doesn't exist in the `payload`.
+
+The SDK provides a few base claim classes which make it easy for you to implement your own claims:
+- [`PrimitiveClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveClaim.ts): Can be used to add any primitive type value (`boolean`, `string`, `number`) to the session payload.
+- [`PrimitiveArrayClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts): Can be used to add any primitive array type value (`boolean[]`, `string[]`, `number[]`) to the session payload.
+- [`BooleanClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/booleanClaim.ts): A special case of the `PrimitiveClaim`, used to add a `boolean` type claim.
+
+Using these, we have built a few useful claims:
+- [`EmailVerificationClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/emailverification/emailVerificationClaim.ts): This is used to store info about if the user has verified their email.
+- [`RolesClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/userroles/userRoleClaim.ts): This is used to store the list of roles associated with a user.
+- [`PermissionClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/userroles/permissionClaim.ts): This is used to store the list of permissions associated with the user.
+
+You can image all sorts of claims that can be built further:
+- If the user has completed 2FA or not
+- If the user has filled in all the profile info post sign up or not
+- The last time the user authenticated themselves (useful for if you want to ask the user for their password after a certain time period).
+
+## Claim validator interface
+
+Once a claim is added to the session, we must specify the checks that need to run on them during session verification. For example, if we want an API to be guarded so that only `admin` roles can access them, we need a way to tell SuperTokens to do that check. This is where claim validators come into the picture. Here is the shape for a claim validator object:
+
+```text
+type SessionClaimValidator {
+    id: string,
+
+    claim: SessionClaim<any>,
+
+    shouldRefetch: (payload: any, userContext: any) => Promise<boolean>,
+
+    validate: (payload: any, userContext: any) => Promise<ClaimValidationResult>;
+}
+
+type ClaimValidationResult = { isValid: true } | { isValid: false; reason?: {...} };
+```
+
+- The `id` is used to identify the session claim validator. This is useful to know which validator failed in case several of them are being checked at the same time. The value of this is usually the same as the claim object's `key`, but it can be set to anything else.
+
+- The `claim` property is a reference to the claim object that's associated with this validator. The `shouldRefetch` and `validate` functions will use `claim.getValueFromPayload` to fetch the claim value from the input `payload`.
+
+- `shouldRefetch` is a function which determines if the value of the claim should be fetched again. In the in built validators, this function usually returns `true` if the claim does not exist in the `payload`, or if it's too old.
+
+- `validate` function extracts the claim value from the input `payload` (usually using `claim.getValueFromPayload`), and determines if the validator check has passed or not. For example, if the validator is supposed to enforce that the user's email is verified, and if the claim value is `false`, then this function would return:
+    ```text
+    {
+        isValid: false,
+        message: "wrong value",
+        expectedValue: true,
+        actualValue: false
+    }
+    ```
+
+Using this interface and the claims interface, SuperTokens runs the following session claim validation process during session verification:
+```text
+function validateSessionClaims(accessToken, claimValidators[]) {
+    payload = accessToken.getPayload();
+    
+    // Step 1: refetch claims if required
+    foreach validator in claimValidators {
+        if (validator.shouldRefetch(payload)) {
+            claimValue = validator.claim.fetchValue(accessToken.userId)
+            payload = validator.claim.addToPayload_internal(payload, claimValue) 
+        }
+    }
+
+    failedClaims = []
+
+    // Step 2: Validate all claims
+    foreach validator in claimValidators {
+        validationResult = validator.validate(payload)
+        if (!validationResult.isValid) {
+            failedClaims.push({id: validator.id, reason: validationResult.reason})
+        }
+    }
+
+    return failedClaims
+}
+```
+
+The built-in base claims (`PrimitiveClaim`, `PrimitiveArrayClaim`, `BooleanClaim`) all expose a set of useful validators:
+- [`PrimitiveClaim.validators.hasValue(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveClaim.ts#L50): This function call returns a validator object that enforces that the session claim has the specified `val`.
+
+- [`PrimitiveArrayClaim.validators.includes(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L50): This checks if the the session claims value, which is an array, includes the input `val`.
+
+- [`PrimitiveArrayClaim.validators.excludes(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L91): This checks if the the session claims value, which is an array, excludes the input `val`.
+
+- [`PrimitiveArrayClaim.validators.includesAll(val[], maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L136): This checks if the the session claims value, which is an array, includes all of the items in the input `val[]`.
+
+- [`PrimitiveArrayClaim.validators.excludesAll(val[], maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L178): This checks if the the session claims value, which is an array, excludes all of the items in the input `val[]`.
+
+- The `BooleanClaim` is built on top of the `PrimitiveClaim` class, so it has the same `hasValue` function, but also has additional `isTrue(maxAgeInSeconds?)` and `isFalse(maxAgeInSeconds?)` functions.
+
+In all of the above claim validators, the `maxAgeInSeconds` input (which is optional) governs how often the session claim value should be refetched 
+- A value of `0` will make it refetch the claim value each time a check happens.
+- If not passed, the claim will only be refetched if it's missing in the session. The in built claims like email verification or user roles claims have a default value of five mins, meaning that those claim values are refreshed from the database after every five mins.
+
+## How to add or modify a claim in a session?
+
+Once you have made your own session claim object, you need to add it to a session. There are two ways in which you can add them:
+- During session creation
+- Updating the session to add a claim after session creation
+
+### During session creation
+You need to override the `createNewSession` function to modify the access token payload like shown below:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import { UserRoleClaim } from "supertokens-node/recipe/userroles";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "...",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        Session.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async function (input) {
+                            let userId = input.userId;
+
+                            // This goes in the access token, and is availble to read on the frontend.
+                            input.accessTokenPayload = {
+                                ...input.accessTokenPayload,
+                                // highlight-next-line
+                                ...(await UserRoleClaim.build(input.userId, input.userContext))
+                            };
+
+                            /*
+                            At this step, the access token paylaod looks like this:
+                            {
+                                ...input.accessTokenPayload,
+                                st-roles: {
+                                    v: ["admin"],
+                                    t: <current time in MS>
+                                }
+                            }
+                            */
+
+                            return originalImplementation.createNewSession(input);
+                        },
+                    };
+                },
+            },
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+						// First we copy the original implementation func
+						originalCreateNewSession := *originalImplementation.CreateNewSession
+
+						// Now we override the CreateNewSession function
+						(*originalImplementation.CreateNewSession) = func(res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+
+							if accessTokenPayload == nil {
+								accessTokenPayload = map[string]interface{}{}
+							}
+
+							// highlight-start
+							accessTokenPayload, err := userrolesclaims.UserRoleClaim.Build(userID, accessTokenPayload, userContext)
+
+							if err != nil {
+								return nil, err
+							}
+                            // highlight-end
+
+							/*
+							   At this step, the access token paylaod looks like this:
+							   {
+							       st-roles: {
+							           v: ["admin"],
+							           t: <current time in MS>
+							       }
+							   }
+							*/
+
+							return originalCreateNewSession(res, userID, accessTokenPayload, sessionData, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from supertokens_python.recipe.userroles import UserRoleClaim
+from typing import Any, Dict, Union
+
+
+def override_functions(original_implementation: RecipeInterface):
+    original_implementation_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(request: Any, user_id: str,
+                                 access_token_payload: Union[None, Dict[str, Any]],
+                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        access_token_payload = {
+            **access_token_payload,
+            # highlight-next-line
+            **(await UserRoleClaim.build(user_id, user_context))
+        }
+
+        # At this step, the access token paylaod looks like this:
+        # {
+        #    st-roles: {
+        #        v: ["admin"],
+        #        t: < current time in MS >
+        #    }
+        # }
+
+        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+
+    framework='...',  # type: ignore
+    recipe_list=[
+        session.init(
+            override=session.InputOverrideConfig(
+                functions=override_functions
+            )
+        )
+    ]
+)
+```
+</TabItem>
+</BackendSDKTabs>
+
+In the above code snippet, we take an example of manually adding the user roles claim to the session (note that this is done automatically for you if you initialise the user roles recipe). 
+
+The `build` function is a helper function which all claims have that does the following:
+```text
+class Claim {
+    // other functions like fetchValue, getValueFromPayload etc..
+    function build(userId) {
+        claimValue = this.fetchValue(userId);
+        return this.addToPayload_internal({}, claimValue)
+    }
+}
+```
+
+### Post session creation
+Once you have the session container object (result of session verification), you can call the `fetchAndSetClaim` function on it to set the claim value in the session
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import { SessionContainer } from "supertokens-node/recipe/session";
+import { UserRoleClaim } from "supertokens-node/recipe/userroles";
+
+async function addClaimToSession(session: SessionContainer) {
+    await session.fetchAndSetClaim(UserRoleClaim)
+}
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+)
+
+func addClaimToSession(session sessmodels.SessionContainer) {
+	err := session.FetchAndSetClaim(userrolesclaims.UserRoleClaim)
+	if err != nil {
+		//...
+	}
+}
+```
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+async def add_claim_to_session(session: SessionContainer):
+    await session.fetch_and_set_claim(UserRoleClaim)
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+def add_claim_to_session(session: SessionContainer):
+    session.sync_fetch_and_set_claim(UserRoleClaim)
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+`fetchAndSetClaim` fetches the claim value using `claim.fetchValue` and adds it to the access token in the session.
+
+There is also an offline version of `fetchAndSetClaim` exposed by the `Session` recipe which takes the claim and a `sessionHandle`. This will update that session's access token payload in the database, so when that session refreshes, the new access token will reflect that change.
+
+### Manually setting a claim's value in a session
+You can also manually set a claim's value in the session without it using the `fetchValue` function. This is useful for situations in which the `fetchValue` function doesn't read from a data source (ex: a database). 
+
+An example of this is the 2FA claim. The `fetchValue` function always returns `false` because there is no database entry that is updated when 2FA is completed - we simply update the session payload.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import { SessionContainer } from "supertokens-node/recipe/session";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims";
+
+const SecondFactorClaim = new BooleanClaim({
+    fetchValue: () => false,
+    key: "2fa-completed",
+});
+
+async function mark2FAAsComplete(session: SessionContainer) {
+    await session.setClaimValue(SecondFactorClaim, true)
+}
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func mark2FAAsComplete(session sessmodels.SessionContainer) {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+
+	err := session.SetClaimValue(SecondFactorClaim, true)
+	if err != nil {
+		//...
+	}
+}
+```
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.recipe.session.claims import BooleanClaim
+
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __: False)
+
+async def set_2fa_claim_as_completed(session: SessionContainer):
+    await session.set_claim_value(SecondFactorClaim, True)
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.recipe.session.claims import BooleanClaim
+
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __: False)
+
+def set_2fa_claim_as_completed(session: SessionContainer):
+    session.sync_set_claim_value(SecondFactorClaim, True)
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+## How to add a claim validator?
+
+In order for SuperTokens to check the claims during session verification, you need to add the claim validators in the backend / frontend SDK. On the backend, the claim validators will be run during session verification, and on the frontend, they will run when you use the `<SessionAuth>` component (for pre built UI), or when you call the `Session.validateClaims` function.
+
+### Adding a validator check globally
+
+This method allows you to add a claim validator such that it applies checks globally - for all your API / frontend routes. This is useful for claim validators like 2FA, when you want all users to be able to access the app only if they have completed 2FA. It also helps prevent development mistakes wherein someone may forget to explictly add the 2FA claim check for each route.
+
+#### On the backend
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims";
+
+const SecondFactorClaim = new BooleanClaim({
+    fetchValue: () => false,
+    key: "2fa-completed",
+});
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "...",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        Session.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getGlobalClaimValidators: async function (input) {
+                            // highlight-next-line
+                            return [...input.claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()]
+                        }
+                    };
+                },
+            },
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	_, SessionClaimValidator := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+
+						(*originalImplementation.GetGlobalClaimValidators) = func(userId string, claimValidatorsAddedByOtherRecipes []claims.SessionClaimValidator, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+							// highlight-start
+							claimValidatorsAddedByOtherRecipes = append(claimValidatorsAddedByOtherRecipes, SessionClaimValidator.IsTrue(nil, nil))
+							// highlight-end
+
+							return claimValidatorsAddedByOtherRecipes, nil
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface, SessionClaimValidator
+from typing import Any, Dict, List
+from supertokens_python.recipe.session.claims import BooleanClaim
+
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __: False)
+
+
+def override_functions(original_implementation: RecipeInterface):
+
+    def get_global_claim_validators(
+        user_id: str,
+        claim_validators_added_by_other_recipes: List[SessionClaimValidator],
+        user_context: Dict[str, Any],
+    ):
+        # highlight-start
+        claim_validators_added_by_other_recipes.append(
+            SecondFactorClaim.validators.is_true(None))
+        # highlight-end
+        return claim_validators_added_by_other_recipes
+
+    original_implementation.get_global_claim_validators = get_global_claim_validators
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+
+    framework='...',  # type: ignore
+    recipe_list=[
+        session.init(
+            override=session.InputOverrideConfig(
+                functions=override_functions
+            )
+        )
+    ]
+)
+```
+</TabItem>
+</BackendSDKTabs>
+
+This will run the `isTrue` validator check on the `SecondFactorClaim` during each session verification and will only allow access to your APIs if this validator passes (i.e., the user has finished 2FA). If this validator fails, SuperTokens will send a `403` to the frontend.
+
+:::note
+The claim validators added this way do not run for the APIs exposed by the SuperTokens middleware.
 :::
+
+#### On the frontend
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+<FrontendPreBuiltUITabs>
+<TabItem value="reactjs">
+
+```tsx
+import SuperTokens from "supertokens-auth-react"
+import Session, { BooleanClaim } from "supertokens-auth-react/recipe/session";
+
+const SecondFactorClaim = new BooleanClaim({
+    id: "2fa-completed",
+    refresh: async () => {
+        // we do nothing here because refreshing the 2fa claim doesn't make sense
+    }
+});
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        //...
+        Session.init({
+            override: {
+                functions: (oI) => {
+                    return {
+                        ...oI,
+                        getGlobalClaimValidators: function (input) {
+                            // highlight-next-line
+                            return [...input.claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()]
+                        }
+                    }
+                }
+            }
+        })
+    ]
+});
+```
+
+Now whenever you wrap your component with the `<SessionAuth>` wrapper, SuperTokens will run the `SecondFactorClaim.validators.isTrue()` validator check automatically and provide you the result in the session context.
+
+```tsx
+import Session, { BooleanClaim } from "supertokens-auth-react/recipe/session";
+
+const SecondFactorClaim = new BooleanClaim({
+    id: "2fa-completed",
+    refresh: async () => {
+        // we do nothing here because refreshing the 2fa claim doesn't make sense
+    }
+});
+
+function Dashboard(props: any) {
+    let sessionContext = Session.useSessionContext();
+
+    if (sessionContext.loading) {
+        return null;
+    }
+
+    if (sessionContext.invalidClaims.some(i => i.validatorId === SecondFactorClaim.id)) {
+        // the 2fa check failed. We should redirect the user to the second
+        // factor screen.
+        return "You cannot access this page because you have not completed 2FA";
+    }
+
+    // 2FA check passed
+}
+```
+
+</TabItem>
+<TabItem value="angular">
+
+```tsx
+import SuperTokens from "supertokens-web-js";
+import Session, { BooleanClaim } from 'supertokens-web-js/recipe/session';
+
+const SecondFactorClaim = new BooleanClaim({
+      id: "2fa-completed",
+      refresh: async () => {
+            // we do nothing here because refreshing the 2fa claim doesn't make sense
+      }
+});
+
+SuperTokens.init({
+      appInfo: {
+            apiDomain: "...",
+            appName: "...",
+      },
+      recipeList: [
+            //...
+            Session.init({
+                  override: {
+                        functions: (oI) => {
+                              return {
+                                    ...oI,
+                                    getGlobalClaimValidators: function (input) {
+                                          // highlight-next-line
+                                          return [...input.claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()]
+                                    }
+                              }
+                        }
+                  }
+            })
+      ]
+})
+```
+
+Now you can protect your frontend routes by using the `Session.validateClaims` function as shown below:
+
+```tsx
+import Session, { BooleanClaim } from "supertokens-web-js/recipe/session";
+
+const SecondFactorClaim = new BooleanClaim({
+    id: "2fa-completed",
+    refresh: async () => {
+        // we do nothing here because refreshing the 2fa claim doesn't make sense
+    }
+});
+
+async function shouldAllowAccessToProtectedPage() {
+    if (await Session.doesSessionExist()) {
+        // Session.validateClaims will check all global validators.
+        let validatorFailures = await Session.validateClaims();
+        if (validatorFailures.length === 0) {
+            // all checks passed
+            return true;
+        }
+        if (validatorFailures.some(i => i.validatorId === SecondFactorClaim.id)) {
+            // 2fa check failed
+            return false;
+        }
+        // some other validator failed.
+    }
+    return false;
+}
+```
+
+</TabItem>
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import SuperTokens from "supertokens-web-js";
+import Session, { BooleanClaim } from 'supertokens-web-js/recipe/session';
+
+const SecondFactorClaim = new BooleanClaim({
+      id: "2fa-completed",
+      refresh: async () => {
+            // we do nothing here because refreshing the 2fa claim doesn't make sense
+      }
+});
+
+SuperTokens.init({
+      appInfo: {
+            apiDomain: "...",
+            appName: "...",
+      },
+      recipeList: [
+            //...
+            Session.init({
+                  override: {
+                        functions: (oI) => {
+                              return {
+                                    ...oI,
+                                    getGlobalClaimValidators: function (input) {
+                                          // highlight-next-line
+                                          return [...input.claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()]
+                                    }
+                              }
+                        }
+                  }
+            })
+      ]
+})
+```
+
+Now you can protect your frontend routes by using the `Session.validateClaims` function as shown below:
+
+```tsx
+import Session, { BooleanClaim } from "supertokens-web-js/recipe/session";
+
+const SecondFactorClaim = new BooleanClaim({
+    id: "2fa-completed",
+    refresh: async () => {
+        // we do nothing here because refreshing the 2fa claim doesn't make sense
+    }
+});
+
+async function shouldAllowAccessToProtectedPage() {
+    if (await Session.doesSessionExist()) {
+        // Session.validateClaims will check all global validators.
+        let validatorFailures = await Session.validateClaims();
+        if (validatorFailures.length === 0) {
+            // all checks passed
+            return true;
+        }
+        if (validatorFailures.some(i => i.validatorId === SecondFactorClaim.id)) {
+            // 2fa check failed
+            return false;
+        }
+        // some other validator failed.
+    }
+    return false;
+}
+```
+
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens from "supertokens-web-js-script";
+import supertokensSession from 'supertokens-web-js-script/recipe/session';
+const SecondFactorClaim = new supertokensSession.BooleanClaim({
+      id: "2fa-completed",
+      refresh: async () => {
+            // we do nothing here because refreshing the 2fa claim doesn't make sense
+      }
+});
+
+supertokens.init({
+      appInfo: {
+            apiDomain: "...",
+            appName: "...",
+      },
+      recipeList: [
+            //...
+            supertokensSession.init({
+                  override: {
+                        functions: (oI) => {
+                              return {
+                                    ...oI,
+                                    getGlobalClaimValidators: function (input) {
+                                          // highlight-next-line
+                                          return [...input.claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()]
+                                    }
+                              }
+                        }
+                  }
+            })
+      ]
+})
+```
+
+Now you can protect your frontend routes by using the `supertokensSession.validateClaims` function as shown below:
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+const SecondFactorClaim = new supertokensSession.BooleanClaim({
+    id: "2fa-completed",
+    refresh: async () => {
+        // we do nothing here because refreshing the 2fa claim doesn't make sense
+    }
+});
+
+async function shouldAllowAccessToProtectedPage() {
+    if (await supertokensSession.doesSessionExist()) {
+        // Session.validateClaims will check all global validators.
+        let validatorFailures = await supertokensSession.validateClaims();
+        if (validatorFailures.length === 0) {
+            // all checks passed
+            return true;
+        }
+        if (validatorFailures.some(i => i.validatorId === SecondFactorClaim.id)) {
+            // 2fa check failed
+            return false;
+        }
+        // some other validator failed.
+    }
+    return false;
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+:::caution
+The mobile SDKs do not yet support adding global claim validators. Please see the next section on how to add checks on a per screen basis instead.
+:::
+
+</TabItem>
+</FrontendCustomUITabs>
+
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
+### Adding a validator check to a specific route
+
+If you want a session claim validator to run only on certain routes, then you should use this method of adding them.
+
+To illustrate this, we will be taking an example of user roles claim validator in which we will be giving access to a user only if they have the `"admin"` role.
+
+#### On the backend
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 1 -->
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let app = express();
+
+app.post(
+    "/update-blog",
+    verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ],
+    }),
+    async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user is an admin.
+    }
+);
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    overrideGlobalClaimValidators: async (globalValidators) => [
+                        ...globalValidators,
+                        UserRoles.UserRoleClaim.validators.includes("admin"),
+                        // UserRoles.PermissionClaim.validators.includes("edit")
+                    ],
+                }),
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user is an admin.
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ],
+    }),
+}, async (req: SessionRequest, res) => {
+    // All validator checks have passed and the user is an admin.
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+async function updateBlog(awsEvent: SessionEvent) {
+    // All validator checks have passed and the user is an admin.
+};
+
+exports.handler = verifySession(updateBlog, {
+    overrideGlobalClaimValidators: async (globalValidators) => ([
+        ...globalValidators, 
+        UserRoles.UserRoleClaim.validators.includes("admin"),
+        // UserRoles.PermissionClaim.validators.includes("edit")
+    ])
+});
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import {SessionContext} from "supertokens-node/framework/koa";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => ([
+            ...globalValidators, 
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ])
+    }), async (ctx: SessionContext, next) => {
+    // All validator checks have passed and the user is an admin.
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+class SetRole {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/update-blog")
+    @intercept(verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => ([
+            ...globalValidators, 
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ])
+    }))
+    @response(200)
+    async handler() {
+        // All validator checks have passed and the user is an admin.
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+// highlight-start
+export default async function setRole(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                overrideGlobalClaimValidators: async (globalValidators) => ([
+                    ...globalValidators, 
+                    UserRoles.UserRoleClaim.validators.includes("admin"),
+                    // UserRoles.PermissionClaim.validators.includes("edit")
+                ])
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+    // All validator checks have passed and the user is an admin.
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import UserRoles from "supertokens-node/recipe/userroles";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard({
+    overrideGlobalClaimValidators: async (globalValidators: SessionClaimValidator[]) => ([
+        ...globalValidators, 
+        UserRoles.UserRoleClaim.validators.includes("admin"),
+        // UserRoles.PermissionClaim.validators.includes("edit")
+    ])
+  }))
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    // All validator checks have passed and the user is an admin.
+    return true;
+  }
+}
+```
+</TabItem>
+
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			// highlight-start
+			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+				globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+				return globalClaimValidators, nil
+			},
+			// highlight-end
+		}, exampleAPI).ServeHTTP(rw, r)
+	})
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all validators have passed..
+}
+```
+
+</TabItem>
+<TabItem value="gin">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := gin.New()
+
+	// Wrap the API handler in session.VerifySession
+	router.POST("/likecomment", verifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}), exampleAPI)
+}
+
+// This is a function that wraps the supertokens verification function
+// to work the gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func exampleAPI(c *gin.Context) {
+	// TODO: session is verified and all claim validators pass.
+}
+```
+
+</TabItem>
+<TabItem value="chi">
+
+```go
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	r.Post("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}, exampleAPI))
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
+
+```
+
+</TabItem>
+<TabItem value="mux">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	router.HandleFunc("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}, exampleAPI)).Methods(http.MethodPost)
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
+```
+
+</TabItem>
+</GoFrameworkSubTabs>
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+
+@app.post('/like_comment')  # type: ignore
+async def like_comment(session: SessionContainer = Depends(
+        verify_session(
+            # highlight-start
+            # We add the UserRoleClaim's includes validator
+            override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+            [UserRoleClaim.validators.includes("admin")]
+            # highlight-end
+        )
+)):
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@app.route('/update-jwt', methods=['POST'])  # type: ignore
+@verify_session(
+    # highlight-start
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+    # highlight-end
+)
+def like_comment():
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@verify_session(
+    # highlight-start
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+    # highlight-end
+)
+async def like_comment(request: HttpRequest):
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+- We add the `UserRoleClaim` validator to the `verifySession` function which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all API routes by default. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+<!-- END COPY SECTION -->
+
+For more complex access control, you can even extract the claim value from the session and then check the value yourself:
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 2 -->
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let app = express();
+
+app.post("/update-blog", verifySession(), async (req: SessionRequest, res) => {
+    // highlight-start
+    const roles = await req.session!.getClaimValue(UserRoles.UserRoleClaim);
+    
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+});
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession()
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        // highlight-start
+        const roles = await req.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+        if (roles === undefined || !roles.includes("admin")) {
+            // this error tells SuperTokens to return a 403 to the frontend.
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User is not an admin",
+                payload: [{
+                    id: UserRoles.UserRoleClaim.key
+                }]
+            })
+        }
+        // highlight-end
+        // user is an admin..
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession(),
+}, async (req: SessionRequest, res) => {
+    // highlight-start
+    const roles = await req.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+async function updateBlog(awsEvent: SessionEvent) {
+    // highlight-start
+    const roles = await awsEvent.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+};
+
+exports.handler = verifySession(updateBlog);
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession(), async (ctx: SessionContext, next) => {
+    // highlight-start
+    const roles = await ctx.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+class UpdateBlog {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) {}
+    @post("/update-blog")
+    @intercept(verifySession())
+    @response(200)
+    async handler() {
+        // highlight-start
+        const roles = await ((this.ctx as any).session as Session.SessionContainer).getClaimValue(UserRoles.UserRoleClaim);
+
+        if (roles === undefined || !roles.includes("admin")) {
+            // this error tells SuperTokens to return a 403 to the frontend.
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User is not an admin",
+                payload: [{
+                    id: UserRoles.UserRoleClaim.key
+                }]
+            })
+        }
+        // highlight-end
+        // user is an admin..
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+export default async function updateBlog(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession()(req, res, next);
+        },
+        req,
+        res
+    )
+
+	// highlight-start
+    const roles = await req.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        await superTokensNextWrapper(
+            async (next) => {
+                throw new STError({
+                    type: "INVALID_CLAIMS",
+                    message: "User is not an admin",
+                    payload: [{
+                        id: UserRoles.UserRoleClaim.key
+                    }]
+                })
+            },
+            req,
+            res
+        )
+    }
+    // highlight-end
+    // user is an admin..
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Session } from "@nestjs/common";
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard())
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    // highlight-start
+    const roles = await session.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+    return true;
+  }
+}
+```
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	sessionerror "github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	http.ListenAndServe("SERVER ADDRESS", corsMiddleware(
+		supertokens.Middleware(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			// Handle your APIs..
+			if r.URL.Path == "/update-blog" && r.Method == "POST" {
+				// Calling the API with session verification
+				session.VerifySession(nil, postExample).ServeHTTP(rw, r)
+				return
+			}
+		}))))
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, r *http.Request) {
+		//...
+	})
+}
+
+func postExample(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
+
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
+		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
+			Msg:           "User is not an admin",
+			InvalidClaims: []claims.ClaimValidationError{
+                {ID: userrolesclaims.UserRoleClaim.Key},
+            },
+		}, r, w)
+		if err != nil {
+			// TODO: send 500 error to client
+		}
+	}
+	// highlight-end
+
+	// User is an admin...
+}
+
+func contains(s []interface{}, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+```
+
+</TabItem>
+<TabItem value="gin">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+    sessionerror "github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := gin.New()
+
+	router.POST("/update-blog", verifySession(nil), postExample)
+}
+
+// Wrap session.VerifySession to work with Gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+// This is the API handler.
+func postExample(c *gin.Context) {
+    // highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(c.Request.Context())
+	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
+
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
+		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
+			Msg:           "User is not an admin",
+			InvalidClaims: []claims.ClaimValidationError{
+                {ID: userrolesclaims.UserRoleClaim.Key},
+            },
+		}, c.Request, c.Writer)
+		if err != nil {
+			// TODO: send 500 error to client
+		}
+	}
+	// highlight-end
+
+	// User is an admin...
+}
+
+func contains(s []interface{}, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+```
+
+</TabItem>
+<TabItem value="chi">
+
+```go
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+    sessionerror "github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	r.Post("/update-blog", session.VerifySession(nil, postExample))
+}
+
+// This is the API handler.
+func postExample(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
+
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
+		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
+			Msg:           "User is not an admin",
+			InvalidClaims: []claims.ClaimValidationError{
+                {ID: userrolesclaims.UserRoleClaim.Key},
+            },
+		}, r, w)
+		if err != nil {
+			// TODO: send 500 error to client
+		}
+	}
+	// highlight-end
+}
+
+func contains(s []interface{}, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+```
+
+</TabItem>
+<TabItem value="mux">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	sessionerror "github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/update-blog",
+		session.VerifySession(nil, postExample)).Methods(http.MethodPost)
+}
+
+// This is the API handler.
+func postExample(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
+
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
+		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
+			Msg: "User is not an admin",
+			InvalidClaims: []claims.ClaimValidationError{
+				{ID: userrolesclaims.UserRoleClaim.Key},
+			},
+		}, r, w)
+		if err != nil {
+			// TODO: send 500 error to client
+		}
+	}
+	// highlight-end
+}
+
+func contains(s []interface{}, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+```
+
+</TabItem>
+</GoFrameworkSubTabs>
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from fastapi import Depends
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@app.post('/update-blog')  # type: ignore
+async def update_blog_api(session: SessionContainer = Depends(verify_session())):
+    # highlight-start
+    roles = await session.get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from flask import Flask, g
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+app = Flask(__name__)
+
+@app.route('/update-blog', methods=['POST'])  # type: ignore
+@verify_session()
+def set_role_api():
+    session: SessionContainer = g.supertokens  # type: ignore
+    # highlight-start
+    roles = session.sync_get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from django.http import HttpRequest
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@verify_session()
+async def get_user_info_api(request: HttpRequest):
+    session: SessionContainer = request.supertokens  # type: ignore
+    # highlight-start
+    roles = await session.get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+
+</TabItem>
+</BackendSDKTabs>
+
+<!-- END COPY SECTION -->
+
+#### On the frontend
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+<FrontendPreBuiltUITabs>
+<TabItem value="reactjs">
+
+Provide the `overrideGlobalClaimValidators` prop to the `<SessionAuth>` component as shown below
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 3 -->
+
+```tsx
+import React from "react";
+import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session';
+import { UserRoleClaim, /*PermissionClaim*/ } from 'supertokens-auth-react/recipe/userroles';
+
+const AdminRoute = (props: React.PropsWithChildren<any>) => {
+    return (
+        <SessionAuth
+            overrideGlobalClaimValidators={(globalValidators) =>
+                [...globalValidators,
+                UserRoleClaim.validators.includes("admin"),
+                    /* PermissionClaim.validators.includes("modify") */
+                ]
+            }
+        >
+            <InvalidClaimHandler>
+                {props.children}
+            </InvalidClaimHandler>
+        </SessionAuth>
+    );
+}
+
+function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
+    let sessionContext = useSessionContext();
+    if (sessionContext.loading) {
+        return null;
+    }
+
+    if (sessionContext.invalidClaims.some(i => i.validatorId === UserRoleClaim.id)) {
+        return <div>You cannot access this page because you are not an admin.</div>
+    }
+
+    // We show the protected route since all claims validators have
+    // passed implying that the user is an admin.
+    return <div>{props.children}</div>;
+}
+```
+Above we are creating a generic component called `AdminRoute` which enforces that its child components can only be rendered if the user has the admin role.
+
+In the `AdminRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. We also add the `UserRoleClaim` validator to the `<SessionAuth>` component which checks if the validators pass or not.
+
+Finally, we check the result of the validation in the `InvalidClaimHandler` component which displays `"You cannot access this page because you are not an admin."` if the `UserRoleClaim` claim failed.
+
+If all validation passes, we render the `props.children` component.
+
+:::note
+You can extend the `AdminRoute` component to check for other types of validators as well. This component can then be reused to protect all of your app's components (In this case, you may want to rename this component to something more appropriate, like `ProtectedRoute`).
+:::
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 4 -->
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-auth-react/recipe/session";
+import {UserRoleClaim} from "supertokens-auth-react/recipe/userroles"
+
+function ProtectedComponent() {
+    let claimValue = Session.useClaimValue(UserRoleClaim)
+    if (claimValue.loading || !claimValue.doesSessionExist) {
+        return null;
+    }
+    let roles = claimValue.value;
+    if (roles !== undefined && roles.includes("admin")) {
+        // User is an admin
+    } else {
+        // User doesn't have any roles, or is not an admin..
+    }
+}
+```
+
+<!-- END COPY SECTION -->
+
+:::caution
+Unlike using the `overrideGlobalClaimValidators` prop, the `useClaimValue` function will not check for globally added claims. SuperTokens adds certain claims globally (for example the email verification claim in case you have enabled that recipe) which get checked only when running the `<SessionAuth>` wrapper is executed. Therefore, using `useClaimValue` is less favourable. 
+:::
+
+</TabItem>
+<TabItem value="angular">
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 5 -->
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim, /*PermissionClaim*/ } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    UserRoleClaim.validators.includes("admin"),
+                 /* PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 6 -->
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let roles = await Session.getClaimValue({claim: UserRoleClaim});
+        if (roles !== undefined && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+<!-- END COPY SECTION -->
+
+:::caution
+Unlike the `validateClaims` function, the `getClaimValue` function will not check for globally added claims. SuperTokens adds certain claims globally (for example the email verification claim in case you have enabled that recipe) which get checked only when running the `validateClaims` function. Therefore, using `getClaimValue` is less favourable. 
+:::
+
+</TabItem>
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 5 -->
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim, /*PermissionClaim*/ } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    UserRoleClaim.validators.includes("admin"),
+                 /* PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 6 -->
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let roles = await Session.getClaimValue({claim: UserRoleClaim});
+        if (roles !== undefined && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+<!-- END COPY SECTION -->
+
+</TabItem>
+<TabItem value="script">
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 7 -->
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensUserRoles from "supertokens-web-js-script/recipe/userroles";
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await supertokensSession.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    supertokensUserRoles.UserRoleClaim.validators.includes("admin"),
+                 /* supertokensUserRoles.PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === supertokensUserRoles.UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 8 -->
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensUserRoles from "supertokens-web-js-script/recipe/userroles";
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+        // highlight-start
+        let roles = await supertokensSession.getClaimValue({claim: supertokensUserRoles.UserRoleClaim});
+        if (roles !== undefined && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+<!-- END COPY SECTION -->
+
+</TabItem>
+</NpmOrScriptTabs>
+
+:::caution
+Unlike the `validateClaims` function, the `getClaimValue` function will not check for globally added claims. SuperTokens adds certain claims globally (for example the email verification claim in case you have enabled that recipe) which get checked only when running the `validateClaims` function. Therefore, using `getClaimValue` is less favourable. 
+:::
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<!-- COPY SECTION -->
+<!-- ./session/common-customizations/sessions/protecting-frontend-routes.mdx -->
+<!-- 1 -->
+
+<FrontendMobileSubTabs>
+
+<TabItem value="reactnative">
+
+```tsx
+import SuperTokens from 'supertokens-react-native';
+
+async function checkIfUserIsAnAdmin() {
+    if (await SuperTokens.doesSessionExist()) {
+
+        // highlight-start
+        let roles: string[] = (await SuperTokens.getAccessTokenPayloadSecurely())["st-role"].v;
+
+        if (roles.includes("admin")) {
+            // user is an admin
+        } else {
+            // user is not an admin
+        }
+        // highlight-end
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="android">
+
+```kotlin
+import android.app.Application
+import com.supertokens.session.SuperTokens
+import org.json.JSONObject
+
+class MainApplication: Application() {
+    fun checkIfUserIsAnAdmin() {
+        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
+        val roles: List<String> = (accessTokenPayload.get("st-role") as JSONObject).get("v") as List<String>;
+        if (roles.contains("admin")) {
+            // user is an admin
+        } else {
+            // user is not an admin
+        }
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="ios">
+
+```swift
+import UIKit
+import SuperTokensIOS
+
+fileprivate class ViewController: UIViewController {
+    func checkIfUserIsAnAdmin() {
+        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let roleObject: [String: Any] = accessTokenPayload["st-role"] as? [String: Any], let roles: [String] = roleObject["v"] as? [String] {
+            if roles.contains("admin") {
+                // user is an admin
+            } else {
+                // user is not an admin
+            }
+        }
+    }
+}
+```
+
+</TabItem>
+
+</FrontendMobileSubTabs>
+
+<!-- END COPY SECTION -->
+
+</TabItem>
+</FrontendCustomUITabs>
+
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
