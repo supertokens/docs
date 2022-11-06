@@ -10,6 +10,7 @@ show_ui_switcher: true
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
 import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
 import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
 import TabItem from "@theme/TabItem";
@@ -721,8 +722,9 @@ function Dashboard(props: any) {
     }
 
     if (sessionContext.invalidClaims.some(i => i.validatorId === SecondFactorClaim.id)) {
-        // the 2fa check failed.
-        return null;
+        // the 2fa check failed. We should redirect the user to the second
+        // factor screen.
+        return "You cannot access this page because you have not completed 2FA";
     }
 
     // 2FA check passed
@@ -964,16 +966,1474 @@ The mobile SDKs do not yet support adding global claim validators. Please see th
 
 ### Adding a validator check to a specific route
 
-#### On the backend
-TODO
+If you want a session claim validator to run only on certain routes, then you should use this method of adding them.
 
-#### On the frontend
-TODO
-
-### Handling claim validation failures
+To illustrate this, we will be taking an example of user roles claim validator in which we will be giving access to a user only if they have the `"admin"` role.
 
 #### On the backend
-TODO
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 1 -->
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let app = express();
+
+app.post(
+    "/update-blog",
+    verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ],
+    }),
+    async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user is an admin.
+    }
+);
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    overrideGlobalClaimValidators: async (globalValidators) => [
+                        ...globalValidators,
+                        UserRoles.UserRoleClaim.validators.includes("admin"),
+                        // UserRoles.PermissionClaim.validators.includes("edit")
+                    ],
+                }),
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user is an admin.
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ],
+    }),
+}, async (req: SessionRequest, res) => {
+    // All validator checks have passed and the user is an admin.
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+async function updateBlog(awsEvent: SessionEvent) {
+    // All validator checks have passed and the user is an admin.
+};
+
+exports.handler = verifySession(updateBlog, {
+    overrideGlobalClaimValidators: async (globalValidators) => ([
+        ...globalValidators, 
+        UserRoles.UserRoleClaim.validators.includes("admin"),
+        // UserRoles.PermissionClaim.validators.includes("edit")
+    ])
+});
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import {SessionContext} from "supertokens-node/framework/koa";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => ([
+            ...globalValidators, 
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ])
+    }), async (ctx: SessionContext, next) => {
+    // All validator checks have passed and the user is an admin.
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+class SetRole {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/update-blog")
+    @intercept(verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => ([
+            ...globalValidators, 
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ])
+    }))
+    @response(200)
+    async handler() {
+        // All validator checks have passed and the user is an admin.
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+// highlight-start
+export default async function setRole(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                overrideGlobalClaimValidators: async (globalValidators) => ([
+                    ...globalValidators, 
+                    UserRoles.UserRoleClaim.validators.includes("admin"),
+                    // UserRoles.PermissionClaim.validators.includes("edit")
+                ])
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+    // All validator checks have passed and the user is an admin.
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import UserRoles from "supertokens-node/recipe/userroles";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard({
+    overrideGlobalClaimValidators: async (globalValidators: SessionClaimValidator[]) => ([
+        ...globalValidators, 
+        UserRoles.UserRoleClaim.validators.includes("admin"),
+        // UserRoles.PermissionClaim.validators.includes("edit")
+    ])
+  }))
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    // All validator checks have passed and the user is an admin.
+    return true;
+  }
+}
+```
+</TabItem>
+
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			// highlight-start
+			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+				globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+				return globalClaimValidators, nil
+			},
+			// highlight-end
+		}, exampleAPI).ServeHTTP(rw, r)
+	})
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all validators have passed..
+}
+```
+
+</TabItem>
+<TabItem value="gin">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := gin.New()
+
+	// Wrap the API handler in session.VerifySession
+	router.POST("/likecomment", verifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}), exampleAPI)
+}
+
+// This is a function that wraps the supertokens verification function
+// to work the gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func exampleAPI(c *gin.Context) {
+	// TODO: session is verified and all claim validators pass.
+}
+```
+
+</TabItem>
+<TabItem value="chi">
+
+```go
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	r.Post("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}, exampleAPI))
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
+
+```
+
+</TabItem>
+<TabItem value="mux">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	router.HandleFunc("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}, exampleAPI)).Methods(http.MethodPost)
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
+```
+
+</TabItem>
+</GoFrameworkSubTabs>
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+
+@app.post('/like_comment')  # type: ignore
+async def like_comment(session: SessionContainer = Depends(
+        verify_session(
+            # highlight-start
+            # We add the UserRoleClaim's includes validator
+            override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+            [UserRoleClaim.validators.includes("admin")]
+            # highlight-end
+        )
+)):
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@app.route('/update-jwt', methods=['POST'])  # type: ignore
+@verify_session(
+    # highlight-start
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+    # highlight-end
+)
+def like_comment():
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@verify_session(
+    # highlight-start
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+    # highlight-end
+)
+async def like_comment(request: HttpRequest):
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+- We add the `UserRoleClaim` validator to the `verifySession` function which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all API routes by default. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+<!-- END COPY SECTION -->
+
+For more complex access control, you can even extract the claim value from the session and then check the value yourself:
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 2 -->
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let app = express();
+
+app.post("/update-blog", verifySession(), async (req: SessionRequest, res) => {
+    // highlight-start
+    const roles = await req.session!.getClaimValue(UserRoles.UserRoleClaim);
+    
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+});
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession()
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        // highlight-start
+        const roles = await req.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+        if (roles === undefined || !roles.includes("admin")) {
+            // this error tells SuperTokens to return a 403 to the frontend.
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User is not an admin",
+                payload: [{
+                    id: UserRoles.UserRoleClaim.key
+                }]
+            })
+        }
+        // highlight-end
+        // user is an admin..
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession(),
+}, async (req: SessionRequest, res) => {
+    // highlight-start
+    const roles = await req.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+async function updateBlog(awsEvent: SessionEvent) {
+    // highlight-start
+    const roles = await awsEvent.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+};
+
+exports.handler = verifySession(updateBlog);
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession(), async (ctx: SessionContext, next) => {
+    // highlight-start
+    const roles = await ctx.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+class UpdateBlog {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) {}
+    @post("/update-blog")
+    @intercept(verifySession())
+    @response(200)
+    async handler() {
+        // highlight-start
+        const roles = await ((this.ctx as any).session as Session.SessionContainer).getClaimValue(UserRoles.UserRoleClaim);
+
+        if (roles === undefined || !roles.includes("admin")) {
+            // this error tells SuperTokens to return a 403 to the frontend.
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User is not an admin",
+                payload: [{
+                    id: UserRoles.UserRoleClaim.key
+                }]
+            })
+        }
+        // highlight-end
+        // user is an admin..
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+export default async function updateBlog(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession()(req, res, next);
+        },
+        req,
+        res
+    )
+
+	// highlight-start
+    const roles = await req.session!.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        await superTokensNextWrapper(
+            async (next) => {
+                throw new STError({
+                    type: "INVALID_CLAIMS",
+                    message: "User is not an admin",
+                    payload: [{
+                        id: UserRoles.UserRoleClaim.key
+                    }]
+                })
+            },
+            req,
+            res
+        )
+    }
+    // highlight-end
+    // user is an admin..
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Session } from "@nestjs/common";
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import UserRoles from "supertokens-node/recipe/userroles";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard())
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    // highlight-start
+    const roles = await session.getClaimValue(UserRoles.UserRoleClaim);
+
+    if (roles === undefined || !roles.includes("admin")) {
+        // this error tells SuperTokens to return a 403 to the frontend.
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User is not an admin",
+            payload: [{
+                id: UserRoles.UserRoleClaim.key
+            }]
+        })
+    }
+    // highlight-end
+    // user is an admin..
+    return true;
+  }
+}
+```
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	sessionerror "github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	http.ListenAndServe("SERVER ADDRESS", corsMiddleware(
+		supertokens.Middleware(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			// Handle your APIs..
+			if r.URL.Path == "/update-blog" && r.Method == "POST" {
+				// Calling the API with session verification
+				session.VerifySession(nil, postExample).ServeHTTP(rw, r)
+				return
+			}
+		}))))
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, r *http.Request) {
+		//...
+	})
+}
+
+func postExample(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
+
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
+		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
+			Msg:           "User is not an admin",
+			InvalidClaims: []claims.ClaimValidationError{
+                {ID: userrolesclaims.UserRoleClaim.Key},
+            },
+		}, r, w)
+		if err != nil {
+			// TODO: send 500 error to client
+		}
+	}
+	// highlight-end
+
+	// User is an admin...
+}
+
+func contains(s []interface{}, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+```
+
+</TabItem>
+<TabItem value="gin">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+    sessionerror "github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := gin.New()
+
+	router.POST("/update-blog", verifySession(nil), postExample)
+}
+
+// Wrap session.VerifySession to work with Gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+// This is the API handler.
+func postExample(c *gin.Context) {
+    // highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(c.Request.Context())
+	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
+
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
+		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
+			Msg:           "User is not an admin",
+			InvalidClaims: []claims.ClaimValidationError{
+                {ID: userrolesclaims.UserRoleClaim.Key},
+            },
+		}, c.Request, c.Writer)
+		if err != nil {
+			// TODO: send 500 error to client
+		}
+	}
+	// highlight-end
+
+	// User is an admin...
+}
+
+func contains(s []interface{}, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+```
+
+</TabItem>
+<TabItem value="chi">
+
+```go
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+    sessionerror "github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	r.Post("/update-blog", session.VerifySession(nil, postExample))
+}
+
+// This is the API handler.
+func postExample(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
+
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
+		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
+			Msg:           "User is not an admin",
+			InvalidClaims: []claims.ClaimValidationError{
+                {ID: userrolesclaims.UserRoleClaim.Key},
+            },
+		}, r, w)
+		if err != nil {
+			// TODO: send 500 error to client
+		}
+	}
+	// highlight-end
+}
+
+func contains(s []interface{}, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+```
+
+</TabItem>
+<TabItem value="mux">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	sessionerror "github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/update-blog",
+		session.VerifySession(nil, postExample)).Methods(http.MethodPost)
+}
+
+// This is the API handler.
+func postExample(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	roles := sessionContainer.GetClaimValue(userrolesclaims.UserRoleClaim)
+
+	if roles == nil || !contains(roles.([]interface{}), "admin") {
+		err := supertokens.ErrorHandler(sessionerror.InvalidClaimError{
+			Msg: "User is not an admin",
+			InvalidClaims: []claims.ClaimValidationError{
+				{ID: userrolesclaims.UserRoleClaim.Key},
+			},
+		}, r, w)
+		if err != nil {
+			// TODO: send 500 error to client
+		}
+	}
+	// highlight-end
+}
+
+func contains(s []interface{}, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+```
+
+</TabItem>
+</GoFrameworkSubTabs>
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from fastapi import Depends
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@app.post('/update-blog')  # type: ignore
+async def update_blog_api(session: SessionContainer = Depends(verify_session())):
+    # highlight-start
+    roles = await session.get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from flask import Flask, g
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+app = Flask(__name__)
+
+@app.route('/update-blog', methods=['POST'])  # type: ignore
+@verify_session()
+def set_role_api():
+    session: SessionContainer = g.supertokens  # type: ignore
+    # highlight-start
+    roles = session.sync_get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from django.http import HttpRequest
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@verify_session()
+async def get_user_info_api(request: HttpRequest):
+    session: SessionContainer = request.supertokens  # type: ignore
+    # highlight-start
+    roles = await session.get_claim_value(UserRoleClaim)
+    if roles is None or "admin" not in roles:
+        raise_invalid_claims_exception("User is not an admin", [
+                                       ClaimValidationError(UserRoleClaim.key, None)])
+    # highlight-end
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+
+</TabItem>
+</BackendSDKTabs>
+
+<!-- END COPY SECTION -->
 
 #### On the frontend
-TODO
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+<FrontendPreBuiltUITabs>
+<TabItem value="reactjs">
+
+Provide the `overrideGlobalClaimValidators` prop to the `<SessionAuth>` component as shown below
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 3 -->
+
+```tsx
+import React from "react";
+import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session';
+import { UserRoleClaim, /*PermissionClaim*/ } from 'supertokens-auth-react/recipe/userroles';
+
+const AdminRoute = (props: React.PropsWithChildren<any>) => {
+    return (
+        <SessionAuth
+            overrideGlobalClaimValidators={(globalValidators) =>
+                [...globalValidators,
+                UserRoleClaim.validators.includes("admin"),
+                    /* PermissionClaim.validators.includes("modify") */
+                ]
+            }
+        >
+            <InvalidClaimHandler>
+                {props.children}
+            </InvalidClaimHandler>
+        </SessionAuth>
+    );
+}
+
+function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
+    let sessionContext = useSessionContext();
+    if (sessionContext.loading) {
+        return null;
+    }
+
+    if (sessionContext.invalidClaims.some(i => i.validatorId === UserRoleClaim.id)) {
+        return <div>You cannot access this page because you are not an admin.</div>
+    }
+
+    // We show the protected route since all claims validators have
+    // passed implying that the user is an admin.
+    return <div>{props.children}</div>;
+}
+```
+Above we are creating a generic component called `AdminRoute` which enforces that its child components can only be rendered if the user has the admin role.
+
+In the `AdminRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. We also add the `UserRoleClaim` validator to the `<SessionAuth>` component which checks if the validators pass or not.
+
+Finally, we check the result of the validation in the `InvalidClaimHandler` component which displays `"You cannot access this page because you are not an admin."` if the `UserRoleClaim` claim failed.
+
+If all validation passes, we render the `props.children` component.
+
+:::note
+You can extend the `AdminRoute` component to check for other types of validators as well. This component can then be reused to protect all of your app's components (In this case, you may want to rename this component to something more appropriate, like `ProtectedRoute`).
+:::
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 4 -->
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-auth-react/recipe/session";
+import {UserRoleClaim} from "supertokens-auth-react/recipe/userroles"
+
+function ProtectedComponent() {
+    let claimValue = Session.useClaimValue(UserRoleClaim)
+    if (claimValue.loading || !claimValue.doesSessionExist) {
+        return null;
+    }
+    let roles = claimValue.value;
+    if (roles !== undefined && roles.includes("admin")) {
+        // User is an admin
+    } else {
+        // User doesn't have any roles, or is not an admin..
+    }
+}
+```
+
+<!-- END COPY SECTION -->
+
+</TabItem>
+<TabItem value="angular">
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 5 -->
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim, /*PermissionClaim*/ } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    UserRoleClaim.validators.includes("admin"),
+                 /* PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 6 -->
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let roles = await Session.getClaimValue({claim: UserRoleClaim});
+        if (roles !== undefined && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+<!-- END COPY SECTION -->
+
+</TabItem>
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 5 -->
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim, /*PermissionClaim*/ } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    UserRoleClaim.validators.includes("admin"),
+                 /* PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 6 -->
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let roles = await Session.getClaimValue({claim: UserRoleClaim});
+        if (roles !== undefined && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+<!-- END COPY SECTION -->
+
+</TabItem>
+<TabItem value="script">
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 7 -->
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensUserRoles from "supertokens-web-js-script/recipe/userroles";
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await supertokensSession.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    supertokensUserRoles.UserRoleClaim.validators.includes("admin"),
+                 /* supertokensUserRoles.PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === supertokensUserRoles.UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./userroles/protecting-routes.mdx -->
+<!-- 8 -->
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensUserRoles from "supertokens-web-js-script/recipe/userroles";
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+        // highlight-start
+        let roles = await supertokensSession.getClaimValue({claim: supertokensUserRoles.UserRoleClaim});
+        if (roles !== undefined && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+<!-- END COPY SECTION -->
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<!-- COPY SECTION -->
+<!-- ./session/common-customizations/sessions/protecting-frontend-routes.mdx -->
+<!-- 1 -->
+
+<FrontendMobileSubTabs>
+
+<TabItem value="reactnative">
+
+```tsx
+import SuperTokens from 'supertokens-react-native';
+
+async function checkIfUserIsAnAdmin() {
+    if (await SuperTokens.doesSessionExist()) {
+
+        // highlight-start
+        let roles: string[] = (await SuperTokens.getAccessTokenPayloadSecurely())["st-role"].v;
+
+        if (roles.includes("admin")) {
+            // user is an admin
+        } else {
+            // user is not an admin
+        }
+        // highlight-end
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="android">
+
+```kotlin
+import android.app.Application
+import com.supertokens.session.SuperTokens
+import org.json.JSONObject
+
+class MainApplication: Application() {
+    fun checkIfUserIsAnAdmin() {
+        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
+        val roles: List<String> = (accessTokenPayload.get("st-role") as JSONObject).get("v") as List<String>;
+        if (roles.contains("admin")) {
+            // user is an admin
+        } else {
+            // user is not an admin
+        }
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="ios">
+
+```swift
+import UIKit
+import SuperTokensIOS
+
+fileprivate class ViewController: UIViewController {
+    func checkIfUserIsAnAdmin() {
+        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let roleObject: [String: Any] = accessTokenPayload["st-role"] as? [String: Any], let roles: [String] = roleObject["v"] as? [String] {
+            if roles.contains("admin") {
+                // user is an admin
+            } else {
+                // user is not an admin
+            }
+        }
+    }
+}
+```
+
+</TabItem>
+
+</FrontendMobileSubTabs>
+
+<!-- END COPY SECTION -->
+
+</TabItem>
+</FrontendCustomUITabs>
+
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
