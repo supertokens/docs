@@ -12,8 +12,9 @@ hide_title: true
 ```sql
 CREATE SCHEMA boxyhq;
 CREATE USER {{DB_USER_n}}_boxyhq WITH LOGIN PASSWORD '{{DB_PASSWORD_n}}' VALID UNTIL 'infinity';
-GRANT ALL PRIVILEGES ON DATABASE {{DB_NAME_n}} TO {{DB_USER_n}}_boxyhq;
 ALTER USER {{DB_USER_n}}_boxyhq set SEARCH_PATH = 'boxyhq';
+GRANT ALL PRIVILEGES ON DATABASE {{DB_NAME_n}} TO {{DB_USER_n}}_boxyhq;
+GRANT ALL PRIVILEGES ON SCHEMA boxyhq TO {{DB_USER_n}}_boxyhq;
 ```
 - Generate API key online
     - Go to https://randomkeygen.com
