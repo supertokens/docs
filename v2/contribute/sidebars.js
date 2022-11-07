@@ -130,7 +130,8 @@ module.exports = {
             "checklists/saas/adding-new-ec2-instance-for-node-api",
             "checklists/saas/db-restore",
             "checklists/saas/adding-instances-to-load-blancer",
-            "checklists/saas/custom-core-deployment"
+            "checklists/saas/custom-core-deployment",
+            "checklists/saas/launch-boxyhq-containers"
           ],
         },
         {
