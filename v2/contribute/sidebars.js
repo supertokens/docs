@@ -131,7 +131,8 @@ module.exports = {
             "checklists/saas/db-restore",
             "checklists/saas/adding-instances-to-load-blancer",
             "checklists/saas/custom-core-deployment",
-            "checklists/saas/launch-boxyhq-containers"
+            "checklists/saas/launch-boxyhq-containers",
+            "checklists/saas/adding-cores-for-user"
           ],
         },
         {
