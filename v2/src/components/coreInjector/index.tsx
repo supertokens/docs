@@ -68,7 +68,7 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
                 c = c.split("^{coreInjector_connection_uri_comment}").join('// ' + defaultValue + ' is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.')
                 c = c.split("^{coreInjector_connection_uri_comment_with_hash}").join('# ' + defaultValue + ' is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.')
                 c = c.split("^{coreInjector_uri}").join('"' + defaultValue + '",');
-                c = c.split("^{coreInjector_api_key}").join('"IF YOU HAVE AN API KEY FOR THE CORE, ADD IT HERE"')
+                c = c.split("^{coreInjector_api_key}").join('<API_KEY(if configured)>')
                 c = c.split("^{coreInjector_api_key_commented}").join('// ')
                 c = c.split("^{coreInjector_api_key_commented_with_hash}").join('# ')
                 c = c.split("^{coreInjector_uri_without_quotes}").join(defaultValue)
