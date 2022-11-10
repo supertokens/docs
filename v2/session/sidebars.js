@@ -161,7 +161,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Customizations',
+      label: 'Auth flow customizations',
       collapsed: true,
       items: [
         "common-customizations/sessions/new-session",
@@ -218,8 +218,70 @@ module.exports = {
           ]
         },
         {
+          type: 'category',
+          label: 'Actions, Hooks and Custom API responses',
+          items: [
+            "advanced-customizations/overview",
+            {
+              type: 'category',
+              label: 'Frontend functions override',
+              items: [
+                "advanced-customizations/frontend-functions-override/about",
+                "advanced-customizations/frontend-functions-override/usage"
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Backend functions override',
+              items: [
+                "advanced-customizations/backend-functions-override/about",
+                "advanced-customizations/backend-functions-override/usage"
+              ],
+            },
+            {
+              type: 'category',
+              label: 'APIs override',
+              items: [
+                "advanced-customizations/apis-override/about",
+                "advanced-customizations/apis-override/usage",
+                {
+                  type: 'category',
+                  label: 'Sending custom response',
+                  items: [
+                    "advanced-customizations/apis-override/custom-response/api-override",
+                    "advanced-customizations/apis-override/custom-response/throwing-error"
+                  ],
+                },
+                "advanced-customizations/apis-override/disabling"
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Frontend hooks',
+              items: [
+                "advanced-customizations/frontend-hooks/pre-api",
+                "advanced-customizations/frontend-hooks/handle-event"
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Examples',
+              items: [
+                {
+                  type: 'category',
+                  label: 'Using localstorage instead of cookies',
+                  items: [
+                    "advanced-customizations/examples/localstorage/about",
+                    "advanced-customizations/examples/localstorage/guide"
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
           type: "category",
-          label: "Core",
+          label: "SuperTokens Core customizations",
           items: [
             "common-customizations/core/api-keys",
             "common-customizations/core/ip-allow-deny",
@@ -243,77 +305,9 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Advanced customizations / Overrides',
+      label: 'Testing & Debugging',
       items: [
-        "advanced-customizations/overview",
-        {
-          type: 'category',
-          label: 'Frontend functions override',
-          items: [
-            "advanced-customizations/frontend-functions-override/about",
-            "advanced-customizations/frontend-functions-override/usage"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Backend functions override',
-          items: [
-            "advanced-customizations/backend-functions-override/about",
-            "advanced-customizations/backend-functions-override/usage"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'APIs override',
-          items: [
-            "advanced-customizations/apis-override/about",
-            "advanced-customizations/apis-override/usage",
-            {
-              type: 'category',
-              label: 'Sending custom response',
-              items: [
-                "advanced-customizations/apis-override/custom-response/api-override",
-                "advanced-customizations/apis-override/custom-response/throwing-error"
-              ],
-            },
-            "advanced-customizations/apis-override/disabling"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Frontend hooks',
-          items: [
-            "advanced-customizations/frontend-hooks/pre-api",
-            "advanced-customizations/frontend-hooks/handle-event"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Examples',
-          items: [
-            {
-              type: 'category',
-              label: 'Using localstorage instead of cookies',
-              items: [
-                "advanced-customizations/examples/localstorage/about",
-                "advanced-customizations/examples/localstorage/guide"
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Testing',
-      items: [
-        "testing/testing-with-postman"
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Troubleshooting',
-      items: [
+        "testing/testing-with-postman",
         "troubleshooting/how-to-troubleshoot",
         "troubleshooting/cors-issues"
       ],
