@@ -69,6 +69,7 @@ function DocSidebarItemCategory({
   collapsible,
   activePath,
   depth,
+  isInGroup,
   ...props
 }) {
   const { items, label } = item;
@@ -142,17 +143,17 @@ function DocSidebarItemCategory({
 
   if (isGrouped) {
     containerStyle = {
-      borderWidth: "1px",
-      boxSizing: "border-box",
-      MozBoxSizing: "border-box",
-      WebkitBoxSizing: "border-box",
-      borderColor: "#FF9933",
-      borderStyle: "solid",
-      borderRadius: 12,
-      marginLeft: 9,
-      marginRight: 9,
-      boxShadow: "0px 0px 8px rgba(255, 153, 51, 0.5)",
-      paddingBottom: 12,
+      // borderWidth: "1px",
+      // boxSizing: "border-box",
+      // MozBoxSizing: "border-box",
+      // WebkitBoxSizing: "border-box",
+      // borderColor: "#FF9933",
+      // borderStyle: "solid",
+      // borderRadius: 12,
+      // marginLeft: 9,
+      // marginRight: 9,
+      // boxShadow: "0px 0px 8px rgba(255, 153, 51, 0.5)",
+      // paddingBottom: 12,
     }
 
     _depth = _depth - 1;
@@ -183,18 +184,22 @@ function DocSidebarItemCategory({
 
   let menuLinkAfterIconClass = "";
 
-  if (item.customProps !== undefined && item.customProps.categoryIcon !== undefined) {
-    const iconName = item.customProps.categoryIcon;
-
-    menuLinkAfterIconClass = "menu__link--after-" + iconName;
+  if (isInGroup) {
+    menuLinkAfterIconClass = "menu__link--after-highlight";
   }
+
+  // if (item.customProps !== undefined && item.customProps.categoryIcon !== undefined) {
+  //   const iconName = item.customProps.categoryIcon;
+
+  //   menuLinkAfterIconClass = "menu__link--after-" + iconName;
+  // }
 
   let showIconAfter = true;
 
-  if (item.customProps !== undefined && item.customProps.hideCategoryIcon === true) {
-    menuLinkAfterIconClass = "menu__link--after-no-icon";
-    showIconAfter = false;
-  }
+  // if (item.customProps !== undefined && item.customProps.hideCategoryIcon === true) {
+  //   menuLinkAfterIconClass = "menu__link--after-no-icon";
+  //   showIconAfter = false;
+  // }
 
   return (
     <li
@@ -288,6 +293,7 @@ function DocSidebarItemCategory({
           collapsible={collapsible}
           activePath={activePath}
           depth={_depth}
+          isInGroup={isGrouped}
         />
       </ul>
     </li>
