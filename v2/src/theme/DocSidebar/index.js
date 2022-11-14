@@ -69,6 +69,7 @@ function DocSidebarItemCategory({
   collapsible,
   activePath,
   depth,
+  isInGroup,
   ...props
 }) {
   const { items, label } = item;
@@ -183,17 +184,26 @@ function DocSidebarItemCategory({
 
   let menuLinkAfterIconClass = "";
 
-  if (item.customProps !== undefined && item.customProps.categoryIcon !== undefined) {
-    const iconName = item.customProps.categoryIcon;
+  // if (item.customProps !== undefined && item.customProps.categoryIcon !== undefined) {
+  //   const iconName = item.customProps.categoryIcon;
 
-    menuLinkAfterIconClass = "menu__link--after-" + iconName;
-  }
+  //   menuLinkAfterIconClass = "menu__link--after-" + iconName;
+  // }
 
   let showIconAfter = true;
 
-  if (item.customProps !== undefined && item.customProps.hideCategoryIcon === true) {
-    menuLinkAfterIconClass = "menu__link--after-no-icon";
-    showIconAfter = false;
+  // if (item.customProps !== undefined && item.customProps.hideCategoryIcon === true) {
+  //   menuLinkAfterIconClass = "menu__link--after-no-icon";
+  //   showIconAfter = false;
+  // }
+
+  let textStyle = {};
+
+  if (isInGroup) {
+    textStyle = {
+      textTransform: "uppercase",
+      fontSize: 11,
+    }
   }
 
   return (
@@ -213,6 +223,7 @@ function DocSidebarItemCategory({
         href={_collapsible ? '#' : undefined}
         {...props}
         data-depth={_depth}
+        style={textStyle}
       >
         <span
           className={styles.sidebarMenuItemLinkLabel}
@@ -288,6 +299,7 @@ function DocSidebarItemCategory({
           collapsible={collapsible}
           activePath={activePath}
           depth={_depth}
+          isInGroup={isGrouped}
         />
       </ul>
     </li>
@@ -300,15 +312,39 @@ function DocSidebarItemLink({
   activePath,
   collapsible: _collapsible,
   depth,
+  isInGroup,
   ...props
 }) {
   const { href, label } = item;
   const isActive = isActiveSidebarItem(item, activePath);
+
+  let textStyle = {};
+  let containerStyle = {};
+
+  if (isInGroup) {
+    textStyle = {
+      textTransform: "uppercase",
+      fontSize: 11,
+    }
+
+    containerStyle = {
+      marginTop: 12,
+    }
+  }
+
+  if (depth > 0) {
+    textStyle = {
+      ...textStyle,
+      marginLeft: `${depth * 16}px`,
+    }
+  }
+
   return (
     <li
       className={clsx("menu__list-item")}
       key={label}
       data-depth={depth}
+      style={containerStyle}
     >
       <Link
         className={clsx('menu__link', styles.sidebarMenuItemLink, {
@@ -324,9 +360,7 @@ function DocSidebarItemLink({
         {isInternalUrl(href) ? (
           <span
             className={styles.sidebarMenuItemLinkLabel}
-            style={depth > 0 ? {
-              marginLeft: `${depth * 16}px`,
-            } : {}}
+            style={textStyle}
           >
             {label}
           </span>
