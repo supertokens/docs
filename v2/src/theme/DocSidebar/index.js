@@ -136,7 +136,6 @@ function DocSidebarItemCategory({
 
   let containerStyle = {};
   let _depth = depth;
-  let sidebarMenuItemLink = {};
   let menuLinkAdditionalClass = "";
   let isGrouped = item.customProps !== undefined && item.customProps.highlightGroup === true;
   let _collapsible = collapsible;
@@ -152,8 +151,6 @@ function DocSidebarItemCategory({
       borderRadius: 12,
       marginLeft: 9,
       marginRight: 9,
-      marginTop: 12,
-      marginBottom: 16,
       boxShadow: "0px 0px 8px rgba(255, 153, 51, 0.5)",
       paddingBottom: 12,
     }
@@ -173,12 +170,15 @@ function DocSidebarItemCategory({
       lineHeight: "16px",
     }
 
-    sidebarMenuItemLink = {
-      marginBottom: 12,
-    }
-
     menuLinkAdditionalClass = "menu__link--sublist-grouped"
     _collapsible = false;
+  }
+
+  if (_depth <= 0) {
+    containerStyle = {
+      ...containerStyle,
+      marginTop: 12,
+    }
   }
 
   let menuLinkAfterIconClass = "";
@@ -187,6 +187,13 @@ function DocSidebarItemCategory({
     const iconName = item.customProps.categoryIcon;
 
     menuLinkAfterIconClass = "menu__link--after-" + iconName;
+  }
+
+  let showIconAfter = true;
+
+  if (item.customProps !== undefined && item.customProps.hideCategoryIcon === true) {
+    menuLinkAfterIconClass = "menu__link--after-no-icon";
+    showIconAfter = false;
   }
 
   return (
@@ -206,12 +213,14 @@ function DocSidebarItemCategory({
         href={_collapsible ? '#' : undefined}
         {...props}
         data-depth={_depth}
-        style={sidebarMenuItemLink}
       >
         <span
           className={styles.sidebarMenuItemLinkLabel}
           style={labelStyle}
         >{label}</span>
+        {
+          !showIconAfter && <div className={styles.spacer}></div>
+        }
         {item.customProps &&
           item.customProps.logoUrl &&
           typeof item.customProps.logoUrl === "string" &&
@@ -257,7 +266,9 @@ function DocSidebarItemCategory({
             </div>
           )
         }
-        <div className={styles.spacer}></div>
+        {
+          showIconAfter && <div className={styles.spacer}></div>
+        }
       </a>
       <ul
         className="menu__list"
