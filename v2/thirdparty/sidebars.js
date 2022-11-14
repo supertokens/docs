@@ -2,270 +2,280 @@ module.exports = {
   sidebar: [
     "introduction",
     {
-      type: 'category',
-      label: 'Quick setup with Pre built UI',
-      customProps: {
-        superColour: true,
-      },
-      items: [
-        {
-          type: 'category',
-          label: 'Setup',
-          collapsed: false,
-          items: [
-            "pre-built-ui/setup/frontend",
-            "pre-built-ui/setup/backend",
-            {
-              type: 'category',
-              label: 'Step 3: Core',
-              items: [
-                {
-                  type: 'category',
-                  label: 'Self hosted',
-                  items: [
-                    "pre-built-ui/setup/core/with-docker",
-                    "pre-built-ui/setup/core/without-docker",
-                    {
-                      type: 'category',
-                      label: 'Database Setup',
-                      items: [
-                        "pre-built-ui/setup/database-setup/mysql",
-                        "pre-built-ui/setup/database-setup/postgresql",
-                        "pre-built-ui/setup/database-setup/rename-database-tables"
-                      ],
-                    }
-                  ],
-                },
-                "pre-built-ui/setup/core/saas-setup"
-              ],
-            },
-            "pre-built-ui/setup/dashboard",
-          ]
-        },
-        "pre-built-ui/handling-session-tokens",
-        "pre-built-ui/securing-routes",
-        "pre-built-ui/sign-out",
-        "pre-built-ui/auth-redirection",
-        "pre-built-ui/enable-email-verification",
-        {
-          type: 'category',
-          label: 'Further Reading',
-          items: [
-            "pre-built-ui/further-reading/thirdparty-login",
-            "pre-built-ui/further-reading/email-verification"
-          ]
-        },
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Using your own UI',
-      customProps: {
-        superColour: true,
-      },
-      items: [
-        {
-          type: 'category',
-          label: 'Initialisation',
-          collapsed: false,
-          items: [
-            "custom-ui/init/frontend",
-            "custom-ui/init/backend",
-            {
-              type: 'category',
-              label: 'Step 3: Core',
-              items: [
-                {
-                  type: 'category',
-                  label: 'Self hosted',
-                  items: [
-                    "custom-ui/init/core/with-docker",
-                    "custom-ui/init/core/without-docker",
-                    {
-                      type: 'category',
-                      label: 'Database Setup',
-                      items: [
-                        "custom-ui/init/database-setup/mysql",
-                        "custom-ui/init/database-setup/postgresql",
-                        "custom-ui/init/database-setup/rename-database-tables"
-                      ],
-                    }
-                  ],
-                },
-                "custom-ui/init/core/saas-setup"
-              ],
-            },
-            "custom-ui/init/dashboard",
-          ]
-        },
-        "custom-ui/thirdparty-login",
-        "custom-ui/handling-session-tokens",
-        "custom-ui/securing-routes",
-        "custom-ui/sign-out",
-        "custom-ui/enable-email-verification",
-      ],
-    },
-    {
       type: "category",
-      label: "Integrations",
+      label: "Start Here",
       customProps: {
-        logoUrl: [
+        highlightGroup: true,
+      },
+      collapsed: false,
+      items: [
+      {
+        type: 'category',
+        label: 'Quick setup with Pre built UI',
+        customProps: {
+          categoryIcon: "lightning",
+        },
+        items: [
           {
-            url: '/img/logos/hasura-logo.png',
-            label: 'Hasura',
+            type: 'category',
+            label: 'Setup',
+            collapsed: false,
+            items: [
+              "pre-built-ui/setup/frontend",
+              "pre-built-ui/setup/backend",
+              {
+                type: 'category',
+                label: 'Step 3: Core',
+                items: [
+                  {
+                    type: 'category',
+                    label: 'Self hosted',
+                    items: [
+                      "pre-built-ui/setup/core/with-docker",
+                      "pre-built-ui/setup/core/without-docker",
+                      {
+                        type: 'category',
+                        label: 'Database Setup',
+                        items: [
+                          "pre-built-ui/setup/database-setup/mysql",
+                          "pre-built-ui/setup/database-setup/postgresql",
+                          "pre-built-ui/setup/database-setup/rename-database-tables"
+                        ],
+                      }
+                    ],
+                  },
+                  "pre-built-ui/setup/core/saas-setup"
+                ],
+              },
+              "pre-built-ui/setup/dashboard",
+            ]
           },
+          "pre-built-ui/handling-session-tokens",
+          "pre-built-ui/securing-routes",
+          "pre-built-ui/sign-out",
+          "pre-built-ui/auth-redirection",
+          "pre-built-ui/enable-email-verification",
           {
-            url: '/img/logos/graphql-logo.png',
-            label: 'GraphQL',
-          },
-          {
-            url: '/img/logos/next-logo.png',
-            label: 'NextJS',
-          },
-          {
-            url: '/img/logos/nest-logo.svg',
-            label: 'NestJS',
-          },
-          {
-            url: '/img/logos/aws-lambda.svg',
-            label: 'AWS Lambda',
+            type: 'category',
+            label: 'Further Reading',
+            items: [
+              "pre-built-ui/further-reading/thirdparty-login",
+              "pre-built-ui/further-reading/email-verification"
+            ]
           },
         ],
       },
-      items: [
-        {
-          type: 'category',
-          label: 'Hasura',
-          customProps: {
-            logoUrl: '/img/logos/hasura-logo.png'
-          },
-          items: [
-            "hasura-integration/with-jwt",
-            "hasura-integration/without-jwt",
-          ],
+      {
+        type: 'category',
+        label: 'Using your own UI',
+        customProps: {
+          categoryIcon: "pencil",
         },
-        {
-          type: 'category',
-          label: 'GraphQL',
-          customProps: {
-            logoUrl: '/img/logos/graphql-logo.png'
+        items: [
+          {
+            type: 'category',
+            label: 'Initialisation',
+            collapsed: false,
+            items: [
+              "custom-ui/init/frontend",
+              "custom-ui/init/backend",
+              {
+                type: 'category',
+                label: 'Step 3: Core',
+                items: [
+                  {
+                    type: 'category',
+                    label: 'Self hosted',
+                    items: [
+                      "custom-ui/init/core/with-docker",
+                      "custom-ui/init/core/without-docker",
+                      {
+                        type: 'category',
+                        label: 'Database Setup',
+                        items: [
+                          "custom-ui/init/database-setup/mysql",
+                          "custom-ui/init/database-setup/postgresql",
+                          "custom-ui/init/database-setup/rename-database-tables"
+                        ],
+                      }
+                    ],
+                  },
+                  "custom-ui/init/core/saas-setup"
+                ],
+              },
+              "custom-ui/init/dashboard",
+            ]
           },
-          items: [
-            "graphql-integration/backend-setup",
-            "graphql-integration/making-requests",
-            "graphql-integration/access-session-info",
-          ],
-        },
-        {
-          type: 'category',
-          label: 'NextJS',
-          customProps: {
-            logoUrl: '/img/logos/next-logo.png'
-          },
-          items: [
-            "nextjs/about",
-            "nextjs/init",
-            "nextjs/setting-up-frontend",
-            "nextjs/setting-up-backend",
-            "nextjs/protecting-route",
+          "custom-ui/thirdparty-login",
+          "custom-ui/handling-session-tokens",
+          "custom-ui/securing-routes",
+          "custom-ui/sign-out",
+          "custom-ui/enable-email-verification",
+        ],
+      },
+      {
+        type: "category",
+        label: "Integrations",
+        customProps: {
+          logoUrl: [
             {
-              type: 'category',
-              label: '5. Session verification',
-              items: [
-                "nextjs/session-verification/in-api",
-                "nextjs/session-verification/in-ssr"
-              ],
+              url: '/img/logos/hasura-logo.png',
+              label: 'Hasura',
             },
-            "nextjs/next-steps"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'NestJS',
-          customProps: {
-            logoUrl: '/img/logos/nest-logo.svg'
-          },
-          items: [
-            "nestjs/guide",
-          ],
-        },
-        {
-          type: 'category',
-          label: 'RedwoodJS',
-          customProps: {
-            logoUrl: '/img/logos/redwood-logo.png',
-          },
-          items: [
-            "redwood/about"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Netlify',
-          customProps: {
-            logoUrl: '/img/logos/netlify.svg'
-          },
-          items: [
-            "serverless/with-netlify/about",
-            "serverless/with-netlify/frontend",
-            "serverless/with-netlify/backend-config",
-            "serverless/with-netlify/auth-serverless",
-            "serverless/with-netlify/session-verification",
-            "serverless/with-netlify/next-steps"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'AWS Lambda',
-          customProps: {
-            logoUrl: '/img/logos/aws-lambda.svg'
-          },
-          items: [
-            "serverless/with-aws-lambda/about",
-            "serverless/with-aws-lambda/frontend",
-            "serverless/with-aws-lambda/backend-config",
-            "serverless/with-aws-lambda/auth-serverless",
-            "serverless/with-aws-lambda/api-gateway-config",
             {
-              type: 'category',
-              label: '5. Session Verification',
-              items: [
-                "serverless/with-aws-lambda/session-verification",
-                "serverless/with-aws-lambda/authorizer",
-                "serverless/with-aws-lambda/jwt-authorizer",
-              ],
+              url: '/img/logos/graphql-logo.png',
+              label: 'GraphQL',
             },
-            "serverless/with-aws-lambda/next-steps",
-            "serverless/with-aws-lambda/appsync-integration"
+            {
+              url: '/img/logos/next-logo.png',
+              label: 'NextJS',
+            },
+            {
+              url: '/img/logos/nest-logo.svg',
+              label: 'NestJS',
+            },
+            {
+              url: '/img/logos/aws-lambda.svg',
+              label: 'AWS Lambda',
+            },
           ],
         },
-        {
-          type: 'category',
-          label: 'Supabase',
-          customProps: {
-            logoUrl: '/img/logos/supabase-logo.jpg'
+        items: [
+          {
+            type: 'category',
+            label: 'Hasura',
+            customProps: {
+              logoUrl: '/img/logos/hasura-logo.png'
+            },
+            items: [
+              "hasura-integration/with-jwt",
+              "hasura-integration/without-jwt",
+            ],
           },
-          items: [
-            "supabase-intergration/about",
-            "supabase-intergration/setup",
-            "supabase-intergration/backend",
-            "supabase-intergration/supabase-client",
-            "supabase-intergration/backend-signup-override",
-            "supabase-intergration/frontend",
-            "supabase-intergration/policies"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Vercel',
-          customProps: {
-            logoUrl: '/img/logos/vercel.jpeg'
+          {
+            type: 'category',
+            label: 'GraphQL',
+            customProps: {
+              logoUrl: '/img/logos/graphql-logo.png'
+            },
+            items: [
+              "graphql-integration/backend-setup",
+              "graphql-integration/making-requests",
+              "graphql-integration/access-session-info",
+            ],
           },
-          items: [
-            "serverless/with-vercel/about"
-          ],
-        },
-      ],
+          {
+            type: 'category',
+            label: 'NextJS',
+            customProps: {
+              logoUrl: '/img/logos/next-logo.png'
+            },
+            items: [
+              "nextjs/about",
+              "nextjs/init",
+              "nextjs/setting-up-frontend",
+              "nextjs/setting-up-backend",
+              "nextjs/protecting-route",
+              {
+                type: 'category',
+                label: '5. Session verification',
+                items: [
+                  "nextjs/session-verification/in-api",
+                  "nextjs/session-verification/in-ssr"
+                ],
+              },
+              "nextjs/next-steps"
+            ],
+          },
+          {
+            type: 'category',
+            label: 'NestJS',
+            customProps: {
+              logoUrl: '/img/logos/nest-logo.svg'
+            },
+            items: [
+              "nestjs/guide",
+            ],
+          },
+          {
+            type: 'category',
+            label: 'RedwoodJS',
+            customProps: {
+              logoUrl: '/img/logos/redwood-logo.png',
+            },
+            items: [
+              "redwood/about"
+            ],
+          },
+          {
+            type: 'category',
+            label: 'Netlify',
+            customProps: {
+              logoUrl: '/img/logos/netlify.svg'
+            },
+            items: [
+              "serverless/with-netlify/about",
+              "serverless/with-netlify/frontend",
+              "serverless/with-netlify/backend-config",
+              "serverless/with-netlify/auth-serverless",
+              "serverless/with-netlify/session-verification",
+              "serverless/with-netlify/next-steps"
+            ],
+          },
+          {
+            type: 'category',
+            label: 'AWS Lambda',
+            customProps: {
+              logoUrl: '/img/logos/aws-lambda.svg'
+            },
+            items: [
+              "serverless/with-aws-lambda/about",
+              "serverless/with-aws-lambda/frontend",
+              "serverless/with-aws-lambda/backend-config",
+              "serverless/with-aws-lambda/auth-serverless",
+              "serverless/with-aws-lambda/api-gateway-config",
+              {
+                type: 'category',
+                label: '5. Session Verification',
+                items: [
+                  "serverless/with-aws-lambda/session-verification",
+                  "serverless/with-aws-lambda/authorizer",
+                  "serverless/with-aws-lambda/jwt-authorizer",
+                ],
+              },
+              "serverless/with-aws-lambda/next-steps",
+              "serverless/with-aws-lambda/appsync-integration"
+            ],
+          },
+          {
+            type: 'category',
+            label: 'Supabase',
+            customProps: {
+              logoUrl: '/img/logos/supabase-logo.jpg'
+            },
+            items: [
+              "supabase-intergration/about",
+              "supabase-intergration/setup",
+              "supabase-intergration/backend",
+              "supabase-intergration/supabase-client",
+              "supabase-intergration/backend-signup-override",
+              "supabase-intergration/frontend",
+              "supabase-intergration/policies"
+            ],
+          },
+          {
+            type: 'category',
+            label: 'Vercel',
+            customProps: {
+              logoUrl: '/img/logos/vercel.jpeg'
+            },
+            items: [
+              "serverless/with-vercel/about"
+            ],
+          },
+        ],
+      }
+    ]
     },
     {
       type: "category",
