@@ -1033,6 +1033,7 @@ import { VerifySessionOptions } from "supertokens-node/recipe/session/types";
 import { errorHandler } from "supertokens-node/framework/express";
 import { NextFunction, Request, Response } from "express";
 import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
 
 function verifySession(options?: VerifySessionOptions) {
     return async (req: Request, res: Response, next: NextFunction) => {
@@ -1052,9 +1053,34 @@ function verifySession(options?: VerifySessionOptions) {
             }
             next();
         } catch (err) {
-            errorHandler()(err, req, res, (err) => {
+            if (SuperTokensError.isErrorFromSuperTokens(err)) {
+                if (err.type === Session.Error.TRY_REFRESH_TOKEN) {
+                    // This means that the session exists, but the access token
+                    // has expired.
+
+                    // You can handle this in a custom way by sending a 401.
+                    // Or you can call the errorHandler middleware as shown below
+                } else if (err.type === Session.Error.UNAUTHORISED) {
+                    // This means that the session does not exist anymore.
+
+                    // You can handle this in a custom way by sending a 401.
+                    // Or you can call the errorHandler middleware as shown below
+                } else if (err.type === Session.Error.TOKEN_THEFT_DETECTED) {
+                    // Session hijacking attempted. You should revoke the session
+                    // using Session.revokeSession fucntion and send a 401
+                } else if (err.type === Session.Error.INVALID_CLAIMS) {
+                    // The user is missing some required claim. 
+                    // You can pass the missing claims to the frontend and handle it there
+                }
+
+                // OR you can use this errorHandler which will
+                // handle all of the above errors in the default way
+                errorHandler()(err, req, res, (err) => {
+                    next(err)
+                })
+            } else {
                 next(err)
-            })
+            }
         }
     };
 }
@@ -1070,7 +1096,10 @@ import (
 	"context"
 	"net/http"
 
+	defaultErrors "errors"
+
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/errors"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
@@ -1080,6 +1109,27 @@ func VerifySession(options *sessmodels.VerifySessionOptions, otherHandler http.H
 		session.GetSession(r, w, options)
 		session, err := session.GetSession(r, w, options)
 		if err != nil {
+			if defaultErrors.As(err, &errors.TryRefreshTokenError{}) {
+				// This means that the session exists, but the access token
+				// has expired.
+
+				// You can handle this in a custom way by sending a 401.
+				// Or you can call the errorHandler middleware as shown below
+			} else if defaultErrors.As(err, &errors.UnauthorizedError{}) {
+				// This means that the session does not exist anymore.
+
+				// You can handle this in a custom way by sending a 401.
+				// Or you can call the errorHandler middleware as shown below
+			} else if defaultErrors.As(err, &errors.TokenTheftDetectedError{}) {
+				// Session hijacking attempted. You should revoke the session
+				// using Session.revokeSession fucntion and send a 401
+			} else if defaultErrors.As(err, &errors.InvalidClaimError{}) {
+				// The user is missing some required claim.
+				// You can pass the missing claims to the frontend and handle it there
+			}
+
+			// OR you can use this errorHandler which will
+			// handle all of the above errors in the default way
 			err = supertokens.ErrorHandler(err, r, w)
 			if err != nil {
 				// TODO: send a 500 error to the frontend
@@ -1110,6 +1160,12 @@ from supertokens_python.recipe.session.syncio import get_session
 from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.session.interfaces import SessionClaimValidator
 from supertokens_python.types import MaybeAwaitable
+from supertokens_python.recipe.session.exceptions import (
+    TokenTheftError,
+    UnauthorisedError,
+    InvalidClaimsError,
+    TryRefreshTokenError
+)
 
 _T = TypeVar("_T", bound=Callable[..., Any])
 
@@ -1131,10 +1187,37 @@ def verify_session(
             from flask import make_response, request
 
             baseRequest = FlaskRequest(request)
-            session = get_session(baseRequest,
-                                  anti_csrf_check,
-                                  session_required,
-                                  override_global_claim_validators)
+            try:
+                session = get_session(baseRequest,
+                                      anti_csrf_check,
+                                      session_required,
+                                      override_global_claim_validators)
+            except Exception as e:
+                if isinstance(e, TryRefreshTokenError):
+                    # This means that the session exists, but the access token
+                    # has expired.
+
+                    # You can handle this in a custom way by sending a 401.
+                    # Or you can call the errorHandler middleware as shown below
+                    pass
+                if isinstance(e, UnauthorisedError):
+                    # This means that the session does not exist anymore.
+
+                    # You can handle this in a custom way by sending a 401.
+                    # Or you can call the errorHandler middleware as shown below
+                    pass
+                if isinstance(e, TokenTheftError):
+                    # Session hijacking attempted. You should revoke the session
+                    # using Session.revokeSession fucntion and send a 401
+                    pass
+                if isinstance(e, InvalidClaimsError):
+                    # The user is missing some required claim.
+                    # You can pass the missing claims to the frontend and handle it there
+                    pass
+
+                # OR you can raise this error which will
+                # handle all of the above errors in the default way
+                raise e
             if session is None:
                 if session_required:
                     raise Exception("Should never come here")

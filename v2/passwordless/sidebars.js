@@ -279,58 +279,69 @@ module.exports = {
       ],
     },
     {
-      type: 'category',
-      label: 'Email Delivery',
+      type: "category",
+      label: "Session Management",
       items: [
-        "email-delivery/about",
-        "email-delivery/default",
+        "common-customizations/sessions/about",
         {
-          type: 'category',
-          label: 'Method 2) SMTP service',
+          type: "category",
+          label: "Protecting API routes",
           items: [
-            "email-delivery/smtp/configure-smtp",
-            "email-delivery/smtp/change-email-content"
+            "common-customizations/sessions/session-verification-in-api/verify-session",
+            "common-customizations/sessions/session-verification-in-api/get-session"
           ]
         },
-        "email-delivery/custom-method",
-        "email-delivery/pre-post-email"
+        "common-customizations/sessions/protecting-frontend-routes",
+        {
+          type: "category",
+          label: "Using sessions with JWTs",
+          items: [
+            "common-customizations/sessions/with-jwt/enabling-jwts",
+            "common-customizations/sessions/with-jwt/custom-claims",
+            "common-customizations/sessions/with-jwt/read-jwt",
+            "common-customizations/sessions/with-jwt/jwt-verification"
+          ]
+        },
+        {
+          type: "category",
+          label: "Reading / modifying session claims",
+          items: [
+            "common-customizations/sessions/claims/access-token-payload",
+            "common-customizations/sessions/claims/claim-validators"
+          ]
+        },
+        "common-customizations/sessions/revoke-session",
+        {
+          type: "category",
+          label: "Session security",
+          items: [
+            "common-customizations/sessions/cookies-and-https",
+            "common-customizations/sessions/cookie-consent",
+            "common-customizations/sessions/anti-csrf",
+            "common-customizations/sessions/same-site-cookie",
+            "common-customizations/sessions/jwt-signing-key-rotation",
+            "common-customizations/sessions/change-session-timeout",
+            "common-customizations/sessions/access-token-blacklisting"
+          ]
+        },
+        "common-customizations/sessions/share-sessions-across-sub-domains",
+        {
+          type: "category",
+          label: "Other operations",
+          items: [
+            "common-customizations/sessions/handling-session-expiry",
+            "common-customizations/sessions/multiple-api-endpoints",
+            "common-customizations/sessions/fetch-sessions-for-user",
+            "common-customizations/sessions/in-iframe",
+            "common-customizations/sessions/error-handling",
+
+          ]
+        },
       ]
     },
     {
       type: 'category',
-      label: 'SMS Delivery',
-      items: [
-        "sms-delivery/about",
-        "sms-delivery/default",
-        {
-          type: 'category',
-          label: 'Method 2) Twilio service',
-          items: [
-            "sms-delivery/twilio/configure-twilio",
-            "sms-delivery/twilio/change-sms-content"
-          ]
-        },
-        "sms-delivery/supertokens-sms-service",
-        "sms-delivery/custom-method",
-        "sms-delivery/pre-post-email"
-      ]
-    },
-    {
-      type: 'category',
-      label: 'User Roles',
-      items: [
-        "user-roles/initialisation",
-        "user-roles/creating-role",
-        "user-roles/managing-roles-and-users",
-        "user-roles/protecting-routes",
-        "user-roles/managing-roles-and-permissions",
-        "user-roles/get-all-roles",
-        "user-roles/delete-roles",
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Customizations',
+      label: 'Auth flow customizations',
       collapsed: true,
       items: [
         {
@@ -368,64 +379,40 @@ module.exports = {
           ]
         },
         {
-          type: "category",
-          label: "Sessions",
+          type: 'category',
+          label: 'Email Delivery',
           items: [
-            "common-customizations/sessions/about",
+            "email-delivery/about",
+            "email-delivery/default",
             {
-              type: "category",
-              label: "Protecting API routes",
+              type: 'category',
+              label: 'Method 2) SMTP service',
               items: [
-                "common-customizations/sessions/session-verification-in-api/verify-session",
-                "common-customizations/sessions/session-verification-in-api/get-session"
+                "email-delivery/smtp/configure-smtp",
+                "email-delivery/smtp/change-email-content"
               ]
             },
-            "common-customizations/sessions/protecting-frontend-routes",
+            "email-delivery/custom-method",
+            "email-delivery/pre-post-email"
+          ]
+        },
+        {
+          type: 'category',
+          label: 'SMS Delivery',
+          items: [
+            "sms-delivery/about",
+            "sms-delivery/default",
             {
-              type: "category",
-              label: "Using sessions with JWTs",
+              type: 'category',
+              label: 'Method 2) Twilio service',
               items: [
-                "common-customizations/sessions/with-jwt/enabling-jwts",
-                "common-customizations/sessions/with-jwt/custom-claims",
-                "common-customizations/sessions/with-jwt/read-jwt",
-                "common-customizations/sessions/with-jwt/jwt-verification"
+                "sms-delivery/twilio/configure-twilio",
+                "sms-delivery/twilio/change-sms-content"
               ]
             },
-            {
-              type: "category",
-              label: "Reading / modifying session claims",
-              items: [
-                "common-customizations/sessions/claims/access-token-payload",
-                "common-customizations/sessions/claims/claim-validators"
-              ]
-            },
-            "common-customizations/sessions/revoke-session",
-            {
-              type: "category",
-              label: "Session security",
-              items: [
-                "common-customizations/sessions/cookies-and-https",
-                "common-customizations/sessions/cookie-consent",
-                "common-customizations/sessions/anti-csrf",
-                "common-customizations/sessions/same-site-cookie",
-                "common-customizations/sessions/jwt-signing-key-rotation",
-                "common-customizations/sessions/change-session-timeout",
-                "common-customizations/sessions/access-token-blacklisting"
-              ]
-            },
-            "common-customizations/sessions/share-sessions-across-sub-domains",
-            {
-              type: "category",
-              label: "Other operations",
-              items: [
-                "common-customizations/sessions/handling-session-expiry",
-                "common-customizations/sessions/multiple-api-endpoints",
-                "common-customizations/sessions/fetch-sessions-for-user",
-                "common-customizations/sessions/in-iframe",
-                "common-customizations/sessions/error-handling",
-
-              ]
-            },
+            "sms-delivery/supertokens-sms-service",
+            "sms-delivery/custom-method",
+            "sms-delivery/pre-post-email"
           ]
         },
         {
@@ -459,8 +446,82 @@ module.exports = {
         },
         "common-customizations/userid-format",
         {
+          type: 'category',
+          label: 'Actions, Hooks and Custom API responses',
+          items: [
+            "advanced-customizations/overview",
+            {
+              type: 'category',
+              label: 'React component override',
+              items: [
+                "advanced-customizations/react-component-override/about",
+                "advanced-customizations/react-component-override/usage"
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Frontend functions override',
+              items: [
+                "advanced-customizations/frontend-functions-override/about",
+                "advanced-customizations/frontend-functions-override/usage"
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Backend functions override',
+              items: [
+                "advanced-customizations/backend-functions-override/about",
+                "advanced-customizations/backend-functions-override/usage"
+              ],
+            },
+            {
+              type: 'category',
+              label: 'APIs override',
+              items: [
+                "advanced-customizations/apis-override/about",
+                "advanced-customizations/apis-override/usage",
+                {
+                  type: 'category',
+                  label: 'Sending custom response',
+                  items: [
+                    "advanced-customizations/apis-override/custom-response/api-override",
+                    "advanced-customizations/apis-override/custom-response/throwing-error",
+                    "advanced-customizations/apis-override/custom-response/general-error"
+                  ],
+                },
+                "advanced-customizations/apis-override/disabling"
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Frontend hooks',
+              items: [
+                "advanced-customizations/frontend-hooks/pre-api",
+                "advanced-customizations/frontend-hooks/handle-event",
+                "advanced-customizations/frontend-hooks/redirection-callback"
+              ],
+            },
+            "advanced-customizations/user-context",
+            {
+              type: 'category',
+              label: 'Examples',
+              items: [
+                {
+                  type: 'category',
+                  label: 'Using localstorage instead of cookies',
+                  items: [
+                    "advanced-customizations/examples/localstorage/about",
+                    "advanced-customizations/examples/localstorage/guide"
+                  ],
+                },
+              ],
+            },
+
+          ],
+        },
+        {
           type: "category",
-          label: "Core",
+          label: "SuperTokens Core customizations",
           items: [
             "common-customizations/core/api-keys",
             "common-customizations/core/ip-allow-deny",
@@ -486,90 +547,28 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Advanced customizations / Overrides',
+      label: 'Additional Features',
       items: [
-        "advanced-customizations/overview",
         {
           type: 'category',
-          label: 'React component override',
+          label: 'User Roles',
           items: [
-            "advanced-customizations/react-component-override/about",
-            "advanced-customizations/react-component-override/usage"
+            "user-roles/initialisation",
+            "user-roles/creating-role",
+            "user-roles/managing-roles-and-users",
+            "user-roles/protecting-routes",
+            "user-roles/managing-roles-and-permissions",
+            "user-roles/get-all-roles",
+            "user-roles/delete-roles",
           ],
         },
-        {
-          type: 'category',
-          label: 'Frontend functions override',
-          items: [
-            "advanced-customizations/frontend-functions-override/about",
-            "advanced-customizations/frontend-functions-override/usage"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Backend functions override',
-          items: [
-            "advanced-customizations/backend-functions-override/about",
-            "advanced-customizations/backend-functions-override/usage"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'APIs override',
-          items: [
-            "advanced-customizations/apis-override/about",
-            "advanced-customizations/apis-override/usage",
-            {
-              type: 'category',
-              label: 'Sending custom response',
-              items: [
-                "advanced-customizations/apis-override/custom-response/api-override",
-                "advanced-customizations/apis-override/custom-response/throwing-error",
-                "advanced-customizations/apis-override/custom-response/general-error"
-              ],
-            },
-            "advanced-customizations/apis-override/disabling"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Frontend hooks',
-          items: [
-            "advanced-customizations/frontend-hooks/pre-api",
-            "advanced-customizations/frontend-hooks/handle-event",
-            "advanced-customizations/frontend-hooks/redirection-callback"
-          ],
-        },
-        "advanced-customizations/user-context",
-        {
-          type: 'category',
-          label: 'Examples',
-          items: [
-            {
-              type: 'category',
-              label: 'Using localstorage instead of cookies',
-              items: [
-                "advanced-customizations/examples/localstorage/about",
-                "advanced-customizations/examples/localstorage/guide"
-              ],
-            },
-          ],
-        },
-
-      ],
-    },
-    "flow_diagram",
-    {
-      type: 'category',
-      label: 'Testing',
-      items: [
-        "testing/testing-with-postman"
-      ],
+      ]
     },
     {
       type: 'category',
-      label: 'Troubleshooting',
+      label: 'Testing & Debugging',
       items: [
+        "testing/testing-with-postman",
         "troubleshooting/how-to-troubleshoot",
         "troubleshooting/cors-issues"
       ],
@@ -597,6 +596,7 @@ module.exports = {
       label: "References",
       items: [
         "architecture",
+        "flow_diagram",
         "appinfo",
         "sdks",
         "apis",
