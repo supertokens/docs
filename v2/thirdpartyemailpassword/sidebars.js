@@ -143,6 +143,7 @@ module.exports = {
                 label: 'AWS Lambda',
               },
             ],
+            hideCategoryIcon: true,
           },
           items: [
             {
