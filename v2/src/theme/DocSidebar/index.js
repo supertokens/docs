@@ -134,22 +134,79 @@ function DocSidebarItemCategory({
     }
   }
 
+  let containerStyle = {};
+  let _depth = depth;
+  let sidebarMenuItemLink = {};
+  let menuLinkAdditionalClass = "";
+  let isGrouped = item.customProps !== undefined && item.customProps.highlightGroup === true;
+  let _collapsible = collapsible;
+
+  if (isGrouped) {
+    containerStyle = {
+      borderWidth: "1px",
+      boxSizing: "border-box",
+      MozBoxSizing: "border-box",
+      WebkitBoxSizing: "border-box",
+      borderColor: "#FF9933",
+      borderStyle: "solid",
+      borderRadius: 12,
+      marginLeft: 9,
+      marginRight: 9,
+      marginTop: 12,
+      marginBottom: 16,
+      boxShadow: "0px 0px 8px rgba(255, 153, 51, 0.5)",
+      paddingBottom: 12,
+    }
+
+    _depth = _depth - 1;
+
+    labelStyle = {
+      paddingLeft: 8,
+      paddingRight: 8,
+      paddingTop: 2,
+      paddingBottom: 2,
+      borderRadius: 15,
+      background: "linear-gradient(90.08deg, #ED8E2F -0.59%, #B54414 99.94%)",
+      color: "white",
+      fontWeight: "500",
+      fontSize: 11,
+      lineHeight: "16px",
+    }
+
+    sidebarMenuItemLink = {
+      marginBottom: 12,
+    }
+
+    menuLinkAdditionalClass = "menu__link--sublist-grouped"
+    _collapsible = false;
+  }
+
+  let menuLinkAfterIconClass = "";
+
+  if (item.customProps !== undefined && item.customProps.categoryIcon !== undefined) {
+    const iconName = item.customProps.categoryIcon;
+
+    menuLinkAfterIconClass = "menu__link--after-" + iconName;
+  }
+
   return (
     <li
       className={clsx('menu__list-item', {
         'menu__list-item--collapsed': collapsed,
-      })}>
+      })}
+      style={containerStyle}>
       {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
       <a
-        className={clsx('menu__link', styles.sidebarMenuItemLink, {
-          'menu__link--sublist': collapsible,
-          'menu__link--active': collapsible && isActive,
-          [styles.menuLinkText]: !collapsible,
+        className={clsx('menu__link', menuLinkAdditionalClass, menuLinkAfterIconClass, styles.sidebarMenuItemLink, {
+          'menu__link--sublist': _collapsible,
+          'menu__link--active': _collapsible && isActive,
+          [styles.menuLinkText]: !_collapsible,
         })}
-        onClick={collapsible ? handleItemClick : undefined}
-        href={collapsible ? '#' : undefined}
+        onClick={_collapsible ? handleItemClick : undefined}
+        href={_collapsible ? '#' : undefined}
         {...props}
-        data-depth={depth}
+        data-depth={_depth}
+        style={sidebarMenuItemLink}
       >
         <span
           className={styles.sidebarMenuItemLinkLabel}
@@ -176,7 +233,7 @@ function DocSidebarItemCategory({
               flexFlow: "row wrap",
               flexWrap: "wrap",
               rowGap: "8px",
-              marginRight: "4px",
+              marginRight: "2px",
               marginLeft: "-12px"
             }}>
               {
@@ -219,7 +276,7 @@ function DocSidebarItemCategory({
           onItemClick={onItemClick}
           collapsible={collapsible}
           activePath={activePath}
-          depth={depth}
+          depth={_depth}
         />
       </ul>
     </li>
