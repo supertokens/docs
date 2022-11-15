@@ -183,6 +183,7 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/protecting-frontend-routes",
+        "common-customizations/sessions/ssr",
         {
           type: "category",
           label: "Reading / modifying session claims",

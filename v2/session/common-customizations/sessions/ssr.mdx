@@ -1,0 +1,449 @@
+---
+id: ssr
+title: Session verification during server side rendering
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./session/common-customizations/sessions/ssr.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import TabItem from '@theme/TabItem';
+import HideContentIfNextJSShown from "/src/components/HideContentIfNextJSShown"
+
+# Session verification during server side rendering
+
+## 1) Call the backend `init` function on your web server
+If your web server is a different process than the API server, then you should call the SuperTokens backend SDK `init` function with the Session recipe initialised.
+
+If the web server domain is on a different sub domain than the api domain, then be sure to [enable cookie sharing across backend sub domains](./multiple-api-endpoints)
+
+## 2) Use the `getSession` function
+For server side rendering, we can utilise the [`getSession` function](./session-verification-in-api/get-session) for session verification. The browser will send session cookies along with the request which will be verified by this function resulting in one of these states:
+- Successful verification: This will yield a session object using which you can get the userId of the user.
+- Try refresh token error: This means that the access token has expired and that you should trigger the refresh flow (more on this below).
+- Unauthorised error: This means that the session does not exist, was revoked, or was compromised. Unintuitively, this should also trigger the refresh flow (more on this below) - which will fail and eventually redirect the user to the login screen.
+
+Below is code for how you can use `getSession` to achieve SSR and get the user's ID from the session:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import express from "express";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+let app = express();
+
+// highlight-start
+app.get("/dashboard", async (req, res, next) => {
+    try {
+        let session = await Session.getSession(req, res, {
+            overrideGlobalClaimValidators: () => {
+                // this makes it so that no custom session claims are checked (see below for why we do this)
+                return []
+            }
+        });
+
+        let userId = session.getUserId();
+        //...
+    } catch (err) {
+        if (SuperTokensError.isErrorFromSuperTokens(err)) {
+            if (err.type === Session.Error.TRY_REFRESH_TOKEN || err.type === Session.Error.UNAUTHORISED) {
+                res.redirect("/refresh-session?redirectBack=/dashboard");
+            } else {
+                next(err);
+            }
+        } else {
+            next(err)
+        }
+    }
+});
+```
+
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/dashboard",
+    method: "get",
+    handler: async (req, res) => {
+        try {
+            let session = await Session.getSession(req, res, {
+                overrideGlobalClaimValidators: () => {
+                    // this makes it so that no custom session claims are checked (see below for why we do this)
+                    return []
+                }
+            });
+
+            let userId = session.getUserId();
+            //...
+        } catch (err) {
+            if (SuperTokensError.isErrorFromSuperTokens(err)) {
+                if (err.type === Session.Error.TRY_REFRESH_TOKEN || err.type === Session.Error.UNAUTHORISED) {
+                    return res.redirect("/refresh-session?redirectBack=/dashboard");
+                }
+            }
+            throw err;
+        }
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+let fastify = Fastify();
+
+fastify.get("/dashboard", async (req, res) => {
+    try {
+        let session = await Session.getSession(req, res, {
+            overrideGlobalClaimValidators: () => {
+                // this makes it so that no custom session claims are checked (see below for why we do this)
+                return []
+            }
+        });
+
+        let userId = session.getUserId();
+        //...
+    } catch (err) {
+        if (SuperTokensError.isErrorFromSuperTokens(err)) {
+            if (err.type === Session.Error.TRY_REFRESH_TOKEN || err.type === Session.Error.UNAUTHORISED) {
+                return res.redirect("/refresh-session?redirectBack=/dashboard");
+            }
+        }
+        throw err;
+    }
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import { middleware } from "supertokens-node/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import { Error as SuperTokensError } from "supertokens-node";
+
+async function viewDashboard(awsEvent: SessionEvent, context: any, callback: any) {
+    try {
+        let session = await Session.getSession(awsEvent, awsEvent, {
+            overrideGlobalClaimValidators: () => {
+                // this makes it so that no custom session claims are checked (see below for why we do this)
+                return []
+            }
+        });
+
+        let userId = session.getUserId();
+        //...
+    } catch (err) {
+        if (SuperTokensError.isErrorFromSuperTokens(err)) {
+            if (err.type === Session.Error.TRY_REFRESH_TOKEN || err.type === Session.Error.UNAUTHORISED) {
+                return {
+                    statusCode: 302,
+                    headers: {
+                        Location: '/refresh-session?redirectBack=/dashboard',
+                    },
+                }
+            }
+        }
+        throw err;
+    }
+};
+
+//highlight-next-line
+exports.handler = middleware(viewDashboard);
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+let router = new KoaRouter();
+
+router.get("/dashboard", async (ctx, next) => {
+    try {
+        let session = await Session.getSession(ctx, ctx, {
+            overrideGlobalClaimValidators: () => {
+                // this makes it so that no custom session claims are checked (see below for why we do this)
+                return []
+            }
+        });
+
+        let userId = session.getUserId();
+        //...
+    } catch (err) {
+        if (SuperTokensError.isErrorFromSuperTokens(err)) {
+            if (err.type === Session.Error.TRY_REFRESH_TOKEN || err.type === Session.Error.UNAUTHORISED) {
+                return ctx.redirect("/refresh-session?redirectBack=/dashboard");
+            }
+        }
+        throw err;
+    }
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject } from "@loopback/core";
+import { RestBindings, MiddlewareContext, get, response } from "@loopback/rest";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+class Dashboard {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @get("/dashboard")
+    @response(200)
+    async handler() {
+        try {
+            let session = await Session.getSession(this.ctx, this.ctx, {
+                overrideGlobalClaimValidators: () => {
+                    // this makes it so that no custom session claims are checked (see below for why we do this)
+                    return []
+                }
+            });
+
+            let userId = session.getUserId();
+            //...
+        } catch (err) {
+            if (SuperTokensError.isErrorFromSuperTokens(err)) {
+                if (err.type === Session.Error.TRY_REFRESH_TOKEN || err.type === Session.Error.UNAUTHORISED) {
+                    return this.ctx.response.redirect("/refresh-session?redirectBack=/dashboard");
+                }
+            }
+            throw err;
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+:::important
+Please visit the Integrations -> NextJS -> Session verification -> `getServerSideProps` guide 
+:::
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Get, UseGuards, Req, Res } from "@nestjs/common";
+import type { Request, Response } from "express";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+@Controller()
+export class DashboardController {
+  @Get('dashboard')
+  async getDashboard(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+    try {
+      let session = await Session.getSession(req, res, {
+        overrideGlobalClaimValidators: () => {
+          // this makes it so that no custom session claims are checked (see below for why we do this)
+          return []
+        }
+      });
+
+      let userId = session.getUserId();
+      //...
+    } catch (err) {
+      if (SuperTokensError.isErrorFromSuperTokens(err)) {
+        if (err.type === Session.Error.TRY_REFRESH_TOKEN || err.type === Session.Error.UNAUTHORISED) {
+          return res.redirect("/refresh-session?redirectBack=/dashboard");
+        }
+      }
+      throw err;
+    }
+  }
+}
+```
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	defaultErrors "errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func showDashboard(w http.ResponseWriter, r *http.Request) {
+	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			// this makes it so that no custom session claims are checked (see below for why we do this)
+			return []claims.SessionClaimValidator{}, nil
+		},
+	})
+
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			if defaultErrors.As(err, &errors.TryRefreshTokenError{}) || defaultErrors.As(err, &errors.UnauthorizedError{}) {
+				http.RedirectHandler("/refresh-session?redirectBack=/dashboard", http.StatusFound).ServeHTTP(w, r)
+				return
+			}
+		}
+		// TODO: send 500 error to the frontend
+		return
+	}
+
+	userID := sessionContainer.GetUserID()
+	fmt.Println(userID)
+	// ...
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_session
+from fastapi.requests import Request
+from fastapi.responses import RedirectResponse
+from supertokens_python.recipe.session.exceptions import (
+    UnauthorisedError,
+    TryRefreshTokenError
+)
+
+@app.get('/dashboard')  # type: ignore
+async def dashboard(request: Request):
+    try:
+        session = await get_session(request)
+
+        if session is None:
+            raise Exception("Should never come here")
+
+        user_id = session.get_user_id()
+
+        print(user_id)
+        # TODO
+    except Exception as e:
+        if isinstance(e, TryRefreshTokenError) or isinstance(e, UnauthorisedError):
+            return RedirectResponse(
+                '/refresh-session?redirectBack=/dashboard',
+                status_code=302)
+        raise e
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from supertokens_python.recipe.session.syncio import get_session
+from flask.wrappers import Request
+from flask import redirect
+from supertokens_python.recipe.session.exceptions import (
+    UnauthorisedError,
+    TryRefreshTokenError
+)
+
+@app.route('/dashboard', methods=['GET'])  # type: ignore
+def dashboard(request: Request):
+    try:
+        session = get_session(request)
+
+        if session is None:
+            raise Exception("Should never come here")
+
+        user_id = session.get_user_id()
+
+        print(user_id)
+        # TODO
+    except Exception as e:
+        if isinstance(e, TryRefreshTokenError) or isinstance(e, UnauthorisedError):
+            return redirect(
+                '/refresh-session?redirectBack=/dashboard',
+                code=302)
+        raise e
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_session
+from django.http import HttpRequest
+from django.shortcuts import redirect
+from supertokens_python.recipe.session.exceptions import (
+    UnauthorisedError,
+    TryRefreshTokenError
+)
+
+async def dashboard(request: HttpRequest):
+    try:
+        session = await get_session(request)
+        if session is None:
+            raise Exception("Should never come here")
+
+        user_id = session.get_user_id()
+
+        print(user_id)  # TODO
+    except Exception as e:
+        if isinstance(e, TryRefreshTokenError) or isinstance(e, UnauthorisedError):
+            return redirect(
+                '/refresh-session?redirectBack=/dashboard',
+                code=302)
+        raise e
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+<HideContentIfNextJSShown>
+
+:::caution
+On successful verification, please do not update the access token payload during SSR because:
+- This is  `GET` request, which usually means no state change.
+- The change to the access token (due to payload update) will not be correctly reflected on the frontend.
+:::
+
+## 3) Implementing the refresh session flow
+TODO
+
+## Why do we trigger the refresh session flow on `UNAUTHORISED` error?
+TODO: We do this instead of redirecting to the login page so that the session state on the frontend is also cleared correctly in case the session was revoked on the backend, otherwise it can cause an infinite loop.
+
+## Why do we not check for custom session claims?
+TODO
+
+</HideContentIfNextJSShown>
