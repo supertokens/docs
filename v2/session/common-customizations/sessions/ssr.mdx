@@ -2,11 +2,16 @@
 id: ssr
 title: Session verification during server side rendering
 hide_title: true
+show_ui_switcher: true
 ---
 
 <!-- COPY DOCS -->
 <!-- ./session/common-customizations/sessions/ssr.mdx -->
 
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
 import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
@@ -431,14 +436,155 @@ async def dashboard(request: HttpRequest):
 
 <HideContentIfNextJSShown>
 
-:::caution
+:::important
 On successful verification, please do not update the access token payload during SSR because:
 - This is  `GET` request, which usually means no state change.
 - The change to the access token (due to payload update) will not be correctly reflected on the frontend.
 :::
 
 ## 3) Implementing the refresh session flow
-TODO
+From the above code snippets, if the `getSession` function throws an unauthorised or try refresh token error, we redirect the user to the `/refresh-session` path on the client side. On this path, we want to attempt refreshing the session which can yield:
+- Success: The frontend will get new access and refresh tokens. Post this, we want to redirect the user to the path mentioned on the `redirectBack` query param.
+- Failure: This would happen if the session has expired or has been revoked from the backend. Either way, you want to redirect the user to the login page.
+
+Below is the code snippet that you can use on the `/refresh-session` path on the frontend
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+<FrontendPreBuiltUITabs>
+<TabItem value="reactjs">
+
+```tsx
+import React from "react";
+import Session from "supertokens-auth-react/recipe/session"
+import SuperTokens from "supertokens-auth-react";
+
+export function AttemptRefresh(props: any) {
+    React.useEffect(() => {
+        let cancel = false;
+        Session.attemptRefreshingSession().then(success => {
+            if (cancel) {
+                // component has unmounted somehow..
+                return;
+            }
+            if (success) {
+                // we have new session tokens, so we redirect the user back
+                // to where they were.
+                const urlParams = new URLSearchParams(window.location.search);
+                window.location.href = urlParams.get('redirectBack')!;
+            } else {
+                // we redirect to the login page since the user
+                // is now logged out
+                SuperTokens.redirectToAuth();
+            }
+        })
+        return () => {
+            cancel = true;
+        }
+    }, []);
+    return null;
+}
+```
+
+</TabItem>
+
+<TabItem value="angular">
+
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+
+function attemptRefresh() {
+    Session.attemptRefreshingSession().then(success => {
+        if (success) {
+            // we have new session tokens, so we redirect the user back
+            // to where they were.
+            const urlParams = new URLSearchParams(window.location.search);
+            window.location.href = urlParams.get('redirectBack')!;
+        } else {
+            // we redirect to the login page since the user
+            // is now logged out
+            window.location.href = "/login"
+        }
+    })
+}
+```
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+## Requiring a session to access a route
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+
+function attemptRefresh() {
+    Session.attemptRefreshingSession().then(success => {
+        if (success) {
+            // we have new session tokens, so we redirect the user back
+            // to where they were.
+            const urlParams = new URLSearchParams(window.location.search);
+            window.location.href = urlParams.get('redirectBack')!;
+        } else {
+            // we redirect to the login page since the user
+            // is now logged out
+            window.location.href = "/login"
+        }
+    })
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokensSession from 'supertokens-web-js-script/recipe/session';
+function attemptRefresh() {
+    supertokensSession.attemptRefreshingSession().then(success => {
+        if (success) {
+            // we have new session tokens, so we redirect the user back
+            // to where they were.
+            const urlParams = new URLSearchParams(window.location.search);
+            window.location.href = urlParams.get('redirectBack')!;
+        } else {
+            // we redirect to the login page since the user
+            // is now logged out
+            window.location.href = "/login"
+        }
+    })
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+:::caution
+Server side rendering is not applicable for mobile apps.
+:::
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
 
 ## Why do we trigger the refresh session flow on `UNAUTHORISED` error?
 TODO: We do this instead of redirecting to the login page so that the session state on the frontend is also cleared correctly in case the session was revoked on the backend, otherwise it can cause an infinite loop.
