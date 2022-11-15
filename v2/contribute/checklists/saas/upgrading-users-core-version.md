@@ -80,3 +80,6 @@ hide_title: true
 
 ### 4.0 to 4.1
 - No manual change required
+
+### 4.1 to 4.2
+- No manual change required
