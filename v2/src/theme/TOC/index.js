@@ -148,7 +148,7 @@ function TOC({ toc, showUISwitcher }) {
             fontWeight: "500",
             fontSize: 16,
           }}>
-          What type of UI do you want to use?
+          Which frontend SDK do you use?
         </span>
         <div
           onClick={() => {
@@ -172,16 +172,16 @@ function TOC({ toc, showUISwitcher }) {
           }}>
           {isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
             marginRight: "8px",
-            marginLeft: "-18px" // 10 px is the width of the tick, and 8 is to account for marginRight
+            // marginLeft: "-18px" // 10 px is the width of the tick, and 8 is to account for marginRight
           }} />}
           <span
             style={{
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: "700",
               marginTop: 6,
               marginBottom: 6,
             }}>
-            Your own UI
+            supertokens-web-js / mobile
           </span>
         </div>
         <div
@@ -210,12 +210,12 @@ function TOC({ toc, showUISwitcher }) {
           }} />}
           <span
             style={{
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: "700",
               marginTop: 6,
               marginBottom: 6,
             }}>
-            Pre built UI
+            supertokens-auth-react
           </span>
         </div>
       </div>
