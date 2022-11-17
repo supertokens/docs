@@ -2,14 +2,14 @@ module.exports = {
   sidebar: [
     "introduction",
     {
-      type: 'category',
-      label: 'Architecture',
+      type: "category",
+      label: "Architecture",
       items: [
         "architecture/overview",
         "architecture/recipes",
         {
-          type: 'category',
-          label: 'Modules',
+          type: "category",
+          label: "Modules",
           items: [
             "architecture/modules/frontend",
             "architecture/modules/backend",
@@ -18,8 +18,8 @@ module.exports = {
           ],
         },
         {
-          type: 'category',
-          label: 'Interfaces',
+          type: "category",
+          label: "Interfaces",
           items: [
             "architecture/interfaces/fdi",
             "architecture/interfaces/cdi",
@@ -29,12 +29,12 @@ module.exports = {
       ],
     },
     {
-      type: 'category',
-      label: 'SDK & Core code architecture',
+      type: "category",
+      label: "SDK & Core code architecture",
       items: [
         {
-          type: 'category',
-          label: 'Frontend',
+          type: "category",
+          label: "Frontend",
           items: [
             "module-architecture/frontend/overview",
             "module-architecture/frontend/recipe-structure",
@@ -44,8 +44,8 @@ module.exports = {
           ],
         },
         {
-          type: 'category',
-          label: 'Backend',
+          type: "category",
+          label: "Backend",
           items: [
             "module-architecture/backend/overview",
             "module-architecture/backend/recipe-structure",
@@ -56,8 +56,8 @@ module.exports = {
           ],
         },
         {
-          type: 'category',
-          label: 'Core',
+          type: "category",
+          label: "Core",
           items: [
             "module-architecture/core/overview",
             "module-architecture/core/transactions",
@@ -70,57 +70,54 @@ module.exports = {
       ],
     },
     {
-      type: 'category',
-      label: 'Recipe Design',
+      type: "category",
+      label: "Recipe Design",
       items: [
         "recipe-design/about",
         "recipe-design/frontend",
         "recipe-design/backend",
         {
-          type: 'category',
-          label: 'Core',
-          items: [
-            "recipe-design/core/table",
-            "recipe-design/core/core-logic",
-          ],
+          type: "category",
+          label: "Core",
+          items: ["recipe-design/core/table", "recipe-design/core/core-logic"],
         },
         "recipe-design/api-design",
         "recipe-design/overrides",
       ],
     },
     {
-      type: 'category',
-      label: 'Development workflow',
+      type: "category",
+      label: "Development workflow",
       items: [
         "dev-workflow/setting-up-dev-env",
         "dev-workflow/project-management",
         "dev-workflow/git-organised",
-        "dev-workflow/github-action"
+        "dev-workflow/github-action",
       ],
     },
     {
-      type: 'category',
-      label: 'Code style',
+      type: "category",
+      label: "Code style",
       items: [
         "code-style/general",
         "code-style/type-thinking",
         "code-style/typescript",
         "code-style/react",
         "code-style/java",
-        "code-style/go"
+        "code-style/go",
       ],
     },
     {
-      type: 'category',
-      label: 'Checklists',
+      type: "category",
+      label: "Checklists",
       items: [
         "checklists/new-backend-sdk",
         "checklists/new-frontend-sdk",
         "checklists/new-github-sdk",
         "checklists/new-super-recipe",
         {
-          type: 'category',
-          label: 'SaaS',
+          type: "category",
+          label: "SaaS",
           items: [
             "checklists/saas/add-new-region",
             "checklists/saas/scaling-prod-instances",
@@ -132,18 +129,52 @@ module.exports = {
             "checklists/saas/adding-instances-to-load-blancer",
             "checklists/saas/custom-core-deployment",
             "checklists/saas/launch-boxyhq-containers",
-            "checklists/saas/adding-cores-for-user"
+            "checklists/saas/adding-cores-for-user",
           ],
         },
         {
-          type: 'category',
-          label: 'Website Dev',
-          items: [
-            "checklists/website/webflow"
-          ],
+          type: "category",
+          label: "Website Dev",
+          items: ["checklists/website/webflow"],
         },
         "checklists/pricing-change-checklist",
-        "checklists/new-tech-stack-launch"
+        "checklists/new-tech-stack-launch",
+      ],
+    },
+    {
+      type: "category",
+      label: "Decision logs",
+      items: [
+        "decisions/about",
+        {
+          type: "category",
+          label: "Sessions",
+          items: [
+            "decisions/session/0001",
+            "decisions/session/0002",
+            "decisions/session/0003",
+            "decisions/session/0004",
+            "decisions/session/0006",
+            "decisions/session/0007",
+            "decisions/session/0008",
+            "decisions/session/0009",
+            "decisions/session/0010",
+            "decisions/session/0011",
+            "decisions/session/0012",
+            "decisions/session/0013",
+            "decisions/session/0014",
+            "decisions/session/0015",
+            "decisions/session/0016"
+          ],
+        },
+        {
+          type: "category",
+          label: "Passwordless",
+          items: [
+            "decisions/passwordless/0001",
+            "decisions/passwordless/0002",
+          ],
+        },
       ],
     },
   ],
