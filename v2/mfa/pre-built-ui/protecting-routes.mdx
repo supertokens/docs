@@ -13,70 +13,89 @@ import Disclaimer from "./disclaimer.mdx"
 
 <Disclaimer />
 
-Now we can use `SecondFactorClaim` to check if a user has completed both factors.
+We will create a generic wrapper which will protect its child components such that they are viewable only if the user has completed both the auth factors. Otherwise, it will redirect the user to the relevant auth factor screen.
 
-So we modify the `Session.init` call like this:
+Start by copy / pasting the following code:
 ```tsx
-import Session from "supertokens-auth-react/recipe/session"
-import { BooleanClaim } from "supertokens-auth-react/recipe/session"; // typecheck-only, removed from output
-declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+import { useEffect } from "react";
+import { SessionAuth, useSessionContext } from "supertokens-auth-react/recipe/session";
+import { useNavigate } from "react-router-dom";
+// @ts-ignore
+import { SecondFactorClaim } from "./secondFactorClaim";
 
-Session.init({
-    override: {
-        functions: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => {
-                    return [...claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()];
-                },
-            };
-        },
-    },
-})
-```
-
-Now any component wrapped by a `<SessionAuth />` component will have a validation error in the `invalidClaims` array of session context if the user hasn't completed both factors. You can use this directly in your routes (to display a warning for example) or use a wrapper similar to this:
-
-```tsx
-import React from "react";
-import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session';
-import { BooleanClaim } from "supertokens-auth-react/recipe/session"; // typecheck-only, removed from output
-declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
-
-const ProtectedRoute = (props: React.PropsWithChildren<any>) => {
+function ProtectedRoute(props: any) {
     return (
         <SessionAuth>
-            <InvalidClaimHandler>
-                {props.children}
-            </InvalidClaimHandler>
+            <ProtectedRouteHelper>{props.children}</ProtectedRouteHelper>
         </SessionAuth>
     );
 }
 
-function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
-    let sessionContext = useSessionContext();
-    if (sessionContext.loading) {
-        return null;
-    }
+function ProtectedRouteHelper(props: any) {
+    const session = useSessionContext();
+    const navigate = useNavigate();
 
-    if (sessionContext.invalidClaims.some(i => i.validatorId === SecondFactorClaim.id)) {
-        // TODO: navigate to /second-factor
-        return <div>You cannot access this page because you have not completed both factors.</div>
-    }
+    useEffect(() => {
+        if (!session.loading) {
+            if (session.invalidClaims.find((a) => a.validatorId === SecondFactorClaim.id)) {
+                // this means that the second factor claim did not pass
+                // so we navigate the user to the second factor screen
+                navigate("/second-factor");
+            }
+        }
+    }, [session, navigate]);
 
-    // We show the protected route since all claims validators have
-    // passed implying that the user is an admin.
-    return <div>{props.children}</div>;
+    return props.children;
 }
 ```
-Above we are creating a generic component called `ProtectedRoute` which enforces that its child components can only be rendered if the user has completed both factors.
 
-In the `ProtectedRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. We've also added a `SecondFactorClaim` validator to the list of global validators , which the `<SessionAuth>` component will check by default.
+Now we can wrap your application routes with the above `ProtectedRoute` component:
 
-Finally, we check the result of the validation in the `InvalidClaimHandler` component which displays `"You cannot access this page because you have not completed both factors."` if the `SecondFactorClaim` claim failed. In this case, you can also navigate the user to the `/second-factor` route.
 
-If all validation passes, we render the `props.children` component.
+```tsx
+import React from "react";
+import {
+    Routes,
+    Route,
+} from "react-router-dom";
+import * as reactRouterDom from "react-router-dom";
+import { SuperTokensWrapper, getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react";
+import { SessionAuth } from "supertokens-auth-react/recipe/session";
+// @ts-ignore
+import SecondFactor from "./SecondFactor";
+// @ts-ignore
+import Home from "./Home"
+declare const ProtectedRoute: any // typecheck-only, removed from output
 
-:::success
-We have now completed the routing logic to include the 2FA state.
-:::
+function App() {
+    return (
+        <SuperTokensWrapper>
+            <div className="App">
+                <div className="fill">
+                    <Routes>
+                        {getSuperTokensRoutesForReactRouterDom(reactRouterDom)}
+                        // highlight-start
+                        <Route
+                            path="/"
+                            element={
+                                <ProtectedRoute>
+                                    <Home />
+                                </ProtectedRoute>
+                            }
+                        />
+                        // highlight-end
+                        <Route
+                            path="/second-factor"
+                            element={
+                                <SessionAuth>
+                                    <SecondFactor />
+                                </SessionAuth>
+                            }
+                        />
+                    </Routes>
+                </div>
+            </div>
+        </SuperTokensWrapper>
+    );
+}
+```

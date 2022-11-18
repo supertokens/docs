@@ -25,9 +25,27 @@ If you have correctly followed the frontend setup guide in the [ThirdPartyEmailP
 
 No further step is required for the first factor.
 
+## Create and add the `SecondFactor` claim validator
+
+This [custom claim's validator](https://supertokens.com/docs/session/common-customizations/sessions/claims/claim-validators) will be responsible to check if the second factor has been completed or not. Then we can use the result in various places to protect frontend routes (in the subsequent steps).
+
+Create a file called `SecondFactor.tsx` in which you add the following code:
+```tsx
+import { BooleanClaim } from "supertokens-auth-react/recipe/session";
+
+export const SecondFactorClaim = new BooleanClaim({
+    id: "2fa-completed",
+    refresh: async () => {
+        // This is something we have no way of refreshing, so this is a no-op
+    },
+});
+```
+
+TODO.... add this claim to global claim checker
+
 ## Second factor UI
 
-For this guide, we will be showing the second factor UI on `/second-factor` (you can change this to whichever path you like).
+For this guide, we will be showing the second factor UI on `/second-factor`.
 
 ### 1) Disable the default UI
 ```tsx
@@ -55,132 +73,115 @@ SuperTokens.init({
         })
     ],
 })
-
 ```
 
-### 2) Show the Passwordless UI on `/second-factor`
+### 2) Create the second factor UI on `/second-factor`
 
-Create a React component for `/second-factor` screen in which, you can render the Passwordless UI as follows:
+Copy & paste the code for the second-factor UI from [our demo app right here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-thirdpartyemailpassword-2fa-passwordless/src/SecondFactor/index.tsx).
+
+This component customises the `Passwordless.SignInUpTheme` component to:
+- Add a button to "login with another account" which allows users to redo the first factor.
+- Redirects the user to the `/` route in case the second factor has already been completed.
+- Auto sends the OTP to the user in case they are signing in and we already know their phone number. 
+
+### 3) Override the passwordless UI components to change the header text and disable the change phone number button
+
+Copy / Paste the following override customisations in the `Passwordless.init` function call:
+
 ```tsx
-import { useEffect, useState } from "react";
-import { redirectToAuth } from "supertokens-auth-react";
+import SuperTokens from "supertokens-auth-react";
 import Passwordless from "supertokens-auth-react/recipe/passwordless";
-import Session, { useSessionContext, SessionAuth } from "supertokens-auth-react/recipe/session";
+import { useSessionContext } from "supertokens-auth-react/recipe/session";
 
-const CustomSignInUpTheme: typeof Passwordless.SignInUpTheme = (props) => {
-    // TODO, we will customize this later.
-    return <Passwordless.SignInUpTheme {...props} />;
-};
-
-function SecondFactor() {
-    return (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-            }}>
-            // highlight-start
-            <Passwordless.SignInUp redirectOnSessionExists={false}>
-                {
-                    // @ts-ignore We ignore the error about missing props, since they'll be set by the feature component
-                    <CustomSignInUpTheme />
-                }
-            </Passwordless.SignInUp>
-            // highlight-end
-            <div
-                onClick={async () => {
-                    // TODO:
-                }}
-                style={{
-                    cursor: "pointer",
-                    color: "blue",
-                    textDecoration: "underline",
-                }}>
-                Login with another account
-            </div>
-        </div>
-    );
-}
-
-export default function SecondFactorWrapper() {
-    return (
-        <SessionAuth>
-            <SecondFactor />
-        </SessionAuth>
-    );
-}
-```
-
-:::note
-Notice that we have also rendered a `"Login with another account"` button below the UI. This will help users to start the login flow again if they wish to. We will circle back to the implementation of the `onClick` handler for this.
-:::
-
-Now if you navigate to `/second-factor`, you should see the enter phone number UI box. In the next sections, we will be seeing how to fix the routing so that this screen is only accessible if the user has finished the first factor.
-
-</AppInfoForm>
-
-### 3) Navigating to the second factor screen after the first is complete
-
-We can do this by providing the `getRedirectionURL` callback to the `ThirdPartyEmailPassword` recipe `init`:
-
-```tsx
-import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword";
-import Session from "supertokens-auth-react/recipe/session";
-
-ThirdPartyEmailPassword.init({
-    // ... previous config
-    getRedirectionURL: async function (context) {
-        if (context.action === "SUCCESS") {
-            // we successfully logged in,
-            // we must now show the user sign in with passwordless
-            return "/second-factor";
-        }
+SuperTokens.init({
+    appInfo: {
+        appName: "^{form_appName}",
+        apiDomain: "^{form_apiDomain}",
+        websiteDomain: "^{form_websiteDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        websiteBasePath: "^{form_websiteBasePath}"
     },
+    recipeList: [
+        Passwordless.init({
+            contactMethod: "PHONE",
+            signInUpFeature: {
+                // this will prevent the passwordless UI from being rendered when you 
+                // visit ^{form_websiteDomain}^{form_websiteBasePath}?rid=passwordless
+                disableDefaultUI: true,
+            },
+            // highlight-start
+            override: {
+                components: {
+                    PasswordlessSignInUpHeader_Override: () => {
+                        return (
+                            <div
+                                style={{
+                                    fontSize: "30px",
+                                    marginBottom: "10px",
+                                }}>
+                                Second factor auth
+                            </div>
+                        );
+                    },
+                    // we override the component which shows the change phone number button
+                    PasswordlessUserInputCodeFormFooter_Override: ({ DefaultComponent, ...props }) => {
+                        const session = useSessionContext();
+
+                        if (session.loading !== true && session.accessTokenPayload.phoneNumber === undefined) {
+                            // this will show the change phone number button
+                            return <DefaultComponent {...props} />;
+                        }
+
+                        // this will hide the change phone number button
+                        return null;
+                    },
+                },
+            },
+            // highlight-end
+        })
+    ],
 })
 ```
 
-This callback is called with `context.action === "SUCCESS"` after the `ThirdPartyEmailPassword` login is complete (our first factor).
+</AppInfoForm>
 
-### 4) Turn off checking for a session in the Passwordless Sign In/Up component
+## 4) Disaplay the second factor component on your app's router
 
-By default, the passwordless sign in / up component checks if a session exists and if it does, it shows a UI indicating to "close this tab since you are already logged in" (since the user could have opened a magic link on another tab). To prevent this behaviour, modify one of its props as follows:
-
-```tsx
-import { useEffect, useState } from "react";
-import { redirectToAuth } from "supertokens-auth-react";
-import Passwordless from "supertokens-auth-react/recipe/passwordless";
-import Session from "supertokens-auth-react/recipe/session";
-
-const CustomSignInUpTheme: typeof Passwordless.SignInUpTheme = (props) => {
-    // If this was active, we'd not show the OTP screen because it'd detect an active session.
-    props.featureState.successInAnotherTab = false;
-
-    return <Passwordless.SignInUpTheme {...props} />;
-};
-```
-
-### 5) Navigate to `/` if both factors are completed
+Finally, we add the custom component we copy / pasted before to our router:
 
 ```tsx
-import { useEffect } from "react";
-import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
+import {
+    Routes,
+    Route,
+} from "react-router-dom";
+import * as reactRouterDom from "react-router-dom";
+import { SuperTokensWrapper, getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react";
+import { SessionAuth } from "supertokens-auth-react/recipe/session";
+// @ts-ignore
+import SecondFactor from "./SecondFactor";
 
-function SecondFactor() {
-    const session = useSessionContext();
-
-    useEffect(() => {
-        if (!session.loading) {
-            if (session.invalidClaims.length === 0) {
-                // navigate to "/"
-            }
-        }
-
-        // We intentionally skip session.invalidClaims from the dependency array since that would mean we may navigate to / twice
-    }, [session.loading]);
-
-    // The rest of SecondFactor component from above..
-    return <></>;
+function App() {
+    return (
+        <SuperTokensWrapper>
+            <div className="App">
+                <div className="fill">
+                    <Routes>
+                        {getSuperTokensRoutesForReactRouterDom(reactRouterDom)}
+                        // highlight-start
+                        <Route
+                            path="/second-factor"
+                            element={
+                                <SessionAuth>
+                                    <SecondFactor />
+                                </SessionAuth>
+                            }
+                        />
+                        // highlight-end
+                    </Routes>
+                </div>
+            </div>
+        </SuperTokensWrapper>
+    );
 }
 ```
+
