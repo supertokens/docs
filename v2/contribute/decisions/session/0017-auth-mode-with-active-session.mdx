@@ -1,0 +1,41 @@
+---
+id: "0017"
+title: Auth-mode should be set to the mode of the active session if present and the configured value otherwise
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader"
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
+
+# Auth-mode should be set to the mode of the active session if present and the configured value otherwise
+
+<DecisionHeader status="proposed" lastUpdate="2022-11-22" created="2022-11-22" deciders={["rishabhpoddar", "porcellus"]} proposedBy={["porcellus"]} />
+
+## Context and Problem Statement
+
+- As per [this decision](0008) active sessions can't change auth-methods even through refreshing.
+- As per [this decision](0007) the backend (by default) allows fallback in session verification, but only if the auth-mode is not specified in the request
+
+Now we need to decide what to do if the preference set in the frontend config doesn't match the active session.
+
+## Considered Options
+
+* Skip attaching the auth-mode to requests
+* Always send the auth-mode preference set in the config
+* Auth-mode should be set to the mode of the active session if present and the configured value otherwise
+
+## Decision Outcome
+
+Auth-mode should be set to the mode of the active session if present and the configured value otherwise. Reasons:
+- We can always determine the appropriate header value
+- The backend will validate the choice anyway
+- We need to attach the preference set in the FE config for endpoints that could create a session (which includes user APIs)
+
+Process to determine if the auth-mode:
+1. If there is no last-refresh-attempt stored we call refresh (we don't know if a session exists or not) with auth-mode set to the "cookie".
+This will cause legacy sessions to call refresh first, which is fine, since `verifySession` would reject with `TRY_REFRESH_TOKEN` anyway ([see here](0007-session-verification-should-allow-fallback))
+2. If there is a last-refresh-attempt stored but no front-token, we know that there is no session. We can set auth-mode to the configured value.
+3. If we know there is a session we can check the presence of the access token in the cookies as used by the header based auth. If it's present we can set the auth mode to header.
+4. Otherwise, we set auth-mode to cookie.
