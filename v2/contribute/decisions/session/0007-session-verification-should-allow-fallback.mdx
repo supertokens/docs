@@ -1,6 +1,6 @@
 ---
 id: "0007"
-title: Session verification should allow fallback if auth mode header not set
+title: Session verification should check headers then cookies
 hide_title: true
 ---
 
@@ -9,7 +9,7 @@ import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
 import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
 import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
 
-# Session verification should allow fallback if auth mode header not set
+# Session verification should check headers then cookies
 
 <DecisionHeader status="proposed" lastUpdate="2022-10-25" created="2022-10-25" deciders={["rishabhpoddar", "porcellus"]} proposedBy={["porcellus"]} />
 
@@ -48,20 +48,36 @@ These can be reduced to two things:
 * Allow fallback
 * Allow fallback if rid header not set
 * Allow fallback if auth mode header not set
+* Session verification should check headers then cookies
 
 ## Decision Outcome
 
-Allow fallback if auth mode header not set.
-- Fallback meaning: cookie first then headers. 
-- If idRefreshToken is present, we can also reject with a 401.
-- `getTokenTransferMethod` return type will include "MISSING_AUTH_HEADER" that allows fallback
+Session verification should check headers then cookies:
+- If idRefreshToken is present, we reject with `TRY_REFRESH_TOKEN`
+- Headers is the default method as per [this decision](./0003)
+- Make sure that updating the access token updates in the fallback case use the same as the incoming request. (e.g: if we read a session from cookies then `updateAccessTokenPayload` should update the cookies, not headers)
+- We could add a configurable validation function that checks if a request is allowed to use a token transfer method, but this can be done later.
+    - Also, the usefulness of it is limited, since an attacker could just call logout and login with their own user using the appropriate token transfer method
+
+### Expected behaviour as a table
+
+| sessionRequired 	| Authorization header 	| Access token cookie 	| Output                    	            |
+|-----------------	|----------------------	|---------------------	|-----------------------------------------	|
+| true           	| none                 	| none                 	| UNAUTHORISED            	            |
+| false           	| none                 	| none                 	| undefined                   	            |
+| *             	| exists               	| exist                 | Based on session validation of header 	|
+| *             	| exists               	| none                 	| Based on session validation of header 	|
+| *             	| none                 	| exists               	| Based on session validation of cookie 	|
+
+- Also check [this decision](./0013): Treat Authorization header as empty if it doesn't contain a SuperTokens token
+- Also check [this decision](./0019): Optional session verification should throw TRY_REFRESH_TOKEN errors
 
 ## Pros and Cons of the Options
 
 ### Reject
 
 <ArgumentPro> Easier to communicate - if it doesn't match we reject </ArgumentPro>
-<ArgumentPro> Always forces upgrade on next request </ArgumentPro>
+<ArgumentCon> Forces the user to sign in again, since refresh won't allow an upgrade (check [here](./0008))</ArgumentCon>
 <ArgumentPro> Strictly matches settings </ArgumentPro>
 <ArgumentCon> Cookie based requests without our SDKs need to set preference/rid in header, but this is less used </ArgumentCon>
 <ArgumentNeut> With access to our (client) SDK all cases work equally well provided sensible default </ArgumentNeut>
@@ -81,5 +97,14 @@ Allow fallback if auth mode header not set.
 ### Allow fallback if auth mode header not set
 
 <ArgumentPro> Easier to communicate </ArgumentPro>
+<ArgumentCon> We should still make the backend be able to validate it </ArgumentCon>
+<ArgumentNeut> With access to our (client) SDK all cases work equally well provided sensible default </ArgumentNeut>
+
+### Session verification should check headers then cookies
+
+Meaning, it always uses fallback, ignoring the auth mode header
+
+<ArgumentPro> Easiest to communicate </ArgumentPro>
+<ArgumentPro> Makes it clear that the auth mode sent by the frontend is just a preference </ArgumentPro>
 <ArgumentCon> We should still make the backend be able to validate it </ArgumentCon>
 <ArgumentNeut> With access to our (client) SDK all cases work equally well provided sensible default </ArgumentNeut>

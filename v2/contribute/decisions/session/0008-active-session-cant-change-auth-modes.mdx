@@ -1,0 +1,54 @@
+---
+id: "0008"
+title: Active session can't change auth-modes
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader"
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
+
+# Active session can't change auth-modes
+
+<DecisionHeader status="proposed" lastUpdate="2022-11-22" created="2022-10-25" deciders={["rishabhpoddar", "porcellus"]} proposedBy={["porcellus"]} />
+
+## Context and Problem Statement
+
+We need to decide if we can upgrade in get/verifySession on refresh calls
+
+## Considered Options
+
+* All
+* Refresh only
+* None (change in settings only take effect when creating new session)
+
+## Decision Outcome
+
+Active session can't change auth-modes. Reasons:
+- Allowing it in all request would increase implementation complexity for not much gain and it'd make our vulnerability of XSS attacks worse.
+- If we allow changing the auth-mode during session refresh we increase the attack surface of XSS.
+- An XSS attack could still steal tokens by changing the auth-method during sign-in, but in this case they could also capture the user credentials.
+- This means that changing the default auth-mode in the frontend SDK will only have effect after the user logs in again.
+
+As a consequence:
+- Refresh session will not change the auth-mode of incoming requests.
+- In case both cookies and headers are there, we default to headers (see [here](./0003))
+- Respecting the auth-mode header in case both exist during a refresh call would provide no real advantage:
+    - this should not happen while using a FE SDK:
+        - when refreshing or creating sessions we clear the token transfer methods we are not using (e.g.: we clear cookies when creating a session using headers).
+        - there can be some edge cases (changing versions back-and-forth during development): we are not optimising for this
+    - the most likely case is someone sending manual requests:
+        - Headers should take priority as that's more likely to be intentional.
+    - it could be an attacker through XSS:
+        - even if we reject this/use cookies, they could call logout to clear old cookies before adding their own tokens, completely replacing the session
+- In case both cookies and headers are there, refresh will clear the one we are not using.
+
+### Expected behaviour of refreshSession as a table
+
+| Authorization header 	| Refresh token cookie 	| Output                    	            | Set tokens in  | Cleared tokens        |
+|----------------------	|---------------------	|-----------------------------------------	|--------------  |-------------------	 |
+| none                 	| none               	| UNAUTHORISED              	            | -              | none                  |
+| none                 	| exists               	| Validate refresh token from cookie        | cookies        | none                  |
+| exists               	| none                 	| Validate refresh token from header        | headers        | none                  |
+| exists               	| exists               	| Validate refresh token from header        | headers        | cookies               |
