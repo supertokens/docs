@@ -1,0 +1,36 @@
+---
+id: "0001"
+title: Recipe functions should take recipeUserId or primaryUserId
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader"
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
+
+# Recipe functions should take recipeUserId or primaryUserId
+
+<DecisionHeader status="accepted" lastUpdate="2022-11-23" created="2022-11-23" deciders={["rishabhpoddar", "bhumilsarvaiya"]} proposedBy={["bhumilsarvaiya"]} />
+
+## Context and Problem Statement
+
+There are a few recipe functions that take userId and it can get confusing at times to decide whether the userId passed should be treated as primaryUserId or recipeUserId
+
+## Example
+
+For `updateEmailOrPassword` function, let's say the input are userId and password. If the passed userId is recipeUserId, it's all fine. But what if the userId is primaryUserId and there are multiple emailpassword users linked with the primaryUserId. For which one should we update the password?
+
+## Considered Options
+
+* Have recipeUserId and primaryUserId everywhere (no id). So functions like getUserId in session object will no longer be there. Instead, there will be getPrimaryUserId and getRecipeUserId (this will be there anyways).
+* For the passed userId if there exists a recipeUserId, we apply changes to that recipeUserId. If recipUserId doesn't exists but there exists a primaryUserId, we try to get recipeUserId on which the changes can be applied. If no recipe user is found, we simply throw no user found error. If more than one recipe user is found for which the changes can be applied, we throw a 400 error indicating to the user to pass a recipeUserId instead.
+* These functions should only accept a recipeUserId and if a primaryUserId is passed, it always throws an error.
+
+## Decision Outcome
+
+We have choose to go with the second option. The reasons are:
+- User's not using us with account linking doesn't need to be educated about the primaryUserId and recpieUserId
+- it would be easy to explain this approach in docs compared to other options. If we would have gone with first approach, users who are not using us for the account linking stuff will get session.getPrimaryUserId as undefined and we have to ask them to use session.getRecipeUserId everywhere. For user who are using us along with account linking, telling them to use session.getPrimaryUserId in few places and session.getRecipeUserId in other places would be tricky. This would require us to create more overhead in docs where we have to ask user if they are usign us with account linking or not and based on that show/suggest them which function to use where.
+- The problem of one primary user having multiple linked accounts of the same recipe has a low probability and so for now we can just ignore that. This can happen for thirdparty (since multiple social login methods), but there are no functions to update email etc in that recipe that would lead to issues.
+- We didn't go with the last option either cause going with the second option is just better user experience. Even if they pass a primaryUserId, if we are able to find single recipe user on which we can make the desire changes, we should rather make that change instead of throwing an error. Another reason is that if we went with this experience, we would have to ask users to explicitly use session.getRecipeId() in certain places and session.getUserId in certain places, causing communication issues.

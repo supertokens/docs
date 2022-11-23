@@ -175,6 +175,13 @@ module.exports = {
             "decisions/passwordless/0002",
           ],
         },
+        {
+          type: "category",
+          label: "Account-linking",
+          items: [
+            "decisions/accountlinking/0001",
+          ],
+        },
       ],
     },
   ],
