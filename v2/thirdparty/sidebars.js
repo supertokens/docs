@@ -412,7 +412,8 @@ module.exports = {
             "common-customizations/usermetadata/setup",
             "common-customizations/usermetadata/store-data",
             "common-customizations/usermetadata/get-data",
-            "common-customizations/usermetadata/clear-data"
+            "common-customizations/usermetadata/clear-data",
+            "common-customizations/usermetadata/save-user-profile"
           ],
         },
         {
