@@ -55,6 +55,7 @@ module.exports = {
             "pre-built-ui/sign-out",
             "pre-built-ui/auth-redirection",
             "pre-built-ui/enable-email-verification",
+            "pre-built-ui/multi-tenancy",
             {
               type: 'category',
               label: 'Further Reading',
@@ -107,6 +108,7 @@ module.exports = {
               ]
             },
             "custom-ui/thirdparty-login",
+            "custom-ui/multi-tenancy",
             "custom-ui/handling-session-tokens",
             "custom-ui/securing-routes",
             "custom-ui/sign-out",
@@ -351,7 +353,8 @@ module.exports = {
             "common-customizations/sign-in-and-up/built-in-providers",
             "common-customizations/sign-in-and-up/changing-oauth-scopes",
             "common-customizations/sign-in-and-up/custom-providers",
-            "common-customizations/getting-provider-access-token"
+            "common-customizations/getting-provider-access-token",
+            "common-customizations/getting-provider-user-profile"
           ],
         },
         {
