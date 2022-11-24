@@ -183,6 +183,7 @@ module.exports = {
           label: "Account-linking",
           items: [
             "decisions/accountlinking/0001",
+            "decisions/accountlinking/0002",
           ],
         },
       ],
