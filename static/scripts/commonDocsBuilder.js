@@ -500,9 +500,9 @@ function addAntcsScript() {
 }
 
 function addChatWidget() {
-    const driftChatbot = document.createElement("script");
-    driftChatbot.src = "/static/drift.js";
-    document.body.appendChild(driftChatbot)
+    // const driftChatbot = document.createElement("script");
+    // driftChatbot.src = "/static/drift.js";
+    // document.body.appendChild(driftChatbot)
 }
 
 async function aTagWithAnalytics(gotoPage, eventName, metaData) {
