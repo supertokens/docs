@@ -167,7 +167,9 @@ module.exports = {
             "decisions/session/0016",
             "decisions/session/0017",
             "decisions/session/0018",
-            "decisions/session/0019"
+            "decisions/session/0019",
+            "decisions/session/0020",
+            "decisions/session/0021"
           ],
         },
         {
