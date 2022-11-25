@@ -4,7 +4,36 @@ orbs:
   slack: circleci/slack@3.4.2
 
 jobs:
-  deploy-to-test-site:  
+  deploy-to-test-site:
+    docker:
+      - image: rishabhpoddar/supertokens_docs_building_with_android
+    resource_class: xlarge
+    steps:
+      - checkout
+      - node/install-packages:
+          app-dir: '~/project/v2'
+      - run: cd ../ && git clone git@github.com:supertokens/supertokens-backend-website.git
+      - run: apt-get update
+      - run: apt -y --fix-broken install
+      - run: cd v2 && npm run build-ignore-errors
+      - run: git config --global user.email "$EMAIL"
+      - run: git config --global user.name "$NAME"
+      - run: cd ../supertokens-backend-website && git add --all && git commit -m"docs changes" && git push && ./releaseDev.sh
+      - slack/status
+  code-checking-ios-only:
+    macos:
+      xcode: 14.1.0
+    steps:
+      - checkout
+      - node/install-packages:
+          app-dir: '~/project/v2'
+      - run:
+          name: Setup iOS env
+          command: cd v2/src/plugins/codeTypeChecking/iosEnv/ && pod install
+          no_output_timeout: 30m
+      - run: cd v2 && npm run build:ios
+      - slack/status
+  code-checking:  
     docker:
       - image: rishabhpoddar/supertokens_docs_building_with_android
     resource_class: xlarge
@@ -22,9 +51,6 @@ jobs:
       - run: apt -y --fix-broken install
       - run: cd v2/src/plugins/codeTypeChecking/pythonEnv/ && python3.7 -m venv ./venv && source venv/bin/activate && pip install -r ./requirements.txt
       - run: cd v2 && npm run build
-      - run: git config --global user.email "$EMAIL"
-      - run: git config --global user.name "$NAME"
-      - run: cd ../supertokens-backend-website && git add --all && git commit -m"docs changes" && git push && ./releaseDev.sh
       - slack/status
 
 workflows:
@@ -32,6 +58,23 @@ workflows:
   test:
     jobs:
       - deploy-to-test-site:
+          requires:
+            - code-checking
+            - code-checking-ios-only
+          context:
+            - slack-notification
+          filters:
+            branches:
+              only:
+                - master
+      - code-checking:
+          context:
+            - slack-notification
+          filters:
+            branches:
+              only:
+                - master
+      - code-checking-ios-only:
           context:
             - slack-notification
           filters:
