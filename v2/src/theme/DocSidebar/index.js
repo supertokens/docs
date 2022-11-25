@@ -471,6 +471,9 @@ function ResponsiveSidebarButton({ responsiveSidebarOpened, onClick }) {
       aria-haspopup="true"
       className="button button--secondary button--sm menu__button"
       type="button"
+      style={{
+        bottom: 80,
+      }}
       onClick={onClick}>
       {responsiveSidebarOpened ? (
         <span

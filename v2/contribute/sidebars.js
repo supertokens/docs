@@ -164,7 +164,12 @@ module.exports = {
             "decisions/session/0013",
             "decisions/session/0014",
             "decisions/session/0015",
-            "decisions/session/0016"
+            "decisions/session/0016",
+            "decisions/session/0017",
+            "decisions/session/0018",
+            "decisions/session/0019",
+            "decisions/session/0020",
+            "decisions/session/0021"
           ],
         },
         {
@@ -173,6 +178,14 @@ module.exports = {
           items: [
             "decisions/passwordless/0001",
             "decisions/passwordless/0002",
+          ],
+        },
+        {
+          type: "category",
+          label: "Account-linking",
+          items: [
+            "decisions/accountlinking/0001",
+            "decisions/accountlinking/0002",
           ],
         },
       ],
