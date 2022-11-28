@@ -202,4 +202,9 @@ const RECIPE_LABELS = [{
   position: "left",
   docsPluginId: "microservice_auth",
   label: "Microservice Auth"
+}, {
+  type: "recipeLabel",
+  position: "left",
+  docsPluginId: "userdashboard",
+  label: "User Management Dashboard"
 }]
