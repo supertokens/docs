@@ -188,6 +188,13 @@ module.exports = {
             "decisions/accountlinking/0002",
           ],
         },
+        {
+          type: "category",
+          label: "User management dashboard",
+          items: [
+            "decisions/dashboard/0001"
+          ],
+        },
       ],
     },
   ],
