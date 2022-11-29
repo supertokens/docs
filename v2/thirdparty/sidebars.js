@@ -528,7 +528,19 @@ module.exports = {
             },
           ]
         },
-
+        {
+          type: "category",
+          label: "Other customizations",
+          items: [
+            {
+              type: "category",
+              label: "Account deduplication",
+              items: [
+                "common-customizations/deduplication/overview"
+              ]
+            },
+          ]
+        },
       ],
     },
     {
