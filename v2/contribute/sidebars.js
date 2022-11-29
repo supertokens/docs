@@ -169,7 +169,16 @@ module.exports = {
             "decisions/session/0018",
             "decisions/session/0019",
             "decisions/session/0020",
-            "decisions/session/0021"
+            "decisions/session/0021",
+            "decisions/session/0022"
+          ],
+        },
+        {
+          type: "category",
+          label: "Session claims",
+          items: [
+            "decisions/session/0001",
+            "decisions/session/0002"
           ],
         },
         {
