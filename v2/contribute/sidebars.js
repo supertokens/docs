@@ -186,6 +186,7 @@ module.exports = {
           items: [
             "decisions/accountlinking/0001",
             "decisions/accountlinking/0002",
+            "decisions/accountlinking/0003",
           ],
         },
         {
