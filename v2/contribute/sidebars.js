@@ -192,7 +192,8 @@ module.exports = {
           type: "category",
           label: "User management dashboard",
           items: [
-            "decisions/dashboard/0001"
+            "decisions/dashboard/0001",
+            "decisions/dashboard/0002"
           ],
         },
       ],
