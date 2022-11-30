@@ -55,7 +55,6 @@ module.exports = {
             "pre-built-ui/sign-out",
             "pre-built-ui/auth-redirection",
             "pre-built-ui/enable-email-verification",
-            "pre-built-ui/multi-tenancy",
             {
               type: 'category',
               label: 'Further Reading',
@@ -64,6 +63,7 @@ module.exports = {
                 "pre-built-ui/further-reading/email-verification"
               ]
             },
+            "pre-built-ui/multi-tenancy",
           ],
         },
         {
@@ -108,11 +108,11 @@ module.exports = {
               ]
             },
             "custom-ui/thirdparty-login",
-            "custom-ui/multi-tenancy",
             "custom-ui/handling-session-tokens",
             "custom-ui/securing-routes",
             "custom-ui/sign-out",
             "custom-ui/enable-email-verification",
+            "custom-ui/multi-tenancy",
           ],
         },
       ]
