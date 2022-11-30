@@ -177,8 +177,8 @@ module.exports = {
           type: "category",
           label: "Session claims",
           items: [
-            "decisions/session/0001",
-            "decisions/session/0002"
+            "decisions/sessionclaims/0001",
+            "decisions/sessionclaims/0002"
           ],
         },
         {
