@@ -536,7 +536,8 @@ module.exports = {
               type: "category",
               label: "Account deduplication",
               items: [
-                "common-customizations/deduplication/overview"
+                "common-customizations/deduplication/overview",
+                "common-customizations/deduplication/implementing-deduplication"
               ]
             },
           ]
