@@ -14,7 +14,7 @@ The approach to implementing account deduplication is to override the backend fu
 - If a user does not exist, we call the original implementation; Else
 - We return a message to the frontend telling the user why sign up was rejected.
 
-Add the following override logic to `ThirdPartyEmailPassword.init` on the backend
+Add the following override logic to `ThirdPartyPasswordless.init` on the backend
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -23,8 +23,8 @@ Add the following override logic to `ThirdPartyEmailPassword.init` on the backen
 import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
 
 ThirdPartyPasswordless.init({
-    contactMethod: "EMAIL", // This example will work with any contactMethod
-    flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // This example will work with any flow.
+    contactMethod: "EMAIL", // typecheck-only, removed from output
+    flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // typecheck-only, removed from output
     override: {
         functions: (originalImplementation) => {
             return {
@@ -94,22 +94,23 @@ ThirdPartyPasswordless.init({
 import (
 	"errors"
 
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
-	thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
-		Override: &tpepmodels.OverrideStruct{
-			Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
+	thirdpartypasswordless.Init(tplmodels.TypeInput{
+		Override: &tplmodels.OverrideStruct{
+			Functions: func(originalImplementation tplmodels.RecipeInterface) tplmodels.RecipeInterface {
 				ogThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
 
-				(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
-					existingUsers, err := thirdpartyemailpassword.GetUsersByEmail(email)
+				(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, userContext supertokens.UserContext) (tplmodels.ThirdPartySignInUp, error) {
+					existingUsers, err := thirdpartypasswordless.GetUsersByEmail(email)
 					if err != nil {
-						return tpepmodels.SignInUpResponse{}, err
+						return tplmodels.ThirdPartySignInUp{}, err
 					}
 
 					if len(existingUsers) == 0 {
@@ -127,41 +128,52 @@ func main() {
 					if isSignIn {
 						return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
 					}
-					return tpepmodels.SignInUpResponse{}, errors.New("Cannot sign up as email already exists")
-				}
-
-				ogEmailPasswordSignUp := *originalImplementation.EmailPasswordSignUp
-
-				(*originalImplementation.EmailPasswordSignUp) = func(email, password string, userContext supertokens.UserContext) (tpepmodels.SignUpResponse, error) {
-					existingUsers, err := thirdpartyemailpassword.GetUsersByEmail(email)
-					if err != nil {
-						return tpepmodels.SignUpResponse{}, err
-					}
-
-					if len(existingUsers) == 0 {
-						// this means this email is new so we allow sign up
-						return ogEmailPasswordSignUp(email, password, userContext)
-					}
-
-					return tpepmodels.SignUpResponse{
-						EmailAlreadyExistsError: &struct{}{},
-					}, nil
+					return tplmodels.ThirdPartySignInUp{}, errors.New("Cannot sign up as email already exists")
 				}
 
 				return originalImplementation
 			},
 
-			APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
+			APIs: func(originalImplementation tplmodels.APIInterface) tplmodels.APIInterface {
 				originalSignInUpPOST := *originalImplementation.ThirdPartySignInUpPOST
+				originalCreateCodePOST := *originalImplementation.CreateCodePOST
 
-				(*originalImplementation.ThirdPartySignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpepmodels.ThirdPartyOutput, error) {
+				(*originalImplementation.CreateCodePOST) = func(email, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+					if email != nil {
+						existingUsers, err := thirdpartypasswordless.GetUsersByEmail(*email)
+						if err != nil {
+							return plessmodels.CreateCodePOSTResponse{}, err
+						}
+						isSignIn := false
+
+						for _, user := range existingUsers {
+							if user.ThirdParty == nil {
+								// this means that the existing user is a passwordless login user. So we allow it
+								isSignIn = true
+							}
+						}
+
+						if isSignIn {
+							return originalCreateCodePOST(email, phoneNumber, options, userContext)
+						}
+						return plessmodels.CreateCodePOSTResponse{
+							GeneralError: &supertokens.GeneralErrorResponse{
+								Message: "Seems like you already have an account with another method. Please use that instead.",
+							},
+						}, nil
+					}
+					// phone number based login, so we allow it.
+					return originalCreateCodePOST(email, phoneNumber, options, userContext)
+				}
+
+				(*originalImplementation.ThirdPartySignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tplmodels.ThirdPartySignInUpOutput, error) {
 
 					resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
 
 					if err.Error() == "Cannot sign up as email already exists" {
 						// this error was thrown from our function override above.
 						// so we send a useful message to the user
-						return tpepmodels.ThirdPartyOutput{
+						return tplmodels.ThirdPartySignInUpOutput{
 							GeneralError: &supertokens.GeneralErrorResponse{
 								Message: "Seems like you already have an account with another method. Please use that instead.",
 							},
