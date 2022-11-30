@@ -1,0 +1,227 @@
+---
+id: implementing-deduplication
+title: Implementing account deduplication
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Implementing account deduplication
+
+The approach to implementing account deduplication is to override the backend functions / APIs which create a user such that:
+- We check if a user already exists with that email.
+- If a user does not exist, we call the original implementation; Else
+- We return a message to the frontend telling the user why sign up was rejected.
+
+Add the following override logic to `ThirdParty.init` on the backend
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+ThirdParty.init({
+    signInAndUpFeature: {
+        providers: [/* ... */]
+    },
+    override: {
+        functions: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                signInUp: async function (input) {
+                    let existingUsers = await ThirdParty.getUsersByEmail(input.email);
+                    if (existingUsers.length === 0) {
+                        // this means this email is new so we allow sign up
+                        return originalImplementation.signInUp(input);
+                    }
+                    if (existingUsers.find(i => i.thirdParty.id === input.thirdPartyId && i.thirdParty.userId === input.thirdPartyUserId)) {
+                        // this means we are trying to sign in with the same social login. So we allow it
+                        return originalImplementation.signInUp(input);
+                    }
+                    // this means that the email already exists with another social login method.
+                    // so we throw an error.
+                    throw new Error("Cannot sign up as email already exists");
+                }
+            }
+        },
+        apis: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                signInUpPOST: async function (input) {
+                    try {
+                        return await originalImplementation.signInUpPOST!(input);
+                    } catch (err: any) {
+                        if (err.message === "Cannot sign up as email already exists") {
+                            // this error was thrown from our function override above.
+                            // so we send a useful message to the user
+                            return {
+                                status: "GENERAL_ERROR",
+                                message: "Seems like you already have an account with another social login. Please use that instead."
+                            }
+                        }
+                        throw err;
+                    }
+                }
+            }
+        }
+    }
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	thirdparty.Init(&tpmodels.TypeInput{
+		Override: &tpmodels.OverrideStruct{
+			Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
+				ogSignInUp := *originalImplementation.SignInUp
+
+				(*originalImplementation.SignInUp) = func(thirdPartyID, thirdPartyUserID, email string, userContext supertokens.UserContext) (tpmodels.SignInUpResponse, error) {
+					existingUsers, err := thirdparty.GetUsersByEmail(email)
+					if err != nil {
+						return tpmodels.SignInUpResponse{}, err
+					}
+
+					if len(existingUsers) == 0 {
+						// this means this email is new so we allow sign up
+						return ogSignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+					}
+
+					isSignIn := false
+					for _, user := range existingUsers {
+						if user.ThirdParty.ID == thirdPartyID && user.ThirdParty.UserID == thirdPartyUserID {
+							// this means we are trying to sign in with the same social login. So we allow it
+							isSignIn = true
+						}
+					}
+					if isSignIn {
+						return ogSignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+					}
+					return tpmodels.SignInUpResponse{}, errors.New("Cannot sign up as email already exists")
+				}
+
+				return originalImplementation
+			},
+			APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
+				originalSignInUpPOST := *originalImplementation.SignInUpPOST
+
+				(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpmodels.SignInUpPOSTResponse, error) {
+
+					resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
+
+					if err.Error() == "Cannot sign up as email already exists" {
+						// this error was thrown from our function override above.
+						// so we send a useful message to the user
+						return tpmodels.SignInUpPOSTResponse{
+							GeneralError: &supertokens.GeneralErrorResponse{
+								Message: "Seems like you already have an account with another social login. Please use that instead.",
+							},
+						}, nil
+					}
+
+					return resp, err
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.types import GeneralErrorResponse
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.asyncio import get_users_by_email
+from supertokens_python.recipe.thirdparty.interfaces import APIInterface, APIOptions, RecipeInterface, SignInUpOkResult
+from typing import Union, Dict, Any
+from supertokens_python.recipe.thirdparty.provider import Provider
+
+
+def override_thirdparty_functions(original_implementation: RecipeInterface):
+    original_sign_in_up = original_implementation.sign_in_up
+
+    async def sign_in_up(third_party_id: str, third_party_user_id: str, email: str,
+                         user_context: Dict[str, Any],
+                         ) -> SignInUpOkResult:
+        existing_users = await get_users_by_email(email, user_context)
+        if (len(existing_users) == 0):
+            # this means this email is new so we allow sign up
+            return await original_sign_in_up(third_party_id, third_party_user_id, email, user_context)
+
+        if (len([x for x in existing_users if
+                x.third_party_info.id == third_party_id and
+                 x.third_party_info.user_id == third_party_user_id]) > 0):
+            # this means we are trying to sign in with the same social login. So we allow it
+            return await original_sign_in_up(third_party_id, third_party_user_id, email, user_context)
+
+        # this means that the email already exists with another social login method.
+        # so we throw an error.
+        raise Exception("Cannot sign up as email already exists")
+
+    original_implementation.sign_in_up = sign_in_up
+
+    return original_implementation
+
+
+def override_thirdparty_apis(original_implementation: APIInterface):
+    original_sign_in_up_post = original_implementation.sign_in_up_post
+
+    async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: APIOptions, user_context: Dict[str, Any]):
+        try:
+            return await original_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+        except Exception as e:
+            if str(e) == "Cannot sign up as email already exists":
+                return GeneralErrorResponse("Seems like you already have an account with another social login. Please use that instead.")
+            raise e
+
+    original_implementation.sign_in_up_post = sign_in_up_post
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
+    recipe_list=[
+        thirdparty.init(
+            override=thirdparty.InputOverrideConfig(
+                apis=override_thirdparty_apis,
+                functions=override_thirdparty_functions
+            ),
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[
+                # ...
+            ])
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+In the above code snippet, we override the `signInUpPOST` API as well as the `signInUp` recipe function. The API is called by the frontend after the user is redirected back to your app from the third party provider's login page. The API then exchanges the auth code with the provider and calls the `signInUp` function with the user's email and thirdParty info.
+
+We override the `signInUp` recipe function to:
+- Get all ThirdParty users that have the same input email.
+- If no users exist with that email, it means that this is a new email and so we call the `originalImplementation` function which creates a new user.
+- If instead, a user exists, but has the same `thirdPartyId` and `thirdPartyUserId`, implying that this is a sign in (for example a user who had signed up with Google is signing in with Google), we again allow the operation by calling the `originalImplementation` function.
+- If neither of the conditions above match, it means that the user is trying to sign up with a third party provider whilst they already have an account with another provider. So here we throw an error with some custom message.
+
+Finally, we override the `signInUpPOST` API to catch that custom error and return a [general error status](../../advanced-customizations/apis-override/custom-response/general-error) to the frontend with a message that will be displayed to the user in the sign in form.
