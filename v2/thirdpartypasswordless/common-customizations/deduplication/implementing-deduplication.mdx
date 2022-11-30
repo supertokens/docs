@@ -196,20 +196,19 @@ func main() {
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.types import GeneralErrorResponse
-from supertokens_python.recipe import thirdpartyemailpassword
-from supertokens_python.recipe.thirdpartyemailpassword.asyncio import get_users_by_email
-from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, RecipeInterface, ThirdPartySignInUpOkResult, ThirdPartyAPIOptions, EmailPasswordSignUpOkResult, EmailPasswordSignUpEmailAlreadyExistsError
+from supertokens_python.recipe import thirdpartypasswordless
+from supertokens_python.recipe.thirdpartypasswordless.asyncio import get_users_by_email
+from supertokens_python.recipe.thirdpartypasswordless.interfaces import APIInterface, RecipeInterface, ThirdPartySignInUpOkResult, ThirdPartyAPIOptions, PasswordlessAPIOptions
 from typing import Union, Dict, Any
 from supertokens_python.recipe.thirdparty.provider import Provider
 
 
-def override_thirdpartyemailpassword_functions(original_implementation: RecipeInterface):
+def override_thirdpartypasswordless_functions(original_implementation: RecipeInterface):
     original_thirdparty_sign_in_up = original_implementation.thirdparty_sign_in_up
-    original_email_password_sign_up = original_implementation.emailpassword_sign_up
 
     async def thirdparty_sign_in_up(third_party_id: str, third_party_user_id: str, email: str,
-                         user_context: Dict[str, Any],
-                         ) -> ThirdPartySignInUpOkResult:
+                                    user_context: Dict[str, Any],
+                                    ) -> ThirdPartySignInUpOkResult:
         existing_users = await get_users_by_email(email, user_context)
         if (len(existing_users) == 0):
             # this means this email is new so we allow sign up
@@ -221,29 +220,36 @@ def override_thirdpartyemailpassword_functions(original_implementation: RecipeIn
             # this means we are trying to sign in with the same social login. So we allow it
             return await original_thirdparty_sign_in_up(third_party_id, third_party_user_id, email, user_context)
 
-        # this means that the email already exists with another social or email password login method.
+        # this means that the email already exists with another social or passwordless login method.
         # so we throw an error.
         raise Exception("Cannot sign up as email already exists")
 
-    async def emailpassword_sign_up(
-        email: str, password: str, user_context: Dict[str, Any]
-    ) -> Union[EmailPasswordSignUpOkResult, EmailPasswordSignUpEmailAlreadyExistsError]:
-        existing_users = await get_users_by_email(email, user_context)
-
-        if (len(existing_users) == 0):
-            # this means this email is new so we allow sign up
-            return await original_email_password_sign_up(email, password, user_context)
-
-        return EmailPasswordSignUpEmailAlreadyExistsError()
-
-    original_implementation.emailpassword_sign_up = emailpassword_sign_up
     original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
 
     return original_implementation
 
 
-def override_thirdpartyemailpassword_apis(original_implementation: APIInterface):
+def override_thirdpartypasswordless_apis(original_implementation: APIInterface):
     original_sign_in_up_post = original_implementation.thirdparty_sign_in_up_post
+    original_create_code_post = original_implementation.create_code_post
+
+    async def create_code_post(email: Union[str, None], phone_number: Union[str, None], api_options: PasswordlessAPIOptions,
+                               user_context: Dict[str, Any],
+                               ):
+        if email is not None:
+            existing_users = await get_users_by_email(email, user_context)
+            if (len(existing_users) == 0):
+                # this means this email is new so we allow sign up
+                return await original_create_code_post(email, phone_number, api_options, user_context)
+
+            if (len([x for x in existing_users if x.third_party_info is None]) > 0):
+                # this means that the existing user is a passwordless login user. So we allow it
+                return await original_create_code_post(email, phone_number, api_options, user_context)
+
+            return GeneralErrorResponse("Seems like you already have an account with another social login provider. Please use that instead.")
+
+        # phone number based login, so we allow it.
+        return await original_create_code_post(email, phone_number, api_options, user_context)
 
     async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: ThirdPartyAPIOptions, user_context: Dict[str, Any]):
         try:
@@ -254,6 +260,7 @@ def override_thirdpartyemailpassword_apis(original_implementation: APIInterface)
             raise e
 
     original_implementation.thirdparty_sign_in_up_post = sign_in_up_post
+    original_implementation.create_code_post = create_code_post
     return original_implementation
 
 
@@ -262,10 +269,12 @@ init(
         api_domain="...", app_name="...", website_domain="..."),
     framework='...',  # type: ignore
     recipe_list=[
-        thirdpartyemailpassword.init(
-            override=thirdpartyemailpassword.InputOverrideConfig(
-                apis=override_thirdpartyemailpassword_apis,
-                functions=override_thirdpartyemailpassword_functions
+        thirdpartypasswordless.init(
+            contact_config=...,  # type: ignore
+            flow_type="...",  # type: ignore
+            override=thirdpartypasswordless.InputOverrideConfig(
+                apis=override_thirdpartypasswordless_apis,
+                functions=override_thirdpartypasswordless_functions
             ),
         )
     ]
