@@ -174,6 +174,16 @@ module.exports = {
         },
         {
           type: "category",
+          label: "Session claims",
+          items: [
+            "decisions/sessionclaims/0001",
+            "decisions/sessionclaims/0002",
+            "decisions/sessionclaims/0003",
+            "decisions/sessionclaims/0004"
+          ],
+        },
+        {
+          type: "category",
           label: "Passwordless",
           items: [
             "decisions/passwordless/0001",
