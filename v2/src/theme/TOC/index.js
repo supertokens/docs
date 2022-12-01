@@ -180,6 +180,7 @@ function TOC({ toc, showUISwitcher }) {
               fontWeight: "700",
               marginTop: 6,
               marginBottom: 6,
+              maxWidth: "calc(100% - 24px)",
             }}>
             supertokens-web-js / mobile
           </span>
@@ -206,7 +207,6 @@ function TOC({ toc, showUISwitcher }) {
           }}>
           {!isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
             marginRight: "8px",
-            marginLeft: "-18px" // 10 px is the width of the tick, and 8 is to account for marginRight
           }} />}
           <span
             style={{
@@ -214,6 +214,7 @@ function TOC({ toc, showUISwitcher }) {
               fontWeight: "700",
               marginTop: 6,
               marginBottom: 6,
+              maxWidth: "calc(100% - 24px)",
             }}>
             supertokens-auth-react
           </span>
