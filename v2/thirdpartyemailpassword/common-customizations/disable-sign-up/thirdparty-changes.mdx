@@ -4,10 +4,106 @@ title: Changes to third party flow
 hide_title: true
 ---
 
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
 
 # Changes to third party flow
 
-We need to start by maintaining a whitelist of emails. You can either store this list in your own database, or then use the metadata feature provided by SuperTokens to store this. This may seem like a strange use case of the user metadata recipe we provide, but it works.
+We need to start by maintaining an allow list of emails. You can either store this list in your own database, or then use the metadata feature provided by SuperTokens to store this. This may seem like a strange use case of the user metadata recipe we provide, but it works.
 
 You want to implement the following functions on your backend:
 
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import UserMetadata from "supertokens-node/recipe/usermetadata"
+
+async function addEmailToAllowlist(email: string) {
+    let existingData = await UserMetadata.getUserMetadata("emailAllowList");
+    let allowList: string[] = existingData.metadata.allowList || [];
+    allowList = [...allowList, email];
+    await UserMetadata.updateUserMetadata("emailAllowList", {
+        allowList
+    });
+}
+
+async function isEmailAllowed(email: string) {
+    let existingData = await UserMetadata.getUserMetadata("emailAllowList");
+    let allowList: string[] = existingData.metadata.allowList || [];
+    return allowList.includes("email");
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import "github.com/supertokens/supertokens-golang/recipe/usermetadata"
+
+func addEmailToAllowlist(email string) error {
+	existingData, err := usermetadata.GetUserMetadata("emailAllowList")
+	if err != nil {
+		return err
+	}
+	allowList := []string{}
+	allowListFromMetadata, ok := existingData["allowList"].([]string)
+	if ok {
+		allowList = allowListFromMetadata
+	}
+	allowList = append(allowList, email)
+	_, err = usermetadata.UpdateUserMetadata("emailAllowList", map[string]interface{}{
+		"allowList": allowList,
+	})
+	return err
+}
+
+func isEmailAllowed(email string) (bool, error) {
+	existingData, err := usermetadata.GetUserMetadata("emailAllowList")
+	if err != nil {
+		return false, err
+	}
+	allowList := []string{}
+	allowListFromMetadata, ok := existingData["allowList"].([]string)
+	if ok {
+		allowList = allowListFromMetadata
+	}
+	for _, allowedEmail := range allowList {
+		if allowedEmail == email {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata, update_user_metadata
+from typing import List
+
+async def add_email_to_allow_list(email: str):
+    metadataResult = await get_user_metadata("emailAllowList")
+    allow_list: List[str] = metadataResult.metadata["allowList"] if "allowList" in metadataResult.metadata else []
+    allow_list.append(email)
+    await update_user_metadata("emailAllowList", {
+        "allowList": allow_list
+    })
+
+async def is_email_allowed(email: str):
+    metadataResult = await get_user_metadata("emailAllowList")
+    allow_list: List[str] = metadataResult.metadata["allowList"] if "allowList" in metadataResult.metadata else []
+    return email in allow_list
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+:::important
+Remember to [initialise the user metadata recipe](../usermetadata/setup) on the backend `recipeList` during `supertokens.init`.
+:::
+
+After that, we override the `signInUpPOST` API and recipe function to check if the input email is allowed durign sign up. If not allowed, we send back a user friendly message to the frontend.
