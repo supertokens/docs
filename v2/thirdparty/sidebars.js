@@ -366,7 +366,6 @@ module.exports = {
         },
         "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
-        "post-login/getting-provider-access-token",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
@@ -383,7 +382,8 @@ module.exports = {
             "common-customizations/email-verification/changing-token-lifetime",
             "common-customizations/email-verification/changing-style",
             "common-customizations/email-verification/changing-email-verification-status",
-            "common-customizations/email-verification/generate-link-manually"
+            "common-customizations/email-verification/generate-link-manually",
+            "common-customizations/email-verification/multitenant-email-verification",
           ]
         },
         {
@@ -413,7 +413,6 @@ module.exports = {
             "common-customizations/usermetadata/store-data",
             "common-customizations/usermetadata/get-data",
             "common-customizations/usermetadata/clear-data",
-            "common-customizations/usermetadata/save-user-profile"
           ],
         },
         {
@@ -568,7 +567,6 @@ module.exports = {
                 "common-customizations/saml/with-boxyhq/what-is-boxyhq",
                 "common-customizations/saml/with-boxyhq/flow-diagram",
                 "common-customizations/saml/with-boxyhq/integration-steps",
-                "common-customizations/saml/with-boxyhq/multi-tenant"
               ],
             },
           ],
