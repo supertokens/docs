@@ -178,7 +178,8 @@ module.exports = {
           items: [
             "decisions/sessionclaims/0001",
             "decisions/sessionclaims/0002",
-            "decisions/sessionclaims/0003"
+            "decisions/sessionclaims/0003",
+            "decisions/sessionclaims/0004"
           ],
         },
         {
