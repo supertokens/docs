@@ -130,6 +130,7 @@ module.exports = {
             "checklists/saas/custom-core-deployment",
             "checklists/saas/launch-boxyhq-containers",
             "checklists/saas/adding-cores-for-user",
+            "checklists/saas/tables-to-consider-for-data-migration-dev-to-prod",
           ],
         },
         {
