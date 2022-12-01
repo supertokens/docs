@@ -106,4 +106,204 @@ async def is_email_allowed(email: str):
 Remember to [initialise the user metadata recipe](../usermetadata/setup) on the backend `recipeList` during `supertokens.init`.
 :::
 
-After that, we override the `signInUpPOST` API and recipe function to check if the input email is allowed durign sign up. If not allowed, we send back a user friendly message to the frontend.
+After that, we override the `thirdPartySignInUpPOST` API and the `thirdPartySignInUp` recipe function to check if the input email is allowed durign sign up. If not allowed, we send back a user friendly message to the frontend.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+declare let isEmailAllowed: (email: string) => Promise<boolean> // typecheck-only, removed from output
+
+ThirdPartyEmailPassword.init({
+    override: {
+        functions: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                thirdPartySignInUp: async function (input) {
+                    let existingUsers = await ThirdPartyEmailPassword.getUsersByEmail(input.email);
+                    if (existingUsers.length === 0) {
+                        // this means that the email is new and is a sign up
+                        if (!(await isEmailAllowed(input.email))) {
+                            // email is not in allow list, so we disallow
+                            throw new Error("No sign up")
+                        }
+                    }
+                    // We allow the sign in / up operation
+                    return originalImplementation.thirdPartySignInUp(input);
+                }
+            }
+        },
+        apis: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                thirdPartySignInUpPOST: async function (input) {
+                    try {
+                        return await originalImplementation.thirdPartySignInUpPOST!(input);
+                    } catch (err: any) {
+                        if (err.message === "No sign up") {
+                            // this error was thrown from our function override above.
+                            // so we send a useful message to the user
+                            return {
+                                status: "GENERAL_ERROR",
+                                message: "Sign ups are disabled. Please contact the admin."
+                            }
+                        }
+                        throw err;
+                    }
+                }
+            }
+        }
+    }
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func isEmailAllowed(email string) (bool, error) {
+	// ... from previous code snippet
+	return false, nil
+}
+
+func main() {
+	thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+		Override: &tpepmodels.OverrideStruct{
+			Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
+				ogThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
+
+				(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
+					existingUsers, err := thirdpartyemailpassword.GetUsersByEmail(email)
+					if err != nil {
+						return tpepmodels.SignInUpResponse{}, err
+					}
+
+					if len(existingUsers) == 0 {
+						// this means that the email is new and is a sign up
+						allowed, err := isEmailAllowed(email)
+						if err != nil {
+							return tpepmodels.SignInUpResponse{}, err
+						}
+						if !allowed {
+							return tpepmodels.SignInUpResponse{}, errors.New("No sign up")
+						}
+					}
+					// We allow the sign in / up operation
+					return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+				}
+
+				return originalImplementation
+			},
+
+			APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
+				originalSignInUpPOST := *originalImplementation.ThirdPartySignInUpPOST
+
+				(*originalImplementation.ThirdPartySignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpepmodels.ThirdPartyOutput, error) {
+
+					resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
+
+					if err.Error() == "No sign up" {
+						// this error was thrown from our function override above.
+						// so we send a useful message to the user
+						return tpepmodels.ThirdPartyOutput{
+							GeneralError: &supertokens.GeneralErrorResponse{
+								Message: "Sign ups are disabled. Please contact the admin.",
+							},
+						}, nil
+					}
+
+					return resp, err
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.types import GeneralErrorResponse
+from supertokens_python.recipe import thirdpartyemailpassword
+from supertokens_python.recipe.thirdpartyemailpassword.asyncio import get_users_by_email
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, RecipeInterface, ThirdPartySignInUpOkResult, ThirdPartyAPIOptions
+from typing import Union, Dict, Any
+from supertokens_python.recipe.thirdparty.provider import Provider
+
+async def is_email_allowed(email: str):
+    # from previous code snippet..
+    return False
+
+def override_thirdpartyemailpassword_functions(original_implementation: RecipeInterface):
+    original_thirdparty_sign_in_up = original_implementation.thirdparty_sign_in_up
+
+    async def thirdparty_sign_in_up(third_party_id: str, third_party_user_id: str, email: str,
+                         user_context: Dict[str, Any],
+                         ) -> ThirdPartySignInUpOkResult:
+        existing_users = await get_users_by_email(email, user_context)
+        if (len(existing_users) == 0):
+            if not await is_email_allowed(email):
+                raise Exception("No sign up")
+
+        # this means this email is new so we allow sign up
+        return await original_thirdparty_sign_in_up(third_party_id, third_party_user_id, email, user_context)
+        raise Exception("No sign up")
+
+    original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
+
+    return original_implementation
+
+
+def override_thirdpartyemailpassword_apis(original_implementation: APIInterface):
+    original_sign_in_up_post = original_implementation.thirdparty_sign_in_up_post
+
+    async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: ThirdPartyAPIOptions, user_context: Dict[str, Any]):
+        try:
+            return await original_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+        except Exception as e:
+            if str(e) == "No sign up":
+                return GeneralErrorResponse("Seems like you already have an account with another method. Please use that instead.")
+            raise e
+
+    original_implementation.thirdparty_sign_in_up_post = sign_in_up_post
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
+    recipe_list=[
+        thirdpartyemailpassword.init(
+            override=thirdpartyemailpassword.InputOverrideConfig(
+                apis=override_thirdpartyemailpassword_apis,
+                functions=override_thirdpartyemailpassword_functions
+            ),
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+`thirdPartySignInUpPOST` is called when the user is redirected to the app from the third party provider post login. The API calls the `thirdPartySignInUp` recipe function in which we check:
+- If there exists a user with the input email, it means they are signing in and so we allow the operation.
+- Otherwise, we check if the input email is allowed by calling our `isEmailAllowed` function (which we implemented above). If not allowed, we throw an error with a custom message.
+- Finally, we override the `thirdPartySignInUpPOST` API to catch this custom error and return a message to the frontend which will be displayed to the user.
+
+We can add emails to the allow list by calling the `addEmailToAllowlist` function we implemented above.
