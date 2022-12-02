@@ -1,0 +1,62 @@
+---
+id: "0005"
+title: Allowing email verification in post login account-linking
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader"
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
+
+#  Allowing email verification in post login account-linking
+
+<DecisionHeader status="accepted" lastUpdate="2022-12-01" created="2022-11-30" deciders={["rishabhpoddar", "bhumilsarvaiya"]} proposedBy={["bhumilsarvaiya"]} />
+
+## Context and Problem Statement
+
+Should we allow email verification to get triggered during post login account linking API or not? In our last discussion, if the account info of new account (which can already exists from before or a new account needs to be created for the given account info) is not verified and `shouldRequireVerification` boolean is compulsory, we are sending a account link failure error. Instead, should we create a new recipe account if it does not already exists and trigger email verification flow? The problem can be explained better with an example here:
+- User is currently logged in to there account with email A (which has an associated primaryUserId)
+- User wants to link account with email B via email password flow.
+- Post login account linking API is called with email A's session and email B (and password) as new account input
+- Now the question is should we trigger email verification flow for email B or not?
+
+## Considered Options
+
+* allow account creation if necessary and trigger email verification flow
+* do not trigger email verification flow and do not create account B if not already exists. Instead, return an error to the frontend
+
+## Decision Outcome
+
+Chosen option: allow account creation if necessary and trigger email verification flow, because
+
+* We also are allowing email verification flow to happen in the post login account linking API when the account to link used to exist from before. The reason this is OK, is that in order for the input to be the account to be linked in this API, the user has to provide that account's credentials, and if they know the credentials, then triggering the email verification flow doesn't do any extra harm - it would be the same as them just signing into that account normally and triggering the email verification flow
+
+* Earlier we just threw an error saying not verified, which did not serve any purpose. We did this cause, we thought of some attack vectors example:
+    - Secenario 1:
+        - Attacker creates an account with email A, which belongs to them and a primaryUserId gets created
+        - Attacker then calls post login account linking API with email B which doesn't belong to them. This will send a verification mail to actual user.
+        - Actual user, by mistake, clicks the verification link and the email password account gets linked to the attacker's account.
+        - If later the actual user signs up with email B via some other flow, those accounts will be linked to the attacker's account
+    - Scenario 2:
+        - There already exists an account with email B which is not associated with a primaryUserId because the actual user has not verified the account
+        - Attacker creates an account with email A, which belongs to them and a primaryUserId gets created
+        - Assuming that the attacker knows the password to email B's account, they initiate post login account linking flow where the session exists with email A and account to be linked is B (which already exists but without primaryUserId)
+        - If email verification mail is sent to the actual user, their account will then linked to the attacker's account
+- But those attack vectors could be executed anyway, regardless of this API not allowing email verification, examples:
+    - Counter to Scenario 1:
+        - Attacker creates an account with email B, which doesn't belongs to them and during sign-up verification mail is sent
+        - Actual user clicks the verification link and the email password account gets verified, thus creating a primaryUserId. The attacker knows the login info here cause they were the one who created the account in the first place
+        - Now attacker initiate post login account linking flow where the session exists with email B and account to be linked is A which already belongs to them previously and was already verified by them.
+        - Thus, the state that we tried to prevent by disallowing email verification flow during post login account linking flow can still be achieved via normal sign-up flow
+        - Also, the actual user clicking on the verification link without realising whether they have a account for a given service is fault on user's end. This can happen for any service existing today and disallowing email verification during post login account linking flow is not the right solution
+    - Counter to Scenario 2:
+        - When the attacker initiates post login account linking flow where the session exists with email A and account to be linked is B (which already exists but without primaryUserId), they also needs to know the login info for account with email B. Also, the account was not created by them. So if they know the login info here, it could be be a user mistake where they would have disclosed there login info somehow and the attacker got the hold of it. This has nothing to do with disallowing email verification flow and can happen regardless.
+
+### Further information
+
+- We decided that in the post login account linking API, if the account belonging to the session is not verified && shouldRequireVerification is true, we will initiate the email verification flow without keeping track of the new account to be linked - because this is just easier to implement.
+- If account to be linked (regardless of if it already existed before this API was called or not) is not verified and shouldRequireVerification is true, then we keep track that this new account should be linked with the existing account (in a new table called `recipe_account_to_link`), and initiate the verification flow for the new account.
+- By default, we will not require the account to be linked to require verification. But the developer can change this of course.
+- API that consumes email verification code will check `recipe_account_to_link` table for if the verified account needs to be linked. And if present, follows the linking flow (except that a new session does not need to be created).
+- If at any time, we are creating a primary user ID for an account, then, we will remove from that new table any rows that contains that account’s recipe user ID.
