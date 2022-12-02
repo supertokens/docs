@@ -23,18 +23,40 @@ We need to verify email B even if logged in using email A, cause post login acco
 * Add a new session claim that marks the session as "intent to link an account"
 * The frontend will send the recipeUserId to the backend during email verification APIs. So instead of the backend taking a session as input, they will take a recipeUserId + session as an input.
 
-## Discussion
+## Decision Outcome
 
-* We would add this claim in APIs that initiate a new sign up. For example in the passwordless createCodePOST API, we can add this claim if a session already exists when this API is called. Or in linkAccountToExistingAccountPOST API for social login (containing the provider’s auth code).
-* New payload structure:
+Option chosen: Add a new session claim that marks the session as "intent to link an account"
+
+This claim will be added during:
+- Post login account linking API in case email verification is required for the to link account.
+- In sign up related APIs like createCodePOST for passwordless if this is called with an input session.
+
+New payload structure:
 ```ts
 {
-   "st-acc-link":{
-      v: <recipe user ID> | "not created",
+   "st-acc-to-link":{
+      v: <recipe user ID> | "",
       t: ....,
    }
 }
 ```
-* The v will be “not created” if this claim is being added in APIs like createCodePOST. Else it will be the recipeUserId of the new user.
-* The email verification UI on the frontend and related APIs (create and consume verification code + is email verified API), check this claim if the normal email verification claim is true. If this claim exists, and has a user ID, then it will use that for its operations.
-* The implies that the user will still be able to use their app routes and app’s APIs even if the new account to link is kept in unverified mode.
+* The v will be `""` if this claim is being added in APIs like createCodePOST and the user does not exist. Else it will be the recipeUserId of the new user.
+* The email verification UI on the frontend and related APIs (create and consume verification code + is email verified API), check if this claim is present if the `EmailVerificationClaim` value is `true`. If this claim exists, and has a user ID, then it will use that for its operations.
+* This implies that the user will still be able to use their app routes and app's APIs even if the new account to link is kept in unverified mode.
+* This claim is removed when the account to link is either no longer a candidate for linking to the current session's account, or has already been linked.
+
+This claim should also be used by passwordless login screen (like OTP or enter email / phone screen) so that they do not redirect to the `/` route in case a session exists, and this claim exists as well.
+
+## Pros and Cons of the Options
+
+### Update accessToken payload email verification claim to have additional information regarding email B (email for which email verification needs to be done)
+
+<ArgumentCon> This requires changing the base claim structure. </ArgumentCon>
+
+### Add a new session claim that marks the session as "intent to link an account"
+
+<ArgumentPro> Is more generic and can be used for purposes other than for email verification </ArgumentPro>
+
+### The frontend will send the recipeUserId to the backend during email verification APIs. So instead of the backend taking a session as input, they will take a recipeUserId + session as an input.
+
+<ArgumentCon> Intre=oduces complexity for users who are building their custom UI - they would have to manually pass the correct user ID. </ArgumentCon>
