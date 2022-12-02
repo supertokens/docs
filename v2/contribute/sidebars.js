@@ -199,6 +199,11 @@ module.exports = {
             "decisions/accountlinking/0002",
             "decisions/accountlinking/0003",
             "decisions/accountlinking/0004",
+            "decisions/accountlinking/0005",
+            "decisions/accountlinking/0006",
+            "decisions/accountlinking/0007",
+            "decisions/accountlinking/0008",
+            "decisions/accountlinking/0009",
           ],
         },
         {
