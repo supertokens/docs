@@ -540,6 +540,14 @@ module.exports = {
                 "common-customizations/deduplication/implementing-deduplication"
               ]
             },
+            {
+              type: "category",
+              label: "Disable sign up / implement invite flow",
+              items: [
+                "common-customizations/disable-sign-up/overview",
+                "common-customizations/disable-sign-up/thirdparty-changes"
+              ]
+            },
           ]
         },
       ],
