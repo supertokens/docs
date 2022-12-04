@@ -563,7 +563,20 @@ module.exports = {
             },
           ]
         },
-
+        {
+          type: "category",
+          label: "Other customizations",
+          items: [
+            {
+              type: "category",
+              label: "Disable sign up / implement invite flow",
+              items: [
+                "common-customizations/disable-sign-up/overview",
+                "common-customizations/disable-sign-up/emailpassword-changes"
+              ]
+            },
+          ]
+        },
       ],
     },
     {
