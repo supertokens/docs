@@ -575,6 +575,14 @@ module.exports = {
                 "common-customizations/disable-sign-up/emailpassword-changes"
               ]
             },
+            {
+              type: "category",
+              label: "Implement username and password login",
+              items: [
+                "common-customizations/username-password/overview",
+                "common-customizations/username-password/emailpassword-changes"
+              ]
+            },
           ]
         },
       ],
