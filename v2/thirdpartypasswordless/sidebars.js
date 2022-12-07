@@ -576,7 +576,7 @@ module.exports = {
               items: [
                 "common-customizations/disable-sign-up/overview",
                 "common-customizations/disable-sign-up/thirdparty-changes",
-                "common-customizations/disable-sign-up/passwordless-changes"
+                "common-customizations/disable-sign-up/passwordless-via-allow-list"
               ]
             },
           ]
