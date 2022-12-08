@@ -1,6 +1,6 @@
 ---
 id: "0002"
-title: Merge providers list from static config and database
+title: Combining statically and dynamically configured provider list
 hide_title: true
 ---
 
@@ -9,32 +9,37 @@ import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
 import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
 import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
 
-# Merge providers list from static config and database
+# Combining statically and dynamically configured provider list
 
 <DecisionHeader status="proposed" lastUpdate="2022-12-08" created="2022-12-08" deciders={["rishabhpoddar", "sattvikc"]} proposedBy={["sattvikc"]} />
 
 ## Context and Problem Statement
 
-How do we select the providers list when the user has configured a list of providers in the static config as well as in the core database? Applicable both on frontend and backend.
+Since we now allow users to dynamically add provider configurations into the core, and also the user might have configured a static list, this causes an ambiguity on what should be the final set of providers list and which configs should be used by the SDK
 
+How do we come up with a consolidated list of providers and their configs?
 
 ## Considered Options
 
-* All providers declared statically
-* List from database if available, else static list
+* Prioritize list from the core, merge the config on to the static list prioritizing the config from core. (Refer the option section for more details)
 
 
 ## Decision Outcome
 
-Chosen option: **List from database if available, else static list**, because
+Chosen option: **Prioritize list from the core, merge the config on to the static list prioritizing the config from core.**, because
 
 * Gives complete control on the provider list
-* Allows for overrides from the static list
+* Allows for overrides using the static list
+* Allows adding new providers without code change
 
-In this approach, if the list from core database is empty, we return the static list.
+## Pros and Cons of the Options
 
-If the list from core database is not empty, we use that list and for each provider in the list:
-  - if the same provider is present in the static list, we merge the dynamic and static config, keeping dynamic config as the priority
+### Prioritize list from the core, merge the config on to the static list prioritizing the config from core.
+
+In this approach, if the provider list from core database is empty, we use the static provider list as is.
+
+If the provider list from core database is not empty, we use that list and for each provider in the list:
+  - if the same provider is present in the static list, we merge the dynamic and static config, keeping dynamic config as the priority (explained later)
   - if the provider is not present in the static list, then
     - if the provider is an built-in provider, we create an appropriate provider instance
     - else we create a custom provider
@@ -42,19 +47,8 @@ If the list from core database is not empty, we use that list and for each provi
 In case a certain provider needs an override, but should not be shown for the default tenant (from the static list), an optional config `UseForDefaultTenant` needs to be set to false.
 
 
-## Pros and Cons of the Options
-
-### All providers declared statically
-
-<ArgumentPro> Clear in terms of which providers are in use </ArgumentPro>
-<ArgumentCon> Difficult to hide ones in the static list </ArgumentCon>
-<ArgumentCon> Does not allow dynamically adding new providers without code change </ArgumentCon>
-
-### List from database if available, else static list
-
-<ArgumentPro> Allows complete replacement of static config list </ArgumentPro>
-<ArgumentPro> Intutively, static list can be used with the default tenant, and dynamic list for other tenants </ArgumentPro>
-<ArgumentCon> Same config might be duplicated on multiple tenants </ArgumentCon>
+<ArgumentPro> Allows complete replacement of static config list for each tenant </ArgumentPro>
+<ArgumentPro> All common configs can be statically declared and only the tenant specific configs can be added to the core. </ArgumentPro>
 <ArgumentCon> Needs additional config on the static list to hide, if declared only for override reasons </ArgumentCon>
 
 
@@ -85,7 +79,7 @@ Additionally, we prioritise config coming from the core as shown below:
 
 ** Merging of clients **
 
-Clients are merged based on the clientType, prioritising the core
+Clients array is merged based on the clientType, prioritising the core
 
 if the static config has following properties:
 
@@ -118,11 +112,6 @@ and the core has the following stored:
       clientId: "clientid_tenant1",
       clientSecret: "clientsecret_tenant1"
     },
-    {
-      clientType: "mobile",
-      clientId: "clientid1",
-      clientSecret: "clientsecret1"
-    },
   ]
 }
 ```
@@ -137,6 +126,11 @@ The final config in use would be:
       clientType: "web",
       clientId: "clientid_tenant1",
       clientSecret: "clientsecret_tenant1"
+    },
+    {
+      clientType: "mobile",
+      clientId: "clientid1",
+      clientSecret: "clientsecret1"
     },
   ]
 }
