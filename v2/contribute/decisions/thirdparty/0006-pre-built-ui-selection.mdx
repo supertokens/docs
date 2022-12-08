@@ -1,0 +1,87 @@
+---
+id: "0006"
+title: Recipe selection for pre-built UI
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader"
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
+
+# Recipe selection for pre-built UI
+
+<DecisionHeader status="proposed" lastUpdate="2022-12-08" created="2022-12-08" deciders={["rishabhpoddar", "sattvikc"]} proposedBy={["sattvikc"]} />
+
+## Context and Problem Statement
+
+In case of `usesDynamicLoginMethods` set to true, the backend responds with the recipes that are enabled in the core for a particular tenant, such as:
+```json
+{
+  "thirdParty": {
+    "enabled": true/false,
+    ...
+  },
+  "emailpassword": {
+    "enabled": true/false,
+    ...
+  },
+  "passwordless": {
+    "enabled": true/false,
+    ...
+  }
+}
+```
+
+Along with this, the user would have statically initialized a combination of auth recipes, such as emailpassword & thirdpartypasswordless, etc.
+
+Based on the information provided by backend (core) and the recipies initialized by the user, the SDK needs to decide which recipe must be used for the UI
+
+## Considered Options
+
+* Logic described below
+
+## Decision Outcome
+
+### Step 1 Find an exact match (more examples later)
+
+The SDK will first try to find if there is an exact match between the recipies initialized in the frontend and the recipies enabled in the core.
+
+For example, if thidparty and emailpassword is enabled in the core and the user has initialized thirdpartyemailpassword recipe on the frontend, that will be used.
+
+### Step 2 Find a partial match (more examples later)
+
+If the Step 1 has failed, the SDK will try to find at least one matching recipe and then use that for the UI, in the following priority order:
+
+* thirdpartyemailpassword
+* thirdpartypasswordless
+* emailpassword
+* passwordless
+* thirdparty
+
+For example, if thirdparty and emailpassword is enabled in the core and the user has initialized emailpassword & thirdpartypasswordless recipe on the frontend, thirdpartypasswordless would be used, based on partial match and higher priority.
+
+### Step 3
+
+If the Step 2 also fails, the SDK will throw an error, as there is no match at all.
+
+For example, if thirdparty and emailpassword is enabled in the core and the user has initialized passwordless recipe on the frontend, it will result in an error.
+
+## Pros and Cons
+
+<ArgumentPro> Presents most useful UI </ArgumentPro>
+<ArgumentCon> The UI may not match the enabled recipes in the core </ArgumentCon>
+<ArgumentCon> Some cases such as all three enabled, emailpassword & passwordless together are not supported out of the box </ArgumentCon>
+
+## Examples and results
+
+| Recipes Enabled in Core | Recipes initialized on frontend | Selected Recipe for UI |
+| :---------------------- | :------------------------------ | :--------------------- |
+| emailpassword           | emailpassword                   | emailpassword          |
+| thirdparty              | thirdpartyemailpassword         | thirdpartyemailpassword |
+| thirdparty & emailpassword | thirdpartyemailpassword      | thirdpartyemailpassword |
+| thirdparty & emailpassword | thirdparty & emailpassword   | emailpassword          |
+| thirdparty & emailpassword | thirdparty & passwordless    | thirdparty             |
+| thirdparty & emailpassword | emailpassword & thirdpartyemailpassword | thirdpartyemailpassword |
+| thirdparty & emailpassword | emailpassword & thirdpartypasswordless | thirdpartypasswordless |
+| thirdparty & emailpassword & passwordless | thirdpartyemailpassword & thirdpartypasswordless | thirdpartyemailpassword |
