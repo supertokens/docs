@@ -214,6 +214,15 @@ module.exports = {
             "decisions/dashboard/0002"
           ],
         },
+        {
+          type: "category",
+          label: "Thirdparty",
+          items: [
+            "decisions/thirdparty/0007",
+            "decisions/thirdparty/0008",
+            "decisions/thirdparty/0009",
+          ],
+        },
       ],
     },
   ],
