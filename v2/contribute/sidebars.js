@@ -223,6 +223,7 @@ module.exports = {
             "decisions/thirdparty/0003",
             "decisions/thirdparty/0004",
             "decisions/thirdparty/0010",
+            "decisions/thirdparty/0011",
             // "decisions/thirdparty/0006",
             // "decisions/thirdparty/0007",
             // "decisions/thirdparty/0008",
