@@ -1,0 +1,118 @@
+---
+id: "0001"
+title: Showing thirdparty provider list dynamically
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader"
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
+
+# Showing thirdparty provider list dynamically
+
+<DecisionHeader status="proposed" lastUpdate="2022-12-07" created="2022-12-07" deciders={["rishabhpoddar", "sattvikc"]} proposedBy={["sattvikc"]} />
+
+## Context and Problem Statement
+
+### Context
+
+We would like to allow users to show the list of thirdparty providers dynamically. This means that the user should be able to add, update or delete providers without having to change the code. In the case of multi-tenancy, the user should be able to show different providers for different tenants.
+
+This is in the context of thirdparty recipe, however when we expand the multi-tenancy functionality to other recipes, we should be able to dynamically determine different login methods (emailpassword, thirdparty, etc) for each tenant.
+
+From the above context, we have 4 different use cases:
+1. Static Config and single tenant
+2. Static Config and multiple tenants
+3. Dynamic config and single tenant
+4. Dynamic config and multi tenant
+
+Clearly, for the use cases 3 & 4, we need to fetch the list of providers from the backend.
+
+### Use cases explained
+
+** 1. Static Config and single tenant **
+
+This is a very basic use case where the user has a single tenant and statically configured list of login methods and thirdparty providers.
+
+** 2. Static Config and multiple tenants **
+
+In this case, the user uses the same set of statically configured login methods and thirdparty providers across all tenants.
+
+** 3. Dynamic config and single tenant **
+
+In this scenario, although the user has a single tenant, he may need to add or remove thirdparty providers dynamically.
+
+** 4. Dynamic config and multi tenant **
+
+This would be a classic multi-tenant scenario, where each tenant has a different set of thirdparty providers enabled, and different credentials for them.
+
+### Problem Statement
+
+What would be the best way for the user to differentiate & configure the SDK for all the above use cases?
+
+## Considered Options
+
+* Show providers list dynamically when Multitenancy recipe is initialized
+* Always try to show providers list dynamically, fallback to statically configured list
+* Add `usesDynamicLoginMethod` config to each recipe
+* Add `usesDynamicLoginMethods` config to the top level config, defaulted to `false`
+* Add `usesDynamicLoginMethods` config to the top level config, defaulted to `true` if the user has provided implementation for `getTenantId` in Multitenancy.init(), else `false`
+
+## Decision Outcome
+
+Chosen option: **Add `usesDynamicLoginMethods` config to the top level config, defaulted to `false`**, because
+
+* Clearly indicates that the dynamic providers list is being used
+* Avoids call to backend if the user does not intend to use dynamic providers list, even if multi tenancy is initialised
+
+Also, `usesDynamicLoginMethods` is added as a toplevel config instead of thirdparty recipe, as this will avoid multiple network calls in future while expanding this feature into other recipes.
+
+### This is how the user would configure the frontend in the mentioned use cases
+
+** Single Tenant, static config **
+
+User does not need to set `usesDynamicLoginMethods` (false by default), nor do they they need to initialise multitenancy recipe.
+
+** Multi Tenant, static config **
+
+Frontend is initialized with Multitenancy.init() with a config to get tenantId. User does not need to set `usesDynamicLoginMethods` (false by default).
+
+** Single Tenant, dynamic config **
+
+Frontend is initialized with `usesDynamicLoginMethods` set to `true`. No multitenancy.init() required.
+
+** Multi Tenant, dynamic config **
+
+Frontend is initialized with `usesDynamicLoginMethods` set to `true`, and Multitenancy.init() with a config to get tenantId.
+
+## Pros and Cons of the Options
+
+### Show providers list dynamically when Multitenancy recipe is initialized
+
+This means that whenever the login methods and thirdparty providers list has to be dynamically fetched from the backend, Multitenancy recipe must be initialized by the user.
+
+<ArgumentCon> From the user's point of view, it is unintuitive to call `Multitenancy.init()` for a single tenant / dynamic config use case </ArgumentCon>
+
+### Always try to show providers list dynamically, fallback to statically configured list
+
+Here, we always try to fetch the dynamic config from the backend. If the user has not configured in the core, the SDK would fallback to use the static configuration
+
+<ArgumentPro> No extra config needed by the user </ArgumentPro>
+<ArgumentCon> Ends up calling the backend API unnecessarily if the static provider list is enough for the user </ArgumentCon>
+
+### Add `usesDynamicLoginMethod` config to each recipe
+
+<ArgumentCon> When using a combination of recipes, would need multiple calls to the Backend to fetch the dynamic config </ArgumentCon>
+
+### Add `usesDynamicLoginMethods` config to the thirdparty recipe, defaulted to `false`
+
+<ArgumentPro> Backend API will be called only when the feature is enabled </ArgumentPro>
+<ArgumentPro> Clearly indicates that the dynamic providers list is being used </ArgumentPro>
+<ArgumentCon> In case of multi-tenancy, even though it's most common to use dynamic provider list, user has to enable this to avail that functionality </ArgumentCon>
+
+### Add `usesDynamicLoginMethods` config to the top level config, defaulted to `true` if the user has provided implementation for `getTenantId` in Multitenancy.init(), else `false`
+
+<ArgumentPro> Handles common cases - [Single-tenant, static config] and [Multi-tenant, dynamic config] seamlessly with minimal config by the user </ArgumentPro>
+<ArgumentCon> Difficult to implement </ArgumentCon>
+<ArgumentCon> Difficult to communicate the option to the user </ArgumentCon>
