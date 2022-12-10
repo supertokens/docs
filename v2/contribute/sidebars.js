@@ -214,6 +214,23 @@ module.exports = {
             "decisions/dashboard/0002"
           ],
         },
+        {
+          type: "category",
+          label: "Multitenancy",
+          items: [
+            "decisions/multitenancy/0001",
+            "decisions/multitenancy/0002",
+            "decisions/multitenancy/0003",
+            "decisions/multitenancy/0004",
+            "decisions/multitenancy/0005",
+            "decisions/multitenancy/0006",
+            "decisions/multitenancy/0007",
+            "decisions/multitenancy/0008",
+            "decisions/multitenancy/0009",
+            "decisions/multitenancy/0010",
+            "decisions/multitenancy/0011",
+          ],
+        },
       ],
     },
   ],
