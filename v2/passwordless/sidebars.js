@@ -552,7 +552,8 @@ module.exports = {
               label: "Disable sign up / implement invite flow",
               items: [
                 "common-customizations/disable-sign-up/overview",
-                "common-customizations/disable-sign-up/passwordless-changes"
+                "common-customizations/disable-sign-up/passwordless-via-allow-list",
+                "common-customizations/disable-sign-up/passwordless-via-invite-link"
               ]
             },
           ]
