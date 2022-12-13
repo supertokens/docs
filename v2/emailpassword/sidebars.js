@@ -627,6 +627,7 @@ module.exports = {
             "migration/account-creation/user-creation",
             "migration/account-creation/user-id-mapping",
             "migration/account-creation/email-verification",
+            "migration/account-creation/ep-migration-without-password-hash"
           ],
         },
         "migration/data-migration",
