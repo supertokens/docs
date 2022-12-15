@@ -131,6 +131,7 @@ module.exports = {
             "checklists/saas/launch-boxyhq-containers",
             "checklists/saas/adding-cores-for-user",
             "checklists/saas/tables-to-consider-for-data-migration-dev-to-prod",
+            "checklists/saas/move-to-aurora-serverless",
           ],
         },
         {
