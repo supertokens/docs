@@ -207,6 +207,7 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/share-sessions-across-sub-domains",
+        "common-customizations/sessions/token-transfer-method",
         {
           type: "category",
           label: "Other operations",
