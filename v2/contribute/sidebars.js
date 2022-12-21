@@ -232,6 +232,13 @@ module.exports = {
             "decisions/multitenancy/0011",
           ],
         },
+        {
+          type: "category",
+          label: "React-SDK",
+          items: [
+            "decisions/reactsdk/0001",
+          ],
+        },
       ],
     },
   ],
