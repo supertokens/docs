@@ -230,6 +230,7 @@ module.exports = {
             "decisions/multitenancy/0009",
             "decisions/multitenancy/0010",
             "decisions/multitenancy/0011",
+            "decisions/multitenancy/0012",
           ],
         },
       ],
