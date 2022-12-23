@@ -1,34 +1,168 @@
 ---
 id: multi-tenancy
-title: "Multi-tenant SSO"
+title: "Multitenant login"
 hide_title: true
 ---
-# Multi-tenant SSO
 
-## Overview
+import AppInfoForm from "/src/components/appInfoForm"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
 
-We support the following multi-tenant SSO providers out of the box:
+:::important
+TODO BANNER This is a paid feature
 
-- Active Directory
-- Google Workspaces
-- Okta
+If you wish to use this feature for free, follow this implementation guide TODO link
+:::
 
-## Provider Configs
+# Multitenant login
 
-- Adding a configs to the core (CURL request)
+## What is Multitenancy?
 
-## Frontend
+Multitenancy is a form of architecture where multiple clients share the same set of computing resources. Each client in this context is known as a tenant. For example, applications like Slack or Github offer services to various enterprises, which inturn host their own set of users and data. Although the underlying application is same, there is a logical separation of users and data between the tenants.
 
-- Code snippet that shows the usage of:
-  - getTenantID
-  - getConfiguredProvidersFromBackend
+SuperTokens supports multitenancy for the thirdparty recipe out of the box. Follow this guide to learn how to set it up.
 
-## Backend
+## Multitenant login flow
 
-- Code snippet
-  - with empty providers list
+TODO diagram
+
+## Step 1: Add tenant and thirdparty providers to the core
+
+### Create tenants
+
+```bash
+curl --location --request PUT 'http://localhost:3567/recipe/multitenancy/tenant' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "tenantId": "...",
+    "emailpasswordEnabled": true,
+    "thirdpartyEnabled": true,
+    "passwordlessEnabled": true
+}'
+```
+
+### Add ThirdParty Providers to the core for the tenant created above
+
+```bash
+curl --location --request PUT 'http://localhost:3567/recipe/multitenancy/config/thirdparty' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "config": {
+    "tenantId": "...",
+    "thirdPartyId": "okta",
+    "name": "Okta",
+    "clients": [
+      {
+        "clientId": "string",
+        "clientSecret": "string",
+        "additionalConfig": {
+          "oktaDomain": "..."
+        }
+      }
+    ]
+  }
+}'
+```
+
+Repeat the above steps for all the tenants and their corresponding ThirdParty providers.
+
+## Step 2: Frontent setup
+
+Modify the `SuperTokens.init` to do the following:
+1. Set the `usesDynamicLoginMethods` to true and remove the providers list
+2. Initialize the `Multitenancy` recipe and provide `getTenantId` config function
+
+<AppInfoForm
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+>
+
+```tsx
+
+import React from 'react';
+
+import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
+import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
+import Session from "supertokens-auth-react/recipe/session";
+import Multitenancy from "supertokens-auth-react/recipe/multitenancy";
+
+SuperTokens.init({
+    appInfo: {
+        // learn more about this on https://supertokens.com/docs/thirdpartyemailpassword/appinfo
+        appName: "^{form_appName}",
+        apiDomain: "^{form_apiDomain}",
+        websiteDomain: "^{form_websiteDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        websiteBasePath: "^{form_websiteBasePath}"
+    },
+    // highlight-start
+    usesDynamicLoginMethods: true,
+    // highlight-end
+    recipeList: [
+        // highlight-start
+        ThirdParty.init(),
+        // highlight-end
+        Session.init(),
+        // highlight-start
+        Multitenancy.init({
+          getTenantId: async () => {
+            // Logic to determine the tenant id
+            return "..."
+          }
+        })
+        // highlight-end
+    ]
+});
+```
+
+The logic to determine the `tenantId` can be based on the intended setup. For example, you could provide a form input to accept the `tenantId` from the user. Or you could use the subdomain to determine the `tenantId`.
+
+</AppInfoForm>
+
+## Step 3: Backend setup
+
+Remove the `providers` list from the `thirdparty` config. The backend SDK will automatically pick up the configuration stored in the core.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+TODO
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	// Inside supertokens.Init
+  // highlight-start
+	thirdparty.Init(nil)
+		// highlight-end
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+TODO
+```
+
+</TabItem>
+</BackendSDKTabs>
 
 ## See also
 
 TODO: links
-- Custom Provider for Multi-tenant SSO
+
+- Single Login Domain - asking users for tenantId
+- Single Login Domain - redirection post login
+- Subdomain login
+- Getting tenant id of logged in user
+- Allowing end users to add their own SSO provider
+- SAML login
