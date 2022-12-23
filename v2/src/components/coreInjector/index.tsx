@@ -40,7 +40,7 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
                     c = c.split("\n^{coreInjector_connection_uri_comment_with_hash}").join('')
                     c = c.split("^{coreInjector_uri}").join('"",');
                     c = c.split("^{coreInjector_api_key}").join('""')
-                    c = c.split("^{coreInjector_api_key_without_quotes}").join('""')
+                    c = c.split("^{coreInjector_api_key_without_quotes}").join('')
                     c = c.split("^{coreInjector_api_key_commented}").join('')
                     c = c.split("^{coreInjector_api_key_commented_with_hash}").join('')
                     c = c.split("^{coreInjector_uri_without_quotes}").join('')
