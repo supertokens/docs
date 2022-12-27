@@ -112,7 +112,7 @@ module.exports = {
             "custom-ui/securing-routes",
             "custom-ui/sign-out",
             "custom-ui/enable-email-verification",
-            "custom-ui/multi-tenancy",
+            "custom-ui/multitenant-login",
           ],
         },
       ]
@@ -529,17 +529,6 @@ module.exports = {
             },
           ]
         },
-
-      ],
-    },
-    {
-      type: "category",
-      label: "Multitenancy",
-      items: [
-        "multitenancy/overview",
-        "multitenancy/single-login-domain",
-        "multitenancy/sub-domain-login",
-        "multitenancy/licensing",
       ],
     },
     {
