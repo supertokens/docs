@@ -364,6 +364,7 @@ module.exports = {
             "common-customizations/signin-form/field-validators",
           ]
         },
+        "common-customizations/get-user-info",
         "common-customizations/handling-signup-success",
         "common-customizations/handling-signin-success",
         "common-customizations/password-managers",
