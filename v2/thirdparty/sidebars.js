@@ -55,7 +55,7 @@ module.exports = {
             "pre-built-ui/sign-out",
             "pre-built-ui/auth-redirection",
             "pre-built-ui/enable-email-verification",
-            "pre-built-ui/multi-tenancy",
+            "pre-built-ui/multitenant-login",
             {
               type: 'category',
               label: 'Further Reading',
