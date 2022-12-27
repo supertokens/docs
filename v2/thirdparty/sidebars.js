@@ -381,7 +381,6 @@ module.exports = {
             "common-customizations/email-verification/changing-style",
             "common-customizations/email-verification/changing-email-verification-status",
             "common-customizations/email-verification/generate-link-manually",
-            "common-customizations/email-verification/multitenant-email-verification",
           ]
         },
         {
