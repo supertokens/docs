@@ -230,7 +230,7 @@ async function appleSignInClicked() {
             // highlight-end
         });
 
-        // we redirect the user to google for auth.
+        // we redirect the user to apple for auth.
         window.location.assign(authUrl);
     } catch (err: any) {
         if (err.isSuperTokensGeneralError === true) {
@@ -365,10 +365,10 @@ func main() {
 					{
 						ClientID:     "...",
 						ClientSecret: "...",
+						// highlight-next-line
+						ForcePKCE: &forcePKCE,
 					},
 				},
-				// highlight-next-line
-				ForcePKCE: &forcePKCE,
 			},
 		},
 	}
@@ -389,7 +389,76 @@ Frontend setup would be same as described in [Flow 1a](#flow-1a-sign-in-with-goo
 
 ## Flow 1d
 
+For some providers, the provider can validate the OAuth client using client assertion method. This can be done by providing 
+- `privateKey` for **Okta** (TODO instructions on how to get it)
+- `certificateThumbprint`, `certificate` for **Azure Active Directory** (TODO instructions on how to get it)
+
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
 TODO
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	// highlight-next-line
+	forcePKCE := true
+	// within thirdparty.Init
+	_ = []tpmodels.ProviderInput{
+		{
+			Config: tpmodels.ProviderConfig{
+				ThirdPartyId: "okta",
+				Clients: []tpmodels.ProviderClientConfig{
+					{
+						ClientID:     "...",
+						ClientSecret: "...",
+						// highlight-next-line
+						AdditionalConfig: map[string]interface{}{
+							"privateKey": "...",
+							"oktaDomain": "...",
+						},
+					},
+				},
+			},
+			Config: tpmodels.ProviderConfig{
+				ThirdPartyId: "active-directory",
+				Clients: []tpmodels.ProviderClientConfig{
+					{
+						ClientID:     "...",
+						ClientSecret: "...",
+						// highlight-next-line
+						AdditionalConfig: map[string]interface{}{
+							"certificateThumbprint": "...",
+							"certificate": "...",
+							"directoryId": "...",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+```
+
+Frontend setup would be same as described in [Flow 1a](#flow-1a-sign-in-with-google-example).
+
+</TabItem>
+<TabItem value="python">
+
+```python
+TODO
+```
+
+</TabItem>
+</BackendSDKTabs>
 
 </TabItem>
 
@@ -416,14 +485,12 @@ TODO
 Once you have the authorisation code from the auth provider, you need to call the signinup API exposed by our backend SDK as shown below:
 
 ```bash
-# TODO update the request below
-
 curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
 --header 'rid: ^{codeImportRecipeName}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "thirdPartyId": "apple",
-    "clientType": "ios/android"
+    "clientType": "ios/android",
     "redirectURIInfo": {
         "redirectURIOnProviderDashboard": "...",
         "redirectURIQueryParams": {
@@ -435,9 +502,8 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
 ```
 
 :::important
-- The `clientId` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
-- For login with Apple on iOS, the `clientId` should be the same as your app's bundle identifier on the frontend and backend. The `redirectURI` doesn't matter and its value can be a universal link configured for your app.
-- On Android, the `redirectURI` should match the one configured on the Apple developer dashboard.
+- The `clientType` input is optional and is required only if you have initialised the provider with multiple clients on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
+- On Android, the `redirectURIOnProviderDashboard` should match the one configured on the Apple developer dashboard.
 :::
 
 The response body from the API call has a `status` property in it:
@@ -482,18 +548,16 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
 --header 'rid: ^{codeImportRecipeName}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-    "redirectURI": "",
     "thirdPartyId": "apple",
-    "authCodeResponse": {
+    "oAuthTokens": {
         "access_token": "..."
     },
-    "clientId": "..."
+    "clientType": "ios"
 }'
 ```
 
 :::important
-- The `clientId` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
-- In this flow, the value of `redirectURI` isn't used on the backend, so we give the API an empty string.
+- The `clientType` input is optional and is required only if you have initialised more than one `clients` for the provider on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
 - If you have the `id_token`, you can also just send that inplace of the `access_token`.
 :::
 
@@ -563,18 +627,16 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
 --header 'rid: ^{codeImportRecipeName}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-    "redirectURI": "",
     "thirdPartyId": "apple",
-    "authCodeResponse": {
+    "oAuthTokens": {
         "access_token": "..."
     },
-    "clientId": "..."
+    "clientType": "ios"
 }'
 ```
 
 :::important
-- The `clientId` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
-- In this flow, the value of `redirectURI` isn't used on the backend, so we give the API an empty string.
+- The `clientTyppe` input is optional and is required only if you have initialised more than one `clients` for the provider on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
 - If you have the `id_token`, you can also just send that inplace of the `access_token`.
 :::
 
@@ -596,6 +658,8 @@ On success, the backend will send back session tokens as part of the response he
 </TabItem>
 
 </FrontendCustomUITabs>
+
+----------------
 
 ## Social / SSO login for both, web and mobile apps
 
@@ -673,9 +737,64 @@ TODO
 
 ### Frontend
 
-```bash
-TODO curl snippets for getAuthURL and SignInUp
+**If using web-js SDK**
+
+Initialise the thirdparty recipe with the `clientType` specified in the input.
+
+```ts
+import SuperTokens from 'supertokens-web-js'
+import ThirdParty from 'supertokens-web-js/recipe/thirdparty'
+import Session from 'supertokens-web-js/recipe/session';
+
+
+SuperTokens.init({
+  appInfo: {
+    appName: 'SuperTokens Demo',
+    apiDomain: 'http://localhost:8000',
+    apiBasePath: '/auth',
+  },
+  recipeList: [
+    Session.init(),
+    // highlight-start
+    ThirdParty.init({
+      clientType: 'web',
+    }),
+    // highlight-end
+  ],
+})
 ```
+
+**If calling backend APIs directly**,
+
+Pass `clientType` as a query parameter to the `authorisationurl` endpoint: `<backendDomain>/auth/authorisationurl`
+
+```bash
+curl --location --request GET 'http://localhost:3001/auth/authorisationurl?clientType=android&thirdPartyId=apple'
+```
+
+and once the sign in is complete,
+
+Pass the same `clientType` as part of the json body for the `signinup` endpoint: `<backendDomain>/auth/signinup`
+
+```bash
+curl --location --request POST 'http://localhost:3001/auth/signinup' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "clientType": "android",
+    "thirdPartyId": "apple",
+    "redirectURIInfo": {
+        "redirectURIOnProviderDashboard": "...",
+        "redirectURIQueryParams": {
+            "code": "...",
+            "state": "..."
+        }
+    }
+}'
+```
+
+:::important
+`clientType` is mandatory if there are multiple `clients` specified for a provider. If the `clientType` is not passed to the backend or the passed `clientType` is not found in the list of `clients` for the provider, then the backend will return an error.
+:::
 
 <!-- END COPY SECTION -->
 
