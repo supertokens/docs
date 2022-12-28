@@ -65,10 +65,6 @@ SuperTokens.init({
 
 ## Step 2: Back End 
 
-TODO config based implementation
-
-TODO custom implementation
-
 :::note 
 The OAuth callback URL for your custom provider will be `{websiteDomain}{websiteBasePath}/callback/{customId}`, where `customId` is the `id` given in the config below (the value below is `"custom"`).
 :::
@@ -80,6 +76,8 @@ The OAuth callback URL for your custom provider will be `{websiteDomain}{website
 import SuperTokens from "supertokens-node";
 import Session from "supertokens-node/recipe/session";
 import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+TODO
 
 SuperTokens.init({
     appInfo: {
@@ -169,65 +167,33 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			thirdparty.Init(&tpmodels.TypeInput{
-				// highlight-start
 				SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
-					Providers: []tpmodels.TypeProvider{
+					Providers: []tpmodels.ProviderInput{
 						{
-							ID: "custom",
-							Get: func(redirectURI, authCodeFromRequest *string, userContext supertokens.UserContext) tpmodels.TypeProviderGetResponse {
-
-								if redirectURI == nil {
-									temp := ""
-									redirectURI = &temp
-								}
-
-								if authCodeFromRequest == nil {
-									temp := ""
-									authCodeFromRequest = &temp
-								}
-
-								return tpmodels.TypeProviderGetResponse{
-									AccessTokenAPI: tpmodels.AccessTokenAPI{
-										// this contains info about the token endpoint which exchanges the auth code with the access token and profile info.
-										URL: "https://oauth.example.com/token",
-										Params: map[string]string{
-											// example post params
-											"client_id":     "<CLIENT ID>",
-											"client_secret": "<CLIENT SECRET>",
-											"grant_type":    "authorization_code",
-											"redirect_uri":  *redirectURI,
-											"code":          *authCodeFromRequest,
-											//...
-										},
+							// highlight-start
+							Config: tpmodels.ProviderConfig{
+								ThirdPartyId: "custom",
+								Clients: []tpmodels.ProviderClientConfig{
+									{
+										ClientID:     "...",
+										ClientSecret: "...",
 									},
-									AuthorisationRedirect: tpmodels.AuthorisationRedirect{
-										// this contains info about forming the authorisation redirect URL without the state params and without the redirect_uri param
-										URL: "https://oauth.example.com",
-										Params: map[string]interface{}{
-											"client_id":     "<CLIENT ID>",
-											"scope":         "<SCOPES>",
-											"response_type": "code",
-										},
+								},
+								AuthorizationEndpoint: "https://example.com/oauth/authorize",
+								TokenEndpoint:         "https://example.com/oauth/token",
+								UserInfoEndpoint:      "https://example.com/oauth/userinfo",
+								UserInfoMap: tpmodels.TypeUserInfoMap{
+									FromUserInfoAPI: tpmodels.TypeUserInfoFields{
+										UserId:        "id",
+										Email:         "email",
+										EmailVerified: "email_verified",
 									},
-									GetClientId: func(userContext supertokens.UserContext) string {
-										return "<CLIENT ID>"
-									},
-									GetProfileInfo: func(authCodeResponse interface{}, userContext supertokens.UserContext) (tpmodels.UserInfo, error) {
-										/* authCodeResponse is the JSON response from the AccessTokenAPI POST call. Using this, you need to return an object of the following type:*/
-										return tpmodels.UserInfo{
-											ID: "userId from Auth provider",
-											Email: &tpmodels.EmailStruct{
-												ID:         "email of user",
-												IsVerified: true, // true if email is verified already
-											},
-										}, nil
-									},
-								}
+								},
 							},
+							// highlight-end
 						},
 					},
 				},
-				// highlight-end
 			}),
 		},
 	})
@@ -248,6 +214,452 @@ from supertokens_python.recipe.thirdparty.provider import Provider
 from supertokens_python.recipe.thirdparty.types import UserInfo, AccessTokenAPI, AuthorisationRedirectAPI
 from typing import Dict, Union, Any
 from supertokens_python.recipe.thirdparty.types import UserInfo, UserInfoEmail
+
+TODO
+
+class CustomProvider(Provider):
+    def __init__(self):
+        super().__init__('<PROVIDER_ID>', False)
+
+    async def get_profile_info(self, auth_code_response: Dict[str, Any], user_context: Dict[str, Any]) -> UserInfo:
+        # TODO: fetch user info from provider based on auth_code_response
+        return UserInfo(user_id="...", email=UserInfoEmail(email="..", email_verified=True))
+
+    def get_authorisation_redirect_api_info(self, user_context: Dict[str, Any]) -> AuthorisationRedirectAPI:
+        params: Dict[str, Any] = {
+            'scope': '<SCOPES>',
+            'response_type': 'code',
+            'client_id': "<CLIENT ID>",
+        }
+        return AuthorisationRedirectAPI(url="https://oauth.example.com", params=params)
+
+    def get_access_token_api_info(
+            self, redirect_uri: str, auth_code_from_request: str, user_context: Dict[str, Any]) -> AccessTokenAPI:
+        params = {
+            'client_id': "<CLIENT ID>",
+            'client_secret': "<CLIENT SECRET>",
+            'grant_type': 'authorization_code',
+            'code': auth_code_from_request,
+            'redirect_uri': redirect_uri
+        }
+        return AccessTokenAPI(url="https://oauth.example.com/token", params=params)
+
+    def get_redirect_uri(self, user_context: Dict[str, Any]) -> Union[None, str]:
+        return None
+    
+    def get_client_id(self, user_context: Dict[str, Any]) -> str:
+        return "<CLIENT ID>"
+
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        thirdparty.init(
+            # highlight-start
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[
+                CustomProvider()
+            ])
+            # highlight-end
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+### Modifying `AuthorizationEndpointQueryParams` and `TokenEndpointBodyParams`
+
+Sometimes, the custom provider might need a different set of parameters to be passed to the `AuthorizationEndpoint` and `TokenEndpoint`, other than what the SDK passes by default.
+
+For example, you may want to use a different value for `"response_type"`, or a dynamic value based on request for `"login_hint"` or an additional parameter like `"response_mode"`. It can be achieved as shown below:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+TODO
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdParty.init({
+            signInAndUpFeature: {
+                // highlight-start
+                providers: [
+                    {
+                        id: "custom",
+                        get: (redirectURI, authCodeFromRequest) => {
+                            return {
+                                accessTokenAPI: {
+                                    // this contains info about the token endpoint which exchanges the auth code with the access token and profile info.
+                                    url: "https://oauth.example.com/token",
+                                    params: {
+                                        // example post params
+                                        client_id: "<CLIENT ID>",
+                                        client_secret: "<CLIENT SECRET>",
+                                        grant_type: "authorization_code",
+                                        redirect_uri: redirectURI || "",
+                                        code: authCodeFromRequest || "",
+                                        //...
+                                    }
+                                },
+                                authorisationRedirect: {
+                                    // this contains info about forming the authorisation redirect URL without the state params and without the redirect_uri param
+                                    url: "https://oauth.example.com",
+                                    params: {
+                                        client_id: "<CLIENT ID>",
+                                        scope: "<SCOPES>",
+                                        response_type: "code",
+                                        //...
+                                    }
+                                },
+                                getClientId: () => {
+                                    return "<CLIENT ID>";
+                                },
+                                getProfileInfo: async (accessTokenAPIResponse) => {
+                                    /* accessTokenAPIResponse is the JSON response from the accessTokenAPI POST call. Using this, you need to return an object of the following type:
+                                    {
+                                        id: string, // user ID as provided by the third party provider
+                                        email?: { // optional 
+                                            id: string, // emailID
+                                            isVerified: boolean // true if the email is verified already
+                                        }
+                                    }
+                                    */
+                                    return {
+                                        id: "..."
+                                    };
+                                }
+                            }
+                        }
+                    }
+                ]
+                // highlight-end
+            }
+        }),
+        Session.init({})
+    ]
+});
+```
+
+:::info
+To see example implementations for popular third party providers like Google or Facebook, please see [our Github repo](https://github.com/supertokens/supertokens-node/tree/master/lib/ts/recipe/thirdparty/providers).
+:::
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{
+				SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
+					Providers: []tpmodels.ProviderInput{
+						{
+							Config: tpmodels.ProviderConfig{
+								ThirdPartyId: "custom",
+								Clients: []tpmodels.ProviderClientConfig{
+									{
+										ClientID:     "...",
+										ClientSecret: "...",
+									},
+								},
+								AuthorizationEndpoint: "https://example.com/oauth/authorize",
+								// highlight-start
+								AuthorizationEndpointQueryParams: map[string]interface{}{
+									"response_type": "token", // Changing an existing parameter
+									"login_hint": func(userContext supertokens.UserContext) interface{} {
+										// ...
+										return "user@example.com"
+									}, // Dynamic value based on the user context
+									"response_mode": "form", // Adding a new parameter
+									"scope":         nil,    // Removing a parameter
+								},
+								// highlight-end
+								TokenEndpoint:    "https://example.com/oauth/token",
+								UserInfoEndpoint: "https://example.com/oauth/userinfo",
+								UserInfoMap: tpmodels.TypeUserInfoMap{
+									FromUserInfoAPI: tpmodels.TypeUserInfoFields{
+										UserId:        "id",
+										Email:         "email",
+										EmailVerified: "email_verified",
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		},
+	})
+}
+```
+
+:::info
+To see example implementations for popular third party providers like Google or Facebook, please see [our Github repo](https://github.com/supertokens/supertokens-golang/tree/master/recipe/thirdparty/providers).
+:::
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.provider import Provider
+from supertokens_python.recipe.thirdparty.types import UserInfo, AccessTokenAPI, AuthorisationRedirectAPI
+from typing import Dict, Union, Any
+from supertokens_python.recipe.thirdparty.types import UserInfo, UserInfoEmail
+
+TODO
+
+class CustomProvider(Provider):
+    def __init__(self):
+        super().__init__('<PROVIDER_ID>', False)
+
+    async def get_profile_info(self, auth_code_response: Dict[str, Any], user_context: Dict[str, Any]) -> UserInfo:
+        # TODO: fetch user info from provider based on auth_code_response
+        return UserInfo(user_id="...", email=UserInfoEmail(email="..", email_verified=True))
+
+    def get_authorisation_redirect_api_info(self, user_context: Dict[str, Any]) -> AuthorisationRedirectAPI:
+        params: Dict[str, Any] = {
+            'scope': '<SCOPES>',
+            'response_type': 'code',
+            'client_id': "<CLIENT ID>",
+        }
+        return AuthorisationRedirectAPI(url="https://oauth.example.com", params=params)
+
+    def get_access_token_api_info(
+            self, redirect_uri: str, auth_code_from_request: str, user_context: Dict[str, Any]) -> AccessTokenAPI:
+        params = {
+            'client_id': "<CLIENT ID>",
+            'client_secret': "<CLIENT SECRET>",
+            'grant_type': 'authorization_code',
+            'code': auth_code_from_request,
+            'redirect_uri': redirect_uri
+        }
+        return AccessTokenAPI(url="https://oauth.example.com/token", params=params)
+
+    def get_redirect_uri(self, user_context: Dict[str, Any]) -> Union[None, str]:
+        return None
+    
+    def get_client_id(self, user_context: Dict[str, Any]) -> str:
+        return "<CLIENT ID>"
+
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        thirdparty.init(
+            # highlight-start
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[
+                CustomProvider()
+            ])
+            # highlight-end
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+The example above shows how the `AuthorizationEndpointQueryParams` can be modified. `TokenEndpointBodyParams` can also be modified using the same approach.
+
+### Providing custom implementations
+
+Sometimes for a custom provider, the built-in implementations may not be enough. For example, you may need to call multiple APIs to get the User info. In such cases, you can override the custom provider functions to provide your own implementations.
+
+Refer the snippet below on how that can be achieved:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+TODO
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdParty.init({
+            signInAndUpFeature: {
+                // highlight-start
+                providers: [
+                    {
+                        id: "custom",
+                        get: (redirectURI, authCodeFromRequest) => {
+                            return {
+                                accessTokenAPI: {
+                                    // this contains info about the token endpoint which exchanges the auth code with the access token and profile info.
+                                    url: "https://oauth.example.com/token",
+                                    params: {
+                                        // example post params
+                                        client_id: "<CLIENT ID>",
+                                        client_secret: "<CLIENT SECRET>",
+                                        grant_type: "authorization_code",
+                                        redirect_uri: redirectURI || "",
+                                        code: authCodeFromRequest || "",
+                                        //...
+                                    }
+                                },
+                                authorisationRedirect: {
+                                    // this contains info about forming the authorisation redirect URL without the state params and without the redirect_uri param
+                                    url: "https://oauth.example.com",
+                                    params: {
+                                        client_id: "<CLIENT ID>",
+                                        scope: "<SCOPES>",
+                                        response_type: "code",
+                                        //...
+                                    }
+                                },
+                                getClientId: () => {
+                                    return "<CLIENT ID>";
+                                },
+                                getProfileInfo: async (accessTokenAPIResponse) => {
+                                    /* accessTokenAPIResponse is the JSON response from the accessTokenAPI POST call. Using this, you need to return an object of the following type:
+                                    {
+                                        id: string, // user ID as provided by the third party provider
+                                        email?: { // optional 
+                                            id: string, // emailID
+                                            isVerified: boolean // true if the email is verified already
+                                        }
+                                    }
+                                    */
+                                    return {
+                                        id: "..."
+                                    };
+                                }
+                            }
+                        }
+                    }
+                ]
+                // highlight-end
+            }
+        }),
+        Session.init({})
+    ]
+});
+```
+
+:::info
+To see example implementations for popular third party providers like Google or Facebook, please see [our Github repo](https://github.com/supertokens/supertokens-node/tree/master/lib/ts/recipe/thirdparty/providers).
+:::
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{
+				SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
+					Providers: []tpmodels.ProviderInput{
+						{
+							Config: tpmodels.ProviderConfig{
+								ThirdPartyId: "custom",
+								Clients: []tpmodels.ProviderClientConfig{
+									{
+										ClientID:     "...",
+										ClientSecret: "...",
+									},
+								},
+								AuthorizationEndpoint: "https://example.com/oauth/authorize",
+								AuthorizationEndpointQueryParams: map[string]interface{}{
+									"response_type": "token", // Changing an existing parameter
+									"login_hint": func(userContext supertokens.UserContext) interface{} {
+										// ...
+										return "user@example.com"
+									}, // Dynamic value based on the user context
+									"response_mode": "form", // Adding a new parameter
+									"scope":         nil,    // Removing a parameter
+								},
+								TokenEndpoint: "https://example.com/oauth/token",
+							},
+							// highlight-start
+							Override: func(provider *tpmodels.TypeProvider) *tpmodels.TypeProvider {
+								// ...
+								provider.GetUserInfo = func(config tpmodels.ProviderConfigForClientType, oAuthTokens tpmodels.TypeOAuthTokens, userContext supertokens.UserContext) (tpmodels.TypeUserInfo, error) {
+									// Call your own APIs
+									// ...
+									return tpmodels.TypeUserInfo{
+										ThirdPartyUserId: "...",
+										Email: &tpmodels.EmailStruct{
+											ID:         "...",
+											IsVerified: true,
+										},
+										RawUserInfoFromProvider: tpmodels.TypeRawUserInfoFromProvider{
+											FromUserInfoAPI: map[string]interface{}{
+												// ...
+											},
+										},
+									}, nil
+								}
+								return provider
+							},
+							// highlight-end
+						},
+					},
+				},
+			}),
+		},
+	})
+}
+```
+
+:::info
+To see example implementations for popular third party providers like Google or Facebook, please see [our Github repo](https://github.com/supertokens/supertokens-golang/tree/master/recipe/thirdparty/providers).
+:::
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.provider import Provider
+from supertokens_python.recipe.thirdparty.types import UserInfo, AccessTokenAPI, AuthorisationRedirectAPI
+from typing import Dict, Union, Any
+from supertokens_python.recipe.thirdparty.types import UserInfo, UserInfoEmail
+
+TODO
 
 class CustomProvider(Provider):
     def __init__(self):
@@ -303,7 +715,7 @@ init(
 
 ## See also
 
-# TODO links
+TODO links
 
 - Getting access token from the thirdparty provider
 - Getting user info from the thirdparty provider
