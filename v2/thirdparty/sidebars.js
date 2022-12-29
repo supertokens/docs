@@ -354,13 +354,7 @@ module.exports = {
             "common-customizations/sign-in-and-up/custom-providers",
           ],
         },
-        {
-          type: 'category',
-          label: 'Sign In And Up',
-          items: [
-            "common-customizations/sign-in-and-up/toc-privacypolicy"
-          ],
-        },
+        "common-customizations/sign-in-and-up/toc-privacypolicy",
         "common-customizations/get-user-info",
         "common-customizations/handling-signinup-success",
         "common-customizations/user-pagination",
