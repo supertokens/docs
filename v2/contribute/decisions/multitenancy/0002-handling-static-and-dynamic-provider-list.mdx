@@ -1,0 +1,127 @@
+---
+id: "0002"
+title: Handling statically and dynamically configured provider list
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader"
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
+
+# Handling statically and dynamically configured provider list
+
+<DecisionHeader status="proposed" lastUpdate="2022-12-08" created="2022-12-08" deciders={["rishabhpoddar", "sattvikc"]} proposedBy={["sattvikc"]} />
+
+## Context and Problem Statement
+
+Since we now allow users to dynamically add thirdparty provider configurations into the core, and also the user might have configured a static list of thirdparty providers in the code, this causes an ambiguity on what the final set of providers list should be, for the SDK to use.
+
+How do we come up with a consolidated list of providers?
+
+## Considered Options
+
+* Union of the list from core and the static config
+* Prioritize list from the core if not empty, else static list
+
+
+## Decision Outcome
+
+Chosen option: **Prioritize list from the core if not empty, else static list**, because
+
+* Gives complete control on the provider list for each tenant
+* Allows declaration in the static list for overrides, even if not used for all the tenants
+
+## Pros and Cons of the Options
+
+### Union of the list from core and the static config
+
+<ArgumentCon> Cannot hide a provider for a specific tenant if statically declared </ArgumentCon>
+
+### Prioritize list from the core if not empty, else static list
+
+SDK would use the thirdparty provider list from the core if it is not empty, else, the statically configured provider list.
+
+:::note
+
+* When a tenant is created on the core, the provider list would be empty. This would mean that the statically configured list would be used by default for that tenant.
+* If the user wants to disable the thirdparty entirely, they can use the createOrUpdateTenant core API to disable the thirdparty recipe
+
+:::
+
+
+<ArgumentPro> Gives complete control on the provider list for each tenant </ArgumentPro>
+<ArgumentPro> Allows declaration in the static list for overrides, even if not used for all the tenants </ArgumentPro>
+<ArgumentCon> Difficult to communicate to the user </ArgumentCon>
+<ArgumentNeut> Provider must be added to core as well, even if statically declared </ArgumentNeut>
+
+
+## Examples
+
+```
+Assuming Builtin providers = ["apple (bultin)", "google (builtin)", "facebook (builtin)"]
+
+
+* Case 1
+  Static List = []
+  Core List   = ["apple", "google"]
+  Final List  = ["apple (builtin)", "google (builtin)"]
+
+* Case 2
+  Static List = ["apple", "google"]
+  Core List   = []
+  Final List  = ["apple", "google"]
+
+* Case 3
+  Static List = ["apple", "google", "facebook"]
+  Core List   = ["apple", "google"]
+  Final List  = ["apple", "google"]
+
+* Case 4
+  Static List = ["apple", "google"]
+  Core List   = ["google", "facebook"]
+  Final List  = ["google", "facebook (builtin)"]
+
+* Case 5
+  Static List = ["apple"]
+  Core List   = ["google", "facebook"]
+  Final List  = ["google (builtin)", "facebook (builtin)"]
+```
+
+## Further details
+
+When a provider is statically declared in the code and the same provider is configured in the core, the SDK would merge each property prioritizing the values from the core.
+
+This is not applicable for the `clients` list, and is merged as [discussed here](./0010).
+
+Even if the provider is not in the static list, but is a built-in provider in the SDK (like apple, AD, google, etc.), we would use that providers implementation and then merge the core config on top of that as if the user had added it to the static list.
+
+
+### Config merging example
+
+For a particular provider, if the statically declared config is:
+```
+{
+  thirdPartyId: "custom",
+  authorisationEndpoint: 'example.com/authorise',
+  tokenEndpoint: 'example.com/token',
+}
+```
+
+and for a particular tenant, the config stored in the core is:
+
+```
+{
+  thirdPartyId: "custom",
+  authorisationEndpoint: "anotherexample.com/authorise",
+}
+```
+
+The final config used by the SDK would be:
+
+```
+{
+  thirdPartyId: "custom",
+  authorisationEndpoint: "anotherexample.com/authorise",
+  tokenEndpoint: 'example.com/token',
+}

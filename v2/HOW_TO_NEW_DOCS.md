@@ -33,6 +33,7 @@
 - Make sure to add a route in the website node server to redirect `/docs/<sdk-name>` to the `index.html` of the generated docs.
 - If creating a new backend SDK, then make sure to also change the website dashboard code snippets.
 - In the nodejs code for the website, we should change where all and how the version header is being injected
+- On the `/docs/community/sdks` page make sure that a link to the sdk docs is present
 
 # To add new code type checking env
 - Create a new folder in `src/plugins/codeTypeChecking/` and call it `<new_lang>Env`

@@ -563,7 +563,28 @@ module.exports = {
             },
           ]
         },
-
+        {
+          type: "category",
+          label: "Other customizations",
+          items: [
+            {
+              type: "category",
+              label: "Disable sign up / implement invite flow",
+              items: [
+                "common-customizations/disable-sign-up/overview",
+                "common-customizations/disable-sign-up/emailpassword-changes"
+              ]
+            },
+            {
+              type: "category",
+              label: "Implement username and password login",
+              items: [
+                "common-customizations/username-password/overview",
+                "common-customizations/username-password/emailpassword-changes"
+              ]
+            },
+          ]
+        },
       ],
     },
     {
@@ -606,6 +627,7 @@ module.exports = {
             "migration/account-creation/user-creation",
             "migration/account-creation/user-id-mapping",
             "migration/account-creation/email-verification",
+            "migration/account-creation/ep-migration-without-password-hash"
           ],
         },
         "migration/data-migration",

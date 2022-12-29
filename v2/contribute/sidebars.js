@@ -130,6 +130,8 @@ module.exports = {
             "checklists/saas/custom-core-deployment",
             "checklists/saas/launch-boxyhq-containers",
             "checklists/saas/adding-cores-for-user",
+            "checklists/saas/tables-to-consider-for-data-migration-dev-to-prod",
+            "checklists/saas/move-to-aurora-serverless",
           ],
         },
         {
@@ -164,7 +166,22 @@ module.exports = {
             "decisions/session/0013",
             "decisions/session/0014",
             "decisions/session/0015",
-            "decisions/session/0016"
+            "decisions/session/0016",
+            "decisions/session/0017",
+            "decisions/session/0018",
+            "decisions/session/0019",
+            "decisions/session/0020",
+            "decisions/session/0021"
+          ],
+        },
+        {
+          type: "category",
+          label: "Session claims",
+          items: [
+            "decisions/sessionclaims/0001",
+            "decisions/sessionclaims/0002",
+            "decisions/sessionclaims/0003",
+            "decisions/sessionclaims/0004"
           ],
         },
         {
@@ -173,6 +190,46 @@ module.exports = {
           items: [
             "decisions/passwordless/0001",
             "decisions/passwordless/0002",
+          ],
+        },
+        {
+          type: "category",
+          label: "Account-linking",
+          items: [
+            "decisions/accountlinking/0001",
+            "decisions/accountlinking/0002",
+            "decisions/accountlinking/0003",
+            "decisions/accountlinking/0004",
+            "decisions/accountlinking/0005",
+            "decisions/accountlinking/0006",
+            "decisions/accountlinking/0007",
+            "decisions/accountlinking/0008",
+            "decisions/accountlinking/0009",
+          ],
+        },
+        {
+          type: "category",
+          label: "User management dashboard",
+          items: [
+            "decisions/dashboard/0001",
+            "decisions/dashboard/0002"
+          ],
+        },
+        {
+          type: "category",
+          label: "Multitenancy",
+          items: [
+            "decisions/multitenancy/0001",
+            "decisions/multitenancy/0002",
+            "decisions/multitenancy/0003",
+            "decisions/multitenancy/0004",
+            "decisions/multitenancy/0005",
+            "decisions/multitenancy/0006",
+            "decisions/multitenancy/0007",
+            "decisions/multitenancy/0008",
+            "decisions/multitenancy/0009",
+            "decisions/multitenancy/0010",
+            "decisions/multitenancy/0011",
           ],
         },
       ],

@@ -370,6 +370,19 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'userdashboard',
+        path: 'userdashboard',
+        routeBasePath: 'docs/userdashboard',
+        sidebarPath: require.resolve('./userdashboard/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'change_me',
         path: 'change_me',
         routeBasePath: 'docs/change_me',

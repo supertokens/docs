@@ -568,7 +568,29 @@ module.exports = {
             },
           ]
         },
-
+        {
+          type: "category",
+          label: "Other customizations",
+          items: [
+            {
+              type: "category",
+              label: "Account deduplication",
+              items: [
+                "common-customizations/deduplication/overview",
+                "common-customizations/deduplication/implementing-deduplication"
+              ]
+            },
+            {
+              type: "category",
+              label: "Disable sign up / implement invite flow",
+              items: [
+                "common-customizations/disable-sign-up/overview",
+                "common-customizations/disable-sign-up/thirdparty-changes",
+                "common-customizations/disable-sign-up/emailpassword-changes"
+              ]
+            },
+          ]
+        },
       ],
     },
     {
@@ -632,6 +654,7 @@ module.exports = {
             "migration/account-creation/user-creation",
             "migration/account-creation/user-id-mapping",
             "migration/account-creation/email-verification",
+            "migration/account-creation/ep-migration-without-password-hash"
           ],
         },
         "migration/data-migration",

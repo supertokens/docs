@@ -527,6 +527,28 @@ module.exports = {
             },
           ]
         },
+        {
+          type: "category",
+          label: "Other customizations",
+          items: [
+            {
+              type: "category",
+              label: "Account deduplication",
+              items: [
+                "common-customizations/deduplication/overview",
+                "common-customizations/deduplication/implementing-deduplication"
+              ]
+            },
+            {
+              type: "category",
+              label: "Disable sign up / implement invite flow",
+              items: [
+                "common-customizations/disable-sign-up/overview",
+                "common-customizations/disable-sign-up/thirdparty-changes"
+              ]
+            },
+          ]
+        },
       ],
     },
     {
