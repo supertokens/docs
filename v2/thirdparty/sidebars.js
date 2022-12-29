@@ -348,7 +348,7 @@ module.exports = {
       items: [
         {
           type: 'category',
-          label: 'Third Party Providers',
+          label: 'Third Party Providers (single tenant)',
           items: [
             "common-customizations/sign-in-and-up/built-in-providers",
             "common-customizations/sign-in-and-up/custom-providers",
