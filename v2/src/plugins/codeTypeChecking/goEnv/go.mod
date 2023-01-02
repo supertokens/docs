@@ -9,7 +9,7 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/supertokens/supertokens-golang v0.9.14
+	github.com/supertokens/supertokens-golang v0.9.15-0.20230102073247-6a2fdba82a9d
 )
 
 require (
@@ -38,7 +38,7 @@ require (
 	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/twilio/twilio-go v0.26.0 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
+	golang.org/x/crypto v0.2.0 // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
