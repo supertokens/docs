@@ -349,43 +349,44 @@ module.exports = {
       label: 'Auth flow customizations',
       collapsed: true,
       items: [
+        "common-customizations/handling-signinup-success",
         {
           type: 'category',
-          label: 'Third Party Providers',
+          label: 'Sign in / up',
           items: [
-            "common-customizations/signup-form/built-in-providers",
-            "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers",
-            "common-customizations/getting-provider-access-token"
+            {
+              type: 'category',
+              label: 'Social login providers',
+              items: [
+                "common-customizations/signup-form/built-in-providers",
+                "common-customizations/signup-form/custom-providers",
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Email password sign up form',
+              items: [
+                "common-customizations/signup-form/adding-fields",
+                "common-customizations/signup-form/changing-field-labels",
+                "common-customizations/signup-form/field-validators",
+              ],
+            },
+            {
+              type: "category",
+              label: "Email password sign in form",
+              items: [
+                "common-customizations/signin-form/changing-field-labels",
+                "common-customizations/signin-form/field-validators",
+              ]
+            },
+            "common-customizations/signup-form/toc-privacypolicy",
+            "common-customizations/embed-sign-in-up-form",
+            "common-customizations/password-managers",
           ],
-        },
-        {
-          type: 'category',
-          label: 'Sign Up Form',
-          items: [
-            "common-customizations/signup-form/adding-fields",
-            "common-customizations/signup-form/changing-field-labels",
-            "common-customizations/signup-form/field-validators",
-            "common-customizations/signup-form/toc-privacypolicy"
-          ],
-        },
-        {
-          type: "category",
-          label: "Sign In Form",
-          items: [
-            "common-customizations/signin-form/changing-field-labels",
-            "common-customizations/signin-form/field-validators",
-            "common-customizations/signin-form/built-in-providers",
-            "common-customizations/signin-form/custom-providers",
-          ]
         },
         "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
-        "post-login/getting-provider-access-token",
-        "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
-        "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         "common-customizations/change-password",
         {

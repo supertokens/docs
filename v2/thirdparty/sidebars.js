@@ -346,20 +346,26 @@ module.exports = {
       label: 'Auth flow customizations',
       collapsed: true,
       items: [
+        "common-customizations/handling-signinup-success",
         {
           type: 'category',
-          label: 'Social login providers',
+          label: 'Sign in / up',
           items: [
-            "common-customizations/sign-in-and-up/built-in-providers",
-            "common-customizations/sign-in-and-up/custom-providers",
+            {
+              type: 'category',
+              label: 'Social login providers',
+              items: [
+                "common-customizations/sign-in-and-up/built-in-providers",
+                "common-customizations/sign-in-and-up/custom-providers",
+              ],
+            },
+            "common-customizations/sign-in-and-up/toc-privacypolicy",
+            "common-customizations/embed-sign-in-up-form",
           ],
         },
-        "common-customizations/sign-in-and-up/toc-privacypolicy",
         "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
-        "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         {
           type: "category",

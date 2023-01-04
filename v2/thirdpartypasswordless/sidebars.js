@@ -347,37 +347,40 @@ module.exports = {
       label: 'Auth flow customizations',
       collapsed: true,
       items: [
+        "common-customizations/handling-signinup-success",
         {
           type: "category",
-          label: "Sign In / Up form",
+          label: "Sign in / up",
           items: [
-            "common-customizations/sign-in-up/default-country",
-            "common-customizations/sign-in-up/resend-time-gap",
-            "common-customizations/sign-in-up/change-maximum-retries",
-            "common-customizations/sign-in-up/change-otp-format",
+            {
+              type: 'category',
+              label: 'Social login',
+              items: [
+                "common-customizations/signup-form/built-in-providers",
+                "common-customizations/signup-form/custom-providers",
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Passwordless login',
+              items: [
+                "common-customizations/sign-in-up/default-country",
+                "common-customizations/sign-in-up/resend-time-gap",
+                "common-customizations/sign-in-up/change-maximum-retries",
+                "common-customizations/sign-in-up/change-otp-format",
+                "common-customizations/sign-in-up/change-email-phone-validation"
+              ],
+            },
             "common-customizations/sign-in-up/toc-privacypolicy",
-            "common-customizations/sign-in-up/change-email-phone-validation"
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Third Party Providers',
-          items: [
-            "common-customizations/signup-form/built-in-providers",
-            "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers",
-            "common-customizations/getting-provider-access-token"
+            "common-customizations/embed-sign-in-up-form",
           ],
         },
         "common-customizations/generating-magic-link-manually",
         "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
-        "post-login/getting-provider-access-token",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",
-        "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         {
           type: "category",
