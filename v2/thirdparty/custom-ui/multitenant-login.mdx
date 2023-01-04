@@ -27,10 +27,10 @@ import CoreInjector from "/src/components/coreInjector"
 Multitenant login is a feature that let's you customize login experience for each of your customers. For example, a customer `customer1` hosted on `customer1.yourdomain.com` can have login with `Active Directory` and `Google`, and another customer `customer2` hosted on `customer2.yourdomain.com` can have login with `Okta` and `Facebook`.
 
 This is also the page that you should see if you want to implement sign in with:
-- Okta
-- SAML
-- Active Directory
-- Google Workspaces
+- Okta (`thirdPartyId: "okta"`)
+- SAML (`thirdPartyId: "boxy-saml"`)
+- Active Directory (`thirdPartyId: "active-directory"`)
+- Google Workspaces (`thirdPartyId: "google-workspaces"`)
 - Or any other workforce IdP
 
 <!-- END COPY SECTION -->
@@ -39,11 +39,11 @@ This is also the page that you should see if you want to implement sign in with:
 <!-- ./thirdparty/pre-built-ui/multitenant-login.mdx  -->
 <!-- 2 -->
 
-## Step 1: Create a new tenant in SuperTokens core
+## Step 1: Create and configure a new tenant in SuperTokens core
 
-Use the endpoint below to create a tenant.
+Each tenant can be configured with a unique `tenantId`, and the list of third party connections (Active Directory, Google etc..) that should be allowed for them. 
 
-The `tenantId` is a unique identifier for each tenant. The `emailpasswordEnabled`, `thirdpartyEnabled` and `passwordlessEnabled` flags indicate whether the tenant has enabled the corresponding login method.
+You can create a new tenant using our backend SDKs or via a `cURL` command to the core.
 
 <BackendSDKTabs enableCurl>
 
@@ -57,7 +57,30 @@ TODO
 <TabItem value="go">
 
 ```go
-TODO
+import (
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy"
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy/multitenancymodels"
+)
+
+func main() {
+	tenantId := "customer1"
+	thirdpartyEnabled := true
+
+  // highlight-start
+	resp, err := multitenancy.CreateOrUpdateTenant(&tenantId, multitenancymodels.TenantConfig{
+		ThirdpartyEnabled: &thirdpartyEnabled,
+	})
+  // highlight-end
+
+	if err != nil {
+		// handle error
+	}
+	if resp.OK.CreatedNew {
+		// new tenant was created
+	} else {
+		// existing tenant's config was modified.
+	}
+}
 ```
 
 </TabItem>
@@ -92,10 +115,8 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multite
 --header 'api-key: ^{coreInjector_api_key_without_quotes}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-    "tenantId": "...",
-    "emailpasswordEnabled": true,
-    "thirdpartyEnabled": true,
-    "passwordlessEnabled": true
+    "tenantId": "customer1",
+    "thirdpartyEnabled": true
 }'
 ```
 
@@ -105,7 +126,7 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multite
 
 </BackendSDKTabs>
 
-Once a tenant is created, add their thirdparty providers using the endpoint below.
+Once a tenant is created, add their thirdparty providers as shown below.
 
 <BackendSDKTabs enableCurl>
 
@@ -119,7 +140,40 @@ TODO
 <TabItem value="go">
 
 ```go
-TODO
+import (
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	tenantId := "customer1"
+
+	// highlight-start
+	resp, err := multitenancy.CreateOrUpdateThirdPartyConfig(tpmodels.ProviderConfig{
+		TenantId:     &tenantId,
+		ThirdPartyId: "active-directory",
+		Name:         "Active Directory",
+		Clients: []tpmodels.ProviderClientConfig{
+			{
+				ClientID:     "...",
+				ClientSecret: "...",
+				AdditionalConfig: map[string]interface{}{
+					"directoryId": "...",
+				},
+			},
+		},
+	})
+	// highlight-end
+
+	if err != nil {
+		// handle error
+	}
+	if resp.OK.CreatedNew {
+		// Active Directory added to customer1
+	} else {
+		// Existing active directory config overwritten for customer1
+	}
+}
 ```
 
 </TabItem>
@@ -155,13 +209,13 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multite
 --header 'Content-Type: application/json' \
 --data-raw '{
   "config": {
-    "tenantId": "...",
+    "tenantId": "customer1",
     "thirdPartyId": "active-directory",
     "name": "Active Directory",
     "clients": [
       {
-        "clientId": "string",
-        "clientSecret": "string",
+        "clientId": "...",
+        "clientSecret": "...",
         "additionalConfig": {
           "directoryId": "..."
         }
@@ -177,12 +231,15 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multite
 
 </BackendSDKTabs>
 
+:::important
+The above shows how to add an Active Directory config for the `customer1` tenant. You can see the config structure for all the in built providers [on this page](./TODO).
+:::
 
 <!-- END COPY SECTION -->
 
 ## Step 2: Frontend setup
 
-To fetch the login methods dynamically from the backend, use the following API:
+The frontend setup is similar to that of a [regular single tenant social login page](./thirdparty-login), but on page load, you will first need to check which third party providers are enabled for the current tenant. This can be done by querying the backend as shown below:
 
 <FrontendCustomUITabs>
 <TabItem value="web">
@@ -191,20 +248,24 @@ To fetch the login methods dynamically from the backend, use the following API:
 <TabItem value="npm">
 
 ```tsx
+TODO
 import SuperTokens from 'supertokens-web-js';
 
-const loginMethods = await SuperTokens.getLoginMethods({
-  tenantId: '...'
-})
+async function fetchThirdPartyLoginProvidersForTenant(tenantId: string) {
+	const loginMethods = await SuperTokens.getLoginMethods({
+		tenantId
+	})
 
-if (loginMethods.thirdParty.enabled) {
-  const providers = loginMethods.thirdParty.providers;
-  if (providers.find(i => i.thirdPartyId === "active-directory")) {
-     // render sign in with Active Directory button
-  }
-  // more checks for other providers
-} else {
-  // thirdparty login is disabled for the tenant
+	if (loginMethods.thirdParty.enabled) {
+		const providers = loginMethods.thirdParty.providers;
+		if (providers.find(i => i.thirdPartyId === "active-directory")) {
+			// render sign in with Active Directory button
+		} else {
+			// more checks for other providers
+		}
+	} else {
+		// thirdparty login is disabled for the tenant
+	}
 }
 ```
 
@@ -213,59 +274,65 @@ if (loginMethods.thirdParty.enabled) {
 
 ```tsx
 TODO
+import supertokens from 'supertokens-web-js-script';
+async function fetchThirdPartyLoginProvidersForTenant(tenantId: string) {
+	const loginMethods = await supertokens.getLoginMethods({
+		tenantId
+	})
+
+	if (loginMethods.thirdParty.enabled) {
+		const providers = loginMethods.thirdParty.providers;
+		if (providers.find(i => i.thirdPartyId === "active-directory")) {
+			// render sign in with Active Directory button
+		} else {
+			// more checks for other providers
+		}
+	} else {
+		// thirdparty login is disabled for the tenant
+	}
+}
 ```
 
 </TabItem>
 </NpmOrScriptTabs>
 
+Once you have the list of third party providers for the current tenant, you can display the relevant buttons on the page.
+
+When the user clicks on a specific provider, you would need to follow the same steps mentioned in the [single tenant social login page](./thirdparty-login). The only addition is that when calling `getAuthorisationURLWithQueryParamsAndSetState`, you would also need to pass in the `tenantId`.
+
 </TabItem>
 
 <TabItem value="mobile">
 
-<FrontendMobileSubTabs>
+<AppInfoForm askForAPIDomain>
 
-<TabItem value="reactnative">
+Once you have the authorisation code from the auth provider, you need to call the signinup API exposed by our backend SDK as shown below:
 
-```tsx
-TODO
+```bash
+curl --location --request GET '^{form_apiDomain}^{form_apiBasePath}/loginmethods?tenantId=customer1' \
+--header 'rid: multitenancy'
 ```
 
-</TabItem>
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: The `recipes` field will contain information about which login methods are enabled along with the list of third party providers configured for this tenant.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
 
-<TabItem value="android">
+</AppInfoForm>
 
-```kotlin
-TODO
-```
+Once you have the list of third party providers for the current tenant, you can display the relevant buttons on the page.
 
-</TabItem>
-
-<TabItem value="ios">
-
-```swift
-TODO
-```
-
-</TabItem>
-
-</FrontendMobileSubTabs>
+When the user clicks on a specific provider, you would need to follow the same steps mentioned in the [single tenant social login page](./thirdparty-login). The only addition is that when calling `/auth/signinup POST` API, you would also need to pass in the `tenantId` in the request body (along with other fields like `thirdPartyId`).
 
 </TabItem>
 
 </FrontendCustomUITabs>
-
-Please refer [this page](./thirdparty-login) for the frontend implementation. 
-
-Note that you would now need to pass `tenantId` to the `getAuthorisationURLWithQueryParamsAndSetState` function in the thirdparty recipe. `tenantId` need not be passed on the `signInAndUp` API and the SDK will handle it automatically.
-
-If calling the backend APIs directly, in mobile applications for instance, `tenantId` will need to be passed to both `authorisationurl` (as query param) and `signinup` (as json body param) endpoints.
 
 
 <!-- COPY SECTION -->
 <!-- ./thirdparty/pre-built-ui/multitenant-login.mdx  -->
 <!-- 3 -->
 
-## Step 3: Backend setup
+## Step 3: Backend CORS changes
 
 If you are using different domains or sub-domains for each tenant on the frontend, your backend CORS setting needs to be updated to allow requests from those origins.
 
@@ -363,6 +430,10 @@ TODO
 <!-- COPY SECTION -->
 <!-- ./thirdparty/pre-built-ui/multitenant-login.mdx  -->
 <!-- 4 -->
+
+:::success
+You have now completed a basic multi tenant setup for your application. There may be more steps required depending on the specifics of your UX. Checkout the "See also" section below for more information.
+:::
 
 ## See also
 

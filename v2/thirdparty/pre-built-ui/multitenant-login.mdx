@@ -24,10 +24,10 @@ import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 Multitenant login is a feature that let's you customize login experience for each of your customers. For example, a customer `customer1` hosted on `customer1.yourdomain.com` can have login with `Active Directory` and `Google`, and another customer `customer2` hosted on `customer2.yourdomain.com` can have login with `Okta` and `Facebook`.
 
 This is also the page that you should see if you want to implement sign in with:
-- Okta
-- SAML
-- Active Directory
-- Google Workspaces
+- Okta (`thirdPartyId: "okta"`)
+- SAML (`thirdPartyId: "boxy-saml"`)
+- Active Directory (`thirdPartyId: "active-directory"`)
+- Google Workspaces (`thirdPartyId: "google-workspaces"`)
 - Or any other workforce IdP
 
 <!-- END COPY SECTION -->
@@ -36,11 +36,11 @@ This is also the page that you should see if you want to implement sign in with:
 <!-- ./thirdparty/pre-built-ui/multitenant-login.mdx  -->
 <!-- 2 -->
 
-## Step 1: Create a new tenant in SuperTokens core
+## Step 1: Create and configure a new tenant in SuperTokens core
 
-Use the endpoint below to create a tenant.
+Each tenant can be configured with a unique `tenantId`, and the list of third party connections (Active Directory, Google etc..) that should be allowed for them. 
 
-The `tenantId` is a unique identifier for each tenant. The `emailpasswordEnabled`, `thirdpartyEnabled` and `passwordlessEnabled` flags indicate whether the tenant has enabled the corresponding login method.
+You can create a new tenant using our backend SDKs or via a `cURL` command to the core.
 
 <BackendSDKTabs enableCurl>
 
@@ -54,7 +54,30 @@ TODO
 <TabItem value="go">
 
 ```go
-TODO
+import (
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy"
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy/multitenancymodels"
+)
+
+func main() {
+	tenantId := "customer1"
+	thirdpartyEnabled := true
+
+  // highlight-start
+	resp, err := multitenancy.CreateOrUpdateTenant(&tenantId, multitenancymodels.TenantConfig{
+		ThirdpartyEnabled: &thirdpartyEnabled,
+	})
+  // highlight-end
+
+	if err != nil {
+		// handle error
+	}
+	if resp.OK.CreatedNew {
+		// new tenant was created
+	} else {
+		// existing tenant's config was modified.
+	}
+}
 ```
 
 </TabItem>
@@ -89,10 +112,8 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multite
 --header 'api-key: ^{coreInjector_api_key_without_quotes}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-    "tenantId": "...",
-    "emailpasswordEnabled": true,
-    "thirdpartyEnabled": true,
-    "passwordlessEnabled": true
+    "tenantId": "customer1",
+    "thirdpartyEnabled": true
 }'
 ```
 
@@ -102,7 +123,7 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multite
 
 </BackendSDKTabs>
 
-Once a tenant is created, add their thirdparty providers using the endpoint below.
+Once a tenant is created, add their thirdparty providers as shown below.
 
 <BackendSDKTabs enableCurl>
 
@@ -116,7 +137,40 @@ TODO
 <TabItem value="go">
 
 ```go
-TODO
+import (
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	tenantId := "customer1"
+
+	// highlight-start
+	resp, err := multitenancy.CreateOrUpdateThirdPartyConfig(tpmodels.ProviderConfig{
+		TenantId:     &tenantId,
+		ThirdPartyId: "active-directory",
+		Name:         "Active Directory",
+		Clients: []tpmodels.ProviderClientConfig{
+			{
+				ClientID:     "...",
+				ClientSecret: "...",
+				AdditionalConfig: map[string]interface{}{
+					"directoryId": "...",
+				},
+			},
+		},
+	})
+	// highlight-end
+
+	if err != nil {
+		// handle error
+	}
+	if resp.OK.CreatedNew {
+		// Active Directory added to customer1
+	} else {
+		// Existing active directory config overwritten for customer1
+	}
+}
 ```
 
 </TabItem>
@@ -152,13 +206,13 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multite
 --header 'Content-Type: application/json' \
 --data-raw '{
   "config": {
-    "tenantId": "...",
+    "tenantId": "customer1",
     "thirdPartyId": "active-directory",
     "name": "Active Directory",
     "clients": [
       {
-        "clientId": "string",
-        "clientSecret": "string",
+        "clientId": "...",
+        "clientSecret": "...",
         "additionalConfig": {
           "directoryId": "..."
         }
@@ -174,13 +228,16 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multite
 
 </BackendSDKTabs>
 
+:::important
+The above shows how to add an Active Directory config for the `customer1` tenant. You can see the config structure for all the in built providers [on this page](./TODO).
+:::
 
 <!-- END COPY SECTION -->
 
 ## Step 2: Frontend setup
 
 Modify the `SuperTokens.init` to do the following:
-1. Set the `usesDynamicLoginMethods` to true.
+1. Set the `usesDynamicLoginMethods` to true. This will tell our frontend SDK that the login page is based on the tenantId and to fetch the tenant config from the backend before showing any login UI.
 2. Initialize the `Multitenancy` recipe and provide `getTenantId` config function.
 
 <AppInfoForm
@@ -234,30 +291,13 @@ SuperTokens.init({
 
 <TabItem value="angular">
 
-:::important
-SuperTokens does not provide Angular components for pre built UI, but, there are two ways of implementing SuperTokens in your Angular frontend:
-- Load SuperTokens's pre-built React UI components in your Angular app. Continue following the guide for this flow.
-- Build your own UI. Click [here](../../custom-ui/init/frontend) to learn more.
-:::
-
-
-```tsx
-TODO
-```
+~COPY-TABS=reactjs
 
 </TabItem>
 
 <TabItem value="vue">
 
-:::important
-SuperTokens does not provide Vue components for pre built UI, but, there are two ways of implementing SuperTokens in your Vue frontend:
-- Load SuperTokens's pre-built React UI components in your Vue app. Continue following the guide for this flow.
-- Build your own UI. Click [here](../../custom-ui/init/frontend) to learn more.
-:::
-
-```tsx
-TODO
-```
+~COPY-TABS=reactjs
 
 </TabItem>
 
@@ -269,7 +309,7 @@ TODO
 <!-- ./thirdparty/pre-built-ui/multitenant-login.mdx  -->
 <!-- 3 -->
 
-## Step 3: Backend setup
+## Step 3: Backend CORS changes
 
 If you are using different domains or sub-domains for each tenant on the frontend, your backend CORS setting needs to be updated to allow requests from those origins.
 
@@ -367,6 +407,10 @@ TODO
 <!-- COPY SECTION -->
 <!-- ./thirdparty/pre-built-ui/multitenant-login.mdx  -->
 <!-- 4 -->
+
+:::success
+You have now completed a basic multi tenant setup for your application. There may be more steps required depending on the specifics of your UX. Checkout the "See also" section below for more information.
+:::
 
 ## See also
 
