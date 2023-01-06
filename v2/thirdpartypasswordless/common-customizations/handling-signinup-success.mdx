@@ -114,7 +114,7 @@ SuperTokens.init({
 
             // highlight-start
             override: {
-                apis: (originalImplementation) => {
+                functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
                         // override the thirdparty sign in / up API
@@ -192,40 +192,51 @@ func main() {
 			thirdpartypasswordless.Init(tplmodels.TypeInput{
 				// highlight-start
 				Override: &tplmodels.OverrideStruct{
-					APIs: func(originalImplementation tplmodels.APIInterface) tplmodels.APIInterface {
+					Functions: func(originalImplementation tplmodels.RecipeInterface) tplmodels.RecipeInterface {
 
 						// create a copy of the original function
-						originalConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-						originalThirdPartySignInUpPOST := *originalImplementation.ThirdPartySignInUpPOST
+						originalConsumeCode := *originalImplementation.ConsumeCode
+						originalThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
 
-						// override the thirdparty sign in / up API
-						(*originalImplementation.ThirdPartySignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tplmodels.ThirdPartySignInUpOutput, error) {
+						// override the thirdparty sign in / up function
+						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, oAuthTokens tpmodels.TypeOAuthTokens, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, userContext supertokens.UserContext) (tplmodels.ThirdPartySignInUp, error) {
 
 							// TODO: some pre sign in / up logic
 
-							resp, err := originalThirdPartySignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
+							resp, err := originalThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, userContext)
 							if err != nil {
-								return tplmodels.ThirdPartySignInUpOutput{}, err
+								return tplmodels.ThirdPartySignInUp{}, err
 							}
 
 							if resp.OK != nil {
+								// user object contains the ID and email of the user
+								user := resp.OK.User
+								fmt.Println(user)
+
+								// This is the response from the OAuth tokens provided by the third party provider
+								fmt.Println(resp.OK.OAuthTokens["access_token"])
+
+								// This gives the user's info as returned by the provider's user profile endpoint.
+								fmt.Println(resp.OK.RawUserInfoFromProvider.FromUserInfoAPI["first_name"])
+
 								if resp.OK.CreatedNewUser {
-									// TODO: some post sign up logic
+									// TODO: Post sign up logic
 								} else {
-									// TODO: some post sign in logic
+									// TODO: Post sign in logic
 								}
+
 							}
 
 							return resp, err
 						}
 
-						// override the passwordless sign in up API
-						(*originalImplementation.ConsumeCodePOST) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (tplmodels.ConsumeCodePOSTResponse, error) {
+						// override the passwordless sign in up function
+						(*originalImplementation.ConsumeCode) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, userContext supertokens.UserContext) (tplmodels.ConsumeCodeResponse, error) {
 
-							// First we call the original implementation of ConsumeCodeUpPOST.
-							response, err := originalConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+							// First we call the original implementation of ConsumeCodeUp.
+							response, err := originalConsumeCode(userInput, linkCode, preAuthSessionID, userContext)
 							if err != nil {
-								return tplmodels.ConsumeCodePOSTResponse{}, err
+								return tplmodels.ConsumeCodeResponse{}, err
 							}
 
 							if response.OK != nil {
@@ -319,7 +330,7 @@ init(
             flow_type="...", # type: ignore
 			# highlight-start
             override=thirdpartypasswordless.InputOverrideConfig(
-                apis=override_thirdpartypasswordless_apis
+                functions=override_thirdpartypasswordless_apis
             ),
 			# highlight-end            
         )
