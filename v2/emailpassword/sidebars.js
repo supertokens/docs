@@ -346,31 +346,37 @@ module.exports = {
       label: 'Auth flow customizations',
       collapsed: true,
       items: [
-        {
-          type: 'category',
-          label: 'Sign Up Form',
-          items: [
-            "common-customizations/signup-form/adding-fields",
-            "common-customizations/signup-form/changing-field-labels",
-            "common-customizations/signup-form/field-validators",
-            "common-customizations/signup-form/toc-privacypolicy"
-          ],
-        },
-        {
-          type: "category",
-          label: "Sign In Form",
-          items: [
-            "common-customizations/signin-form/changing-field-labels",
-            "common-customizations/signin-form/field-validators",
-          ]
-        },
-        "common-customizations/get-user-info",
         "common-customizations/handling-signup-success",
         "common-customizations/handling-signin-success",
-        "common-customizations/password-managers",
+        {
+          type: 'category',
+          label: 'Sign In / Up',
+          items: [
+            {
+              type: 'category',
+              label: 'Sign Up Form',
+              items: [
+                "common-customizations/signup-form/adding-fields",
+                "common-customizations/signup-form/changing-field-labels",
+                "common-customizations/signup-form/field-validators",
+              ],
+            },
+            {
+              type: "category",
+              label: "Sign In Form",
+              items: [
+                "common-customizations/signin-form/changing-field-labels",
+                "common-customizations/signin-form/field-validators",
+              ]
+            },
+            "common-customizations/signup-form/toc-privacypolicy",
+            "common-customizations/embed-sign-in-up-form",
+            "common-customizations/password-managers",
+          ],
+        },
+        "common-customizations/get-user-info",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
-        "common-customizations/embed-sign-in-up-form",
         "common-customizations/change-password",
         {
           type: "category",
