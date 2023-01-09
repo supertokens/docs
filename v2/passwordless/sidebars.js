@@ -345,25 +345,26 @@ module.exports = {
       label: 'Auth flow customizations',
       collapsed: true,
       items: [
+        "common-customizations/handling-signinup-success",
         {
           type: "category",
-          label: "Sign In / Up form",
+          label: "Sign In / Up",
           items: [
             "common-customizations/sign-in-up/default-country",
             "common-customizations/sign-in-up/resend-time-gap",
             "common-customizations/sign-in-up/change-maximum-retries",
             "common-customizations/sign-in-up/change-otp-format",
+            "common-customizations/sign-in-up/change-email-phone-validation",
             "common-customizations/sign-in-up/toc-privacypolicy",
-            "common-customizations/sign-in-up/change-email-phone-validation"
+            "common-customizations/embed-sign-in-up-form",
           ],
         },
         "common-customizations/generating-magic-link-manually",
         "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
         "common-customizations/user-pagination",
+        "common-customizations/delete-user",
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",
-        "common-customizations/embed-sign-in-up-form",
         {
           type: "category",
           label: "Email Verification",
