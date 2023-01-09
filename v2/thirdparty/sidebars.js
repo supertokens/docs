@@ -359,6 +359,13 @@ module.exports = {
                 "common-customizations/sign-in-and-up/custom-providers",
               ],
             },
+            {
+              type: "category",
+              label: "Multi tenancy and Enterprise SSO",
+              items: [
+                "common-customizations/multi-tenancy/overview"
+              ]
+            },
             "common-customizations/sign-in-and-up/toc-privacypolicy",
             "common-customizations/embed-sign-in-up-form",
           ],
