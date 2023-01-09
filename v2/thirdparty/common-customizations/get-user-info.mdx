@@ -4,9 +4,6 @@ title: Get User info
 hide_title: true
 ---
 
-<!-- COPY DOCS -->
-<!-- ./thirdpartyemailpassword/common-customizations/get-user-info.mdx -->
-
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
 import TabItem from '@theme/TabItem';
@@ -19,11 +16,18 @@ import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
 
 # Get User Info
 
-You can fetch user information on the backend as well as on the frontend.
+<!-- COPY SECTION -->
+<!-- ./thirdpartyemailpassword/common-customizations/get-user-info.mdx -->
+<!-- 0 -->
 
-## Fetching on the backend
+There are several ways to fetch information about a user:
+- Using their user ID, you can get their email ID, time joined, and metadata that is saved in the user metadata recipe.
+- If the user logged in via a third party providers, you can get their profile info in the post sign up override along with the provider's access token. You can save this information in the user metadata recipe for later retrieval.
+- Lastly, you can get the user's session information and access token payload from their session handle (offline mode), or from the currently logged in session object (online mode).
 
-### Using `getUserByEmail`
+<!-- END COPY SECTION -->
+
+## Fetching information using the user's email
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -79,7 +83,8 @@ from supertokens_python.recipe.^{codeImportRecipeName}.asyncio import ^{getUserB
 
 async def some_func():
     # Note that users_info has type List[User]
-    _ = await ^{getUserByEmailPython}("test@example.com")
+    users_info = await ^{getUserByEmailPython}("test@example.com")
+    print(users_info)
 ```
 
 </TabItem>
@@ -99,7 +104,13 @@ users_info = ^{getUserByEmailPython}("test@example.com")
 </TabItem>
 </BackendSDKTabs>
 
-### Using `getUserById`
+<!-- COPY SECTION -->
+<!-- ./thirdpartyemailpassword/common-customizations/get-user-info.mdx -->
+<!-- 1 -->
+
+## Fetching information using the user's ID
+
+### Using the `getUserById` function
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -529,119 +540,188 @@ async def get_user_info_api(request: HttpRequest):
 </TabItem>
 </BackendSDKTabs>
 
-## Fetching on the frontend
+### Using the user metadata recipe
 
-:::important
-The function calls below require no API calls and read directly from the session information stored on the frontend. This makes them very quick.
-:::
+Checkout the [user metadata recipe docs](./usermetadata/about) which shows you how to save and fetch any JSON object against the user's ID. You can use this to save information like the user's name (`first_name` and `last_name`) or any other field associated with the user.
 
-<FrontendSDKTabs>
-<TabItem value="reactjs">
-<FrontendReactContextSubTabs>
+## Getting information from the user's session
 
-<TabItem value="with-react-context">
+The user's session contains their user ID and the session's payload. You can access this on the backend and frontend as well as whilst the user is online or offline.
+
+More information about this can be found in the [session docs](./sessions/claims/access-token-payload#read-the-access-token-payload).
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./thirdpartyemailpassword/common-customizations/get-user-info.mdx -->
+<!-- 2 -->
+
+## Getting the user's third party provider information and access token
+If the user used a third party provider to login, you can access their info via SuperTokens as shown below. You can then save the OAuthTokens in your own db or in SuperTokens (using the [user metadata recipe](./usermetadata/store-data)) and use them to fetch / change info about the logged in user from the third party provider
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
 
 ```tsx
-import React from "react";
-// highlight-next-line
-import { useSessionContext } from 'supertokens-auth-react/recipe/session'; 
+import SuperTokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/^{codeImportRecipeName}";
+import Session from "supertokens-node/recipe/session";
 
-// Your dashboard component
-function Dashboard(props: any) {
-    // highlight-next-line
-    let session = useSessionContext();
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: { 
+        connectionURI: "...",
+     },
+    recipeList: [
+        ThirdPartyEmailPassword.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // override the thirdparty sign in / up API
+                        thirdPartySignInUpPOST: async function(input) {
+                            if (originalImplementation.thirdPartySignInUpPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
 
-    if (session.loading) {
-        return null;
-    }
+                            // TODO: Some pre sign in / up logic
 
-    let {doesSessionExist, userId, accessTokenPayload} = session;
+                            let response = await originalImplementation.thirdPartySignInUpPOST(input);
 
-    // doesSessionExist will always be true if this is wrapped in `<SessionAuth>`
-    if (!doesSessionExist) {
-        // TODO
-    }
+                            if (response.status === "OK") {
+                                if (response.createdNewUser) {
+                                    // TODO: some post sign up logic
+                                } else {
+                                    // TODO: some post sign in logic
+                                }
+                            }
 
-    let name = accessTokenPayload.userName;
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+				//highlight-start
+				Override: &tpepmodels.OverrideStruct{
+					Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
+						
+						originalThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
+
+						// override the thirdparty sign in / up function
+						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, oAuthTokens tpmodels.TypeOAuthTokens, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
+
+							resp, err := originalThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, userContext)
+							if err != nil {
+								return tpepmodels.SignInUpResponse{}, err
+							}
+
+							if resp.OK != nil {
+								user := resp.OK.User
+								fmt.Println(user)
+
+								// This is the response from the OAuth tokens provided by the third party provider
+								fmt.Println(resp.OK.OAuthTokens["access_token"])
+                                // other tokens like the refresh_token or id_token are also 
+                                // available in the OAuthTokens object.
+
+								// This gives the user's info as returned by the provider's user profile endpoint.
+								fmt.Println(resp.OK.RawUserInfoFromProvider.FromUserInfoAPI["first_name"])
+
+								// This gives the user's info from the returned ID token 
+                                // if the provider gave us an ID token
+                                fmt.Println(resp.OK.RawUserInfoFromProvider.FromIdTokenPayload["first_name"])
+							}
+
+							return resp, err
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
 }
 ```
 
 </TabItem>
+<TabItem value="python">
 
-<TabItem value="without-react-context">
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import ^{codeImportRecipeName}
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, ThirdPartyAPIOptions, EmailPasswordAPIOptions, ThirdPartySignInUpPostOkResult, EmailPasswordSignInPostOkResult, EmailPasswordSignUpPostOkResult
+from typing import Union, Dict, Any, List
+from supertokens_python.recipe.thirdparty.provider import Provider
+from supertokens_python.recipe.emailpassword.types import FormField
 
-```tsx
-import Session from 'supertokens-auth-react/recipe/session';
+# highlight-start
+def override_thirdpartyemailpassword_apis(original_implementation: APIInterface):
+    original_thirdparty_sign_in_up_post = original_implementation.thirdparty_sign_in_up_post
+    
+    async def thirdparty_sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None],
+                                         api_options: ThirdPartyAPIOptions, user_context: Dict[str, Any]):
+        # call the default behaviour as show below
+        result = await original_thirdparty_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+        
+        if isinstance(result, ThirdPartySignInUpPostOkResult):
+            if result.created_new_user:
+                pass # TODO: some post sign up logic
+            else:
+                pass # TODO: some post sign in logic
+        
+        return result
 
-async function getUserInfo() {
-      if (await Session.doesSessionExist()) {
-            let userId = await Session.getUserId();
-            let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
-      }
-}
-```
+    original_implementation.thirdparty_sign_in_up_post = thirdparty_sign_in_up_post
+    return original_implementation
+# highlight-end
 
-</TabItem>
-</FrontendReactContextSubTabs>
-</TabItem>
-
-<TabItem value="vanillajs">
-
-<NpmOrScriptTabs>
-<TabItem value="npm">
-
-```tsx
-import Session from 'supertokens-web-js/recipe/session';
-
-async function getUserInfo() {
-      if (await Session.doesSessionExist()) {
-            let userId = await Session.getUserId();
-            let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
-      }
-}
-```
-
-</TabItem>
-<TabItem value="script">
-
-```tsx
-import supertokensSession from "supertokens-web-js-script/recipe/session";
-async function getUserInfo() {
-      if (await supertokensSession.doesSessionExist()) {
-            let userId = await supertokensSession.getUserId();
-            let accessTokenPayload = await supertokensSession.getAccessTokenPayloadSecurely();
-      }
-}
-```
-
-</TabItem>
-</NpmOrScriptTabs>
-
-</TabItem>
-<TabItem value="react-native">
-
-```tsx
-import SuperTokens from 'supertokens-react-native';
-
-async function getUserInfo() {
-      if (await SuperTokens.doesSessionExist()) {
-            let userId = await SuperTokens.getUserId();
-            let accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
-      }
-}
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        thirdpartyemailpassword.init(
+			# highlight-start
+            override=thirdpartyemailpassword.InputOverrideConfig(
+                functions=override_thirdpartyemailpassword_apis
+            )
+			# highlight-end
+        )
+    ]
+)
 ```
 </TabItem>
+</BackendSDKTabs>
 
-<TabItem value="angular">
-
-~COPY-TABS=npm,vanillajs
-
-</TabItem>
-
-<TabItem value="vue">
-
-~COPY-TABS=angular
-
-</TabItem>
-
-</FrontendSDKTabs>
+<!-- END COPY SECTION -->
