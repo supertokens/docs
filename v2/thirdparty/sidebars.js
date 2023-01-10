@@ -364,7 +364,15 @@ module.exports = {
               label: "Multi tenancy and Enterprise SSO",
               items: [
                 "common-customizations/multi-tenancy/overview",
-                "common-customizations/multi-tenancy/new-tenant-config"
+                "common-customizations/multi-tenancy/new-tenant-config",
+                {
+                  type: "category",
+                  label: "Common UX flows",
+                  items: [
+                    "common-customizations/multi-tenancy/common-domain-login",
+                    "common-customizations/multi-tenancy/sub-domain-login"
+                  ]
+                },
               ]
             },
             "common-customizations/sign-in-and-up/toc-privacypolicy",
