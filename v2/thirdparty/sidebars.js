@@ -363,7 +363,8 @@ module.exports = {
               type: "category",
               label: "Multi tenancy and Enterprise SSO",
               items: [
-                "common-customizations/multi-tenancy/overview"
+                "common-customizations/multi-tenancy/overview",
+                "common-customizations/multi-tenancy/new-tenant-config"
               ]
             },
             "common-customizations/sign-in-and-up/toc-privacypolicy",
