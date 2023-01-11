@@ -19,7 +19,9 @@ import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 
 In this UX flow, all tenants login using their assigned sub domain (`customer1.example.com`, `customer2.example.com` and so on). The login method that's shown on the login page on each sub domain depends on that tenant's `tenantId` configuration. 
 
+:::important
 Throughout this page, we will assume that the tenant ID for a tenant is equal to their sub domain - so if the sub domain assigned to a tenant is `customer.example.com`, then their tenantId is `customer1`.
+:::
 
 <!-- COPY SECTION -->
 <!-- ./thirdparty/common-customizations/multi-tenancy/common-domain-login.mdx  -->
@@ -33,11 +35,174 @@ Whenever you want to onboard a new customer, you should [create and configure a 
 
 ## Step 2: Load login methods dynamically on the frontend based on the tenantId
 
-TODO
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+Modify the `SuperTokens.init` to do the following:
+1. Set the `usesDynamicLoginMethods` to true. This will tell our frontend SDK that the login page is based on the tenantId and to fetch the tenant config from the backend before showing any login UI.
+2. Initialize the `Multitenancy` recipe and provide `getTenantId` config function.
+
+<AppInfoForm
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+>
+
+<FrontendPreBuiltUITabs>
+<TabItem value="reactjs">
+
+```tsx
+import React from 'react';
+
+import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
+import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
+import Session from "supertokens-auth-react/recipe/session";
+import Multitenancy from "supertokens-auth-react/recipe/multitenancy";
+
+SuperTokens.init({
+    appInfo: {
+        // learn more about this on https://supertokens.com/docs/thirdpartyemailpassword/appinfo
+        appName: "^{form_appName}",
+        apiDomain: "^{form_apiDomain}",
+        websiteDomain: "^{form_websiteDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        websiteBasePath: "^{form_websiteBasePath}"
+    },
+    // highlight-start
+    usesDynamicLoginMethods: true,
+    // highlight-end
+    recipeList: [
+        // highlight-start
+        ThirdParty.init(),
+        // highlight-end
+        Session.init(),
+        // highlight-start
+        Multitenancy.init({
+          getTenantId: async () => {
+            // We treat the sub domain as the tenant ID
+            return window.location.host.split('.')[0]
+          }
+        })
+        // highlight-end
+    ]
+});
+```
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+</AppInfoForm>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+The frontend setup is similar to that of a [regular single tenant social login page](../../custom-ui/thirdparty-login), but on page load, you will first need to check which third party providers are enabled for the current tenant. This can be done by querying the backend as shown below:
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<!-- COPY SECTION -->
+<!-- ./thirdparty/custom-ui/multitenant-login.mdx  -->
+<!-- 2d -->
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+
+async function fetchThirdPartyLoginProvidersForTenant(tenantId: string) {
+	const loginMethods = await SuperTokens.getLoginMethods({
+		tenantId
+	})
+
+	if (loginMethods.thirdParty.enabled) {
+		const providers = loginMethods.thirdParty.providers;
+		if (providers.find(i => i.thirdPartyId === "active-directory")) {
+			// render sign in with Active Directory button
+		} else {
+			// more checks for other providers
+		}
+	} else {
+		// thirdparty login is disabled for the tenant
+	}
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens from 'supertokens-web-js-script';
+async function fetchThirdPartyLoginProvidersForTenant(tenantId: string) {
+	const loginMethods = await supertokens.getLoginMethods({
+		tenantId
+	})
+
+	if (loginMethods.thirdParty.enabled) {
+		const providers = loginMethods.thirdParty.providers;
+		if (providers.find(i => i.thirdPartyId === "active-directory")) {
+			// render sign in with Active Directory button
+		} else {
+			// more checks for other providers
+		}
+	} else {
+		// thirdparty login is disabled for the tenant
+	}
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+<!-- END COPY SECTION -->
+
+Once you have the list of third party providers for the current tenant, you can display the relevant buttons on the page.
+
+When the user clicks on a specific provider, you would need to follow the same steps mentioned in the [single tenant social login page](../../custom-ui/thirdparty-login). The only addition is that when calling `getAuthorisationURLWithQueryParamsAndSetState`, you would also need to pass in the `tenantId`.
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<!-- COPY SECTION -->
+<!-- ./thirdparty/custom-ui/multitenant-login.mdx  -->
+<!-- 2d1 -->
+
+<AppInfoForm askForAPIDomain>
+
+```bash
+curl --location --request GET '^{form_apiDomain}^{form_apiBasePath}/loginmethods?tenantId=customer1' \
+--header 'rid: multitenancy'
+```
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: The `recipes` field will contain information about which login methods are enabled along with the list of third party providers configured for this tenant.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+
+</AppInfoForm>
+
+<!-- END COPY SECTION -->
+
+Once you have the list of third party providers for the current tenant, you can display the relevant buttons on the page.
+
+When the user clicks on a specific provider, you would need to follow the same steps mentioned in the [single tenant social login page](../../custom-ui/thirdparty-login). The only addition is that when calling `/auth/signinup POST` API, you would also need to pass in the `tenantId` in the request body (along with other fields like `thirdPartyId`).
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
 
 ## Step 3: Tell SuperTokens about tenant's sub domains
 
-TODO
+We want to restrict users to only be able to access their (sub)domains. SuperTokens makes it easy for you to do this. We start by telling SuperTokens which domain each tenantId has access to:
 
 <!-- COPY SECTION -->
 <!-- ./thirdparty/common-customizations/multi-tenancy/common-domain-login.mdx  -->
