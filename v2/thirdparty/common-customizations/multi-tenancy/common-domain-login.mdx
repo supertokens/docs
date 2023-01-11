@@ -505,11 +505,11 @@ import Multitenancy from "supertokens-web-js/recipe/multitenancy";
 
 async function redirectToSubDomain() {
     if (await Session.doesSessionExist()) {
-        let allowedDomains: string[] | undefined = await Session.getClaimValue({
-            claim: Multitenancy.MultiTenancyDomainClaim
+        let claimValues: {allowedDomains: string[] | undefined, tenantId: string} = await Session.getClaimValue({
+            claim: Multitenancy.MultiTenancyClaim
         });
 
-        window.location.href = "https://" + allowedDomains![0];
+        window.location.href = "https://" + claimValues.allowedDomains![0];
     } else {
         window.location.href = "/auth";
     }
@@ -524,11 +524,11 @@ import supertokensSession from "supertokens-web-js-script/recipe/session";
 import supertokensMultitenancy from "supertokens-web-js-script/recipe/multitenancy";
 async function redirectToSubDomain() {
     if (await Session.doesSessionExist()) {
-        let allowedDomains: string[] | undefined = await supertokensSession.getClaimValue({
-            claim: supertokensMultitenancy.MultiTenancyDomainClaim
+        let claimValues: {allowedDomains: string[] | undefined, tenantId: string} = await supertokensSession.getClaimValue({
+            claim: supertokensMultitenancy.MultiTenancyClaim
         });
 
-        window.location.href = "https://" + allowedDomains![0];
+        window.location.href = "https://" + claimValues.allowedDomains![0];
     } else {
         window.location.href = "/auth";
     }
@@ -538,7 +538,7 @@ async function redirectToSubDomain() {
 </TabItem>
 </NpmOrScriptTabs>
 
-- The `MultiTenancyDomainClaim` claim is auto added to the session by our backend SDK if you provide the `GetAllowedDomainsForTenantId` config from the previous step.
+- The `MultiTenancyClaim` claim is auto added to the session by our backend SDK if you provide the `GetAllowedDomainsForTenantId` config from the previous step.
 - This claim contains a list of domains that are allowed for this user, based on their tenant ID.
 
 ## Step 6: (Optional) Sharing sessions across sub domains
@@ -723,4 +723,183 @@ TODO
 
 On the frontend, we want to check if the tenant has access to the current sub domain. If not, we want to redirect them to the right sub domain. This can be done by using the `hasAccessToCurrentDomain` session validator from the multi tenancy recipe:
 
-TODO..
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+<FrontendPreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+```tsx
+import React from "react";
+import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session';
+import { MultitenancyClaim } from 'supertokens-auth-react/recipe/multitenancy';
+
+const ProtectedRoute = (props: React.PropsWithChildren<any>) => {
+    return (
+        <SessionAuth
+            overrideGlobalClaimValidators={(globalValidators) =>
+                [...globalValidators,
+                    MultitenancyClaim.validators.hasAccessToCurrentDomain()
+                ]
+            }
+        >
+            <InvalidClaimHandler>
+                {props.children}
+            </InvalidClaimHandler>
+        </SessionAuth>
+    );
+}
+
+function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
+    let sessionContext = useSessionContext();
+    if (sessionContext.loading) {
+        return null;
+    }
+
+    if (sessionContext.invalidClaims.some(i => i.validatorId === MultitenancyClaim.id)) {
+        return <div>You cannot access this page.</div>
+    }
+
+    return <div>{props.children}</div>;
+}
+```
+Above we are creating a generic component called `ProtectedRoute` which enforces that its child components can only be rendered if the user is on the right sub domain based on the Multi tenancy claim.
+
+</TabItem>
+
+<TabItem value="angular">
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { MultitenancyClaim } from "supertokens-web-js/recipe/multitenancy";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    MultitenancyClaim.validators.hasAccessToCurrentDomain(),
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === MultitenancyClaim.id) {
+                // multi tenancy domain check claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `MultitenancyClaim` validator which makes sure that the user is on the right sub domain.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { MultitenancyClaim } from "supertokens-web-js/recipe/multitenancy";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    MultitenancyClaim.validators.hasAccessToCurrentDomain(),
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === MultitenancyClaim.id) {
+                // multi tenancy domain check claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `MultitenancyClaim` validator which makes sure that the user is on the right sub domain.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensMultitenancy from "supertokens-web-js-script/recipe/multitenancy";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await supertokensSession.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    supertokensMultitenancy.MultitenancyClaim.validators.hasAccessToCurrentDomain(),
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.validatorId === supertokensMultitenancy.MultitenancyClaim.id) {
+                // multi tenancy domain check claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `MultitenancyClaim` validator which makes sure that the user is on the right sub domain.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
