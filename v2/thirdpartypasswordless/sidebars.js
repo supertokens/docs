@@ -294,7 +294,6 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/protecting-frontend-routes",
-        "common-customizations/sessions/get-access-token",
         "common-customizations/sessions/ssr",
         {
           type: "category",
