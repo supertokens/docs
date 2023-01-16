@@ -25,7 +25,7 @@ hide_title: true
 ### 3.4 to 3.5
 - Change `user_id` in `emailverification_verified_emails` to `VARCHAR(128)`
 - Change `user_id` in `emailverification_tokens` to `VARCHAR(128)`
-- Add new table:
+- Add new table (use the db_user associated with user's core or remember to change the owner of the new tables to db_user):
    ```
    CREATE TABLE IF NOT EXISTS all_auth_recipe_users(
       user_id CHAR(36) NOT NULL,
