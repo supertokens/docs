@@ -247,6 +247,7 @@ module.exports = {
           label: "React-SDK",
           items: [
             "decisions/reactsdk/0001",
+            "decisions/reactsdk/0002",
           ],
         },
       ],
