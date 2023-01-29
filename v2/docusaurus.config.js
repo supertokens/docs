@@ -147,13 +147,13 @@ module.exports = {
   plugins: [
     [
       // loads the supertokens.com react bundle for footer and analytics etc..
-      "./src/plugins/reactBundle",
+      require("./src/plugins/reactBundle"),
       {
         id: "react-bundle",
       }
     ],
     [
-      "./src/plugins/copyDocsAndCodeTypeChecking",
+      require("./src/plugins/copyDocsAndCodeTypeChecking"),
       {
         // used for copying docs content via the <-COPY DOCS-> directive
         // used for do code type checking as well AFTER running cop docs
