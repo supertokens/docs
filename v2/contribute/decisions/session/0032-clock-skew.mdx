@@ -1,0 +1,91 @@
+---
+id: "0032"
+title: Get clock skew during session creation/refresh by adding server time to response body
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader"
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro"
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon"
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut"
+
+# Get clock skew during session creation/refresh by adding server time to response body
+
+<DecisionHeader status="proposed" lastUpdate="2023-01-24" created="2022-12-24" deciders={["rishabhpoddar", "porcellus"]} proposedBy={["porcellus"]} />
+
+## Context and Problem Statement
+
+If the clocks on the FE and BE are misaligned, it can cause a lot of issues. E.g.: claim validation will always fail if the clock skew is larger that the maxAge of the validator. We can solve this by detecting clock skew on the FE.
+
+## Considered Options
+
+* Synchronise BE and BE clocks via a handshake request
+* Call a third-party service to get the clock skew
+* Get clock skew by adding server time to response headers on all requests
+* Get clock skew during session creation/refresh by adding server time to response body
+* Get clock skew during session creation/refresh by adding server time to new response header
+* Get clock skew during session creation/refresh by `iat` to the front-token
+
+## Decision Outcome
+
+We've decided to get clock skew during session creation/refresh by `iat` to the front-token:
+- We don't want to make/wait for extra requests on page-load
+- Syncs often enough
+- We can use the same information to sync the BE clock to the Core without changing the CDI if we choose to
+- Re-uses existing mechanism instead of adding a new one
+
+Notes:
+- This means that we need to get timestamps through a centralized provider at least on the FE
+- It should be backwards compatible: if the iat is not there in the front-token we can assume a 0 skew.
+- The clock skew should be saved in a cookie on the FE with the same scope as the session (if it's off, it'll be re-synced on refresh)
+
+### Synchronise BE and BE clocks via a handshake request
+
+<ArgumentPro> Could be used for other things (i.e.: validating that FE/BE configs match) </ArgumentPro>
+<ArgumentCon> Delays initial session loading/validation </ArgumentCon>
+<ArgumentCon> An extra request on all page loads </ArgumentCon>
+
+### Call a third-party service to get the clock skew
+
+<ArgumentPro> Single source of truth </ArgumentPro>
+<ArgumentCon> Delays initial session loading/validation </ArgumentCon>
+<ArgumentCon> An extra request on all page loads </ArgumentCon>
+<ArgumentCon> Depends on a third-party </ArgumentCon>
+<ArgumentCon> The BE would need to sync to the same source </ArgumentCon>
+<ArgumentCon> Extra setting in FE CSP headers </ArgumentCon>
+
+### Get clock skew by adding server time to response headers on all requests
+
+<ArgumentPro> No third-party dependence </ArgumentPro>
+<ArgumentPro> No extra request </ArgumentPro>
+<ArgumentPro> Syncs often </ArgumentPro>
+<ArgumentCon> New header - needs to be added to exposed headers </ArgumentCon>
+<ArgumentCon> If the clock skew is updated, the times in the debug log can get weird </ArgumentCon>
+
+### Get clock skew during session creation/refresh by adding server time to response body
+
+<ArgumentPro> No third-party dependence </ArgumentPro>
+<ArgumentPro> No extra request </ArgumentPro>
+<ArgumentPro> Syncs often enough - we only use dates/times in logs and when checking of the access token or a claim is expired </ArgumentPro>
+<ArgumentCon> Changes response type of multiple requests </ArgumentCon>
+<ArgumentCon> Would need to be added to the response if the user calls `createNewSession` </ArgumentCon>
+<ArgumentCon> If the clock skew is updated, the times in the debug log can get weird </ArgumentCon>
+
+### Get clock skew during session creation/refresh by adding server time to new response header
+
+<ArgumentPro> No third-party dependence </ArgumentPro>
+<ArgumentPro> No extra request </ArgumentPro>
+<ArgumentPro> Syncs often enough - we only use dates/times in logs and when checking of the access token or a claim is expired </ArgumentPro>
+<ArgumentCon> New header - needs to be added to exposed headers </ArgumentCon>
+<ArgumentCon> If the clock skew is updated, the times in the debug log can get weird </ArgumentCon>
+
+### Get clock skew during session creation/refresh by adding `iat` to front-token
+
+<ArgumentPro> Single source of truth - we can use the same information to sync the BE clock if we choose to </ArgumentPro>
+<ArgumentPro> No third-party dependence </ArgumentPro>
+<ArgumentPro> No extra request </ArgumentPro>
+<ArgumentPro> No FDI change </ArgumentPro>
+<ArgumentPro> Syncs often enough - we only use dates/times in logs and when checking of the access token or a claim is expired </ArgumentPro>
+<ArgumentCon> Need to set up a centralised timestamp provider on the BE as well </ArgumentCon>
+<ArgumentCon> Re-using the issue time of tokens in a non-obvious way </ArgumentCon>
+<ArgumentCon> If the clock skew is updated, the times in the debug log can get weird </ArgumentCon>
