@@ -14,11 +14,11 @@ let remarkPlugins = [
  * These are remark plugins that run specifically before the default ones docusaurus adds
  */
 let beforeDefaultRemarkPlugins = [
-  require("./src/plugins/tocHeaderProcessor"),
+  "./src/plugins/tocHeaderProcessor",
 ];
 
 let rehypePlugins = [
-  require('./src/plugins/addNofollowToExternalLinks')
+  "./src/plugins/addNofollowToExternalLinks"
 ];
 
 module.exports = {
