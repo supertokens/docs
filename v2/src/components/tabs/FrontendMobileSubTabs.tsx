@@ -16,21 +16,21 @@ export default function FrontendMobileSubTabs(props: any) {
                 { label: 'iOS', value: 'ios' },
                 { label: 'Flutter', value: 'flutter' }
             ]}>
-            {/* {childContainsTabItemWithValue("ios", props.children)
+            {childContainsTabItemWithValue("flutter", props.children)
                 ? null
-                : DefaultiOSTabItem()} */}
+                : DefaultFlutterTabItem()}
             {props.children}
         </Tabs>
     );
 }
 
-function DefaultiOSTabItem() {
+function DefaultFlutterTabItem() {
     // we add a div cause COPY-TABS won't work
     // as a direct child of TabItem.
     return (
-        <TabItem value="ios" mdxType="TabItem">
+        <TabItem value="flutter" mdxType="TabItem">
             <div>
-                ~COPY-TABS=android
+                Coming Soon
             </div>
         </TabItem>
     );
