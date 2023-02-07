@@ -19,19 +19,19 @@ import Foundation
 internal class AntiCSRF {
     class AntiCSRFInfo {
         var antiCSRF: String? = nil
-        var idRefreshToken: String? = nil
+        var associatedAccessTokenUpdate: String? = nil
         
-        init(antiCSRFToken: String, associatedIdRefreshToken: String) {
+        init(antiCSRFToken: String, associatedAccessTokenUpdate: String) {
             antiCSRF = antiCSRFToken
-            idRefreshToken = associatedIdRefreshToken
+            self.associatedAccessTokenUpdate = associatedAccessTokenUpdate
         }
     }
     
     private static var antiCSRFInfo: AntiCSRFInfo? = nil
     private static let antiCSRFUserDefaultsKey = "supertokens-ios-anticsrf-key"
     
-    internal static func getToken(associatedIdRefreshToken: String?) -> String? {
-        if associatedIdRefreshToken == nil {
+    internal static func getToken(associatedAccessTokenUpdate: String?) -> String? {
+        if associatedAccessTokenUpdate == nil {
             AntiCSRF.antiCSRFInfo = nil
             return nil
         }
@@ -43,17 +43,17 @@ internal class AntiCSRF {
                 return nil
             }
             
-            AntiCSRF.antiCSRFInfo = AntiCSRFInfo(antiCSRFToken: antiCSRFToken!, associatedIdRefreshToken: associatedIdRefreshToken!)
-        } else if AntiCSRF.antiCSRFInfo?.idRefreshToken != nil && AntiCSRF.antiCSRFInfo?.idRefreshToken != associatedIdRefreshToken! {
+            AntiCSRF.antiCSRFInfo = AntiCSRFInfo(antiCSRFToken: antiCSRFToken!, associatedAccessTokenUpdate: associatedAccessTokenUpdate!)
+        } else if AntiCSRF.antiCSRFInfo?.associatedAccessTokenUpdate != nil && AntiCSRF.antiCSRFInfo?.associatedAccessTokenUpdate != associatedAccessTokenUpdate! {
             AntiCSRF.antiCSRFInfo = nil
-            return AntiCSRF.getToken(associatedIdRefreshToken: associatedIdRefreshToken)
+            return AntiCSRF.getToken(associatedAccessTokenUpdate: associatedAccessTokenUpdate)
         }
         
         return AntiCSRF.antiCSRFInfo!.antiCSRF
     }
     
-    internal static func setToken(antiCSRFToken: String, associatedIdRefreshToken: String? = nil) {
-        if associatedIdRefreshToken == nil {
+    internal static func setToken(antiCSRFToken: String, associatedAccessTokenUpdate: String? = nil) {
+        if associatedAccessTokenUpdate == nil {
             AntiCSRF.antiCSRFInfo = nil
             return;
         }
@@ -62,7 +62,7 @@ internal class AntiCSRF {
         userDefaults.set(antiCSRFToken, forKey: AntiCSRF.antiCSRFUserDefaultsKey)
         userDefaults.synchronize()
         
-        AntiCSRF.antiCSRFInfo = AntiCSRFInfo(antiCSRFToken: antiCSRFToken, associatedIdRefreshToken: associatedIdRefreshToken!)
+        AntiCSRF.antiCSRFInfo = AntiCSRFInfo(antiCSRFToken: antiCSRFToken, associatedAccessTokenUpdate: associatedAccessTokenUpdate!)
     }
     
     internal static func removeToken() {

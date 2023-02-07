@@ -328,6 +328,7 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/share-sessions-across-sub-domains",
+        "common-customizations/sessions/token-transfer-method",
         {
           type: "category",
           label: "Other operations",
@@ -518,21 +519,6 @@ module.exports = {
               ],
             },
             "advanced-customizations/user-context",
-            {
-              type: 'category',
-              label: 'Examples',
-              items: [
-                {
-                  type: 'category',
-                  label: 'Using localstorage instead of cookies',
-                  items: [
-                    "advanced-customizations/examples/localstorage/about",
-                    "advanced-customizations/examples/localstorage/guide"
-                  ],
-                },
-              ],
-            },
-
           ],
         },
         {
