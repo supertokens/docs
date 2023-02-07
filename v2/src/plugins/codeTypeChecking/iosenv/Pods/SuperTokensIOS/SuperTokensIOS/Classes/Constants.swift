@@ -16,8 +16,13 @@
 import Foundation
 
 internal class SuperTokensConstants {
+    static let accessTokenHeaderKey = "st-access-token"
+    static let refreshTokenHeaderKey = "st-refresh-token"
     static let antiCSRFHeaderKey = "anti-csrf"
     static let frontTokenHeaderKey = "front-token"
-    static let idRefreshTokenHeaderKey = "id-refresh-token"
     static let platformName = "ios"
+    
+    static let LAST_ACCESS_TOKEN_UPDATE = "st-last-access-token-update";
+    static let REFRESH_TOKEN_NAME = "st-refresh-token";
+    static let ACCESS_TOKEN_NAME = "st-access-token";
 }
