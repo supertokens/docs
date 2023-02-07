@@ -22,7 +22,7 @@ internal class FrontToken {
     }
     
     private static func getFrontToken() -> String? {
-        if IdRefreshToken.getToken() == nil {
+        if Utils.getLocalSessionState().status == .NOT_EXISTS {
             return nil
         }
         
@@ -46,8 +46,8 @@ internal class FrontToken {
                 let frontToken: String? = getFrontToken()
                 
                 if frontToken == nil {
-                    let idRefresh = IdRefreshToken.getToken()
-                    if idRefresh != nil {
+                    let localSessionState = Utils.getLocalSessionState()
+                    if localSessionState.status == .EXISTS {
                         tokenInfoSemaphore.wait()
                     } else {
                         finalReturnValue = nil
@@ -93,18 +93,6 @@ internal class FrontToken {
         setFrontTokenToStorage(frontToken: frontToken)
     }
     
-    static func setToken(frontToken: String?) {
-        let executionSemaphore = DispatchSemaphore(value: 0)
-        
-        readWriteDispatchQueue.async(flags: .barrier) {
-            setFrontToken(frontToken: frontToken)
-            tokenInfoSemaphore.signal()
-            executionSemaphore.signal()
-        }
-        
-        executionSemaphore.wait()
-    }
-    
     private static func removeTokenFromStorage() {
         Utils.getUserDefaults().removeObject(forKey: userDefaultsKey)
         tokenInMemory = nil
@@ -120,5 +108,27 @@ internal class FrontToken {
         }
         
         executionSemaphore.wait()
+    }
+    
+    static func setItem(frontToken: String) {
+        // We update the refresh attempt info here as well, since this means that we've updated the session in some way
+        // This could be both by a refresh call or if the access token was updated in a custom endpoint
+        // By saving every time the access token has been updated, we cause an early retry if
+        // another request has failed with a 401 with the previous access token and the token still exists.
+        // Check the start and end of onUnauthorisedResponse
+        // As a side-effect we reload the anti-csrf token to check if it was changed by another tab.
+        Utils.saveLastAccessTokenUpdate()
+        
+        if frontToken == "remove" {
+            FrontToken.removeToken()
+            return
+        }
+        
+        FrontToken.setFrontToken(frontToken: frontToken)
+    }
+    
+    static func doesTokenExist() -> Bool {
+        let frontToken = FrontToken.getFrontTokenFromStorage()
+        return frontToken != nil
     }
 }
