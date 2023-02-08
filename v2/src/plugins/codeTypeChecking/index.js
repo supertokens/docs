@@ -265,7 +265,7 @@ async function checkCodeSnippets(language) {
         })
     } else if (language === "dart") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/dart_env/ && flutter run", async function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/dart_env/ && flutter build web", async function (err, stdout, stderr) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
@@ -492,8 +492,8 @@ Enabled: true,
                 if (err) {
                     rej(err);
                 } else {
-                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/dart_env/lib/snippets/' + folderName + "/index.tsx", codeSnippet);
-                    fs.writeFile('src/plugins/codeTypeChecking/dart_env/lib/snippets/' + folderName + "/index.tsx", codeSnippet, function (err) {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/dart_env/lib/snippets/' + folderName + "/index.dart", codeSnippet);
+                    fs.writeFile('src/plugins/codeTypeChecking/dart_env/lib/snippets/' + folderName + "/index.dart", codeSnippet, function (err) {
                         if (err) {
                             rej(err);
                         } else {
