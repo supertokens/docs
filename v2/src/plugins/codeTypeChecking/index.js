@@ -6,6 +6,15 @@ var crypto = require('crypto');
 let mdVars = require("../markdownVariables.json");
 const { execSync } = require('child_process');
 
+let defaultMainContent = `
+
+void main() {
+    // No-op
+}
+`;
+
+let mainContent = defaultMainContent;
+
 function hash(input) {
     return crypto.createHash('md5').update(input).digest('hex');
 }
@@ -265,7 +274,7 @@ async function checkCodeSnippets(language) {
         })
     } else if (language === "dart") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/dart_env/ && flutter build web", async function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/dart_env/ && flutter build web -t lib/snippets/main.dart", async function (err, stdout, stderr) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
@@ -487,6 +496,27 @@ Enabled: true,
         });
     } else if (language === "dart") {
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+        
+        await new Promise(async (res, rej) => {
+            fs.mkdir("src/plugins/codeTypeChecking/dart_env/lib/snippets", { recursive: true }, async (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    res();
+                }
+            })
+        });
+
+        await new Promise(async (res, rej) => {
+            fs.writeFile("src/plugins/codeTypeChecking/dart_env/lib/snippets/main.dart", mainContent, async (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    res();
+                }
+            })
+        });
+
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/dart_env/lib/snippets/' + folderName, { recursive: true }, async (err) => {
                 if (err) {
@@ -499,6 +529,19 @@ Enabled: true,
                         } else {
                             res();
                         }
+                    });
+
+                    let dartImportStatement = `import 'package:dart_env/snippets/${folderName}/index.dart';`;
+                    mainContent = dartImportStatement + "\n" + mainContent;
+
+                    await new Promise(async (res, rej) => {
+                        fs.writeFile("src/plugins/codeTypeChecking/dart_env/lib/snippets/main.dart", mainContent, async (err) => {
+                            if (err) {
+                                rej(err);
+                            } else {
+                                res();
+                            }
+                        })
                     });
                 }
             });
