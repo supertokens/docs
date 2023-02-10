@@ -6,6 +6,15 @@ var crypto = require('crypto');
 let mdVars = require("../markdownVariables.json");
 const { execSync } = require('child_process');
 
+let defaultMainContent = `
+
+void main() {
+    // No-op
+}
+`;
+
+let mainContent = defaultMainContent;
+
 function hash(input) {
     return crypto.createHash('md5').update(input).digest('hex');
 }
@@ -67,6 +76,8 @@ async function addCodeSnippetToEnv(mdFile, isSwiftEnabled) {
                             currLineTrimmed.includes("text") || currLineTrimmed.includes("json")
                             || currLineTrimmed.includes("html")) {
                             currentCodeLanguage = "ignore"
+                        } else if (currLineTrimmed === "```dart" || currLineTrimmed.startsWith("```dart ")) {
+                            currentCodeLanguage = "dart";
                         } else {
                             return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE in file ${mdFile}.`));
                         }
@@ -261,6 +272,21 @@ async function checkCodeSnippets(language) {
                 res();
             });
         })
+    } else if (language === "dart") {
+        await new Promise((res, rej) => {
+            exec("cd src/plugins/codeTypeChecking/dart_env/ && flutter build web -t lib/snippets/main.dart", async function (err, stdout, stderr) {
+                if (err) {
+                    console.log('\x1b[31m%s\x1b[0m', stdout);
+                    console.log('\x1b[31m%s\x1b[0m', err);
+                    console.log("=======SETUP INSTRS========\n");
+                    console.log('\x1b[36m%s\x1b[0m', `Make sure that you have flutter setup on your system and try this command again`)
+                    console.log('\x1b[36m%s\x1b[0m', `Make sure that you have run 'flutter pub get' inside dart_env and try this command again`)
+                    console.log("==========================\n");
+                    return rej(err);
+                }
+                res();
+            });
+        })
     } else {
         throw new Error("Unsupported language in checkCodeSnippets");
     }
@@ -326,7 +352,7 @@ Enabled: true,
     // this block is there so that the dev knows that the resulting block should use variable code snippets.
     if (ogCodeSnippet !== codeSnippet) {
         for (let i = 0; i < 50; i++) {
-            if (language === "typescript" || language === "go" || language === "kotlin") {
+            if (language === "typescript" || language === "go" || language === "kotlin" || language === "swift" || language === "dart") {
                 codeSnippet = "// THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE\n" + codeSnippet;
             } else if (language === "python") {
                 codeSnippet = "# THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE\n" + codeSnippet;
@@ -464,6 +490,58 @@ Enabled: true,
                             execSync(`./src/plugins/codeTypeChecking/iosenv/createFile.rb "${filename}"`)
                             res();
                         }
+                    });
+                }
+            });
+        });
+    } else if (language === "dart") {
+        let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+        
+        await new Promise(async (res, rej) => {
+            fs.mkdir("src/plugins/codeTypeChecking/dart_env/lib/snippets", { recursive: true }, async (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    res();
+                }
+            })
+        });
+
+        await new Promise(async (res, rej) => {
+            fs.writeFile("src/plugins/codeTypeChecking/dart_env/lib/snippets/main.dart", mainContent, async (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    res();
+                }
+            })
+        });
+
+        await new Promise(async (res, rej) => {
+            fs.mkdir('src/plugins/codeTypeChecking/dart_env/lib/snippets/' + folderName, { recursive: true }, async (err) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    await assertThatUserIsNotRemovedDocsVariableByMistake('src/plugins/codeTypeChecking/dart_env/lib/snippets/' + folderName + "/index.dart", codeSnippet);
+                    fs.writeFile('src/plugins/codeTypeChecking/dart_env/lib/snippets/' + folderName + "/index.dart", codeSnippet, function (err) {
+                        if (err) {
+                            rej(err);
+                        } else {
+                            res();
+                        }
+                    });
+
+                    let dartImportStatement = `import 'package:dart_env/snippets/${folderName}/index.dart';`;
+                    mainContent = dartImportStatement + "\n" + mainContent;
+
+                    await new Promise(async (res, rej) => {
+                        fs.writeFile("src/plugins/codeTypeChecking/dart_env/lib/snippets/main.dart", mainContent, async (err) => {
+                            if (err) {
+                                rej(err);
+                            } else {
+                                res();
+                            }
+                        })
                     });
                 }
             });
