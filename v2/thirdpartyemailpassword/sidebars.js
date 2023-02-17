@@ -280,6 +280,16 @@ module.exports = {
             "serverless/with-vercel/about"
           ],
         },
+        {
+          type: 'category',
+          label: 'Capacitor',
+          customProps: {
+            logoUrl: '/img/logos/capacitorjs-icon.svg'
+          },
+          items: [
+            "capacitor-integration/about"
+          ],
+        }
       ],
     },
     {
