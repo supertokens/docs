@@ -92,6 +92,10 @@ module.exports = function (context, opts) {
                         splittedCheck.filter(i => i === "kotlin").length >= 1) {
                         await checkCodeSnippets("kotlin");
                     }
+                    if (splittedCheck.filter(i => i === "all").length >= 1 ||
+                        splittedCheck.filter(i => i === "dart").length >= 1) {
+                        await checkCodeSnippets("dart");
+                    }
 
                     // We do not do this in the case of "all" intentionally because
                     // iOS code checking needs MacOS

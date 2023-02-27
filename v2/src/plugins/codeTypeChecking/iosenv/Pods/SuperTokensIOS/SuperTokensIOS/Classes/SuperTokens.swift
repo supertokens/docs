@@ -40,16 +40,18 @@ public class SuperTokens {
     internal static func resetForTests() {
         FrontToken.removeToken()
         AntiCSRF.removeToken()
-        IdRefreshToken.removeToken()
         SuperTokens.isInitCalled = false
+        Utils.setToken(tokenType: .access, value: "")
+        Utils.setToken(tokenType: .refresh, value: "")
+        FrontToken.setItem(frontToken: "remove")
     }
     
-    public static func initialize(apiDomain: String, apiBasePath: String? = nil, sessionExpiredStatusCode: Int? = nil, cookieDomain: String? = nil, userDefaultsSuiteName: String? = nil, eventHandler: ((EventType) -> Void)? = nil, preAPIHook: ((APIAction, URLRequest) -> URLRequest)? = nil, postAPIHook: ((APIAction, URLRequest, URLResponse?) -> Void)? = nil) throws {
+    public static func initialize(apiDomain: String, apiBasePath: String? = nil, sessionExpiredStatusCode: Int? = nil, sessionTokenBackendDomain: String? = nil, tokenTransferMethod: SuperTokensTokenTransferMethod? = nil, userDefaultsSuiteName: String? = nil, eventHandler: ((EventType) -> Void)? = nil, preAPIHook: ((APIAction, URLRequest) -> URLRequest)? = nil, postAPIHook: ((APIAction, URLRequest, URLResponse?) -> Void)? = nil) throws {
         if SuperTokens.isInitCalled {
             return;
         }
         
-        SuperTokens.config = try NormalisedInputType.normaliseInputType(apiDomain: apiDomain, apiBasePath: apiBasePath, sessionExpiredStatusCode: sessionExpiredStatusCode, cookieDomain: cookieDomain, eventHandler: eventHandler, preAPIHook: preAPIHook, postAPIHook: postAPIHook, userDefaultsSuiteName: userDefaultsSuiteName)
+        SuperTokens.config = try NormalisedInputType.normaliseInputType(apiDomain: apiDomain, apiBasePath: apiBasePath, sessionExpiredStatusCode: sessionExpiredStatusCode, sessionTokenBackendDomain: sessionTokenBackendDomain, tokenTransferMethod: tokenTransferMethod, eventHandler: eventHandler, preAPIHook: preAPIHook, postAPIHook: postAPIHook, userDefaultsSuiteName: userDefaultsSuiteName)
         
         guard let _config: NormalisedInputType = SuperTokens.config else {
             throw SuperTokensError.initError(message: "Error initialising SuperTokens")
@@ -62,8 +64,43 @@ public class SuperTokens {
     }
     
     public static func doesSessionExist() -> Bool {
-        let token = IdRefreshToken.getToken()
-        return token != nil
+        let tokenInfo = FrontToken.getToken()
+        
+        if tokenInfo == nil {
+            return false
+        }
+        
+        let currentTimeInMillis: Int = Int(Date().timeIntervalSince1970 * 1000)
+        
+        if let accessTokenExpiry: Int = tokenInfo!["ate"] as? Int, accessTokenExpiry < currentTimeInMillis {
+            let executionSemaphore = DispatchSemaphore(value: 0)
+            var shouldRetry: Bool = false
+            var error: Error?
+            let preRequestLocalSessionState = Utils.getLocalSessionState()
+            
+            SuperTokensURLProtocol.onUnauthorisedResponse(preRequestLocalSessionState: preRequestLocalSessionState, callback: { unauthResponse in
+                
+                if unauthResponse.status == .API_ERROR {
+                    error = unauthResponse.error
+                }
+                
+                shouldRetry = unauthResponse.status == .RETRY
+                executionSemaphore.signal()
+                
+            })
+            
+            executionSemaphore.wait()
+            
+            // Here we dont throw the error and instead return false, because
+            // otherwise users would have to use a try catch just to call doesSessionExist
+            if error != nil {
+                return false
+            }
+            
+            return shouldRetry
+        }
+        
+        return true
     }
     
     public static func signOut(completionHandler: @escaping (Error?) -> Void) {
@@ -125,17 +162,21 @@ public class SuperTokens {
                 executionSemaphore.signal()
             }
             
-            // we do not send an event here since it's triggered in setIdRefreshToken area.
+            // we do not send an event here since it's triggered in fireSessionUpdateEventsIfNecessary.
         }).resume()
     }
     
     public static func attemptRefreshingSession() throws -> Bool {
-        let preRequestIdRefreshToken = IdRefreshToken.getToken()
+        if !SuperTokens.isInitCalled {
+            throw SuperTokensError.initError(message: "Init function not called")
+        }
+        
+        let preRequestLocalSessionState = Utils.getLocalSessionState()
         var error: Error?
         let executionSemaphore = DispatchSemaphore(value: 0)
         var shouldRetry: Bool = false
         
-        SuperTokensURLProtocol.onUnauthorisedResponse(preRequestIdRefresh: preRequestIdRefreshToken, callback: {
+        SuperTokensURLProtocol.onUnauthorisedResponse(preRequestLocalSessionState: preRequestLocalSessionState, callback: {
             unauthResponse in
             
             if unauthResponse.status == .API_ERROR {
@@ -168,7 +209,7 @@ public class SuperTokens {
             throw SuperTokensError.illegalAccess(message: "No session exists")
         }
         
-        if accessTokenExpiry < Date().millisecondsSince1970 {
+        if accessTokenExpiry < Int(Date().timeIntervalSince1970 * 1000) {
             let retry = try SuperTokens.attemptRefreshingSession()
             
             if retry {
@@ -179,5 +220,13 @@ public class SuperTokens {
         }
         
         return userPayload
+    }
+    
+    public static func getAccessToken() -> String? {
+        if doesSessionExist() {
+            return Utils.getTokenForHeaderAuth(tokenType: .access)
+        }
+        
+        return nil
     }
 }
