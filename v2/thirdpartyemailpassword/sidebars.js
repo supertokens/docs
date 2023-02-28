@@ -540,7 +540,7 @@ module.exports = {
                 "advanced-customizations/frontend-hooks/redirection-callback"
               ],
             },
-            "advanced-customizations/user-context",          ],
+            "advanced-customizations/user-context",],
         },
         {
           type: "category",
@@ -622,8 +622,7 @@ module.exports = {
               items: [
                 "common-customizations/saml/with-boxyhq/what-is-boxyhq",
                 "common-customizations/saml/with-boxyhq/flow-diagram",
-                "common-customizations/saml/with-boxyhq/integration-steps",
-                "common-customizations/saml/with-boxyhq/multi-tenant"
+                "common-customizations/saml/with-boxyhq/integration-steps"
               ],
             },
           ],

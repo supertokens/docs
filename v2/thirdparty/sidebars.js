@@ -384,6 +384,26 @@ module.exports = {
                     "common-customizations/multi-tenancy/sub-domain-login"
                   ]
                 },
+                {
+                  type: 'category',
+                  label: 'SAML Login',
+                  items: [
+                    "common-customizations/saml/what-is-saml",
+                    "common-customizations/saml/saml-login",
+                    {
+                      type: 'category',
+                      label: 'With BoxyHQ',
+                      customProps: {
+                        logoUrl: '/img/logos/boxyhq.png'
+                      },
+                      items: [
+                        "common-customizations/saml/with-boxyhq/what-is-boxyhq",
+                        "common-customizations/saml/with-boxyhq/flow-diagram",
+                        "common-customizations/saml/with-boxyhq/integration-steps",
+                      ],
+                    },
+                  ],
+                },
               ]
             },
             "common-customizations/sign-in-and-up/toc-privacypolicy",
@@ -579,27 +599,7 @@ module.exports = {
             "user-roles/get-all-roles",
             "user-roles/delete-roles",
           ],
-        },
-        {
-          type: 'category',
-          label: 'SAML',
-          items: [
-            "common-customizations/saml/what-is-saml",
-            "common-customizations/saml/saml-login",
-            {
-              type: 'category',
-              label: 'With BoxyHQ',
-              customProps: {
-                logoUrl: '/img/logos/boxyhq.png'
-              },
-              items: [
-                "common-customizations/saml/with-boxyhq/what-is-boxyhq",
-                "common-customizations/saml/with-boxyhq/flow-diagram",
-                "common-customizations/saml/with-boxyhq/integration-steps",
-              ],
-            },
-          ],
-        },
+        }
       ]
     },
     {
