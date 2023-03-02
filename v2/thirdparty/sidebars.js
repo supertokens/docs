@@ -404,6 +404,7 @@ module.exports = {
                     },
                   ],
                 },
+                "common-customizations/multi-tenancy/custom-provider",
               ]
             },
             "common-customizations/sign-in-and-up/toc-privacypolicy",
