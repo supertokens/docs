@@ -18,68 +18,91 @@ Complete both steps from the quick setup guide for SuperTokens:
 ## b) Install GraphQL dependencies on your backend
 
 :::info
-We use express-graphql as an example, SuperTokens can be used with other GraphQL libraries.
+We use Apollo server in this example, SuperTokens can be used with other GraphQL libraries as well.
 :::
 
 ```bash
-npm i express-graphql graphql
+npm install @apollo/server graphql
 ```
 
 ## c) Setup GraphQL
 
-### Create a schema 
+### Create your schema 
 
 ```tsx
-import { buildSchema } from 'graphql';
-
-var schema = buildSchema(`
+const typeDefs = `#graphql
   type Query {
-    hello: String
+      verify: String,
   }
-`);
+`
 ```
 
 ### Create resolvers
 
 ```tsx
-var resolvers = {
-    hello: () => "Hello World!",
+const resolvers = {
+    Query: {
+        verify: async (_: any, __: any, contextValue: any) => {
+            await Session.getSession(contextValue.req, contextValue.res);
+            return "Session verified";
+        }
+    }
 }
 ```
 
-Refer to the [official guide](https://graphql.org/learn/) to know more.
+Refer to the [official Apollo guide](https://www.apollographql.com/docs/apollo-server/getting-started) to know more.
 
 ## d) Add a GraphQL endpoint with optional session verification
 
 ```tsx
-import express from "express"
-import { graphqlHTTP } from 'express-graphql';
-import { verifySession } from "supertokens-node/recipe/session/framework/express";
-import { buildSchema } from 'graphql';
+import { ApolloServer } from "@apollo/server";
+import express from "express";
+import { expressMiddleware } from "@apollo/server/express4";
 
-var GraphQLSchema = buildSchema(`...`); // Refer to step c
-var resolvers = {/* ... */ }; // Refer to step c
-// ...
+const typeDefs = '' // Refer to previous step
+const resolvers = {} // Refer to previous step
 
-let app = express();
-
-// highlight-start
-/*
-* The verifySession middleware adds the session object to req
-* { sessionRequired: false } allows access to the endpoint even 
-* when a session does not exist
-*/
-app.use("/graphQL", verifySession({ sessionRequired: false }), graphqlHTTP(async (req: any, res) => {
-    return {
-        schema: GraphQLSchema,
-        rootValue: resolvers,
-        // req.session will be undefined if a session does not exist
-        context: {
-            session: req.session,
+const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [
+        {
+            requestDidStart: async () => {
+                return {
+                    didEncounterErrors: async (requestContext) => {
+                        const {req, res} = requestContext.contextValue as any;
+                        for (let i = 0; i < requestContext.errors.length; i++) {
+                            let error = requestContext.errors[i].originalError;
+                            await new Promise(async (resolve) => {
+                                // This will handle any session or other SuperTokens related errors
+                                await errorHandler()(error, req, res, (err) => {
+                                    resolve(undefined);
+                                });
+                            });
+                        }
+                    },
+                };
+            }
         }
-    };
-}))
-// highlight-end
+    ],
+})
+
+server.start().then(() => {
+    // Use expressMiddleware only after server.start has resolved
+    app.use(express.json(), expressMiddleware(server, {
+        context: async ({req, res}) => {
+            return {
+              // We add this so that we can access sessions in the resolvers
+                req,
+                res,
+            };
+        },
+    }))
+
+    app.listen(3001, () => {
+        console.log("Server started");
+    })
+})
 ```
 
 Refer to [this page](../common-customizations/sessions/session-verification-in-api/verify-session#the-session-object) to know more about the session object

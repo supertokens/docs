@@ -7,47 +7,71 @@ hide_title: true
 # Creating sessions
 
 ```tsx
-import express from "express"
-import { buildSchema } from 'graphql';
-import { graphqlHTTP } from 'express-graphql';
-import { verifySession } from "supertokens-node/recipe/session/framework/express";
-import { SessionRequest } from "supertokens-node/framework/express";
+import { ApolloServer } from "@apollo/server";
+import express from "express";
+import { expressMiddleware } from "@apollo/server/express4";
 import Session from "supertokens-node/recipe/session";
 
-// ...
-
-let app = express();
-
-var GraphQLSchema = buildSchema(`
-  type Mutation {
-      login(email: String, password: String): String
-  }
-`);
-
-function getResolvers(req: any, res: any) {
-    return {
-        login: async ({ email, password }: { email: string, password: string }) => {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    // TODO: Validate credentials
-                    let userIdentifier = "userId"
-                    let session = await Session.createNewSession(req, res, userIdentifier);
-                    resolve("Logged In");
-                } catch (e) {
-                    reject(e);
-                }
-            });
+const typeDefs = `
+type Mutation {
+    login(email: String, password: String)
+}
+`
+const resolvers = {
+    // highlight-start
+    Mutation: {
+        login: async (_: any, args: any, contextValue: any) => {
+            let {email, password} = args;
+                
+            // TODO: Validate credentials
+            let userId = "userId";
+            await Session.createNewSession(contextValue.req, contextValue.res, userId);
+            return "Session Created";
         },
-    };
+    },
+    // highlight-end
 }
 
-app.use("/graphQL", verifySession({ sessionRequired: false }), graphqlHTTP(async (req, res) => {
-    return {
-        schema: GraphQLSchema,
-        rootValue: getResolvers(req, res),
-        context: {
-            session: (req as SessionRequest).session,
+const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [
+        {
+            requestDidStart: async () => {
+                return {
+                    didEncounterErrors: async (requestContext) => {
+                        const {req, res} = requestContext.contextValue as any;
+                        for (let i = 0; i < requestContext.errors.length; i++) {
+                            let error = requestContext.errors[i].originalError;
+                            await new Promise(async (resolve) => {
+                                // This will handle any session or other SuperTokens related errors
+                                await errorHandler()(error, req, res, (err) => {
+                                    resolve(undefined);
+                                });
+                            });
+                        }
+                    },
+                };
+            }
         }
-    };
-}))
+    ],
+})
+
+server.start().then(() => {
+    // Use expressMiddleware only after server.start has resolved
+    app.use(express.json(), verifySession({sessionRequired: false}), expressMiddleware(server, {
+        context: async ({req, res}) => {
+            return {
+              // req.session will be undefined if a session does not exist
+                session: (req as any).session,
+                req,
+                res,
+            };
+        },
+    }))
+
+    app.listen(3001, () => {
+        console.log("Server started");
+    })
+})
 ```
