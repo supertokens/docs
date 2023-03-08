@@ -408,6 +408,7 @@ module.exports = {
                 "common-customizations/multi-tenancy/multi-app",
               ]
             },
+            "common-customizations/sign-in-and-up/provider-config",
             "common-customizations/sign-in-and-up/toc-privacypolicy",
             "common-customizations/embed-sign-in-up-form",
           ],
