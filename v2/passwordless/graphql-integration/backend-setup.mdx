@@ -30,6 +30,10 @@ Follow the [frontend and backend custom UI setup guides](../custom-ui/init/front
 
 </PreBuiltOrCustomUISwitcher>
 
+<!-- COPY SECTION -->
+<!-- ./session/graphql-integration/backend-setup.mdx -->
+<!-- 1 -->
+
 ## b) Install GraphQL dependencies on your backend
 
 :::info
@@ -42,17 +46,29 @@ npm install @apollo/server graphql
 
 ## c) Setup GraphQL
 
-### Create a schema 
+### Create your schema 
+
+In this example we will create the following:
+- A query to verify that a session exists
+- A mutation to login
+- A mutation of logout
 
 ```tsx
-const typeDefs = `#graphql
-  type Query {
-      verify: String,
-  }
-`
+const typeDefs = `
+type Query {
+    verify: String,
+}
+
+type Mutation {
+    login(email: String, password: String): String
+    logout: String,
+}
+`;
 ```
 
 ### Create resolvers
+
+We use the `Session` recipe from `supertokens-node` to create, revoke and verify user sessions.
 
 ```tsx
 import Session from "supertokens-node/recipe/session";
@@ -60,16 +76,47 @@ import Session from "supertokens-node/recipe/session";
 const resolvers = {
     Query: {
         verify: async (_: any, __: any, contextValue: any) => {
-            await Session.getSession(contextValue.req, contextValue.res);
-            return "Session verified";
+            let session = await Session.getSession(contextValue.req, contextValue.res);
+            return "Session exists";
         }
-    }
+    },
+    Mutation: {
+        login: async (_: any, args: any, contextValue: any) => {
+            try {
+                let {email, password} = args;
+
+                // TODO: Validate credentials
+                let userId = "userId";
+                await Session.createNewSession(contextValue.req, contextValue.res, userId);
+                return "Session Created";
+            } catch (e) {
+                throw e;
+            }
+        },
+        logout: async (_: any, args: any, contextValue: any) => {
+            let session = await Session.getSession(contextValue.req, contextValue.res);
+            await session.revokeSession();
+            return "Session revoked";
+        }
+    },
 }
 ```
 
-Refer to the [official Apollo guide](https://www.apollographql.com/docs/apollo-server/getting-started) to know more.
+:::note
+In the code above we read `req` and `res` from `contextValue`, refer to the next step to see how this is being added to the graphql context
+:::
 
-## d) Add a GraphQL endpoint with optional session verification
+Refer to the [official Apollo guide](https://www.apollographql.com/docs/apollo-server/schema/schema) to know more about creating queries, mutations and resolvers.
+
+## d) Add the GraphQL middleware to your server
+
+:::info
+When using Apollo server, you must use `expressMiddleware` in order to use SuperTokens because `startStandaloneServer` does not let you configure custom CORS settings
+:::
+
+Next we create an instance of `ApolloServer` which is added to our server using `expressMiddleware` provided by the Apollo package.
+
+We need to create a plugin so that we can handle errors thrown by the SuperTokens SDK in a specific way. This is because GraphQL by default returns HTTP status code `200` for errors which is incompatible with the SuperTokens frontend SDKs. In order to work around this we use the `errorHandler` provided by the SuperTokens SDK to handle errors if they are thrown by the SuperTokens SDK, all other errors will be handled by Apollo in the normal way.
 
 ```tsx
 import { ApolloServer } from "@apollo/server";
@@ -125,4 +172,10 @@ server.start().then(() => {
 })
 ```
 
+:::important
+Note that we add the request and response objects to the GraphQL context object when using `expressMiddleware`. These are then used in the resolvers in the previous steps along with the Session recipe for supertokens-node.
+:::
+
 Refer to [this page](../common-customizations/sessions/session-verification-in-api/verify-session#the-session-object) to know more about the session object
+
+<!-- END COPY SECTION -->
