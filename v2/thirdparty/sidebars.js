@@ -163,7 +163,6 @@ module.exports = {
           items: [
             "graphql-integration/backend-setup",
             "graphql-integration/making-requests",
-            "graphql-integration/access-session-info",
           ],
         },
         {

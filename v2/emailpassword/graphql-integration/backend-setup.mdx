@@ -12,6 +12,10 @@ import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/s
 
 # Backend Setup
 
+:::important
+This guide uses `express`, if you are using another backend framework you can use this guide as a reference for the various steps involved in integrating with SuperTokens but some parts may need tweaking depending on the framework you are using.
+:::
+
 ## a) Complete the setup guides
 
 <PreBuiltOrCustomUISwitcher>
@@ -32,69 +36,186 @@ Follow the [frontend and backend custom UI setup guides](../custom-ui/init/front
 
 ## b) Install GraphQL dependencies on your backend
 
-:::note
-We use express-graphql as an example, SuperTokens can be used with other GraphQL libraries.
+:::info
+We use Apollo server in this example, SuperTokens can be used with other GraphQL libraries as well.
 :::
 
 ```bash
-npm i express-graphql graphql
+npm install @apollo/server graphql
 ```
 
 ## c) Setup GraphQL
 
-### Create a schema 
+### Create your schema 
+
+In this example we will create a simple social app that allows logged in users to create and view posts. To build an app like this you would need the following:
+- A way for users to login and logout
+- A way for users to create posts
+- A way for users to like posts
+
+For sake of simplicity we will just focus on login/logout and viewing posts.
+
+From a GraphQL perspective we will need the following:
+- A query to fetch the user's posts
 
 ```tsx
-import { buildSchema } from 'graphql';
-
-var schema = buildSchema(`
-  type Query {
-    hello: String
-  }
-`);
+const typeDefs = `
+type Query {
+    posts: [String],
+}
+`;
 ```
+
+The `posts` Query will return a list of `String` (one for each post) if the user is logged in.
+
+:::important
+We do not add any queries or mutations for login and logout because the SuperTokens middleware exposes APIs that handle this for us.
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+Refer to the [backend pre-built UI setup guides](../pre-built-ui/setup/backend) if you have not already added the SuperTokens middleware.
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+Refer to the [backend custom UI setup guides](../custom-ui/init/backend) if you have not already added the SuperTokens middleware.
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
+:::
 
 ### Create resolvers
 
+We use the `Session` recipe from `supertokens-node` to verify that the user is logged in with the `getSession` function
+
 ```tsx
-var resolvers = {
-    hello: () => "Hello World!",
+import Session from "supertokens-node/recipe/session";
+
+const resolvers = {
+    Query: {
+        posts: async (_: any, __: any, contextValue: any) => {
+            // getSession will throw an error if the session does not already exist
+            let session = await Session.getSession(contextValue.req, contextValue.res);
+            let userId = session.getUserId();
+            // TODO: Fetch all posts for the user using the userId
+            return [];
+        }
+    },
 }
 ```
 
-Refer to the [official guide](https://graphql.org/learn/) to know more.
+:::note
+In the code above we read `req` and `res` from `contextValue`, refer to the next step to see how this is being added to the graphql context
+:::
 
-## d) Add a GraphQL endpoint with optional session verification
+Refer to the [official Apollo guide](https://www.apollographql.com/docs/apollo-server/schema/schema) to know more about creating queries, mutations and resolvers.
+
+<!-- COPY SECTION -->
+<!-- ./session/graphql-integration/backend-setup.mdx -->
+<!-- 1 -->
+
+## d) Add the Apollo middleware and SuperTokens error handler to your server
+
+### Setting up Apollo server
+
+Now that we have our schema setup, we need to create an instance of the Apollo server. 
+
+The SuperTokens SDK can throw errors (for example if the user is not logged in) which need to handled in a specific way. By default Apollo handles all errors by returning a HTTP status `200` and the description of the error, which is not supported by the SuperTokens frontend SDKs.
+
+To work around this we create a custom plugin for the Apollo server that will handle errors thrown by the SuperTokens SDK, all other errors will be handled as they normally would by Apollo. The `errorHandler` exposed by the SuperTokens backend SDK will identify if an error is thrown by the SDK itself and handle it accordingly.
 
 ```tsx
-import express from "express"
-import { graphqlHTTP } from 'express-graphql';
-import { verifySession } from "supertokens-node/recipe/session/framework/express";
-import { buildSchema } from 'graphql';
-
-var GraphQLSchema = buildSchema(`...`); // Refer to step c
-var resolvers = {/* ... */ }; // Refer to step c
-// ...
+import { ApolloServer } from "@apollo/server";
+import express from "express";
+import {errorHandler} from "supertokens-node/framework/express/index.js";
 
 let app = express();
 
+const typeDefs = '' // TODO: Refer to previous step
+const resolvers = {} // TODO: Refer to previous step
+
 // highlight-start
-/*
-* The verifySession middleware adds the session object to req
-* { sessionRequired: false } allows access to the endpoint even 
-* when a session does not exist
-*/
-app.use("/graphQL", verifySession({ sessionRequired: false }), graphqlHTTP(async (req: any, res) => {
-    return {
-        schema: GraphQLSchema,
-        rootValue: resolvers,
-        // req.session will be undefined if a session does not exist
-        context: {
-            session: req.session,
+const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [
+        {
+            requestDidStart: async () => {
+                return {
+                    didEncounterErrors: async (requestContext) => {
+                        const {req, res} = requestContext.contextValue as any;
+                        for (let i = 0; i < requestContext.errors.length; i++) {
+                            let error = requestContext.errors[i].originalError;
+                            await new Promise(async (resolve) => {
+                                // This will handle any session or other SuperTokens related errors
+                                await errorHandler()(error, req, res, (err) => {
+                                    resolve(undefined);
+                                });
+                            });
+                        }
+                    },
+                };
+            }
         }
-    };
-}))
+    ],
+})
 // highlight-end
 ```
 
+### Adding the Apollo middleware
+
+:::info
+When using Apollo server, you must use `expressMiddleware` in order to use SuperTokens because `startStandaloneServer` does not let you configure custom CORS settings
+:::
+
+```tsx
+import { ApolloServer } from "@apollo/server";
+import express from "express";
+import { expressMiddleware } from "@apollo/server/express4";
+import {errorHandler} from "supertokens-node/framework/express/index.js";
+
+let app = express();
+
+const typeDefs = '' // TODO: Refer to previous step
+const resolvers = {} // TODO: Refer to previous step
+
+const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [
+        // TODO: Refer to the previous section
+    ],
+})
+
+server.start().then(() => {
+    // highlight-start
+    // Use expressMiddleware only after server.start has resolved
+    app.use(express.json(), expressMiddleware(server, {
+        context: async ({req, res}) => {
+            return {
+              // We add this so that we can access sessions in the resolvers
+                req,
+                res,
+            };
+        },
+    }))
+    // highlight-end
+
+    app.listen(3001, () => {
+        console.log("Server started");
+    })
+})
+```
+
+:::important
+We add the request and response objects to the GraphQL context object when using `expressMiddleware`. These are then used in the resolvers in the previous steps along with the Session recipe for supertokens-node.
+:::
+
 Refer to [this page](../common-customizations/sessions/session-verification-in-api/verify-session#the-session-object) to know more about the session object
+
+<!-- END COPY SECTION -->
