@@ -24,7 +24,9 @@ export default function AuthMode(props: { text: string, size: size, path: string
     }
 
     return <a href={props.path} className={`recipe_box ${props.size}`} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
-        <div className="recipe_box__icon_wrapper" style={{ backgroundImage: `url(${ hover ? imageOnHover.default : image.default})` }}></div>
+        <div className="recipe_box__icon_wrapper">
+            <img src={hover ? imageOnHover.default : image.default} alt="" />
+        </div>
         <div className="recipe_box__text">{props.text}</div>
         <div className="recipe_box__full_image" style={{ backgroundImage: `url(${imageToShow.default})`}}></div>
     </a>
