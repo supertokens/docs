@@ -58,7 +58,7 @@ export default function RecipeSelector(props) {
       >
         <span>{!open ? label() : "Select Recipe"}</span>
         <div>
-          <img src={open ? OpenIcon : CloseIcon} />
+          <img src={CloseIcon} style={{ transform: open ? "rotate(180deg)" : "", transition: "all 250ms linear" }} />
         </div>
       </div>
       <div

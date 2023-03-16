@@ -28,6 +28,8 @@ export default function AuthMode(props: { text: string, size: size, path: string
             <img src={hover ? imageOnHover.default : image.default} alt="" />
         </div>
         <div className="recipe_box__text">{props.text}</div>
-        <div className="recipe_box__full_image" style={{ backgroundImage: `url(${imageToShow.default})`}}></div>
+        <div className="recipe_box__full_image">
+            <img src={`/img/guides/${props.img}.png`} alt="preview of pre-built UI" />
+        </div>
     </a>
 }
