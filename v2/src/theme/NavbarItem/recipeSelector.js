@@ -56,7 +56,7 @@ export default function RecipeSelector(props) {
         onClick={() => setOpen(!open)}
         className={clsx("recipe_selector__dropdown", { open: open })}
       >
-        <span>{!open ? label() : "Select Recipe"}</span>
+        <span>{label()}</span>
         <div>
           <img src={CloseIcon} style={{ transform: open ? "rotate(180deg)" : "", transition: "all 250ms linear" }} />
         </div>
