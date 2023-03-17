@@ -10,15 +10,24 @@ import { Answer } from "../question"
 const copyTabIdentifier = "~COPY-TABS=";
 
 export default function FrontendPreBuiltUITabs(props: any) {
+  let values = [
+    { label: "ReactJS", value: "reactjs" },
+    { label: "Angular", value: "angular" },
+    { label: "Vue", value: "vue" }
+  ];
+
+  if (props.showMobileTab !== undefined) {
+    values.push({ 
+      label: "Mobile", 
+      value: "mobile", 
+    });
+  }
+
   // this is done twice since vue has a copy tabs pointing at angular and angular also has copy tabs
   return applyCopyTabs(applyCopyTabs(<Tabs
     groupId="frontendsdk"
     defaultValue="reactjs"
-    values={[
-      { label: "ReactJS", value: "reactjs" },
-      { label: "Angular", value: "angular" },
-      { label: "Vue", value: "vue" }
-    ]}
+    values={values}
   >
     {childContainsTabItemWithValue("reactjs", props.children)
       ? null
