@@ -33,6 +33,10 @@ Whenever you want to onboard a new customer, you should [create and configure a 
 
 <!-- END COPY SECTION -->
 
+<!-- COPY SECTION -->
+<!-- ./emailpassword/common-customizations/multi-tenancy/sub-domain-login.mdx -->
+<!-- 1 -->
+
 ## Step 2: Change CORS setting and `websiteDomain`
 
 ### CORS setup
@@ -56,6 +60,7 @@ Whenever you want to onboard a new customer, you should [create and configure a 
 
 - On the backend, you should set the `websiteDomain` to be your main domain (`example.com` if your sub domains are `sub.example.com`), and then you want to override the `sendEmail` functions to change the domain of the link dynamically based on the request's origin. See the Email Delivery section in our docs for how to override the `sendEmail` function.
 
+<!-- END COPY SECTION -->
 
 ## Step 3: Load login methods dynamically on the frontend based on the tenantId
 
@@ -80,13 +85,12 @@ Modify the `SuperTokens.init` to do the following:
 import React from 'react';
 
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
-import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 import Session from "supertokens-auth-react/recipe/session";
 import Multitenancy from "supertokens-auth-react/recipe/multitenancy";
 
 SuperTokens.init({
     appInfo: {
-        // learn more about this on https://supertokens.com/docs/thirdpartyemailpassword/appinfo
         appName: "^{form_appName}",
         apiDomain: "^{form_apiDomain}",
         websiteDomain: "^{form_websiteDomain}",
@@ -98,7 +102,7 @@ SuperTokens.init({
     // highlight-end
     recipeList: [
         // highlight-start
-        ThirdParty.init(),
+        EmailPassword.init(),
         // highlight-end
         Session.init(),
         // highlight-start
@@ -123,14 +127,16 @@ SuperTokens.init({
 
 <CustomUIContent>
 
-The frontend setup is similar to that of a [regular single tenant social login page](../../custom-ui/thirdparty-login), but on page load, you will first need to check which third party providers are enabled for the current tenant. This can be done by querying the backend as shown below:
+<!-- COPY SECTION -->
+<!-- ./emailpassword/common-customizations/multi-tenancy/common-domain-login.mdx  -->
+<!-- 1 -->
+
+You need to build a UI that will ask the user to enter their tenantId or Organisation name (which can be used as the tenant ID). The input value will then be used in various function calls, as we will see below.
+
+Once you have the user's tenant ID, you can fetch their list of configured login methods and render the login UI accordingly:
 
 <FrontendCustomUITabs>
 <TabItem value="web">
-
-<!-- COPY SECTION -->
-<!-- ./thirdparty/common-customizations/multi-tenancy/common-domain-login.mdx  -->
-<!-- 2d -->
 
 <NpmOrScriptTabs>
 <TabItem value="npm">
@@ -138,20 +144,15 @@ The frontend setup is similar to that of a [regular single tenant social login p
 ```tsx
 import SuperTokens from 'supertokens-web-js';
 
-async function fetchThirdPartyLoginProvidersForTenant(tenantId: string) {
+async function fetchLoginMethodsForTenant(tenantId: string) {
 	const loginMethods = await SuperTokens.getLoginMethods({
 		tenantId
 	})
 
-	if (loginMethods.thirdParty.enabled) {
-		const providers = loginMethods.thirdParty.providers;
-		if (providers.find(i => i.thirdPartyId === "active-directory")) {
-			// render sign in with Active Directory button
-		} else {
-			// more checks for other providers
-		}
+	if (loginMethods.emailpassword.enabled) {
+		// email password login is enabled for the tenant
 	} else {
-		// thirdparty login is disabled for the tenant
+		// check for other login methods being enabled for the tenant.
 	}
 }
 ```
@@ -161,20 +162,15 @@ async function fetchThirdPartyLoginProvidersForTenant(tenantId: string) {
 
 ```tsx
 import supertokens from 'supertokens-web-js-script';
-async function fetchThirdPartyLoginProvidersForTenant(tenantId: string) {
+async function fetchLoginMethodsForTenant(tenantId: string) {
 	const loginMethods = await supertokens.getLoginMethods({
 		tenantId
 	})
 
-	if (loginMethods.thirdParty.enabled) {
-		const providers = loginMethods.thirdParty.providers;
-		if (providers.find(i => i.thirdPartyId === "active-directory")) {
-			// render sign in with Active Directory button
-		} else {
-			// more checks for other providers
-		}
+	if (loginMethods.emailpassword.enabled) {
+		// email password login is enabled for the tenant
 	} else {
-		// thirdparty login is disabled for the tenant
+		// check for other login methods being enabled for the tenant.
 	}
 }
 ```
@@ -182,19 +178,13 @@ async function fetchThirdPartyLoginProvidersForTenant(tenantId: string) {
 </TabItem>
 </NpmOrScriptTabs>
 
-<!-- END COPY SECTION -->
-
-Once you have the list of third party providers for the current tenant, you can display the relevant buttons on the page.
-
-When the user clicks on a specific provider, you would need to follow the same steps mentioned in the [single tenant social login page](../../custom-ui/thirdparty-login). The only addition is that when calling `getAuthorisationURLWithQueryParamsAndSetState`, you would also need to pass in the `tenantId`.
+- In the code snippet above, we fetch the login methods for the tenantId.
+- We then render the login UI based on the response. For example, if the `emailpassword` login method is enabled, we render the email password login UI. If the `thirdparty` login method is enabled, we render the third party login UI.
 
 </TabItem>
 
 <TabItem value="mobile">
 
-<!-- COPY SECTION -->
-<!-- ./thirdparty/common-customizations/multi-tenancy/common-domain-login.mdx  -->
-<!-- 2d1 -->
 
 <AppInfoForm askForAPIDomain>
 
@@ -204,20 +194,17 @@ curl --location --request GET '^{form_apiDomain}^{form_apiBasePath}/loginmethods
 ```
 
 The response body from the API call has a `status` property in it:
-- `status: "OK"`: The `recipes` field will contain information about which login methods are enabled along with the list of third party providers configured for this tenant.
+- `status: "OK"`: The `recipes` field will contain information about which login methods are enabled for this tenant.
 - `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
 
 </AppInfoForm>
 
-<!-- END COPY SECTION -->
-
-Once you have the list of third party providers for the current tenant, you can display the relevant buttons on the page.
-
-When the user clicks on a specific provider, you would need to follow the same steps mentioned in the [single tenant social login page](../../custom-ui/thirdparty-login). The only addition is that when calling `/auth/signinup POST` API, you would also need to pass in the `tenantId` in the request body (along with other fields like `thirdPartyId`).
 
 </TabItem>
 
 </FrontendCustomUITabs>
+
+<!-- END COPY SECTION -->
 
 </CustomUIContent>
 
