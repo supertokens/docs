@@ -129,7 +129,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("userdashboard"),
               })}
             >
-              <a href="/docs/userdashboard/introduction">User Management Dashboard</a>
+              <a href="/docs/userdashboard/about">User Management Dashboard</a>
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
