@@ -379,6 +379,23 @@ module.exports = {
                 "common-customizations/signin-form/field-validators",
               ]
             },
+            {
+              type: "category",
+              label: "Multi tenancy",
+              items: [
+                "common-customizations/multi-tenancy/overview",
+                "common-customizations/multi-tenancy/new-tenant-config",
+                {
+                  type: "category",
+                  label: "Common UX flows",
+                  items: [
+                    "common-customizations/multi-tenancy/common-domain-login",
+                    "common-customizations/multi-tenancy/sub-domain-login"
+                  ]
+                },
+                "common-customizations/multi-tenancy/multi-app",
+              ]
+            },
             "common-customizations/signup-form/toc-privacypolicy",
             "common-customizations/embed-sign-in-up-form",
             "common-customizations/password-managers",
@@ -473,15 +490,6 @@ module.exports = {
           ]
         },
         "common-customizations/userid-format",
-        {
-          type: "category",
-          label: "Multi Tenancy",
-          items: [
-            "common-customizations/multi-tenancy/about",
-            "common-customizations/multi-tenancy/one-login-many-sub-domains",
-            "common-customizations/multi-tenancy/one-login-per-sub-domain"
-          ]
-        },
         {
           type: 'category',
           label: 'Actions, Hooks and Custom API responses',
