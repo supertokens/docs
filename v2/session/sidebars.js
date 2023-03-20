@@ -39,6 +39,7 @@ module.exports = {
                 "quick-setup/core/saas-setup"
               ],
             },
+            "quick-setup/handling-session-tokens",
           ],
         },
       ],
@@ -91,9 +92,6 @@ module.exports = {
           items: [
             "graphql-integration/backend-setup",
             "graphql-integration/making-requests",
-            "graphql-integration/access-session-info",
-            "graphql-integration/create-session",
-            "graphql-integration/revoke-session",
           ],
         },
         {
