@@ -17,7 +17,7 @@ export default function RecipeSelector(props) {
       case "thirdpartyemailpassword":
         return "ThirdPartyEmailPassword Recipe";
       case "phonepassword":
-        return "Phone Password Recipe";
+        return "Phone Password Login";
       case "thirdpartypasswordless":
         return "ThirdPartyPasswordless Recipe";
       case "emailpassword":
