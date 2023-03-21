@@ -55,6 +55,7 @@ module.exports = {
             "pre-built-ui/sign-out",
             "pre-built-ui/auth-redirection",
             "pre-built-ui/enable-email-verification",
+            "pre-built-ui/multitenant-login",
             {
               type: 'category',
               label: 'Further Reading',
@@ -112,6 +113,7 @@ module.exports = {
             "custom-ui/securing-routes",
             "custom-ui/sign-out",
             "custom-ui/enable-email-verification",
+            "custom-ui/multitenant-login",
           ],
         },
       ],
@@ -365,6 +367,23 @@ module.exports = {
             "common-customizations/sign-in-up/change-maximum-retries",
             "common-customizations/sign-in-up/change-otp-format",
             "common-customizations/sign-in-up/change-email-phone-validation",
+            {
+              type: "category",
+              label: "Multi tenancy",
+              items: [
+                "common-customizations/multi-tenancy/overview",
+                "common-customizations/multi-tenancy/new-tenant-config",
+                {
+                  type: "category",
+                  label: "Common UX flows",
+                  items: [
+                    "common-customizations/multi-tenancy/common-domain-login",
+                    "common-customizations/multi-tenancy/sub-domain-login"
+                  ]
+                },
+                "common-customizations/multi-tenancy/multi-app",
+              ]
+            },
             "common-customizations/sign-in-up/toc-privacypolicy",
             "common-customizations/embed-sign-in-up-form",
           ],
