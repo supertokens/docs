@@ -55,6 +55,7 @@ module.exports = {
             "pre-built-ui/sign-out",
             "pre-built-ui/auth-redirection",
             "pre-built-ui/enable-email-verification",
+            "pre-built-ui/multitenant-login",
             {
               type: 'category',
               label: 'Further Reading',
@@ -114,6 +115,7 @@ module.exports = {
             "custom-ui/securing-routes",
             "custom-ui/sign-out",
             "custom-ui/enable-email-verification",
+            "custom-ui/multitenant-login",
           ],
         },
       ],
@@ -374,15 +376,54 @@ module.exports = {
               type: 'category',
               label: 'Passwordless login',
               items: [
-                "common-customizations/sign-in-up/default-country",
-                "common-customizations/sign-in-up/resend-time-gap",
-                "common-customizations/sign-in-up/change-maximum-retries",
-                "common-customizations/sign-in-up/change-otp-format",
-                "common-customizations/sign-in-up/change-email-phone-validation"
+                "common-customizations/sign-in-and-up/default-country",
+                "common-customizations/sign-in-and-up/resend-time-gap",
+                "common-customizations/sign-in-and-up/change-maximum-retries",
+                "common-customizations/sign-in-and-up/change-otp-format",
+                "common-customizations/sign-in-and-up/change-email-phone-validation"
               ],
             },
-            "common-customizations/sign-in-up/toc-privacypolicy",
-            "common-customizations/embed-sign-in-up-form",
+            {
+              type: "category",
+              label: "Multi tenancy and Enterprise SSO",
+              items: [
+                "common-customizations/multi-tenancy/overview",
+                "common-customizations/multi-tenancy/new-tenant-config",
+                {
+                  type: "category",
+                  label: "Common UX flows",
+                  items: [
+                    "common-customizations/multi-tenancy/common-domain-login",
+                    "common-customizations/multi-tenancy/sub-domain-login"
+                  ]
+                },
+                {
+                  type: 'category',
+                  label: 'SAML Login',
+                  items: [
+                    "common-customizations/saml/what-is-saml",
+                    "common-customizations/saml/saml-login",
+                    {
+                      type: 'category',
+                      label: 'With BoxyHQ',
+                      customProps: {
+                        logoUrl: '/img/logos/boxyhq.png'
+                      },
+                      items: [
+                        "common-customizations/saml/with-boxyhq/what-is-boxyhq",
+                        "common-customizations/saml/with-boxyhq/flow-diagram",
+                        "common-customizations/saml/with-boxyhq/integration-steps",
+                      ],
+                    },
+                  ],
+                },
+                "common-customizations/multi-tenancy/custom-provider",
+                "common-customizations/multi-tenancy/multi-app",
+              ]
+            },
+            "common-customizations/sign-in-and-up/provider-config",
+            "common-customizations/sign-in-and-up/toc-privacypolicy",
+            "common-customizations/embed-sign-in-and-up-form",
           ],
         },
         "common-customizations/generating-magic-link-manually",
@@ -597,26 +638,6 @@ module.exports = {
             "user-roles/managing-roles-and-permissions",
             "user-roles/get-all-roles",
             "user-roles/delete-roles",
-          ],
-        },
-        {
-          type: 'category',
-          label: 'SAML',
-          items: [
-            "common-customizations/saml/what-is-saml",
-            "common-customizations/saml/saml-login",
-            {
-              type: 'category',
-              label: 'With BoxyHQ',
-              customProps: {
-                logoUrl: '/img/logos/boxyhq.png'
-              },
-              items: [
-                "common-customizations/saml/with-boxyhq/what-is-boxyhq",
-                "common-customizations/saml/with-boxyhq/flow-diagram",
-                "common-customizations/saml/with-boxyhq/integration-steps"
-              ],
-            },
           ],
         },
       ]
