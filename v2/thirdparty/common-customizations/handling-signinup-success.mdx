@@ -2,20 +2,27 @@
 id: handling-signinup-success
 title: Post signin / signup callbacks
 hide_title: true
+show_ui_switcher: true
 ---
 
-import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import TabItem from '@theme/TabItem';
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 
 # Post signin / signup callbacks
 
 ## 1) On the frontend
 
-This method allows you to fire events immediately after a successful sign in / up. For example to send analytics events post sign in / up.
+<PreBuiltOrCustomUISwitcher>
 
-<FrontendSDKTabs>
+<PreBuiltUIContent>
+
+<FrontendPreBuiltUITabs>
+
 <TabItem value="reactjs">
+
+This method allows you to fire events immediately after a successful sign in / up. For example to send analytics events post sign in / up.
 
 ```tsx
 import SuperTokens from "supertokens-auth-react";
@@ -56,11 +63,25 @@ Please refer to [this page](../advanced-customizations/frontend-hooks/handle-eve
 :::
 
 </TabItem>
-</FrontendSDKTabs>
+
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+:::caution Not applicable
+This section is not applicable for custom UI since you will be calling the signInUp API yourself anyway. Anything that you want to do post sign in / up, can be done based on the result of the API call.
+:::
+
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
 
 ## 2) On the backend
 
-For this, you'll have to override `signInUpPOST` API in the `init` function call.
+For this, you'll have to override `signInUp` recipe function in the `init` function call.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -86,10 +107,10 @@ SuperTokens.init({
             },
             // highlight-start
             override: {
-                apis: (originalImplementation) => {
+                functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signInUpPOST: async function (input) {
+                        signInUp: async function (input) {
 
                             if (originalImplementation.signInUpPOST === undefined) {
                                 throw Error("Should never come here");
@@ -141,29 +162,31 @@ func main() {
 			thirdparty.Init(&tpmodels.TypeInput{
 				//highlight-start
 				Override: &tpmodels.OverrideStruct{
-					APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
+					Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
 						// create a copy of the originalImplementation
-						originalSignInUpPOST := *originalImplementation.SignInUpPOST
+						originalSignInUp := *originalImplementation.SignInUp
 
 						// override the sign in up API
-						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpmodels.SignInUpPOSTResponse, error) {
+						(*originalImplementation.SignInUp) = func(thirdPartyID, thirdPartyUserID, email string, oAuthTokens tpmodels.TypeOAuthTokens, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, userContext supertokens.UserContext) (tpmodels.SignInUpResponse, error) {
 
-							// First we call the original implementation of SignInUpPOST.
-							response, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
+							// First we call the original implementation of SignInUp.
+							response, err := originalSignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, userContext)
 							if err != nil {
-								return tpmodels.SignInUpPOSTResponse{}, err
+								return tpmodels.SignInUpResponse{}, err
 							}
 
 							if response.OK != nil {
 								// sign in / up was successful
 
-								// user object contains the ID, email and other third party info
+								// user object contains the ID and email of the user
 								user := response.OK.User
 								fmt.Println(user)
 
-								// This is the response from the OAuth 2 provider that contains their tokens or user info.
-								thirdPartyAuthCodeResponse := response.OK.AuthCodeResponse
-								fmt.Println(thirdPartyAuthCodeResponse)
+								// This is the response from the OAuth tokens provided by the third party provider
+								fmt.Println(response.OK.OAuthTokens["access_token"])
+
+								// This gives the user's info as returned by the provider's user profile endpoint.
+								fmt.Println(response.OK.RawUserInfoFromProvider.FromUserInfoAPI["first_name"])
 
 								if response.OK.CreatedNewUser {
 									// TODO: Post sign up logic
@@ -231,7 +254,7 @@ init(
         thirdparty.init(
 			# highlight-start
             override=thirdparty.InputOverrideConfig(
-                apis=override_thirdparty_apis
+                functions=override_thirdparty_apis
             ),
 			# highlight-end
             sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[])
@@ -251,5 +274,6 @@ Using the code above, if `createdNewUser` is `true`, you can (for example):
 - Add the user's ID and their info to your own database (in addition to it being stored in SuperTokens).
 - Send analytics events about a sign up.
 - Send a welcome email to the user.
+- You can [associate a role to the user](/docs/userroles/managing-roles-and-users).
 
 <!-- END COPY SECTION -->

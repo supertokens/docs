@@ -7,16 +7,15 @@ hide_title: true
 <!-- COPY DOCS -->
 <!-- ./thirdpartyemailpassword/common-customizations/saml/with-boxyhq/integration-steps.mdx -->
 
+import MultiTenancyPaidBanner from '../../../../community/reusableMD/multitenancy/MultiTenancyPaidBanner.mdx'  
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import CoreInjector from "/src/components/coreInjector"
+
+<MultiTenancyPaidBanner />
+
 # Integration Steps
-
-We will be following the code in our [example app with SuperTokens + SAML Jackson](https://github.com/supertokens/jackson-supertokens-express), for React and NodeJS express apps.
-
-- If you use a different backend SDK than NodeJS, you can follow similar steps as mentioned in this guide, but also see the guide for [integrating with a custom OAuth provider](../../signup-form/custom-providers#step-2-back-end) (for the SDK that you use).
-- If you are not using our `supertokens-auth-react` SDK, then please see [this blog post](https://supertokens.com/blog/adding-social-login-to-your-website-with-supertokens) for how to manually make API calls to the backend to complete the OAuth flow.
-
-:::important
-This guide assumes that you have completed the [frontend and backend quick setup guide](../../../quick-setup/frontend) that is mentioned in the previous sections and have connected your app to a SuperTokens core (either self hosted or managed service).
-:::
 
 ## 1) Generate the XML metadata file from your SAML provider
 Your SAML provider will allow you to download a `.xml` file that you can upload to SAML Jackson. During this process, you will need to provide it:
@@ -100,168 +99,217 @@ For our example app, you can see [this command here](https://github.com/supertok
 ./addTenant.sh <TENANT_ID>
 
 # example
-./addTenant.sh app1.com
-./addTenant.sh app2.com
+./addTenant.sh customer1
+./addTenant.sh customer2
 ```
 
-In this guide, we will assume that there is only one tenant configured. If you want to configure multiple tenants, that will be covered in the next page.
+The output of this command will provide you the `client_id` and `client_secret` for this tenant. You will need to provide these values to SuperTokens for this tenant when configuring this tenant's providers (see below).
 
-:::note
-The output of this command will provide you the `client_id` and `client_secret` for this tenant. You will need to use these values in the OAuth flow when configuring SuperTokens to talk to SAML Jackson.
-:::
+## 5) Create a new tenant in SuperTokens (if not done already)
 
-## 5) Modify your frontend app to add a Login with SAML button
+<!-- COPY SECTION -->
+<!-- ./thirdparty/pre-built-ui/multitenant-login.mdx  -->
+<!-- 2a -->
 
-import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
-import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
-import TabItem from '@theme/TabItem';
+<BackendSDKTabs enableCurl>
 
-<FrontendSDKTabs>
-<TabItem value="reactjs">
-
-```tsx
-import React from "react";
-import SuperTokens from "supertokens-auth-react";
-import ^{recipeNameCapitalLetters} from "supertokens-auth-react/recipe/^{codeImportRecipeName}";
-SuperTokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        ^{recipeNameCapitalLetters}.init({
-            ^{reactRecipeInitDefault}
-            ^{reactSignInUpFeature}: {
-                // highlight-start
-                providers: [
-                    {
-                        id: "saml-jackson",
-                        name: "SAML",
-
-                        // optional
-                        // you do not need to add a click handler to this as
-                        // we add it for you automatically.
-                        buttonComponent: <div style={{
-                            cursor: "pointer",
-                            border: "1",
-                            paddingTop: "5px",
-                            paddingBottom: "5px",
-                            borderRadius: "5px",
-                            borderStyle: "solid"
-                        }}>Login with SAML</div>
-                    }
-                ],
-                // highlight-end
-                // ...
-            },
-            // ...
-        }),
-        // ...
-    ]
-});
-```
-
-The above will add a "Login with SAML" button to your list of third party providers. Notice that the `id` used is `saml-jackson`. This same `id` will be used on the backend too, and the redirect URL will be `{websiteDomain}/{websiteBasePath}/auth/callback/saml-jackson`
-
-</TabItem>
-</FrontendSDKTabs>
-
-## 6) Add a custom OAuth provider on the backend server code
-
-<BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
-import axios from "axios";
-import SuperTokens from "supertokens-node";
-import Session from "supertokens-node/recipe/session";
-import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
-
-SuperTokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    supertokens: {
-        connectionURI: "...",
-    },
-    recipeList: [
-        ^{recipeNameCapitalLetters}.init({
-            ^{nodeRecipeInitDefaultWithoutSignInUp}
-            // highlight-start
-            ^{nodeSignInUpFeatureStart}
-            providers: [
-                {
-                    id: "saml-jackson",
-                    get: (redirectURI, authCodeFromRequest, userContext) => {
-                        let client_id = "TODO: From output of step 4";
-                        let client_secret = "TODO: From output of step 4";
-                        return {
-                            accessTokenAPI: {
-                                url: `http://localhost:5225/api/oauth/token`,
-                                params: {
-                                    client_id,
-                                    client_secret,
-                                    grant_type: "authorization_code",
-                                    redirect_uri: redirectURI || "",
-                                    code: authCodeFromRequest || "",
-                                }
-                            },
-                            authorisationRedirect: {
-                                url: `http://localhost:5225/api/oauth/authorize`,
-                                params: {
-                                    client_id
-                                }
-                            },
-                            getClientId: () => {
-                                return client_id;
-                            },
-                            getProfileInfo: async (accessTokenAPIResponse) => {
-                                const profile = await axios({
-                                    method: 'get',
-                                    url: `http://localhost:5225/api/oauth/userinfo`,
-                                    headers: {
-                                        Authorization: `Bearer ${accessTokenAPIResponse.access_token}`,
-                                    },
-                                });
-                                return {
-                                    id: profile.data.id,
-                                    email: {
-                                        id: profile.data.email,
-                                        isVerified: true
-                                    }
-                                };
-                            }
-                        }
-                    }
-                }
-            ]
-            // highlight-end
-            ^{nodeSignInUpFeatureEnd}
-        }),
-        Session.init({})
-    ]
-});
+TODO
 ```
 
 </TabItem>
 <TabItem value="go">
 
-:::note
-Please see the NodeJS tab and make similar changes to the Go integration. You can see how to integrate a custom OAuth provider in the Go SDK [using this guide](../../signup-form/custom-providers#step-2-back-end).
-:::
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy"
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy/multitenancymodels"
+)
+
+func main() {
+	tenantId := "customer1"
+	thirdPartyEnabled := true
+
+  // highlight-start
+	resp, err := multitenancy.CreateOrUpdateTenant(&tenantId, multitenancymodels.TenantConfig{
+		thirdPartyEnabled: &thirdPartyEnabled,
+	})
+  // highlight-end
+
+	if err != nil {
+		// handle error
+	}
+	if resp.OK.CreatedNew {
+		// new tenant was created
+	} else {
+		// existing tenant's config was modified.
+	}
+}
+```
 
 </TabItem>
 <TabItem value="python">
 
-:::note
-Please see the NodeJS tab and make similar changes to the Python integration. You can see how to integrate a custom OAuth provider in the Python SDK [using this guide](../../signup-form/custom-providers#step-2-back-end).
-:::
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+TODO
+```
 
 </TabItem>
+
+<TabItem value="syncio">
+
+```python
+TODO
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+
+<TabItem value="curl">
+
+<CoreInjector defaultValue="http://localhost:3567">
+
+```bash
+curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multitenancy/tenant' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "tenantId": "customer1",
+    "thirdPartyEnabled": true
+}'
+```
+
+</CoreInjector>
+
+</TabItem>
+
 </BackendSDKTabs>
 
-## 7) Supporting multiple tenants
-The above shows you how to get SAML Jackson + SuperTokens to work with a single tenant. If you would like to support multiple tenants, please see the next page.
+<!-- END COPY SECTION -->
+
+## 6) Configure the SAML provider for the tenant
+
+<BackendSDKTabs enableCurl>
+
+<TabItem value="nodejs">
+
+```tsx
+TODO
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/multitenancy"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	tenantId := "customer1"
+
+	// highlight-start
+	resp, err := multitenancy.CreateOrUpdateThirdPartyConfig(tpmodels.ProviderConfig{
+		TenantId:     &tenantId,
+		ThirdPartyId: "boxy-saml",
+		Name:         "SAML Login",
+		Clients: []tpmodels.ProviderClientConfig{
+			{
+				ClientID:     "<TODO: GENERATED FROM PREVIOUS STEP>",
+				ClientSecret: "<TODO: GENERATED FROM PREVIOUS STEP>",
+				AdditionalConfig: map[string]interface{}{
+					"boxyURL": "http://localhost:5225",
+				},
+			},
+		},
+	})
+	// highlight-end
+
+	if err != nil {
+		// handle error
+	}
+	if resp.OK.CreatedNew {
+		// SAML Login added to customer1
+	} else {
+		// Existing SAML Login config overwritten for customer1
+	}
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+TODO
+```
+
+</TabItem>
+
+<TabItem value="syncio">
+
+```python
+TODO
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+
+<TabItem value="curl">
+
+<CoreInjector defaultValue="http://localhost:3567">
+
+```bash
+curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multitenancy/config/thirdparty' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "config": {
+    "tenantId": "customer1",
+    "thirdPartyId": "boxy-saml",
+    "name": "SAML Login",
+    "clients": [
+      {
+        "clientId": "<TODO: GENERATED FROM PREVIOUS STEP>",
+        "clientSecret": "<TODO: GENERATED FROM PREVIOUS STEP>",
+        "additionalConfig": {
+          "boxyURL": "http://localhost:5225"
+        }
+      }
+    ]
+  }
+}'
+```
+
+</CoreInjector>
+
+</TabItem>
+
+</BackendSDKTabs>
+
+- Make sure to replace `http://localhost:5225` with the correct value for where you have hosted the boxy hq server. If you are using our SuperTokens managed service, we will host the Boxy HQ server for you ([reach out to us](mailto:team@supertokens.com) to activate your instance).
+
+
+:::success
+You have now successfully configured a new tenant in SuperTokens. The next step is to wire up the frontend SDK to show the right login UI for this tenant. The specifics of this step depend on the UX that you want to provide to your users, but we have two common UX flows documented in the "Common UX flows" section.
+:::
+
+## 7) Adding multiple SAML connections to a single tenant
+
+If you have just one SAML connection for a tenant, then the `thirdPartyId` for that connection can be `boxy-saml`. This will also display a single "SAML Login" button on our pre built UI.
+
+Whilst this works well, if you want to add a second SAML connection for the same tenant, you need to follow the same steps as above, but instead of using `"boxy-saml"` as the `thirdPartyId`, you need to set it to another value that starts with `"boxy-saml"` (for step 6).
+
+For examlpe, if a tenant has Active Directory and Okta login (both with SAML), you can create the Active Directory provider using `"boxy-saml"` as the `thirdPartyId`, and for Okta, you could use `"boxy-saml-okta"` (it's important that the string starts with `"boxy-saml"`). You can also give them different names - instead of "SAML Login" (that's shown above), you can use "Active Directory" and "Okta" so that the button on the pre built UI shows the right name.

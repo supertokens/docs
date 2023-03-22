@@ -1,6 +1,6 @@
 ---
 id: thirdparty-login
-title: Social / SSO login
+title: Social login
 hide_title: true
 ---
 
@@ -15,7 +15,7 @@ import AppInfoForm from "/src/components/appInfoForm"
 import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 
-# Social / SSO login
+# Social login
 
 There are different flows that the third party login provider may support:
 - _**Flow 1)**_ Via authorisation code (one time use code) - for web and mobile apps. 
@@ -33,9 +33,9 @@ The same flow applies during sign up and sign in. If the user is signing up, the
 <FrontendCustomUITabs>
 <TabItem value="web">
 
-## Flow 1a (Sign in with Google example)
+<h2>Flow 1a: Authorization code grant flow (Sign in with Google example)</h2>
 
-### Step 1) Redirecting to social / SSO provider
+<h3>Step 1) Redirecting to social / SSO provider</h3>
 
 The first step is to fetch the URL on which the user will be authenticated. This can be done by querying the backend API exposed by SuperTokens (as shown below). The backend SDK automatically appends the right query params to the URL (like scope, client ID etc). 
 
@@ -86,6 +86,7 @@ async function googleSignInClicked() {
 
             // This is where Google should redirect the user back after login or error.
             // This URL goes on the Google's dashboard as well.
+            // This is just an example callback URL. You can use any that you like.
             authorisationURL: "http://localhost:3000/auth/callback/google",
         });
 
@@ -109,7 +110,7 @@ async function googleSignInClicked() {
 </TabItem>
 </NpmOrScriptTabs>
 
-### Step 2) Handling the auth callback on your frontend
+<h3>Step 2) Handling the auth callback on your frontend</h3>
 
 Once the third party provider redirects your user back to your app, you need to consume the information to sign in the user. This requires you to:
 - Setup a route in your app that will handle this callback. We recommend something like `http://localhost:3000/auth/callback/google` (for Google). Regardless of what you make this path, remember to use that same path when calling the `^{webjsGetAuthorisationUrl}` function in the first step.
@@ -200,26 +201,100 @@ Once the third party provider redirects your user back to your app, you need to 
 On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
 :::
 
-### Special case for login with Apple
+<h3>Special case for login with Apple</h3>
 
-Unlike other providers, Apple will not redirect your user back to your frontend app. Instead, it will redirect the user to your backend with a `FORM POST` request.
+<AppInfoForm
+    askForWebsiteDomain
+    askForAPIDomain
+>
 
-Our backend SDK will capture this request and redirect the user to your frontend app on your website domain on the `/auth/callback/apple` route (where `/auth` is the value of `websiteBasePath` set on the backend).
+Unlike other providers, Apple will not redirect your user back to your frontend app. Instead, it will redirect the user to your backend with a `FORM POST` request. This means that the URL that you configure on the Apple's dashboard should point to your backend API layer in which **our middleware** will handle the request and redirect the user to your frontend app. Your frontend app should then call the `^{webjsThirdPartySignInUp}` API on that page as shown previously.
 
-:::important
-This means, that the value provided to the `authorisationURL` param in step 1, will be ignored and that on the Apple developer dashboard, you should set the `redirect_uri` to your API domain on the `/auth/callback/apple` route (where `/auth` is the value of `apiBasePath` set on the backend).
-:::
+In order to tell SuperTokens which frontend route to redirect the user back to, you need to set the `frontendRedirectURL` to the frontend route (just like for other providers), and also need to set the `redirectURIOnProviderDashboard` to point to your backend API route (to which Apple will send a POST request).
 
-## Flow 1b
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import { ^{webjsGetAuthorisationUrl} } from "supertokens-web-js/recipe/^{codeImportRecipeName}";
+
+async function appleSignInClicked() {
+    try {
+        const authUrl = await ^{webjsGetAuthorisationUrl}({
+            thirdPartyId: "apple",
+
+            frontendRedirectURL: "http://localhost:3000/auth/callback/apple", // This is an example callback URL on your frontend. You can use another path as well.
+            // highlight-start
+            redirectURIOnProviderDashboard: "^{form_apiDomain}^{form_apiBasePath}/callback/apple", // This URL goes on the Apple's dashboard
+            // highlight-end
+        });
+
+        // we redirect the user to apple for auth.
+        window.location.assign(authUrl);
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokens^{recipeNameCapitalLetters} from "supertokens-web-js-script/recipe/^{codeImportRecipeName}";
+async function appleSignInClicked() {
+    try {
+        const authUrl = await supertokens^{recipeNameCapitalLetters}.^{webjsGetAuthorisationUrl}({
+            thirdPartyId: "apple",
+
+            frontendRedirectURL: "http://localhost:3000/auth/callback/apple", // This is an example callback URL on your frontend. You can use another path as well.
+            // highlight-start
+            redirectURIOnProviderDashboard: "^{form_apiDomain}^{form_apiBasePath}/callback/apple", // This URL goes on the Apple's dashboard
+            // highlight-end
+        });
+
+        /*
+        Example value of authUrl: https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount?scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&access_type=offline&include_granted_scopes=true&response_type=code&client_id=1060725074195-kmeum4crr01uirfl2op9kd5acmi9jutn.apps.googleusercontent.com&state=5a489996a28cafc83ddff&redirect_uri=https%3A%2F%2Fsupertokens.io%2Fdev%2Foauth%2Fredirect-to-app&flowName=GeneralOAuthFlow
+        */
+
+        // we redirect the user to google for auth.
+        window.location.assign(authUrl);
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</AppInfoForm>
+
+<h2>Flow 1b: Authorization code grant flow with PKCE</h2>
+
+This is identical to flow 1a, except that you do **not** need to provide a client secret during backend init. This flow only works for providers which support the [PKCE flow](https://oauth.net/2/pkce/).
+
+<h2>Flow 2: Via OAuth / Access token</h2>
+
 :::caution
-Not supported by SuperTokens yet.
+This flow is not applicable for web apps.
 :::
 
 </TabItem>
 
 <TabItem value="mobile">
 
-<h2>Flow 1a (Sign in with Apple example)</h2>
+<h2>Flow 1a: Authorization code grant flow (Sign in with Apple example)</h2>
 
 <FrontendMobileSubTabs>
 
@@ -245,9 +320,37 @@ Coming Soon
 
 <TabItem value="ios">
 
-:::info
-Coming Soon
-:::
+For iOS you use the normal sign in with apple flow and then use the id token to login with SuperTokens
+
+```swift
+import UIKit
+import AuthenticationServices
+
+class ViewController: UIViewController, ASAuthorizationControllerPresentationContextProviding, ASAuthorizationControllerDelegate {
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return view.window!
+    }
+
+    func loginWithApple() {
+        let authorizationRequest = ASAuthorizationAppleIDProvider().createRequest()
+        authorizationRequest.requestedScopes = [.email, .fullName]
+        
+        let authorizationController = ASAuthorizationController(authorizationRequests: [authorizationRequest])
+        
+        authorizationController.presentationContextProvider = self
+        authorizationController.delegate = self
+        authorizationController.performRequests()
+    }
+    
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let credential: ASAuthorizationAppleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+            let idToken = credential.identityToken,
+            let idTokenString: String = String(data: idToken, encoding: .utf8) else {return}
+        
+        // Send the id token string to APIs exposed by the SuperTokens backend SDK
+    }
+}
+```
 
 </TabItem>
 
@@ -272,17 +375,29 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
 --header 'rid: ^{codeImportRecipeName}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-    "redirectURI": "...",
     "thirdPartyId": "apple",
-    "code": "...",
-    "clientId": "..."
+    "clientType": "...",
+    "redirecURIInfo": {
+        "redirectURIOnProviderDashboard": "^{form_apiDomain}^{form_apiBasePath}/callback/apple",
+        "redirectURIQueryParams": {
+            "code": "...",
+            "user": {
+                "name":{
+                    "firstName":"...",
+                    "lastName":"..."
+                },
+                "email":"..."
+            }
+        }
+    }
 }'
 ```
 
 :::important
-- The `clientId` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
-- For login with Apple on iOS, the `clientId` should be the same as your app's bundle identifier on the frontend and backend. The `redirectURI` doesn't matter and its value can be a universal link configured for your app.
-- On Android, the `redirectURI` should match the one configured on the Apple developer dashboard.
+- The `clientType` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
+- On iOS, `redirectURIOnProviderDashboard` doesn't matter and its value can be a universal link configured for your app.
+- On Android, the `redirectURIOnProviderDashboard` should match the one configured on the Apple developer dashboard.
+- The `user` object contains information provided by Apple.
 :::
 
 The response body from the API call has a `status` property in it:
@@ -296,15 +411,83 @@ On success, the backend will send back session tokens as part of the response he
 
 </AppInfoForm>
 
-<h2>Flow 1b</h2>
+<h2>Flow 1b: Authorization code grant flow with PKCE</h2>
 
-:::caution
-Not supported by SuperTokens yet.
+This is similar to flow 1a, except that you do **not** need to provide a client secret during backend init. This flow only works for providers which support the [PKCE flow](https://oauth.net/2/pkce/).
+
+<FrontendMobileSubTabs>
+
+<TabItem value="reactnative">
+
+<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+
+See the setup step for this in flow 1a. In addition to that, you need to configure the [react native auth library](https://github.com/invertase/react-native-app-auth) to also return the PKCE code verifier along with the authorization code. This can be done by setting the `usePKCE` boolean to `true` and also by setting the `skipCodeExchange` to `true` when configuring the react native auth library.
+
+The minimum scope that is required by SuperTokens is one that gives you the user's email - in case of Google login, it is `"https://www.googleapis.com/auth/userinfo.email"`.
+
+</TabItem>
+
+<TabItem value="android">
+
+<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+
+You can follow the [official guide](https://developers.google.com/identity/protocols/oauth2/native-app) on how to use the PKCE flow with google sign in on Android
+
+</TabItem>
+
+<TabItem value="ios">
+
+<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+
+You can follow the [official guide](https://developers.google.com/identity/protocols/oauth2/native-app) on how to use the PKCE flow with google sign in on iOS
+
+</TabItem>
+
+</FrontendMobileSubTabs>
+
+<h3>Step 2) Calling the signinup API to consume the authorisation token</h3>
+
+<AppInfoForm askForAPIDomain>
+
+Once you have the authorisation code and PKCE verifier from the auth provider, you need to call the signinup API exposed by our backend SDK as shown below:
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "thirdPartyId": "google",
+    "clientType": "...",
+    "redirectURIInfo": {
+        "redirectURIOnProviderDashboard": "^{form_apiDomain}^{form_apiBasePath}/callback/google",
+        "redirectURIQueryParams": {
+            "code": "...",
+        },
+        "pkceCodeVerifier": "..."
+    }
+}'
+```
+
+:::important
+- The `clientType` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
+- On iOS, `redirectURIOnProviderDashboard` doesn't matter and its value can be a universal link configured for your app.
+- On Android, the `redirectURIOnProviderDashboard` should match the one configured on the Google cloud platform.
 :::
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This is returned if the social / SSO provider did not provider an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+
+:::note
+On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
+:::
+
+</AppInfoForm>
 
 ----------------
 
-<h2>Flow 2 example (Sign in with Google example)</h2>
+<h2>Flow 2: Via OAuth / Access token (Sign in with Google example)</h2>
 
 <FrontendMobileSubTabs>
 
@@ -329,19 +512,17 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
 --header 'rid: ^{codeImportRecipeName}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-    "redirectURI": "",
-    "thirdPartyId": "apple",
-    "authCodeResponse": {
+    "thirdPartyId": "google",
+    "clientType": "...",
+    "oAuthTokens": {
         "access_token": "..."
     },
-    "clientId": "..."
 }'
 ```
 
 :::important
-- The `clientId` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
-- In this flow, the value of `redirectURI` isn't used on the backend, so we give the API an empty string.
-- If you have the `id_token`, you can also just send that inplace of the `access_token`.
+- The `clientType` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
+- If you have the `id_token`, you can also send that along with the `access_token`.
 :::
 
 The response body from the API call has a `status` property in it:
@@ -410,19 +591,18 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
 --header 'rid: ^{codeImportRecipeName}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-    "redirectURI": "",
-    "thirdPartyId": "apple",
-    "authCodeResponse": {
-        "access_token": "..."
+    "thirdPartyId": "google",
+    "clientType": "...",
+    "oAuthTokens": {
+        "access_token": "...",
+        "id_token": "..."
     },
-    "clientId": "..."
 }'
 ```
 
 :::important
-- The `clientId` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
-- In this flow, the value of `redirectURI` isn't used on the backend, so we give the API an empty string.
-- If you have the `id_token`, you can also just send that inplace of the `access_token`.
+- The `clientType` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
+- If you have the `id_token`, you can send that along with the `access_token`.
 :::
 
 The response body from the API call has a `status` property in it:
@@ -448,11 +628,7 @@ On success, the backend will send back session tokens as part of the response he
 
 If you have social / SSO login for your web and mobile app, then you might need to setup different client ID / secret for the same provider on the backend. For example, in case of Apple login, Apple gives you different client IDs for iOS login vs web & Android login (same client ID for web and Android).
 
-In order to get this to work, you would need to call `Apple.init` twice on the backend (in the `providers` array). This causes an issue where when querying the signinup API, the backend would not know which client ID to use for the provider.
-
-In order to solve this, you can:
-- Provide the client ID to the API calls mentioned above; OR
-- Set the `isDefault` to `true` on the backend provider config (as shown below) which means that in case the frontend doesn't pass a client ID in the signinup API call, that provider config will be used:
+In order to get this to work, you would need to add additional clients to the Apple.init on the backend. Each client would need to be uniquely identified and this is done using the `clientType` string. For example, you can add one `clientType` for `web-and-android` and one for `ios`.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -492,35 +668,36 @@ let providers = [
 
 ```go
 import (
-	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
 	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
 )
 
 func main() {
-	_ = []tpmodels.TypeProvider{
-		// Used for web and android login. These credentials will be used
-		// since IsDefault is true, if the frontend doesn't pass a clientID to the
-		// signinup API call, it will use this one.
-		thirdparty.Apple(tpmodels.AppleConfig{
-            // highlight-next-line
-			IsDefault: true,
-			ClientID:  "...",
-			ClientSecret: tpmodels.AppleClientSecret{
-				KeyId:      "...",
-				PrivateKey: "...",
-				TeamId:     "...",
+	_ = []tpmodels.ProviderInput{
+		{
+			Config: tpmodels.ProviderConfig{
+				ThirdPartyId: "apple",
+				Clients: []tpmodels.ProviderClientConfig{
+					{
+						ClientType: "web-and-android",
+						ClientID:   "...",
+						AdditionalConfig: map[string]interface{}{
+							"keyId":      "...",
+							"privateKey": "...",
+							"teamId":     "...",
+						},
+					},
+					{
+						ClientType: "ios",
+						ClientID:   "...",
+						AdditionalConfig: map[string]interface{}{
+							"keyId":      "...",
+							"privateKey": "...",
+							"teamId":     "...",
+						},
+					},
+				},
 			},
-		}),
-
-        // Used by iOS login. Notice that isDefault is not set here
-        thirdparty.Apple(tpmodels.AppleConfig{
-			ClientID:  "...",
-			ClientSecret: tpmodels.AppleClientSecret{
-				KeyId:      "...",
-				PrivateKey: "...",
-				TeamId:     "...",
-			},
-		}),
+		},
 	}
 }
 ```
@@ -557,12 +734,94 @@ providers = [
 </TabItem>
 </BackendSDKTabs>
 
+For the frontend, you would need to use the right `clientType` as shown below:
+
+<FrontendCustomUITabs>
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+<AppInfoForm askForAPIDomain>
+
+We pass in the `clientType` during the init call.
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    // highlight-next-line
+    clientType: "web-and-android"
+    recipeList: [/*...*/],
+});
+```
+
+If you are using our pre built UI SDK (supertokens-auth-react) as well, you can provide the `clientType` config to it as follows:
+
+```tsx
+import SuperTokens from 'supertokens-auth-react';
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    // highlight-next-line
+    clientType: "web-and-android"
+    recipeList: [/*...*/],
+});
+```
+
+</AppInfoForm>
+
+</TabItem>
+<TabItem value="script">
+
+<AppInfoForm askForAPIDomain>
+
+We pass in the `clientType` during the init call.
+
+```tsx
+import supertokens from "supertokens-web-js-script";
+supertokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    // highlight-next-line
+    clientType: "web-and-android"
+    recipeList: [/*...*/],
+});
+```
+
+</AppInfoForm>
+
+</TabItem>
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+When making calls to the APIs from your mobile app, the request body also takes a `clientType` prop as seen in the above API calls.
+
+</TabItem>
+</FrontendCustomUITabs>
+
 <!-- END COPY SECTION -->
 
 ## See also
 
 - [Post sign in / sign up action](../common-customizations/handling-signinup-success)
-- [Changing OAuth provider's scope](../common-customizations/sign-in-and-up/changing-oauth-scopes)
+- [See all built in providers](../common-customizations/sign-in-and-up/built-in-providers)
+- [Changing OAuth provider's scope](../common-customizations/sign-in-and-up/built-in-providers#setting-oauth-scopes)
 - [Integrating with a custom OAuth provider](../common-customizations/sign-in-and-up/custom-providers)
-- [Using the provider's access token on the backend](../common-customizations/getting-provider-access-token)
+- [Fetching profile info and using the provider's access token on the backend](../common-customizations/get-user-info)
 - [Customising user ID format](../common-customizations/userid-format)

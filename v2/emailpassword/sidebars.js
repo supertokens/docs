@@ -55,6 +55,7 @@ module.exports = {
             "pre-built-ui/sign-out",
             "pre-built-ui/auth-redirection",
             "pre-built-ui/enable-email-verification",
+            "pre-built-ui/multitenant-login",
             {
               type: 'category',
               label: 'Further Reading',
@@ -113,6 +114,7 @@ module.exports = {
             "custom-ui/securing-routes",
             "custom-ui/sign-out",
             "custom-ui/enable-email-verification",
+            "custom-ui/multitenant-login",
           ],
         },
       ]
@@ -356,31 +358,54 @@ module.exports = {
       label: 'Auth flow customizations',
       collapsed: true,
       items: [
-        {
-          type: 'category',
-          label: 'Sign Up Form',
-          items: [
-            "common-customizations/signup-form/adding-fields",
-            "common-customizations/signup-form/changing-field-labels",
-            "common-customizations/signup-form/field-validators",
-            "common-customizations/signup-form/toc-privacypolicy"
-          ],
-        },
-        {
-          type: "category",
-          label: "Sign In Form",
-          items: [
-            "common-customizations/signin-form/changing-field-labels",
-            "common-customizations/signin-form/field-validators",
-          ]
-        },
-        "common-customizations/get-user-info",
         "common-customizations/handling-signup-success",
         "common-customizations/handling-signin-success",
-        "common-customizations/password-managers",
+        {
+          type: 'category',
+          label: 'Sign In / Up',
+          items: [
+            {
+              type: 'category',
+              label: 'Sign Up Form',
+              items: [
+                "common-customizations/signup-form/adding-fields",
+                "common-customizations/signup-form/changing-field-labels",
+                "common-customizations/signup-form/field-validators",
+              ],
+            },
+            {
+              type: "category",
+              label: "Sign In Form",
+              items: [
+                "common-customizations/signin-form/changing-field-labels",
+                "common-customizations/signin-form/field-validators",
+              ]
+            },
+            {
+              type: "category",
+              label: "Multi tenancy",
+              items: [
+                "common-customizations/multi-tenancy/overview",
+                "common-customizations/multi-tenancy/new-tenant-config",
+                {
+                  type: "category",
+                  label: "Common UX flows",
+                  items: [
+                    "common-customizations/multi-tenancy/common-domain-login",
+                    "common-customizations/multi-tenancy/sub-domain-login"
+                  ]
+                },
+                "common-customizations/multi-tenancy/multi-app",
+              ]
+            },
+            "common-customizations/signup-form/toc-privacypolicy",
+            "common-customizations/embed-sign-in-up-form",
+            "common-customizations/password-managers",
+          ],
+        },
+        "common-customizations/get-user-info",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
-        "common-customizations/embed-sign-in-up-form",
         "common-customizations/change-password",
         {
           type: "category",
@@ -467,15 +492,6 @@ module.exports = {
           ]
         },
         "common-customizations/userid-format",
-        {
-          type: "category",
-          label: "Multi Tenancy",
-          items: [
-            "common-customizations/multi-tenancy/about",
-            "common-customizations/multi-tenancy/one-login-many-sub-domains",
-            "common-customizations/multi-tenancy/one-login-per-sub-domain"
-          ]
-        },
         {
           type: 'category',
           label: 'Actions, Hooks and Custom API responses',
