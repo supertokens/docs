@@ -362,11 +362,11 @@ module.exports = {
           type: "category",
           label: "Sign In / Up",
           items: [
-            "common-customizations/sign-in-up/default-country",
-            "common-customizations/sign-in-up/resend-time-gap",
-            "common-customizations/sign-in-up/change-maximum-retries",
-            "common-customizations/sign-in-up/change-otp-format",
-            "common-customizations/sign-in-up/change-email-phone-validation",
+            "common-customizations/sign-in-and-up/default-country",
+            "common-customizations/sign-in-and-up/resend-time-gap",
+            "common-customizations/sign-in-and-up/change-maximum-retries",
+            "common-customizations/sign-in-and-up/change-otp-format",
+            "common-customizations/sign-in-and-up/change-email-phone-validation",
             {
               type: "category",
               label: "Multi tenancy",
@@ -384,8 +384,8 @@ module.exports = {
                 "common-customizations/multi-tenancy/multi-app",
               ]
             },
-            "common-customizations/sign-in-up/toc-privacypolicy",
-            "common-customizations/embed-sign-in-up-form",
+            "common-customizations/sign-in-and-up/toc-privacypolicy",
+            "common-customizations/embed-sign-in-and-up-form",
           ],
         },
         "common-customizations/generating-magic-link-manually",
