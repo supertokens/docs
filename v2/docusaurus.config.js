@@ -383,6 +383,20 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'multitenancy',
+        path: 'multitenancy',
+        routeBasePath: 'docs/multitenancy',
+        sidebarPath: require.resolve('./multitenancy/sidebars.js'),
+        showLastUpdateTime: true,
+        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'change_me',
         path: 'change_me',
         routeBasePath: 'docs/change_me',

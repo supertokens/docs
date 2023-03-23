@@ -152,6 +152,13 @@ export default function RecipeSelector(props) {
             >
               <a href="/docs/microservice_auth/introduction">Microservice Authentication</a>
             </li>
+            <li
+              className={clsx("recipe_selector__menu__add_ons_items", {
+                active: activeSelector("microservice_auth"),
+              })}
+            >
+              <a href="/docs/multitenancy/introduction">Multitenancy</a>
+            </li>
           </ul>
         </div>
       </div>
