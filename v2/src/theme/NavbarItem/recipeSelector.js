@@ -17,7 +17,7 @@ export default function RecipeSelector(props) {
       case "thirdpartyemailpassword":
         return "ThirdPartyEmailPassword Recipe";
       case "phonepassword":
-        return "EmailPassword + Passwordless Recipe";
+        return "Phone Password Login";
       case "thirdpartypasswordless":
         return "ThirdPartyPasswordless Recipe";
       case "emailpassword":
@@ -75,7 +75,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("thirdpartyemailpassword"),
               })}
             >
-              <a href="/docs/thirdpartyemailpassword/introduction">ThirdPartyEmailPassword</a>
+              <a href="/docs/thirdpartyemailpassword/introduction">Email password + Social Login</a>
             </li>
             <li
               className={clsx("recipe_selector__menu__auth_methods_items", {
@@ -129,7 +129,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("userdashboard"),
               })}
             >
-              <a href="/docs/userdashboard/introduction">User Management Dashboard</a>
+              <a href="/docs/userdashboard/about">User Management Dashboard</a>
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
@@ -143,14 +143,14 @@ export default function RecipeSelector(props) {
                 active: activeSelector("mfa"),
               })}
             >
-              <a href="/docs/mfa/introduction">Multi factor auth</a>
+              <a href="/docs/mfa/introduction">Multi factor Authentication</a>
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
                 active: activeSelector("microservice_auth"),
               })}
             >
-              <a href="/docs/microservice_auth/introduction">Microservice Auth</a>
+              <a href="/docs/microservice_auth/introduction">Microservice Authentication</a>
             </li>
           </ul>
         </div>
