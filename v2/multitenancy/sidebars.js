@@ -1,6 +1,9 @@
 module.exports = {
   sidebar: [
     "introduction",
-    "architecture"
+    "architecture",
+    "new-tenant",
+    "new-app",
+    "recipe-selection"
   ]
 };
