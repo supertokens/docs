@@ -36,6 +36,8 @@ export default function RecipeSelector(props) {
         return "Microservice Auth";
       case "userdashboard":
         return "User Management Dashboard";
+      case "multitenancy":
+        return "Multi Tenancy";
       default:
         return "Select Recipe";
     }
@@ -154,7 +156,7 @@ export default function RecipeSelector(props) {
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
-                active: activeSelector("microservice_auth"),
+                active: activeSelector("multitenancy"),
               })}
             >
               <a href="/docs/multitenancy/introduction">Multitenancy</a>

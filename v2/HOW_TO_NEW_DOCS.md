@@ -7,6 +7,8 @@
 - If creating a new recipe, to add the recipe label in the nav bar and guides page: 
    - edit src/components/recipeBoxes/guides.json
    - edit src/theme/NavbarItem/recipeSelector.js
+      - add to the switch-case of `label` function
+      - add to the html components
 - If the new doc needs to be linked with older versions of the docs, then add it to the `LINK_TO_OLDER_VERSIONS` in `src/theme/NavbarItem/index.js`
 - If creating a new backend SDK, then make sure to also change the website dashboard code snippets.
 
