@@ -4,11 +4,112 @@ hide_title: true
 ---
 
 import MultiTenancyPaidBanner from '../community/reusableMD/multitenancy/MultiTenancyPaidBanner.mdx'
-import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import TabItem from '@theme/TabItem';
-import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import CoreInjector from "/src/components/coreInjector"
+
+<!-- COPY DOCS -->
+<!-- ./emailpassword/common-customizations/multi-tenancy/multi-app.mdx -->
 
 <MultiTenancyPaidBanner />
 
-# Creating a new app
+# Run multiple apps / dev envs using the same SuperTokens core
+
+Just like how you can create multiple tenants / user pools within one SuperTokens core, you can create multiple apps within one core as well:
+- Each app is isolated and can have several tenants.
+- Each app can be assigned its own database, or share a database with another app (and yet be logically isolated).
+- Each app can have its own set of [core and db configs](https://github.com/supertokens/supertokens-core/blob/master/config.yaml). If a specific config is not explicitly set for an app, it will inherit it from the base config.yaml / docker env vars config.
+- The core and db configs of each tenant within an app are inherited from the configs of that app.
+
+You can use this feature to use one SuperTokens core deployment across several indepedent apps within your company, and / or to create multiple dev environments (dev, staging, prod etc..) for one app without having to deploy individual SuperTokens core instances.
+
+## Create a new app in the core
+
+In order to create a new app in the SuperTokens core, you can use the following cURL command:
+
+<CoreInjector defaultValue="http://localhost:3567">
+
+```bash
+curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multitenancy/app' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "appId": "app1",
+    "thirdPartyEnabled": true,
+    "passwordlessEnabled": true,
+    "emailPasswordEnabled": true,
+    "coreConfig": {...}
+}'
+```
+
+</CoreInjector>
+
+- The above command will create (or update) an app with the appId of `app1`.
+- It will also create a default tenant for this app with the tenant ID of `public` (i.e. the default tenantId)
+- You can set various core configs for this app (see the config.yaml / docker env var options for your core), and also enable various login methods for the `public` tenant that's created with this app.
+
+## Cofiguring the app ID during backend SDK init
+
+Whilst one core can have multiple apps, you must use a dedicated backend (integrated with our backend SDK) per app. For example, if you have two apps, and both use a NodeJS backend, then you need to configure one app's backend to have appId as `app1` (as an example), and the other app's backend to have appId as `app2`. You can specify an appId on the backend SDK supertokens.init by appending the appId to the connectionUri as shown below:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import supertokens from "supertokens-node";
+
+supertokens.init({
+    supertokens: {
+        // highlight-next-line
+        connectionURI: "http://localhost:3567/appid-app1",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: []
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import "github.com/supertokens/supertokens-golang/supertokens"
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		Supertokens: &supertokens.ConnectionInfo{
+            // highlight-next-line
+			ConnectionURI: "http://localhost:3567/appid-app1",
+		},
+	})
+}
+
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    supertokens_config=SupertokensConfig(
+        # highlight-next-line
+        connection_uri='http://localhost:3567/appid-app1',
+    ),
+    framework='...', # type: ignore
+    recipe_list=[
+      #...
+   ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+- In the above code snippet, we tell the backend SDK that the appId to use for this app is `app1`. You can pick your own app ID, but whatever it is, you need to add it as shown above.
+- It is important to prefix the app ID with `appid-` as that enables ths SuperTokens core to reliably detect the app that the query is for.
