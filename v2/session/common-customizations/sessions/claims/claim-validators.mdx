@@ -213,7 +213,35 @@ In all of the above claim validators, the `maxAgeInSeconds` input (which is opti
 
 ### On the frontend
 
+<PreBuiltOrCustomUISwitcher>
+
 Just like the backend, the frontend too has session claim validators that conform to the following shape
+
+<PreBuiltUIContent>
+
+```text
+class SessionClaimValidator {
+    constructor(public readonly id: string) {}
+
+    refresh(): Promise<void>;
+
+    shouldRefresh(accessTokenPayload: any): Promise<boolean> | boolean;
+
+    validate(
+        accessTokenPayload: any
+    ): Promise<ClaimValidationResult> | ClaimValidationResult;
+    
+    onFailureRedirection?: (({ userContext, reason }: { userContext: any; reason: any }) => Promise<string | undefined> | string | undefined);
+    showAccessDeniedOnFailure?: boolean;
+}
+
+type ClaimValidationResult = { isValid: true } | { isValid: false; reason?: any };
+```
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
 ```text
 class SessionClaimValidator {
     constructor(public readonly id: string) {}
@@ -230,17 +258,29 @@ class SessionClaimValidator {
 type ClaimValidationResult = { isValid: true } | { isValid: false; reason?: any };
 ```
 
+</CustomUIContent>
+
+
 - The `refresh` function is the same as the one in the frontend claim interface.
 - `shouldRefresh` is function which determines if the claim should be checked against the backend before calling `validate`. This usually returns `true` if the claim value is too old or if it is not present in the `accessTokenPayload`.
 - The `validate` function checks the `accessTokenPayload` for the value of the claim and returns an appropriate response. 
+
+<PreBuiltUIContent>
+
+- Using the `onFailureRedirection` callback, you can choose to redirect the user to a specific url or path if the claim validation fails.
+- By setting `showAccessDeniedOnFailure` to false, you can choose to still show the contents of SessionAuth even if the claim validation fails.
+
+</PreBuiltUIContent>
 
 The logic for how validators are run on the frontend is the same as on the backend:
 - First we `refresh` the claim if that claim's `shouldRefresh` returns `true` (and we do this for all the claims)
 - Then we call the `validate` function on the claims one by one to return a array of validation result.
 
-In case validation fails, you can choose to render a certain UI or redirect the user. In certain claim validators, like the email verification validator, the frontend SDK (for pre built UI) automatically redirects the user to the email verification screen.
+In case validation fails, you can choose to render an access denied screen, custom UI or redirect the user. In certain claim validators, like the email verification validator, the frontend SDK (for pre-built UI) automatically redirects the user to the email verification screen.
 
-And once again, just like in the backend, the frontend too exposes several helper functions like `hasValue`, `includes`, `excludes`, `isTrue` etc for the base claim classes.
+And once again, just like in the backend, the frontend too exposes several helper functions like `hasValue`, `includes`, `excludes`, `isTrue` etc. for the base claim classes.
+
+</PreBuiltOrCustomUISwitcher>
 
 ## How to add or modify a claim in a session?
 
@@ -2109,36 +2149,54 @@ const AdminRoute = (props: React.PropsWithChildren<any>) => {
                 ]
             }
         >
-            <InvalidClaimHandler>
-                {props.children}
-            </InvalidClaimHandler>
+            {props.children}
         </SessionAuth>
     );
 }
 
-function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
-    let sessionContext = useSessionContext();
-    if (sessionContext.loading) {
-        return null;
-    }
-
-    if (sessionContext.invalidClaims.some(i => i.validatorId === UserRoleClaim.id)) {
-        return <div>You cannot access this page because you are not an admin.</div>
-    }
-
-    // We show the protected route since all claims validators have
-    // passed implying that the user is an admin.
-    return <div>{props.children}</div>;
-}
 ```
 Above we are creating a generic component called `AdminRoute` which enforces that its child components can only be rendered if the user has the admin role.
 
-In the `AdminRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. We also add the `UserRoleClaim` validator to the `<SessionAuth>` component which checks if the validators pass or not.
+In the `AdminRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. We also add the `UserRoleClaim` validator to the `<SessionAuth>` component which checks if the validators pass or not. If all validation passes, we render the `props.children` component. If the a claim validation has failed we can:
+1. Show an access-denied screen. This can be disabled by adding `useDefaultAccessDeniedScreen={false}` or you can override this screen by adding an override for `SessionAccessDenied_Override`.
+2. Redirect the user to a specific page by adding an `onFailureRedirection`
+Both of these options are showcased in this combined example:
 
-Finally, we check the result of the validation in the `InvalidClaimHandler` component which displays `"You cannot access this page because you are not an admin."` if the `UserRoleClaim` claim failed.
+```tsx
+import React from "react";
+import { SessionAuth, SessionComponentsOverrideProvider, useSessionContext } from 'supertokens-auth-react/recipe/session';
+import { UserRoleClaim, /*PermissionClaim*/ } from 'supertokens-auth-react/recipe/userroles';
 
-If all validation passes, we render the `props.children` component.
+const AdminRoute = (props: React.PropsWithChildren<any>) => {
+    return (
+        <SessionComponentsOverrideProvider 
+            components={{
+                SessionAccessDenied_Override: () => <h1>My Custom Access Denied Screen!</h1>
+        }}>
+            <SessionAuth 
+                useDefaultAccessDeniedScreen={
+                    /* 
+                        If this is set to false, we render the `props.children` component even
+                        if a claim validation failed (if we do not redirect)
+                    */
+                    true
+                }
+                overrideGlobalClaimValidators={(globalValidators) => [
+                    ...globalValidators,
+                    {
+                        ...UserRoleClaim.validators.includes("admin"),
+                        // If this callback returns a url, the user will be redirected there on failure.
+                        onFailureRedirection: () => "/not-an-admin"
+                    }
+                ]
+            }>
+                {props.children}
+            </SessionAuth>
+        </SessionComponentsOverrideProvider>
+    );
+}
 
+```
 :::note
 You can extend the `AdminRoute` component to check for other types of validators as well. This component can then be reused to protect all of your app's components (In this case, you may want to rename this component to something more appropriate, like `ProtectedRoute`).
 :::
