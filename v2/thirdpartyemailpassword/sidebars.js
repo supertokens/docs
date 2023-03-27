@@ -69,7 +69,7 @@ module.exports = {
         },
         {
           type: 'category',
-          label: 'Using your own UI',
+          label: 'Using your own UI / Custom UI',
           customProps: {
             categoryIcon: "pencil",
           },
@@ -538,7 +538,7 @@ module.exports = {
                 "advanced-customizations/frontend-hooks/redirection-callback"
               ],
             },
-            "advanced-customizations/user-context",          ],
+            "advanced-customizations/user-context",],
         },
         {
           type: "category",
