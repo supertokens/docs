@@ -15,3 +15,8 @@ hide_title: true
 - roles
 - role_permissions
 - user_roles
+- totp_users
+- totp_user_devices
+- totp_used_codes
+- user_last_active
+- dashboard_users
