@@ -8,7 +8,8 @@ let TabItem = require("@theme/TabItem").default;
 
 type Props = {
     defaultValue?: string
-    showTenantId?: boolean
+    showTenantId?: boolean,
+    showAppId?: boolean
 };
 
 type State = {
@@ -133,6 +134,10 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
                 }
                 return c;
             });
+        }
+
+        if (this.props.showAppId === false) {
+            return singleTenant;
         }
 
         return <Tabs
