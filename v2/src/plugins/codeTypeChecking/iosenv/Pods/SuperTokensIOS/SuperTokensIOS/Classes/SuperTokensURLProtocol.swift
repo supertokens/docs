@@ -10,6 +10,13 @@ import Foundation
 public class SuperTokensURLProtocol: URLProtocol {
     private static let readWriteDispatchQueue = DispatchQueue(label: "io.supertokens.session.readwrite", attributes: .concurrent)
     
+    // Refer to comment in makeRequest to know why this is needed
+    private var requestForRetry: NSMutableURLRequest? = nil
+    
+    override public init(request: URLRequest, cachedResponse: CachedURLResponse?, client: URLProtocolClient?) {
+        super.init(request: request, cachedResponse: cachedResponse, client: client)
+    }
+    
     public override class func canInit(with request: URLRequest) -> Bool {
         if !SuperTokens.isInitCalled {
             // We cannot throw in this function because that would be an invalid override
@@ -24,7 +31,7 @@ public class SuperTokensURLProtocol: URLProtocol {
         // NOTE: For iOS we dont check whether the request is being made for refreshing
         // because we use a custom URL session object so this protocol never gets called
         do {
-            let doNotDoInterception = !(try Utils.shouldDoInterception(toCheckURL: request.url!.absoluteString, apiDomain: SuperTokens.config!.apiDomain, cookieDomain: SuperTokens.config!.cookieDomain))
+            let doNotDoInterception = !(try Utils.shouldDoInterception(toCheckURL: request.url!.absoluteString, apiDomain: SuperTokens.config!.apiDomain, cookieDomain: SuperTokens.config!.sessionTokenBackendDomain))
             
             if !doNotDoInterception {
                 // Returning true means that URLSession will use this class when making the request
@@ -53,20 +60,50 @@ public class SuperTokensURLProtocol: URLProtocol {
         }
     }
     
-    func makeRequest() {
-        let mutableRequest = (self.request as NSURLRequest).mutableCopy() as! NSMutableURLRequest
-        let preRequestIdRefresh = IdRefreshToken.getToken()
+    private func removeAuthHeaderIfMatchesLocalToken(_mutableRequest: NSMutableURLRequest) -> NSMutableURLRequest {
+        // .value is case insensitive
+        if let originalAuthorizationHeader = _mutableRequest.value(forHTTPHeaderField: "Authorization") {
+            let accessToken = Utils.getTokenForHeaderAuth(tokenType: .access)
+            
+            if accessToken != nil && originalAuthorizationHeader == "Bearer \(accessToken!)" {
+                // Removing headers from a request is not case insensitive
+                _mutableRequest.setValue(nil, forHTTPHeaderField: "Authorization")
+                _mutableRequest.setValue(nil, forHTTPHeaderField: "authorization")
+            }
+        }
         
-        if preRequestIdRefresh != nil {
-            let antiCSRF = AntiCSRF.getToken(associatedIdRefreshToken: preRequestIdRefresh)
+        return _mutableRequest
+    }
+    
+    func makeRequest() {
+        var mutableRequest = (self.request as NSURLRequest).mutableCopy() as! NSMutableURLRequest
+        
+        // When this function is called for retrying we cannot use the global request
+        // because that will not have the modified headers
+        if requestForRetry != nil {
+            mutableRequest = requestForRetry!
+            requestForRetry = nil
+        }
+        
+        mutableRequest = removeAuthHeaderIfMatchesLocalToken(_mutableRequest: mutableRequest)
+        
+        let preRequestLocalSessionState = Utils.getLocalSessionState()
+        
+        if preRequestLocalSessionState.status == .EXISTS {
+            let antiCSRF = AntiCSRF.getToken(associatedAccessTokenUpdate: preRequestLocalSessionState.lastAccessTokenUpdate!)
             if antiCSRF != nil {
-                mutableRequest.addValue(antiCSRF!, forHTTPHeaderField: SuperTokensConstants.antiCSRFHeaderKey)
+                mutableRequest.setValue(antiCSRF!, forHTTPHeaderField: SuperTokensConstants.antiCSRFHeaderKey)
             }
         }
         
         if mutableRequest.value(forHTTPHeaderField: "rid") == nil {
             mutableRequest.addValue("anti-csrf", forHTTPHeaderField: "rid")
         }
+        
+        let tokenTransferMethod = SuperTokens.config!.tokenTransferMethod
+        mutableRequest.setValue(tokenTransferMethod.rawValue, forHTTPHeaderField: "st-auth-mode")
+        
+        Utils.setAuthorizationHeaderIfRequired(mutableRequest: mutableRequest)
         
         let apiRequest = mutableRequest.copy() as! URLRequest
         
@@ -76,25 +113,23 @@ public class SuperTokensURLProtocol: URLProtocol {
             data, response, error in
             
             if let httpResponse: HTTPURLResponse = response as? HTTPURLResponse {
-                let headerFields = httpResponse.allHeaderFields as? [String:String]
-                if headerFields != nil && response!.url != nil {
-                    let idRefreshTokenFromResponse = httpResponse.allHeaderFields[SuperTokensConstants.idRefreshTokenHeaderKey]
-                    if (idRefreshTokenFromResponse != nil) {
-                        IdRefreshToken.setToken(newIdRefreshToken: idRefreshTokenFromResponse as! String, statusCode: httpResponse.statusCode);
-                    }
-                }
+                Utils.saveTokenFromHeaders(httpResponse: httpResponse)
+                Utils.fireSessionUpdateEventsIfNecessary(
+                    wasLoggedIn: preRequestLocalSessionState.status == .EXISTS,
+                    status: httpResponse.statusCode,
+                    frontTokenheaderFromResponse: httpResponse.value(forHTTPHeaderField: SuperTokensConstants.frontTokenHeaderKey)
+                )
                 
                 if httpResponse.statusCode == SuperTokens.config!.sessionExpiredStatusCode {
-                    SuperTokensURLProtocol.onUnauthorisedResponse(preRequestIdRefresh: preRequestIdRefresh, callback: {
+                    mutableRequest = self.removeAuthHeaderIfMatchesLocalToken(_mutableRequest: mutableRequest)
+                    SuperTokensURLProtocol.onUnauthorisedResponse(preRequestLocalSessionState: preRequestLocalSessionState, callback: {
                         unauthResponse in
                         
                         if unauthResponse.status == .RETRY {
+                            self.requestForRetry = mutableRequest
                             self.makeRequest()
                         } else {
-                            if IdRefreshToken.getToken() == nil {
-                                AntiCSRF.removeToken()
-                                FrontToken.removeToken()
-                            }
+                            SuperTokensURLProtocol.clearTokensIfRequired()
                             
                             if unauthResponse.error != nil {
                                 self.resolveToUser(data: nil, response: nil, error: unauthResponse.error)
@@ -104,29 +139,12 @@ public class SuperTokensURLProtocol: URLProtocol {
                         }
                     })
                 } else {
-                    let antiCSRFFromResponse = httpResponse.allHeaderFields[SuperTokensConstants.antiCSRFHeaderKey]
-                    
-                    if antiCSRFFromResponse != nil {
-                        let idRefreshPostResponse = IdRefreshToken.getToken()
-                        if idRefreshPostResponse != nil {
-                            AntiCSRF.setToken(antiCSRFToken: antiCSRFFromResponse as! String, associatedIdRefreshToken: idRefreshPostResponse)
-                        }
-                    }
-                    
-                    let frontTokenFromHeaders = httpResponse.allHeaderFields[SuperTokensConstants.frontTokenHeaderKey]
-                    
-                    if frontTokenFromHeaders != nil {
-                        FrontToken.setToken(frontToken: (frontTokenFromHeaders as! String))
-                    }
-                    
-                    if IdRefreshToken.getToken() == nil {
-                        AntiCSRF.removeToken()
-                        FrontToken.removeToken()
-                    }
+                    SuperTokensURLProtocol.clearTokensIfRequired()
                     
                     self.resolveToUser(data: data, response: response, error: error)
                 }
             } else {
+                SuperTokensURLProtocol.clearTokensIfRequired()
                 self.resolveToUser(data: data, response: response, error: error)
             }
         }).resume()
@@ -150,16 +168,17 @@ public class SuperTokensURLProtocol: URLProtocol {
         self.client?.urlProtocolDidFinishLoading(self)
     }
     
-    static func onUnauthorisedResponse(preRequestIdRefresh: String?, callback: @escaping (UnauthorisedResponse) -> Void) {
+    static func onUnauthorisedResponse(preRequestLocalSessionState: LocalSessionState, callback: @escaping (UnauthorisedResponse) -> Void) {
         SuperTokensURLProtocol.readWriteDispatchQueue.async(flags: .barrier) {
-            let postLockIdRefresh = IdRefreshToken.getToken()
-            if postLockIdRefresh == nil {
+            let postLockLocalSessionState = Utils.getLocalSessionState()
+            
+            if postLockLocalSessionState.status == .NOT_EXISTS {
                 SuperTokens.config!.eventHandler(.UNAUTHORISED)
                 callback(UnauthorisedResponse(status: UnauthorisedResponse.UnauthorisedStatus.SESSION_EXPIRED))
                 return
             }
             
-            if postLockIdRefresh != preRequestIdRefresh {
+            if postLockLocalSessionState.status != preRequestLocalSessionState.status || (postLockLocalSessionState.status == .EXISTS && preRequestLocalSessionState.status == .EXISTS && postLockLocalSessionState.lastAccessTokenUpdate! != preRequestLocalSessionState.lastAccessTokenUpdate!) {
                 callback(UnauthorisedResponse(status: UnauthorisedResponse.UnauthorisedStatus.RETRY))
                 return;
             }
@@ -168,15 +187,26 @@ public class SuperTokensURLProtocol: URLProtocol {
             var refreshRequest = URLRequest(url: refreshUrl)
             refreshRequest.httpMethod = "POST"
             
-            let antiCSRF = AntiCSRF.getToken(associatedIdRefreshToken: preRequestIdRefresh)
-            if antiCSRF != nil {
-                refreshRequest.addValue(antiCSRF!, forHTTPHeaderField: SuperTokensConstants.antiCSRFHeaderKey)
+            if preRequestLocalSessionState.status == .EXISTS {
+                let antiCSRF = AntiCSRF.getToken(associatedAccessTokenUpdate: preRequestLocalSessionState.lastAccessTokenUpdate!)
+                if antiCSRF != nil {
+                    refreshRequest.addValue(antiCSRF!, forHTTPHeaderField: SuperTokensConstants.antiCSRFHeaderKey)
+                }
             }
             
             refreshRequest.addValue(SuperTokens.rid, forHTTPHeaderField: "rid")
             refreshRequest.addValue(Version.supported_fdi.joined(separator: ","), forHTTPHeaderField: "fdi-version")
             
-            refreshRequest = SuperTokens.config!.preAPIHook(.REFRESH_SESSION, refreshRequest)
+            let tokenTransferMethod = SuperTokens.config!.tokenTransferMethod
+            refreshRequest.setValue(tokenTransferMethod.rawValue, forHTTPHeaderField: "st-auth-mode")
+            
+            // We need a mutable one here because URLRequest does not allow setting headers
+            // if the request is passed as a param to a function
+            let mutableRefreshRequest = (refreshRequest as NSURLRequest).mutableCopy() as! NSMutableURLRequest
+            
+            Utils.setAuthorizationHeaderIfRequired(mutableRequest: mutableRefreshRequest, addRefreshToken: true)
+            
+            refreshRequest = SuperTokens.config!.preAPIHook(.REFRESH_SESSION, mutableRefreshRequest.copy() as! URLRequest)
             
             let semaphore = DispatchSemaphore(value: 0)
             
@@ -186,20 +216,24 @@ public class SuperTokensURLProtocol: URLProtocol {
                 
                 if response as? HTTPURLResponse != nil {
                     let httpResponse = response as! HTTPURLResponse
-                    let headerFields = httpResponse.allHeaderFields as? [String:String]
                     
-                    var removeIdRefreshToken = true;
-                    if headerFields != nil && response!.url != nil {
-                        let idRefreshTokenFromResponse = httpResponse.allHeaderFields[SuperTokensConstants.idRefreshTokenHeaderKey]
-                        if (idRefreshTokenFromResponse != nil) {
-                            IdRefreshToken.setToken(newIdRefreshToken: idRefreshTokenFromResponse as! String, statusCode: httpResponse.statusCode);
-                            removeIdRefreshToken = false;
-                        }
+                    Utils.saveTokenFromHeaders(httpResponse: httpResponse)
+                    
+                    let isUnauthorised = httpResponse.statusCode == SuperTokens.config!.sessionExpiredStatusCode
+                    
+                    if isUnauthorised && httpResponse.value(forHTTPHeaderField: SuperTokensConstants.frontTokenHeaderKey) == nil {
+                        FrontToken.setItem(frontToken: "remove")
                     }
                     
-                    if httpResponse.statusCode == SuperTokens.config!.sessionExpiredStatusCode && removeIdRefreshToken {
-                        IdRefreshToken.setToken(newIdRefreshToken: "remove", statusCode: httpResponse.statusCode);
-                    }
+                    let frontTokenInHeaders = httpResponse.value(forHTTPHeaderField: SuperTokensConstants.frontTokenHeaderKey)
+                    
+                    Utils.fireSessionUpdateEventsIfNecessary(
+                        wasLoggedIn: preRequestLocalSessionState.status == .EXISTS,
+                        status: httpResponse.statusCode,
+                        frontTokenheaderFromResponse: frontTokenInHeaders == nil ? "remove" : frontTokenInHeaders!
+                    )
+                    
+                    SuperTokensURLProtocol.clearTokensIfRequired()
                     
                     if httpResponse.statusCode >= 300 {
                         semaphore.signal()
@@ -209,21 +243,14 @@ public class SuperTokensURLProtocol: URLProtocol {
                     
                     SuperTokens.config!.postAPIHook(.REFRESH_SESSION, refreshRequest, response)
                     
-                    let idRefreshToken = IdRefreshToken.getToken()
-                    
-                    let antiCSRFFromResponse = httpResponse.allHeaderFields[SuperTokensConstants.antiCSRFHeaderKey]
-                    if antiCSRFFromResponse != nil {
-                        AntiCSRF.setToken(antiCSRFToken: antiCSRFFromResponse as! String, associatedIdRefreshToken: idRefreshToken)
-                    }
-                    
-                    let frontTokenFromResponse = httpResponse.allHeaderFields[SuperTokensConstants.frontTokenHeaderKey]
-                    if frontTokenFromResponse != nil {
-                        FrontToken.setToken(frontToken: (frontTokenFromResponse as! String))
-                    }
-                    
-                    if idRefreshToken == nil {
-                        AntiCSRF.removeToken()
-                        FrontToken.removeToken()
+                    if Utils.getLocalSessionState().status == .NOT_EXISTS {
+                        // The execution should never come here.. but just in case.
+                        // removed by server. So we logout
+
+                        // we do not send "UNAUTHORISED" event here because
+                        // this is a result of the refresh API returning a session expiry, which
+                        // means that the frontend did not know for sure that the session existed
+                        // in the first place.
                         semaphore.signal()
                         callback(UnauthorisedResponse(status: UnauthorisedResponse.UnauthorisedStatus.SESSION_EXPIRED))
                         return
@@ -233,6 +260,7 @@ public class SuperTokensURLProtocol: URLProtocol {
                     SuperTokens.config!.eventHandler(.REFRESH_SESSION)
                     callback(UnauthorisedResponse(status: UnauthorisedResponse.UnauthorisedStatus.RETRY))
                 } else {
+                    SuperTokensURLProtocol.clearTokensIfRequired()
                     semaphore.signal()
                     callback(UnauthorisedResponse(status: UnauthorisedResponse.UnauthorisedStatus.API_ERROR, error: error))
                 }
@@ -244,5 +272,14 @@ public class SuperTokensURLProtocol: URLProtocol {
     
     public override func stopLoading() {
         // Do nothing, this is required to be implemented
+    }
+    
+    static func clearTokensIfRequired() {
+        let preRequestLocalSessionState = Utils.getLocalSessionState()
+        
+        if preRequestLocalSessionState.status == .NOT_EXISTS {
+            AntiCSRF.removeToken()
+            FrontToken.removeToken()
+        }
     }
 }

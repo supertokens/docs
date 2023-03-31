@@ -24,7 +24,7 @@ We also have [a blog post writeup](https://supertokens.com/blog/connect-supertok
 ```sql
 CREATE DATABASE supertokens;
 ```
-You can skip this step if you want SuperTokens to write to your own database. In this case, you will need to provide your database's name as shown in the step below. 
+You can skip this step if you want SuperTokens to write to your own database. In this case, you will need to provide your database's name as shown in the step below.
 
 ## 2) Connect SuperTokens to your database 🔌
 
@@ -116,7 +116,26 @@ CREATE TABLE IF NOT EXISTS userid_mapping(
     external_user_id_info TEXT,
     PRIMARY KEY (supertokens_user_id, external_user_id),
     FOREIGN KEY (supertokens_user_id) REFERENCES all_auth_recipe_users(user_id) ON DELETE CASCADE
-)
+);
+
+CREATE TABLE IF NOT EXISTS dashboard_users(
+    user_id CHAR(36) NOT NULL,
+    email VARCHAR(256) NOT NULL UNIQUE,
+    password_hash VARCHAR(256) NOT NULL,
+    time_joined BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS dashboard_user_sessions(
+    session_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
+    time_created BIGINT UNSIGNED NOT NULL,
+    expiry BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY(session_id),
+    FOREIGN KEY(user_id) REFERENCES dashboard_users (user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX dashboard_user_sessions_expiry_index ON dashboard_user_sessions(expiry);
 
 CREATE TABLE session_access_token_signing_keys (
     created_at_time BIGINT UNSIGNED NOT NULL,
@@ -133,6 +152,12 @@ CREATE TABLE IF NOT EXISTS session_info (
     created_at_time BIGINT UNSIGNED NOT NULL,
     jwt_user_payload TEXT,
     PRIMARY KEY(session_handle)
+);
+
+CREATE TABLE IF NOT EXISTS user_last_active (
+    user_id VARCHAR(128),
+    last_active_time BIGINT UNSIGNED,
+    PRIMARY KEY(user_id)
 );
 
 CREATE TABLE IF NOT EXISTS emailpassword_users (
@@ -225,7 +250,7 @@ CREATE TABLE IF NOT EXISTS user_metadata (
 
 CREATE TABLE IF NOT EXISTS roles (
   role VARCHAR(255) NOT NULL,
-  PRIMARY KEY (role)  
+  PRIMARY KEY (role)
 );
 
 CREATE TABLE IF NOT EXISTS role_permissions (
@@ -245,6 +270,34 @@ CREATE TABLE IF NOT EXISTS user_roles (
 );
 
 CREATE INDEX user_roles_role_index ON user_roles(role);
+
+CREATE TABLE IF NOT EXISTS totp_users (
+    user_id VARCHAR(128) NOT NULL,
+    PRIMARY KEY (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS totp_user_devices (
+    user_id VARCHAR(128) NOT NULL,
+    device_name VARCHAR(256) NOT NULL,
+    secret_key VARCHAR(256) NOT NULL,
+    period INTEGER NOT NULL,
+    skew INTEGER NOT NULL,
+    verified BOOLEAN NOT NULL,
+    PRIMARY KEY (user_id, device_name),
+    FOREIGN KEY (user_id) REFERENCES totp_users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS totp_used_codes (
+    user_id VARCHAR(128) NOT NULL,
+    code VARCHAR(8) NOT NULL,
+    is_valid BOOLEAN NOT NULL,
+    expiry_time_ms BIGINT UNSIGNED NOT NULL,
+    created_time_ms BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (user_id, created_time_ms),
+    FOREIGN KEY (user_id) REFERENCES totp_users(user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX totp_used_codes_expiry_time_ms_index ON totp_used_codes(expiry_time_ms);
 ```
 
 :::tip

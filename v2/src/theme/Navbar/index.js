@@ -4,30 +4,30 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React, { useCallback, useState, useEffect } from 'react';
-import clsx from 'clsx';
-import SearchBar from '@theme/SearchBar';
-import Toggle from '@theme/Toggle';
-import useThemeContext from '@theme/hooks/useThemeContext';
-import { useThemeConfig } from '@docusaurus/theme-common';
-import useHideableNavbar from '@theme/hooks/useHideableNavbar';
-import useLockBodyScroll from '@theme/hooks/useLockBodyScroll';
-import useWindowSize, { windowSizes } from '@theme/hooks/useWindowSize';
-import NavbarItem from '@theme/NavbarItem';
-import Logo from '@theme/Logo';
-import IconMenu from '@theme/IconMenu';
-import styles from './styles.module.css'; // retrocompatible with v1
+import React, { useCallback, useState, useEffect } from "react";
+import clsx from "clsx";
+import SearchBar from "@theme/SearchBar";
+import Toggle from "@theme/Toggle";
+import useThemeContext from "@theme/hooks/useThemeContext";
+import { useThemeConfig } from "@docusaurus/theme-common";
+import useHideableNavbar from "@theme/hooks/useHideableNavbar";
+import useLockBodyScroll from "@theme/hooks/useLockBodyScroll";
+import useWindowSize, { windowSizes } from "@theme/hooks/useWindowSize";
+import NavbarItem from "@theme/NavbarItem";
+import Logo from "@theme/Logo";
+import IconMenu from "@theme/IconMenu";
+import styles from "./styles.module.css"; // retrocompatible with v1
 import SignUpButton from "../NavbarItem/SignUpButton";
 
-const DefaultNavItemPosition = 'right'; // If split links by left/right
+const DefaultNavItemPosition = "right"; // If split links by left/right
 // if position is unspecified, fallback to right (as v1)
 
 function splitNavItemsByPosition(items) {
   const leftItems = items.filter(
-    (item) => (item.position ?? DefaultNavItemPosition) === 'left',
+    (item) => (item.position ?? DefaultNavItemPosition) === "left"
   );
   const rightItems = items.filter(
-    (item) => (item.position ?? DefaultNavItemPosition) === 'right',
+    (item) => (item.position ?? DefaultNavItemPosition) === "right"
   );
   return {
     leftItems,
@@ -52,7 +52,7 @@ function Navbar() {
   }, [setSidebarShown]);
   const onToggleChange = useCallback(
     (e) => (e.target.checked ? setDarkTheme() : setLightTheme()),
-    [setLightTheme, setDarkTheme],
+    [setLightTheme, setDarkTheme]
   );
   const windowSize = useWindowSize();
   useEffect(() => {
@@ -60,21 +60,20 @@ function Navbar() {
       setSidebarShown(false);
     }
   }, [windowSize]);
-  const hasSearchNavbarItem = items.some((item) => item.type === 'search');
+  const hasSearchNavbarItem = items.some((item) => item.type === "search");
   let { leftItems, rightItems } = splitNavItemsByPosition(items);
-
-  leftItems = [...leftItems, ...RECIPE_LABELS];
 
   return (
     <nav
       ref={navbarRef}
-      className={clsx('navbar', 'navbar--fixed-top', {
-        'navbar--dark': style === 'dark',
-        'navbar--primary': style === 'primary',
-        'navbar-sidebar--show': sidebarShown,
+      className={clsx("navbar", "navbar--fixed-top", {
+        "navbar--dark": style === "dark",
+        "navbar--primary": style === "primary",
+        "navbar-sidebar--show": sidebarShown,
         [styles.navbarHideable]: hideOnScroll,
         [styles.navbarHidden]: hideOnScroll && !isNavbarVisible,
-      })}>
+      })}
+    >
       <div className="navbar__inner">
         <div className="navbar__items">
           {items != null && items.length !== 0 && (
@@ -84,15 +83,19 @@ function Navbar() {
               type="button"
               tabIndex={0}
               onClick={showSidebar}
-              onKeyDown={showSidebar}>
+              onKeyDown={showSidebar}
+            >
               <IconMenu />
             </button>
           )}
-          <Logo
-            className="navbar__brand"
-            imageClassName="navbar__logo"
-            titleClassName="navbar__title"
-          />
+          <div className="navbar__items__brand_and_dropdown">
+            <Logo
+              className="navbar__brand"
+              imageClassName="navbar__logo"
+              titleClassName="navbar__title"
+            />
+            <NavbarItem type="recipeDropDown" position="left" />
+          </div>
           {leftItems.map((item, i) => (
             <NavbarItem {...item} key={i} />
           ))}
@@ -148,63 +151,4 @@ function Navbar() {
   );
 }
 
-
 export default Navbar;
-
-
-const RECIPE_LABELS = [{
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "thirdpartyemailpassword",
-  label: "ThirdPartyEmailPassword Recipe"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "phonepassword",
-  label: "EmailPassword + Passwordless Recipe"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "thirdpartypasswordless",
-  label: "ThirdPartyPasswordless Recipe"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "emailpassword",
-  label: "EmailPassword Recipe"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "thirdparty",
-  label: "ThirdParty Recipe"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "passwordless",
-  label: "Passwordless Recipe"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "session",
-  label: "Session Recipe"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "userroles",
-  label: "User Roles Recipe"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "mfa",
-  label: "Multi factor auth"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "microservice_auth",
-  label: "Microservice Auth"
-}, {
-  type: "recipeLabel",
-  position: "left",
-  docsPluginId: "userdashboard",
-  label: "User Management Dashboard"
-}]

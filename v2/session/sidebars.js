@@ -39,6 +39,7 @@ module.exports = {
                 "quick-setup/core/saas-setup"
               ],
             },
+            "quick-setup/handling-session-tokens",
           ],
         },
       ],
@@ -91,9 +92,6 @@ module.exports = {
           items: [
             "graphql-integration/backend-setup",
             "graphql-integration/making-requests",
-            "graphql-integration/access-session-info",
-            "graphql-integration/create-session",
-            "graphql-integration/revoke-session",
           ],
         },
         {
@@ -207,6 +205,7 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/share-sessions-across-sub-domains",
+        "common-customizations/sessions/token-transfer-method",
         {
           type: "category",
           label: "Other operations",
@@ -272,22 +271,7 @@ module.exports = {
                 "advanced-customizations/frontend-hooks/pre-api",
                 "advanced-customizations/frontend-hooks/handle-event"
               ],
-            },
-            {
-              type: 'category',
-              label: 'Examples',
-              items: [
-                {
-                  type: 'category',
-                  label: 'Using localstorage instead of cookies',
-                  items: [
-                    "advanced-customizations/examples/localstorage/about",
-                    "advanced-customizations/examples/localstorage/guide"
-                  ],
-                },
-              ],
-            },
-          ],
+            },          ],
         },
         {
           type: "category",

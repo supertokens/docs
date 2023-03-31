@@ -1,0 +1,149 @@
+---
+id: "0002"
+title: Split recipe-specific route handlers into separate components
+hide_title: true
+---
+
+import DecisionHeader from "/src/components/decisionLogs/DecisionHeader";
+import ArgumentPro from "/src/components/decisionLogs/ArgumentPro";
+import ArgumentCon from "/src/components/decisionLogs/ArgumentCon";
+import ArgumentNeut from "/src/components/decisionLogs/ArgumentNeut";
+
+# Split recipe-specific route handlers into separate components
+
+<DecisionHeader
+  status="proposed"
+  lastUpdate="2023-01-24"
+  created="2023-01-24"
+  deciders={["rishabhpoddar", "porcellus"]}
+  proposedBy={["porcellus"]}
+/>
+
+## Context and Problem Statement
+
+We want to enable apps to initialize supertokens-auth-react without bundling react. This is useful for example in angular apps, where we should be able to use a single init call in the main route (and use auth-react throughout the app), while only bundling react to the module handling auth.
+
+## Considered Options
+
+- Add recipeIds into input of getRoutingComponent
+- Add separate components for the pre-built UI of each recipe
+
+## Decision Outcome
+
+Chosen option: Add separate components for the pre-built UI of each recipe, because
+
+- Interface fits well into react
+- Works with most bundlers
+
+Notes:
+
+- The new components will be called `RecipeNamePreBuiltUIRoutes`
+- The new components should take `router` as a required prop.
+- We choose not to handle component overrides in the new Routes components, in order to avoid multiple ways of adding the same config.
+- `canHandleRoute` will be recipe specific and moved into recipe index files.
+- We can remove `disableDefaultUI` from the email verification config, but other recipes use this on a per-feature basis (e.g.: disable only signInUp instead of all pre-built routes).
+
+## Pros and Cons of the Options
+
+### Add recipeIds into input of getRoutingComponent
+
+<ArgumentPro> Could work with really smart bundlers </ArgumentPro>
+<ArgumentPro> Less interface change </ArgumentPro>
+<ArgumentCon> The recipes need to be listed in two places </ArgumentCon>
+<ArgumentCon> For most bundlers, this will import all recipes ui components instead of just the required ones </ArgumentCon>
+
+```tsx
+function App() {
+  return (
+    <SuperTokensWrapper>
+      <EmailVerificationComponentsOverrideProvider
+        components={{
+          EmailVerificationSendVerifyEmail_Override: () => <OtpScreen />,
+        }}>
+        <div className="App">
+          <Router>
+            <Routes>
+              {getSuperTokensRoutesForReactRouterDom(require("react-router-dom"), [EmailPassword.recipeId])}
+              <Route
+                path="/"
+                element={
+                  <SessionAuth>
+                    <Home />
+                  </SessionAuth>
+                }
+              />
+            </Routes>
+          </Router>
+        </div>
+      </EmailVerificationComponentsOverrideProvider>
+    </SuperTokensWrapper>
+  );
+}
+```
+
+### Add separate components for the pre-built UI of each recipe
+
+<ArgumentPro> Should work with all bundlers </ArgumentPro>
+<ArgumentPro> Interface feels native to react </ArgumentPro>
+<ArgumentPro> Adding a `componentOverrides` prop would replace the separate override provider component in most (but not all) cases </ArgumentPro>
+<ArgumentCon> The interface changes a lot </ArgumentCon>
+<ArgumentCon> The recipes have to be listed in two places </ArgumentCon>
+<ArgumentCon> `canHandleRoute` and `getRoutingComponent` will have to be recipe specific as well </ArgumentCon>
+
+With react-router-dom:
+
+```tsx
+function App() {
+  return (
+    <SuperTokensWrapper>
+      <EmailVerificationComponentsOverrideProvider
+        components={{
+          EmailVerificationSendVerifyEmail_Override: () => <OtpScreen />,
+        }}>
+        <div className="App">
+          <Router>
+            <Routes>
+              <EmailPasswordPreBuiltUIRoutes router={require("react-router-dom")} />
+              <EmailVerificationPreBuiltUIRoutes router={require("react-router-dom")} />
+              <Route
+                path="/"
+                element={
+                  <SessionAuth>
+                    <Home />
+                  </SessionAuth>
+                }
+              />
+            </Routes>
+          </Router>
+        </div>
+      </EmailVerificationComponentsOverrideProvider>
+    </SuperTokensWrapper>
+  );
+}
+```
+
+With no react-router-dom:
+
+```tsx
+class App extends React.Component {
+  render() {
+    // We could handle looping through these for the user but I don't think this is an issue.
+    if (EmailPasswordPreBuiltUI.canHandleRoute()) {
+      return EmailPasswordPreBuiltUI.getRoutingComponent();
+    }
+
+    if (EmailVerificationPreBuiltUI.canHandleRoute()) {
+      return (
+        <EmailVerificationComponentsOverrideProvider
+          components={{
+            EmailVerificationSendVerifyEmail_Override: () => <OtpScreen />,
+          }}>
+          {EmailVerificationPreBuiltUI.getRoutingComponent()}
+        </EmailVerificationComponentsOverrideProvider>
+      );
+    }
+
+    return <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>;
+  }
+}
+```

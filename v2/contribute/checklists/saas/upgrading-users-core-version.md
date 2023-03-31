@@ -86,3 +86,9 @@ hide_title: true
 
 ### 4.2 to 4.3
 - No manual change required
+
+### 4.3 to 4.4
+- No manual change required
+
+### 4.4 to 4.5
+- No manual change required
