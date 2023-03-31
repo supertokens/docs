@@ -39,6 +39,7 @@ module.exports = {
                 "quick-setup/core/saas-setup"
               ],
             },
+            "quick-setup/handling-session-tokens",
           ],
         },
       ],

@@ -68,7 +68,7 @@ module.exports = {
         },
         {
           type: 'category',
-          label: 'Using your own UI',
+          label: 'Using your own UI / Custom UI',
           customProps: {
             categoryIcon: "pencil",
           },
