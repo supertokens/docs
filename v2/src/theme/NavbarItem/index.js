@@ -87,7 +87,8 @@ export default function NavbarItem({ type, ...props }) {
     if (DO_NOT_SHOW_GITHUB_BUTTON.filter(i => i === currDocs).length > 0) {
       return null;
     }
-    let toReplace = currDocs === "community" ? "core" : currDocs;
+    const shouldUseCore = currDocs === "core" || currDocs === "guides";
+    let toReplace = shouldUseCore ? "core" : currDocs;
 
     if (toReplace === "nodejs") {
       toReplace = "node";
