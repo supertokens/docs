@@ -306,10 +306,8 @@ module.exports = {
         "common-customizations/sessions/ssr",
         {
           type: "category",
-          label: "Using sessions with JWTs",
+          label: "Using the access token as JWT",
           items: [
-            "common-customizations/sessions/with-jwt/enabling-jwts",
-            "common-customizations/sessions/with-jwt/custom-claims",
             "common-customizations/sessions/with-jwt/read-jwt",
             "common-customizations/sessions/with-jwt/jwt-verification"
           ]
