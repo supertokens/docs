@@ -17,6 +17,14 @@ import {Question, Answer}from "/src/components/question"
 
 # Handling session tokens
 
+There are two modes ways in which you can use sessions with SuperTokens:
+- Using `httpOnly` cookies
+- Authorization bearer token.
+
+Our frontend SDK uses `httpOnly` cookie based session for websites by default as it secures against tokens theft via XSS attacks. For other platform like mobile apps, we use a bearer token in the Authorization header by default. This setting can be changed [as described in the token transfer section](../common-customizations/sessions/token-transfer-method)
+
+
+
 ## If using our frontend SDK
 
 ### For Web
@@ -195,13 +203,13 @@ fileprivate class NetworkManager {
 By default our mobile SDKs use a bearer token in the Authorization header to provide credentials.
 :::
 
-### Getting the access token
+## Getting the access token
 
-:::caution
-Our SDK automatically handles adding the access token to request headers. You only need to add the access token to the request if you want to send the access token to a different API domain than what is configured on the frontend SDK init function call.
-:::
+Our SDK automatically handles adding the access token to request headers. Therefore, there are only two cases in which you might want to get the access token:
+- If you want to send the access token to a different API domain than what is configured as the vlaue of `apiDomain`.
+- You want to use a non http based protocol like websockets.
 
-If you are using a header-based session or enabled `exposeAccessTokenToFrontendInCookieBasedAuth` (see below), you can read the access token on the frontend using the `getAccessToken` method:
+You can read the access token using the `getAccessToken` function as shown below. This function will also make sure to refresh the session if the access token has expired.
 
 <!-- COPY SECTION -->
 <!-- ./thirdpartyemailpassword/custom-ui/handling-session-tokens.mdx -->
@@ -305,17 +313,9 @@ Future<String?> getToken() async {
 
 <!-- END COPY SECTION -->
 
-#### If using cookie-based sessions
-
-:::caution
-This will expose the access token to the frontend, meaning it could be vulnerable to XSS attacks.
-:::
-
 :::important
-If you are using header-based sessions, you can skip this step
+If using cookie-based sessions, by default, the access token is not exposed to the frontend (since it's `httpOnly` cookie). So calling the `getAccessToken` function will return an `undefined` value. In order to expose the token to the fronten in cookie based auth, you will need to pass in the `exposeAccessTokenToFrontendInCookieBasedAuth` param on the backend as shown below.
 :::
-
-By enabling this setting, you'll expose the access token to your frontend code even if you use cookies for authentication.
 
 <!-- COPY SECTION -->
 <!-- ./session/common-customizations/sessions/with-jwt/read-jwt.mdx -->
@@ -430,17 +430,17 @@ The login API will return the following headers:
         ate: 1665226412455, // time in milliseconds for when the access token will expire, and then a refresh is required
         uid: "....", // user ID
         up: {
-            ...
-        } // custom payload added to the access token by you on the backend
+            sub: "..",
+            iat: ..,
+            ... // other access token payload
+        }
     }
     
     */
     ```
 
-    This is required because you don't have access to the actual access token on the frontend (for security reasons), but may want to read its payload (for example to know the user's role). This token itself is not signed and hence can't be used in place of the access token itself.
+    This token is mainly used for cookie based auth because you don't have access to the actual access token on the frontend (for security reasons), but may want to read its payload (for example to know the user's role). This token itself is not signed and hence can't be used in place of the access token itself. You may want to save this token in localstorage or in frontend cookies (using `document.cookies`).
 
-
-    You may want to save this token in localstorage or in frontend cookies (using `document.cookies`).
 - `anti-csrf` header (optional): By default it's not required, so it's not sent. But if this is sent, you should save this token as well for use when making requests.
 
 ### Making network requests to protected APIs
@@ -468,7 +468,8 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/session/ref
 ```
 
 :::note
-You may also need to add the `anti-csrf` header to the request if that was provided to you during sign in.
+- You may also need to add the `anti-csrf` header to the request if that was provided to you during sign in.
+- The cURL command above shows the `sRefreshToken` cookie as well, but this is added by the web browser automatically, so you don't need to add it explicitly.
 :::
 
 </AppInfoForm>
@@ -488,31 +489,6 @@ You should attach the `st-auth-mode` header to calls to the login API, but this 
 The login API will return the following headers:
 - `st-access-token`: This contains the current access token associated with the session. You should save this in your application (e.g., in frontend localstorage).
 - `st-refresh-token`: This contains the current refresh token associated with the session. You should save this in your application (e.g., in frontend localstorage).
-- `front-token` header: This contains information about the access token:
-    - The userID
-    - The expiry time of the access token
-    - The payload added by you in the access token.
-    
-    Here is the structure of the token:
-    ```tsx
-    let frontTokenFromRequestHeader = "...";
-    let frontTokenDecoded = JSON.parse(decodeURIComponent(escape(atob(frontTokenFromRequestHeader))));
-    console.log(frontTokenDecoded);
-    /*
-    {
-        ate: 1665226412455, // time in milliseconds for when the access token will expire, and then a refresh is required
-        uid: "....", // user ID
-        up: {
-            ...
-        } // custom payload added to the access token by you on the backend
-    }
-    
-    */
-    ```
-
-    This is added because while you have access to the access token, you may want to read its payload without decoding it (for example to know the user's role). This token itself is not signed and hence can't be used in place of the access token itself.
-
-    You may want to save this token in localstorage or in frontend cookies (using `document.cookies`).
 
 ### Making network requests to protected APIs
 
@@ -520,9 +496,7 @@ You need to add the following headers to request:
 - `authorization: Bearer {access-token}`
 - You need to set the `credentials` to `true` or `include`. This is achieved different based on the library you are using to make requests.
 
-An API call can potentially update the `access-token` and `front-token` tokens, for example if you call the `mergeIntoAccessTokenPayload` function on the `session` object on the backend. This kind of update is reflected in the response headers for your API calls. The headers will contain new values for:
-- `st-access-token`
-- `front-token`
+An API call can potentially update the `access-token`, for example if you call the `mergeIntoAccessTokenPayload` function on the `session` object on the backend. This kind of update is reflected in the response headers for your API calls. The headers will contain new values for `st-access-token`
 
 These should be read and saved by you in the same way as it's being done during login.
 
@@ -543,7 +517,7 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/session/ref
 
 The result of a session refresh will be either:
 - Status code `200`: This implies a succesful refresh. The set of tokens returned here will be the same as when the user logs in, so you can handle them in the same way.
-- Status code `401`: This means that the refresh token is invalid, or has been revoked. You must ask the user to relogin. Remember to clear the `front-token`, `st-refresh-token`, `st-access-token` that you saved on the frontend earlier.
+- Status code `401`: This means that the refresh token is invalid, or has been revoked. You must ask the user to relogin. Remember to clear the `st-refresh-token` and `st-access-token` that you saved on the frontend earlier.
 
 </Answer>
 
