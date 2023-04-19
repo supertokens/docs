@@ -79,8 +79,7 @@ module.exports = {
             logoUrl: '/img/logos/hasura-logo.png'
           },
           items: [
-            "hasura-integration/with-jwt",
-            "hasura-integration/without-jwt",
+            "hasura-integration/with-jwt"
           ],
         },
         {
@@ -269,7 +268,7 @@ module.exports = {
                 "advanced-customizations/frontend-hooks/pre-api",
                 "advanced-customizations/frontend-hooks/handle-event"
               ],
-            },          ],
+            },],
         },
         {
           type: "category",

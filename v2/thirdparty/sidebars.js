@@ -150,8 +150,7 @@ module.exports = {
             logoUrl: '/img/logos/hasura-logo.png'
           },
           items: [
-            "hasura-integration/with-jwt",
-            "hasura-integration/without-jwt",
+            "hasura-integration/with-jwt"
           ],
         },
         {
