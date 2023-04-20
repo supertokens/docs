@@ -296,6 +296,7 @@ module.exports = {
           type: "category",
           label: "Protecting API routes",
           items: [
+            "common-customizations/sessions/session-verification-in-api/overview",
             "common-customizations/sessions/session-verification-in-api/verify-session",
             "common-customizations/sessions/session-verification-in-api/get-session",
             "common-customizations/sessions/with-jwt/jwt-verification"
