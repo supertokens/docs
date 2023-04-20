@@ -295,19 +295,13 @@ module.exports = {
           label: "Protecting API routes",
           items: [
             "common-customizations/sessions/session-verification-in-api/verify-session",
-            "common-customizations/sessions/session-verification-in-api/get-session"
-          ]
-        },
-        "common-customizations/sessions/protecting-frontend-routes",
-        "common-customizations/sessions/ssr",
-        {
-          type: "category",
-          label: "Using the access token as JWT",
-          items: [
-            "common-customizations/sessions/with-jwt/read-jwt",
+            "common-customizations/sessions/session-verification-in-api/get-session",
             "common-customizations/sessions/with-jwt/jwt-verification"
           ]
         },
+        "common-customizations/sessions/protecting-frontend-routes",
+        "common-customizations/sessions/with-jwt/read-jwt",
+        "common-customizations/sessions/ssr",
         {
           type: "category",
           label: "Reading / modifying session claims",
