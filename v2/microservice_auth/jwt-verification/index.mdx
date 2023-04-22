@@ -1,6 +1,6 @@
 ---
 id: index
-title: Manually verify the JWT
+title: Verify JWTs
 hide_title: true
 ---
 
@@ -152,3 +152,64 @@ JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
   // highlight-end
 });
 ```
+
+## M2M and frontend session verification for the same API
+You may have a setup wherein the same API is called from the frontend as well as from other microservices. The frontend session works differently than m2m sessions, so we have to account for both forms of token inputs. 
+
+Our approach here would be to first attempt frontend session verification, and if that fails, then attempt m2m jwt verification (using the above method). If both fails, then we send back a `401` response.
+
+We will use the [`getSession` function](https://supertokens.com/docs/session/common-customizations/sessions/session-verification-in-api/get-session) for frontend session verification (we use node js express as an exmaple below, but the code snippet for your framework can be seen in the `getSession` function docs).
+
+```tsx
+import express from "express";
+import Session from "supertokens-node/recipe/session";
+import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+let app = express();
+
+
+var client = jwksClient({
+  jwksUri: '{apiDomain}/{apiBasePath}/jwt/jwks.json'
+});
+
+function getKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    var signingKey = key!.getPublicKey();
+    callback(err, signingKey);
+  });
+}
+
+
+app.post("/like-comment", async (req, res, next) => {
+  // highlight-start
+    try {
+        let session = await Session.getSession(req, res, { sessionRequired: false })
+
+        if (session !== undefined) {
+            // API call from the frontend and session verification is successful..
+            let userId = session.getUserId();
+        } else {
+            // maybe this API is called from a microservice, so we attempt JWT verification as
+            // shown above.
+            let jwt = req.headers["authorization"];
+            jwt = jwt === undefined ? undefined : jwt.split('Bearer ')[1];
+            if (jwt === undefined) {
+                // return a 401 unauthorised error...
+            } else {
+                JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
+                  let decodedJWT = decoded;
+                  // microservices auth is successful..
+                });
+            }
+        }
+    } catch (err) {
+        next(err);
+    }
+  // highlight-end
+});
+```
+
+- Notice that we add the `sessionRequired: false` option when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function will return `undefined`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function will throw a try refresh token error, sending a 401 to the frontend. This will trigger a session refresh flow as expected.
+- If the `getSession` function returns `undefined`, it means that the session is not from the frontend and we can attempt a microservice auth verification using the JWT verification method shown previously in this page.
+- If that fails too, we can send back a `401` response.
