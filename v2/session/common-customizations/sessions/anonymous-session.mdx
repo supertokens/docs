@@ -7,6 +7,10 @@ hide_title: true
 <!-- COPY DOCS -->
 <!-- ./session/common-customizations/sessions/anonymous-session.mdx -->
 
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs"
+
 # Anonymous / Guest sessions
 
 With anonymous sessions, you can keep track of user's action / data before they login, and then transfer that data to their post login session.
@@ -19,5 +23,277 @@ Anonymous sessions have different properties than regular, logged in sessions:
 
 Given the different chaacteristics of anonymous sessions, using a simple, long lived JWT is a perfect use case. They can be used to store any information about user's activity, and they don't occupy any database space either.
 
+## Creating a JWT
+
 We can issue JWTs using the Session recipe's `Session.createJWT` function as shown below:
 
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session"
+
+async function createAnonymousJWT(payload: any) {
+    let jwtResponse = await Session.createJWT({
+        key: "value",
+        // more payload...
+    }, 315360000); // 10 years lifetime
+    if (jwtResponse.status === "OK") {
+        // Send JWT as Authorization header to M2
+        return jwtResponse.jwt;
+    }
+    throw new Error("Unable to create JWT. Should never come here.")
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	jwtResponse, err := session.CreateJWT(map[string]interface{}{
+		"key": "value",
+		// ...additional payload
+	}, 315360000) // 10 years lifetime
+	if err != nil {
+		// handle error
+	}
+	jwtString := jwtResponse.OK.Jwt
+	fmt.Println(jwtString)
+    // Send JWT as Authorization header to M2
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.session import asyncio
+from supertokens_python.recipe.session.interfaces import CreateJwtOkResult
+
+async def create_jwt():
+    jwtResponse = await asyncio.create_jwt({
+        "key": "value",
+        # ... extra payload
+    }, 315360000) # 10 years lifetime
+
+    if isinstance(jwtResponse, CreateJwtOkResult):
+        _ = jwtResponse.jwt
+        # Send JWT as Authorization header to M2
+    else:
+        raise Exception("Unable to create JWT. Should never come here.")
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.session.syncio import create_jwt
+from supertokens_python.recipe.session.interfaces import CreateJwtOkResult
+
+jwtResponse = create_jwt({
+    "source": "microservice",
+    # ... extra payload
+})
+
+if isinstance(jwtResponse, CreateJwtOkResult):
+    jwtStr = jwtResponse.jwt
+    # Send JWT as Authorization header to M2
+else:
+    raise Exception("Unable to create JWT. Should never come here.")
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+- As shown in the code above, you can add any payload you like to the JWT. You can even add a `sub` (userId) payload with a random UUID if you like, or some user ID with a prefix like `"G-.."` which indicates this is a guest user ID.
+- You could create your own application middleware which will inspects the request and auto adds a JWT to it in the response cookies. This way, whenever a user visits your website, and make an API call, they will get a JWT in their cookies, and you can use that JWT to track their activity.
+
+## Verifying the JWT
+See the [manual JWT verification section](./with-jwt/jwt-verification) to see how we can verify the JWT and get its payload.
+
+:::important
+In the section about verification using the public key string, we do not need to set `useDynamicAccessTokenSigningKey` to `true` since the `createJWT` function used above uses the static signing key (`kid` starting the `s-..`) by default.
+:::
+
+## Updating the JWT's payload
+You can create a new JWT with the new payload and add it to the response cookies. This way, the user will have the new JWT in their cookies, and you can use that JWT to track their activity.
+
+## Transferring data to a logged in session
+The idea here is that we will override the `createNewSession` on the backend's `Session.init` so that whenever the user logs in / signs up, we can transfer the data from the anonymous session to the logged in session.
+
+Our override will attempt to read the request header cookie to get the JWT (assuming that you have added it to the cookies), verify it, and then add the payload to the logged in session.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "...",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        Session.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        createNewSession: async function (input) {
+                            let userId = input.userId;
+
+                            let jwt = input.userContext._default.request.getCookieValue("jwt");
+
+                            if (jwt !== undefined) {
+                                // verify JWT using a JWT verification library..
+
+                                let jwtPayload = { /* ... get from decoded jwt ... */};
+
+                                // This goes in the access token, and is availble to read on the frontend.
+                                input.accessTokenPayload = {
+                                    ...input.accessTokenPayload,
+                                    ...jwtPayload
+                                };
+                            }
+
+                            return originalImplementation.createNewSession(input);
+                        },
+                    };
+                },
+            },
+            // highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				// highlight-start
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+						// First we copy the original implementation func
+						originalCreateNewSession := *originalImplementation.CreateNewSession
+
+						// Now we override the CreateNewSession function
+						(*originalImplementation.CreateNewSession) = func(req *http.Request, res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+
+                            jwt := userContext["_default"].(map[string]interface{})["request"].(*http.Request).Cookie("jwt")
+
+                            if jwt != nil {
+                                // verify JWT using a jwt verification library..
+                                decodedJWT := map[string]interface{}{
+                                    // from JWT verification lib
+                                }
+
+                                // This goes in the access token, and is availble to read on the frontend.
+                                if accessTokenPayload == nil {
+                                    accessTokenPayload = map[string]interface{}{}
+                                }
+                                accessTokenPayload["someKey"] = decodedJWT["someKey"]
+                            }
+
+							return originalCreateNewSession(req, res, userID, accessTokenPayload, sessionData, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from typing import Any, Dict, Union
+
+def override_functions(original_implementation: RecipeInterface):
+    original_implementation_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(request: Any, user_id: str,
+                                 access_token_payload: Union[None, Dict[str, Any]],
+                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+        
+        jwt = user_context._default.request.get_cookie("jwt")
+
+        if jwt is not None:
+            # verify JWT using a JWT verification library..
+            jwt_payload = {
+                # from JWT verification lib
+            }
+
+            # This goes in the access token, and is availble to read on the frontend.
+            if access_token_payload is None:
+                access_token_payload = {}
+            access_token_payload["someKey"] = jwt_payload["someKey"]
+
+        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    
+    framework='...', # type: ignore
+    recipe_list=[
+        session.init(
+            # highlight-start
+            override=session.InputOverrideConfig(
+                functions=override_functions
+            )
+            # highlight-end
+        )
+    ]
+)
+```
+</TabItem>
+</BackendSDKTabs>
+
+- In the above code snippet, we attempt to read the JWT from the request header cookie. If it exists, we verify it and then add the payload to the logged in session.
+- If the JWT doesn't exist, or if we cannot verify it, it would be safe to ignore it, and create the logged in session anyway.
+- We assume that the you have saved the JWT in the cookies in with the key of `jwt`. But if not, you can extract the JWT from the request based on how you have saved it. You can even read the headers from the request. The full interface for the request object is:
+    - [For nodejs](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/framework/request.ts)
+    - For go: The request object type is `*http.Request`
+    - [For python](https://github.com/supertokens/supertokens-python/blob/master/supertokens_python/framework/request.py)
