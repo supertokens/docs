@@ -313,6 +313,7 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/revoke-session",
+        "common-customizations/sessions/anonymous-session",
         {
           type: "category",
           label: "Session security",
