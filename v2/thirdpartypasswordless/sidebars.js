@@ -316,6 +316,7 @@ module.exports = {
         },
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/anonymous-session",
+        "common-customizations/sessions/with-websocket",
         {
           type: "category",
           label: "Session security",

@@ -1,0 +1,173 @@
+---
+id: with-websocket
+title: Websocket session verification
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./session/common-customizations/sessions/with-websocket.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
+import AppInfoForm from "/src/components/appInfoForm"
+
+# Websocket session verification
+
+Socket connections do not always use HTTP, and so we cannot utilise cookies / http authorization header here. Instead, we must fetch the JWT on the frontend and send that at the start of the socket connection.
+
+## Step 1: Exposing the JWT to the frontend
+We need to make sure that we expose the JWT to the frontend. This is already the case in header based auth, but if you are using cookie based auth, then you should set the following boolean to true in `session.init` on the backend:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init({
+            //highlight-start
+            exposeAccessTokenToFrontendInCookieBasedAuth: true
+            //highlight-end
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+TODO
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				//highlight-start
+				Jwt: &sessmodels.JWTInputConfig{
+					Enable: true,
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+TODO
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+	    session.init(
+            jwt=session.JWTConfig(
+                enable=True,
+                # This is an example of a URL that ngrok generates when
+                # you expose localhost to the internet
+                issuer='https://0d53-2405-201-e-d8bd-587b-3674-124d-4208.ngrok.io/auth'
+            )
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+## Step 2: Send the JWT on socket connection start
+On the client side, when you create a socket connection, you must fetch the JWT from the session and use that as follows.:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session"
+
+async function initSocketConnection() {
+    const token = await Session.getAccessToken();
+    if (tokens === undefined) {
+        throw new Error("User is not logged in");
+    }
+    const socket = io.connect('http://localhost:3000', {
+        query: {token}
+    });
+    return socket;
+}
+```
+
+- See our [docs on how to fetch the access token on the frontend for all frameworks](./with-jwt/read-jwt#on-the-frontend) if needed.
+- The `Session.getAccessToken()` function will auto refresh the session before returning the JWT if needed.
+
+:::caution
+Make sure to close the socket connection whenever appropriate to avoid sending stale JWTs.
+:::
+
+## Step 3: Veriy the JWT
+Verify the JWT on socket connection initialisation on the backend:
+
+<AppInfoForm askForAPIDomain>
+
+```tsx
+const io = require('socket.io')();
+import jwt, {jwksClient} from 'jsonwebtoken';
+
+// functions to fetch jwks
+var client = jwksClient({
+  jwksUri: '^{form_apiDomain}^{form_apiBasePath}/jwt/jwks.json'
+});
+
+function getKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    var signingKey = key!.getPublicKey();
+    callback(err, signingKey);
+  });
+}
+
+// socket io connection
+io.use(function(socket, next){
+// highlight-start
+  // we first try and verify the jwt from the token param.
+  if (socket.handshake.query && socket.handshake.query.token){
+    jwt.verify(socket.handshake.query.token, getKey, {}, function(err, decoded) {
+      if (err) return next(new Error('Authentication error'));
+      socket.decoded = decoded;
+      next();
+    });
+  }
+  else {
+    next(new Error('Authentication error'));
+  }  
+// highlight-end  
+})
+.on('connection', function(socket) {
+    // Connection now authenticated to receive further events
+
+    socket.on('message', function(message) {
+        io.emit('message', message);
+    });
+});
+```
+
+</AppInfoForm>
