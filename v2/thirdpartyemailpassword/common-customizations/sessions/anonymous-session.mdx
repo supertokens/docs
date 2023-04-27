@@ -78,7 +78,7 @@ func main() {
 
 ```python
 from supertokens_python.recipe.session import asyncio
-from supertokens_python.recipe.session.interfaces import CreateJwtOkResult
+from supertokens_python.recipe.jwt.interfaces import CreateJwtOkResult
 
 async def create_jwt():
     jwtResponse = await asyncio.create_jwt({
@@ -98,7 +98,7 @@ async def create_jwt():
 
 ```python
 from supertokens_python.recipe.session.syncio import create_jwt
-from supertokens_python.recipe.session.interfaces import CreateJwtOkResult
+from supertokens_python.recipe.jwt.interfaces import CreateJwtOkResult
 
 jwtResponse = create_jwt({
     "source": "microservice",
@@ -246,16 +246,19 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import session
 from supertokens_python.recipe.session.interfaces import RecipeInterface
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
+
 
 def override_functions(original_implementation: RecipeInterface):
     original_implementation_create_new_session = original_implementation.create_new_session
 
-    async def create_new_session(request: Any, user_id: str,
-                                 access_token_payload: Union[None, Dict[str, Any]],
-                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
-        
-        jwt = user_context._default.request.get_cookie("jwt")
+    async def create_new_session(user_id: str,
+                                 access_token_payload: Optional[Dict[str, Any]],
+                                 session_data_in_database: Optional[Dict[str, Any]],
+                                 disable_anti_csrf: Optional[bool],
+                                 user_context: Dict[str, Any]):
+
+        jwt = user_context["_default"]["request"].get_cookie("jwt")
 
         if jwt is not None:
             # verify JWT using a JWT verification library..
@@ -268,15 +271,17 @@ def override_functions(original_implementation: RecipeInterface):
                 access_token_payload = {}
             access_token_payload["someKey"] = jwt_payload["someKey"]
 
-        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+        return await original_implementation_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
 
+
 init(
-    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    
-    framework='...', # type: ignore
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+
+    framework='...',  # type: ignore
     recipe_list=[
         session.init(
             # highlight-start

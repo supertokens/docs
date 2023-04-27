@@ -283,11 +283,13 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
+from supertokens_python.framework import BaseRequest
 from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.session.interfaces import RecipeInterface, SessionClaimValidator, SessionClaim
+from supertokens_python.recipe.session.interfaces import RecipeInterface, SessionClaimValidator, SessionClaim, CreateNewSessionResult
 from supertokens_python.recipe.session.recipe_implementation import RecipeImplementation
-from typing import Dict, Any, Union, List, TypeVar
+from typing import Dict, Any, Union, List, TypeVar, Optional
 from supertokens_python.recipe import session
+from supertokens_python.recipe.session.utils import TokenTransferMethod
 
 _T = TypeVar("_T")
 
@@ -295,17 +297,19 @@ _T = TypeVar("_T")
 def override_session_functions(original_implementation: RecipeInterface):
     original_create_new_session = original_implementation.create_new_session
 
-    async def create_new_session(request: Any, user_id: str,
-                                 access_token_payload: Union[None, Dict[str, Any]],
-                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+    async def create_new_session(user_id: str,
+                                 access_token_payload: Optional[Dict[str, Any]],
+                                 session_data_in_database: Optional[Dict[str, Any]],
+                                 disable_anti_csrf: Optional[bool],
+                                 user_context: Dict[str, Any]):
         if user_context["isSignUp"] is True:
             # The execution will come here only in case
             # a sign up API is calling this function. This is because
             # only then will the user_context["isSignUp"] === true
             # (see above code).
-            return EmptySession(original_implementation)
+            return CreateNewSessionResult(EmptySession(original_implementation))
 
-        return await original_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+        return await original_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
     original_implementation.create_new_session = create_new_session
     return original_implementation
 # highlight-end
@@ -331,18 +335,16 @@ init(
 class EmptySession(session.SessionContainer):
     def __init__(self, recipe_implementation: RecipeInterface):
         assert isinstance(recipe_implementation, RecipeImplementation)
-        super().__init__(recipe_implementation, recipe_implementation.config, "", "", "", {}, "cookie")
+        super().__init__(recipe_implementation,
+                         recipe_implementation.config, "", "", None, "", "", "", {}, None, False)
 
     async def revoke_session(self, user_context: Union[Any, None] = None) -> None:
         pass
 
-    async def get_session_data(self, user_context: Union[Dict[str, Any], None] = None) -> Dict[str, Any]:
+    async def get_session_data_from_database(self, user_context: Union[Dict[str, Any], None] = None) -> Dict[str, Any]:
         return {}
 
-    async def update_session_data(self, new_session_data: Dict[str, Any], user_context: Union[Dict[str, Any], None] = None) -> None:
-        pass
-
-    async def update_access_token_payload(self, new_access_token_payload: Dict[str, Any], user_context: Union[Dict[str, Any], None] = None) -> None:
+    async def update_session_data_in_database(self, new_session_data: Dict[str, Any], user_context: Union[Dict[str, Any], None] = None) -> None:
         pass
 
     def get_user_id(self, user_context: Union[Dict[str, Any], None] = None) -> str:
@@ -363,6 +365,9 @@ class EmptySession(session.SessionContainer):
 
     async def get_expiry(self, user_context: Union[Dict[str, Any], None] = None) -> int:
         return -1
+
+    async def attach_to_request_response(self, request: BaseRequest, transfer_method: TokenTransferMethod):
+        pass
 
     async def assert_claims(
         self,
