@@ -98,6 +98,7 @@ from supertokens_python import (
     InputAppInfo,
     SupertokensConfig,
 )
+from supertokens_python.recipe.session.interfaces import RecipeInterface as SessionRecipeInterface
 
 from typing import Any, Dict, Optional
 
@@ -120,15 +121,16 @@ app_info = InputAppInfo(
 framework = "fastapi"
 
 # highlight-start
-from supertokens_python.recipe.session.interfaces import RecipeInterface as SessionRecipeInterface, SessionContainer
-
 def override_session_functions(oi: SessionRecipeInterface) -> SessionRecipeInterface:
     oi_create_new_session = oi.create_new_session
 
     async def create_new_session(
-            request: Any, user_id: str, access_token_payload: Optional[Dict[str, Any]], 
-            session_data: Optional[Dict[str, Any]], user_context: Dict[str, Any]
-        ) -> SessionContainer:
+        user_id: str,
+        access_token_payload: Optional[Dict[str, Any]],
+        session_data_in_database: Optional[Dict[str, Any]],
+        disable_anti_csrf: Optional[bool],
+        user_context: Dict[str, Any],
+    ):
         # AWS requires JWTs to contain an audience (aud) claim
         # The value for this claim should be the same as the
         # value you set when creating the authorizer
@@ -138,8 +140,8 @@ def override_session_functions(oi: SessionRecipeInterface) -> SessionRecipeInter
             access_token_payload = {}
 
         access_token_payload["aud"] = "jwtAuthorizers"
-        return await oi_create_new_session(request, user_id, access_token_payload, session_data, user_context)
-    
+        return await oi_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
+
     oi.create_new_session = create_new_session
     return oi
 # highlight-end
@@ -147,10 +149,10 @@ def override_session_functions(oi: SessionRecipeInterface) -> SessionRecipeInter
 recipe_list = [
     # highlight-start
     session.init(
-        jwt=session.JWTConfig(enable=True),
         override=session.InputOverrideConfig(
             functions=override_session_functions,
-        )
+        ),
+        expose_access_token_to_frontend_in_cookie_based_auth=True,
     ),
     # highlight-end
 ]
