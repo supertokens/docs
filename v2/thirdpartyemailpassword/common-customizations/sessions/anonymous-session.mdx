@@ -57,16 +57,17 @@ import (
 )
 
 func main() {
+	validitySessions := uint64(315360000)
 	jwtResponse, err := session.CreateJWT(map[string]interface{}{
 		"key": "value",
 		// ...additional payload
-	}, 315360000) // 10 years lifetime
+	}, nil, &validitySessions) // 10 years lifetime
 	if err != nil {
 		// handle error
 	}
 	jwtString := jwtResponse.OK.Jwt
 	fmt.Println(jwtString)
-    // Send JWT as Authorization header to M2
+	// Send JWT as Authorization header to M2
 }
 ```
 
@@ -210,24 +211,27 @@ func main() {
 						originalCreateNewSession := *originalImplementation.CreateNewSession
 
 						// Now we override the CreateNewSession function
-						(*originalImplementation.CreateNewSession) = func(req *http.Request, res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 
-                            jwt := userContext["_default"].(map[string]interface{})["request"].(*http.Request).Cookie("jwt")
+							jwt, err := (*userContext)["_default"].(map[string]interface{})["request"].(*http.Request).Cookie("jwt")
+							if err != nil {
+								return nil, err
+							}
 
-                            if jwt != nil {
-                                // verify JWT using a jwt verification library..
-                                decodedJWT := map[string]interface{}{
-                                    // from JWT verification lib
-                                }
+							if jwt != nil {
+								// verify JWT using a jwt verification library..
+								decodedJWT := map[string]interface{}{
+									// from JWT verification lib
+								}
 
-                                // This goes in the access token, and is availble to read on the frontend.
-                                if accessTokenPayload == nil {
-                                    accessTokenPayload = map[string]interface{}{}
-                                }
-                                accessTokenPayload["someKey"] = decodedJWT["someKey"]
-                            }
+								// This goes in the access token, and is availble to read on the frontend.
+								if accessTokenPayload == nil {
+									accessTokenPayload = map[string]interface{}{}
+								}
+								accessTokenPayload["someKey"] = decodedJWT["someKey"]
+							}
 
-							return originalCreateNewSession(req, res, userID, accessTokenPayload, sessionData, userContext)
+							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
 						}
 
 						return originalImplementation
