@@ -1367,17 +1367,13 @@ func VerifySession(accessToken string, antiCsrfToken *string, options *sessmodel
 }
 ```
 
-The `supertokens.ErrorHandler` will send a `401` reply to the frontend if the `getSession` function throws an exception indicating that the session does not exist or if the access token has expired.
-
 </TabItem>
 <TabItem value="python">
 
 ```python
-from functools import wraps
-from typing import Any, Callable, Dict, TypeVar, Union, cast, List, Optional
+from typing import Any, Callable, Dict, TypeVar, List, Optional
 
-from supertokens_python.framework.flask.flask_request import FlaskRequest
-from supertokens_python.recipe.session.syncio import get_session
+from supertokens_python.recipe.session.syncio import get_session_without_request_response
 from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.session.interfaces import SessionClaimValidator
 from supertokens_python.types import MaybeAwaitable
@@ -1392,8 +1388,11 @@ _T = TypeVar("_T", bound=Callable[..., Any])
 
 
 def verify_session(
-    anti_csrf_check: Union[bool, None] = None,
-    session_required: bool = True,
+    access_token: str,
+    anti_csrf_token: Optional[str],
+    anti_csrf_check: Optional[bool],
+    session_required: Optional[bool],
+    check_database: Optional[bool],
     override_global_claim_validators: Optional[
         Callable[
             [List[SessionClaimValidator], SessionContainer, Dict[str, Any]],
@@ -1402,10 +1401,12 @@ def verify_session(
     ] = None,
 ):
     try:
-        session = get_session_without_request_response(baseRequest,
-                                anti_csrf_check,
-                                session_required,
-                                override_global_claim_validators)
+        session = get_session_without_request_response(access_token,
+                                                       anti_csrf_token,
+                                                       anti_csrf_check,
+                                                       session_required,
+                                                       check_database,
+                                                       override_global_claim_validators)
     except Exception as e:
         if isinstance(e, TryRefreshTokenError):
             # This means that the session exists, but the access token
@@ -1432,16 +1433,21 @@ def verify_session(
         # OR you can raise this error which will
         # handle all of the above errors in the default way
         raise e
-    if session is None:
-        if session_required:
-            raise Exception("Should never come here")
-        baseRequest.set_session_as_none()
-    else:
-        baseRequest.set_session(session)
-    response = make_response(f(*args, **kwargs))
-```
 
-If `get_session` throws an error (in case the input access token is invalid or has expired), then the SuperTokens middleware added to your app will handle that exception and send a `401` to the frontend.
+    if session is not None:
+        # we can use the `session` container as we usually do..
+        # TODO: API logic...
+
+        # At the end of the API logic, we must fetch all the tokens from the session container
+        # and set them in the response headers / cookies ourselves.
+        tokens = session.get_all_session_tokens_dangerously()
+        if tokens["accessAndFrontTokenUpdated"]:
+            # TODO: set access token in response via tokens["accessToken"]
+            # TODO: set front-token in response via tokens["frontToken"]
+            if tokens["antiCsrfToken"] is not None:
+                # TODO: set anti-csrf token update in response via tokens["antiCsrfToken"]
+                pass
+```
 
 </TabItem>
 </BackendSDKTabs>
