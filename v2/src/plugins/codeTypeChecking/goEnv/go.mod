@@ -9,11 +9,11 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/supertokens/supertokens-golang v0.10.2
+	github.com/supertokens/supertokens-golang v0.11.1-0.20230504064907-82fc16bfeda1
 )
 
 require (
-	github.com/MicahParks/keyfunc v1.0.0 // indirect
+	github.com/MicahParks/keyfunc v1.9.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/derekstavis/go-qs v0.0.0-20180720192143-9eef69e6c4e7 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
@@ -22,7 +22,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.1 // indirect
 	github.com/goccy/go-json v0.9.11 // indirect
-	github.com/golang-jwt/jwt/v4 v4.1.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect

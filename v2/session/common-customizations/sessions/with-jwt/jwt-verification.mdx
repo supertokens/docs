@@ -1,19 +1,31 @@
 ---
 id: jwt-verification
-title: JWT verification
+title: Manually verify the JWT
 hide_title: true
 ---
 
 <!-- COPY DOCS -->
 <!-- ./session/common-customizations/sessions/with-jwt/jwt-verification.mdx -->
 
+
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import AppInfoForm from "/src/components/appInfoForm"
 
-# JWT verification
+# Manually verify the JWT
+
+There are two steps in doing session verification using JWTs:
+- Verify the JWT signature and expiry using a JWT verification library
+- Check for custom claim values for authorization.
+
+## Verifying a JWT using a jwt verification library
 
 <AppInfoForm askForAPIDomain>
 
-## Method 1) Using JWKS endpoint
+### Method 1) Using JWKS endpoint (recommended)
 
 Some libraries let you provide a JWKS endpoint to verify a JWT. The JWKS endpoint exposed by SuperTokens is availble at the following URL:
 
@@ -38,14 +50,18 @@ function getKey(header: JwtHeader, callback: SigningKeyCallback) {
   });
 }
 
-let jwt = "...";
+let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
 JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
   let decodedJWT = decoded;
   // Use JWT
 });
 ```
 
-## Method 2) Using public key string
+### Method 2) Using public key string
+
+:::caution
+This method is less secure compared to Method 1 because it disables key rotation of the access token signing key. In this case, if the private key is stolen somehow, it can be used indinitely to forge access tokens (Unless you manually change the key in the database).
+:::
 
 Some JWT verification libraries require you to provide the JWT secret / public key for verification. You can obtain the JWT secret from SuperTokens in the following way:
 
@@ -57,15 +73,27 @@ Some JWT verification libraries require you to provide the JWT secret / public k
     "keys": [
       {
         "kty": "RSA",
-        "kid": "2de612a5-a5ba-413e-9216-4c43e2e78c86",
+        "kid": "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
         "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
         "e": "AQAB",
+        "alg": "RS256",
+        "use": "sig"
+      },
+      {
+        "kty": "RSA",
+        "kid": "d-230...802340",
+        "n": "AMZruthvYz7...lx0rU8c=",
+        "e": "...",
         "alg": "RS256",
         "use": "sig"
       }
     ]
   }
   ```
+
+  :::important
+  The above shows an example output which returns two keys. There could be more keys returned based on the configured key rotation setting in the core. If you notice, each key's `kid` starts with a `s-..` or a `d-..`. The `s-..` key is a static key that will never change, whereas `d-...` keys are dynamic keys that keep changing. So if you are hardcoding public keys somewhere, you always want to pick the `s-..` key.
+  :::
 
 - Next, we run the NodeJS script below to convert the above output to a `PEM` file format.
   ```tsx
@@ -74,7 +102,7 @@ Some JWT verification libraries require you to provide the JWT secret / public k
   // This JWK is copied from the result of the above SuperTokens core request
   let jwk = {
     "kty": "RSA",
-    "kid": "2de612a5-a5ba-413e-9216-4c43e2e78c86",
+    "kid": "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
     "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
     "e": "AQAB",
     "alg": "RS256",
@@ -91,9 +119,7 @@ Some JWT verification libraries require you to provide the JWT secret / public k
   -----BEGIN PUBLIC KEY-----
   MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9I
   QQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm
-  lVYdE7Oq34WOHxMCqh1rKE8lW5m3bl5CJiupxor92e4eubyrBSr6GSjqrWjWj00g
-  hlY19QERVaY2HIAkWTluLekvC0o9itRDNUtxN0NR7hIiW2+9+lgdtUWdi3GQFWao
-  7ryPuwjyS2ZNcz+F5qWz5bpaajNpsOQL38hMJ5Fq3Z/sDaXS3hDM7RkLNlwl+G6w
+  ... (truncated for display)
   XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStT
   xwIDAQAB
   -----END PUBLIC KEY-----
@@ -105,11 +131,129 @@ Some JWT verification libraries require you to provide the JWT secret / public k
 
   // Truncated for display
   let certificate = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----";
-  let jwt = "...";
+  let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
   JsonWebToken.verify(jwt, certificate, function (err, decoded) {
       let decodedJWT = decoded;
       // Use JWT
   });
   ```
+- The final step is to tell SuperTokens to always only use the static key when creating a new session. This can be done by setting the below config in the backend SDK:
+
+<!-- COPY SECTION -->
+<!-- ./session/common-customizations/sessions/jwt-signing-key-rotation.mdx -->
+<!-- 1 -->
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "...",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init({
+            //highlight-next-line
+            useDynamicAccessTokenSigningKey: true,
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	// highlight-next-line
+	useDynamicAccessTokenSigningKey := true
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				// highlight-next-line
+				UseDynamicAccessTokenSigningKey: &useDynamicAccessTokenSigningKey,
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        session.init(
+            # highlight-start
+            use_dynamic_access_token_signing_key=True
+            # highlight-end
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+<!-- END COPY SECTION -->
+
+
+## Check for custom claim values for authorization
+
+Once you have verified the access token, you can fetch the payload and do authorization checks based on the values of the custom claims. For examlpe, if you want to do check for if the user's email is verified, you should check the `st-ev` claim in the payload as shown below:
+
+```ts
+import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+var client = jwksClient({
+  jwksUri: '^{form_apiDomain}^{form_apiBasePath}/jwt/jwks.json'
+});
+
+function getKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    var signingKey = key!.getPublicKey();
+    callback(err, signingKey);
+  });
+}
+
+let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
+JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
+  if (err) {
+    // send a 401 to the frontend..
+  }
+  if (decoded !== undefined && typeof decoded !== "string") {
+    let isEmailVerified = (decoded as any)["st-ev"].v
+    if (!isEmailVerified) {
+      // send a 403 to the frontend..
+    }
+  }
+});
+```
+
+Claims like email verification and user roles claims are added to the access token by our backend SDK automatically. You can even [add your own custom claims](../claims/access-token-payload) to the access token payload and those claims will be in the JWT as expected.
+
+:::important
+On claim validation failure, you must send a `403` to the frontend which will cause our frontend SDK (pre built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.
+:::
 
 </AppInfoForm>

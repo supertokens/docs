@@ -11,8 +11,7 @@ module.exports = {
           type: "category",
           label: "JWT Verification",
           items: [
-            "jwt-verification/index",
-            "jwt-verification/get-public-key"
+            "jwt-verification/index"
           ]
         },
       ]
