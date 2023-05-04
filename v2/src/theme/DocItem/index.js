@@ -85,7 +85,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
             marginLeft: 17,
             marginRight: 5,
           }}>
-          Which frontend SDK do you use?
+          Which UI do you use?
         </span>
         <div
           style={{
@@ -122,7 +122,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
             {isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
               marginRight: "8px",
             }} />}
-            supertokens-web-js / mobile
+            Custom UI
           </div>
 
           <div
@@ -155,7 +155,7 @@ function PreBuiltCustomUISelector({ showUISwitcher }) {
             {!isCustomSelected && <img src="/img/ui-switcher-check.svg" style={{
               marginRight: "8px",
             }} />}
-            supertokens-auth-react
+            Pre built UI
           </div>
         </div>
       </div>
