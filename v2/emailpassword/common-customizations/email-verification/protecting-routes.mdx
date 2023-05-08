@@ -29,7 +29,7 @@ import {Answer} from "/src/components/question"
 
 ### Add email verification checks to all API routes
 
-If you want to protect all your backend API routes with email verification checks, set the `mode` to `REQUIRED` in the `EmailVerification` config
+If you want to protect all your backend API routes with email verification checks, set the `mode` to `REQUIRED` in the `EmailVerification` config. Routes protected with the `verifySession` middleware will now additionally check for email verification status.
 
 
 <BackendSDKTabs>
@@ -975,7 +975,7 @@ async def like_comment(request: HttpRequest):
 
 Set the email verification mode to `REQUIRED` and wrap your website routes using `<SessionAuth />`. If the user's email is not verified, SuperTokens will automatically redirect the user to the email verification screen. 
 
-### Protecting specific frontend routes
+### Protect specific frontend routes
 
 We will create a generic component called `VerifiedRoute` which enforces that its child components can only be rendered if the user has a verified email address.
 
@@ -1085,6 +1085,7 @@ In case the `validationErrors` array is not empty, you can loop through the erro
 
 ```tsx
 import Session from "supertokens-web-js/recipe/session";
+import { sendVerificationEmail } from "supertokens-web-js/recipe/emailverification";
 import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
 
 async function shouldLoadRoute() {
@@ -1093,6 +1094,9 @@ async function shouldLoadRoute() {
     for (const err of validationErrors) {
         if (err.validatorId === EmailVerificationClaim.id) {
             // email verification claim check failed
+            // Redirect the user to the email verification screen to trigger the verification email
+            // Note: /auth/verify-email is the default email verification path
+            window.location.assign("/auth/verify-email")
         } else {
             // some other claim check failed (from the global validators list)
         }
@@ -1117,10 +1121,14 @@ async function shouldLoadRoute(): Promise<boolean> {
         if (isVerified) {
             // user has verified their email address
             return true;
+        } else {
+            // Redirect the user to the email verification screen to trigger the verification email
+            // Note: /auth/verify-email is the default email verification path
+            window.location.assign("/auth/verify-email")
         }
         // highlight-end
     }
-    // either a session does not exist, or the user has not verified their email address
+    // session does not exist
     return false
 }
 ```
@@ -1166,6 +1174,9 @@ async function shouldLoadRoute() {
     for (const err of validationErrors) {
         if (err.validatorId === supertokensEmailVerification.EmailVerificationClaim.id) {
             // email verification claim check failed
+            // Redirect the user the email verification path to send the verification email
+            // Note: /auth/verify-email is the default email verification path
+            window.location.assign("/auth/verify-email")
         } else {
             // some other claim check failed
         }
@@ -1190,10 +1201,14 @@ async function shouldLoadRoute(): Promise<boolean> {
         if (isVerified) {
             // user has verified their email address
             return true;
+        } else {
+            // Redirect the user the email verification path to send the verification email
+            // Note: /auth/verify-email is the default email verification path
+            window.location.assign("/auth/verify-email")
         }
         // highlight-end
     }
-    // either a session does not exist, or the user has not verified their email address
+    // session does not exist
     return false
 }
 ```
@@ -1269,6 +1284,9 @@ async function shouldLoadRoute() {
     for (const err of validationErrors) {
         if (err.validatorId === EmailVerificationClaim.id) {
             // email verification claim check failed
+            // Redirect the user the email verification path to send the verification email
+            // Note: /auth/verify-email is the default email verification path
+            window.location.assign("/auth/verify-email")
         } else {
             // some other claim check failed (from the global validators list)
         }
@@ -1293,10 +1311,14 @@ async function shouldLoadRoute(): Promise<boolean> {
         if (isVerified) {
             // user has verified their email address
             return true;
+        } else {
+            // Redirect the user the email verification path to send the verification email
+            // Note: /auth/verify-email is the default email verification path
+            window.location.assign("/auth/verify-email")
         }
         // highlight-end
     }
-    // either a session does not exist, or the user has not verified their email address
+    // session does not exist
     return false
 }
 ```
@@ -1337,7 +1359,7 @@ async function shouldLoadRoute(): Promise<boolean> {
 
 ```tsx
 import Session from "supertokens-web-js/recipe/session";
-import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
+import { EmailVerificationClaim, sendVerificationEmail } from "supertokens-web-js/recipe/emailverification";
 
 async function shouldLoadRoute(): Promise<boolean> {
     if (await Session.doesSessionExist()) {
@@ -1351,6 +1373,8 @@ async function shouldLoadRoute(): Promise<boolean> {
           for (const err of validationErrors) {
               if (err.validatorId === EmailVerificationClaim.id) {
                   // email is not verified
+                  // Send the verification email to the user
+                  await sendEmail();
               }
           }
         }
@@ -1359,6 +1383,28 @@ async function shouldLoadRoute(): Promise<boolean> {
     // a session does not exist, or email is not verified
     return false
 }
+
+async function sendEmail() {
+    try {
+        let response = await sendVerificationEmail();
+        if (response.status === "EMAIL_ALREADY_VERIFIED_ERROR") {
+            // This can happen if the info about email verification in the session was outdated.
+            // Redirect the user to the home page
+            window.location.assign("/home");
+        } else {
+            // email was sent successfully.
+            window.alert("Please check your email and click the link in it")
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+
 ```
 
 </TabItem>
@@ -1379,6 +1425,8 @@ async function shouldLoadRoute(): Promise<boolean> {
           for (const err of validationErrors) {
               if (err.validatorId === supertokensEmailVerification.EmailVerificationClaim.id) {
                   // email is not verified
+                  // Send the verification email to the user
+                  await sendEmail();
               }
           }
         }
@@ -1387,9 +1435,35 @@ async function shouldLoadRoute(): Promise<boolean> {
     // a session does not exist, or email is not verified
     return false
 }
+
+async function sendEmail() {
+    try {
+        let response = await sendVerificationEmail();
+        if (response.status === "EMAIL_ALREADY_VERIFIED_ERROR") {
+            // This can happen if the info about email verification in the session was outdated.
+            // Redirect the user to the home page
+            window.location.assign("/home");
+        } else {
+            // email was sent successfully.
+            window.alert("Please check your email and click the link in it")
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
 ```
 
 </TabItem>
+
+:::note
+The API for sending an email verification email requires an active session. If you are using our frontend SDKs, then the session tokens should automatically get attached to the request.
+:::
+
 </NpmOrScriptTabs>
 
 In your protected routes, you need to first check if a session exists, and then call the `Session.validateClaims` function as shown above. This function inspects the session's contents and runs claim validators on them. If a claim validator fails, it will be reflected in the `validationErrors` variable. The `EmailVerificationClaim` validator will be automatically checked by this function since you have initialized the email verification recipe.
