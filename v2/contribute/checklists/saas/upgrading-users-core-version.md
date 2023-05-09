@@ -95,3 +95,17 @@ hide_title: true
 
 ### 4.5 to 4.6
 - No manual change required
+
+### 4.6 to 5.0
+- Renamed `access_token_signing_key_update_interval` to `access_token_dynamic_signing_key_update_interval` in config
+- If `access_token_signing_key_dynamic` is currently set to `false` then run:
+   ```sql
+   ALTER TABLE session_info ADD COLUMN use_static_key BOOLEAN NOT NULL DEFAULT(true);
+   INSERT INTO jwt_signing_keys(key_id, key_string, algorithm, created_at)
+      select CONCAT('s-', created_at_time) as key_id, value as key_string, 'RS256' as algorithm, created_at_time as created_at
+      from session_access_token_signing_keys;
+   ```
+- If `access_token_signing_key_dynamic` is currently set to `true`, or it not set at all:
+   ```sql
+   ALTER TABLE session_info ADD COLUMN use_static_key BOOLEAN NOT NULL DEFAULT(false);
+   ```
