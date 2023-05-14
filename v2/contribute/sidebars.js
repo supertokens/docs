@@ -251,6 +251,21 @@ module.exports = {
             "decisions/reactsdk/0002",
           ],
         },
+        {
+          type: "category",
+          label: "OAuth2",
+          items: [
+            "decisions/oauth/0001",
+            "decisions/oauth/0002",
+            "decisions/oauth/0003",
+            "decisions/oauth/0004",
+            "decisions/oauth/0005",
+            "decisions/oauth/0006",
+            "decisions/oauth/0007",
+            "decisions/oauth/0008",
+            "decisions/oauth/0009"
+          ],
+        },
       ],
     },
   ],
