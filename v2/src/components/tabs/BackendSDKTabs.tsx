@@ -16,6 +16,9 @@ export default function BackendSDKTabs(props: any) {
     if (props.enableCurl) {
         values.push({ label: 'cURL', value: 'curl' });
     }
+    if (props.otherFrameworks) {
+        values.push({ label: 'Other Frameworks', value: 'otherFrameworks' });
+    }
 
     return (
         <Tabs
