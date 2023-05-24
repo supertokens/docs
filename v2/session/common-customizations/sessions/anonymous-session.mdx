@@ -164,19 +164,33 @@ SuperTokens.init({
                         createNewSession: async function (input) {
                             let userId = input.userId;
 
-                            let jwt = input.userContext._default.request.getCookieValue("jwt");
+                            const request = SuperTokens.getRequestFromUserContext(input.userContext);
+
+                            let jwt: string | undefined
+                            let jwtPayload = {}
+
+                            if (request !== undefined) {
+                                jwt = request.getCookieValue("jwt");
+                            } else {
+                                /**
+                                 * This is possible if the function is triggerred from the user management dashboard
+                                 * OR if the function was called internally from the SDK
+                                 * 
+                                 * In this case set a reasonable default value to use
+                                 */
+                            }
 
                             if (jwt !== undefined) {
                                 // verify JWT using a JWT verification library..
 
-                                let jwtPayload = { /* ... get from decoded jwt ... */};
-
-                                // This goes in the access token, and is availble to read on the frontend.
-                                input.accessTokenPayload = {
-                                    ...input.accessTokenPayload,
-                                    ...jwtPayload
-                                };
+                                jwtPayload = { /* ... get from decoded jwt ... */};
                             }
+
+                            // This goes in the access token, and is availble to read on the frontend.
+                            input.accessTokenPayload = {
+                                ...input.accessTokenPayload,
+                                ...jwtPayload
+                            };
 
                             return originalImplementation.createNewSession(input);
                         },
@@ -212,24 +226,35 @@ func main() {
 
 						// Now we override the CreateNewSession function
 						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+                            request := supertokens.GetRequestFromUserContext(userContext)
 
-							jwt, err := (*userContext)["_default"].(map[string]interface{})["request"].(*http.Request).Cookie("jwt")
-							if err != nil {
-								return nil, err
-							}
+                            if (request != nil) {
+                                jwt, err := request.Cookie("jwt")
 
-							if jwt != nil {
-								// verify JWT using a jwt verification library..
-								decodedJWT := map[string]interface{}{
-									// from JWT verification lib
-								}
+                                if err != nil {
+                                    return nil, err
+                                }
 
-								// This goes in the access token, and is availble to read on the frontend.
-								if accessTokenPayload == nil {
-									accessTokenPayload = map[string]interface{}{}
-								}
-								accessTokenPayload["someKey"] = decodedJWT["someKey"]
-							}
+                                if jwt != nil {
+                                    // verify JWT using a jwt verification library..
+                                    decodedJWT := map[string]interface{}{
+                                        // from JWT verification lib
+                                    }
+
+                                    // This goes in the access token, and is availble to read on the frontend.
+                                    if accessTokenPayload == nil {
+                                        accessTokenPayload = map[string]interface{}{}
+                                    }
+                                    accessTokenPayload["someKey"] = decodedJWT["someKey"]
+                                }
+                            } else {
+                                /**
+                                * This is possible if the function is triggerred from the user management dashboard
+                                * OR if the function was called internally from the SDK
+                                * 
+                                * In this case set a reasonable default value to use
+                                */
+                            }
 
 							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
 						}
@@ -262,7 +287,18 @@ def override_functions(original_implementation: RecipeInterface):
                                  disable_anti_csrf: Optional[bool],
                                  user_context: Dict[str, Any]):
 
-        jwt = user_context["_default"]["request"].get_cookie("jwt")
+        request=get_request_from_user_context(user_context)
+        jwt: Optional[str]
+
+        if request is not None:
+            jwt=request.get_cookie("jwt")
+        else:
+            #
+            # This is possible if the function is triggerred from the user management dashboard
+            # OR if the function was called internally from the SDK
+            # 
+            # In this case set a reasonable default value to use
+            #
 
         if jwt is not None:
             # verify JWT using a JWT verification library..
