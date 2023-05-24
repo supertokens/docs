@@ -225,6 +225,7 @@ module.exports = {
           label: 'Actions, Hooks and Custom API responses',
           items: [
             "advanced-customizations/overview",
+            "advanced-customizations/user-context/custom-request-properties",
             {
               type: 'category',
               label: 'Frontend functions override',
