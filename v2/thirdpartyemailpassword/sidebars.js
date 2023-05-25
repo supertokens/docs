@@ -534,7 +534,6 @@ module.exports = {
             },
             "advanced-customizations/user-context",],
         },
-        "common-customizations/other-frameworks",
         {
           type: "category",
           label: "SuperTokens Core customizations",
@@ -656,6 +655,7 @@ module.exports = {
       label: "References",
       items: [
         "architecture",
+        "other-frameworks",
         "appinfo",
         "sdks",
         "apis",
