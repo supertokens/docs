@@ -629,6 +629,7 @@ module.exports = {
       label: "References",
       items: [
         "architecture",
+        "other-frameworks",
         "appinfo",
         "sdks",
         "apis",
