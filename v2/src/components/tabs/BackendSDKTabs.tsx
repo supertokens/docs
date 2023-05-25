@@ -54,7 +54,7 @@ function DefaultOtherFrameworks() {
                     </h5>
                 </div>
                 <div className="admonition-content">
-                    For other backend frameworks, you can follow our
+                    For other backend frameworks, you can follow our  
                      <a href="/docs/community/other-frameworks"> guide on how to spin up a separate server configured with the SuperTokens backend SDK </a> to authenticate requests and issue session tokens.
                 </div>
             </div>

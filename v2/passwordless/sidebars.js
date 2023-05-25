@@ -600,6 +600,7 @@ module.exports = {
       label: "References",
       items: [
         "architecture",
+        "other-frameworks",
         "flow_diagram",
         "appinfo",
         "sdks",
