@@ -17,9 +17,11 @@ import TabItem from '@theme/TabItem';
 SuperTokens does not provide the UI for users to update their email, you will need to create the UI and setup a route on your backend to have this functionality.
 :::
 
-In this section we will go over how you can create a route on your backend which can update a user's email. Calling this route will check if the new email is valid, not already in use and update the user's profile with the new password. There are two types of flows here:
+In this section we will go over how you can create a route on your backend which can update a user's email. Calling this route will check if the new email is valid and not already in use and proceed to update the user's account with the new email. There are two types of flows here:
 
-## Flow 1: Changing email without requiring email verification.
+## Flow 1: Update email without verifying the new email.
+
+In this flow a user is allowed to update their accounts email without verifying the new email id.
 
 ### Step 1: Creating the `/change-email` route
 - You will need to create a route on your backend which is protected by the session verification middleware, this will ensure that only a authenticated user can access the protected route.
@@ -94,7 +96,7 @@ def change_password():
 
 </BackendSDKTabs>
 
-### Step 2: Validate and update the user's email
+### Step 2: Validate the new email and update the account
 
 - Validate the input email.
 - Check if the account you are trying to update is a social account.
@@ -138,14 +140,22 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     // Check if the new email is already associated with another user.
     // If it is, then we throw an error. If it's already associated with this user,
     // then we return a success response with an appropriate message.
-    let existingUser = await EmailPassword.getUserByEmail(email);
-    if (existingUser !== undefined) {
-        if (existingUser.id === session.getUserId()) {
-            // TODO: send successful responses that email already belongs to this account
-            return 
-        } else {
-            // TODO: handle error that email exists with another account.
-            return
+    // First we check if the new email is already associated with another email-password user.
+    // If it is, then we throw an error. If it's already associated with this user,
+    // then we return a success response with an appropriate message.
+    let existingUsers = await ThirdPartyEmailPassword.getUsersByEmail(email);
+
+    if (existingUsers.length != 0) {
+        for (let i = 0; i < existingUsers.length; i++) {
+            if (existingUsers[i].id === session.getUserId()) {
+                // TODO: send successful responses that email already belongs to this account
+                return
+            }
+
+            if (existingUsers[i].thirdParty === undefined) {
+                // TODO: handle error that email exists with another account.
+                return
+            }
         }
     }
     
@@ -169,6 +179,13 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     // highlight-end
 
 })
+
+function isValidEmail(email: string) {
+    let regexp = new RegExp(
+        /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+    );
+    return regexp.test(email);
+}
 
 ```
 
@@ -225,11 +242,87 @@ def change_password():
 </TabItem>
 </BackendSDKTabs>
 
-## Flow 2: Changing email after the new email is verified. 
+## Flow 2: Updating email after verifying the new email. 
 
-### Step 2: Validate and update the user's email
+In this flow a the user's account is updated once they have verified the new email.
+
+### Step 1: Creating the `/change-email` route
+- You will need to create a route on your backend which is protected by the session verification middleware, this will ensure that only a authenticated user can access the protected route.
+- To learn more about how to use the session verification middleware for other frameworks click [here](verify-session)
+
+<BackendSDKTabs>
+
+<TabItem value="nodejs">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express"
+import express from "express";
+
+let app = express();
+
+// highlight-start
+app.post("/change-email", verifySession(), async (req: SessionRequest, res: express.Response) => {
+    // TODO: see next steps
+})
+
+// highlight-end
+```
+</TabItem>
+
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+// highlight-start
+// the following example uses net/http
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
+	})
+}
+
+func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: see next steps
+}
+
+// highlight-end
+```
+
+</TabItem>
+
+
+<TabItem value="python">
+
+```python
+# the following example uses flask
+from supertokens_python.recipe.session.framework.flask import verify_session
+from flask import Flask
+
+app = Flask(__name__)
+
+# highlight-start
+@app.route('/change-email', methods=['POST']) # type: ignore
+@verify_session()
+def change_password():
+    pass # TODO: see next steps
+# highlight-end
+```
+
+</TabItem>
+
+</BackendSDKTabs>
+
+### Step 2: Validate the email and initiate the email verification flow
 
 - Validate the input email
+- Check that the user's account is not a social account.
 - Check if the input email is associated with an account.
 - Check if the input email is already verified.
 - If the email is not verified, create and send the verification email.
@@ -258,24 +351,30 @@ app.post("/change-password", verifySession(), async (req: SessionRequest, res: e
         return res.status(400).send("Email is invalid");
     }
 
-    // This resets the state of the session related to the email update.
-    // We do this here cause there are many code flow branches below which result in
-    // not triggering the email verification flow, in which we want to do this.
-    // So instead of duplicating this code below, we do it once on top. If the
-    // toUpdateEmail doesn't exist in the session, this is a no-op.
-    await session.mergeIntoAccessTokenPayload({
-        toUpdateEmail: null,
-    });
+    // Check if the user's account is not a third party account
+    {
+        let sessionId = session?.getUserId();
+        let userAccount = await ThirdPartyEmailPassword.getUserById(sessionId!);
+        if (userAccount!.thirdParty !== undefined) {
+            // TODO handle error, cannot update password for third party users.
+            return
+        }
+    }
 
-    // First we check if the new email is already associated with another user.
+    // First we check if the new email is already associated with another email-password user.
     // If it is, then we throw an error. If it's already associated with this user,
     // then we return a success response with an appropriate message.
-    let existingUser = await EmailPassword.getUserByEmail(email);
-    if (existingUser !== undefined) {
-        if (existingUser.id === session.getUserId()) {
-            return res.status(200).send("Email already belongs to this account");
-        } else {
-            return res.status(400).send("Email already exists with another user");
+    let existingUsers = await ThirdPartyEmailPassword.getUsersByEmail(email);
+
+    if (existingUsers.length != 0) {
+        for (let i = 0; i < existingUsers.length; i++) {
+            if (existingUsers[i].id === session.getUserId()) {
+                return res.status(200).send("Email already belongs to this account");
+            }
+
+            if (existingUsers[i].thirdParty === undefined) {
+                return res.status(400).send("Email already exists with another user");
+            }
         }
     }
 
@@ -324,6 +423,13 @@ app.post("/change-password", verifySession(), async (req: SessionRequest, res: e
     // highlight-end
 
 })
+
+function isValidEmail(email: string) {
+    let regexp = new RegExp(
+        /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+    );
+    return regexp.test(email);
+}
 
 ```
 
@@ -450,6 +556,74 @@ def change_password():
     # TODO: send successful password update response
     # highlight-end
 
+
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+
+### Step 3: Override the `verifyEmailPost` API to update the user's account on successful email verification
+
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import EmailVerification from "supertokens-node/recipe/emailverification";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    ThirdPartyEmailPassword.init({}),
+    EmailVerification.init({
+        mode: "REQUIRED",
+        override: {
+            apis: (oI) => {
+                return {
+                    ...oI,
+                    verifyEmailPOST: async function (input) {
+                        let response = await oI.verifyEmailPOST!(input);
+                        if (response.status === "OK") {
+                            // This will update the email of the user to the one
+                            // that was just marked as verified by the token.
+                            await EmailPassword.updateEmailOrPassword({
+                                userId: response.user.id,
+                                email: response.user.email,
+                            });
+                        }
+                        return response;
+                    },
+                };
+            },
+        },
+    }),
+    Session.init(),
+  ],
+});
+```
+
+
+</TabItem>
+
+<TabItem value="go">
+
+```go
+
+```
+
+</TabItem>
+
+<TabItem value="python">
+
+```python
 
 ```
 
