@@ -96,16 +96,14 @@ def change_password():
 ### Step 2: Validate the new email and update the account
 
 - Validate the input email.
-- Check if the account you are trying to update is a social account.
-- Check if the input email is associated with an account.
-- Update the input email.
+- Update the account with the input email.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
 // the following example uses express
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
@@ -123,19 +121,9 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         // TODO: handle invalid email error
         return 
     }
-
-    // Check that the account to be updated is not a social account
-    {
-        let userId = session!.getUserId();
-        let userAccount = await ThirdPartyEmailPassword.getUserById(userId!);
-        if (userAccount!.thirdParty !== undefined) {
-            // TODO: handle error, cannot update email for third party users.
-            return 
-        }
-    }
     
     // Update the email
-    let resp = await ThirdPartyEmailPassword.updateEmailOrPassword({
+    let resp = await EmailPassword.updateEmailOrPassword({
         userId: session.getUserId(),
         email: email,
     });
@@ -295,7 +283,6 @@ def change_password():
 ### Step 2: Validate the email and initiate the email verification flow
 
 - Validate the input email
-- Check that the user's account is not a social account.
 - Check if the input email is associated with an account.
 - Check if the input email is already verified.
 - If the email is **NOT** verified, create and send the verification email.
@@ -325,30 +312,17 @@ app.post("/change-password", verifySession(), async (req: SessionRequest, res: e
         return res.status(400).send("Email is invalid");
     }
 
-    // Check if the user's account is not a third party account
-    {
-        let sessionId = session!.getUserId();
-        let userAccount = await ThirdPartyEmailPassword.getUserById(sessionId!);
-        if (userAccount!.thirdParty !== undefined) {
-            // TODO handle error, cannot update password for third party users.
-            return
-        }
-    }
-
-    // Check if the new email is already associated with another email-password user.
+    // Check if the new email is already associated with another user.
     // If it is, then we throw an error. If it's already associated with this user,
     // then we return a success response with an appropriate message.
-    let existingUsers = await ThirdPartyEmailPassword.getUsersByEmail(email);
-
-    if (existingUsers.length != 0) {
-        for (let i = 0; i < existingUsers.length; i++) {
-            if (existingUsers[i].id === session.getUserId()) {
-                return res.status(200).send("Email already belongs to this account");
-            }
-
-            if (existingUsers[i].thirdParty === undefined) {
-                return res.status(400).send("Email already exists with another user");
-            }
+    let existingUser = await EmailPassword.getUserByEmail(email);
+    if (existingUser !== undefined) {
+        if (existingUser.id === session.getUserId()) {
+            // TODO send successful response that email already belongs to this account.
+            return
+        } else {
+            // TODO handle error, email already exists with another user.
+            return
         }
     }
 
@@ -373,26 +347,30 @@ app.post("/change-password", verifySession(), async (req: SessionRequest, res: e
                 },
             });
 
-            return res.status(200).send("Email verification email sent");
+            // TODO send successful response that email verification email sent.
+            return 
         }
         // else case is that the email is already verified (which can happen cause
         // of some race condition). So we continue below..
     }
 
     // Since the email is verified, we try and do an update
-    let resp = await ThirdPartyEmailPassword.updateEmailOrPassword({
+    let resp = await EmailPassword.updateEmailOrPassword({
         userId: session.getUserId(),
         email: email,
     });
 
     if (resp.status === "OK") {
-        return res.status(200).send("Successfully updated email");
+        // TODO send successful response that email updated.
+        return
     }
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
         // Technically it should never come here cause we have
         // checked for this above already, but just in case (some sort of race condition).
-        return res.status(400).send("Email already exists with another user");
+        // TODO handle error, email already exists with another user.
+        return 
     }
+
     throw new Error("Should never come here");
     // highlight-end
 
@@ -546,7 +524,7 @@ def change_password():
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
 import EmailVerification from "supertokens-node/recipe/emailverification";
 import Session from "supertokens-node/recipe/session";
 
@@ -557,7 +535,7 @@ SuperTokens.init({
     websiteDomain: "...",
   },
   recipeList: [
-    ThirdPartyEmailPassword.init({}),
+    EmailPassword.init(),
     EmailVerification.init({
         mode: "REQUIRED",
         override: {
@@ -569,7 +547,7 @@ SuperTokens.init({
                         if (response.status === "OK") {
                             // This will update the email of the user to the one
                             // that was just marked as verified by the token.
-                            await ThirdPartyEmailPassword.updateEmailOrPassword({
+                            await EmailPassword.updateEmailOrPassword({
                                 userId: response.user.id,
                                 email: response.user.email,
                             });
