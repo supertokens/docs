@@ -322,7 +322,7 @@ app = Flask(__name__)
 # highlight-start
 @app.route('/change-email', methods=['POST']) # type: ignore
 @verify_session()
-def change_password():
+def change_email():
     pass # TODO: see next steps
 # highlight-end
 ```
@@ -353,7 +353,7 @@ import express from "express";
 
 let app = express();
 
-app.post("/change-password", verifySession(), async (req: SessionRequest, res: express.Response) => {
+app.post("/change-email", verifySession(), async (req: SessionRequest, res: express.Response) => {
 
     // highlight-start
     let session = req.session!;
@@ -513,7 +513,7 @@ from flask import g, request
 from re import fullmatch
 
 
-@app.route('/change-password', methods=['POST']) # type: ignore
+@app.route('/change-email', methods=['POST']) # type: ignore
 @verify_session()
 def change_email():
     session: SessionContainer = g.supertokens # type: ignore
@@ -656,6 +656,64 @@ SuperTokens.init({
 <TabItem value="python">
 
 ```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import thirdpartyemailpassword, emailverification
+from supertokens_python.recipe.emailverification.interfaces import (
+    APIInterface,
+    APIOptions
+)
+
+from supertokens_python.recipe.thirdpartyemailpassword.asyncio import (
+    update_email_or_password
+)
+
+from supertokens_python.recipe.emailverification.interfaces import (
+    EmailVerifyPostOkResult
+)
+
+from supertokens_python.recipe.session.interfaces import (
+    SessionContainer
+)
+from supertokens_python import (
+    InputAppInfo,
+    SupertokensConfig,
+)
+
+from typing import Optional, Dict, Any
+
+
+def override_email_verification_apis(original_implementation: APIInterface):
+    original_email_verification_verify_email_post = original_implementation.email_verify_post
+    
+    async def email_verify_post(token: str, session: Optional[SessionContainer], api_options: APIOptions, user_context: Dict[str, Any] ):
+        
+        verification_response = await original_email_verification_verify_email_post(token, session, api_options, user_context)
+        
+        if isinstance(verification_response, EmailVerifyPostOkResult):
+            await update_email_or_password(verification_response.user.user_id, verification_response.user.email)
+        
+        return verification_response
+    
+    original_email_verification_verify_email_post = email_verify_post
+    return original_implementation
+
+
+init(
+    supertokens_config=SupertokensConfig(
+        connection_uri="..."
+    ),
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="flask",
+    recipe_list=[
+        thirdpartyemailpassword.init(),
+        emailverification.init(
+        "REQUIRED",
+        override=emailverification.InputOverrideConfig(
+            apis=override_email_verification_apis
+        ),
+    ),
+    ],
+)
 
 ```
 
