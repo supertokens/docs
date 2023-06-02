@@ -84,7 +84,7 @@ app = Flask(__name__)
 # highlight-start
 @app.route('/change-email', methods=['POST']) # type: ignore
 @verify_session()
-def change_password():
+def change_email():
     pass # TODO: see next steps
 # highlight-end
 ```
@@ -201,14 +201,53 @@ func changePasswordAPI(w http.ResponseWriter, r *http.Request) {
 ```python
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.^{rid}.syncio import get_user_by_id, ^{pythonSignIn}, update_email_or_password
-from supertokens_python.recipe.^{rid}.interfaces import ^{codeSignInWrongCredentialsErrorPythonType}, UpdateEmailOrPasswordPasswordPolicyViolationError
-from flask import g
+from supertokens_python.recipe.^{rid}.syncio import get_user_by_id, update_email_or_password
+from supertokens_python.recipe.^{rid}.interfaces import UpdateEmailOrPasswordOkResult, UpdateEmailOrPasswordEmailAlreadyExistsError
+from flask import g, request
+from re import fullmatch
 
-@app.route('/change-password', methods=['POST']) # type: ignore
+@app.route('/change-email', methods=['POST']) # type: ignore
 @verify_session()
-def change_password():
+def change_email():
+    session: SessionContainer = g.supertokens
 
+    request_body = request.get_json()
+
+    # validate the input email
+    if not is_valid_email(request_body["email"]):
+        # TODO: handle invalid email error
+        return
+
+    # check that the account is not a social account
+    user_id = session.get_user_id()
+    user_info = get_user_by_id(user_id)
+
+    if user_info.third_party_info is not None:  # type: ignore
+        # TODO handle error, cannot update email for social account
+        return
+
+    # update the users email
+    update_response = update_email_or_password(user_id, email=request_body["email"])
+
+    if isinstance(update_response, UpdateEmailOrPasswordOkResult):
+        # TODO send successful email update response
+        return
+
+    if isinstance(update_response, UpdateEmailOrPasswordEmailAlreadyExistsError):
+        # TODO handle error, email already exists
+        return
+
+    raise Exception("Should never reach here")
+
+async def is_valid_email(value: str) -> bool:
+    return (
+        fullmatch(
+            r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,'
+            r"3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$",
+            value,
+        )
+        is not None
+    )
 
 ```
 
@@ -322,7 +361,8 @@ app.post("/change-password", verifySession(), async (req: SessionRequest, res: e
 
     // validate the input email
     if (!isValidEmail(email)) {
-        return res.status(400).send("Email is invalid");
+        // TODO: handle error, email is invalid
+        return
     }
 
     // Check if the user's account is not a third party account
@@ -343,13 +383,11 @@ app.post("/change-password", verifySession(), async (req: SessionRequest, res: e
     if (existingUsers.length != 0) {
         for (let i = 0; i < existingUsers.length; i++) {
             if (existingUsers[i].id === session.getUserId()) {
-                return res.status(200).send("Email already belongs to this account");
-            }
-
-            if (existingUsers[i].thirdParty === undefined) {
-                return res.status(400).send("Email already exists with another user");
+                // TODO: send successful response, email already belongs to this account.
+                return
             }
         }
+        return res.status(400).send("Email already exists with another user");
     }
 
     // Then, we check if the email is verified for this user ID or not.
@@ -372,8 +410,8 @@ app.post("/change-password", verifySession(), async (req: SessionRequest, res: e
                     email: email,
                 },
             });
-
-            return res.status(200).send("Email verification email sent");
+            // TODO: send successful response that verification email has been sent
+            return
         }
         // else case is that the email is already verified (which can happen cause
         // of some race condition). So we continue below..
@@ -386,12 +424,14 @@ app.post("/change-password", verifySession(), async (req: SessionRequest, res: e
     });
 
     if (resp.status === "OK") {
+        // TODO: send successful response that email has been updated
         return res.status(200).send("Successfully updated email");
     }
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
         // Technically it should never come here cause we have
         // checked for this above already, but just in case (some sort of race condition).
-        return res.status(400).send("Email already exists with another user");
+        // TODO: handle error, email already exists for another account
+        return
     }
     throw new Error("Should never come here");
     // highlight-end
@@ -435,55 +475,6 @@ type RequestBody struct {
 
 func changePasswordAPI(w http.ResponseWriter, r *http.Request) {
 
-	// retrieve the session object as shown below
-	sessionContainer := session.GetSessionFromRequestContext(r.Context())
-
-	// retrive the old password from the request body
-	var requestBody RequestBody
-	err := json.NewDecoder(r.Body).Decode(&requestBody)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// get the userId from the session
-	userID := sessionContainer.GetUserID()
-
-	// get the signed in user's email from the getUserById function
-	userInfo, err := ^{rid}.^{goGetUserById}(userID)
-	if err != nil {
-		// TODO: Handle error
-		return
-	}
-
-	// call signin to check that the input is correct
-	isPasswordValid, err := ^{rid}.^{goSignIn}(userInfo.Email, requestBody.OldPassword)
-	if err != nil {
-		// TODO: Handle error
-		return
-	}
-
-	// highlight-start
-	if isPasswordValid.OK != nil {
-		// TODO: Handle error
-		return
-	}
-
-	updateResponse, err := ^{rid}.UpdateEmailOrPassword(userID, &userInfo.Email, &requestBody.NewPassword, nil)
-	if err != nil {
-		// TODO: Handle error
-		return
-	}
-
-	if updateResponse.PasswordPolicyViolatedError != nil {
-		// This error is returned if the new password doesn't match the defined password policy
-		// TODO: Handle error
-		return
-	}
-	// TODO: send successful password update response
-	// highlight-end
-
-}
 ```
 
 </TabItem>
@@ -493,43 +484,109 @@ func changePasswordAPI(w http.ResponseWriter, r *http.Request) {
 ```python
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.^{rid}.syncio import get_user_by_id, ^{pythonSignIn}, update_email_or_password
-from supertokens_python.recipe.^{rid}.interfaces import ^{codeSignInWrongCredentialsErrorPythonType}, UpdateEmailOrPasswordPasswordPolicyViolationError
-from flask import g
+from supertokens_python.recipe.thirdpartyemailpassword.syncio import ( 
+    get_user_by_id,
+    get_users_by_email, 
+    update_email_or_password
+)
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import (
+    UpdateEmailOrPasswordOkResult,
+    UpdateEmailOrPasswordEmailAlreadyExistsError,
+)
+
+from supertokens_python.recipe.emailverification.syncio import (
+    is_email_verified,
+    create_email_verification_token,
+    send_email,   
+)
+
+from supertokens_python.recipe.emailverification.types import (
+    EmailTemplateVars,
+    VerificationEmailTemplateVarsUser
+)
+
+from supertokens_python.recipe.emailverification.interfaces import (
+    CreateEmailVerificationTokenOkResult,
+)
+
+from flask import g, request
+from re import fullmatch
+
 
 @app.route('/change-password', methods=['POST']) # type: ignore
 @verify_session()
-def change_password():
-
-    # highlight-start
+def change_email():
     session: SessionContainer = g.supertokens # type: ignore
-    
-    # get the userId from the session object
+
+    request_body = request.get_json()
+
+    # validate the input email
+    if not is_valid_email(request_body["email"]):
+        # TODO: handle invalid email error
+        return
+
+    # check that the account is not a social account
     user_id = session.get_user_id()
+    user_info = get_user_by_id(user_id)
 
-    # get the signed in user's email from the getUserById function
-    users_info = get_user_by_id(user_id)
-
-    if users_info is None:
-        raise Exception("Should never come here")
-
-    # call signin to check that the input password is correct
-    isPasswordValid = ^{pythonSignIn}(users_info.email, request.json["oldPassword"]) # type: ignore
-
-    if isinstance(isPasswordValid, ^{codeSignInWrongCredentialsErrorPythonType}):
-        # TODO: handle incorrect password error
+    if user_info.third_party_info is not None:  # type: ignore
+        # TODO handle error, cannot update email for social account
         return
+
+    # Check if the new email is already associated with another user.
+    # If it is, then we throw an error. If it's already associated with this user,
+    # then we return a success response with an appropriate message.
+    existing_users = get_users_by_email(request_body["email"])
+    if len(existing_users) > 0:
+        for user in existing_users:
+            if user.user_id == user_id:
+                # TODO send successful response that email is already associated with this user
+                return
+        # TODO handle error, email already exists with another user
+
+    # Then, we check if the email is verified for this user ID or not.
+    # It is important to understand that SuperTokens stores email verification
+    # status based on the user ID AND the email, and not just the email.
+    is_verified = is_email_verified(user_id, request_body["email"])
     
-    # update the users password
-    update_response = update_email_or_password(user_id, password=request.json["newPassword"]) # type: ignore
+    if not is_verified:
+        # Create and send the email verification link to the user for the new email.
+        token_info = create_email_verification_token(user_id, request_body["email"])
+        
+        if isinstance(token_info, CreateEmailVerificationTokenOkResult):
+            link = "http://localhost:3000/auth/verify-email?token={token_info.token}"
+            
+            send_email(EmailTemplateVars(VerificationEmailTemplateVarsUser(user_id=user_id, email=request_body["email"]), link, {}), None)
+            
+            # TODO send successful email verification response
+            return
+    # else case is that the email is already verified (which can happen cause of some race condition). So we continue below..
+    
+    # update the users email
+    update_response = update_email_or_password(user_id, email=request_body["email"])
 
-    if isinstance(update_response, UpdateEmailOrPasswordPasswordPolicyViolationError):
-        # TODO: handle password policy violation error
+    if isinstance(update_response, UpdateEmailOrPasswordOkResult):
+        # TODO send successful email update response
         return
 
-    # TODO: send successful password update response
-    # highlight-end
+    if isinstance(update_response, UpdateEmailOrPasswordEmailAlreadyExistsError):
+        # Technically it should never come here cause we have
+        # checked for this above already, but just in case (some sort of race condition).
+        # TODO handle error, email already exists
+        return
 
+    raise Exception("Should never reach here")
+
+
+async def is_valid_email(value: str) -> bool:
+    return (
+        fullmatch(
+            r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,'
+            r"3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$",
+            value,
+        )
+        is not None
+    )
 
 ```
 
