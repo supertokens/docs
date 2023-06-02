@@ -304,6 +304,89 @@ CREATE TABLE IF NOT EXISTS totp_used_codes (
 );
 
 CREATE INDEX totp_used_codes_expiry_time_ms_index ON totp_used_codes(expiry_time_ms);
+
+CREATE TABLE IF NOT EXISTS oauth2_client(
+    app_id VARCHAR(64) DEFAULT 'public',
+    client_id  VARCHAR(128) NOT NULL,
+    name TEXT NOT NULL,
+    client_secret_hash  VARCHAR(128) NOT NULL,
+    redirect_uris  TEXT NOT NULL,
+    created_at_ms  BIGINT NOT NULL,
+    updated_at_ms BIGINT NOT NULL,
+
+    CONSTRAINT oauth2_client_pkey PRIMARY KEY(app_id, client_id),
+    CONSTRAINT oauth2_client_app_id_fkey FOREIGN KEY(app_id) REFERENCES apps(app_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS oauth2_scopes(
+    app_id VARCHAR(64) DEFAULT 'public',
+    scope TEXT NOT NULL,
+    
+    CONSTRAINT oauth2_scopes_pkey PRIMARY KEY(app_id, scope),
+    CONSTRAINT oauth2_scopes_app_id_fkey FOREIGN KEY(app_id) REFERENCES apps(app_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS oauth2_client_allowed_scopes(
+    app_id VARCHAR(64) DEFAULT 'public',
+    client_id VARCHAR(128) NOT NULL,
+    scope TEXT NOT NULL,
+    requires_consent BOOLEAN NOT NULL,
+
+    CONSTRAINT oauth2_client_allowed_scopes_pkey PRIMARY KEY(app_id, client_id, scope),
+    CONSTRAINT oauth2_client_allowed_scopes_client_id_fkey FOREIGN KEY(app_id, client_id) references oauth2_client(app_id, client_id) ON DELETE CASCADE,
+    CONSTRAINT oauth2_client_allowed_scopes_scope_fkey FOREIGN KEY(app_id, scope) references oauth2_scopes(app_id, scope) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT oauth2_client_allowed_scopes_app_id_fkey FOREIGN KEY(app_id) REFERENCES apps(app_id) ON DELETE CASCADE
+);
+
+CREATE INDEX oauth2_client_allowed_scopes_client_id_index ON oauth2_client_allowed_scopes(app_id, client_id);
+
+CREATE TABLE IF NOT EXISTS oauth2_authcode(
+    app_id VARCHAR(64) DEFAULT 'public',
+    tenant_id VARCHAR(64) DEFAULT 'public',
+    authorization_code_hash VARCHAR(128) NOT NULL CONSTRAINT oauth2_authcode_authorization_code_hash_key UNIQUE,
+    session_handle VARCHAR(255) NOT NULL,
+    client_id VARCHAR(128) NOT NULL,
+    created_at_ms BIGINT NOT NULL,
+    expires_at_ms BIGINT NOT NULL,
+    scope TEXT NOT NULL,
+    redirect_uri TEXT NOT NULL,
+    access_type VARCHAR(10) NOT NULL,
+    code_challenge VARCHAR(128),
+    code_challenge_method VARCHAR(10),
+
+    CONSTRAINT oauth2_authcode_pkey PRIMARY KEY(app_id, tenant_id, authorization_code_hash),
+    CONSTRAINT oauth2_authcode_client_id_fkey FOREIGN KEY(app_id, client_id) references oauth2_client(app_id, client_id) ON DELETE CASCADE,
+    CONSTRAINT oauth2_authcode_tenant_id_fkey FOREIGN KEY(app_id, tenant_id) references tenants(app_id, tenant_id) ON DELETE CASCADE,
+    CONSTRAINT oauth2_authcode_app_id_fkey FOREIGN KEY(app_id) REFERENCES apps(app_id) ON DELETE CASCADE
+);
+
+CREATE INDEX oauth2_authcode_client_id_index ON oauth2_authcode(app_id, client_id);
+CREATE INDEX oauth2_authcode_session_handle_index ON oauth2_authcode(app_id, session_handle);
+CREATE INDEX oauth2_authcode_expires_at_ms_index ON oauth2_authcode(expires_at_ms);
+
+CREATE TABLE IF NOT EXISTS oauth2_token(
+    app_id VARCHAR(64) DEFAULT 'public',
+    tenant_id VARCHAR(64) DEFAULT 'public',
+    client_id VARCHAR(128) NOT NULL,
+    session_handle VARCHAR(255),
+    scope TEXT NOT NULL,
+    access_token_hash VARCHAR(128) NOT NULL CONSTRAINT oauth2_token_access_token_hash_key UNIQUE,
+    refresh_token_hash VARCHAR(128) CONSTRAINT oauth2_token_refresh_token_hash_key UNIQUE,
+    created_at_ms  BIGINT NOT NULL,
+    last_updated_at_ms  BIGINT NOT NULL,
+    access_token_expires_at_ms BIGINT NOT NULL,
+    refresh_token_expires_at_ms BIGINT,
+
+    CONSTRAINT oauth2_token_pkey PRIMARY KEY(app_id, tenant_id, access_token_hash),
+    CONSTRAINT oauth2_token_client_id_fkey FOREIGN KEY(app_id, client_id) references oauth2_client(app_id, client_id) ON DELETE CASCADE,
+    CONSTRAINT oauth2_token_tenant_id_fkey FOREIGN KEY(app_id, tenant_id) references tenants(app_id, tenant_id) ON DELETE CASCADE,
+    CONSTRAINT oauth2_token_app_id_fkey FOREIGN KEY(app_id) REFERENCES apps(app_id) ON DELETE CASCADE
+);
+
+CREATE INDEX oauth2_token_client_id_index ON oauth2_token(app_id, client_id);
+CREATE INDEX oauth2_token_session_handle_index ON oauth2_token(app_id, session_handle);
+CREATE INDEX oauth2_token_access_token_expires_at_ms_index ON oauth2_token(access_token_expires_at_ms);
+CREATE INDEX oauth2_token_refresh_token_expires_at_ms_index ON oauth2_token(refresh_token_expires_at_ms);
 ```
 
 :::tip
