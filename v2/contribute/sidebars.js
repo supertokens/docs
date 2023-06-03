@@ -263,7 +263,15 @@ module.exports = {
             "decisions/oauth/0006",
             "decisions/oauth/0007",
             "decisions/oauth/0008",
-            "decisions/oauth/0009"
+            "decisions/oauth/0009",
+            "decisions/oauth/0010",
+            "decisions/oauth/0011",
+            "decisions/oauth/0012",
+            "decisions/oauth/0013",
+            "decisions/oauth/0014",
+            "decisions/oauth/0015",
+            "decisions/oauth/0016",
+            "decisions/oauth/0017"
           ],
         },
       ],
