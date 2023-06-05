@@ -446,7 +446,8 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
                 return
             }
         }
-        return res.status(400).send("Email already exists with another user");
+        // TODO: handle error, email already belongs to another account
+        return
     }
 
     // Then, we check if the email is verified for this user ID or not.
@@ -484,7 +485,7 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
 
     if (resp.status === "OK") {
         // TODO: send successful response that email has been updated
-        return res.status(200).send("Successfully updated email");
+        return 
     }
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
         // Technically it should never come here cause we have
@@ -514,25 +515,144 @@ function isValidEmail(email: string) {
 ```go
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"regexp"
 
+	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
 	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
 )
 
+type RequestBody struct {
+	email string
+}
+
+// the following example uses net/http
 func main() {
 	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		// Wrap the API handler in session.VerifySession
-		session.VerifySession(nil, changePasswordAPI).ServeHTTP(rw, r)
+		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
 	})
 }
 
-type RequestBody struct {
-	OldPassword string
-	NewPassword string
+func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	var requestBody RequestBody
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	// validate the input email
+	if !isValidEmail(requestBody.email) {
+		// TODO: handle invalid email error
+		return
+	}
+
+	// check that the account is not a social account
+	userId := sessionContainer.GetUserID()
+	userAccount, err := thirdpartyemailpassword.GetUserById(userId)
+	if err != nil {
+		// TODO: handle error
+		return
+	}
+
+	if userAccount.ThirdParty != nil {
+		// TODO: handle error, cannot update email for third party accounts
+		return
+	}
+
+	// Check if the new email is already associated with another email-password user.
+	// If it is, then we throw an error. If it's already associated with this user,
+	// then we return a success response with an appropriate message.
+	existingUsers, err := thirdpartyemailpassword.GetUsersByEmail(requestBody.email)
+
+	if err != nil {
+		// TODO: handle error
+	}
+
+	if len(existingUsers) > 0 {
+		for i := 0; i < len(existingUsers); i++ {
+			if existingUsers[i].ID == userId {
+				// TODO: send successful response, email already belongs to this account.
+				return
+			}
+		}
+		// TODO: handle error, email already exists with another account
+	}
+
+	// Then, we check if the email is verified for this user ID or not.
+	// It is important to understand that SuperTokens stores email verification
+	// status based on the user ID AND the email, and not just the email.
+	isVerified, err := emailverification.IsEmailVerified(userId, &requestBody.email)
+
+	if err != nil {
+		// TODO: handle error
+	}
+
+	if !isVerified {
+		// Now we create and send the email verification link to the user for the new email.
+		tokenInfo, err := emailverification.CreateEmailVerificationToken(userId, &requestBody.email)
+		if err != nil {
+			// TODO: handle error
+		}
+
+		if tokenInfo.OK != nil {
+			link := "http://localhost:3000/auth/verify-email?token=" + tokenInfo.OK.Token
+
+			err := emailverification.SendEmail(emaildelivery.EmailType{
+				EmailVerification: &emaildelivery.EmailVerificationType{
+					User: emaildelivery.User{
+						ID:    userId,
+						Email: requestBody.email,
+					},
+					EmailVerifyLink: link,
+				},
+			})
+
+			if err != nil {
+				// TODO: handle error
+			}
+		}
+		// else case is that the email is already verified (which can happen cause
+		// of some race condition). So we continue below..
+	}
+
+	// Since the email is verified, we try and do an update
+	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil)
+
+	if err != nil {
+		// TODO: handle error
+	}
+
+	if updateResponse.OK != nil {
+		// TODO: send successfully updated email response
+		return
+	}
+
+	if updateResponse.EmailAlreadyExistsError != nil {
+		// Technically it should never come here cause we have
+		// checked for this above already, but just in case (some sort of race condition).
+		// TODO: handle error, email already exists for another account
+		return
+	}
+
+	log.Fatal("should not reach here")
+	// highlight-end
+
 }
 
-func changePasswordAPI(w http.ResponseWriter, r *http.Request) {
+func isValidEmail(email string) bool {
+	emailCheck, err := regexp.Match(`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`, []byte(email))
+	if err != nil {
+		return false
+	}
+	return emailCheck
+}
 
 ```
 
