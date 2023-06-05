@@ -828,7 +828,54 @@ SuperTokens.init({
 <TabItem value="go">
 
 ```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
 
+func test() {
+	err := supertokens.Init(supertokens.TypeInput{
+		AppInfo: supertokens.AppInfo{
+			AppName:       "...",
+			APIDomain:     "...",
+			WebsiteDomain: "...",
+		},
+		RecipeList: []supertokens.Recipe{
+			thirdpartyemailpassword.Init(nil),
+			emailverification.Init(evmodels.TypeInput{
+				Mode: evmodels.ModeRequired,
+				Override: &evmodels.OverrideStruct{
+					APIs: func(originalImplementation evmodels.APIInterface) evmodels.APIInterface {
+
+						originalVerifyEmailPOST := *originalImplementation.VerifyEmailPOST
+
+						(*originalImplementation.VerifyEmailPOST) = func(token string, sessionContainer sessmodels.SessionContainer, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
+							response, err := originalVerifyEmailPOST(token, sessionContainer, options, userContext)
+							if response.OK != nil {
+								// This will update the email of the user to the one
+								// that was just marked as verified by the token.
+								thirdpartyemailpassword.UpdateEmailOrPassword(response.OK.User.ID, &response.OK.User.Email, nil, nil)
+							}
+
+							return response, err
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+			session.Init(nil),
+		},
+	})
+
+	if err != nil {
+		panic(err.Error())
+	}
+}
 ```
 
 </TabItem>
