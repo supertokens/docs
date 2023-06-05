@@ -376,6 +376,7 @@ module.exports = {
         "common-customizations/delete-user",
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/change-password",
+        "common-customizations/change-email-post-login",
         {
           type: "category",
           label: "Reset Password",

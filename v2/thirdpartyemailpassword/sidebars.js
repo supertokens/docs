@@ -392,6 +392,7 @@ module.exports = {
         "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         "common-customizations/change-password",
+        "common-customizations/change-email-post-login",
         {
           type: "category",
           label: "Reset Password",
