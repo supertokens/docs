@@ -60,7 +60,6 @@ Session.init({
 ```go
 import (
 	"errors"
-	"net/http"
 
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
@@ -75,7 +74,7 @@ func main() {
 				// first we copy the original implementation
 				originalCreateNewSession := *originalImplementation.CreateNewSession
 
-				(*originalImplementation.CreateNewSession) = func(req *http.Request, res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 					// highlight-start
 					existingSessions, err := session.GetAllSessionHandlesForUserWithContext(userID, userContext)
 					if err != nil {
@@ -88,7 +87,7 @@ func main() {
 					}
 
 					// no other session exists, and so we can continue with logging in this user
-					return originalCreateNewSession(req, res, userID, accessTokenPayload, sessionData, userContext)
+					return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
 					// highlight-end
 				}
 
@@ -107,16 +106,19 @@ func main() {
 from supertokens_python.recipe.session.asyncio import get_all_session_handles_for_user
 from supertokens_python.recipe import session
 from supertokens_python.recipe.session.interfaces import RecipeInterface
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
+
 
 def override_session_functions(original_implementation: RecipeInterface):
 
     # first we copy the original implementation
     original_create_new_session = original_implementation.create_new_session
 
-    async def create_new_session(request: Any, user_id: str,
-                                 access_token_payload: Union[None, Dict[str, Any]],
-                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+    async def create_new_session(user_id: str,
+                                 access_token_payload: Optional[Dict[str, Any]],
+                                 session_data_in_database: Optional[Dict[str, Any]],
+                                 disable_anti_csrf: Optional[bool],
+                                 user_context: Dict[str, Any]):
         # highlight-start
         existing_sessions = await get_all_session_handles_for_user(user_id)
 
@@ -125,7 +127,7 @@ def override_session_functions(original_implementation: RecipeInterface):
             raise Exception("Session already exists on another device")
 
         # no other session exists, and so we can continue with logging in this user
-        return await original_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+        return await original_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
         # highlight-end
 
     original_implementation.create_new_session = create_new_session

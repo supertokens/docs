@@ -1,0 +1,292 @@
+---
+id: custom-request-properties
+title: Adding and reading custom request properties
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./emailpassword/advanced-customizations/user-context/custom-request-properties.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Adding and reading custom request properties
+
+When using the APIs exposed by the SuperTokens SDKs, you may want to pass custom information to your backend. You can leverage our pre api hook, overrides and user context features to achieve this by:
+1. Using the pre api hook to add custom information to network requests made by our frontend SDKs
+2. Using the overrides feature to provide custom handling for APIs and functions in the backend SDK
+3. Using the user context feature in the backend to access to original request and consuming any custom information
+
+## Adding custom information to requests on the frontend
+
+You can use our [pre api hook feature](../frontend-hooks/pre-api) to add custom information to network requests made by the frontend SDKs.
+
+For example let us consider a React app using `supertokens-auth-react` where we add some custom header whenever the user signs out:
+
+```tsx
+import Session from "supertokens-auth-react/recipe/session";
+
+Session.init({
+    preAPIHook: async (context) => {
+        let requestInit = context.requestInit;
+
+        if (context.action === "SIGN_OUT") {
+            let headers = {
+                ...requestInit.headers,
+                customHeader: "customvalue,"
+            };
+            requestInit = {
+                ...requestInit,
+                headers,
+            }
+        }
+
+        return {
+            url: context.url,
+            requestInit,
+        };
+    }
+})
+```
+
+:::info
+Refer to the [pre api hook documentation](../frontend-hooks/pre-api) to learn how to do this for our other frontend SDKs
+:::
+
+## Reading custom request information in the backend
+
+To read information on the backend we need to use either the [API overrides feature](../apis-override/about.mdx) or the [backend function override feature](../backend-functions-override/about.mdx). We override the API/function we want to read the information in, get the original request object and then read the query/body to consume the custom property.
+
+Let us continue the example we used above, we need to read the headers from the request and read the value of `customHeader`. This will involve:
+- Overriding either the `revokeSession` function or the `signOutPOST` API of the session recipe
+- Getting the request object from the user context
+- Reading the custom header value
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+We use the `getRequestFromUserContext` function provided by the SDK to get the request object from the user context.
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+Session.init({
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                revokeSession: async (input) => {
+                    // highlight-start
+                    let customHeaderValue = "";
+                    const request = SuperTokens.getRequestFromUserContext(input.userContext);
+
+                    if (request !== undefined) {
+                        //@ts-ignore
+                        customHeaderValue = request.getHeaderValue("customHeader");
+                    } else {
+                        /**
+                         * This is possible if the function is triggerred from the user management dashboard
+                         * 
+                         * In this case set a reasonable default value to use
+                         */
+                        customHeaderValue = "default";
+                    }
+
+                    // highlight-end
+
+                    // Perform custom logic based on the value of customHeaderValue
+
+                    return oI.revokeSession(input);
+                },
+            };
+        },
+        apis: (oI) => {
+            return {
+                ...oI,
+                signOutPOST: async (input) => {
+                    if (oI.signOutPOST === undefined) {
+                        throw Error("Signout API is disabled");
+                    }
+
+                    // highlight-start
+                    let customHeaderValue = "";
+                    const request = SuperTokens.getRequestFromUserContext(input.userContext);
+
+                    if (request !== undefined) {
+                        //@ts-ignore
+                        customHeaderValue = request.getHeaderValue("customHeader");
+                    } else {
+                        /**
+                         * This is possible if the function is triggerred from the user management dashboard
+                         * 
+                         * In this case set a reasonable default value to use
+                         */
+                        customHeaderValue = "default";
+                    }
+
+                    // highlight-end
+
+                    // Perform custom logic based on the value of customHeaderValue
+
+                    return oI.signOutPOST(input);
+                },
+            };
+        }
+    },
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+We use the `GetRequestFromUserContext` function provided by the SDK to get the request object from the user context.
+
+```go
+import (
+    "github.com/supertokens/supertokens-golang/recipe/session"
+    "github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+    "github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+    session.Init(&sessmodels.TypeInput{
+        Override: &sessmodels.OverrideStruct{
+            Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+                originalRevokeSession := *originalImplementation.RevokeSession
+
+                *originalImplementation.RevokeSession = func(sessionHandle string, userContext supertokens.UserContext) (bool, error) {
+                    // highlight-start
+                    customHeadervalue := ""
+                    request := supertokens.GetRequestFromUserContext(userContext)
+
+                    if request != nil {
+                        customHeadervalue = request.Header.Get("customHeader")
+                    } else {
+                        /**
+                        * This is possible if the function is triggerred from the user management dashboard
+                        * 
+                        * In this case set a reasonable default value to use
+                        */
+                        customHeadervalue = "default";
+                    }
+                    // highlight-end
+
+                    print(customHeadervalue)
+
+                    // Perform custom logic based on the value of customHeadervalue
+
+                    return originalRevokeSession(sessionHandle, userContext)
+                }
+
+                return originalImplementation
+            },
+            APIs: func(originalImplementation sessmodels.APIInterface) sessmodels.APIInterface {
+                originalSignOutPost := *originalImplementation.SignOutPOST
+
+                *originalImplementation.SignOutPOST = func(sessionContainer sessmodels.SessionContainer, options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
+                    // highlight-start
+                    customHeadervalue := ""
+                    request := supertokens.GetRequestFromUserContext(userContext)
+
+                    if request != nil {
+                        customHeadervalue = request.Header.Get("customHeader")
+                    } else {
+                        /**
+                        * This is possible if the function is triggerred from the user management dashboard
+                        * 
+                        * In this case set a reasonable default value to use
+                        */
+                        customHeadervalue = "default";
+                    }
+                    // highlight-end
+
+                    print(customHeadervalue)
+
+                    // Perform custom logic based on the value of customHeadervalue
+
+                    return originalSignOutPost(sessionContainer, options, userContext)
+                }
+
+                return originalImplementation
+            },
+        },
+    })
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+We use the `get_request_from_user_context` function provided by the SDK to get the request object from the user context.
+
+```python
+from supertokens_python import get_request_from_user_context
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface, APIInterface, APIOptions
+from typing import Any, Dict, Optional
+
+def override_session_functions(original_implementation: RecipeInterface):
+    original_revoke_session = original_implementation.revoke_session
+
+    async def revoke_session(session_handle: str, user_context: Dict[str, Any]):
+        # highlight-start
+        request=get_request_from_user_context(user_context)
+        customHeaderValue=""
+
+        if request is not None:
+            customHeaderValue=request.get_header("customHeader")
+        else:
+            #
+            # This is possible if the function is triggerred from the user management dashboard
+            # 
+            # In this case set a reasonable default value to use
+            #
+            customHeaderValue="default"
+        # highlight-end
+        
+        print(customHeaderValue)
+        # Perform custom logic based on the value of customHeadervalue
+
+        return await original_revoke_session(session_handle, user_context)
+
+    original_implementation.revoke_session = revoke_session
+    return original_implementation
+
+def override_session_apis(original_implementation: APIInterface):
+    original_signout_post = original_implementation.signout_post
+
+    async def signout_post(session: Optional[session.SessionContainer], api_options: APIOptions, user_context: Dict[str, Any]):
+        # highlight-start
+        request=get_request_from_user_context(user_context)
+        customHeaderValue=""
+
+        if request is not None:
+            customHeaderValue=request.get_header("customHeader")
+        else:
+            #
+            # This is possible if the function is triggerred from the user management dashboard
+            # 
+            # In this case set a reasonable default value to use
+            #
+            customHeaderValue="default"
+        # highlight-end
+        
+        print(customHeaderValue)
+        # Perform custom logic based on the value of customHeadervalue
+
+        return await original_signout_post(session, api_options, user_context)
+
+    original_implementation.signout_post = signout_post
+    return original_implementation
+
+session.init(
+    override=session.InputOverrideConfig(
+        functions=override_session_functions,
+        apis=override_session_apis
+    ),
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
