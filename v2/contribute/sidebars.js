@@ -274,7 +274,8 @@ module.exports = {
             "decisions/oauth/0017",
             "decisions/oauth/0018",
             "decisions/oauth/0019",
-            "decisions/oauth/0020"
+            "decisions/oauth/0020",
+            "decisions/oauth/0021"
           ],
         },
       ],
