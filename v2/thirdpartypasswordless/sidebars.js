@@ -382,6 +382,7 @@ module.exports = {
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",
         "common-customizations/embed-sign-in-up-form",
+        "common-customizations/change-email-post-login",
         "common-customizations/account-linking",
         {
           type: "category",
