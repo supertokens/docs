@@ -162,7 +162,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
 )
 
@@ -171,7 +171,7 @@ type RequestBody struct {
 }
 
 // the following example uses net/http
-func test() {
+func main() {
 	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		// Wrap the API handler in session.VerifySession
 		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
@@ -196,7 +196,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	// update the email
 	userId := sessionContainer.GetUserID()
-	updateResponse, err := emailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil)
+	updateResponse, err := passwordless.UpdateUser(userId, &requestBody.email, nil)
 
 	if err != nil {
 		// TODO: handle error
@@ -482,8 +482,8 @@ import (
 	"regexp"
 
 	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
 )
 
@@ -519,7 +519,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	// If it is, then we throw an error. If it's already associated with this user,
 	// then we return a success response with an appropriate message.
 	userId := sessionContainer.GetUserID()
-	existingUser, err := emailpassword.GetUserByEmail(requestBody.email)
+	existingUser, err := passwordless.GetUserByEmail(requestBody.email)
 
 	if err != nil {
 		// TODO: handle error
@@ -570,7 +570,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Since the email is verified, we try and do an update
-	updateResponse, err := emailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil)
+	updateResponse, err := passwordless.UpdateUser(userId, &requestBody.email, nil)
 
 	if err != nil {
 		// TODO: handle error
@@ -776,16 +776,18 @@ SuperTokens.init({
 <TabItem value="go">
 
 ```go
-import (
+mport (
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
-func test() {
+func main() {
 	err := supertokens.Init(supertokens.TypeInput{
 		AppInfo: supertokens.AppInfo{
 			AppName:       "...",
@@ -793,7 +795,12 @@ func test() {
 			WebsiteDomain: "...",
 		},
 		RecipeList: []supertokens.Recipe{
-			emailpassword.Init(nil),
+			passwordless.Init(plessmodels.TypeInput{
+				FlowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
+				ContactMethodEmailOrPhone: plessmodels.ContactMethodEmailOrPhoneConfig{
+					Enabled: true,
+				},
+			}),
 			emailverification.Init(evmodels.TypeInput{
 				Mode: evmodels.ModeRequired,
 				Override: &evmodels.OverrideStruct{
@@ -802,17 +809,17 @@ func test() {
 						originalVerifyEmailPOST := *originalImplementation.VerifyEmailPOST
 
 						(*originalImplementation.VerifyEmailPOST) = func(token string, sessionContainer sessmodels.SessionContainer, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
-                            // highlight-start
+							// highlight-start
 							response, err := originalVerifyEmailPOST(token, sessionContainer, options, userContext)
 							if response.OK != nil {
 								// This will update the email of the user to the one
 								// that was just marked as verified by the token.
 								_, err := emailpassword.UpdateEmailOrPassword(response.OK.User.ID, &response.OK.User.Email, nil, nil)
-                                if err != nil {
+								if err != nil {
 									// TODO: Handle error
 								}
 							}
-                            // highlight-end
+							// highlight-end
 
 							return response, err
 						}
