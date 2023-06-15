@@ -152,8 +152,7 @@ module.exports = {
             logoUrl: '/img/logos/hasura-logo.png'
           },
           items: [
-            "hasura-integration/with-jwt",
-            "hasura-integration/without-jwt",
+            "hasura-integration/with-jwt"
           ],
         },
         {
@@ -297,22 +296,15 @@ module.exports = {
           type: "category",
           label: "Protecting API routes",
           items: [
+            "common-customizations/sessions/session-verification-in-api/overview",
             "common-customizations/sessions/session-verification-in-api/verify-session",
-            "common-customizations/sessions/session-verification-in-api/get-session"
-          ]
-        },
-        "common-customizations/sessions/protecting-frontend-routes",
-        "common-customizations/sessions/ssr",
-        {
-          type: "category",
-          label: "Using sessions with JWTs",
-          items: [
-            "common-customizations/sessions/with-jwt/enabling-jwts",
-            "common-customizations/sessions/with-jwt/custom-claims",
-            "common-customizations/sessions/with-jwt/read-jwt",
+            "common-customizations/sessions/session-verification-in-api/get-session",
             "common-customizations/sessions/with-jwt/jwt-verification"
           ]
         },
+        "common-customizations/sessions/protecting-frontend-routes",
+        "common-customizations/sessions/with-jwt/read-jwt",
+        "common-customizations/sessions/ssr",
         {
           type: "category",
           label: "Reading / modifying session claims",
@@ -322,6 +314,8 @@ module.exports = {
           ]
         },
         "common-customizations/sessions/revoke-session",
+        "common-customizations/sessions/anonymous-session",
+        "common-customizations/sessions/with-websocket",
         {
           type: "category",
           label: "Session security",
@@ -484,6 +478,7 @@ module.exports = {
           label: 'Actions, Hooks and Custom API responses',
           items: [
             "advanced-customizations/overview",
+            "advanced-customizations/user-context/custom-request-properties",
             {
               type: 'category',
               label: 'React component override',
@@ -636,6 +631,7 @@ module.exports = {
       label: "References",
       items: [
         "architecture",
+        "other-frameworks",
         "appinfo",
         "sdks",
         "apis",

@@ -416,8 +416,6 @@ Session.init({
 
 ```go
 import (
-	"net/http"
-
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/claims"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
@@ -425,18 +423,18 @@ import (
 )
 
 func main() {
-    // highlight-start
-    SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
-        return false, nil
-    }, nil)
-    // highlight-end
+	// highlight-start
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
 
 	session.Init(&sessmodels.TypeInput{
 		Override: &sessmodels.OverrideStruct{
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 				oCreateNewSession := *originalImplementation.CreateNewSession
 				/* This function is called after signing in or signing up via the first factor */
-				nCreateNewSession := func(req *http.Request, res http.ResponseWriter, userID string, accessTokenPayload map[string]interface{}, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 					// highlight-start
 					if accessTokenPayload == nil {
 						accessTokenPayload = map[string]interface{}{}
@@ -446,9 +444,8 @@ func main() {
 						return nil, err
 					}
 					// highlight-end
-					return oCreateNewSession(req, res, userID, accessTokenPayload, sessionData, userContext)
+					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
 				}
-				*originalImplementation.CreateNewSession = nCreateNewSession
 				return originalImplementation
 			},
 		},
@@ -463,7 +460,7 @@ func main() {
 from supertokens_python.recipe import session
 from supertokens_python.recipe.session.claims import BooleanClaim
 from supertokens_python.recipe.session.interfaces import RecipeInterface
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 
 # This will be used to modify the session's access token payload
 # to add {"2fa-completed": false} into it.
@@ -472,14 +469,15 @@ SecondFactorClaim = BooleanClaim(
     key="2fa-completed", fetch_value=lambda _, __: False)
 # highlight-end
 
+
 def override_session_functions(original_implementation: RecipeInterface):
     original_create_new_session = original_implementation.create_new_session
 
     async def create_new_session(
-        request: Any,
         user_id: str,
-        access_token_payload: Union[None, Dict[str, Any]],
-        session_data: Union[None, Dict[str, Any]],
+        access_token_payload: Optional[Dict[str, Any]],
+        session_data_in_database: Optional[Dict[str, Any]],
+        disable_anti_csrf: Optional[bool],
         user_context: Dict[str, Any],
     ):
         # This function is called after signing in or signing up via the first factor
@@ -490,7 +488,7 @@ def override_session_functions(original_implementation: RecipeInterface):
         # highlight-next-line
         access_token_payload = {**access_token_payload, **(await SecondFactorClaim.build(user_id, user_context))}
         return await original_create_new_session(
-            request, user_id, access_token_payload, session_data, user_context
+            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context
         )
 
     original_implementation.create_new_session = create_new_session

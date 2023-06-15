@@ -2,12 +2,19 @@
 sidebar_position: 1
 title: Protecting API and website routes
 hide_title: true
+show_ui_switcher: true
 ---
 
 <!-- COPY DOCS -->
 <!-- ./thirdpartyemailpassword/common-customizations/email-verification/protecting-routes.mdx -->
 
+
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import AppInfoForm from "/src/components/appInfoForm"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs";
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
 import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
 import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
 import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
@@ -15,14 +22,18 @@ import TabItem from '@theme/TabItem';
 import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
 import FrontendReactContextSubTabs from "/src/components/tabs/FrontendReactContextSubTabs"
 import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import AngularUIImplementation from "/src/components/reusableSnippets/angularUIImplementation"
+import VueUIImplementation from "/src/components/reusableSnippets/vueUIImplementation"
+import {Answer} from "/src/components/question"
 
-# Protecting API and website routes
+# Protecting backend APIs and website routes
 
-## Protecting API routes
+## Protecting backend API routes
 
-### Add checking to all API routes
+### Add email verification checks to all API routes
 
-#### Set `mode` to `REQUIRED` in the `EmailVerification` config
+If you want to protect all your backend API routes with email verification checks, set the `mode` to `REQUIRED` in the `EmailVerification` config. Routes protected with the `verifySession` middleware will now additionally check for email verification status.
+
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -100,7 +111,7 @@ init(
 </TabItem>
 </BackendSDKTabs>
 
-#### Disable email verification for specific routes (for `REQUIRED` mode)
+In case you have set the email verification mode to `REQUIRED` but want to disable the check for a specific route, you can make the following changes to the `verifySession` middleware:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -540,7 +551,10 @@ async def like_comment(request: HttpRequest):
 </TabItem>
 </BackendSDKTabs>
 
-### Add checking to a single route (for `OPTIONAL` mode)
+### Add email verification checks to specific API routes
+
+If you want to protect specific backend API routes with email verification checks, set the `mode` to `OPTIONAL` in the `EmailVerification` config. You will then override the `verifySession` middleware protecting the route to check for email verification status. 
+
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -951,16 +965,23 @@ async def like_comment(request: HttpRequest):
 </TabItem>
 </BackendSDKTabs>
 
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
 ## Protecting frontend routes
 
-<FrontendSDKTabs>
+<FrontendPreBuiltUITabs>
+
 <TabItem value="reactjs">
 
-### If using `REQUIRED` mode
+### Protect all frontend routes
 
-Wrapping your website routes using `<SessionAuth />` should be enough for this to work. If the user's email is not verified, SuperTokens will automatically redirect the user to the email verification screen.
+Set the email verification mode to `REQUIRED` and wrap your website routes using `<SessionAuth />`. If the user's email is not verified, SuperTokens will automatically redirect the user to the email verification screen. 
 
-### If using `OPTIONAL` mode
+### Protect specific frontend routes
+
+Set the email verification mode to `OPTIONAL`. We will create a generic component called `VerifiedRoute` which enforces that its child components can only be rendered if the user has a verified email address.
 
 ```tsx
 import React from "react";
@@ -984,6 +1005,9 @@ function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
     }
 
     if (sessionContext.invalidClaims.some(i => i.validatorId === EmailVerificationClaim.id)) {
+        // Alternatively you could redirect the user to the email verification screen to trigger the verification email
+        // Note: /auth/verify-email is the default email verification path
+        // window.location.assign("/auth/verify-email")
         return <div>You cannot access this page because your email address is not verified.</div>
     }
 
@@ -992,11 +1016,9 @@ function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
     return <div>{props.children}</div>;
 }
 ```
-Above we are creating a generic component called `VerifiedRoute` which enforces that its child components can only be rendered if the user has a verified email address.
-
 In the `VerifiedRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. The `EmailVerificationClaim` validator is automatically added to the `<SessionAuth>` component if the `EmailVerification` recipe has been initialized.
 
-Finally, we check the result of the validation in the `InvalidClaimHandler` component which displays `"You cannot access this page because your email address is not verified."` if the `EmailVerificationClaim` validator failed.
+Finally, we check the result of the validation in the `InvalidClaimHandler` component which displays `"You cannot access this page because your email address is not verified."` if the `EmailVerificationClaim` validator failed. Alternatively you could also redirect the user to the default email verification path to trigger the sending of the verification email.
 
 If all validation passes, we render the `props.children` component.
 
@@ -1021,7 +1043,9 @@ function ProtectedComponent() {
     if (isEmailVerified !== undefined && isEmailVerified) {
         //...
     } else {
-        //...
+        // Redirect the user the email verification path to send the verification email
+        // Note: /auth/verify-email is the default email verification path
+        window.location.assign("/auth/verify-email")
     }
 }
 ```
@@ -1030,34 +1054,33 @@ function ProtectedComponent() {
 
 </TabItem>
 
-<TabItem value="vanillajs">
-
-<NpmOrScriptTabs>
-<TabItem value="npm">
+<TabItem value="angular">
 
 ```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
+import Session from "supertokens-auth-react/recipe/session";
+import { EmailVerificationClaim } from "supertokens-auth-react/recipe/emailverification";
 
 async function shouldLoadRoute(): Promise<boolean> {
     if (await Session.doesSessionExist()) {
-
-        // highlight-start
         let validationErrors = await Session.validateClaims();
 
         if (validationErrors.length === 0) {
             // user has verified their email address
             return true;
+        } else {
+          for (const err of validationErrors) {
+              if (err.validatorId === EmailVerificationClaim.id) {
+                  // email is not verified
+              }
+          }
         }
-        // highlight-end
     }
-    // either a session does not exist, or one of the validators failed.
-    // so we do not allow access to this page.
+    // a session does not exist, or email is not verified
     return false
 }
 ```
 
-We call the `validateClaims` function. If you initialized the `EmailVerification` recipe, this will include the `EmailVerificationClaim` validator in the `globalValidators`.
+In your protected routes, you need to first check if a session exists, and then call the Session.validateClaims function as shown above. This function inspects the session's contents and runs claim validators on them. If a claim validator fails, it will be reflected in the validationErrors variable. The EmailVerificationClaim validator will be automatically checked by this function since you have initialized the email verification recipe.
 
 <details><summary>Checking validation error</summary>
 
@@ -1108,6 +1131,79 @@ async function shouldLoadRoute(): Promise<boolean> {
 </details>
 
 </TabItem>
+
+<TabItem value="vue">
+
+~COPY-TABS=angular
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+## Protecting Frontend routes
+
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { EmailVerificationClaim, sendVerificationEmail } from "supertokens-web-js/recipe/emailverification";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let validationErrors = await Session.validateClaims();
+
+        if (validationErrors.length === 0) {
+            // user has verified their email address
+            return true;
+        } else {
+          for (const err of validationErrors) {
+              if (err.validatorId === EmailVerificationClaim.id) {
+                  // email is not verified
+                  // Send the verification email to the user
+                  await sendEmail();
+              }
+          }
+        }
+        // highlight-end
+    }
+    // a session does not exist, or email is not verified
+    return false
+}
+
+async function sendEmail() {
+    try {
+        let response = await sendVerificationEmail();
+        if (response.status === "EMAIL_ALREADY_VERIFIED_ERROR") {
+            // This can happen if the info about email verification in the session was outdated.
+            // Redirect the user to the home page
+            window.location.assign("/home");
+        } else {
+            // email was sent successfully.
+            window.alert("Please check your email and click the link in it")
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+
+```
+
+</TabItem>
 <TabItem value="script">
 
 ```tsx
@@ -1115,75 +1211,106 @@ import supertokensSession from "supertokens-web-js-script/recipe/session";
 import supertokensEmailVerification from "supertokens-web-js-script/recipe/emailverification";
 async function shouldLoadRoute(): Promise<boolean> {
     if (await supertokensSession.doesSessionExist()) {
-
         // highlight-start
         let validationErrors = await supertokensSession.validateClaims();
 
         if (validationErrors.length === 0) {
             // user has verified their email address
             return true;
+        } else {
+          for (const err of validationErrors) {
+              if (err.validatorId === supertokensEmailVerification.EmailVerificationClaim.id) {
+                  // email is not verified
+                  // Send the verification email to the user
+                  await sendEmail();
+              }
+          }
         }
         // highlight-end
     }
-    // either a session does not exist, or one of the validators failed.
-    // so we do not allow access to this page.
+    // a session does not exist, or email is not verified
     return false
 }
-```
 
-We call the `validateClaims` function. If you initialized the `EmailVerification` recipe, this will include the `EmailVerificationClaim` validator in the `globalValidators`.
-
-<details><summary>Checking validation error</summary>
-
-In case the `validationErrors` array is not empty, you can loop through the erros to know which claim has failed:
-
-```tsx
-import supertokensSession from "supertokens-web-js-script/recipe/session";
-import supertokensEmailVerification from "supertokens-web-js-script/recipe/emailverification";
-async function shouldLoadRoute() {
-    let validationErrors = await supertokensSession.validateClaims(/*{...}*/);
-    // highlight-start
-    for (const err of validationErrors) {
-        if (err.validatorId === supertokensEmailVerification.EmailVerificationClaim.id) {
-            // email verification claim check failed
+async function sendEmail() {
+    try {
+        let response = await supertokensEmailVerification.sendVerificationEmail();
+        if (response.status === "EMAIL_ALREADY_VERIFIED_ERROR") {
+            // This can happen if the info about email verification in the session was outdated.
+            // Redirect the user to the home page
+            window.location.assign("/home");
         } else {
-            // some other claim check failed
+            // email was sent successfully.
+            window.alert("Please check your email and click the link in it")
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
         }
     }
-    // highlight-end
 }
 ```
 
-</details>
+</TabItem>
 
-<details><summary>Manually checking verification status</summary>
-If you want to have more complex access control, you can either create your own validator, or you can get the boolean from the session as follows, and check it yourself:
+:::note
+The API for sending an email verification email requires an active session. If you are using our frontend SDKs, then the session tokens should automatically get attached to the request.
+:::
+
+</NpmOrScriptTabs>
+
+In your protected routes, you need to first check if a session exists, and then call the `Session.validateClaims` function as shown above. This function inspects the session's contents and runs claim validators on them. If a claim validator fails, it will be reflected in the `validationErrors` variable. The `EmailVerificationClaim` validator will be automatically checked by this function since you have initialized the email verification recipe.
+
+<details><summary>Handling 403 responses on the frontend</summary>
+
+<AppInfoForm askForAPIDomain>
+
+If your frontend queries a protected API on your backend and it fails with a 403, you can call the `validateClaims` function and loop through the errors to know which claim has failed:
 
 ```tsx
+import axios from "axios";
 import Session from "supertokens-web-js/recipe/session";
 import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
 
-async function shouldLoadRoute(): Promise<boolean> {
-    if (await Session.doesSessionExist()) {
+async function callProtectedRoute() {
+    try {
+        let response = await axios.get("^{form_apiDomain}/protectedroute");
+    } catch (error) {
         // highlight-start
-        let isVerified = await Session.getClaimValue({claim: EmailVerificationClaim});
-        if (isVerified) {
-            // user has verified their email address
-            return true;
+        if (axios.isAxiosError(error) && error.response?.status === 403) {
+            let validationErrors = await Session.validateClaims();
+            for (let err of validationErrors) {
+                if (err.validatorId === EmailVerificationClaim.id) {
+                    // email verification claim check failed
+                    // We call the sendEmail function defined in the previous section to send the verification email.
+                    // await sendEmail();
+                } else {
+                    // some other claim check failed (from the global validators list)
+                }
+            }
+            // highlight-end
+
         }
-        // highlight-end
     }
-    // either a session does not exist, or the user has not verified their email address
-    return false
 }
 ```
 
+</AppInfoForm>
+
 </details>
-</TabItem>
-</NpmOrScriptTabs>
 
 </TabItem>
-<TabItem value="react-native">
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+<FrontendMobileSubTabs>
+
+<TabItem value="reactnative">
 
 ```tsx
 import SuperTokens from 'supertokens-react-native';
@@ -1197,7 +1324,7 @@ async function checkIfEmailIsVerified() {
         if (isVerified) {
             // TODO..
         } else {
-            // TODO..
+            // You can trigger the sending of the verification email by calling `^{form_apiDomain}^{form_apiBasePath}/user/email/verify/token`
         }
         // highlight-end
     }
@@ -1206,16 +1333,88 @@ async function checkIfEmailIsVerified() {
 
 </TabItem>
 
-<TabItem value="angular">
+<TabItem value="android">
 
-~COPY-TABS=npm,vanillajs
+```kotlin
+import android.app.Application
+import com.supertokens.session.SuperTokens
+import org.json.JSONObject
+
+class MainApplication: Application() {
+    fun checkIfEmailIsVerified() {
+        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
+        val isVerified: Boolean = (accessTokenPayload.get("st-ev") as JSONObject).get("v") as Boolean
+        if (isVerified) {
+            // TODO..
+        } else {
+            // You can trigger the sending of the verification email by calling `^{form_apiDomain}^{form_apiBasePath}/user/email/verify/token`
+        }
+    }
+}
+```
 
 </TabItem>
 
-<TabItem value="vue">
+<TabItem value="ios">
 
-~COPY-TABS=angular
+```swift
+import UIKit
+import SuperTokensIOS
+
+fileprivate class ViewController: UIViewController {
+    func checkIfEmailIsVerified() {
+        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let emailVerificationObject: [String: Any] = accessTokenPayload["st-ev"] as? [String: Any], let isVerified: Bool = emailVerificationObject["v"] as? Bool {
+            if isVerified {
+                // Email is verified
+            } else {
+                // You can trigger the sending of the verification email by calling `^{form_apiDomain}^{form_apiBasePath}/user/email/verify/token`
+            }
+        }
+    }
+}
+```
 
 </TabItem>
 
-</FrontendSDKTabs>
+<TabItem value="flutter">
+
+```dart
+import 'package:supertokens_flutter/supertokens.dart';
+
+Future<void> checkIfEmailIsVerified() async {
+    var accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
+
+    if (accessTokenPayload.containsKey("st-ev")) {
+      Map<String, dynamic> emailVerificationObject = accessTokenPayload["st-ev"];
+
+      if (emailVerificationObject.containsKey("v")) {
+        bool isVerified = emailVerificationObject["v"];
+
+        if (isVerified) {
+          // Email is verified
+        } else {
+          // You can trigger the sending of the verification email by calling `^{form_apiDomain}^{form_apiBasePath}/user/email/verify/token`
+        }
+      }
+    }
+}
+```
+
+</TabItem>
+
+</FrontendMobileSubTabs>
+
+<details><summary>Handling 403 responses on the frontend</summary>
+
+If your frontend queries a protected API on your backend and it fails with a 403, you can check the value of the `st-ev` claim in the access token payload. If it is set to false you can send the verification email
+
+</details>
+
+</AppInfoForm>
+
+</TabItem>
+</FrontendCustomUITabs>
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>

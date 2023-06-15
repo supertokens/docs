@@ -47,27 +47,80 @@ For other languages, [jwt.io](https://jwt.io/libraries) recommends some librarie
 
 ### Method 2) Using public key string
 
-#### a) Getting a certificate string
+Some JWT verification libraries require you to provide the JWT secret / public key for verification. You can obtain the JWT secret from SuperTokens in the following way:
 
-Refer to [this](./get-public-key) to know how to retrieve a key string to use
+- First, we query the `JWKS.json` endpoint:
+  ```bash
+  curl --location --request GET '^{form_apiDomain}^{form_apiBasePath}/jwt/jwks.json'
 
-#### b) Verify the JWT
+  {
+    "keys": [
+      {
+        "kty": "RSA",
+        "kid": "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
+        "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
+        "e": "AQAB",
+        "alg": "RS256",
+        "use": "sig"
+      },
+      {
+        "kty": "RSA",
+        "kid": "d-230...802340",
+        "n": "AMZruthvYz7...lx0rU8c=",
+        "e": "...",
+        "alg": "RS256",
+        "use": "sig"
+      }
+    ]
+  }
+  ```
 
-Some libraries/services let you configure a secret that can be used for JWT verification. Using the same example as above you can use a key when using `jsonwebtoken`.
+  :::important
+  The above shows an example output which returns two keys. There could be more keys returned based on the configured key rotation setting in the core. If you notice, each key's `kid` starts with a `s-..` or a `d-..`. The `s-..` key is a static key that will never change, whereas `d-...` keys are dynamic keys that keep changing. So if you are hardcoding public keys somewhere, you always want to pick the `s-..` key.
+  :::
 
-```ts
-import JsonWebToken from 'jsonwebtoken';
+- Next, we run the NodeJS script below to convert the above output to a `PEM` file format.
+  ```tsx
+  import jwkToPem from 'jwk-to-pem';
 
-// Truncated for display
-let certificate = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----";
-let jwt = "...";
-JsonWebToken.verify(jwt, certificate, function (err, decoded) {
-    let decodedJWT = decoded;
-    // Use JWT
-});
-```
+  // This JWK is copied from the result of the above SuperTokens core request
+  let jwk = {
+    "kty": "RSA",
+    "kid": "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
+    "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
+    "e": "AQAB",
+    "alg": "RS256",
+    "use": "sig"
+  };
 
-For other languages, [jwt.io](https://jwt.io/libraries) recommends some libraries that you can use for JWT verification
+  // @ts-ignore
+  let certString = jwkToPem(jwk);
+  ```
+
+  The above snippet would generate the following certificate string:
+
+  ```text
+  -----BEGIN PUBLIC KEY-----
+  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9I
+  QQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm
+  ... (truncated for display)
+  XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStT
+  xwIDAQAB
+  -----END PUBLIC KEY-----
+  ```
+
+- Now you can use the generated PEM string in your code like shown below:
+  ```ts
+  import JsonWebToken from 'jsonwebtoken';
+
+  // Truncated for display
+  let certificate = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----";
+  let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
+  JsonWebToken.verify(jwt, certificate, function (err, decoded) {
+      let decodedJWT = decoded;
+      // Use JWT
+  });
+  ```
 
 ## Claim verification
 The second step is to get the JWT payload and check that it has the `"source": "microservice"` claim:
@@ -99,3 +152,64 @@ JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
   // highlight-end
 });
 ```
+
+## M2M and frontend session verification for the same API
+You may have a setup wherein the same API is called from the frontend as well as from other microservices. The frontend session works differently than m2m sessions, so we have to account for both forms of token inputs. 
+
+Our approach here would be to first attempt frontend session verification, and if that fails, then attempt m2m jwt verification (using the above method). If both fails, then we send back a `401` response.
+
+We will use the [`getSession` function](https://supertokens.com/docs/session/common-customizations/sessions/session-verification-in-api/get-session) for frontend session verification (we use node js express as an exmaple below, but the code snippet for your framework can be seen in the `getSession` function docs).
+
+```tsx
+import express from "express";
+import Session from "supertokens-node/recipe/session";
+import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+let app = express();
+
+
+var client = jwksClient({
+  jwksUri: '{apiDomain}/{apiBasePath}/jwt/jwks.json'
+});
+
+function getKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    var signingKey = key!.getPublicKey();
+    callback(err, signingKey);
+  });
+}
+
+
+app.post("/like-comment", async (req, res, next) => {
+  // highlight-start
+    try {
+        let session = await Session.getSession(req, res, { sessionRequired: false })
+
+        if (session !== undefined) {
+            // API call from the frontend and session verification is successful..
+            let userId = session.getUserId();
+        } else {
+            // maybe this API is called from a microservice, so we attempt JWT verification as
+            // shown above.
+            let jwt = req.headers["authorization"];
+            jwt = jwt === undefined ? undefined : jwt.split('Bearer ')[1];
+            if (jwt === undefined) {
+                // return a 401 unauthorised error...
+            } else {
+                JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
+                  let decodedJWT = decoded;
+                  // microservices auth is successful..
+                });
+            }
+        }
+    } catch (err) {
+        next(err);
+    }
+  // highlight-end
+});
+```
+
+- Notice that we add the `sessionRequired: false` option when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function will return `undefined`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function will throw a try refresh token error, sending a 401 to the frontend. This will trigger a session refresh flow as expected.
+- If the `getSession` function returns `undefined`, it means that the session is not from the frontend and we can attempt a microservice auth verification using the JWT verification method shown previously in this page.
+- If that fails too, we can send back a `401` response.

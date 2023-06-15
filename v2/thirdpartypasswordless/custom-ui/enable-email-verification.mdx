@@ -685,6 +685,44 @@ async function shouldLoadRoute(): Promise<boolean> {
 
 In your protected routes, you need to first check if a session exists, and then call the `Session.validateClaims` function as shown above. This function inspects the session's contents and runs claim validators on them. If a claim validator fails, it will be reflected in the `validationErrors` variable. The `EmailVerificationClaim` validator will be automatically checked by this function since you have initialized the email verification recipe.
 
+<details><summary>Handling 403 responses on the frontend</summary>
+
+<AppInfoForm askForAPIDomain>
+
+If your frontend queries a protected API on your backend and it fails with a 403, you can call the `validateClaims` function and loop through the errors to know which claim has failed:
+
+```tsx
+import axios from "axios";
+import Session from "supertokens-web-js/recipe/session";
+import { EmailVerificationClaim, sendVerificationEmail } from "supertokens-web-js/recipe/emailverification";
+
+async function callProtectedRoute() {
+    try {
+        let response = await axios.get("^{form_apiDomain}/protectedroute");
+    } catch (error) {
+        // highlight-start
+        if (axios.isAxiosError(error) && error.response?.status === 403) {
+            let validationErrors = await Session.validateClaims();
+            for (let err of validationErrors) {
+                if (err.validatorId === EmailVerificationClaim.id) {
+                    // email verification claim check failed
+                    // We call the sendEmail function defined in the next section to send the verification email.
+                    // await sendEmail();
+                } else {
+                    // some other claim check failed (from the global validators list)
+                }
+            }
+            // highlight-end
+
+        }
+    }
+}
+```
+
+</AppInfoForm>
+
+</details>
+
 </TabItem>
 
 <TabItem value="mobile">
@@ -785,6 +823,12 @@ Future<void> checkIfEmailIsVerified() async {
 
 </FrontendMobileSubTabs>
 
+<details><summary>Handling 403 responses on the frontend</summary>
+
+If your frontend queries a protected API on your backend and it fails with a 403, you can check the value of the `st-ev` claim in the access token payload. If it is set to false you can send the verification email
+
+</details>
+
 </TabItem>
 </FrontendCustomUITabs>
 
@@ -792,7 +836,7 @@ import AppInfoForm from "/src/components/appInfoForm"
 
 ## Step 5: Sending the email verification email
 
-When the email verificaiton validators fail, or post sign up, you want to redirect the user to a screen telling them that a verification email has been sent to them. On this screen, you should call the following API
+When the email verification validators fail, or post sign up, you want to redirect the user to a screen telling them that a verification email has been sent to them. On this screen, you should call the following API
 
 <FrontendCustomUITabs>
 <TabItem value="web">
@@ -1021,7 +1065,7 @@ init(
 
 ## Step 6: Verifying the email post link clicked
 
-When the email verificaiton validators fail, or post sign up, you want to redirect the user to a screen telling them that a verification email has been sent to them. On this screen, you should call the following API
+When the email verification validators fail, or post sign up, you want to redirect the user to a screen telling them that a verification email has been sent to them. On this screen, you should call the following API
 
 <FrontendCustomUITabs>
 <TabItem value="web">
@@ -1100,7 +1144,7 @@ Once the user has enters their email, you can call the following API to send a r
 ```bash
 curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/user/email/verify' \
 --header 'rid: emailverification' \
---header 'Content-Type: application/json' \
+--header 'Content-Type: application/json; charset=utf-8' \
 --data-raw '{
   "method": "token",
   "token": "ZTRiOTBjNz...jI5MTZlODkxw"
@@ -1110,7 +1154,7 @@ curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/user/email/
 </AppInfoForm>
 
 The response body from the API call has a `status` property in it:
-- `status: "OK"`: Email verificaiton was successful.
+- `status: "OK"`: Email verification was successful.
 - `status: "EMAIL_VERIFICATION_INVALID_TOKEN_ERROR"`: This can happen if the verification code is expired or invalid. You should ask the user to retry.
 - `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
 
@@ -1119,7 +1163,7 @@ The response body from the API call has a `status` property in it:
 
 :::caution
 - This API doesn't require an active session to succeed.
-- If you are calling the above API on page load, there is an edge case in which email clients might open the verificaiton link in the email (for scanning purposes) and consume the token in the URL. This would lead to issues in which an attacker could sign up using someone else's email and end up with a veriifed status!
+- If you are calling the above API on page load, there is an edge case in which email clients might open the verification link in the email (for scanning purposes) and consume the token in the URL. This would lead to issues in which an attacker could sign up using someone else's email and end up with a veriifed status!
 
     To prevent this, on page load, you should check if a session exists, and if it does, only then call the above API. If a session does not exist, you should first show a button, which when clicked would call the above API (email clients won't automatically click on this button). The button text could be something like "Click here to verify your email". 
 :::
