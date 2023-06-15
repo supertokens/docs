@@ -21,11 +21,9 @@ import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
 import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 
-# Fetching the JWT and reading claims
+# Fetching the access token string
 
-## Fetching the JWT on the backend
-
-### Method 1) After session verification
+## On the backend
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -43,7 +41,7 @@ app.get("/getJWT", verifySession(), async (req, res) => {
     let session = req.session;
 
     // highlight-start
-    let jwt = session.getAccessTokenPayload()["jwt"];
+    let jwt = session.getAccessToken();
     // highlight-end
 
     res.json({ token: jwt })
@@ -73,7 +71,7 @@ server.route({
         let session = req.session;
 
         // highlight-start
-        let jwt = session!.getAccessTokenPayload()["jwt"];
+        let jwt = session!.getAccessToken();
         // highlight-end
         return res.response({ token: jwt }).code(200);
     }
@@ -94,7 +92,7 @@ fastify.get("/getJWT", {
     let session = req.session;
 
     // highlight-start
-    let jwt = session.getAccessTokenPayload()["jwt"];
+    let jwt = session.getAccessToken();
     // highlight-end
     res.send({ token: jwt });
 });
@@ -111,7 +109,7 @@ async function getJWT(awsEvent: SessionEvent) {
     let session = awsEvent.session;
 
     // highlight-start
-    let jwt = session!.getAccessTokenPayload()["jwt"];
+    let jwt = session!.getAccessToken();
     // highlight-end
 
     return {
@@ -137,7 +135,7 @@ router.get("/getJWT", verifySession(), (ctx: SessionContext, next) => {
     let session = ctx.session;
 
     // highlight-start
-    let jwt = session!.getAccessTokenPayload()["jwt"];
+    let jwt = session!.getAccessToken();
     // highlight-end
     ctx.body = { token: jwt };
 });
@@ -161,7 +159,7 @@ class GetJWT {
         let session = this.ctx.session;
 
         // highlight-start
-        let jwt = session!.getAccessTokenPayload()["jwt"];
+        let jwt = session!.getAccessToken();
         // highlight-end
         return { token: jwt };
     }
@@ -187,7 +185,7 @@ export default async function getJWT(req: SessionRequest, res: any) {
     let session = req.session;
 
     // highlight-start
-    let jwt = session!.getAccessTokenPayload()["jwt"];
+    let jwt = session!.getAccessToken();
     // highlight-end
     res.json({ token: jwt })
 }
@@ -206,11 +204,9 @@ export class ExampleController {
   @Get('example')
   @UseGuards(new AuthGuard())
   async postExample(@Session() session: SessionContainer): Promise<{ token: any }> {
-    const currAccessTokenPayload = session.getAccessTokenPayload();
-
     //highlight-start
     // For more information about "AuthGuard" and the "Session" decorator please read our NestJS guide.
-    let jwt = session.getAccessTokenPayload()["jwt"];
+    const jwt = session.getAccessToken();
     //highlight-end
     return { token: jwt };
   }
@@ -234,10 +230,8 @@ func getJWT(w http.ResponseWriter, r *http.Request) {
 	// retrieve the session object as shown below
 	sessionContainer := session.GetSessionFromRequestContext(r.Context())
 
-	currAccessTokenPayload := sessionContainer.GetAccessTokenPayload()
-
 	// highlight-start
-	jwt := currAccessTokenPayload["jwt"]
+	jwt := sessionContainer.GetAccessToken()
 	// highlight-end
 
 	fmt.Println(jwt)
@@ -258,7 +252,7 @@ from supertokens_python.recipe.session import SessionContainer
 @app.get('/getJWT') # type: ignore
 async def get_jwt(session: SessionContainer = Depends(verify_session())):
     # highlight-next-line
-    current_jwt = session.get_access_token_payload()['jwt']
+    current_jwt = session.get_access_token()
 
     print(current_jwt) # TODO...
 ```
@@ -277,7 +271,7 @@ def get_jwt():
     session: SessionContainer = g.supertokens # type: ignore
 
     # highlight-next-line
-    current_jwt = session.get_access_token_payload()['jwt']
+    current_jwt = session.get_access_token()
 
     print(current_jwt) # TODO...
 ```
@@ -295,7 +289,7 @@ async def get_jwt(request: HttpRequest):
     session: SessionContainer = request.supertokens # type: ignore
 
     # highlight-next-line
-    current_jwt = session.get_access_token_payload()['jwt']
+    current_jwt = session.get_access_token()
 
     print(current_jwt) # TODO...
 ```
@@ -306,118 +300,93 @@ async def get_jwt(request: HttpRequest):
 </TabItem>
 </BackendSDKTabs>
 
-### Method 2) Without session verification
+## On the frontend
+
+### 1) Enable `exposeAccessTokenToFrontendInCookieBasedAuth`
+
+When using cookie based auth, by default, the access token is not readable by the JS on the frontend (since it's stored as `httpOnly` cookie). To enable this, you need to set the `exposeAccessTokenToFrontendInCookieBasedAuth` config to `true` (as shown below
+
+:::important
+If you are only using header-based sessions, you can skip this step
+:::
+
+<!-- COPY SECTION -->
+<!-- ./session/common-customizations/sessions/with-jwt/read-jwt.mdx -->
+<!-- 1 -->
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
+import SuperTokens from "supertokens-node";
 import Session from "supertokens-node/recipe/session";
 
-async function getJWT() {
-      let userId = "...";
-      // we first get all the sessionHandles (string[]) for a user
-      let sessionHandles = await Session.getAllSessionHandlesForUser(userId);
-
-      sessionHandles.forEach(async (handle) => {
-            // highlight-start
-            let currSessionInfo = await Session.getSessionInformation(handle)
-            if (currSessionInfo === undefined) {
-                  return;
-            }
-            let currentJWT = currSessionInfo.accessTokenPayload["jwt"];
-            // highlight-end
-      })
-}
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init({
+            //highlight-start
+            exposeAccessTokenToFrontendInCookieBasedAuth: true,
+            //highlight-end
+        })
+    ]
+});
 ```
 </TabItem>
 <TabItem value="go">
 
 ```go
 import (
-	"fmt"
-
 	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
-	// we first get all the sessionHandles (string[]) for a user
-	sessionHandles, err := session.GetAllSessionHandlesForUser("userId")
-	if err != nil {
-		// TODO: handle error
-		return
-	}
-
-	// we update all the session's access token payloads for this user
-	for _, handle := range sessionHandles {
-		sessionInfo, err := session.GetSessionInformation(handle)
-		if err != nil {
-			// TODO: handle error
-			return
-		}
-
-		// highlight-next-line
-		currJWT := sessionInfo.AccessTokenPayload["jwt"]
-
-		fmt.Println(currJWT)
-	}
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				//highlight-start
+				ExposeAccessTokenToFrontendInCookieBasedAuth: true,
+				//highlight-end
+			}),
+		},
+	})
 }
 ```
-
 </TabItem>
 <TabItem value="python">
 
-<PythonSyncAsyncSubTabs>
-
-<TabItem value="asyncio">
-
 ```python
-from supertokens_python.recipe.session.asyncio import get_all_session_handles_for_user, get_session_information
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
 
-async def some_func():
-    # we first get all the session_handles (List[string]) for a user
-    session_handles = await get_all_session_handles_for_user("userId")
-
-    for handle in session_handles:
-        session_information = await get_session_information(handle)
-        if session_information is None:
-            continue
-
-        current_access_token_payload = session_information.access_token_payload
-        # highlight-start
-        current_jwt = current_access_token_payload['jwt']
-        # highlight-end
-        print(current_jwt) # TODO..
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
+    recipe_list=[
+        session.init(
+            # highlight-next-line
+            expose_access_token_to_frontend_in_cookie_based_auth=True
+        )
+    ]
+)
 ```
-
-</TabItem>
-<TabItem value="syncio">
-
-```python
-from supertokens_python.recipe.session.syncio import get_all_session_handles_for_user, get_session_information
-
-# we first get all the session_handles (List[string]) for a user
-session_handles = get_all_session_handles_for_user("userId")
-
-for handle in session_handles:
-    session_information = get_session_information(handle)
-    if session_information is None:
-        continue
-
-    current_access_token_payload = session_information.access_token_payload
-    # highlight-start
-    current_jwt = current_access_token_payload['jwt']
-    # highlight-end
-```
-
-</TabItem>
-</PythonSyncAsyncSubTabs>
 
 </TabItem>
 </BackendSDKTabs>
 
-## Fetching the JWT on the frontend
+<!-- END COPY SECTION -->
 
+### 2) Read the access token on the frontend
 
 <PreBuiltOrCustomUISwitcher>
 
@@ -432,23 +401,21 @@ import Session from 'supertokens-auth-react/recipe/session';
 async function getJWT() {
       if (await Session.doesSessionExist()) {
             let userId = await Session.getUserId();
-            let jwt = (await Session.getAccessTokenPayloadSecurely()).jwt;
+            let jwt = await Session.getAccessToken();
       }
 }
 ```
-
-We do not use the `useSessionContext` React hook here because reading the JWT from that hook doesn't cause an auto-refresh in case the JWT has expired. Instead, calling `await Session.getAccessTokenPayloadSecurely()` does do an auto refresh making sure that the returned JWT is not expired. Therefore, you want to call the `Session.getAccessTokenPayloadSecurely()` function as close to the network call as possible.
 
 </TabItem>
 <TabItem value="angular">
 
 ```tsx
-import Session from 'supertokens-web-js/recipe/session';
+import Session from 'supertokens-auth-react/recipe/session';
 
 async function getJWT() {
       if (await Session.doesSessionExist()) {
             let userId = await Session.getUserId();
-            let jwt = (await Session.getAccessTokenPayloadSecurely()).jwt;
+            let jwt = await Session.getAccessToken();
       }
 }
 ```
@@ -473,7 +440,7 @@ import Session from 'supertokens-web-js/recipe/session';
 async function getJWT() {
       if (await Session.doesSessionExist()) {
             let userId = await Session.getUserId();
-            let jwt = (await Session.getAccessTokenPayloadSecurely()).jwt;
+            let jwt = await Session.getAccessToken();
       }
 }
 ```
@@ -486,7 +453,7 @@ import supertokensSession from "supertokens-web-js-script/recipe/session";
 async function getJWT() {
       if (await supertokensSession.doesSessionExist()) {
             let userId = await supertokensSession.getUserId();
-            let jwt = (await supertokensSession.getAccessTokenPayloadSecurely()).jwt;
+            let jwt = await supertokensSession.getAccessToken();
       }
 }
 ```
@@ -507,7 +474,7 @@ import SuperTokens from 'supertokens-react-native';
 async function getJWT() {
       if (await SuperTokens.doesSessionExist()) {
             let userId = await SuperTokens.getUserId();
-            let jwt = (await SuperTokens.getAccessTokenPayloadSecurely()).jwt;
+            let jwt = await SuperTokens.getAccessToken();
       }
 }
 ```
@@ -523,8 +490,7 @@ import org.json.JSONObject
 
 class MainApplication: Application() {
     fun getJWT() {
-        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
-        val jwt: String = accessTokenPayload.get("jwt") as String
+        val jwt: String? = SuperTokens.getAccessToken(this);
     }
 }
 ```
@@ -539,9 +505,8 @@ import SuperTokensIOS
 
 fileprivate class ViewController: UIViewController {
     func getJWT() {
-        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let jwt: String = accessTokenPayload["jwt"] as? String {
-            // Use `jwt` however you like
-        }
+        let jwt: String? = SuperTokens.getAccessToken()
+        // Use `jwt` however you like
     }
 }
 ```
@@ -554,8 +519,7 @@ fileprivate class ViewController: UIViewController {
 import 'package:supertokens_flutter/supertokens.dart';
 
 Future<void> getJWT() async {
-    Map<String, dynamic> accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
-    var jwt = accessTokenPayload["jwt"];
+    var jwt = await SuperTokens.getAccessToken();
 
     if (jwt != null) {
       // Use `jwt` however you like
@@ -574,9 +538,3 @@ Future<void> getJWT() async {
 </CustomUIContent>
 
 </PreBuiltOrCustomUISwitcher>
-
-## Reading the JWT claims
-
-The JWT claims can be read in two ways:
-- Fetch the JWT first (as shown above), [verify it](./jwt-verification) and then decode it to get the claims. This can be done using any standard JWT library.; OR
-- Just read the properties of the access token payload (as shown above). This works because when you set claims, those are copied over in the SuperTokens' access token as well as in the issued JWT.

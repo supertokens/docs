@@ -331,19 +331,20 @@ async def like_comment(request: HttpRequest):
 This object exposes the following functions:
 - `getHandle`: Returns the `sessionHandle` for this session. This is a constant, unique string per session that never changes for its session.
 - `getUserId`: Returns the userId of logged in user
-- `getSessionData`: Returns the session data (stored in the database) that is associated with the session.
-- `updateSessionData`: Set a new JSON object to the session data (stored in the database)
-- `getAccessTokenPayload`: Returns the access token's payload for this session.
+- `getSessionDataFromDatabase`: Returns the session data (stored in the database) that is associated with the session.
+- `updateSessionDataInDatabase`: Set a new JSON object to the session data (stored in the database)
+- `getAccessTokenPayload`: Returns the access token's payload for this session. This includes claims defined by you (e.g.: in `createNewSession`), standard claims (`sub`, `iat`, `exp`) and supertokens specific ones (`sessionHandle`, `parentRefreshTokenHash1`, etc.)
 - `mergeIntoAccessTokenPayload`: Adds key / values into a JSON object in the access token. Set a key to `null` to remove it from the payload.
 - `revokeSession`: Destroys this session in the db and on the frontend
 - `getTimeCreated`: Returns the time in milliseconds of when this session was created
 - `getExpiry`: Returns the time in milliseconds of when this session will expire if not refreshed.
 - `getAccessToken`: Returns the raw `string` access token
+- `getAllSessionTokensDangerously`: Returns an object that contains the raw string representation of all tokens associated with the session along with a boolean that indicates if thee session needs to be updated on the frontend.
 
-#### `getSessionData` vs `getAccessTokenPayload`
-- `getSessionData` queries the SuperTokens Core to get the information, mapped to that session's handle, from the database. Whereas `getAccessTokenPayload` reads directly from the access token used in the request.
-- `getSessionData` is much slower since it requires a network call.
-- The information stored using `updateSessionData` (changes the result of `getSessionData` function call), is not exposed to the frontend in any way. So if you want to store something sensitive against the session handle, use this method.
+#### `getSessionDataFromDatabase` vs `getAccessTokenPayload`
+- `getSessionDataFromDatabase` queries the SuperTokens Core to get the information, mapped to that session's handle, from the database. Whereas `getAccessTokenPayload` reads directly from the access token used in the request.
+- `getSessionDataFromDatabase` is much slower since it requires a network call.
+- The information stored using `updateSessionDataInDatabase` (changes the result of `getSessionDataFromDatabase` function call), is not exposed to the frontend in any way. So if you want to store something sensitive against the session handle, use this method.
 - If you want access to some information in most / all API, like the user's role, then use `getAccessTokenPayload` and `mergeIntoAccessTokenPayload` since fetching this information from the session will be very fast (no network call required).
 
 <!-- END COPY SECTION -->
@@ -1044,7 +1045,7 @@ You can also [build your own custom claim validators](../claims/claim-validators
 :::
 
 
-## `getSession` vs `verifySession`
+## Building your own custom middleware
 
 Both these functions do session verification. However, `verifySession` is a middleware that returns a reply directly to the frontend if the input access token is invalid or expired. On the other hand, `getSession` is a function which returns a session object on successful verification, and throws an exception which can be handled by you in case the access token is expired or is invalid.
 
@@ -1063,19 +1064,7 @@ import { Error as SuperTokensError } from "supertokens-node";
 function verifySession(options?: VerifySessionOptions) {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            if (options?.sessionRequired === false) {
-                (req as any).session = await Session.getSession(req, res, {
-                    antiCsrfCheck: options?.antiCsrfCheck,
-                    overrideGlobalClaimValidators: options?.overrideGlobalClaimValidators,
-                    sessionRequired: false
-                });
-            } else {
-                (req as any).session = await Session.getSession(req, res, {
-                    antiCsrfCheck: options?.antiCsrfCheck,
-                    overrideGlobalClaimValidators: options?.overrideGlobalClaimValidators,
-                    sessionRequired: true
-                });
-            }
+            (req as any).session = await Session.getSession(req, res, options);
             next();
         } catch (err) {
             if (SuperTokensError.isErrorFromSuperTokens(err)) {
@@ -1131,7 +1120,6 @@ import (
 
 func VerifySession(options *sessmodels.VerifySessionOptions, otherHandler http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session.GetSession(r, w, options)
 		session, err := session.GetSession(r, w, options)
 		if err != nil {
 			if defaultErrors.As(err, &errors.TryRefreshTokenError{}) {
@@ -1196,8 +1184,9 @@ _T = TypeVar("_T", bound=Callable[..., Any])
 
 
 def verify_session(
-    anti_csrf_check: Union[bool, None] = None,
     session_required: bool = True,
+    anti_csrf_check: Union[bool, None] = None,
+    check_database: bool = True,
     override_global_claim_validators: Optional[
         Callable[
             [List[SessionClaimValidator], SessionContainer, Dict[str, Any]],
@@ -1214,8 +1203,9 @@ def verify_session(
             baseRequest = FlaskRequest(request)
             try:
                 session = get_session(baseRequest,
-                                      anti_csrf_check,
                                       session_required,
+                                      anti_csrf_check,
+                                      check_database,
                                       override_global_claim_validators)
             except Exception as e:
                 if isinstance(e, TryRefreshTokenError):
@@ -1262,6 +1252,202 @@ If `get_session` throws an error (in case the input access token is invalid or h
 </TabItem>
 </BackendSDKTabs>
 
-:::important
-You should use `getSession` only if you want to handle exception cases on your own, or if you want to build your own session verification middleware instead of using `verifySession` that's provided by us.
-:::
+## Using getSession without `req` / `res` objects
+In the above snippets, we see that `getSession` requires the `request` object and depending on the your backend language and framework, may also require the `response` object. Either way, this version of `getSession` automatically reads from the request cookies / headers and also automatically sets the response cookies / headers based on the update to the session tokens. Whilst this is convenient, sometimes, you may not have the `request` or `response` objects, or you may not want SuperTokens to set the tokens in the response automatically. In this case, you can use the `getSessionWithoutRequestResponse` function.
+
+This function works in a very similar way to `getSession`, except that it doesn't depend on the `request` or `response` objects. It's your responsibility to provide this function the access token, and your responsibility to write the update tokens to the response (if the tokens are even updated during this API call).
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import { VerifySessionOptions } from "supertokens-node/recipe/session/types";
+import { SessionContainer } from "supertokens-node/recipe/session";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+async function verifySession(accessToken: string, antiCsrfToken?: string, options?: VerifySessionOptions) {
+    let session: SessionContainer | undefined;
+    try {
+        session = await Session.getSessionWithoutRequestResponse(accessToken, antiCsrfToken, options);
+    } catch (err) {
+        if (SuperTokensError.isErrorFromSuperTokens(err)) {
+            if (err.type === Session.Error.TRY_REFRESH_TOKEN) {
+                // This means that the session exists, but the access token
+                // has expired.
+
+                // You can handle this in a custom way by sending a 401.
+                // Or you can call the errorHandler middleware as shown below
+            } else if (err.type === Session.Error.UNAUTHORISED) {
+                // This means that the session does not exist anymore.
+
+                // You can handle this in a custom way by sending a 401.
+                // Or you can call the errorHandler middleware as shown below
+            } else if (err.type === Session.Error.TOKEN_THEFT_DETECTED) {
+                // Session hijacking attempted. You should revoke the session
+                // using Session.revokeSession fucntion and send a 401
+            } else if (err.type === Session.Error.INVALID_CLAIMS) {
+                // The user is missing some required claim. 
+                // You can pass the missing claims to the frontend and handle it there
+            }
+        }
+        throw err;
+    }
+    if (session !== undefined) {
+        // we can use the `session` container as we usually do..
+        // TODO: API logic...
+
+        // At the end of the API logic, we must fetch all the tokens from the session container
+        // and set them in the response headers / cookies ourselves.
+        const tokens = session.getAllSessionTokensDangerously();
+        if (tokens.accessAndFrontTokenUpdated) {
+            // TODO: set access token in response via tokens.accessToken
+            // TODO: set front-token in response via tokens.frontToken
+            if (tokens.antiCsrfToken) {
+                // TODO: set anti-csrf token update in response via tokens.antiCsrfToken
+            }
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	defaultErrors "errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
+
+func VerifySession(accessToken string, antiCsrfToken *string, options *sessmodels.VerifySessionOptions) error {
+	session, err := session.GetSessionWithoutRequestResponse(accessToken, antiCsrfToken, options)
+	if err != nil {
+		if defaultErrors.As(err, &errors.TryRefreshTokenError{}) {
+			// This means that the session exists, but the access token
+			// has expired.
+
+			// You can handle this in a custom way by sending a 401.
+			// Or you can call the errorHandler middleware as shown below
+		} else if defaultErrors.As(err, &errors.UnauthorizedError{}) {
+			// This means that the session does not exist anymore.
+
+			// You can handle this in a custom way by sending a 401.
+			// Or you can call the errorHandler middleware as shown below
+		} else if defaultErrors.As(err, &errors.TokenTheftDetectedError{}) {
+			// Session hijacking attempted. You should revoke the session
+			// using Session.revokeSession fucntion and send a 401
+		} else if defaultErrors.As(err, &errors.InvalidClaimError{}) {
+			// The user is missing some required claim.
+			// You can pass the missing claims to the frontend and handle it there
+		} else {
+			// TODO: send a 500 error to the frontend
+		}
+		return err
+	}
+	if session != nil {
+		// we can use the `session` container as we usually do..
+		// TODO: API logic...
+
+		// At the end of the API logic, we must fetch all the tokens from the session container
+		// and set them in the response headers / cookies ourselves.
+		tokens := session.GetAllSessionTokensDangerously()
+		if tokens.AccessAndFrontendTokenUpdated {
+			// TODO: set access token in response via tokens.accessToken
+			// TODO: set front-token in response via tokens.frontToken
+			if tokens.AntiCsrfToken != nil {
+				// TODO: set anti-csrf token update in response via *tokens.AntiCsrfToken
+			}
+		}
+	}
+	return nil
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from typing import Any, Callable, Dict, TypeVar, List, Optional
+
+from supertokens_python.recipe.session.syncio import get_session_without_request_response
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.interfaces import SessionClaimValidator
+from supertokens_python.types import MaybeAwaitable
+from supertokens_python.recipe.session.exceptions import (
+    TokenTheftError,
+    UnauthorisedError,
+    InvalidClaimsError,
+    TryRefreshTokenError
+)
+
+_T = TypeVar("_T", bound=Callable[..., Any])
+
+
+def verify_session(
+    access_token: str,
+    anti_csrf_token: Optional[str],
+    anti_csrf_check: Optional[bool],
+    session_required: Optional[bool],
+    check_database: Optional[bool],
+    override_global_claim_validators: Optional[
+        Callable[
+            [List[SessionClaimValidator], SessionContainer, Dict[str, Any]],
+            MaybeAwaitable[List[SessionClaimValidator]],
+        ]
+    ] = None,
+):
+    try:
+        session = get_session_without_request_response(access_token,
+                                                       anti_csrf_token,
+                                                       anti_csrf_check,
+                                                       session_required,
+                                                       check_database,
+                                                       override_global_claim_validators)
+    except Exception as e:
+        if isinstance(e, TryRefreshTokenError):
+            # This means that the session exists, but the access token
+            # has expired.
+
+            # You can handle this in a custom way by sending a 401.
+            # Or you can call the errorHandler middleware as shown below
+            pass
+        if isinstance(e, UnauthorisedError):
+            # This means that the session does not exist anymore.
+
+            # You can handle this in a custom way by sending a 401.
+            # Or you can call the errorHandler middleware as shown below
+            pass
+        if isinstance(e, TokenTheftError):
+            # Session hijacking attempted. You should revoke the session
+            # using Session.revokeSession fucntion and send a 401
+            pass
+        if isinstance(e, InvalidClaimsError):
+            # The user is missing some required claim.
+            # You can pass the missing claims to the frontend and handle it there
+            pass
+
+        # OR you can raise this error which will
+        # handle all of the above errors in the default way
+        raise e
+
+    if session is not None:
+        # we can use the `session` container as we usually do..
+        # TODO: API logic...
+
+        # At the end of the API logic, we must fetch all the tokens from the session container
+        # and set them in the response headers / cookies ourselves.
+        tokens = session.get_all_session_tokens_dangerously()
+        if tokens["accessAndFrontTokenUpdated"]:
+            # TODO: set access token in response via tokens["accessToken"]
+            # TODO: set front-token in response via tokens["frontToken"]
+            if tokens["antiCsrfToken"] is not None:
+                # TODO: set anti-csrf token update in response via tokens["antiCsrfToken"]
+                pass
+```
+
+</TabItem>
+</BackendSDKTabs>

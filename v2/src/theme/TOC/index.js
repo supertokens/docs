@@ -148,7 +148,7 @@ function TOC({ toc, showUISwitcher }) {
             fontWeight: "500",
             fontSize: 16,
           }}>
-          Which frontend SDK do you use?
+          Which UI do you use?
         </span>
         <div
           onClick={() => {
@@ -182,7 +182,7 @@ function TOC({ toc, showUISwitcher }) {
               marginBottom: 6,
               maxWidth: "calc(100% - 24px)",
             }}>
-            supertokens-web-js / mobile
+            Custom UI
           </span>
         </div>
         <div
@@ -216,7 +216,7 @@ function TOC({ toc, showUISwitcher }) {
               marginBottom: 6,
               maxWidth: "calc(100% - 24px)",
             }}>
-            supertokens-auth-react
+            Pre built UI
           </span>
         </div>
       </div>

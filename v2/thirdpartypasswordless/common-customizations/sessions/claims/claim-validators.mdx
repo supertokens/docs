@@ -176,7 +176,7 @@ function validateSessionClaims(accessToken, claimValidators[]) {
     // Step 1: refetch claims if required
     foreach validator in claimValidators {
         if (validator.shouldRefetch(payload)) {
-            claimValue = validator.claim.fetchValue(accessToken.userId)
+            claimValue = validator.claim.fetchValue(accessToken.sub)
             payload = validator.claim.addToPayload_internal(payload, claimValue) 
         }
     }
@@ -285,6 +285,12 @@ And once again, just like in the backend, the frontend too exposes several helpe
 
 ## How to add or modify a claim in a session?
 
+:::note
+There are "protected" claims, reserved for standard or supertokens specific use-cases. Trying to overwrite them in `createNewSession` or using `mergeIntoAccessTokenPayload` will result in errors.
+
+They are: `sub`, `iat`, `exp`, `sessionHandle`, `refreshTokenHash1`, `parentRefreshTokenHash1`, `antiCsrfToken`
+:::
+
 Once you have made your own session claim object, you need to add it to a session. There are two ways in which you can add them:
 - During session creation
 - Updating the session to add a claim after session creation
@@ -351,8 +357,6 @@ SuperTokens.init({
 
 ```go
 import (
-	"net/http"
-
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
@@ -369,7 +373,7 @@ func main() {
 						originalCreateNewSession := *originalImplementation.CreateNewSession
 
 						// Now we override the CreateNewSession function
-						(*originalImplementation.CreateNewSession) = func(req *http.Request, res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 
 							if accessTokenPayload == nil {
 								accessTokenPayload = map[string]interface{}{}
@@ -381,7 +385,7 @@ func main() {
 							if err != nil {
 								return nil, err
 							}
-                            // highlight-end
+							// highlight-end
 
 							/*
 							   At this step, the access token paylaod looks like this:
@@ -393,7 +397,7 @@ func main() {
 							   }
 							*/
 
-							return originalCreateNewSession(req, res, userID, accessTokenPayload, sessionData, userContext)
+							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
 						}
 
 						return originalImplementation
@@ -412,15 +416,17 @@ from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import session
 from supertokens_python.recipe.session.interfaces import RecipeInterface
 from supertokens_python.recipe.userroles import UserRoleClaim
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 
 
 def override_functions(original_implementation: RecipeInterface):
     original_implementation_create_new_session = original_implementation.create_new_session
 
-    async def create_new_session(request: Any, user_id: str,
-                                 access_token_payload: Union[None, Dict[str, Any]],
-                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+    async def create_new_session(user_id: str,
+                                 access_token_payload: Optional[Dict[str, Any]],
+                                 session_data_in_database: Optional[Dict[str, Any]],
+                                 disable_anti_csrf: Optional[bool],
+                                 user_context: Dict[str, Any]):
         if access_token_payload is None:
             access_token_payload = {}
 
@@ -438,7 +444,7 @@ def override_functions(original_implementation: RecipeInterface):
         #    }
         # }
 
-        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+        return await original_implementation_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
@@ -810,8 +816,8 @@ Now whenever you wrap your component with the `<SessionAuth>` wrapper, SuperToke
 <TabItem value="angular">
 
 ```tsx
-import SuperTokens from "supertokens-web-js";
-import Session, { BooleanClaim } from 'supertokens-web-js/recipe/session';
+import SuperTokens from "supertokens-auth-react";
+import Session, { BooleanClaim } from 'supertokens-auth-react/recipe/session';
 
 const SecondFactorClaim = new BooleanClaim({
       id: "2fa-completed",
@@ -824,6 +830,7 @@ SuperTokens.init({
       appInfo: {
             apiDomain: "...",
             appName: "...",
+            websiteDomain: "..."
       },
       recipeList: [
             //...
@@ -847,7 +854,7 @@ SuperTokens.init({
 Now you can protect your frontend routes by using the `Session.validateClaims` function as shown below:
 
 ```tsx
-import Session, { BooleanClaim } from "supertokens-web-js/recipe/session";
+import Session, { BooleanClaim } from "supertokens-auth-react/recipe/session";
 
 const SecondFactorClaim = new BooleanClaim({
     id: "2fa-completed",
@@ -2191,7 +2198,7 @@ function ProtectedComponent() {
         return null;
     }
     let roles = claimValue.value;
-    if (roles !== undefined && roles.includes("admin")) {
+    if (Array.isArray(roles) && roles.includes("admin")) {
         // User is an admin
     } else {
         // User doesn't have any roles, or is not an admin..
@@ -2213,8 +2220,8 @@ Unlike using the `overrideGlobalClaimValidators` prop, the `useClaimValue` funct
 <!-- 5 -->
 
 ```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { UserRoleClaim, /*PermissionClaim*/ } from "supertokens-web-js/recipe/userroles";
+import Session from "supertokens-auth-react/recipe/session";
+import { UserRoleClaim, /*PermissionClaim*/ } from "supertokens-auth-react/recipe/userroles";
 
 async function shouldLoadRoute(): Promise<boolean> {
     if (await Session.doesSessionExist()) {
@@ -2257,14 +2264,14 @@ async function shouldLoadRoute(): Promise<boolean> {
 If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
 
 ```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { UserRoleClaim } from "supertokens-web-js/recipe/userroles";
+import Session from "supertokens-auth-react/recipe/session";
+import { UserRoleClaim } from "supertokens-auth-react/recipe/userroles";
 
 async function shouldLoadRoute(): Promise<boolean> {
     if (await Session.doesSessionExist()) {
         // highlight-start
         let roles = await Session.getClaimValue({claim: UserRoleClaim});
-        if (roles !== undefined && roles.includes("admin")) {
+        if (Array.isArray(roles) && roles.includes("admin")) {
             // User is an admin
             return true;
         }

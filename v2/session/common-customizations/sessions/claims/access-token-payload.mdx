@@ -24,6 +24,12 @@ import FrontendReactContextSubTabs from "/src/components/tabs/FrontendReactConte
 
 ## Add custom claims to the access token payload
 
+:::important
+There are "protected" claims, reserved for standard or supertokens specific use-cases. Trying to overwrite them in `createNewSession` or using `mergeIntoAccessTokenPayload` will result in errors.
+
+They are: `sub`, `iat`, `exp`, `sessionHandle`, `refreshTokenHash1`, `parentRefreshTokenHash1`, `antiCsrfToken`
+:::
+
 There are two ways to add custom claims to the access token payload:
 - During session creation
 - Post session creation
@@ -79,8 +85,6 @@ SuperTokens.init({
 
 ```go
 import (
-	"net/http"
-
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
@@ -97,7 +101,7 @@ func main() {
 						originalCreateNewSession := *originalImplementation.CreateNewSession
 
 						// Now we override the CreateNewSession function
-						(*originalImplementation.CreateNewSession) = func(req *http.Request, res http.ResponseWriter, userID string, accessTokenPayload, sessionData map[string]interface{}, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 
 							// This goes in the access token, and is availble to read on the frontend.
 							if accessTokenPayload == nil {
@@ -105,7 +109,7 @@ func main() {
 							}
 							accessTokenPayload["someKey"] = "someValue"
 
-							return originalCreateNewSession(req, res, userID, accessTokenPayload, sessionData, userContext)
+							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
 						}
 
 						return originalImplementation
@@ -124,29 +128,34 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import session
 from supertokens_python.recipe.session.interfaces import RecipeInterface
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
+
 
 def override_functions(original_implementation: RecipeInterface):
     original_implementation_create_new_session = original_implementation.create_new_session
 
-    async def create_new_session(request: Any, user_id: str,
-                                 access_token_payload: Union[None, Dict[str, Any]],
-                                 session_data: Union[None, Dict[str, Any]], user_context: Dict[str, Any]):
+    async def create_new_session(user_id: str,
+                                 access_token_payload: Optional[Dict[str, Any]],
+                                 session_data_in_database: Optional[Dict[str, Any]],
+                                 disable_anti_csrf: Optional[bool],
+                                 user_context: Dict[str, Any]):
         if access_token_payload is None:
             access_token_payload = {}
 
         # This goes in the access token, and is availble to read on the frontend.
         access_token_payload["someKey"] = 'someValue'
 
-        return await original_implementation_create_new_session(request, user_id, access_token_payload, session_data, user_context)
+        return await original_implementation_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
 
+
 init(
-    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    
-    framework='...', # type: ignore
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+
+    framework='...',  # type: ignore
     recipe_list=[
         session.init(
             # highlight-start
@@ -889,7 +898,7 @@ async function someFunc() {
             if (currSessionInfo === undefined) {
                   return;
             }
-            let accessTokenPayload = currSessionInfo.accessTokenPayload;
+            let accessTokenPayload = currSessionInfo.customClaimsInAccessTokenPayload;
             let customClaimValue = accessTokenPayload.customClaim;
             // highlight-end
       })
@@ -922,7 +931,7 @@ func main() {
 		}
 
 		// highlight-start
-		accessTokenPayload := sessionInfo.AccessTokenPayload
+		accessTokenPayload := sessionInfo.CustomClaimsInAccessTokenPayload
         currClaimValue := accessTokenPayload["currClaim"]
         // highlight-end
 
@@ -951,7 +960,7 @@ async def some_func():
             continue
 
         # highlight-start
-        current_access_token_payload = session_information.access_token_payload
+        current_access_token_payload = session_information.custom_claims_in_access_token_payload
         custom_claim_value = current_access_token_payload["customClaim"]
         # highlight-end
         
@@ -973,7 +982,7 @@ for handle in session_handles:
         continue
 
     # highlight-start
-    current_access_token_payload = session_information.access_token_payload
+    current_access_token_payload = session_information.custom_claims_in_access_token_payload
     custom_claim_value = current_access_token_payload["customClaim"]
     # highlight-end
     
@@ -1050,7 +1059,7 @@ async function someFunc() {
 <TabItem value="angular">
 
 ```tsx
-import Session from 'supertokens-web-js/recipe/session';
+import Session from 'supertokens-auth-react/recipe/session';
 
 async function someFunc() {
       if (await Session.doesSessionExist()) {

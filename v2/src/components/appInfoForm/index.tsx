@@ -522,7 +522,8 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                             display: "flex",
                             alignItems: "center",
                             cursor: "pointer",
-                            width: "fit-content"
+                            width: "fit-content",
+                            color: "white",
                         }}>
                             <input
                                 name="nextjs-api-route"
