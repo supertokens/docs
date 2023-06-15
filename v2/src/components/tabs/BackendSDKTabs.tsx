@@ -19,7 +19,7 @@ export default function BackendSDKTabs(props: any) {
     if (props.enableCurl) {
         values.push({ label: 'cURL', value: 'curl' });
     }
-    if (!props.disableOtherFrameworks) {
+    if (!props.disableOtherFrameworks && !props.enableCurl) {
         values.push({ label: 'Other Frameworks', value: 'otherFrameworks' });
     }
 
