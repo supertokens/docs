@@ -145,8 +145,8 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
             groupId="curl-single-tenant"
             defaultValue={"single-tenant"}
             values={[
-                { label: 'Single tenant setup', value: 'single-tenant' },
-                { label: 'Multi tenant / app setup', value: 'multi-tenant' },
+                { label: this.props.showTenantId !== false ? 'Single tenant / app setup' : 'Single app setup', value: 'single-tenant' },
+                { label: this.props.showTenantId !== false ? 'Multi tenant / app setup' : 'Multi app setup', value: 'multi-tenant' },
             ]}>
             <TabItem value="single-tenant" mdxType="TabItem">
                 {singleTenant}
