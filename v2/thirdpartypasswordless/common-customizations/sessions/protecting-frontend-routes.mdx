@@ -149,19 +149,31 @@ This can be done using our session claims validator feature. Let's take an examp
 
 ```tsx
 import React from "react";
-import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session';
+import { SessionAuth } from 'supertokens-auth-react/recipe/session';
+import { AccessDeniedScreen } from 'supertokens-auth-react/recipe/session/prebuiltui';
 import { UserRoleClaim, /*PermissionClaim*/ } from 'supertokens-auth-react/recipe/userroles';
 
 const AdminRoute = (props: React.PropsWithChildren<any>) => {
     return (
-        <SessionAuth
-            overrideGlobalClaimValidators={(globalValidators) =>
-                [...globalValidators,
-                UserRoleClaim.validators.includes("admin"),
-                    /* PermissionClaim.validators.includes("modify") */
-                ]
+        <SessionAuth 
+            accessDeniedScreen={
+                /*
+                    We use the built-in screen, but this could be a fully custom component
+                */
+                AccessDeniedScreen
             }
-        >
+            overrideGlobalClaimValidators={(globalValidators) => [
+                ...globalValidators,
+                {
+                    ...UserRoleClaim.validators.includes("admin"),
+                    // If this callback returns a url, the user will be redirected there on failure.
+                    onFailureRedirection: () => "/not-an-admin",
+                    // If this is false, SessionAuth will not show an access denied screen even if this validator fails
+                    // It may still show up if other validators are failing and none required a redirection.
+                    showAccessDeniedOnFailure: true,
+                }
+            ]
+        }>
             {props.children}
         </SessionAuth>
     );
@@ -171,48 +183,10 @@ const AdminRoute = (props: React.PropsWithChildren<any>) => {
 Above we are creating a generic component called `AdminRoute` which enforces that its child components can only be rendered if the user has the admin role.
 
 In the `AdminRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. We also add the `UserRoleClaim` validator to the `<SessionAuth>` component which checks if the validators pass or not. If all validation passes, we render the `props.children` component. If the a claim validation has failed we can:
-1. Show an access-denied screen. This can be enabled by passing a component as the `accessDeniedScreen={AccessDeniedScreen}` prop to `SessionAuth`. You can override this screen by adding an override for `SessionAccessDenied_Override` or passing a fully custom component.
-2. Redirect the user to a specific page by adding an `onFailureRedirection`
-Both of these options are showcased in this combined example:
+1. Show an access-denied screen. This can be enabled by passing a component as the `accessDeniedScreen={AccessDeniedScreen}` prop to `SessionAuth`. We provide a built-in component you can use as a default, but you can use a fully custom component as well.
+2. Redirect the user to a specific page by adding `onFailureRedirection`. Claims requiring redirection take priority over showing the access denied screen.
+Both of these options are showcased in the combined example above.
 
-```tsx
-import React from "react";
-import { SessionAuth, SessionComponentsOverrideProvider, useSessionContext } from 'supertokens-auth-react/recipe/session';
-import { AccessDeniedScreen } from 'supertokens-auth-react/recipe/session/prebuiltui';
-import { UserRoleClaim, /*PermissionClaim*/ } from 'supertokens-auth-react/recipe/userroles';
-
-const AdminRoute = (props: React.PropsWithChildren<any>) => {
-    return (
-        <SessionComponentsOverrideProvider 
-            components={{
-                SessionAccessDenied_Override: () => <h1>My Custom Access Denied Screen!</h1>
-        }}>
-            <SessionAuth 
-                accessDeniedScreen={
-                    /*
-                        We use the built-in screen, but this could be a fully custom component
-                    */
-                    AccessDeniedScreen
-                }
-                overrideGlobalClaimValidators={(globalValidators) => [
-                    ...globalValidators,
-                    {
-                        ...UserRoleClaim.validators.includes("admin"),
-                        // If this callback returns a url, the user will be redirected there on failure.
-                        onFailureRedirection: () => "/not-an-admin",
-                        // If this is false, SessionAuth will not show an access denied screen even if this validator fails
-                        // It may still show up if other validators are failing.
-                        showAccessDeniedOnFailure: true,
-                    }
-                ]
-            }>
-                {props.children}
-            </SessionAuth>
-        </SessionComponentsOverrideProvider>
-    );
-}
-
-```
 :::note
 You can extend the `AdminRoute` component to check for other types of validators as well. This component can then be reused to protect all of your app's components (In this case, you may want to rename this component to something more appropriate, like `ProtectedRoute`).
 :::
