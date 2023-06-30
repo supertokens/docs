@@ -31,8 +31,8 @@ const recipeTabsData: RecipeCardInfo[] = [
     {
         imageSrc: "/img/recipe-tabs/recipe-passwordless-social.png",
         url: "/docs/thirdpartypasswordless/introduction",
-        linkTitle: "Passwordless + Social Login",
-        cardBody: "Add passwordless + social login with sessions to your app",
+        linkTitle: "Passwordless with Social / Enterprise Login",
+        cardBody: "Add passwordless and social / enterprise login with sessions to your app",
         className: "cardEmailPasswordSocial",
         antcsInfo: {
             option_selected: "Passwordless+Sociallogin"
@@ -41,8 +41,8 @@ const recipeTabsData: RecipeCardInfo[] = [
     {
         imageSrc: "/img/recipe-tabs/recipe-email-social.png",
         url: "/docs/thirdpartyemailpassword/introduction",
-        linkTitle: "Email password + Social Login",
-        cardBody: "Add email password + social login with sessions to your app",
+        linkTitle: "Email password with Social / Enterprise Login",
+        cardBody: "Add email password with social / enterprise login with sessions to your app",
         className: "cardEmailPasswordSocial",
         antcsInfo: {
             option_selected: "Emailpassword+Sociallogin"
@@ -61,8 +61,8 @@ const recipeTabsData: RecipeCardInfo[] = [
     {
         imageSrc: "/img/recipe-tabs/recipe-social.png",
         url: "/docs/thirdparty/introduction",
-        linkTitle: "Only Social login",
-        cardBody: "Add popular social providers or custom OAuth 2.0 providers with sessions to your app",
+        linkTitle: "Social / Enterprise login",
+        cardBody: "Add social / enterprise identity providers or custom OAuth 2.0 / SAML providers with sessions to your app",
         className: "cardSocial",
         antcsInfo: {
             option_selected: "OnlySocialLogin"
