@@ -467,24 +467,15 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
 
     if (!isVerified) {
         // Now we create and send the email verification link to the user for the new email.
-        let tokenInfo = await EmailVerification.createEmailVerificationToken(session.getUserId(), email);
+        await EmailVerification.sendEmailVerificationEmail({
+            user: {
+                id: session.getUserId(),
+                email: email,
+            },
+        });
 
-        if (tokenInfo.status === "OK") {
-            let link = "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token=" + tokenInfo.token;
-
-            await EmailVerification.sendEmail({
-                emailVerifyLink: link,
-                type: "EMAIL_VERIFICATION",
-                user: {
-                    id: session.getUserId(),
-                    email: email,
-                },
-            });
-            // TODO: send successful response that verification email has been sent
-            return
-        }
-        // else case is that the email is already verified (which can happen cause
-        // of some race condition). So we continue below..
+        // TODO send successful response that email verification email sent.
+        return 
     }
 
     // Since the email is verified, we try and do an update
@@ -606,30 +597,20 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	if !isVerified {
 		// Now we create and send the email verification link to the user for the new email.
-		tokenInfo, err := emailverification.CreateEmailVerificationToken(userId, &requestBody.email)
-		if err != nil {
-			// TODO: handle error
-		}
+        err := emailverification.SendEmailVerificationEmail(emaildelivery.EmailType{
+            EmailVerification: &emaildelivery.EmailVerificationType{
+                User: emaildelivery.User{
+                    ID:    userId,
+                    Email: requestBody.email,
+                },
+            },
+        })
 
-		if tokenInfo.OK != nil {
-			link := "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token=" + tokenInfo.OK.Token
+        if err != nil {
+            // TODO: handle error
+        }
 
-			err := emailverification.SendEmail(emaildelivery.EmailType{
-				EmailVerification: &emaildelivery.EmailVerificationType{
-					User: emaildelivery.User{
-						ID:    userId,
-						Email: requestBody.email,
-					},
-					EmailVerifyLink: link,
-				},
-			})
-
-			if err != nil {
-				// TODO: handle error
-			}
-		}
-		// else case is that the email is already verified (which can happen cause
-		// of some race condition). So we continue below..
+        return
 	}
 
 	// Since the email is verified, we try and do an update
@@ -742,16 +723,10 @@ def change_email():
     
     if not is_verified:
         # Create and send the email verification link to the user for the new email.
-        token_info = create_email_verification_token(user_id, request_body["email"])
+        send_email_verification_email(user_id, requesy_body["email"])
         
-        if isinstance(token_info, CreateEmailVerificationTokenOkResult):
-            link = "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token={token_info.token}"
-            
-            send_email(EmailTemplateVars(VerificationEmailTemplateVarsUser(user_id=user_id, email=request_body["email"]), link, {}), None)
-            
-            # TODO send successful email verification response
-            return
-    # else case is that the email is already verified (which can happen cause of some race condition). So we continue below..
+        # TODO send successful email verification response
+        return
     
     # update the users email
     update_response = update_passwordless_user(user_id, email=request_body["email"])
@@ -786,6 +761,12 @@ async def is_valid_email(value: str) -> bool:
 </BackendSDKTabs>
 
 </AppInfoForm>
+
+:::info Multi tenancy
+For multi tenancy use case, when calling the `sendEmailVerificationEmail` function, you can also pass in the user's `tenantId`. This will result in the email going to the right website domain that belongs to that `tenantId`.
+
+You can get the user's tenantId from the `session` object using the `session.getTenantId()` function.
+:::
 
 
 ### Step 3: Override the `verifyEmailPost` API to update the user's account on successful email verification
