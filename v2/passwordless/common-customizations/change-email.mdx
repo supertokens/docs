@@ -8,6 +8,7 @@ import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import BackendSDKCasing from "/src/components/BackendSDKCasing"
 import AppInfoForm from "/src/components/appInfoForm"
 import TabItem from '@theme/TabItem';
+import CustomAdmonition from "/src/components/customAdmonition"
 
 # Allow users to change their email 
 
@@ -249,13 +250,13 @@ def change_email():
     request_body = request.get_json()
 
     # validate the input email
-    if not is_valid_email(request_body["email"]): # type: ignore
+    if not is_valid_email(request_body["email"]):
         # TODO: handle invalid email error
         return
 
     # update the users email
     user_id = session.get_user_id()
-    update_response = update_user(user_id, email=request_body["email"]) # type: ignore
+    update_response = update_user(user_id, email=request_body["email"])
 
     if isinstance(update_response, UpdateUserOkResult):
         # TODO send successful email update response
@@ -415,25 +416,15 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
 
     if (!isVerified) {
         // Now we create and send the email verification link to the user for the new email.
-        let tokenInfo = await EmailVerification.createEmailVerificationToken(session.getUserId(), email);
+        await EmailVerification.sendEmailVerificationEmail({
+            user: {
+                id: session.getUserId(),
+                email: email,
+            },
+        });
 
-        if (tokenInfo.status === "OK") {
-            let link = "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token=" + tokenInfo.token;
-
-            await EmailVerification.sendEmail({
-                emailVerifyLink: link,
-                type: "EMAIL_VERIFICATION",
-                user: {
-                    id: session.getUserId(),
-                    email: email,
-                },
-            });
-
-            // TODO send successful response that email verification email sent.
-            return 
-        }
-        // else case is that the email is already verified (which can happen cause
-        // of some race condition). So we continue below..
+        // TODO send successful response that email verification email sent.
+        return 
     }
 
     // Since the email is verified, we try and do an update
@@ -542,30 +533,20 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	if !isVerified {
 		// Now we create and send the email verification link to the user for the new email.
-		tokenInfo, err := emailverification.CreateEmailVerificationToken(userId, &requestBody.email)
-		if err != nil {
-			// TODO: handle error
-		}
+        err := emailverification.SendEmailVerificationEmail(emaildelivery.EmailType{
+            EmailVerification: &emaildelivery.EmailVerificationType{
+                User: emaildelivery.User{
+                    ID:    userId,
+                    Email: requestBody.email,
+                },
+            },
+        })
 
-		if tokenInfo.OK != nil {
-			link := "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token=" + tokenInfo.OK.Token
+        if err != nil {
+            // TODO: handle error
+        }
 
-			err := emailverification.SendEmail(emaildelivery.EmailType{
-				EmailVerification: &emaildelivery.EmailVerificationType{
-					User: emaildelivery.User{
-						ID:    userId,
-						Email: requestBody.email,
-					},
-					EmailVerifyLink: link,
-				},
-			})
-
-			if err != nil {
-				// TODO: handle error
-			}
-		}
-		// else case is that the email is already verified (which can happen cause
-		// of some race condition). So we continue below..
+        return
 	}
 
 	// Since the email is verified, we try and do an update
@@ -647,14 +628,14 @@ def change_email():
     request_body = request.get_json()
 
     # validate the input email
-    if not is_valid_email(request_body["email"]): # type: ignore
+    if not is_valid_email(request_body["email"]):
         # TODO: handle invalid email error
         return
 
     # Check if the new email is already associated with another user.
     # If it is, then we throw an error. If it's already associated with this user,
     # then we return a success response with an appropriate message.
-    existing_user = get_user_by_email(request_body["email"]) # type: ignore
+    existing_user = get_user_by_email(request_body["email"])
     user_id = session.get_user_id()
     if existing_user is not None:
         if existing_user.user_id != session.get_user_id():
@@ -667,23 +648,17 @@ def change_email():
     # Then, we check if the email is verified for this user ID or not.
     # It is important to understand that SuperTokens stores email verification
     # status based on the user ID AND the email, and not just the email.
-    is_verified = is_email_verified(user_id, request_body["email"]) # type: ignore
+    is_verified = is_email_verified(user_id, request_body["email"])
     
     if not is_verified:
         # Create and send the email verification link to the user for the new email.
-        token_info = create_email_verification_token(user_id, request_body["email"]) # type: ignore
+        send_email_verification_email(user_id, requesy_body["email"])
         
-        if isinstance(token_info, CreateEmailVerificationTokenOkResult):
-            link = "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token={token_info.token}"
-            
-            send_email(EmailTemplateVars(VerificationEmailTemplateVarsUser(user_id=user_id, email=request_body["email"]), link, {}), None) # type: ignore
-            
-            # TODO send successful email verification response
-            return
-    # else case is that the email is already verified (which can happen cause of some race condition). So we continue below..
+        # TODO send successful email verification response
+        return
     
     # update the users email
-    update_response = update_user(user_id, email=request_body["email"]) # type: ignore
+    update_response = update_user(user_id, email=request_body["email"])
 
     if isinstance(update_response, UpdateUserOkResult):
         # TODO send successful email update response
@@ -714,6 +689,14 @@ async def is_valid_email(value: str) -> bool:
 </TabItem>
 </BackendSDKTabs>
 </AppInfoForm>
+
+<CustomAdmonition type="multi-tenancy">
+
+For multi tenancy use case, when calling the `sendEmailVerificationEmail` function, you can also pass in the user's `tenantId`. This will result in the email going to the right website domain that belongs to that `tenantId`.
+
+You can get the user's tenantId from the `session` object using the `session.getTenantId()` function.
+
+</CustomAdmonition>
 
 
 ### Step 3: Override the `verifyEmailPost` API to update the user's account on successful email verification
