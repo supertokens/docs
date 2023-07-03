@@ -2,7 +2,8 @@ import React, { PropsWithChildren } from "react";
 
 const allowedTypes: { [key: string]: string } = {
     "multi-tenancy": "Multi Tenancy",
-    "paid-feature": "Paid Feature"
+    "paid-feature": "Paid Feature",
+    "info": "Info"
 }
 
 export default function CustomAdmonition(props: PropsWithChildren<{
