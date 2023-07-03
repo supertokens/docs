@@ -401,9 +401,22 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     // Then, we check if the email is verified for this user ID or not.
     // It is important to understand that SuperTokens stores email verification
     // status based on the user ID AND the email, and not just the email.
-    let isVerified = await EmailVerification.isEmailVerified(session.getUserId(), email);
+    let isVerified = await EmailVerification.isEmailVerifie(session.getUserId(), email);
 
     if (!isVerified) {
+        // Before sending a verification email, we check if the email is already
+        // being used by another user. If it is, we throw an error.
+        let user = (await EmailPassword.getUserById(session.getUserId()))!;
+        for (let i = 0; i < user?.tenantIds.length; i++) {
+            // Since once user can be shared across many tenants, we need to check if
+            // the email already exists in any of the tenants.
+            let userWithEmail = await EmailPassword.getUserByEmail(email, user.tenantIds[i]);
+            if (userWithEmail?.id !== session.getUserId()) {
+                // TODO handle error, email already exists with another user.
+                return
+            }
+        }
+        
         // Now we create and send the email verification link to the user for the new email.
         await EmailVerification.sendEmailVerificationEmail({
             user: {

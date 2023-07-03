@@ -451,6 +451,21 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     let isVerified = await EmailVerification.isEmailVerified(session.getUserId(), email);
 
     if (!isVerified) {
+        // Before sending a verification email, we check if the email is already
+        // being used by another user. If it is, we throw an error.
+        let user = (await ThirdPartyPasswordless.getUserById(session.getUserId()))!;
+        for (let i = 0; i < user?.tenantIds.length; i++) {
+            // Since once user can be shared across many tenants, we need to check if
+            // the email already exists in any of the tenants.
+            let usersWithEmail = await ThirdPartyPasswordless.getUsersByEmail(email, user.tenantIds[i]);
+            for (let y = 0; y < usersWithEmail.length; y++) {
+                if (usersWithEmail[y].id !== session.getUserId()) {
+                    // TODO handle error, email already exists with another user.
+                    return
+                }
+            }
+        }
+        
         // Now we create and send the email verification link to the user for the new email.
         await EmailVerification.sendEmailVerificationEmail({
             user: {
