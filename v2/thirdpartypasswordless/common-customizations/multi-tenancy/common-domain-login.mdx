@@ -630,7 +630,7 @@ On the frontend, we want to check if the tenant has access to the current sub do
 
 ```tsx
 import React from "react";
-import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session';
+import { SessionAuth, getClaimValue } from 'supertokens-auth-react/recipe/session';
 import { AllowedDomainsClaim } from 'supertokens-auth-react/recipe/multitenancy';
 
 const ProtectedRoute = (props: React.PropsWithChildren<any>) => {
@@ -638,31 +638,24 @@ const ProtectedRoute = (props: React.PropsWithChildren<any>) => {
         <SessionAuth
             overrideGlobalClaimValidators={(globalValidators) =>
                 [...globalValidators,
-                    AllowedDomainsClaim.validators.hasAccessToCurrentDomain()
+                {
+                    ...AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
+                    onFailureRedirection: async () => {
+                        let claimValue: string[] | undefined = await getClaimValue({
+                            claim: AllowedDomainsClaim
+                        });
+                        return "https://" + claimValue![0];
+                    }
+                }
                 ]
             }
         >
-            <InvalidClaimHandler>
-                {props.children}
-            </InvalidClaimHandler>
+            {props.children}
         </SessionAuth>
     );
 }
-
-function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
-    let sessionContext = useSessionContext();
-    if (sessionContext.loading) {
-        return null;
-    }
-
-    if (sessionContext.invalidClaims.some(i => i.validatorId === AllowedDomainsClaim.id)) {
-        return <div>You cannot access this page.</div>
-    }
-
-    return <div>{props.children}</div>;
-}
 ```
-Above we are creating a generic component called `ProtectedRoute` which enforces that its child components can only be rendered if the user is on the right sub domain based on the Multi tenancy claim.
+Above we are creating a generic component called `ProtectedRoute` which enforces that its child components can only be rendered if the user is on the right sub domain based on the Multi tenancy claim. In case the claim validation fails, we redirect the user to their right sub domain based on that's configured by you on the backend (via the `AllowedDomainsClaim` session claim).
 
 </TabItem>
 
