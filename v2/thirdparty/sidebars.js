@@ -536,7 +536,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "SuperTokens Core customizations",
+          label: "SuperTokens core settings",
           items: [
             "common-customizations/core/api-keys",
             "common-customizations/core/ip-allow-deny",
