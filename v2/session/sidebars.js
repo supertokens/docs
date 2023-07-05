@@ -223,7 +223,7 @@ module.exports = {
         },
         {
           type: 'category',
-          label: 'Actions, Hooks and Custom API responses',
+          label: 'Backend and frontend overrides (actions, hooks and UI customisation)',
           items: [
             "advanced-customizations/overview",
             "advanced-customizations/user-context/custom-request-properties",
