@@ -4,6 +4,7 @@ module.exports = {
     "architecture",
     "new-tenant",
     "new-app",
+    "users-and-tenants",
     "recipe-selection"
   ]
 };
