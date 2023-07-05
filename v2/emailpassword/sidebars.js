@@ -343,7 +343,7 @@ module.exports = {
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling",
-
+            "common-customizations/sessions/disable-interception"
           ]
         },
       ]
