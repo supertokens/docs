@@ -205,10 +205,10 @@ export default class CoreInjector extends React.PureComponent<PropsWithChildren<
         if (this.isUnmounting) {
             return undefined;
         }
-        if (app.length > 0 && app[0].devDeployment.connectionInfo !== undefined) {
+        if (app !== undefined) {
             return {
-                uri: app[0].devDeployment.connectionInfo.host,
-                key: app[0].devDeployment.connectionInfo.apiKeys[0],
+                uri: app.host,
+                key: app.apiKeys[0],
             }
         }
         return undefined;
