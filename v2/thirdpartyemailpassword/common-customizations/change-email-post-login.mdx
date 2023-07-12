@@ -454,7 +454,7 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         for (let i = 0; i < user?.tenantIds.length; i++) {
             // Since once user can be shared across many tenants, we need to check if
             // the email already exists in any of the tenants.
-            let usersWithEmail = await ThirdPartyEmailPassword.getUsersByEmail(email, user.tenantIds[i]);
+            let usersWithEmail = await ThirdPartyEmailPassword.getUsersByEmail(user.tenantIds[i], email);
             for (let y = 0; y < usersWithEmail.length; y++) {
                 if (usersWithEmail[y].id !== session.getUserId()) {
                     // TODO handle error, email already exists with another user.
@@ -464,7 +464,7 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         }
 
         // Now we create and send the email verification link to the user for the new email.
-        await EmailVerification.sendEmailVerificationEmail(session.getUserId(), email);
+        await EmailVerification.sendEmailVerificationEmail(session.getTenantId(), session.getUserId(), email);
 
         // TODO send successful response that email verification email sent.
         return 
@@ -720,7 +720,8 @@ async def is_valid_email(value: str) -> bool:
 
 <CustomAdmonition type="multi-tenancy">
 
-- For multi tenancy use case, when calling the `sendEmailVerificationEmail` function, you can also pass in the user's `tenantId`. This will result in the email going to the right website domain that belongs to that `tenantId`. You can get the user's tenantId from the `session` object using the `session.getTenantId()` function.
+- Notice that we loop through all the tenants that this user belongs to check that for each of the tenants, there is no other user with the new email. If we did not do this, then calling `updateEmailOrPassword` would fail because the email is already used by another user in one of the tenants that this user belongs to. So in that case, we do not want to go through the verification process either.
+- We also pass in the tenantId of the current session when calling the `sendEmailVerificationEmail` function, so that the link generated will open the the tenant's UI that the user is currently interacting with.
 - When calling `updateEmailOrPassword`, it will return `EMAIL_ALREADY_EXISTS_ERROR` if the new email exists in any of the tenants that the user ID is a part of.
 
 </CustomAdmonition>
