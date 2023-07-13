@@ -646,6 +646,7 @@ module.exports = {
         },
       ]
     },
+    "rate-limits",
     {
       type: 'category',
       label: 'Testing & Debugging',
