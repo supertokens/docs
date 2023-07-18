@@ -2,11 +2,8 @@
 id: get-user-info
 title: Get User info
 hide_title: true
-show_ui_switcher: true
 ---
 
-<!-- COPY DOCS -->
-<!-- ./thirdpartyemailpassword/common-customizations/get-user-info.mdx -->
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
@@ -21,14 +18,22 @@ import { PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent } from "
 import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
 import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
+import CustomAdmonition from "/src/components/customAdmonition"
 
 # Get User Info
 
-You can fetch user information on the backend as well as on the frontend.
+<!-- COPY SECTION -->
+<!-- ./thirdpartyemailpassword/common-customizations/get-user-info.mdx -->
+<!-- 0 -->
 
-## Fetching on the backend
+There are several ways to fetch information about a user:
+- Using their user ID, you can get their email ID, time joined, and metadata that is saved in the user metadata recipe.
+- If the user logged in via a third party providers, you can get their profile info in the post sign up override along with the provider's access token. You can save this information in the user metadata recipe for later retrieval.
+- Lastly, you can get the user's session information and access token payload from their session handle (offline mode), or from the currently logged in session object (online mode).
 
-### Using `getUserByEmail`
+<!-- END COPY SECTION -->
+
+## Fetching information using the user's email
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -41,7 +46,7 @@ import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRec
 async function getUserInfo() {
     // Note that usersInfo has type User[]
     // You can learn more about the `User` object over here https://github.com/supertokens/core-driver-interface/wiki
-    let usersInfo = await ^{recipeNameCapitalLetters}.^{getUserByEmailNode}("test@example.com");
+    let usersInfo = await ^{recipeNameCapitalLetters}.^{getUserByEmailNode}("public", "test@example.com");
 }
 ```
 
@@ -84,7 +89,8 @@ from supertokens_python.recipe.^{codeImportRecipeName}.asyncio import ^{getUserB
 
 async def some_func():
     # Note that users_info has type List[User]
-    _ = await ^{getUserByEmailPython}("test@example.com")
+    users_info = await ^{getUserByEmailPython}("test@example.com")
+    print(users_info)
 ```
 
 </TabItem>
@@ -104,7 +110,19 @@ users_info = ^{getUserByEmailPython}("test@example.com")
 </TabItem>
 </BackendSDKTabs>
 
-### Using `getUserById`
+<CustomAdmonition type="multi-tenancy">
+
+Notice that we pass in the `"public"` tenantId to the function call above. This is the default tenantID and will return the user with the given email that belongs to the `public` tenant. You can provide a different tenantID if required.
+
+</CustomAdmonition>
+
+<!-- COPY SECTION -->
+<!-- ./thirdpartyemailpassword/common-customizations/get-user-info.mdx -->
+<!-- 1 -->
+
+## Fetching information using the user's ID
+
+### Using the `getUserById` function
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -534,194 +552,97 @@ async def get_user_info_api(request: HttpRequest):
 </TabItem>
 </BackendSDKTabs>
 
-## Fetching on the frontend
+### Using the user metadata recipe
 
-:::important
-The function calls below require no API calls and read directly from the session information stored on the frontend. This makes them very quick.
+Checkout the [user metadata recipe docs](./usermetadata/about) which shows you how to save and fetch any JSON object against the user's ID. You can use this to save information like the user's name (`first_name` and `last_name`) or any other field associated with the user.
+
+## Getting information from the user's session
+
+The user's session contains their user ID and the session's payload. You can access this on the backend and frontend as well as whilst the user is online or offline.
+
+More information about this can be found in the [session docs](./sessions/claims/access-token-payload#read-the-access-token-payload).
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./thirdpartyemailpassword/common-customizations/get-user-info.mdx -->
+<!-- 2 -->
+
+## Getting the user's third party provider information and access token
+If the user used a third party provider to login, you can access their info via SuperTokens as shown below. You can then save the OAuthTokens in your own db or in SuperTokens (using the [user metadata recipe](./usermetadata/store-data)) and use them to fetch / change info about the logged in user from the third party provider
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: { 
+        connectionURI: "...",
+     },
+    recipeList: [
+        ^{recipeNameCapitalLetters}.init({
+            ^{nodeRecipeInitDefault}
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // override the thirdparty sign in / up API
+                        ^{nodeThirdPartySignInUp}: async function(input) {
+                            // TODO: Some pre sign in / up logic
+
+                            let response = await originalImplementation.^{nodeThirdPartySignInUp}(input);
+
+                            if (response.status === "OK") {
+                                // This is the response from the OAuth tokens provided by the third party provider
+                                let accessToken = response.oAuthTokens["access_token"];
+                                // other tokens like the refresh_token or id_token are also 
+                                // available in the oAuthTokens object.
+
+                                // This gives the user's info as returned by the provider's user profile endpoint.
+                                let firstName = response.rawUserInfoFromProvider.fromUserInfoAPI!["first_name"];
+
+                                // This gives the user's info from the returned ID token 
+                                // if the provider gave us an ID token
+                                let lastName = response.rawUserInfoFromProvider.fromUserInfoAPI!["last_name"];
+                            }
+
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
 :::
 
+</TabItem>
+<TabItem value="python">
 
-<PreBuiltOrCustomUISwitcher>
-
-<PreBuiltUIContent>
-
-<FrontendPreBuiltUITabs>
-
-<TabItem value="reactjs">
-
-<FrontendReactContextSubTabs>
-
-<TabItem value="with-react-context">
-
-```tsx
-import React from "react";
-// highlight-next-line
-import { useSessionContext } from 'supertokens-auth-react/recipe/session'; 
-
-// Your dashboard component
-function Dashboard(props: any) {
-    // highlight-next-line
-    let session = useSessionContext();
-
-    if (session.loading) {
-        return null;
-    }
-
-    let {doesSessionExist, userId, accessTokenPayload} = session;
-
-    // doesSessionExist will always be true if this is wrapped in `<SessionAuth>`
-    if (!doesSessionExist) {
-        // TODO
-    }
-
-    let name = accessTokenPayload.userName;
-}
-```
+:::note
+Coming Soon
+:::
 
 </TabItem>
+</BackendSDKTabs>
 
-<TabItem value="without-react-context">
-
-```tsx
-import Session from 'supertokens-auth-react/recipe/session';
-
-async function getUserInfo() {
-    if (await Session.doesSessionExist()) {
-        let userId = await Session.getUserId();
-        let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
-    }
-}
-```
-
-</TabItem>
-
-</FrontendReactContextSubTabs>
-
-</TabItem>
-
-<TabItem value="angular">
-
-~COPY-TABS=without-react-context
-
-</TabItem>
-
-</FrontendPreBuiltUITabs>
-
-</PreBuiltUIContent>
-
-<CustomUIContent>
-
-<FrontendCustomUITabs>
-
-<TabItem value="web">
-
-<TabItem value="vanillajs">
-
-<NpmOrScriptTabs>
-
-<TabItem value="npm">
-
-```tsx
-import Session from 'supertokens-web-js/recipe/session';
-
-async function getUserInfo() {
-    if (await Session.doesSessionExist()) {
-        let userId = await Session.getUserId();
-        let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
-    }
-}
-```
-
-</TabItem>
-<TabItem value="script">
-
-```tsx
-import supertokensSession from "supertokens-web-js-script/recipe/session";
-async function getUserInfo() {
-    if (await supertokensSession.doesSessionExist()) {
-        let userId = await supertokensSession.getUserId();
-        let accessTokenPayload = await supertokensSession.getAccessTokenPayloadSecurely();
-    }
-}
-```
-
-</TabItem>
-</NpmOrScriptTabs>
-
-</TabItem>
-
-</TabItem>
-
-<TabItem value="mobile">
-
-<FrontendMobileSubTabs>
-
-<TabItem value="reactnative">
-
-```tsx
-import SuperTokens from 'supertokens-react-native';
-
-async function getUserInfo() {
-    if (await SuperTokens.doesSessionExist()) {
-        let userId = await SuperTokens.getUserId();
-        let accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
-    }
-}
-```
-</TabItem>
-
-<TabItem value="android">
-
-```kotlin
-import android.app.Application
-import com.supertokens.session.SuperTokens
-import org.json.JSONObject
-
-class MainApplication: Application() {
-    fun someFunc() {
-        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
-    }
-}
-```
-
-</TabItem>
-
-<TabItem value="ios">
-
-```swift
-import UIKit
-import SuperTokensIOS
-
-fileprivate class ViewController: UIViewController {
-    func getJWT() {
-        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely() {
-            // Use `accessTokenPayload` however you like
-        }
-    }
-}
-```
-
-</TabItem>
-
-<TabItem value="flutter">
-
-```dart
-import 'package:supertokens_flutter/supertokens.dart';
-
-Future<void> getJWT() async {
-    Map<String, dynamic> accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
-}
-```
-
-</TabItem>
-
-</FrontendMobileSubTabs>
-
-</TabItem>
-
-</FrontendCustomUITabs>
-
-</CustomUIContent>
-
-</PreBuiltOrCustomUISwitcher>
-
+<!-- END COPY SECTION -->

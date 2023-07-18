@@ -4,6 +4,8 @@ import FormItem from './formItem';
 import NormalisedURLDomain from "./normalisedURLDomain";
 import NormalisedURLPath from "./normalisedURLPath";
 import { recursiveMap } from "../utils";
+let Tabs = require("@theme/Tabs").default;
+let TabItem = require("@theme/TabItem").default;
 
 /**
  * The AppInfoForm component is now designed to allow only open the first visible form on the page. 
@@ -33,6 +35,8 @@ type Props = {
     addNetlifyPathExplanation: boolean,
     askForWebsiteBasePath: boolean,
     addVisitWebsiteBasePathText: boolean
+    showMultiTenancyTab?: boolean
+    onlyShowMultiTenancy?: boolean
     // TODO: Add more fields here
 };
 
@@ -72,8 +76,8 @@ const CONTAINER_CLASSNAME = "app-info-form-outer";
 const isReceivingAttr = (mutations: MutationRecord[], attributeName: string, attributeValue?: string) => {
     return mutations.some(mutation => {
         const mutationAttributeName = mutation.attributeName;
-        return mutation.type === 'attributes' 
-            && mutationAttributeName === attributeName 
+        return mutation.type === 'attributes'
+            && mutationAttributeName === attributeName
             && (attributeValue == null || (mutation.target as HTMLElement).getAttribute(attributeName) === attributeValue);
     });
 }
@@ -105,7 +109,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     private readonly elementId = (new Date()).getTime()
     private readonly containerRef: React.RefObject<HTMLDivElement>
     private attributeObserver?: MutationObserver;
-    private visibilityObserver?: IntersectionObserver;  
+    private visibilityObserver?: IntersectionObserver;
 
     constructor(props: PropsWithChildren<Props>) {
         super(props);
@@ -149,7 +153,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
         // listen to DOM changes 
         this.attributeObserver = new MutationObserver(this.onReceiveAttribute.bind(this));
-        this.visibilityObserver = new IntersectionObserver(() => this.setState({ 
+        this.visibilityObserver = new IntersectionObserver(() => this.setState({
             firstAppInfoForm: this.isFirstVisibleAppInfoForm()
         }))
         this.attributeObserver.observe(this.containerRef.current!, { attributes: true });
@@ -173,7 +177,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
     }
 
     setDefaultApiBasePathBasedOnToggles = () => {
-        let defaultApiBasePath = this.state.apiBasePath;        
+        let defaultApiBasePath = this.state.apiBasePath;
 
         if (defaultApiBasePath === "/auth") {
             if (this.props.showNextJSAPIRouteCheckbox && this.state.nextJSApiRouteUsed) {
@@ -190,7 +194,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             } else if (this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed && !defaultApiBasePath.startsWith(netlifyPrefix)) {
                 defaultApiBasePath = this.replacePathPrefixWithNewPrefix(defaultApiBasePath, "/api", "/.netlify/functions");
             }
-        }   
+        }
 
         this.setState({
             apiBasePath: defaultApiBasePath
@@ -228,7 +232,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         if (typeof window !== 'undefined') {
             window.removeEventListener("appInfoFormFilled", this.anotherFormFilled);
         }
-        
+
         if (this.attributeObserver !== undefined) {
             this.attributeObserver.disconnect()
         }
@@ -252,7 +256,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
     }
 
-    resubmitInfoClicked = ({event, scrollToElement} : ResubmitParams) => {
+    resubmitInfoClicked = ({ event, scrollToElement }: ResubmitParams) => {
         if (event !== undefined) {
             event.preventDefault();
         }
@@ -276,7 +280,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             ...oldState,
             [fieldName]: newValue
         }), () => {
-            const errors = {...this.state.fieldErrors};
+            const errors = { ...this.state.fieldErrors };
             delete errors[fieldName];
             this.setState(oldState => ({
                 ...oldState,
@@ -341,14 +345,17 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         </span>
     )
 
-    render() {        
-        const customAttributes: Record<string, string | undefined> = {}        
+    render() {
+        const customAttributes: Record<string, string | undefined> = {}
         if (this.state.firstAppInfoForm) { customAttributes[CONTAINER_ATTRIBUTE_FIRST_FORM] = undefined }
 
-        return <div id={this.elementId.toString()} className={CONTAINER_CLASSNAME} ref={this.containerRef}> 
+        return <div id={this.elementId.toString()} className={CONTAINER_CLASSNAME} ref={this.containerRef}>
             {(!this.state.formSubmitted && this.state.firstAppInfoForm) && this.renderForm()}
-            {this.renderResubmitAndChildren()}
-        </div>;        
+            {this.renderResubmitAndChildren({
+                showMultiTenancyTab: this.props.showMultiTenancyTab !== undefined,
+                onlyShowMultiTenancy: this.props.onlyShowMultiTenancy !== undefined
+            })}
+        </div>;
     }
 
     renderResubmitButton() {
@@ -392,51 +399,88 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         </div>;
     }
 
-    renderResubmitAndChildren() {
-        return (
-            <div>
-                {this.state.formSubmitted && this.state.firstAppInfoForm && this.renderResubmitButton()}
-                {recursiveMap(this.props.children, (c: any) => {
-                    if (typeof c === "string") {
-                        // TODO: Add more fields here.
-                        if (this.props.askForAppName) {
-                            c = c.split("^{form_appName}").join(this.state.appName || '<YOUR_APP_NAME>');
-                        }
-                        if (this.props.askForAPIDomain) {
-                            c = c.split("^{form_apiDomain}").join(this.state.apiDomain || `<YOUR_API_DOMAIN>`);
-                        }
-                        if (this.props.askForWebsiteDomain) {
-                            c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain|| `<YOUR_WEBSITE_DOMAIN>`);
-                        }
-                        if (this.state.showAPIBasePath) {
-                            c = c.split("^{form_apiBasePath}").join(this.state.apiBasePath);
-                        }
-                        if (this.state.showAPIBasePath) {
-                            c = c.split("^{form_apiBasePathForCallbacks}").join(this.state.apiBasePath !== "/" ? this.state.apiBasePath : "");
-                        }
-                        if (this.state.showWebsiteBasePath) {
-                            c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
+    renderResubmitAndChildren(props: { showMultiTenancyTab: boolean, onlyShowMultiTenancy: boolean }) {
+        let renderChildren = (props: { showTenantId: boolean }) => {
+            return (
+                <div>
+                    {this.state.formSubmitted && this.state.firstAppInfoForm && this.renderResubmitButton()}
+                    {recursiveMap(this.props.children, (c: any) => {
+                        if (typeof c === "string") {
+                            // TODO: Add more fields here.
+                            if (this.props.askForAppName) {
+                                c = c.split("^{form_appName}").join(this.state.appName || '<YOUR_APP_NAME>');
+                            }
+                            if (this.props.askForAPIDomain) {
+                                c = c.split("^{form_apiDomain}").join(this.state.apiDomain || `<YOUR_API_DOMAIN>`);
+                            }
+                            if (this.props.askForWebsiteDomain) {
+                                c = c.split("^{form_websiteDomain}").join(this.state.websiteDomain || `<YOUR_WEBSITE_DOMAIN>`);
+                            }
+                            if (this.state.showAPIBasePath) {
+                                if (props.showTenantId) {
+                                    c = c.split("^{form_apiBasePath}").join((this.state.apiBasePath === "/" ? "" : this.state.apiBasePath) + "/<TENANT_ID>");
+                                } else {
+                                    c = c.split("^{form_apiBasePath}").join((this.state.apiBasePath === "/" ? "" : this.state.apiBasePath));
+                                }
+                            }
+                            if (this.state.showAPIBasePath) {
+                                c = c.split("^{form_apiBasePathForCallbacks}").join(this.state.apiBasePath !== "/" ? this.state.apiBasePath : "");
+                            }
+                            if (this.state.showWebsiteBasePath) {
+                                c = c.split("^{form_websiteBasePath}").join(this.state.websiteBasePath);
 
-                            c = c.split("^{form_websiteBasePath_withoutForwardSlash}").join(this.state.websiteBasePath.substring(1,this.state.websiteBasePath.length));
+                                c = c.split("^{form_websiteBasePath_withoutForwardSlash}").join(this.state.websiteBasePath.substring(1, this.state.websiteBasePath.length));
+                            }
+                            if (this.state.showWebsiteBasePath) {
+                                c = c.split("^{form_websiteBasePathForCallbacks}").join(this.state.websiteBasePath !== "/" ? this.state.websiteBasePath : "");
+                            }
+                            if (this.props.addNetlifyPathExplanation && c === "^{form_netlifyPathExplanation}") {
+                                c = this.getNetlifyPathExplanationString();
+                            }
+                            if (this.props.addVisitWebsiteBasePathText && c === "^{form_addVisitWebsiteBasePathText}") {
+                                c = this.getVisitWebsiteBasePathText()
+                            }
                         }
-                        if (this.state.showWebsiteBasePath) {
-                            c = c.split("^{form_websiteBasePathForCallbacks}").join(this.state.websiteBasePath !== "/" ? this.state.websiteBasePath : "");
-                        }
-                        if (this.props.addNetlifyPathExplanation && c === "^{form_netlifyPathExplanation}") {
-                            c = this.getNetlifyPathExplanationString();
-                        }
-                        if (this.props.addVisitWebsiteBasePathText && c === "^{form_addVisitWebsiteBasePathText}") {
-                            c = this.getVisitWebsiteBasePathText()
-                        }
-                    }
-                    return c;
-                })}
-            </div>)
-    }   
+                        return c;
+                    })}
+                </div>)
+        }
+
+        let showTab = props.showMultiTenancyTab;
+        if (props.onlyShowMultiTenancy) {
+            showTab = false;
+        }
+
+        if (!showTab) {
+            return renderChildren({
+                showTenantId: props.onlyShowMultiTenancy
+            })
+        } else {
+            return <Tabs
+                isSubTab={true}
+                groupId="curl-single-tenant"
+                defaultValue={"single-tenant"}
+                values={[
+                    { label: 'Single tenant setup', value: 'single-tenant' },
+                    { label: 'Multi tenant setup', value: 'multi-tenant' },
+                ]}>
+                <TabItem value="single-tenant" mdxType="TabItem">
+                    {renderChildren({
+                        showTenantId: false
+                    })}
+                </TabItem>
+                <TabItem value="multi-tenant" mdxType="TabItem">
+                    {renderChildren({
+                        showTenantId: true
+                    })}
+                </TabItem>
+            </Tabs>
+        }
+    }
 
     renderForm() {
         const canContinue = Object.keys(this.state.fieldErrors).length === 0;
-        
+
         return (
             <div
                 style={{
@@ -447,7 +491,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     color: "#ffffff",
                 }}
                 className="app-info-form-container"
-            >                
+            >
                 <div
                     className="app-info-form-container-link"
                     style={{
@@ -479,15 +523,15 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                     {/* show apiDomain field if it is a nextJS form and the `nextJS api route used` checkbox is not checked */}
                     {(!this.props.showNextJSAPIRouteCheckbox || (this.props.showNextJSAPIRouteCheckbox && !this.state.nextJSApiRouteUsed))
                         && <FormItem
-                        required
-                        index={1}
-                        title="API Domain"
-                        placeholder="e.g. http://localhost:8080"
-                        onChange={(value) => this.updateFieldStateAndRemoveError("apiDomain", value)}
-                        explanation="This is the URL of your app's API server."
-                        value={this.state.apiDomain}
-                        error={this.state.fieldErrors.apiDomain}
-                    />}
+                            required
+                            index={1}
+                            title="API Domain"
+                            placeholder="e.g. http://localhost:8080"
+                            onChange={(value) => this.updateFieldStateAndRemoveError("apiDomain", value)}
+                            explanation="This is the URL of your app's API server."
+                            value={this.state.apiDomain}
+                            error={this.state.fieldErrors.apiDomain}
+                        />}
                     <FormItem
                         index={3}
                         title="API Base Path"
@@ -757,7 +801,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         } else {
             validationErrors.websiteDomain = "websiteDomain cannot be empty.";
         }
-        
+
 
         if (this.state.showAPIBasePath) {
             const netlifyApiRouteUsed = this.props.showNetlifyAPIRouteCheckbox && this.state.netlifyApiRouteUsed;
@@ -791,7 +835,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 }
             }
         }
-    
+
         if (preventErrorUpdateInState && (!localFormDataParsed || localFormDataParsed.websiteBasePath === undefined)) {
             // we do this check in case the user has not submitted the form
             // in which case the base path fields will have the default '/auth'
@@ -827,13 +871,13 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                 ...oldState,
                 fieldErrors: validationErrors
             }))
-        }    
-                    
+        }
+
         return Object.keys(validationErrors).length === 0;
     }
 
     scrollToElement() {
-        if (Boolean(this.containerRef.current)) {     
+        if (Boolean(this.containerRef.current)) {
             let top = 0;
 
             if (this.containerRef.current !== undefined && this.containerRef.current !== null) {
@@ -846,7 +890,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
             if (navbar !== undefined && navbar !== null) {
                 navbarHeight = navbar.clientHeight;
             }
-            
+
             const topPositionAfterNavbar = window.scrollY + top - navbarHeight;
             window.scrollTo({
                 top: topPositionAfterNavbar,
@@ -862,7 +906,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
         }
         // listen event triggered by resubmitFirstAppInfoForm()
         if (isReceivingDisplayAttr(mutations)) {
-            this.resubmitInfoClicked({scrollToElement: true});
+            this.resubmitInfoClicked({ scrollToElement: true });
         }
     }
 

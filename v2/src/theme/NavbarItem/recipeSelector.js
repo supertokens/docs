@@ -36,6 +36,8 @@ export default function RecipeSelector(props) {
         return "Microservice Auth";
       case "userdashboard":
         return "User Management Dashboard";
+      case "multitenancy":
+        return "Multi Tenancy";
       default:
         return "Select Recipe";
     }
@@ -75,7 +77,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("thirdpartyemailpassword"),
               })}
             >
-              <a href="/docs/thirdpartyemailpassword/introduction">Email password + Social Login</a>
+              <a href="/docs/thirdpartyemailpassword/introduction">Email password + Social / Enterprise Login</a>
             </li>
             <li
               className={clsx("recipe_selector__menu__auth_methods_items", {
@@ -96,14 +98,14 @@ export default function RecipeSelector(props) {
                 active: activeSelector("thirdpartypasswordless"),
               })}
             >
-              <a href="/docs/thirdpartypasswordless/introduction">Social Login + Passwordless</a>
+              <a href="/docs/thirdpartypasswordless/introduction">Social / Enterprise Login + Passwordless</a>
             </li>
             <li
               className={clsx("recipe_selector__menu__auth_methods_items", {
                 active: activeSelector("thirdparty"),
               })}
             >
-              <a href="/docs/thirdparty/introduction">Social Login</a>
+              <a href="/docs/thirdparty/introduction">Social / Enterprise Login</a>
             </li>
             <li
               className={clsx("recipe_selector__menu__auth_methods_items", {
@@ -151,6 +153,13 @@ export default function RecipeSelector(props) {
               })}
             >
               <a href="/docs/microservice_auth/introduction">Microservice Authentication</a>
+            </li>
+            <li
+              className={clsx("recipe_selector__menu__add_ons_items", {
+                active: activeSelector("multitenancy"),
+              })}
+            >
+              <a href="/docs/multitenancy/introduction">Multitenancy</a>
             </li>
           </ul>
         </div>

@@ -1,0 +1,77 @@
+---
+id: rate-limits
+title: Rate limit policy
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./emailpassword/rate-limits.mdx -->
+
+# Rate limit policy
+
+## For managed service
+
+The SuperTokens core is rate limited on a per app and per IP address basis. This means that if query the core for app1 using the same IP address very quickly, the rate limit will kick in and you will get a `429` status code back from the core. However, if you query the core using different IP addresses or for a different app, the rate limit of that won't interfere with the previous requests (that had another IP or was for another app).
+
+### Development env
+The free tier of the managed service has a rate limit of 3 requests per second with a burst of 10 requests per second (with nodelay).
+
+### Production env
+The free tier of the managed service has a rate limit of 5 requests per second with a burst of 20 requests per second (with nodelay).
+
+:::note
+
+To know more about this behaviour, please [this nginx document](https://www.nginx.com/blog/rate-limiting-nginx/).
+
+:::
+
+### Applicable to all envs
+The `/hello` API exposed by the core is commonly used for health checks. This API does not require any API key, and has it's own rate limit of 5 requests per second per app (regardless of the IP address querying it). This is independent to the rate limit described above, and cannot change.
+
+:::important
+If you are a paying user for SuperTokens, the rate limit and the burst limit is set dynamically based on your usage (with a minimum of a 100rps). You should not see any `429`s unless there is a **very significant** spike in requests.
+
+If you are not a paying user, and would still like higher rate limits, please [email us](mailto:team@supertokens.com), requesting a higher rate limit.
+
+If you would like a different rate limit policy than the one described above, you can also [email us](mailto:team@supertokens.com), describing what you want.
+:::
+
+## For self hosted
+
+The SuperTokens core has no rate limit other than for the `/hello` API (which is 5 requests per second per app). You are free to add rate limits to the core by using [a reverse proxy like Nginx](https://www.nginx.com/blog/rate-limiting-nginx/).
+
+If you want to implement rate limiting policy similar to our managed service described above, add the following to your `http` and `server` block in the `nginx.conf` file:
+
+```text
+http {
+    # other configs..
+    
+    map $request_uri $limit_req_zone_key {
+        "~^/(appId|appid)-(\w+)/?" $binary_remote_addr:$2;
+        default $binary_remote_addr;
+    }
+
+    limit_req_zone $limit_req_zone_key zone=mylimit:10m rate=5r/s;
+    limit_req_status 429;
+
+    # other configs..
+
+    upstream supertokens {
+        server localhost:3567;
+    }
+
+    server {
+        limit_req zone=mylimit burst=20 nodelay;
+
+        # other configs..
+
+        listen 0.0.0.0:80;
+
+        location / {
+            proxy_pass http://supertokens;
+        }
+    }
+}
+```
+
+In the above, we add rate limit per app per IP address to the core.

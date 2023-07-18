@@ -8,6 +8,7 @@ import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import BackendSDKCasing from "/src/components/BackendSDKCasing"
 import AppInfoForm from "/src/components/appInfoForm"
 import TabItem from '@theme/TabItem';
+import CustomAdmonition from "/src/components/customAdmonition"
 
 # Allow users to change their email 
 
@@ -273,8 +274,10 @@ def change_email():
 
     request_body = request.get_json()
 
+    email: str = str(request_body["email"])  # type: ignore
+
     # validate the input email
-    if not is_valid_email(request_body["email"]): # type: ignore
+    if not is_valid_email(email):
         # TODO: handle invalid email error
         return
 
@@ -282,12 +285,14 @@ def change_email():
     user_id = session.get_user_id()
     user_info = get_user_by_id(user_id)
 
-    if user_info.third_party_info is not None:  # type: ignore
+    assert user_info is not None
+
+    if user_info.third_party_info is not None:
         # TODO handle error, cannot update email for social account
         return
 
     # update the users email
-    update_response = update_email_or_password(user_id, email=request_body["email"]) # type: ignore
+    update_response = update_email_or_password(user_id, email=email)
 
     if isinstance(update_response, UpdateEmailOrPasswordOkResult):
         # TODO send successful email update response
@@ -411,7 +416,7 @@ def change_email():
 
 ```tsx
 // the following example uses express
-import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
 import EmailVerification from "supertokens-node/recipe/emailverification";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
@@ -441,47 +446,32 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         }
     }
 
-    // Check if the new email is already associated with another email-password user.
-    // If it is, then we throw an error. If it's already associated with this user,
-    // then we return a success response with an appropriate message.
-    let existingUsers = await ThirdPartyEmailPassword.getUsersByEmail(email);
-
-    if (existingUsers.length != 0) {
-        for (let i = 0; i < existingUsers.length; i++) {
-            if (existingUsers[i].id === session.getUserId()) {
-                // TODO: send successful response, email already belongs to this account.
-                return
-            }
-        }
-        // TODO: handle error, email already belongs to another account
-        return
-    }
-
     // Then, we check if the email is verified for this user ID or not.
     // It is important to understand that SuperTokens stores email verification
     // status based on the user ID AND the email, and not just the email.
     let isVerified = await EmailVerification.isEmailVerified(session.getUserId(), email);
 
     if (!isVerified) {
-        // Now we create and send the email verification link to the user for the new email.
-        let tokenInfo = await EmailVerification.createEmailVerificationToken(session.getUserId(), email);
-
-        if (tokenInfo.status === "OK") {
-            let link = "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token=" + tokenInfo.token;
-
-            await EmailVerification.sendEmail({
-                emailVerifyLink: link,
-                type: "EMAIL_VERIFICATION",
-                user: {
-                    id: session.getUserId(),
-                    email: email,
-                },
-            });
-            // TODO: send successful response that verification email has been sent
-            return
+        // Before sending a verification email, we check if the email is already
+        // being used by another user. If it is, we throw an error.
+        let user = (await ThirdPartyEmailPassword.getUserById(session.getUserId()))!;
+        for (let i = 0; i < user?.tenantIds.length; i++) {
+            // Since once user can be shared across many tenants, we need to check if
+            // the email already exists in any of the tenants.
+            let usersWithEmail = await ThirdPartyEmailPassword.getUsersByEmail(user.tenantIds[i], email);
+            for (let y = 0; y < usersWithEmail.length; y++) {
+                if (usersWithEmail[y].id !== session.getUserId()) {
+                    // TODO handle error, email already exists with another user.
+                    return
+                }
+            }
         }
-        // else case is that the email is already verified (which can happen cause
-        // of some race condition). So we continue below..
+
+        // Now we create and send the email verification link to the user for the new email.
+        await EmailVerification.sendEmailVerificationEmail(session.getTenantId(), session.getUserId(), email);
+
+        // TODO send successful response that email verification email sent.
+        return 
     }
 
     // Since the email is verified, we try and do an update
@@ -495,8 +485,6 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         return 
     }
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
-        // Technically it should never come here cause we have
-        // checked for this above already, but just in case (some sort of race condition).
         // TODO: handle error, email already exists for another account
         return
     }
@@ -519,270 +507,30 @@ function isValidEmail(email: string) {
 
 <TabItem value="go">
 
-```go
-import (
-	"encoding/json"
-	"log"
-	"net/http"
-	"regexp"
-
-	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
-	"github.com/supertokens/supertokens-golang/recipe/emailverification"
-	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
-)
-
-type RequestBody struct {
-	email string
-}
-
-// the following example uses net/http
-func main() {
-	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		// Wrap the API handler in session.VerifySession
-		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
-	})
-}
-
-func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
-	// highlight-start
-	sessionContainer := session.GetSessionFromRequestContext(r.Context())
-
-	var requestBody RequestBody
-	err := json.NewDecoder(r.Body).Decode(&requestBody)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-
-	// validate the input email
-	if !isValidEmail(requestBody.email) {
-		// TODO: handle invalid email error
-		return
-	}
-
-	// check that the account is not a social account
-	userId := sessionContainer.GetUserID()
-	userAccount, err := thirdpartyemailpassword.GetUserById(userId)
-	if err != nil {
-		// TODO: handle error
-		return
-	}
-
-	if userAccount.ThirdParty != nil {
-		// TODO: handle error, cannot update email for third party accounts
-		return
-	}
-
-	// Check if the new email is already associated with another email-password user.
-	// If it is, then we throw an error. If it's already associated with this user,
-	// then we return a success response with an appropriate message.
-	existingUsers, err := thirdpartyemailpassword.GetUsersByEmail(requestBody.email)
-
-	if err != nil {
-		// TODO: handle error
-	}
-
-	if len(existingUsers) > 0 {
-		for i := 0; i < len(existingUsers); i++ {
-			if existingUsers[i].ID == userId {
-				// TODO: send successful response, email already belongs to this account.
-				return
-			}
-		}
-		// TODO: handle error, email already exists with another account
-	}
-
-	// Then, we check if the email is verified for this user ID or not.
-	// It is important to understand that SuperTokens stores email verification
-	// status based on the user ID AND the email, and not just the email.
-	isVerified, err := emailverification.IsEmailVerified(userId, &requestBody.email)
-
-	if err != nil {
-		// TODO: handle error
-	}
-
-	if !isVerified {
-		// Now we create and send the email verification link to the user for the new email.
-		tokenInfo, err := emailverification.CreateEmailVerificationToken(userId, &requestBody.email)
-		if err != nil {
-			// TODO: handle error
-		}
-
-		if tokenInfo.OK != nil {
-			link := "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token=" + tokenInfo.OK.Token
-
-			err := emailverification.SendEmail(emaildelivery.EmailType{
-				EmailVerification: &emaildelivery.EmailVerificationType{
-					User: emaildelivery.User{
-						ID:    userId,
-						Email: requestBody.email,
-					},
-					EmailVerifyLink: link,
-				},
-			})
-
-			if err != nil {
-				// TODO: handle error
-			}
-		}
-		// else case is that the email is already verified (which can happen cause
-		// of some race condition). So we continue below..
-	}
-
-	// Since the email is verified, we try and do an update
-	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil)
-
-	if err != nil {
-		// TODO: handle error
-	}
-
-	if updateResponse.OK != nil {
-		// TODO: send successfully updated email response
-		return
-	}
-
-	if updateResponse.EmailAlreadyExistsError != nil {
-		// Technically it should never come here cause we have
-		// checked for this above already, but just in case (some sort of race condition).
-		// TODO: handle error, email already exists for another account
-		return
-	}
-
-	log.Fatal("should not reach here")
-	// highlight-end
-
-}
-
-func isValidEmail(email string) bool {
-	emailCheck, err := regexp.Match(`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`, []byte(email))
-	if err != nil {
-		return false
-	}
-	return emailCheck
-}
-
-```
+:::note
+Coming Soon
+:::
 
 </TabItem>
 
 <TabItem value="python">
 
-```python
-from supertokens_python.recipe.session.framework.flask import verify_session
-from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.thirdpartyemailpassword.syncio import ( 
-    get_user_by_id,
-    get_users_by_email, 
-    update_email_or_password
-)
-from supertokens_python.recipe.thirdpartyemailpassword.interfaces import (
-    UpdateEmailOrPasswordOkResult,
-    UpdateEmailOrPasswordEmailAlreadyExistsError,
-)
-
-from supertokens_python.recipe.emailverification.syncio import (
-    is_email_verified,
-    create_email_verification_token,
-    send_email,   
-)
-
-from supertokens_python.recipe.emailverification.types import (
-    EmailTemplateVars,
-    VerificationEmailTemplateVarsUser
-)
-
-from supertokens_python.recipe.emailverification.interfaces import (
-    CreateEmailVerificationTokenOkResult,
-)
-
-from flask import g, request, Flask
-from re import fullmatch
-
-app = Flask(__name__)
-
-@app.route('/change-email', methods=['POST']) # type: ignore
-@verify_session()
-def change_email():
-    # highlight-start
-    session: SessionContainer = g.supertokens # type: ignore
-
-    request_body = request.get_json()
-
-    # validate the input email
-    if not is_valid_email(request_body["email"]): # type: ignore
-        # TODO: handle invalid email error
-        return
-
-    # check that the account is not a social account
-    user_id = session.get_user_id()
-    user_info = get_user_by_id(user_id)
-
-    if user_info.third_party_info is not None:  # type: ignore
-        # TODO handle error, cannot update email for social account
-        return
-
-    # Check if the new email is already associated with another user.
-    # If it is, then we throw an error. If it's already associated with this user,
-    # then we return a success response with an appropriate message.
-    existing_users = get_users_by_email(request_body["email"]) # type: ignore
-    if len(existing_users) > 0:
-        for user in existing_users:
-            if user.user_id == user_id:
-                # TODO send successful response that email is already associated with this user
-                return
-        # TODO handle error, email already exists with another user
-
-    # Then, we check if the email is verified for this user ID or not.
-    # It is important to understand that SuperTokens stores email verification
-    # status based on the user ID AND the email, and not just the email.
-    is_verified = is_email_verified(user_id, request_body["email"]) # type: ignore
-    
-    if not is_verified:
-        # Create and send the email verification link to the user for the new email.
-        token_info = create_email_verification_token(user_id, request_body["email"]) # type: ignore
-        
-        if isinstance(token_info, CreateEmailVerificationTokenOkResult):
-            link = "^{form_websiteDomain}^{form_websiteBasePath}/verify-email?token={token_info.token}"
-            
-            send_email(EmailTemplateVars(VerificationEmailTemplateVarsUser(user_id=user_id, email=request_body["email"]), link, {}), None) # type: ignore
-            
-            # TODO send successful email verification response
-            return
-    # else case is that the email is already verified (which can happen cause of some race condition). So we continue below..
-    
-    # update the users email
-    update_response = update_email_or_password(user_id, email=request_body["email"]) # type: ignore
-
-    if isinstance(update_response, UpdateEmailOrPasswordOkResult):
-        # TODO send successful email update response
-        return
-
-    if isinstance(update_response, UpdateEmailOrPasswordEmailAlreadyExistsError):
-        # Technically it should never come here cause we have
-        # checked for this above already, but just in case (some sort of race condition).
-        # TODO handle error, email already exists
-        return
-
-    raise Exception("Should never reach here")
-    # highlight-end
-
-
-async def is_valid_email(value: str) -> bool:
-    return (
-        fullmatch(
-            r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,'
-            r"3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$",
-            value,
-        )
-        is not None
-    )
-
-```
+:::note
+Coming Soon
+:::
 
 </TabItem>
 </BackendSDKTabs>
 
 </AppInfoForm>
+
+<CustomAdmonition type="multi-tenancy">
+
+- Notice that we loop through all the tenants that this user belongs to check that for each of the tenants, there is no other user with the new email. If we did not do this, then calling `updateEmailOrPassword` would fail because the email is already used by another user in one of the tenants that this user belongs to. So in that case, we do not want to go through the verification process either.
+- We also pass in the tenantId of the current session when calling the `sendEmailVerificationEmail` function, so that the link generated will open the the tenant's UI that the user is currently interacting with.
+- When calling `updateEmailOrPassword`, it will return `EMAIL_ALREADY_EXISTS_ERROR` if the new email exists in any of the tenants that the user ID is a part of.
+
+</CustomAdmonition>
 
 
 ### Step 3: Override the `verifyEmailPost` API to update the user's account on successful email verification

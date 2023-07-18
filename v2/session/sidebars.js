@@ -184,6 +184,7 @@ module.exports = {
         },
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/anonymous-session",
+        "common-customizations/sessions/fetching-tenant-id",
         "common-customizations/sessions/with-websocket",
         {
           type: "category",
@@ -209,7 +210,7 @@ module.exports = {
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling",
-
+            "common-customizations/sessions/disable-interception"
           ]
         },
         {
@@ -222,7 +223,7 @@ module.exports = {
         },
         {
           type: 'category',
-          label: 'Actions, Hooks and Custom API responses',
+          label: 'Backend and frontend overrides (actions, hooks and UI customisation)',
           items: [
             "advanced-customizations/overview",
             "advanced-customizations/user-context/custom-request-properties",
@@ -270,7 +271,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "SuperTokens Core customizations",
+          label: "SuperTokens core settings",
           items: [
             "common-customizations/core/api-keys",
             "common-customizations/core/ip-allow-deny",
@@ -292,6 +293,7 @@ module.exports = {
         },
       ],
     },
+    "rate-limits",
     {
       type: 'category',
       label: 'Testing & Debugging',

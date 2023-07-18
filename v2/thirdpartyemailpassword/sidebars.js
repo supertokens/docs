@@ -55,6 +55,7 @@ module.exports = {
             "pre-built-ui/sign-out",
             "pre-built-ui/auth-redirection",
             "pre-built-ui/enable-email-verification",
+            "pre-built-ui/multitenant-login",
             {
               type: 'category',
               label: 'Further Reading',
@@ -115,6 +116,7 @@ module.exports = {
             "custom-ui/securing-routes",
             "custom-ui/sign-out",
             "custom-ui/enable-email-verification",
+            "custom-ui/multitenant-login",
           ],
         },
       ],
@@ -318,6 +320,7 @@ module.exports = {
         },
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/anonymous-session",
+        "common-customizations/sessions/fetching-tenant-id",
         "common-customizations/sessions/with-websocket",
         {
           type: "category",
@@ -343,7 +346,7 @@ module.exports = {
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling",
-
+            "common-customizations/sessions/disable-interception"
           ]
         },
       ]
@@ -353,43 +356,83 @@ module.exports = {
       label: 'Auth flow customizations',
       collapsed: true,
       items: [
+        "common-customizations/handling-signinup-success",
         {
           type: 'category',
-          label: 'Third Party Providers',
+          label: 'Sign in / up',
           items: [
-            "common-customizations/signup-form/built-in-providers",
-            "common-customizations/signup-form/changing-oauth-scopes",
-            "common-customizations/signup-form/custom-providers",
-            "common-customizations/getting-provider-access-token"
+            {
+              type: 'category',
+              label: 'Social login providers',
+              items: [
+                "common-customizations/signup-form/built-in-providers",
+                "common-customizations/signup-form/custom-providers",
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Email password sign up form',
+              items: [
+                "common-customizations/signup-form/adding-fields",
+                "common-customizations/signup-form/changing-field-labels",
+                "common-customizations/signup-form/field-validators",
+              ],
+            },
+            {
+              type: "category",
+              label: "Email password sign in form",
+              items: [
+                "common-customizations/signin-form/changing-field-labels",
+                "common-customizations/signin-form/field-validators",
+              ]
+            },
+            {
+              type: "category",
+              label: "Multi tenancy and Enterprise SSO",
+              items: [
+                "common-customizations/multi-tenancy/overview",
+                "common-customizations/multi-tenancy/new-tenant-config",
+                {
+                  type: "category",
+                  label: "Common UX flows",
+                  items: [
+                    "common-customizations/multi-tenancy/common-domain-login",
+                    "common-customizations/multi-tenancy/sub-domain-login"
+                  ]
+                },
+                {
+                  type: 'category',
+                  label: 'SAML Login',
+                  items: [
+                    "common-customizations/saml/what-is-saml",
+                    "common-customizations/saml/saml-login",
+                    {
+                      type: 'category',
+                      label: 'With BoxyHQ',
+                      customProps: {
+                        logoUrl: '/img/logos/boxyhq.png'
+                      },
+                      items: [
+                        "common-customizations/saml/with-boxyhq/what-is-boxyhq",
+                        "common-customizations/saml/with-boxyhq/flow-diagram",
+                        "common-customizations/saml/with-boxyhq/integration-steps",
+                      ],
+                    },
+                  ],
+                },
+                "common-customizations/multi-tenancy/custom-provider",
+                "common-customizations/multi-tenancy/multi-app",
+              ]
+            },
+            "common-customizations/sign-in-and-up/provider-config",
+            "common-customizations/signup-form/toc-privacypolicy",
+            "common-customizations/embed-sign-in-up-form",
+            "common-customizations/password-managers",
           ],
-        },
-        {
-          type: 'category',
-          label: 'Sign Up Form',
-          items: [
-            "common-customizations/signup-form/adding-fields",
-            "common-customizations/signup-form/changing-field-labels",
-            "common-customizations/signup-form/field-validators",
-            "common-customizations/signup-form/toc-privacypolicy"
-          ],
-        },
-        {
-          type: "category",
-          label: "Sign In Form",
-          items: [
-            "common-customizations/signin-form/changing-field-labels",
-            "common-customizations/signin-form/field-validators",
-            "common-customizations/signin-form/built-in-providers",
-            "common-customizations/signin-form/custom-providers",
-          ]
         },
         "common-customizations/get-user-info",
-        "common-customizations/handling-signinup-success",
-        "post-login/getting-provider-access-token",
-        "common-customizations/password-managers",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
-        "common-customizations/embed-sign-in-up-form",
         "common-customizations/account-linking",
         "common-customizations/change-password",
         "common-customizations/change-email-post-login",
@@ -479,7 +522,7 @@ module.exports = {
         "common-customizations/userid-format",
         {
           type: 'category',
-          label: 'Actions, Hooks and Custom API responses',
+          label: 'Backend and frontend overrides (actions, hooks and UI customisation)',
           items: [
             "advanced-customizations/overview",
             "advanced-customizations/user-context/custom-request-properties",
@@ -538,7 +581,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "SuperTokens Core customizations",
+          label: "SuperTokens core settings",
           items: [
             "common-customizations/core/api-keys",
             "common-customizations/core/ip-allow-deny",
@@ -601,29 +644,9 @@ module.exports = {
             "user-roles/delete-roles",
           ],
         },
-        {
-          type: 'category',
-          label: 'SAML',
-          items: [
-            "common-customizations/saml/what-is-saml",
-            "common-customizations/saml/saml-login",
-            {
-              type: 'category',
-              label: 'With BoxyHQ',
-              customProps: {
-                logoUrl: '/img/logos/boxyhq.png'
-              },
-              items: [
-                "common-customizations/saml/with-boxyhq/what-is-boxyhq",
-                "common-customizations/saml/with-boxyhq/flow-diagram",
-                "common-customizations/saml/with-boxyhq/integration-steps",
-                "common-customizations/saml/with-boxyhq/multi-tenant"
-              ],
-            },
-          ],
-        },
       ]
     },
+    "rate-limits",
     {
       type: 'category',
       label: 'Testing & Debugging',

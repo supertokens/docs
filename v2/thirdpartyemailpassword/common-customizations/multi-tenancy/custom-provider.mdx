@@ -1,0 +1,296 @@
+---
+id: custom-provider
+title: "Adding a custom third party provider"
+hide_title: true
+---
+
+import MultiTenancyPaidBanner from '../../../community/reusableMD/multitenancy/MultiTenancyPaidBanner.mdx'
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import CoreInjector from "/src/components/coreInjector"
+
+<MultiTenancyPaidBanner />
+
+# Adding a custom third party provider
+
+Whilst there are [several built-in providers](../sign-in-and-up/provider-config) that SuperTokens offers, you may want to add your own provider. This page will show you how to do that on a per tenant basis so that you can add a custom enterprise connection or a social connection to each tenant.
+
+Once you have [created a tenant](./new-tenant-config), you want to call the API / function to create a new provider for the tenant as shown below:
+
+## Via OAuth endpoints
+
+<!-- COPY SECTION -->
+<!-- ./thirdparty/common-customizations/multi-tenancy/custom-provider.mdx -->
+<!-- 1 -->
+
+<BackendSDKTabs enableCurl>
+
+<TabItem value="nodejs">
+
+```tsx
+import Multiteancy from "supertokens-node/recipe/multitenancy";
+
+async function createTenant() {
+    let resp = await Multiteancy.createOrUpdateThirdPartyConfig("customer1", {
+        thirdPartyId: "custom",
+        name: "Custom Provider",
+        clients: [{
+            clientId: "...",
+            clientSecret: "...",
+            scope: ["email", "profile"]
+        }],
+        authorizationEndpoint: "https://example.com/oauth/authorize",
+        authorizationEndpointQueryParams: { // optional
+            "someKey1": "value1",
+            "someKey2": null,
+        },
+        tokenEndpoint: "https://example.com/oauth/token",
+        tokenEndpointBodyParams: {
+            "someKey1": "value1",
+        },
+        userInfoEndpoint: "https://example.com/oauth/userinfo",
+        userInfoMap: {
+            fromUserInfoAPI: {
+                userId: "id",
+                email: "email",
+                emailVerified: "email_verified",
+            }
+        }
+    });
+
+    if (resp.createdNew) {
+        // custom provider added to tenant
+    } else {
+        // existing custom provider config overwritten for tenant
+    }
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+
+<TabItem value="syncio">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+
+<TabItem value="curl">
+
+<CoreInjector defaultValue="http://localhost:3567" showTenantId={false}>
+
+```bash
+curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multitenancy/config/thirdparty' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "config": {
+        "tenantId": "...",
+        "thirdPartyId": "custom",
+        "name": "Custom provider",
+        "clients": [{
+            "clientId": "...",
+            "clientSecret": "...",
+            "scope": ["email", "profile"],
+        }],
+        "authorizationEndpoint": "https://example.com/oauth/authorize",
+        "authorizationEndpointQueryParams": {
+            "someKey1": "value1",
+            "someKey2": "value2"
+        },
+        "tokenEndpoint": "https://example.com/oauth/token",
+        "tokenEndpointBodyParams": {
+            "someKey1": "value1",
+        },
+        "userInfoEndpoint": "https://example.com/oauth/userinfo",
+        "userInfoMap": {
+            "fromUserInfoAPI": {
+                "userId": "id",
+                "email": "email",
+                "emailVerified": "email_verified"
+            }
+        }
+    }
+}'
+```
+
+</CoreInjector>
+
+</TabItem>
+
+</BackendSDKTabs>
+
+- You can see all the options [here](https://supertokens.com/docs/cdi).
+
+- The `tenantId` is a unique ID that identifies the tenant for whom you want to add the custom provider. If not specified, it will add it for the `"public"` tenantId (which is the default one).
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./thirdparty/common-customizations/sign-in-and-up/custom-providers.mdx -->
+<!-- 1 -->
+
+- The `thirdPartyId` is a unique ID for this provider which helps SuperTokens identify the provider. For example, the `thirdPartyId` for the built in Google provider is `"google"`.
+- The `name` field is sent to the frontend and can be used to render the login button on the frontend UI. For example, if you set the `name` to `"XYZ"`, the pre built UI on the frontend will display the text `"Login using XYZ"` on the button for this provider.
+- The `clients` array represents the client credentials / settings for each of your frontend clients. Most of the time, one client item is enough, but if the provider requires to use different client ID / secret for web vs mobile apps, you would need to add two items to this array - one for web, and one for mobile. In this case, you would also need to add the `clientType: string` config for each of the items in the `clients` array.
+- `AuthorizationEndpoint` corresponds to the URL to which the user should be redirected to for the login. For example for Google, this is `"https://accounts.google.com/o/oauth2/v2/auth"`.
+    - `AuthorizationEndpointQueryParams` is an optional config, but it can be used to modify the query params added to the `AuthorizationEndpoint`. You can use this config to add new keys, or to modify or remove (by setting to null) query params added by SuperTokens. 
+- `TokenEndpoint` corresponds to the API that is used to exchange Authorization Code for the user's Access Token or the ID Token. For example for Google, the value of this is `"https://oauth2.googleapis.com/token"`.
+    - `TokenEndpointBodyParams` is an optional config, but it can be used to modify the request body sent to the `TokenEndpoint`. You can use this config to add new keys, or to modify or remove (by setting to null) body params added by SuperTokens. 
+- `UserInfoEndpoint` corresponds to the API that provides user information using the AccessToken. For Google, the value of this is `"https://www.googleapis.com/oauth2/v1/userinfo"`. Once this endpoint is called, SuperTokens fetches user info (like their userID and email ID) from the JSON response based on the config for `UserInfoMap.FromUserInfoAPI` map. For example, the value of the map for Google is:
+    ```text
+    {
+        userId: "id",
+        email: "email",
+        emailVerified: "email_verified"
+    }
+    ```
+
+    This means that when SuperTokens gets back the JSON from the `/userinfo` endpoint, it will read the `jsonResponse.id` field to get the user's Google ID, the `jsonResponse.email` field to get back the user's email and the `jsonResponse.email_verified` field to know if the user's email is verified or not.
+
+    If you want to fetch a value from a nested JSON object, you can specify something like `userId: "user.id"`, in which case the provider's user ID will be fetched using `jsonResponse.user.id`.
+
+
+<!-- END COPY SECTION -->
+
+## Via Open ID connect (OIDC) endpoints
+
+<!-- COPY SECTION -->
+<!-- ./thirdparty/common-customizations/multi-tenancy/custom-provider.mdx -->
+<!-- 2 -->
+
+If the provider is Open ID Connect (OIDC) compatible, you can provide url for the `OIDCDiscoverEndpoint` config. The backend SDK will automatically discover authorization endpoint, token endpoint and the user info endpoint by querying the `<OIDCDiscoverEndpoint>/.well-known/openid-configuration`.
+
+Below is an example of how to set the OIDC discovery endpoint:
+
+<BackendSDKTabs enableCurl>
+<TabItem value="nodejs">
+
+```tsx
+import Multiteancy from "supertokens-node/recipe/multitenancy";
+
+async function createTenant() {
+    let resp = await Multiteancy.createOrUpdateThirdPartyConfig("customer1", {
+        thirdPartyId: "custom",
+        name: "Custom Provider",
+        clients: [{
+            clientId: "...",
+            clientSecret: "...",
+            scope: ["email", "profile"]
+        }],
+        // highlight-start
+        oidcDiscoveryEndpoint: "https://example.com/.well-known/openid-configuration",
+        // highlight-end
+        authorizationEndpointQueryParams: { // optional
+            "someKey1": "value1",
+            "someKey2": null,
+        },
+        userInfoMap: {
+            fromIdTokenPayload: {
+                userId: "id",
+                email: "email",
+                emailVerified: "email_verified",
+            }
+        }
+    });
+
+    if (resp.createdNew) {
+        // custom provider added to tenant
+    } else {
+        // existing custom provider config overwritten for tenant
+    }
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+
+<TabItem value="curl">
+
+<CoreInjector defaultValue="http://localhost:3567" showTenantId={false}>
+
+```bash
+curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/multitenancy/config/thirdparty' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "config": {
+        "tenantId": "...",
+        "thirdPartyId": "custom",
+        "name": "Custom provider",
+        "clients": [{
+            "clientId": "...",
+            "clientSecret": "...",
+            "scope": ["email", "profile"],
+        }],
+        "oidcDiscoveryEndpoint": "https://example.com/.well-known/openid-configuration",
+        "authorizationEndpointQueryParams": {
+            "someKey1": "value1",
+            "someKey2": "value2"
+        },
+        "userInfoMap": {
+            "fromIdTokenPayload": {
+                "userId": "id",
+                "email": "email",
+                "emailVerified": "email_verified"
+            }
+        }
+    }
+}'
+```
+
+</CoreInjector>
+
+</TabItem>
+</BackendSDKTabs>
+
+- You can see all the options [here](https://supertokens.com/docs/cdi).
+
+- The `tenantId` is a unique ID that identifies the tenant for whom you want to add the custom provider. If not specified, it will add it for the `"public"` tenantId (which is the default one).
+
+<!-- END COPY SECTION -->
+
+<!-- COPY SECTION -->
+<!-- ./thirdparty/common-customizations/sign-in-and-up/custom-providers.mdx -->
+<!-- 2 -->
+
+- The config values are similar to the ones in the "Via OAuth endpoints" method. Please read that section to understand the `thirdPartyId`, `name`, `clients` config.
+- Unlike the "Via OAuth endpoints", we extract the user's info from the ID token payload using the config specified by you in the `UserInfoMap.FromIdTokenPayload` map.
+- You can also add the `UserInfoMap.FromUserInfoAPI` map as done in the "Via OAuth endpoints" section. SuperTokens will auto merge the user information.
+
+<!-- END COPY SECTION -->

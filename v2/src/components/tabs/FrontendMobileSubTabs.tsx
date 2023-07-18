@@ -3,6 +3,7 @@ let Tabs = require("@theme/Tabs").default;
 import { childContainsTabItemWithValue } from "./utils";
 let TabItem = require("@theme/TabItem").default;
 import { applyCopyTabs } from "./FrontendPreBuiltUITabs"
+import CustomAdmonition from "../customAdmonition";
 
 export default function FrontendMobileSubTabs(props: any) {
     return applyCopyTabs(
@@ -29,9 +30,10 @@ function DefaultFlutterTabItem() {
     // as a direct child of TabItem.
     return (
         <TabItem value="flutter" mdxType="TabItem">
-            <div>
+            <CustomAdmonition
+                type="info">
                 Coming Soon
-            </div>
+            </CustomAdmonition>
         </TabItem>
     );
 }

@@ -2,20 +2,28 @@
 id: handling-signup-success
 title: Post sign up callbacks
 hide_title: true
+show_ui_switcher: true
 ---
 
-import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import TabItem from '@theme/TabItem';
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 
 # Post sign up callbacks
 
 ## 1) On the frontend
 
-This method allows you to fire events immediately after a successful sign up. For example to send analytics events post sign up.
 
-<FrontendSDKTabs>
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+<FrontendPreBuiltUITabs>
+
 <TabItem value="reactjs">
+
+This method allows you to fire events immediately after a successful sign up. For example to send analytics events post sign up.
 
 ```tsx
 import SuperTokens from "supertokens-auth-react";
@@ -56,12 +64,27 @@ Please refer to [this page](../advanced-customizations/frontend-hooks/handle-eve
 :::
 
 </TabItem>
-</FrontendSDKTabs>
 
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+:::caution Not applicable
+This section is not applicable for custom UI since you will be calling the sign up API yourself anyway. Anything that you want to do post sign up, can be done based on the result of the API call.
+:::
+
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
 
 ## 2) On the backend
 
-For this, you'll have to override the `signUpPOST` API in the `init` function call..
+### Sign up override
+
+For this, you'll have to override the `signUp` function in the `init` function call.
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -85,24 +108,16 @@ SuperTokens.init({
         EmailPassword.init({
             // highlight-start
             override: {
-                apis: (originalImplementation) => {
+                functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        signUpPOST: async function (input) {
-
-                            if (originalImplementation.signUpPOST === undefined) {
-                                throw Error("Should never come here");
-                            }
-
+                        signUp: async function (input) {
                             // First we call the original implementation of signUpPOST.
-                            let response = await originalImplementation.signUpPOST(input);
+                            let response = await originalImplementation.signUp(input);
 
                             // Post sign up response, we check if it was successful
                             if (response.status === "OK") {
                                 let { id, email } = response.user;
-
-                                // // These are the input form fields values that the user used while signing up
-                                let formFields = input.formFields;
                                 // TODO: post sign up logic
                             }
                             return response;
@@ -135,17 +150,17 @@ func main() {
 			emailpassword.Init(&epmodels.TypeInput{
 				//highlight-start
 				Override: &epmodels.OverrideStruct{
-					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+					Functions: func(originalImplementation epmodels.RecipeInterface) epmodels.RecipeInterface {
 						// create a copy of the originalImplementation func
-						originalSignUpPOST := *originalImplementation.SignUpPOST
+						originalSignUp := *originalImplementation.SignUp
 
-						// override the sign in up API
-						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
+						// override the sign in up function
+						(*originalImplementation.SignUp) = func(email, password string, userContext supertokens.UserContext) (epmodels.SignUpResponse, error) {
 
-							// First we call the original implementation of SignUpPOST.
-							response, err := originalSignUpPOST(formFields, options, userContext)
+							// First we call the original implementation of SignUp.
+							response, err := originalSignUp(email, password, userContext)
 							if err != nil {
-								return epmodels.SignUpPOSTResponse{}, err
+								return epmodels.SignUpResponse{}, err
 							}
 
 							if response.OK != nil {
@@ -155,8 +170,6 @@ func main() {
 								user := response.OK.User
 
 								// TODO: Post sign up logic.
-								// You can even read the formFields from the input
-								// params to get the user filled fields.
 								fmt.Println(user)
 
 							}
@@ -226,3 +239,155 @@ Using the code above, you can (for example):
 - Add the user's ID and their info to your own database (in addition to it being stored in SuperTokens).
 - Send analytics events about a sign up.
 - Send a welcome email to the user.
+- You can [associate a role to the user](/docs/userroles/managing-roles-and-users).
+
+### Accessing custom form fields during email password sign up
+
+During email password sign up, if you would like to access the custom form fields that you may have added, you can do so by overriding the `emailPasswordSignUpPOST` API:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+
+// backend
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signUpPOST: async function (input) {
+                            // First we call the original implementation of signUpPOST.
+                            let response = await originalImplementation.signUpPOST!(input);
+
+                            // Post sign up response, we check if it was successful
+                            if (response.status === "OK") {
+                                let { id, email } = response.user;
+                                // TODO: sign up successful
+
+                                // here we fetch a custom form field for the user's name.
+                                // Note that for this to be available, you need to define
+                                // this custom form field.
+                                let name = ""
+                                for (let i = 0; i < input.formFields.length; i++) {
+                                    if (input.formFields[i].id == "name") {
+                                        name = input.formFields[i].value
+                                    }
+                                }
+
+                                // Use name..
+                            }
+                            return response;
+                        }
+                    }
+                },
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // TODO: from previous code snippets
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			emailpassword.Init(&epmodels.TypeInput{
+				Override: &epmodels.OverrideStruct{
+					//highlight-start
+					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+						originalSignUpPOST := *originalImplementation.SignUpPOST
+
+						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
+
+							// pre API logic...
+							resp, err := originalSignUpPOST(formFields, options, userContext)
+							if err != nil {
+								return epmodels.SignUpPOSTResponse{}, err
+							}
+
+							if resp.OK != nil {
+								userId := resp.OK.User.ID
+								fmt.Println(userId)
+								// sign up successful
+
+								// here we fetch a custom form field for the user's name.
+								// Note that for this to be available, you need to define
+								// this custom form field.
+								name := ""
+								for _, field := range formFields {
+									if field.ID == "name" {
+										name = field.Value
+									}
+								}
+
+								fmt.Println(name)
+							}
+
+							return resp, nil
+						}
+
+						return originalImplementation
+					},
+					//highlight-end
+					Functions: func(originalImplementation epmodels.RecipeInterface) epmodels.RecipeInterface {
+						// TODO: From previous code snippet...
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+</TabItem>
+</BackendSDKTabs>
+
+### API override vs Functions override
+For most purposes, you should be using Functions override. Functions override logic is called whenever the API is called from the frontend as well as if you call the sign up / sign in functions yourself manually via the SDK (like `emailpassword.SignIn(...)`).
+
+For example, when the frontend calls the email password sign up API, the SDK invokes the `API.SignUpPOST` above. When you call the original implementation of this function, that function calls the `Functions.SignUp` function first, and if that's successful, it calls the Session recipe's `createNewSession` function.
+
+Therefore, if you want to associate a role with a user, you would want to do that in the `Functions.SignUp` function since then those roles would get added to the session in the subsequent call to the `Session.createNewSession` function. If instead, you associate a role to the user in the `API.SignUpPOST` (after calling the original implementation), the role will not be automatically added to the session since the `Session.createNewSession` would have already been called before the original implementation returns.
+
+The only time it makes sense to override the API functions is if you want to access an argument that's not available in the recipe function. For example, the custom form fields for email password sign up is an input to the `API.SignUpPOST`, but not to the `Functions.SignUp`, so if you want to access the form fields, you should override the `API.SignUpPOST` as shown above. You can also always add the formFields to the userContext object and read it later in the `Functions.SignUp` override, but then you would lose the typing of the form field array structure (which is not a runtime problem, but just a slightly bad developer experience).
