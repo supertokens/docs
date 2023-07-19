@@ -17,11 +17,22 @@ import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 
 # Example 2: Tenants use their sub domain to login
 
+<!-- COPY SECTION -->
+<!-- ./emailpassword/common-customizations/multi-tenancy/sub-domain-login.mdx  -->
+<!-- 0 -->
+
 In this UX flow, all tenants login using their assigned sub domain (`customer1.example.com`, `customer2.example.com` and so on). The login method that's shown on the login page on each sub domain depends on that tenant's `tenantId` configuration. 
 
 :::important
 Throughout this page, we will assume that the tenant ID for a tenant is equal to their sub domain - so if the sub domain assigned to a tenant is `customer1.example.com`, then their tenantId is `customer1`.
+
+An example app for this setup with our **pre built UI** can be found on [our github example dir](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-one-login-per-subdomain). The app is setup to have three tenants:
+- `tenant1.example.com`: Login with emailpassword + Google sign in
+- `tenant2.example.com`: Login with emailPassword
+- `tenant3.example.com`: Login with passwordless + Github sign in
 :::
+
+<!-- END COPY SECTION -->
 
 <!-- COPY SECTION -->
 <!-- ./thirdparty/common-customizations/multi-tenancy/common-domain-login.mdx  -->
@@ -110,8 +121,8 @@ SuperTokens.init({
                     return {
                         ...oI,
                         getTenantId: async () => {
-                        // We treat the sub domain as the tenant ID
-                        return window.location.host.split('.')[0]
+                            // We treat the sub domain as the tenant ID
+                            return window.location.host.split('.')[0]
                         }
                     }
                 }
@@ -242,8 +253,8 @@ SuperTokens.init({
                     return {
                         ...oI,
                         getTenantId: async () => {
-                        // We treat the sub domain as the tenant ID
-                        return window.location.host.split('.')[0]
+                            // We treat the sub domain as the tenant ID
+                            return window.location.host.split('.')[0]
                         }
                     }
                 }
@@ -274,8 +285,8 @@ supertokens.init({
                     return {
                         ...oI,
                         getTenantId: async () => {
-                        // We treat the sub domain as the tenant ID
-                        return window.location.host.split('.')[0]
+                            // We treat the sub domain as the tenant ID
+                            return window.location.host.split('.')[0]
                         }
                     }
                 }
@@ -415,73 +426,30 @@ On the frontend, we want to check if the tenant has access to the current sub do
 
 ```tsx
 import React from "react";
-import { SessionAuth, getClaimValue } from 'supertokens-auth-react/recipe/session';
+import Session from 'supertokens-auth-react/recipe/session';
 import { AllowedDomainsClaim } from 'supertokens-auth-react/recipe/multitenancy';
 
-const ProtectedRoute = (props: React.PropsWithChildren<any>) => {
-    return (
-        <SessionAuth
-            overrideGlobalClaimValidators={(globalValidators) =>
-                [...globalValidators,
+Session.init({
+    override: {
+        functions: (oI) => ({
+            ...oI,
+            getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => [
+                ...claimValidatorsAddedByOtherRecipes,
                 {
                     ...AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
                     onFailureRedirection: async () => {
-                        let claimValue: string[] | undefined = await getClaimValue({
-                            claim: AllowedDomainsClaim
+                        let claimValue = await Session.getClaimValue({
+                            claim: AllowedDomainsClaim,
                         });
                         return "https://" + claimValue![0];
-                    }
-                }
-                ]
-            }
-        >
-            {props.children}
-        </SessionAuth>
-    );
-}
+                    },
+                },
+            ],
+        }),
+    },
+})
 ```
-Above we are creating a generic component called `ProtectedRoute` which enforces that its child components can only be rendered if the user is on the right sub domain based on the Multi tenancy claim. In case the claim validation fails, we redirect the user to their right sub domain based on that's configured by you on the backend (via the `AllowedDomainsClaim` session claim).
-
-</TabItem>
-
-<TabItem value="angular">
-
-```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { AllowedDomainsClaim } from "supertokens-web-js/recipe/multitenancy";
-
-async function shouldLoadRoute(): Promise<boolean> {
-    if (await Session.doesSessionExist()) {
-
-        // highlight-start
-        let validationErrors = await Session.validateClaims({
-            overrideGlobalClaimValidators: (globalValidators) =>
-                [...globalValidators,
-                    AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
-                ]
-        });
-        // highlight-end
-
-        if (validationErrors.length === 0) {
-            // user is an admin
-            return true;
-        }
-
-        for (const err of validationErrors) {
-            if (err.validatorId === AllowedDomainsClaim.id) {
-                // multi tenancy domain check claim check failed
-            } else {
-                // some other claim check failed (from the global validators list)
-            }
-        }
-    }
-
-    return false
-}
-```
-
-- We call the `validateClaims` function with the `AllowedDomainsClaim` validator which makes sure that the user is on the right sub domain.
-- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+Above, in `Session.init` on the frontend, we add the `hasAccessToCurrentDomain` claim validator to the global validators. This means, that [whenever we check protect a route](../sessions/protecting-frontend-routes), it will check if `hasAccessToCurrentDomain` has passed, and if not, SuperTokens will redirect to the user to their right sub domain (via the values set in the `AllowedDomainsClaim` session claim).
 
 </TabItem>
 
@@ -495,37 +463,28 @@ async function shouldLoadRoute(): Promise<boolean> {
 <TabItem value="npm">
 
 ```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { AllowedDomainsClaim } from "supertokens-web-js/recipe/multitenancy";
+import Session from 'supertokens-web-js/recipe/session';
+import { AllowedDomainsClaim } from 'supertokens-web-js/recipe/multitenancy';
 
-async function shouldLoadRoute(): Promise<boolean> {
-    if (await Session.doesSessionExist()) {
-
-        // highlight-start
-        let validationErrors = await Session.validateClaims({
-            overrideGlobalClaimValidators: (globalValidators) =>
-                [...globalValidators,
-                    AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
-                ]
-        });
-        // highlight-end
-
-        if (validationErrors.length === 0) {
-            // user is an admin
-            return true;
-        }
-
-        for (const err of validationErrors) {
-            if (err.validatorId === AllowedDomainsClaim.id) {
-                // multi tenancy domain check claim check failed
-            } else {
-                // some other claim check failed (from the global validators list)
-            }
-        }
-    }
-
-    return false
-}
+Session.init({
+    override: {
+        functions: (oI) => ({
+            ...oI,
+            getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => [
+                ...claimValidatorsAddedByOtherRecipes,
+                {
+                    ...AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
+                    onFailureRedirection: async () => {
+                        let claimValue = await Session.getClaimValue({
+                            claim: AllowedDomainsClaim,
+                        });
+                        return "https://" + claimValue![0];
+                    },
+                },
+            ],
+        }),
+    },
+})
 ```
 
 
@@ -533,44 +492,33 @@ async function shouldLoadRoute(): Promise<boolean> {
 <TabItem value="script">
 
 ```tsx
-import supertokensSession from "supertokens-web-js-script/recipe/session";
-import supertokensMultitenancy from "supertokens-web-js-script/recipe/multitenancy";
-
-async function shouldLoadRoute(): Promise<boolean> {
-    if (await supertokensSession.doesSessionExist()) {
-
-        // highlight-start
-        let validationErrors = await supertokensSession.validateClaims({
-            overrideGlobalClaimValidators: (globalValidators) =>
-                [...globalValidators,
-                    supertokensMultitenancy.AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
-                ]
-        });
-        // highlight-end
-
-        if (validationErrors.length === 0) {
-            // user is an admin
-            return true;
-        }
-
-        for (const err of validationErrors) {
-            if (err.validatorId === supertokensMultitenancy.AllowedDomainsClaim.id) {
-                // multi tenancy domain check claim check failed
-            } else {
-                // some other claim check failed (from the global validators list)
-            }
-        }
-    }
-
-    return false
-}
+import supertokensSession from 'supertokens-web-js-script/recipe/session';
+import supertokensMultitenancy from 'supertokens-web-js-script/recipe/multitenancy';
+supertokensSession.init({
+    override: {
+        functions: (oI) => ({
+            ...oI,
+            getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => [
+                ...claimValidatorsAddedByOtherRecipes,
+                {
+                    ...supertokensMultitenancy.AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
+                    onFailureRedirection: async () => {
+                        let claimValue = await supertokensSession.getClaimValue({
+                            claim: supertokensMultitenancy.AllowedDomainsClaim,
+                        });
+                        return "https://" + claimValue![0];
+                    },
+                },
+            ],
+        }),
+    },
+})
 ```
 
 </TabItem>
 </NpmOrScriptTabs>
 
-- We call the `validateClaims` function with the `AllowedDomainsClaim` validator which makes sure that the user is on the right sub domain.
-- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+Above, in `Session.init` on the frontend, we add the `hasAccessToCurrentDomain` claim validator to the global validators. This means, that [whenever we check protect a route](../sessions/protecting-frontend-routes#verifying-the-claims-of-a-session--cust), it will check if `hasAccessToCurrentDomain` has passed, and if not, SuperTokens will redirect to the user to their right sub domain (via the values set in the `AllowedDomainsClaim` session claim).
 
 </CustomUIContent>
 
