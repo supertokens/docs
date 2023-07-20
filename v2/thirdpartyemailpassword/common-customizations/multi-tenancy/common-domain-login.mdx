@@ -12,14 +12,28 @@ import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
 import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import {Question, Answer}from "/src/components/question"
 
 <MultiTenancyPaidBanner />
 
 # Example 1: Tenants use a common domain to login
 
+<!-- COPY SECTION -->
+<!-- ./emailpassword/common-customizations/multi-tenancy/common-domain-login.mdx  -->
+<!-- 0a -->
+
 In this UX flow, all tenants login using the same page (like `https://example.com/auth`) and are redirected to their sub domain after login. The login method that's shown on the login page depend on the tenant's `tenantId` configuration. 
 
 The process of getting the `tenantId` from the user is left up to you, but a common method is to ask the user to enter their organisation name (which is equal to the `tenantId` that you configure in SuperTokens).
+
+:::important
+An example app for this setup with our **pre built UI** can be found on [our github example dir](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-one-login-many-subdomains). The app is setup to have three tenants:
+- `tenant1`: Login with emailpassword + Google sign in
+- `tenant2`: Login with emailPassword
+- `tenant3`: Login with passwordless + Github sign in
+:::
+
+<!-- END COPY SECTION -->
 
 <!-- COPY SECTION -->
 <!-- ./thirdparty/common-customizations/multi-tenancy/common-domain-login.mdx  -->
@@ -37,105 +51,224 @@ Whenever you want to onboard a new customer, you should [create and configure a 
 
 <PreBuiltUIContent>
 
-If you have [followed the pre built UI setup](../../pre-built-ui/setup/frontend), when you visit the login screen, you should see buttons for social login. We want to replace these with the tenant's provider options.
+<!-- COPY SECTION -->
+<!-- ./emailpassword/common-customizations/multi-tenancy/common-domain-login.mdx  -->
+<!-- 0b -->
 
-In order to do that, we must first get the tenant ID from the user. This can be done by building a UI that will ask them to enter their tenantId or Organisation name (which can be used as the tenant ID).
+<AppInfoForm askForWebsiteBasePath>
 
-For this, we must first disable the default sign in UI and create our own route on which we will built our component. Start by setting the `disableDefaultUI` config in the `supertokens.init` function call as shown below and removing the list of providers you may have added earlier:
+If you have [followed the pre built UI setup](../../pre-built-ui/setup/frontend), when you visit the login screen, you immediately see the login screen. We want to change the flow so that the user is first asked to enter their tenant ID and then the login UI is shown based on the tenant ID.
+
+In order to do that, we must first get the tenant ID from the user. This can be done by building a UI that will ask them to enter their tenantId or Organisation name (which can be used as the tenant ID). We build this UI in a component called `AuthPage` (as shown below):
+
+<FrontendPreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+<Question
+    question="Do you use react-router-dom?">
+
+<Answer title="Yes">
+
+```tsx
+import { useState } from "react";
+import * as reactRouterDom from "react-router-dom";
+import { Routes } from "react-router-dom";
+import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
+import { ^{recipePreBuiltUINameCapitalLetters} } from "supertokens-auth-react/recipe/^{codeImportRecipeName}/prebuiltui";
+import { useSessionContext } from "supertokens-auth-react/recipe/session";
+
+export const AuthPage = () => {
+    const location = reactRouterDom.useLocation();
+    const [inputTenantId, setInputTenantId] = useState("");
+    const tenantId = localStorage.getItem("tenantId") ?? undefined;
+    const session = useSessionContext();
+
+    if (session.loading) {
+        return null;
+    }
+
+    if (
+        tenantId !== undefined || // if we have a tenantId stored
+        session.doesSessionExist === true || // or an active session (it'll contain the tenantId)
+        new URLSearchParams(location.search).has("tenantId") // or we are on a link (e.g.: email verification) that contains the tenantId
+    ) {
+        // Since this component (AuthPage) is rendered in the ^{form_websiteBasePath} route in the main Routes component,
+        // and we are rendering this in a sub route as shown below, the third arg to getSuperTokensRoutesForReactRouterDom
+        // tells SuperTokens to create Routes without ^{form_websiteBasePath} prefix to them, otherwise they would
+        // render on ^{form_websiteBasePath}^{form_websiteBasePath} path.
+        return (
+            <Routes>
+                {getSuperTokensRoutesForReactRouterDom(
+                    reactRouterDom,
+                    [^{recipePreBuiltUINameCapitalLetters}],
+                    "^{form_websiteBasePath}"
+                )}
+            </Routes>
+        );
+    } else {
+        return (
+            <form
+                onSubmit={() => {
+                    // this value will be read by SuperTokens as shown in the next steps.
+                    localStorage.setItem("tenantId", inputTenantId);
+
+                    // This page reload is required so that supertokens.init knows about the saved
+                    // tenant ID
+                    window.location.reload();
+                }}>
+                <h2>Enter your organisation's name:</h2>
+                <input type="text" value={inputTenantId} onChange={(e) => setInputTenantId(e.target.value)} />
+                <br />
+                <button type="submit">Next</button>
+            </form>
+        );
+    }
+};
+```
+
+</Answer>
+<Answer title="No">
+
+```tsx
+import { useState } from "react";
+import { getRoutingComponent } from "supertokens-auth-react/ui";
+import { ^{recipePreBuiltUINameCapitalLetters} } from "supertokens-auth-react/recipe/^{codeImportRecipeName}/prebuiltui";
+import { useSessionContext } from "supertokens-auth-react/recipe/session";
+
+export const AuthPage = () => {
+    const [inputTenantId, setInputTenantId] = useState("");
+    const tenantId = localStorage.getItem("tenantId") ?? undefined;
+    const session = useSessionContext();
+
+    if (session.loading) {
+        return null;
+    }
+
+    if (
+        tenantId !== undefined || // if we have a tenantId stored
+        session.doesSessionExist === true || // or an active session (it'll contain the tenantId)
+        new URLSearchParams(location.search).has("tenantId") // or we are on a link (e.g.: email verification) that contains the tenantId
+    ) {
+        return getRoutingComponent([^{recipePreBuiltUINameCapitalLetters}]);
+    } else {
+        return (
+            <form
+                onSubmit={() => {
+                    // this value will be read by SuperTokens as shown in the next steps.
+                    localStorage.setItem("tenantId", inputTenantId);
+
+                    // This page reload is required so that supertokens.init knows about the saved
+                    // tenant ID
+                    window.location.reload();
+                }}>
+                <h2>Enter your organisation's name:</h2>
+                <input type="text" value={inputTenantId} onChange={(e) => setInputTenantId(e.target.value)} />
+                <br />
+                <button type="submit">Next</button>
+            </form>
+        );
+    }
+};
+```
+
+
+</Answer>
+</Question>
+
+</TabItem>
+
+<TabItem value="angular">
+
+```tsx
+import { useState } from "react";
+import { getRoutingComponent } from "supertokens-auth-react/ui";
+import { ^{recipePreBuiltUINameCapitalLetters} } from "supertokens-auth-react/recipe/^{codeImportRecipeName}/prebuiltui";
+import { useSessionContext } from "supertokens-auth-react/recipe/session";
+
+export const AuthPage = () => {
+    const [inputTenantId, setInputTenantId] = useState("");
+    const tenantId = localStorage.getItem("tenantId") ?? undefined;
+    const session = useSessionContext();
+
+    if (session.loading) {
+        return null;
+    }
+
+    if (
+        tenantId !== undefined || // if we have a tenantId stored
+        session.doesSessionExist === true || // or an active session (it'll contain the tenantId)
+        new URLSearchParams(location.search).has("tenantId") // or we are on a link (e.g.: email verification) that contains the tenantId
+    ) {
+        return getRoutingComponent([^{recipePreBuiltUINameCapitalLetters}]);
+    } else {
+        return (
+            <form
+                onSubmit={() => {
+                    // this value will be read by SuperTokens as shown in the next steps.
+                    localStorage.setItem("tenantId", inputTenantId);
+
+                    // This page reload is required so that supertokens.init knows about the saved
+                    // tenant ID
+                    window.location.reload();
+                }}>
+                <h2>Enter your organisation's name:</h2>
+                <input type="text" value={inputTenantId} onChange={(e) => setInputTenantId(e.target.value)} />
+                <br />
+                <button type="submit">Next</button>
+            </form>
+        );
+    }
+};
+```
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+- We render a simple UI which asks the user for their organisation's name. Their input will be treated as their tenant ID.
+- Once the user has submitted that form, we will store their input in localstorage and reload the page. This value will be read later on (as shown below) by SuperTokens to render the right login method based on the saved tenantId. **The page reload is required for SuperTokens to read the saved tenantId from localstorage.**
+- In case the tenantID exists in localstorage, we render the SuperTokens UI as usual.
+- We render the tenant form if the user has not yet provided us with the information about which tenant they belong to. In all our flows, we get the tenantId threw ways via:
+    - If the user had previously etnered the tenantId and it's stored in localstorage
+    - If there already exists a session - in which case we get the tenantId from the session in the pre built components.
+    - If there is a query param called `tenantId` - in which case we get the tenantId from the query param in the pre built components. This query param will be there in email verification, password reset, or magic links.
+- In the code above, we render a box in which the user can enter their tenant ID / org name, but you can also make it a drop down or any other UI that you want - the key is that their input should be saveed in localstorage so that it can be read later, and that we want to reload the page after the user has chosen the input.
+
+:::important
+We want to render the `AuthPage` component to show on `^{form_websiteBasePath}/*` paths of the website.
+
+The `AuthPage` will replace the call to `getSuperTokensRoutesForReactRouterDom` or `getRoutingComponent` that you may have added to your app from the quick setup section.
+:::
+
+Finally, we need to clear the saved tenantId from localstorage in the following events:
+- When the user signs out: Since the user can get to choose the tenant ID again when they sign in.
+- When the session has been revoked / expired and the frontend detects this: This will redirect the user to the login screen, where they can choose the tenant ID again.
+- When the user signs in: Since now the user's session will be the source of their tenant ID.
 
 <FrontendPreBuiltUITabs>
 
 <TabItem value="reactjs">
 
 ```tsx
-import React from 'react';
-
-import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
-import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword";
 import Session from "supertokens-auth-react/recipe/session";
 
-SuperTokens.init({
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "...",
-        apiBasePath: "...",
-        websiteBasePath: "..."
+Session.init({
+    // other configs..
+    onHandleEvent: (event) => {
+        if (["SIGN_OUT", "UNAUTHORISED", "SESSION_CREATED"].includes(event.action)) {
+            window.localStorage.removeItem("tenantId");
+        }
     },
-    recipeList: [
-        ThirdPartyEmailPassword.init({
-            // highlight-start
-            signInAndUpFeature: {
-                disableDefaultUI: true
-            }
-            // highlight-end
-        }),
-        Session.init()
-    ]
-});
+})
 ```
 
 </TabItem>
 
 </FrontendPreBuiltUITabs>
 
-Now if you visit the login page, you will no longer see the login UI. We will now create our own login route on which we will display the following component:
+</AppInfoForm>
 
-<FrontendPreBuiltUITabs>
-
-<TabItem value="reactjs">
-
-```tsx
-import React from 'react';
-import { SignInAndUp } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui";
-
-function TenantLoginPage() {
-
-    const [tenantId, setTenantId] = React.useState("");
-    const [tenantIdSubmitted, setTenantIdSubmitted] = React.useState(false);
-
-    React.useEffect(() => {
-        // for simplicity sakes, we want to ask the user their 
-        // tenantId each time they reload this page. But you could skip 
-        // this and show a UI to the user in which you display the existing tenantId (if present)
-        // and ask them to confirm it, or enter a new one
-        localStorage.removeItem("tenantId");
-    }, [])
-
-    if (!tenantIdSubmitted) {
-        // render UI to ask the user for their tenant ID
-        return (
-            <div>
-                <div>Enter your organisation's name:</div><br />
-                <input
-                    type="text"
-                    value={tenantId}
-                    onChange={(e) => setTenantId(e.target.value)}
-                />
-                <br /><br />
-                <button onSubmit={() => {
-
-                    // this value will be read by SuperTokens as shown in the next steps.
-                    localStorage.setItem("tenantId", tenantId)
-                    setTenantIdSubmitted(true);
-                }}>Next</button>
-            </div>
-        )
-    } else {
-        // we now have their tenant ID, so we should render the sign in up component
-        // which will display the login UI configured for the user's tenant ID.
-        return <SignInAndUp />
-    }
-}
-```
-- We render a simple UI which asks the user for their organisation's name. Their input will be treated as their tenant ID.
-- Once the user has submitted that form, we will store their input in localstorage. This value will be read later on (as shown below) by SuperTokens to render the right login providers based on the saved tenantId.
-- The component above clears the tenantId from localstorage whenever this page is (re)loaded, but you can change the behaviour of that to show the existing saved tenantId and ask the user to confirm it or change it.
-- Finally, after saving the tenantId in localstorage, we make the component render the `SignInAndUp` UI component from SuperTokens lib which will render the UI we had disabled previously, but with the right set of providers for this tenant.
-
-</TabItem>
-
-</FrontendPreBuiltUITabs>
+<!-- END COPY SECTION -->
 
 </PreBuiltUIContent>
 
@@ -477,12 +610,15 @@ The config above will tell SuperTokens to add the list of domains returned by yo
 
 ## Step 5: (Optional) Redirect the user to their sub domain post sign in
 
+<!-- COPY SECTION -->
+<!-- ./emailpassword/common-customizations/multi-tenancy/common-domain-login.mdx  -->
+<!-- 0c -->
 
 <PreBuiltOrCustomUISwitcher>
 
 <PreBuiltUIContent>
 
-On the frontend side, post sign in, by default, our frontend SDK will redirect the user to the `/` route. You can change this to redirect the user to a specific route which further redirects them to their sub domain.
+On the frontend side, post sign in, by default, our frontend SDK will redirect the user to the `/` route. You can change this to instead redirect them to their sub domain based on their tenantId.
 
 <FrontendPreBuiltUITabs>
 
@@ -490,7 +626,9 @@ On the frontend side, post sign in, by default, our frontend SDK will redirect t
 
 ```tsx
 import SuperTokens from "supertokens-auth-react";
-import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword";
+import ^{recipeNameCapitalLetters} from "supertokens-auth-react/recipe/^{codeImportRecipeName}";
+import Session from "supertokens-auth-react/recipe/session";
+import Multitenancy from "supertokens-auth-react/recipe/multitenancy";
 
 SuperTokens.init({
     appInfo: {
@@ -499,10 +637,19 @@ SuperTokens.init({
         websiteDomain: "...",
     },
     recipeList: [
-        ThirdPartyEmailPassword.init({
+        ^{recipeNameCapitalLetters}.init({
+            ^{reactRecipeInitDefault}
             getRedirectionURL: async (context) => {
                 if (context.action === "SUCCESS") {
-                    return "/redirect";
+                    let claimValue: string[] | undefined = await Session.getClaimValue({
+                        claim: Multitenancy.AllowedDomainsClaim
+                    });
+                    if (claimValue !== undefined) {
+                        window.location.href = "https://" + claimValue[0];
+                    } else {
+                        // there was no configured allowed domain for this user. Throw an error cause of
+                        // misconfig or redirect to a default sub domain
+                    }
                 }
                 return undefined;
             }
@@ -511,22 +658,15 @@ SuperTokens.init({
 });
 ```
 
-
 </TabItem>
 
 </FrontendPreBuiltUITabs>
-
-Then on the `/redirect` page, you can redirect the user to their sub domain which is saved in their session:
 
 </PreBuiltUIContent>
 
 <CustomUIContent>
 
 On the frontend, once the user has completed login, you can read the domain that they have access to (from their session) and redirect them accordingly:
-
-</CustomUIContent>
-
-</PreBuiltOrCustomUISwitcher>
 
 <NpmOrScriptTabs>
 <TabItem value="npm">
@@ -558,7 +698,6 @@ async function redirectToSubDomain() {
 ```tsx
 import supertokensSession from "supertokens-web-js-script/recipe/session";
 import supertokensMultitenancy from "supertokens-web-js-script/recipe/multitenancy";
-
 async function redirectToSubDomain() {
     if (await supertokensSession.doesSessionExist()) {
         let claimValue: string[] | undefined = await supertokensSession.getClaimValue({
@@ -579,8 +718,15 @@ async function redirectToSubDomain() {
 </TabItem>
 </NpmOrScriptTabs>
 
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
 - The `AllowedDomainsClaim` claim is auto added to the session by our backend SDK if you provide the `GetAllowedDomainsForTenantId` config from the previous step.
 - This claim contains a list of domains that are allowed for this user, based on their tenant ID.
+
+<!-- END COPY SECTION -->
+
 
 ## Step 6: (Optional) Sharing sessions across sub domains
 
@@ -608,73 +754,30 @@ On the frontend, we want to check if the tenant has access to the current sub do
 
 ```tsx
 import React from "react";
-import { SessionAuth, getClaimValue } from 'supertokens-auth-react/recipe/session';
+import Session from 'supertokens-auth-react/recipe/session';
 import { AllowedDomainsClaim } from 'supertokens-auth-react/recipe/multitenancy';
 
-const ProtectedRoute = (props: React.PropsWithChildren<any>) => {
-    return (
-        <SessionAuth
-            overrideGlobalClaimValidators={(globalValidators) =>
-                [...globalValidators,
+Session.init({
+    override: {
+        functions: (oI) => ({
+            ...oI,
+            getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => [
+                ...claimValidatorsAddedByOtherRecipes,
                 {
                     ...AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
                     onFailureRedirection: async () => {
-                        let claimValue: string[] | undefined = await getClaimValue({
-                            claim: AllowedDomainsClaim
+                        let claimValue = await Session.getClaimValue({
+                            claim: AllowedDomainsClaim,
                         });
                         return "https://" + claimValue![0];
-                    }
-                }
-                ]
-            }
-        >
-            {props.children}
-        </SessionAuth>
-    );
-}
+                    },
+                },
+            ],
+        }),
+    },
+})
 ```
-Above we are creating a generic component called `ProtectedRoute` which enforces that its child components can only be rendered if the user is on the right sub domain based on the Multi tenancy claim. In case the claim validation fails, we redirect the user to their right sub domain based on that's configured by you on the backend (via the `AllowedDomainsClaim` session claim).
-
-</TabItem>
-
-<TabItem value="angular">
-
-```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { AllowedDomainsClaim } from "supertokens-web-js/recipe/multitenancy";
-
-async function shouldLoadRoute(): Promise<boolean> {
-    if (await Session.doesSessionExist()) {
-
-        // highlight-start
-        let validationErrors = await Session.validateClaims({
-            overrideGlobalClaimValidators: (globalValidators) =>
-                [...globalValidators,
-                    AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
-                ]
-        });
-        // highlight-end
-
-        if (validationErrors.length === 0) {
-            // user is an admin
-            return true;
-        }
-
-        for (const err of validationErrors) {
-            if (err.validatorId === AllowedDomainsClaim.id) {
-                // multi tenancy domain check claim check failed
-            } else {
-                // some other claim check failed (from the global validators list)
-            }
-        }
-    }
-
-    return false
-}
-```
-
-- We call the `validateClaims` function with the `AllowedDomainsClaim` validator which makes sure that the user is on the right sub domain.
-- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+Above, in `Session.init` on the frontend, we add the `hasAccessToCurrentDomain` claim validator to the global validators. This means, that [whenever we check protect a route](../sessions/protecting-frontend-routes), it will check if `hasAccessToCurrentDomain` has passed, and if not, SuperTokens will redirect to the user to their right sub domain (via the values set in the `AllowedDomainsClaim` session claim).
 
 </TabItem>
 
@@ -688,37 +791,28 @@ async function shouldLoadRoute(): Promise<boolean> {
 <TabItem value="npm">
 
 ```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { AllowedDomainsClaim } from "supertokens-web-js/recipe/multitenancy";
+import Session from 'supertokens-web-js/recipe/session';
+import { AllowedDomainsClaim } from 'supertokens-web-js/recipe/multitenancy';
 
-async function shouldLoadRoute(): Promise<boolean> {
-    if (await Session.doesSessionExist()) {
-
-        // highlight-start
-        let validationErrors = await Session.validateClaims({
-            overrideGlobalClaimValidators: (globalValidators) =>
-                [...globalValidators,
-                    AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
-                ]
-        });
-        // highlight-end
-
-        if (validationErrors.length === 0) {
-            // user is an admin
-            return true;
-        }
-
-        for (const err of validationErrors) {
-            if (err.validatorId === AllowedDomainsClaim.id) {
-                // multi tenancy domain check claim check failed
-            } else {
-                // some other claim check failed (from the global validators list)
-            }
-        }
-    }
-
-    return false
-}
+Session.init({
+    override: {
+        functions: (oI) => ({
+            ...oI,
+            getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => [
+                ...claimValidatorsAddedByOtherRecipes,
+                {
+                    ...AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
+                    onFailureRedirection: async () => {
+                        let claimValue = await Session.getClaimValue({
+                            claim: AllowedDomainsClaim,
+                        });
+                        return "https://" + claimValue![0];
+                    },
+                },
+            ],
+        }),
+    },
+})
 ```
 
 
@@ -726,44 +820,33 @@ async function shouldLoadRoute(): Promise<boolean> {
 <TabItem value="script">
 
 ```tsx
-import supertokensSession from "supertokens-web-js-script/recipe/session";
-import supertokensMultitenancy from "supertokens-web-js-script/recipe/multitenancy";
-
-async function shouldLoadRoute(): Promise<boolean> {
-    if (await supertokensSession.doesSessionExist()) {
-
-        // highlight-start
-        let validationErrors = await supertokensSession.validateClaims({
-            overrideGlobalClaimValidators: (globalValidators) =>
-                [...globalValidators,
-                    supertokensMultitenancy.AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
-                ]
-        });
-        // highlight-end
-
-        if (validationErrors.length === 0) {
-            // user is an admin
-            return true;
-        }
-
-        for (const err of validationErrors) {
-            if (err.validatorId === supertokensMultitenancy.AllowedDomainsClaim.id) {
-                // multi tenancy domain check claim check failed
-            } else {
-                // some other claim check failed (from the global validators list)
-            }
-        }
-    }
-
-    return false
-}
+import supertokensSession from 'supertokens-web-js-script/recipe/session';
+import supertokensMultitenancy from 'supertokens-web-js-script/recipe/multitenancy';
+supertokensSession.init({
+    override: {
+        functions: (oI) => ({
+            ...oI,
+            getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => [
+                ...claimValidatorsAddedByOtherRecipes,
+                {
+                    ...supertokensMultitenancy.AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
+                    onFailureRedirection: async () => {
+                        let claimValue = await supertokensSession.getClaimValue({
+                            claim: supertokensMultitenancy.AllowedDomainsClaim,
+                        });
+                        return "https://" + claimValue![0];
+                    },
+                },
+            ],
+        }),
+    },
+})
 ```
 
 </TabItem>
 </NpmOrScriptTabs>
 
-- We call the `validateClaims` function with the `AllowedDomainsClaim` validator which makes sure that the user is on the right sub domain.
-- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+Above, in `Session.init` on the frontend, we add the `hasAccessToCurrentDomain` claim validator to the global validators. This means, that [whenever we check protect a route](../sessions/protecting-frontend-routes#verifying-the-claims-of-a-session--cust), it will check if `hasAccessToCurrentDomain` has passed, and if not, SuperTokens will redirect to the user to their right sub domain (via the values set in the `AllowedDomainsClaim` session claim).
 
 </CustomUIContent>
 
