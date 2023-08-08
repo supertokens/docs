@@ -362,9 +362,29 @@ fileprivate class ViewController: UIViewController, ASAuthorizationControllerPre
 
 <TabItem value="flutter">
 
-:::info
-Coming Soon
-:::
+For flutter we use the [sign_in_with_apple](https://pub.dev/packages/sign_in_with_apple) package, make sure to follow the prerequisites steps to get the package setup. After setup use the snippet below to trigger the apple sign in flow.
+
+```dart
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+
+void loginWithApple() async {
+  try {
+    var credential = await SignInWithApple.getAppleIDCredential(scopes: [
+      AppleIDAuthorizationScopes.email,
+      AppleIDAuthorizationScopes.fullName,
+    ]);
+
+    String authorizationCode = credential.authorizationCode;
+    String? email = credential.email;
+    String? firstname = credential.givenName;
+    String? lastName = credential.familyName;
+
+    // Send the user information and auth code to the backend. Refer to the next step.
+  } catch (e) {
+    // Sign in aborted or failed
+  }
+}
+```
 
 </TabItem>
 
@@ -446,6 +466,14 @@ You can follow the [official guide](https://developers.google.com/identity/proto
 <h3>Step 1) Fetching the authorisation token on the frontend</h3>
 
 You can follow the [official guide](https://developers.google.com/identity/protocols/oauth2/native-app) on how to use the PKCE flow with google sign in on iOS
+
+</TabItem>
+
+<TabItem value="flutter">
+
+<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+
+You can follow the guide for [flutter_appauth](https://pub.dev/packages/flutter_appauth) on how to use the PKCE flow with google sign in with Flutter
 
 </TabItem>
 
@@ -583,6 +611,79 @@ fileprivate class ViewController: UIViewController {
             // TODO: See next step
         }
     }
+}
+```
+
+<h3>Step 2) Calling the signinup API to use the OAuth tokens</h3>
+
+<AppInfoForm askForAPIDomain showMultiTenancyTab>
+
+Once you have the `access_token` or the `id_token` from the auth provider, you need to call the signinup API exposed by our backend SDK as shown below:
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+    "thirdPartyId": "google",
+    "clientType": "...",
+    "oAuthTokens": {
+        "access_token": "...",
+        "id_token": "..."
+    },
+}'
+```
+
+:::important
+- The `clientType` input is optional and is required only if you have initialised the same provider multiple times on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
+- If you have the `id_token`, you can send that along with the `access_token`.
+:::
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This is returned if the social / SSO provider did not provider an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+
+:::note
+On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
+:::
+
+</AppInfoForm>
+
+</TabItem>
+
+<TabItem value="flutter">
+
+<h3>Step 1) Fetching the OAuth / access tokens on the frontend</h3>
+
+You can follow the instructions for the [official google login](https://pub.dev/packages/google_sign_in) library for flutter to set up your app for google login. After setting up, use the snippet below to login with google and get the access token and id token.
+
+```dart
+import 'package:google_sign_in/google_sign_in.dart';
+
+void loginWithGoogle() async {
+  GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+    ],
+  );
+
+  try {
+    var response = await _googleSignIn.signIn();
+
+    if (response == null) {
+      // Login was aborted
+      return;
+    }
+
+    var authentication = await response.authentication;
+    String? accessToken = authentication.accessToken;
+    String? idToken = authentication.idToken;
+
+    // TODO: See next step
+  } catch(e) {
+    // Google sign in failed
+  }
 }
 ```
 
