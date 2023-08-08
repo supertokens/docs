@@ -96,7 +96,7 @@ func main() {
 			Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
 				ogThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
 
-				(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, tenantId string, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
+				(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
 					existingUsers, err := thirdpartyemailpassword.GetUsersByEmail(email, tenantId)
 					if err != nil {
 						return tpepmodels.SignInUpResponse{}, err
@@ -104,7 +104,7 @@ func main() {
 
 					if len(existingUsers) == 0 {
 						// this means this email is new so we allow sign up
-						return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+						return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
 					}
 
 					isSignIn := false
@@ -115,7 +115,7 @@ func main() {
 						}
 					}
 					if isSignIn {
-						return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+						return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
 					}
 					return tpepmodels.SignInUpResponse{}, errors.New("Cannot sign up as email already exists")
 				}
@@ -130,7 +130,7 @@ func main() {
 
 					if len(existingUsers) == 0 {
 						// this means this email is new so we allow sign up
-						return ogEmailPasswordSignUp(email, password, userContext)
+						return ogEmailPasswordSignUp(email, password, tenantId, userContext)
 					}
 
 					return tpepmodels.SignUpResponse{
@@ -144,14 +144,14 @@ func main() {
 			APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
 				originalSignInUpPOST := *originalImplementation.ThirdPartySignInUpPOST
 
-				(*originalImplementation.ThirdPartySignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpepmodels.ThirdPartyOutput, error) {
+				(*originalImplementation.ThirdPartySignInUpPOST) = func(provider *tpmodels.TypeProvider, input tpmodels.TypeSignInUpInput, tenantId string, options tpmodels.APIOptions, userContext *map[string]interface{}) (tpepmodels.ThirdPartySignInUpPOSTResponse, error) {
 
-					resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
+					resp, err := originalSignInUpPOST(provider, input, tenantId, options, userContext)
 
 					if err.Error() == "Cannot sign up as email already exists" {
 						// this error was thrown from our function override above.
 						// so we send a useful message to the user
-						return tpepmodels.ThirdPartyOutput{
+						return tpepmodels.ThirdPartySignInUpPOSTResponse{
 							GeneralError: &supertokens.GeneralErrorResponse{
 								Message: "Seems like you already have an account with another method. Please use that instead.",
 							},
