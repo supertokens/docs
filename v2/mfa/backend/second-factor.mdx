@@ -497,7 +497,7 @@ func main() {
 			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 				// this API is called when the user enters the OTP
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 					// - We should already have a session here since this is called
 					// after first factor login
 					// - We set the claims to check to be [] here, since this needs to be callable
@@ -511,7 +511,7 @@ func main() {
 						return plessmodels.ConsumeCodePOSTResponse{}, err
 					}
 
-					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, tenantId, options, userContext)
 					if err != nil {
 						return resp, err
 					}
@@ -712,7 +712,7 @@ import (
 
 func main() {
 	// highlight-start
-	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
 	// highlight-end
@@ -726,7 +726,7 @@ func main() {
 			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 				// this API is called when the user enters the OTP
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 					// - We should already have a session here since this is called
 					// after first factor login
 					// - We set the claims to check to be [] here, since this needs to be callable
@@ -746,7 +746,7 @@ func main() {
 					(*userContext)["session"] = session
 					// highlight-end
 
-					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, tenantId, options, userContext)
 					if err != nil {
 						return resp, err
 					}
@@ -782,7 +782,7 @@ func main() {
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 				oCreateNewSession := *originalImplementation.CreateNewSession
 				/* This function is called after signing in or signing up via the first factor */
-				(*originalImplementation.CreateNewSession) = func(userID string, tenantID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 					// highlight-start
 					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
 						/**
@@ -796,11 +796,11 @@ func main() {
 					if accessTokenPayload == nil {
 						accessTokenPayload = map[string]interface{}{}
 					}
-					accessTokenPayload, err := SecondFactorClaim.Build(userID, tenantID, accessTokenPayload, userContext)
+					accessTokenPayload, err := SecondFactorClaim.Build(userID, tenantId, accessTokenPayload, userContext)
 					if err != nil {
 						return nil, err
 					}
-					return oCreateNewSession(userID, tenantID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
+					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
 				}
 				return originalImplementation
 			},
@@ -1020,7 +1020,7 @@ func main() {
 				/*This API is called to send an OTP*/
 				oCreateCodePOST := *originalImplementation.CreateCodePOST
 				// highlight-start
-				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+				nCreateCodePOST := func(email *string, phoneNumber *string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
 					/**
 					 * We want to make sure that the OTP being generated is for the
 					 * same number that belongs to this user.
@@ -1041,7 +1041,7 @@ func main() {
 					// We try and get the phone number associated with this user. It will be
 					// defined if this is a sign in attempt, in which case, we will check that
 					// it is equal to the input phone number
-					userMetadata, err := usermetadata.GetUserMetadataWithContext(session.GetUserID(), userContext)
+					userMetadata, err := usermetadata.GetUserMetadata(session.GetUserID(), userContext)
 					if err != nil {
 						return plessmodels.CreateCodePOSTResponse{}, err
 					}
@@ -1049,7 +1049,7 @@ func main() {
 					if passwordlessUserId, ok := userMetadata["passwordlessUserId"].(string); ok {
 						// the flow will come here during a login attempt, since we
 						// associate the passwordless userId to the user on sign up
-						passwordlessUserInfo, err := passwordless.GetUserByIDWithContext(passwordlessUserId, userContext)
+						passwordlessUserInfo, err := passwordless.GetUserByID(passwordlessUserId, userContext)
 						if err != nil {
 							return plessmodels.CreateCodePOSTResponse{}, err
 						}
@@ -1063,15 +1063,15 @@ func main() {
 						}
 					}
 
-					return oCreateCodePOST(email, phoneNumber, options, userContext)
+					return oCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
 				}
 				// highlight-end
 				*originalImplementation.CreateCodePOST = nCreateCodePOST
 
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 					/*...mofications from previous step */
-					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, tenantId, options, userContext)
 					/*...mofications from previous step */
 					return resp, err
 				}
@@ -1248,7 +1248,7 @@ import (
 )
 
 func main() {
-	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
 
@@ -1257,7 +1257,7 @@ func main() {
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 				oCreateNewSession := *originalImplementation.CreateNewSession
 				/* This function is called after signing in or signing up via the first factor */
-				(*originalImplementation.CreateNewSession) = func(userID string, tenantID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
 						/**
 						 * This will be true for the second factor login.
@@ -1269,13 +1269,13 @@ func main() {
 					// highlight-start
 					// we first get the passwordless userId associated with this user
 					// using the UserMetadata recipe
-					userMetadata, err := usermetadata.GetUserMetadataWithContext(userID, userContext)
+					userMetadata, err := usermetadata.GetUserMetadata(userID, userContext)
 					if err != nil {
 						return nil, err
 					}
 					var userPhoneNumber *string
 					if passwordlessUserId, ok := userMetadata["passwordlessUserId"].(string); ok {
-						passwordlessUserInfo, err := passwordless.GetUserByIDWithContext(passwordlessUserId, userContext)
+						passwordlessUserInfo, err := passwordless.GetUserByID(passwordlessUserId, userContext)
 						if err != nil {
 							return nil, err
 						}
@@ -1286,7 +1286,7 @@ func main() {
 					if accessTokenPayload == nil {
 						accessTokenPayload = map[string]interface{}{}
 					}
-					accessTokenPayload, err = SecondFactorClaim.Build(userID, tenantID, accessTokenPayload, userContext)
+					accessTokenPayload, err = SecondFactorClaim.Build(userID, tenantId, accessTokenPayload, userContext)
 					if err != nil {
 						return nil, err
 					}
@@ -1295,7 +1295,7 @@ func main() {
 						accessTokenPayload["phoneNumber"] = *userPhoneNumber
 					}
 					// highlight-end
-					return oCreateNewSession(userID, tenantID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
+					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
 				}
 				return originalImplementation
 			},
@@ -1453,7 +1453,7 @@ func main() {
 			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 				/*This API is called to send an OTP*/
 				oCreateCodePOST := *originalImplementation.CreateCodePOST
-				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+				nCreateCodePOST := func(email *string, phoneNumber *string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
 					/**
 					 * We want to make sure that the OTP being generated is for the
 					 * same number that belongs to this user.
@@ -1486,14 +1486,14 @@ func main() {
 						}
 					}
 
-					return oCreateCodePOST(email, phoneNumber, options, userContext)
+					return oCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
 				}
 				*originalImplementation.CreateCodePOST = nCreateCodePOST
 
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 					/*...mofications from previous step */
-					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, tenantId, options, userContext)
 					/*...mofications from previous step */
 					return resp, err
 				}
