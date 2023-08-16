@@ -275,6 +275,10 @@ def change_email():
 
     request_body = request.get_json()
 
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
+
     # validate the input email
     if not is_valid_email(request_body["email"]):
         # TODO: handle invalid email error
@@ -283,6 +287,10 @@ def change_email():
     # check that the account is not a social account
     user_id = session.get_user_id()
     user_info = get_user_by_id(user_id)
+
+    if user_info is None:
+        # TODO handle error, user does not exist
+        return
 
     if user_info.third_party_info is not None:
         # TODO handle error, cannot update email for social account
@@ -312,7 +320,6 @@ async def is_valid_email(value: str) -> bool:
         )
         is not None
     )
-
 ```
 
 </TabItem>
@@ -619,7 +626,6 @@ from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.thirdpartyemailpassword.syncio import ( 
     get_user_by_id,
-    get_users_by_email, 
     update_email_or_password
 )
 from supertokens_python.recipe.thirdpartyemailpassword.interfaces import (
@@ -629,17 +635,7 @@ from supertokens_python.recipe.thirdpartyemailpassword.interfaces import (
 
 from supertokens_python.recipe.emailverification.syncio import (
     is_email_verified,
-    create_email_verification_token,
-    send_email,   
-)
-
-from supertokens_python.recipe.emailverification.types import (
-    EmailTemplateVars,
-    VerificationEmailTemplateVarsUser
-)
-
-from supertokens_python.recipe.emailverification.interfaces import (
-    CreateEmailVerificationTokenOkResult,
+    send_email_verification_email,
 )
 
 from flask import g, request, Flask
@@ -655,6 +651,10 @@ def change_email():
 
     request_body = request.get_json()
 
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
+
     # validate the input email
     if not is_valid_email(request_body["email"]):
         # TODO: handle invalid email error
@@ -663,6 +663,10 @@ def change_email():
     # check that the account is not a social account
     user_id = session.get_user_id()
     user_info = get_user_by_id(user_id)
+
+    if user_info is None:
+        # TODO handle error, user does not exist
+        return
 
     if user_info.third_party_info is not None:
         # TODO handle error, cannot update email for social account
@@ -675,7 +679,7 @@ def change_email():
     
     if not is_verified:
         # Create and send the email verification link to the user for the new email.
-        send_email_verification_email(user_id, requesy_body["email"])
+        send_email_verification_email("public", user_id, request_body["email"])
         
         # TODO send successful email verification response
         return
@@ -704,7 +708,6 @@ async def is_valid_email(value: str) -> bool:
         )
         is not None
     )
-
 ```
 
 </TabItem>
@@ -866,13 +869,19 @@ from typing import Optional, Dict, Any
 def override_email_verification_apis(original_implementation: APIInterface):
     original_email_verification_verify_email_post = original_implementation.email_verify_post
     
-    async def email_verify_post(token: str, session: Optional[SessionContainer], api_options: APIOptions, user_context: Dict[str, Any] ):
-        
+    async def email_verify_post(
+        token: str,
+        session: Optional[SessionContainer],
+        tenant_id: str,
+        api_options: APIOptions,
+        user_context: Dict[str, Any]
+    ):
+
         # highlight-start
-        verification_response = await original_email_verification_verify_email_post(token, session, api_options, user_context)
+        verification_response = await original_email_verification_verify_email_post(token, session, tenant_id, api_options, user_context)
         
         if isinstance(verification_response, EmailVerifyPostOkResult):
-            await update_email_or_password(verification_response.user.user_id, verification_response.user.email)
+            await update_email_or_password(verification_response.user.user_id, verification_response.user.email, tenant_id_for_password_policy=tenant_id)
         
         return verification_response
         # highlight-end
@@ -899,7 +908,6 @@ init(
     ),
     ],
 )
-
 ```
 
 </TabItem>

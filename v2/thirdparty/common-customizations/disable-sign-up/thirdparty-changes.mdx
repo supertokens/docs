@@ -258,8 +258,9 @@ from supertokens_python.types import GeneralErrorResponse
 from supertokens_python.recipe import ^{codeImportRecipeName}
 from supertokens_python.recipe.^{codeImportRecipeName}.asyncio import get_users_by_email
 from supertokens_python.recipe.^{codeImportRecipeName}.interfaces import APIInterface, RecipeInterface, ^{pythonThirdPartySignInUpOkResult}, ^{pythonThirdPartyAPIOptions}
-from typing import Union, Dict, Any
-from supertokens_python.recipe.thirdparty.provider import Provider
+from typing import Optional, Dict, Any
+from supertokens_python.recipe.thirdparty.provider import Provider, RedirectUriInfo
+from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
 
 async def is_email_allowed(email: str):
     # from previous code snippet..
@@ -268,15 +269,22 @@ async def is_email_allowed(email: str):
 def override_^{codeImportRecipeName}_functions(original_implementation: RecipeInterface):
     original_^{pythonthirdparty_sign_in_up} = original_implementation.^{pythonthirdparty_sign_in_up}
 
-    async def ^{pythonthirdparty_sign_in_up}(third_party_id: str, third_party_user_id: str, email: str, tenant_id str, user_context: Dict[str, Any],
-                         ) -> ^{pythonThirdPartySignInUpOkResult}:
+    async def ^{pythonthirdparty_sign_in_up}(
+        third_party_id: str,
+        third_party_user_id: str,
+        email: str,
+        oauth_tokens: Dict[str, Any],
+        raw_user_info_from_provider: RawUserInfoFromProvider,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ) -> ^{pythonThirdPartySignInUpOkResult}:
         existing_users = await get_users_by_email(email, tenant_id, user_context)
         if (len(existing_users) == 0):
             if not await is_email_allowed(email):
                 raise Exception("No sign up")
 
         # this means this email is new so we allow sign up
-        return await original_^{pythonthirdparty_sign_in_up}(third_party_id, third_party_user_id, email, user_context)
+        return await original_^{pythonthirdparty_sign_in_up}(third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
         raise Exception("No sign up")
 
     original_implementation.^{pythonthirdparty_sign_in_up} = ^{pythonthirdparty_sign_in_up}
@@ -287,9 +295,16 @@ def override_^{codeImportRecipeName}_functions(original_implementation: RecipeIn
 def override_^{codeImportRecipeName}_apis(original_implementation: APIInterface):
     original_sign_in_up_post = original_implementation.^{pythonthirdparty_sign_in_up}_post
 
-    async def ^{pythonthirdparty_sign_in_up}_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: ^{pythonThirdPartyAPIOptions}, user_context: Dict[str, Any]):
+    async def ^{pythonthirdparty_sign_in_up}_post(
+        provider: Provider,
+        redirect_uri_info: Optional[RedirectUriInfo],
+        oauth_tokens: Optional[Dict[str, Any]],
+        tenant_id: str,
+        api_options: ThirdPartyAPIOptions,
+        user_context: Dict[str, Any]
+    ):
         try:
-            return await original_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+            return await original_sign_in_up_post(provider, redirect_uri_info, oauth_tokens, tenant_id, api_options, user_context)
         except Exception as e:
             if str(e) == "No sign up":
                 return GeneralErrorResponse("Seems like you already have an account with another method. Please use that instead.")
