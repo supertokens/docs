@@ -424,7 +424,7 @@ import (
 
 func main() {
 	// highlight-start
-	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
 	// highlight-end
@@ -434,17 +434,17 @@ func main() {
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 				oCreateNewSession := *originalImplementation.CreateNewSession
 				/* This function is called after signing in or signing up via the first factor */
-				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 					// highlight-start
 					if accessTokenPayload == nil {
 						accessTokenPayload = map[string]interface{}{}
 					}
-					accessTokenPayload, err := SecondFactorClaim.Build(userID, accessTokenPayload, userContext)
+					accessTokenPayload, err := SecondFactorClaim.Build(userID, tenantId, accessTokenPayload, userContext)
 					if err != nil {
 						return nil, err
 					}
 					// highlight-end
-					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
+					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
 				}
 				return originalImplementation
 			},
@@ -466,7 +466,7 @@ from typing import Any, Dict, Optional
 # to add {"2fa-completed": false} into it.
 # highlight-start
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
 # highlight-end
 
 
@@ -478,6 +478,7 @@ def override_session_functions(original_implementation: RecipeInterface):
         access_token_payload: Optional[Dict[str, Any]],
         session_data_in_database: Optional[Dict[str, Any]],
         disable_anti_csrf: Optional[bool],
+        tenant_id: str,
         user_context: Dict[str, Any],
     ):
         # This function is called after signing in or signing up via the first factor
@@ -488,7 +489,7 @@ def override_session_functions(original_implementation: RecipeInterface):
         # highlight-next-line
         access_token_payload = {**access_token_payload, **(await SecondFactorClaim.build(user_id, user_context))}
         return await original_create_new_session(
-            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context
+            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context
         )
 
     original_implementation.create_new_session = create_new_session

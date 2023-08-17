@@ -105,8 +105,8 @@ func main() {
 					Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
 						ogSignInUp := *originalImplementation.SignInUp
 
-						(*originalImplementation.SignInUp) = func(thirdPartyID, thirdPartyUserID string, email string, userContext supertokens.UserContext) (tpmodels.SignInUpResponse, error) {
-							resp, err := ogSignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+						(*originalImplementation.SignInUp) = func(thirdPartyID string, thirdPartyUserID string, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext *map[string]interface{}) (tpmodels.SignInUpResponse, error) {
+							resp, err := ogSignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
 
 							if err != nil {
 								return tpmodels.SignInUpResponse{}, err
@@ -150,16 +150,24 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdparty
 from supertokens_python.recipe.thirdparty.interfaces import RecipeInterface
+from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
 from typing import Dict, Any
 
 # highlight-start
 def override_thirdparty_functions(original_implementation: RecipeInterface):
     original_sign_in_up = original_implementation.sign_in_up
 
-    async def sign_in_up(third_party_id: str, third_party_user_id: str, email: str,
-                         user_context: Dict[str, Any]):
+    async def sign_in_up(
+        third_party_id: str,
+        third_party_user_id: str,
+        email: str,
+        oauth_tokens: Dict[str, Any],
+        raw_user_info_from_provider: RawUserInfoFromProvider,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ):
         response = await original_sign_in_up(
-            third_party_id, third_party_user_id, email, user_context)
+            third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
 
         # This is called during the sign_in_up API for third party login,
         # but before calling the create_new_session function.
@@ -294,7 +302,7 @@ func main() {
 					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 						ogCreateNewSession := *originalImplementation.CreateNewSession
 
-						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 							_, isSignUp := (*userContext)["isSignUp"]
 							if isSignUp {
 								/**
@@ -306,7 +314,7 @@ func main() {
 								return nil, nil // this is an empty session. It won't result in a session being created for the user.
 							}
 
-							return ogCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
+							return ogCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
 						}
 
 						return originalImplementation
@@ -342,6 +350,7 @@ def override_session_functions(original_implementation: RecipeInterface):
                                  access_token_payload: Optional[Dict[str, Any]],
                                  session_data_in_database: Optional[Dict[str, Any]],
                                  disable_anti_csrf: Optional[bool],
+                                 tenant_id: str,
                                  user_context: Dict[str, Any]):
         if user_context["isSignUp"] is True:
             # The execution will come here only in case
@@ -350,7 +359,7 @@ def override_session_functions(original_implementation: RecipeInterface):
             # (see above code).
             return EmptySession(original_implementation)
 
-        return await original_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
+        return await original_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context)
     original_implementation.create_new_session = create_new_session
     return original_implementation
 # highlight-end
@@ -377,7 +386,7 @@ class EmptySession(session.SessionContainer):
     def __init__(self, recipe_implementation: RecipeInterface):
         assert isinstance(recipe_implementation, RecipeImplementation)
         super().__init__(recipe_implementation,
-                         recipe_implementation.config, "", "", None, "", "", "", {}, None, False)
+                         recipe_implementation.config, "", "", None, "", "", "", {}, None, False, "")
 
     async def revoke_session(self, user_context: Union[Any, None] = None) -> None:
         pass
@@ -455,6 +464,9 @@ class EmptySession(session.SessionContainer):
             "frontToken": "",
             "refreshToken": None
         }
+    
+    def get_tenant_id(self, user_context: Union[Dict[str, Any], None] = None) -> str:
+        return ""
 ```
 </TabItem>
 </BackendSDKTabs>

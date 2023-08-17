@@ -390,14 +390,14 @@ func main() {
 						originalCreateNewSession := *originalImplementation.CreateNewSession
 
 						// Now we override the CreateNewSession function
-						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 
 							if accessTokenPayload == nil {
 								accessTokenPayload = map[string]interface{}{}
 							}
 
 							// highlight-start
-							accessTokenPayload, err := userrolesclaims.UserRoleClaim.Build(userID, accessTokenPayload, userContext)
+							accessTokenPayload, err := userrolesclaims.UserRoleClaim.Build(userID, tenantId, accessTokenPayload, userContext)
 
 							if err != nil {
 								return nil, err
@@ -414,7 +414,7 @@ func main() {
 							   }
 							*/
 
-							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
+							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
 						}
 
 						return originalImplementation
@@ -443,6 +443,7 @@ def override_functions(original_implementation: RecipeInterface):
                                  access_token_payload: Optional[Dict[str, Any]],
                                  session_data_in_database: Optional[Dict[str, Any]],
                                  disable_anti_csrf: Optional[bool],
+                                 tenant_id: str,
                                  user_context: Dict[str, Any]):
         if access_token_payload is None:
             access_token_payload = {}
@@ -461,7 +462,7 @@ def override_functions(original_implementation: RecipeInterface):
         #    }
         # }
 
-        return await original_implementation_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
+        return await original_implementation_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context)
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
@@ -594,7 +595,7 @@ import (
 )
 
 func mark2FAAsComplete(session sessmodels.SessionContainer) {
-	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
 
@@ -615,7 +616,7 @@ from supertokens_python.recipe.session.interfaces import SessionContainer
 from supertokens_python.recipe.session.claims import BooleanClaim
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
 
 async def set_2fa_claim_as_completed(session: SessionContainer):
     await session.set_claim_value(SecondFactorClaim, True)
@@ -629,7 +630,7 @@ from supertokens_python.recipe.session.interfaces import SessionContainer
 from supertokens_python.recipe.session.claims import BooleanClaim
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
 
 def set_2fa_claim_as_completed(session: SessionContainer):
     session.sync_set_claim_value(SecondFactorClaim, True)
@@ -702,7 +703,7 @@ import (
 )
 
 func main() {
-	_, SessionClaimValidator := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+	_, SessionClaimValidator := claims.BooleanClaim("2fa-completed", func(userId string, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
 
@@ -712,7 +713,7 @@ func main() {
 				Override: &sessmodels.OverrideStruct{
 					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 
-						(*originalImplementation.GetGlobalClaimValidators) = func(userId string, claimValidatorsAddedByOtherRecipes []claims.SessionClaimValidator, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+						(*originalImplementation.GetGlobalClaimValidators) = func(userId string, claimValidatorsAddedByOtherRecipes []claims.SessionClaimValidator, tenantId string, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
 							// highlight-start
 							claimValidatorsAddedByOtherRecipes = append(claimValidatorsAddedByOtherRecipes, SessionClaimValidator.IsTrue(nil, nil))
 							// highlight-end
@@ -739,12 +740,13 @@ from typing import Any, Dict, List
 from supertokens_python.recipe.session.claims import BooleanClaim
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
 
 
 def override_functions(original_implementation: RecipeInterface):
 
     def get_global_claim_validators(
+        tenant_id: str,
         user_id: str,
         claim_validators_added_by_other_recipes: List[SessionClaimValidator],
         user_context: Dict[str, Any],

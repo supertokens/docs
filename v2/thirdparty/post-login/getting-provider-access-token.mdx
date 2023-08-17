@@ -89,8 +89,8 @@ func main() {
 						// First we copy the original implementation
 						originalSignInUpPOST := *originalImplementation.SignInUpPOST
 
-						(*originalImplementation.SignInUpPOST) = func(provider tpmodels.TypeProvider, code string, authCodeResponse interface{}, redirectURI string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpmodels.SignInUpPOSTResponse, error) {
-							resp, err := originalSignInUpPOST(provider, code, authCodeResponse, redirectURI, options, userContext)
+						(*originalImplementation.SignInUpPOST) = func(provider *tpmodels.TypeProvider, input tpmodels.TypeSignInUpInput, tenantId string, options tpmodels.APIOptions, userContext *map[string]interface{}) (tpmodels.SignInUpPOSTResponse, error) {
+							resp, err := originalSignInUpPOST(provider, input, tenantId, options, userContext)
 							if err != nil {
 								return tpmodels.SignInUpPOSTResponse{}, err
 							}
@@ -99,9 +99,9 @@ func main() {
 								// the user logged in / signed up successfully
 
 								// In this example we are using Google as our provider
-								authCodeResponse := resp.OK.AuthCodeResponse
+								authCodeResponse := resp.OK.OAuthTokens
 
-								accessToken := authCodeResponse.(map[string]interface{})["access_token"].(string)
+								accessToken := authCodeResponse["access_token"].(string)
 
 								fmt.Println(accessToken)
 
@@ -126,18 +126,24 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdparty
 from supertokens_python.recipe.thirdparty.interfaces import APIInterface, APIOptions, SignInUpPostOkResult
-from typing import Union, Dict, Any
-from supertokens_python.recipe.thirdparty.provider import Provider
+from typing import Optional, Dict, Any
+from supertokens_python.recipe.thirdparty.provider import Provider, RedirectUriInfo
 
 # highlight-start
 def override_thirdparty_apis(original_implementation: APIInterface):
     
     original_sign_in_up_post = original_implementation.sign_in_up_post
     
-    async def sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None], api_options: APIOptions,
-                              user_context: Dict[str, Any]):
+    async def sign_in_up_post(
+        provider: Provider,
+        redirect_uri_info: Optional[RedirectUriInfo],
+        oauth_tokens: Optional[Dict[str, Any]],
+        tenant_id: str,
+        api_options: APIOptions,
+        user_context: Dict[str, Any]
+    ):
         # First we call the original implementation of signInPOST.
-        response = await original_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+        response = await original_sign_in_up_post(provider, redirect_uri_info, oauth_tokens, tenant_id, api_options, user_context)
         
         # Post sign up response, we check if it was successful
         if isinstance(response, SignInUpPostOkResult):
@@ -145,10 +151,7 @@ def override_thirdparty_apis(original_implementation: APIInterface):
             __ = response.user.email
 
             # In this example we are using Google as our provider
-            thirdparty_auth_response = response.auth_code_response
-
-            if thirdparty_auth_response is None:
-                raise Exception("Should never come here")
+            thirdparty_auth_response = response.oauth_tokens
 
             access_token = thirdparty_auth_response["access_token"]
             print(access_token)

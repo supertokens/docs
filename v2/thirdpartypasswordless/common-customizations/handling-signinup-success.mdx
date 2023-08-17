@@ -196,11 +196,11 @@ func main() {
 						originalThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
 
 						// override the thirdparty sign in / up function
-						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, userContext supertokens.UserContext) (tplmodels.ThirdPartySignInUp, error) {
+						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID string, thirdPartyUserID string, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext *map[string]interface{}) (tplmodels.ThirdPartySignInUp, error) {
 
 							// TODO: some pre sign in / up logic
 
-							resp, err := originalThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, userContext)
+							resp, err := originalThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
 							if err != nil {
 								return tplmodels.ThirdPartySignInUp{}, err
 							}
@@ -222,10 +222,10 @@ func main() {
 						}
 
 						// override the passwordless sign in up function
-						(*originalImplementation.ConsumeCode) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, userContext supertokens.UserContext) (tplmodels.ConsumeCodeResponse, error) {
+						(*originalImplementation.ConsumeCode) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, userContext supertokens.UserContext) (tplmodels.ConsumeCodeResponse, error) {
 
 							// First we call the original implementation of ConsumeCodeUp.
-							response, err := originalConsumeCode(userInput, linkCode, preAuthSessionID, userContext)
+							response, err := originalConsumeCode(userInput, linkCode, preAuthSessionID, tenantId, userContext)
 							if err != nil {
 								return tplmodels.ConsumeCodeResponse{}, err
 							}
@@ -265,17 +265,23 @@ from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdpartypasswordless
 from supertokens_python.recipe.thirdpartypasswordless.interfaces import APIInterface, PasswordlessAPIOptions, ConsumeCodePostOkResult, ThirdPartyAPIOptions, ThirdPartySignInUpPostOkResult
 from typing import Union, Dict, Any
-from supertokens_python.recipe.thirdparty.provider import Provider
+from supertokens_python.recipe.thirdparty.provider import Provider, RedirectUriInfo
 
 # highlight-start
 def override_thirdpartypasswordless_apis(original_implementation: APIInterface):
     original_thirdparty_sign_in_up_post = original_implementation.thirdparty_sign_in_up_post
     original_consume_code_post = original_implementation.consume_code_post
 
-    async def thirdparty_sign_in_up_post(provider: Provider, code: str, redirect_uri: str, client_id: Union[str, None], auth_code_response: Union[Dict[str, Any], None],
-                                         api_options: ThirdPartyAPIOptions, user_context: Dict[str, Any]):
+    async def thirdparty_sign_in_up_post(
+        provider: Provider,
+        redirect_uri_info: Union[RedirectUriInfo, None],
+        oauth_tokens: Union[Dict[str, Any], None],
+        tenant_id: str,
+        api_options: ThirdPartyAPIOptions,
+        user_context: Dict[str, Any]
+    ):
         # call the default behaviour as show below
-        result = await original_thirdparty_sign_in_up_post(provider, code, redirect_uri, client_id, auth_code_response, api_options, user_context)
+        result = await original_thirdparty_sign_in_up_post(provider, redirect_uri_info, oauth_tokens, tenant_id, api_options, user_context)
         
         if isinstance(result, ThirdPartySignInUpPostOkResult):
             if result.created_new_user:
@@ -289,10 +295,11 @@ def override_thirdpartypasswordless_apis(original_implementation: APIInterface):
                                 user_input_code: Union[str, None],
                                 device_id: Union[str, None],
                                 link_code: Union[str, None],
+                                tenant_id: str,
                                 api_options: PasswordlessAPIOptions,
                                 user_context: Dict[str, Any]):
 		# First we call the original implementation of consume_code_post.
-        response = await original_consume_code_post(pre_auth_session_id, user_input_code, device_id, link_code, api_options, user_context)
+        response = await original_consume_code_post(pre_auth_session_id, user_input_code, device_id, link_code, tenant_id, api_options, user_context)
 
         # Post sign up response, we check if it was successful
         if isinstance(response, ConsumeCodePostOkResult):

@@ -497,7 +497,7 @@ func main() {
 			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 				// this API is called when the user enters the OTP
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 					// - We should already have a session here since this is called
 					// after first factor login
 					// - We set the claims to check to be [] here, since this needs to be callable
@@ -511,7 +511,7 @@ func main() {
 						return plessmodels.ConsumeCodePOSTResponse{}, err
 					}
 
-					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, tenantId, options, userContext)
 					if err != nil {
 						return resp, err
 					}
@@ -555,6 +555,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
         user_input_code: Union[str, None],
         device_id: Union[str, None],
         link_code: Union[str, None],
+        tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
     ):
@@ -570,6 +571,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
             user_input_code,
             device_id,
             link_code,
+            tenant_id,
             api_options,
             user_context,
         )
@@ -712,7 +714,7 @@ import (
 
 func main() {
 	// highlight-start
-	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
 	// highlight-end
@@ -726,7 +728,7 @@ func main() {
 			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 				// this API is called when the user enters the OTP
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 					// - We should already have a session here since this is called
 					// after first factor login
 					// - We set the claims to check to be [] here, since this needs to be callable
@@ -746,7 +748,7 @@ func main() {
 					(*userContext)["session"] = session
 					// highlight-end
 
-					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, tenantId, options, userContext)
 					if err != nil {
 						return resp, err
 					}
@@ -782,7 +784,7 @@ func main() {
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 				oCreateNewSession := *originalImplementation.CreateNewSession
 				/* This function is called after signing in or signing up via the first factor */
-				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 					// highlight-start
 					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
 						/**
@@ -796,11 +798,11 @@ func main() {
 					if accessTokenPayload == nil {
 						accessTokenPayload = map[string]interface{}{}
 					}
-					accessTokenPayload, err := SecondFactorClaim.Build(userID, accessTokenPayload, userContext)
+					accessTokenPayload, err := SecondFactorClaim.Build(userID, tenantId, accessTokenPayload, userContext)
 					if err != nil {
 						return nil, err
 					}
-					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
+					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
 				}
 				return originalImplementation
 			},
@@ -821,7 +823,7 @@ from supertokens_python.recipe.session.interfaces import SessionContainer, Recip
 from supertokens_python.recipe.session.claims import BooleanClaim
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
 
 
 def override_passwordless_apis(original_implementation: APIInterface):
@@ -832,6 +834,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
         user_input_code: Union[str, None],
         device_id: Union[str, None],
         link_code: Union[str, None],
+        tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
     ):
@@ -854,6 +857,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
             user_input_code,
             device_id,
             link_code,
+            tenant_id,
             api_options,
             user_context,
         )
@@ -888,6 +892,7 @@ def override_session_functions(original_implementation: RecipeInterface):
         access_token_payload: Optional[Dict[str, Any]],
         session_data_in_database: Optional[Dict[str, Any]],
         disable_anti_csrf: Optional[bool],
+        tenant_id: str,
         user_context: Dict[str, Any],
     ):
         # This function is called after signing in or
@@ -906,7 +911,7 @@ def override_session_functions(original_implementation: RecipeInterface):
 
         access_token_payload = {**access_token_payload, **(await SecondFactorClaim.build(user_id, user_context))}
         return await original_create_new_session(
-            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context
+            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context
         )
 
     original_implementation.create_new_session = create_new_session
@@ -1019,7 +1024,7 @@ func main() {
 				/*This API is called to send an OTP*/
 				oCreateCodePOST := *originalImplementation.CreateCodePOST
 				// highlight-start
-				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+				nCreateCodePOST := func(email *string, phoneNumber *string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
 					/**
 					 * We want to make sure that the OTP being generated is for the
 					 * same number that belongs to this user.
@@ -1040,7 +1045,7 @@ func main() {
 					// We try and get the phone number associated with this user. It will be
 					// defined if this is a sign in attempt, in which case, we will check that
 					// it is equal to the input phone number
-					userMetadata, err := usermetadata.GetUserMetadataWithContext(session.GetUserID(), userContext)
+					userMetadata, err := usermetadata.GetUserMetadata(session.GetUserID(), userContext)
 					if err != nil {
 						return plessmodels.CreateCodePOSTResponse{}, err
 					}
@@ -1048,7 +1053,7 @@ func main() {
 					if passwordlessUserId, ok := userMetadata["passwordlessUserId"].(string); ok {
 						// the flow will come here during a login attempt, since we
 						// associate the passwordless userId to the user on sign up
-						passwordlessUserInfo, err := passwordless.GetUserByIDWithContext(passwordlessUserId, userContext)
+						passwordlessUserInfo, err := passwordless.GetUserByID(passwordlessUserId, userContext)
 						if err != nil {
 							return plessmodels.CreateCodePOSTResponse{}, err
 						}
@@ -1062,15 +1067,15 @@ func main() {
 						}
 					}
 
-					return oCreateCodePOST(email, phoneNumber, options, userContext)
+					return oCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
 				}
 				// highlight-end
 				*originalImplementation.CreateCodePOST = nCreateCodePOST
 
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 					/*...mofications from previous step */
-					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, tenantId, options, userContext)
 					/*...mofications from previous step */
 					return resp, err
 				}
@@ -1101,6 +1106,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
     async def create_code_post(
         email: Union[str, None],
         phone_number: Union[str, None],
+        tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
     ):
@@ -1138,7 +1144,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
                 )
 
         return await original_create_code_post(
-            email, phone_number, api_options, user_context
+            email, phone_number, tenant_id, api_options, user_context
         )
     # highlight-end
 
@@ -1147,6 +1153,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
         user_input_code: Union[str, None],
         device_id: Union[str, None],
         link_code: Union[str, None],
+        tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
     ):
@@ -1156,6 +1163,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
             user_input_code,
             device_id,
             link_code,
+            tenant_id,
             api_options,
             user_context,
         )
@@ -1247,7 +1255,7 @@ import (
 )
 
 func main() {
-	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId string, userContext supertokens.UserContext) (interface{}, error) {
+	SecondFactorClaim, _ := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
 
@@ -1256,7 +1264,7 @@ func main() {
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
 				oCreateNewSession := *originalImplementation.CreateNewSession
 				/* This function is called after signing in or signing up via the first factor */
-				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+				(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
 					if session, ok := (*userContext)["session"].(sessmodels.SessionContainer); ok {
 						/**
 						 * This will be true for the second factor login.
@@ -1268,13 +1276,13 @@ func main() {
 					// highlight-start
 					// we first get the passwordless userId associated with this user
 					// using the UserMetadata recipe
-					userMetadata, err := usermetadata.GetUserMetadataWithContext(userID, userContext)
+					userMetadata, err := usermetadata.GetUserMetadata(userID, userContext)
 					if err != nil {
 						return nil, err
 					}
 					var userPhoneNumber *string
 					if passwordlessUserId, ok := userMetadata["passwordlessUserId"].(string); ok {
-						passwordlessUserInfo, err := passwordless.GetUserByIDWithContext(passwordlessUserId, userContext)
+						passwordlessUserInfo, err := passwordless.GetUserByID(passwordlessUserId, userContext)
 						if err != nil {
 							return nil, err
 						}
@@ -1285,7 +1293,7 @@ func main() {
 					if accessTokenPayload == nil {
 						accessTokenPayload = map[string]interface{}{}
 					}
-					accessTokenPayload, err = SecondFactorClaim.Build(userID, accessTokenPayload, userContext)
+					accessTokenPayload, err = SecondFactorClaim.Build(userID, tenantId, accessTokenPayload, userContext)
 					if err != nil {
 						return nil, err
 					}
@@ -1294,7 +1302,7 @@ func main() {
 						accessTokenPayload["phoneNumber"] = *userPhoneNumber
 					}
 					// highlight-end
-					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, userContext)
+					return oCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
 				}
 				return originalImplementation
 			},
@@ -1314,7 +1322,7 @@ from supertokens_python.recipe.session.interfaces import SessionContainer, Recip
 from supertokens_python.recipe.session.claims import BooleanClaim
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
 
 
 def override_session_functions(original_implementation: RecipeInterface):
@@ -1325,6 +1333,7 @@ def override_session_functions(original_implementation: RecipeInterface):
         access_token_payload: Optional[Dict[str, Any]],
         session_data_in_database: Optional[Dict[str, Any]],
         disable_anti_csrf: Optional[bool],
+        tenant_id: str,
         user_context: Dict[str, Any],
     ):
         # This function is called after signing in
@@ -1356,12 +1365,12 @@ def override_session_functions(original_implementation: RecipeInterface):
         # Insert "is2faComplete" and "phoneNumber" in the access token payload
         access_token_payload = {
             **access_token_payload,
-            **(await SecondFactorClaim.build(user_id, user_context)),
+            **(await SecondFactorClaim.build(user_id, tenant_id, user_context)),
             # highlight-next-line
             "phoneNumber": phone_number,
         }
         return await original_create_new_session(
-            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context
+            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context
         )
 
     original_implementation.create_new_session = create_new_session
@@ -1451,7 +1460,7 @@ func main() {
 			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
 				/*This API is called to send an OTP*/
 				oCreateCodePOST := *originalImplementation.CreateCodePOST
-				nCreateCodePOST := func(email *string, phoneNumber *string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+				nCreateCodePOST := func(email *string, phoneNumber *string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
 					/**
 					 * We want to make sure that the OTP being generated is for the
 					 * same number that belongs to this user.
@@ -1484,14 +1493,14 @@ func main() {
 						}
 					}
 
-					return oCreateCodePOST(email, phoneNumber, options, userContext)
+					return oCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
 				}
 				*originalImplementation.CreateCodePOST = nCreateCodePOST
 
 				oConsumeCodePOST := *originalImplementation.ConsumeCodePOST
-				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
+				nConsumeCodePost := func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ConsumeCodePOSTResponse, error) {
 					/*...mofications from previous step */
-					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, options, userContext)
+					resp, err := oConsumeCodePOST(userInput, linkCode, preAuthSessionID, tenantId, options, userContext)
 					/*...mofications from previous step */
 					return resp, err
 				}
@@ -1518,6 +1527,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
     async def create_code_post(
         email: Union[str, None],
         phone_number: Union[str, None],
+        tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
     ):
@@ -1544,7 +1554,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
                 )
 
         return await original_create_code_post(
-            email, phone_number, api_options, user_context
+            email, phone_number, tenant_id, api_options, user_context
         )
     
     original_implementation.create_code_post = create_code_post

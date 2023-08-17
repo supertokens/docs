@@ -222,7 +222,8 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// update the email
-	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil)
+    tenantId := "public"
+	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil, &tenantId)
 
 	if err != nil {
 		// TODO: handle error
@@ -275,6 +276,9 @@ def change_email():
     request_body = request.get_json()
 
     email: str = str(request_body["email"])  # type: ignore
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
 
     # validate the input email
     if not is_valid_email(email):
@@ -285,7 +289,9 @@ def change_email():
     user_id = session.get_user_id()
     user_info = get_user_by_id(user_id)
 
-    assert user_info is not None
+    if user_info is None:
+        # TODO handle error, user does not exist
+        return
 
     if user_info.third_party_info is not None:
         # TODO handle error, cannot update email for social account
@@ -315,7 +321,6 @@ async def is_valid_email(value: str) -> bool:
         )
         is not None
     )
-
 ```
 
 </TabItem>
@@ -507,17 +512,204 @@ function isValidEmail(email: string) {
 
 <TabItem value="go">
 
-:::note
-Coming Soon
-:::
+```go
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"regexp"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
+)
+
+type RequestBody struct {
+	email string
+}
+
+// the following example uses net/http
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
+	})
+}
+
+func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	var requestBody RequestBody
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	// validate the input email
+	if !isValidEmail(requestBody.email) {
+		// TODO: handle invalid email error
+		return
+	}
+
+	// check that the account is not a social account
+	userId := sessionContainer.GetUserID()
+	userAccount, err := thirdpartyemailpassword.GetUserById(userId)
+	if err != nil {
+		// TODO: handle error
+		return
+	}
+
+	if userAccount.ThirdParty != nil {
+		// TODO: handle error, cannot update email for third party accounts
+		return
+	}
+
+	// Then, we check if the email is verified for this user ID or not.
+	// It is important to understand that SuperTokens stores email verification
+	// status based on the user ID AND the email, and not just the email.
+	isVerified, err := emailverification.IsEmailVerified(userId, &requestBody.email)
+
+	if err != nil {
+		// TODO: handle error
+	}
+
+	if !isVerified {
+		// Now we create and send the email verification link to the user for the new email.
+        _, err := emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.email)
+
+        if err != nil {
+            // TODO: handle error
+        }
+
+        return
+	}
+
+	// Since the email is verified, we try and do an update
+    tenantId := "public"
+	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil, &tenantId)
+
+	if err != nil {
+		// TODO: handle error
+	}
+
+	if updateResponse.OK != nil {
+		// TODO: send successfully updated email response
+		return
+	}
+
+	if updateResponse.EmailAlreadyExistsError != nil {
+		// TODO: handle error, email already exists for another account
+		return
+	}
+
+	log.Fatal("should not reach here")
+	// highlight-end
+
+}
+
+func isValidEmail(email string) bool {
+	emailCheck, err := regexp.Match(`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`, []byte(email))
+	if err != nil {
+		return false
+	}
+	return emailCheck
+}
+
+```
 
 </TabItem>
 
 <TabItem value="python">
 
-:::note
-Coming Soon
-:::
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.thirdpartyemailpassword.syncio import ( 
+    get_user_by_id,
+    update_email_or_password
+)
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import (
+    UpdateEmailOrPasswordOkResult,
+    UpdateEmailOrPasswordEmailAlreadyExistsError,
+)
+
+from supertokens_python.recipe.emailverification.syncio import (
+    is_email_verified,
+    send_email_verification_email,
+)
+
+from flask import g, request, Flask
+from re import fullmatch
+
+app = Flask(__name__)
+
+@app.route('/change-email', methods=['POST']) # type: ignore
+@verify_session()
+def change_email():
+    # highlight-start
+    session: SessionContainer = g.supertokens # type: ignore
+
+    request_body = request.get_json()
+
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
+
+    # validate the input email
+    if not is_valid_email(request_body["email"]):
+        # TODO: handle invalid email error
+        return
+
+    # check that the account is not a social account
+    user_id = session.get_user_id()
+    user_info = get_user_by_id(user_id)
+
+    if user_info is None:
+        # TODO handle error, user does not exist
+        return
+
+    if user_info.third_party_info is not None:
+        # TODO handle error, cannot update email for social account
+        return
+
+    # Then, we check if the email is verified for this user ID or not.
+    # It is important to understand that SuperTokens stores email verification
+    # status based on the user ID AND the email, and not just the email.
+    is_verified = is_email_verified(user_id, request_body["email"])
+    
+    if not is_verified:
+        # Create and send the email verification link to the user for the new email.
+        send_email_verification_email("public", user_id, request_body["email"])
+        
+        # TODO send successful email verification response
+        return
+    
+    # update the users email
+    update_response = update_email_or_password(user_id, email=request_body["email"])
+
+    if isinstance(update_response, UpdateEmailOrPasswordOkResult):
+        # TODO send successful email update response
+        return
+
+    if isinstance(update_response, UpdateEmailOrPasswordEmailAlreadyExistsError):
+        # TODO handle error, email already exists
+        return
+
+    raise Exception("Should never reach here")
+    # highlight-end
+
+
+async def is_valid_email(value: str) -> bool:
+    return (
+        fullmatch(
+            r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,'
+            r"3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$",
+            value,
+        )
+        is not None
+    )
+```
 
 </TabItem>
 </BackendSDKTabs>
@@ -614,13 +806,13 @@ func test() {
 
 						originalVerifyEmailPOST := *originalImplementation.VerifyEmailPOST
 
-						(*originalImplementation.VerifyEmailPOST) = func(token string, sessionContainer sessmodels.SessionContainer, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
+						(*originalImplementation.VerifyEmailPOST) = func(token string, sessionContainer sessmodels.SessionContainer, tenantId string, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
                             // highlight-start
-							response, err := originalVerifyEmailPOST(token, sessionContainer, options, userContext)
+							response, err := originalVerifyEmailPOST(token, sessionContainer, tenantId, options, userContext)
 							if response.OK != nil {
 								// This will update the email of the user to the one
 								// that was just marked as verified by the token.
-								_, err := thirdpartyemailpassword.UpdateEmailOrPassword(response.OK.User.ID, &response.OK.User.Email, nil, nil)
+								_, err := thirdpartyemailpassword.UpdateEmailOrPassword(response.OK.User.ID, &response.OK.User.Email, nil, nil, &tenantId)
                                 if err != nil {
 									// TODO: Handle error
 								}
@@ -678,13 +870,19 @@ from typing import Optional, Dict, Any
 def override_email_verification_apis(original_implementation: APIInterface):
     original_email_verification_verify_email_post = original_implementation.email_verify_post
     
-    async def email_verify_post(token: str, session: Optional[SessionContainer], api_options: APIOptions, user_context: Dict[str, Any] ):
-        
+    async def email_verify_post(
+        token: str,
+        session: Optional[SessionContainer],
+        tenant_id: str,
+        api_options: APIOptions,
+        user_context: Dict[str, Any]
+    ):
+
         # highlight-start
-        verification_response = await original_email_verification_verify_email_post(token, session, api_options, user_context)
+        verification_response = await original_email_verification_verify_email_post(token, session, tenant_id, api_options, user_context)
         
         if isinstance(verification_response, EmailVerifyPostOkResult):
-            await update_email_or_password(verification_response.user.user_id, verification_response.user.email)
+            await update_email_or_password(verification_response.user.user_id, verification_response.user.email, tenant_id_for_password_policy=tenant_id)
         
         return verification_response
         # highlight-end
@@ -711,7 +909,6 @@ init(
     ),
     ],
 )
-
 ```
 
 </TabItem>
