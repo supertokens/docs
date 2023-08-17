@@ -159,7 +159,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("multitenancy"),
               })}
             >
-              <a href="/docs/multitenancy/introduction">Multitenancy</a>
+              <a href="/docs/multitenancy/introduction">Multi tenancy / organizations</a>
             </li>
           </ul>
         </div>
