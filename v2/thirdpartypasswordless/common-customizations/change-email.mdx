@@ -261,7 +261,7 @@ func isValidEmail(email string) bool {
 ```python
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.thirdpartypasswordless.syncio import get_user_by_id, update_passwordless_user
+from supertokens_python.recipe.thirdpartypasswordless.syncio import update_passwordless_user
 from supertokens_python.recipe.thirdpartypasswordless.interfaces import PasswordlessUpdateUserOkResult, PasswordlessUpdateUserEmailAlreadyExistsError
 from flask import g, request, Flask
 from re import fullmatch
@@ -276,6 +276,10 @@ def change_email():
 
     request_body = request.get_json()
 
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
+
     # validate the input email
     if not is_valid_email(request_body["email"]):
         # TODO: handle invalid email error
@@ -283,11 +287,6 @@ def change_email():
 
     # check that the account is not a social account
     user_id = session.get_user_id()
-    user_info = get_user_by_id(user_id)
-
-    if user_info.third_party_info is not None:
-        # TODO handle error, cannot update email for social account
-        return
 
     # update the users email
     update_response = update_passwordless_user(user_id, email=request_body["email"])
@@ -619,8 +618,6 @@ func isValidEmail(email string) bool {
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.thirdpartypasswordless.syncio import ( 
-    get_user_by_id,
-    get_users_by_email, 
     update_passwordless_user
 )
 from supertokens_python.recipe.thirdpartypasswordless.interfaces import (
@@ -630,17 +627,7 @@ from supertokens_python.recipe.thirdpartypasswordless.interfaces import (
 
 from supertokens_python.recipe.emailverification.syncio import (
     is_email_verified,
-    create_email_verification_token,
-    send_email,   
-)
-
-from supertokens_python.recipe.emailverification.types import (
-    EmailTemplateVars,
-    VerificationEmailTemplateVarsUser
-)
-
-from supertokens_python.recipe.emailverification.interfaces import (
-    CreateEmailVerificationTokenOkResult,
+    send_email_verification_email,   
 )
 
 from flask import g, request, Flask
@@ -656,6 +643,10 @@ def change_email():
 
     request_body = request.get_json()
 
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
+
     # validate the input email
     if not is_valid_email(request_body["email"]):
         # TODO: handle invalid email error
@@ -663,11 +654,6 @@ def change_email():
 
     # check that the account is not a social account
     user_id = session.get_user_id()
-    user_info = get_user_by_id(user_id)
-
-    if user_info.third_party_info is not None:
-        # TODO handle error, cannot update email for social account
-        return
 
     # Then, we check if the email is verified for this user ID or not.
     # It is important to understand that SuperTokens stores email verification
@@ -676,7 +662,7 @@ def change_email():
     
     if not is_verified:
         # Create and send the email verification link to the user for the new email.
-        send_email_verification_email(user_id, requesy_body["email"])
+        send_email_verification_email(session.get_tenant_id(), user_id, request_body["email"])
         
         # TODO send successful email verification response
         return
@@ -875,10 +861,10 @@ from typing import Optional, Dict, Any
 def override_email_verification_apis(original_implementation: APIInterface):
     original_email_verification_verify_email_post = original_implementation.email_verify_post
     
-    async def email_verify_post(token: str, session: Optional[SessionContainer], api_options: APIOptions, user_context: Dict[str, Any] ):
+    async def email_verify_post(token: str, session: Optional[SessionContainer], tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any] ):
         
         # highlight-start
-        verification_response = await original_email_verification_verify_email_post(token, session, api_options, user_context)
+        verification_response = await original_email_verification_verify_email_post(token, session, tenant_id, api_options, user_context)
         
         if isinstance(verification_response, EmailVerifyPostOkResult):
             await update_passwordless_user(verification_response.user.user_id, verification_response.user.email)
