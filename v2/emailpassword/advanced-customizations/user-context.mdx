@@ -128,7 +128,7 @@ from typing import List, Dict, Any
 def override_emailpassword_apis(original_implementation: APIInterface):
     original_sign_up_post = original_implementation.sign_up_post
 
-    async def sign_up_post(form_fields: List[FormField],
+    async def sign_up_post(form_fields: List[FormField], tenant_id: str,
                            api_options: APIOptions, user_context: Dict[str, Any]):
 
         # by default, the userContext Dict is {},
@@ -137,7 +137,7 @@ def override_emailpassword_apis(original_implementation: APIInterface):
         # (being called inside original_sign_up_post)
         # to not create a new session in case userContext["isSignUp"] is True
         user_context["isSignUp"] = True
-        return await original_sign_up_post(form_fields, api_options, user_context)
+        return await original_sign_up_post(form_fields, tenant_id, api_options, user_context)
 
     original_implementation.sign_up_post = sign_up_post
     return original_implementation
@@ -299,6 +299,7 @@ def override_session_functions(original_implementation: RecipeInterface):
                                  access_token_payload: Optional[Dict[str, Any]],
                                  session_data_in_database: Optional[Dict[str, Any]],
                                  disable_anti_csrf: Optional[bool],
+                                 tenant_id: str,
                                  user_context: Dict[str, Any]):
         if user_context["isSignUp"] is True:
             # The execution will come here only in case
@@ -307,7 +308,7 @@ def override_session_functions(original_implementation: RecipeInterface):
             # (see above code).
             return EmptySession(original_implementation)
 
-        return await original_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, user_context)
+        return await original_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context)
     original_implementation.create_new_session = create_new_session
     return original_implementation
 # highlight-end
@@ -334,7 +335,7 @@ class EmptySession(session.SessionContainer):
     def __init__(self, recipe_implementation: RecipeInterface):
         assert isinstance(recipe_implementation, RecipeImplementation)
         super().__init__(recipe_implementation,
-                         recipe_implementation.config, "", "", None, "", "", "", {}, None, False)
+                         recipe_implementation.config, "", "", None, "", "", "", {}, None, False, "")
 
     async def revoke_session(self, user_context: Union[Any, None] = None) -> None:
         pass
@@ -412,6 +413,9 @@ class EmptySession(session.SessionContainer):
             "frontToken": "",
             "refreshToken": None
         }
+    
+    def get_tenant_id(self, user_context: Union[Dict[str, Any], None] = None) -> str:
+        return ""
 ```
 </TabItem>
 </BackendSDKTabs>
