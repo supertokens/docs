@@ -519,12 +519,39 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isVerified {
+		// Before sending a verification email, we check if the email is already
+        // being used by another user. If it is, we throw an error.
+		user, err := emailpassword.GetUserByID(sessionContainer.GetUserID())
+
+		if err != nil {
+			// TODO: handle error
+		}
+
+		if user != nil {
+			for i := 0; i < len(user.TenantIds); i++ {
+				// Since once user can be shared across many tenants, we need to check if
+				// the email already exists in any of the tenants.
+				userWithEmail, err := emailpassword.GetUserByEmail(user.TenantIds[i], requestBody.email)
+	
+				if err != nil {
+					// TODO: handle error
+				}
+	
+				if userWithEmail != nil && userWithEmail.ID != sessionContainer.GetUserID() {
+					// TODO handle error, email already exists with another user.
+					return
+				}
+			}
+		}
+
 		// Now we create and send the email verification link to the user for the new email.
-        _, err := emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.email)
+        _, err = emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.email)
 
         if err != nil {
             // TODO: handle error
         }
+
+		// TODO send successful response that email verification email sent.
 
         return
 	}
@@ -558,7 +585,6 @@ func isValidEmail(email string) bool {
 	}
 	return emailCheck
 }
-
 ```
 
 </TabItem>
@@ -569,7 +595,9 @@ func isValidEmail(email string) bool {
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.emailpassword.syncio import ( 
-    update_email_or_password
+    update_email_or_password,
+    get_user_by_id,
+    get_user_by_email,
 )
 from supertokens_python.recipe.emailpassword.interfaces import (
     UpdateEmailOrPasswordOkResult,
@@ -611,6 +639,18 @@ def change_email():
     is_verified = is_email_verified(user_id, request_body["email"])
     
     if not is_verified:
+        # Before sending a verification email, we check if the email is already
+        # being used by another user. If it is, we throw an error.
+        user = get_user_by_id(user_id)
+
+        if user is not None:
+            for tenant_id in user.tenant_ids:
+                user_with_email = get_user_by_email(tenant_id, request_body["email"])
+
+                if user_with_email is not None and user_with_email.user_id != user_id:
+                    # TODO handle error, email already exists with another user.
+                    return
+
         # Create and send the email verification link to the user for the new email.
         send_email_verification_email(session.get_tenant_id(), user_id, request_body["email"])
             
