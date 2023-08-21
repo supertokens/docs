@@ -189,29 +189,34 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions, SignInPostOkResult
-from supertokens_python.recipe.emailpassword.types import FormField
-from typing import List, Dict, Any
+from supertokens_python.recipe import session, emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import RecipeInterface, SignInOkResult
+from typing import Dict, Any
 
 # highlight-start
-def override_email_password_apis(original_implementation: APIInterface):
-    original_sign_in_post = original_implementation.sign_in_post
+def override_emailpassword_functions(original_implementation: RecipeInterface) -> RecipeInterface:
+    original_sign_in = original_implementation.sign_in
+    
+    async def sign_in(
+        email: str,
+        password: str,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ):
+        result = await original_sign_in(email, password, tenant_id, user_context)
 
-    async def sign_in_post(form_fields: List[FormField], tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any]):
-	    # First we call the original implementation of signInPOST.
-        response = await original_sign_in_post(form_fields, tenant_id, api_options, user_context)
-        
-        # Post sign in response, we check if it was successful
-        if isinstance(response, SignInPostOkResult):
-            _ = response.user.user_id
-            __ = response.user.email
+        if isinstance(result, SignInOkResult):
+            id = result.user.user_id
+            email = result.user.email
+            print(id)
+            print(email)
+            
             # TODO: post sign in logic
-            pass
         
-        return response
-	
-    original_implementation.sign_in_post = sign_in_post
+        return result
+                
+    original_implementation.sign_in = sign_in
+
     return original_implementation
 # highlight-end
 
@@ -220,12 +225,13 @@ init(
     framework='...', # type: ignore
     recipe_list=[
         emailpassword.init(
-            # highlight-start
+			# highlight-start
             override=emailpassword.InputOverrideConfig(
-                apis=override_email_password_apis
-            )
-            # highlight-end
-        )
+                functions=override_emailpassword_functions
+            ),
+			# highlight-end
+        ),
+        session.init(),
     ]
 )
 ```
