@@ -126,7 +126,7 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     
     // Update the email
     let resp = await EmailPassword.updateEmailOrPassword({
-        userId: session.getUserId(),
+        recipeUserId: session.getRecipeUserId(),
         email: email,
     });
 
@@ -389,6 +389,7 @@ import EmailVerification from "supertokens-node/recipe/emailverification";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
+import supertokens from "supertokens-node";
 
 let app = express();
 
@@ -406,32 +407,39 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     // Then, we check if the email is verified for this user ID or not.
     // It is important to understand that SuperTokens stores email verification
     // status based on the user ID AND the email, and not just the email.
-    let isVerified = await EmailVerification.isEmailVerified(session.getUserId(), email);
+    let isVerified = await EmailVerification.isEmailVerified(session.getRecipeUserId(), email);
 
     if (!isVerified) {
         // Before sending a verification email, we check if the email is already
         // being used by another user. If it is, we throw an error.
-        let user = (await EmailPassword.getUserById(session.getUserId()))!;
-        for (let i = 0; i < user?.tenantIds.length; i++) {
-            // Since once user can be shared across many tenants, we need to check if
-            // the email already exists in any of the tenants.
-            let userWithEmail = await EmailPassword.getUserByEmail(user.tenantIds[i], email);
-            if (userWithEmail?.id !== session.getUserId()) {
-                // TODO handle error, email already exists with another user.
-                return
+        let user = (await supertokens.getUser(session.getUserId()))!;
+        let usersWithSameEmail = await supertokens.listUsersByAccountInfo({
+            email
+        });
+        for (let i = 0; i < usersWithSameEmail.length; i++) {
+            // Since one user can be shared across many tenants, we need to check if
+            // the email already exists in any of the tenants that belongs to this user.
+            let currUser = usersWithSameEmail[i];
+            for (let y = 0; y < user.tenantIds.length; y++) {
+                if (currUser.tenantIds.includes(user.tenantIds[y])) {
+                    if (currUser?.id !== session.getUserId()) {
+                        // TODO handle error, email already exists with another user.
+                        return
+                    }
+                }
             }
         }
-        
+
         // Now we create and send the email verification link to the user for the new email.
         await EmailVerification.sendEmailVerificationEmail(session.getTenantId(), session.getUserId(), email);
 
         // TODO send successful response that email verification email sent.
-        return 
+        return
     }
 
     // Since the email is verified, we try and do an update
     let resp = await EmailPassword.updateEmailOrPassword({
-        userId: session.getUserId(),
+        recipeUserId: session.getRecipeUserId(),
         email: email,
     });
 
@@ -441,7 +449,7 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     }
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
         // TODO handle error, email already exists with another user.
-        return 
+        return
     }
 
     throw new Error("Should never come here");
@@ -455,7 +463,6 @@ function isValidEmail(email: string) {
     );
     return regexp.test(email);
 }
-
 ```
 
 
@@ -710,39 +717,39 @@ import EmailVerification from "supertokens-node/recipe/emailverification";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
-  appInfo: {
-    apiDomain: "...",
-    appName: "...",
-    websiteDomain: "...",
-  },
-  recipeList: [
-    EmailPassword.init(),
-    EmailVerification.init({
-        mode: "REQUIRED",
-        override: {
-            apis: (oI) => {
-                return {
-                    ...oI,
-                    verifyEmailPOST: async function (input) {
-                        // highlight-start
-                        let response = await oI.verifyEmailPOST!(input);
-                        if (response.status === "OK") {
-                            // This will update the email of the user to the one
-                            // that was just marked as verified by the token.
-                            await EmailPassword.updateEmailOrPassword({
-                                userId: response.user.id,
-                                email: response.user.email,
-                            });
-                        }
-                        return response;
-                        // highlight-end
-                    },
-                };
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        EmailPassword.init(),
+        EmailVerification.init({
+            mode: "REQUIRED",
+            override: {
+                apis: (oI) => {
+                    return {
+                        ...oI,
+                        verifyEmailPOST: async function (input) {
+                            // highlight-start
+                            let response = await oI.verifyEmailPOST!(input);
+                            if (response.status === "OK") {
+                                // This will update the email of the user to the one
+                                // that was just marked as verified by the token.
+                                await EmailPassword.updateEmailOrPassword({
+                                    recipeUserId: response.user.recipeUserId,
+                                    email: response.user.email,
+                                });
+                            }
+                            return response;
+                            // highlight-end
+                        },
+                    };
+                },
             },
-        },
-    }),
-    Session.init(),
-  ],
+        }),
+        Session.init(),
+    ],
 });
 ```
 
