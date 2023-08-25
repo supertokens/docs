@@ -13,7 +13,7 @@ In our example app there are two ways for signing up a user. Email-Password and 
 ```ts
 // config/backendConfig.ts
 
-import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
 import SessionNode from "supertokens-node/recipe/session";
 import { TypeInput, AppInfo } from "supertokens-node/types";
 
@@ -34,7 +34,7 @@ let backendConfig = (): TypeInput => {
         },
         appInfo,
         recipeList: [
-            ^{recipeNameCapitalLetters}.init({
+            ThirdPartyPasswordless.init({
                 flowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
                 contactMethod: "EMAIL",
                 override: {
@@ -49,8 +49,8 @@ let backendConfig = (): TypeInput => {
 
                                 let response = await originalImplementation.consumeCodePOST(input);
 
-                                if (response.status === "OK" && response.createdNewUser) {
-                                    
+                                if (response.status === "OK" && response.createdNewRecipeUser && response.user.loginMethods.length === 1) {
+
                                     // retrieve the accessTokenPayload from the user's session
                                     const accessTokenPayload = response.session.getAccessTokenPayload();
 
@@ -60,7 +60,7 @@ let backendConfig = (): TypeInput => {
                                     // store the user's email mapped to their userId in Supabase
                                     const { error } = await supabase
                                         .from("users")
-                                        .insert({ email: response.user.email, user_id: response.user.id });
+                                        .insert({ email: response.user.emails[0], user_id: response.user.id });
 
                                     if (error !== null) {
                                         throw error;
@@ -73,12 +73,11 @@ let backendConfig = (): TypeInput => {
                     }
                 }
             }),
-            SessionNode.init({/*...*/}),
+            SessionNode.init({/*...*/ }),
         ],
         isInServerlessEnv: true,
     };
 };
-
 ```
 
 We will be changing the Passwordless flow by overriding the `consumeCodePOST` api. When a user signs up we will retrieve the `supabase_token` from the user's `accessTokenPayload`(this was added in the previous step where we changed the `createNewSession` function) and use it to query Supabase to insert the new user's information.
@@ -89,7 +88,7 @@ We will be changing the Passwordless flow by overriding the `consumeCodePOST` ap
 ```ts
 // config/backendConfig.ts
 
-import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
 import SessionNode from "supertokens-node/recipe/session";
 import { TypeInput, AppInfo } from "supertokens-node/types";
 
@@ -110,7 +109,7 @@ let backendConfig = (): TypeInput => {
         },
         appInfo,
         recipeList: [
-            ^{recipeNameCapitalLetters}.init({
+            ThirdPartyPasswordless.init({
                 contactMethod: "EMAIL",
                 flowType: "MAGIC_LINK",
                 providers: [/*...*/],
@@ -126,7 +125,7 @@ let backendConfig = (): TypeInput => {
                                 }
 
                                 /*Look at the previous section*/
-                                
+
                                 return await originalImplementation.consumeCodePOST(input)
                             },
 
@@ -140,7 +139,7 @@ let backendConfig = (): TypeInput => {
                                 let response = await originalImplementation.thirdPartySignInUpPOST(input);
 
                                 // check that there is no issue with sign up and that a new user is created
-                                if (response.status === "OK" && response.createdNewUser) {
+                                if (response.status === "OK" && response.createdNewRecipeUser && response.user.loginMethods.length === 1) {
 
                                     // retrieve the accessTokenPayload from the user's session
                                     const accessTokenPayload = response.session.getAccessTokenPayload();
@@ -151,7 +150,7 @@ let backendConfig = (): TypeInput => {
                                     // store the user's email mapped to their userId in Supabase
                                     const { error } = await supabase
                                         .from("users")
-                                        .insert({ email: response.user.email, user_id: response.user.id });
+                                        .insert({ email: response.user.emails[0], user_id: response.user.id });
 
                                     if (error !== null) {
 
@@ -165,7 +164,7 @@ let backendConfig = (): TypeInput => {
                     },
                 },
             }),
-            SessionNode.init({/*...*/}),
+            SessionNode.init({/*...*/ }),
         ],
         isInServerlessEnv: true,
     };
