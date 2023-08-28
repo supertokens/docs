@@ -8,3 +8,79 @@ hide_title: true
 <!-- ./emailpassword/user-object.mdx -->
 
 # About the User Object
+
+:::important
+This is only applicable for core versions >= 7.0, and for our NodeJS SDK. For other versions, or SDKs, please see: https://github.com/supertokens/core-driver-interface/wiki
+:::
+
+The user object structure is as follows:
+
+```ts
+type User = {
+    id: string;
+    timeJoined: number;
+    isPrimaryUser: boolean;
+    tenantIds: string[];
+    emails: string[];
+    phoneNumbers: string[];
+    thirdParty: {
+        id: string;
+        userId: string;
+    }[];
+    loginMethods: ({
+        recipeId: "emailpassword" | "thirdparty" | "passwordless";
+        tenantIds: string[];
+        timeJoined: number;
+        recipeUserId: RecipeUserId;
+        verified: boolean;
+        email?: string;
+        phoneNumber?: string;
+        thirdParty?: {
+            id: string;
+            userId: string;
+        };
+        hasSameEmailAs: (email: string | undefined) => boolean;
+        hasSamePhoneNumberAs: (phoneNumber: string | undefined) => boolean;
+        hasSameThirdPartyInfoAs: (thirdParty?: { id: string; userId: string }) => boolean;
+    })[];
+};
+
+class RecipeUserId {
+    private recipeUserId: string;
+    constructor(recipeUserId: string) {
+        this.recipeUserId = recipeUserId;
+    }
+
+    public getAsString = () => {
+        return this.recipeUserId;
+    };
+}
+
+```
+ 
+Before we dive into the meaning of each of the fields, it is important to understand the concept of a primary and a recipe user ID.
+
+## Primary vs recipe user ID
+
+In SuperTokens, each user can have multiple login methods: for example, one user may be able to login with both, email password and social login. Each of these login methods, will give the user a unique user ID - this is known as a `recipeUserId`. We call it that, cause email passwors and social login are two different recipes in SuperTokens. Now of course, when that user uses either of the login methods, we must resolve it to the same user ID. This user ID, that is common across all login methods for a user, is known as the primary user ID. The value of the primary user ID is equal to the recipe user ID of the first login method.
+
+Let's take an example. A user first signs up with the email password recipe. This gives them a recipe user ID or `r1`. Their primary user ID is also `r1`. Now, they sign in with Google with the same email. This will create a different recipe user ID `r2`. If you have enabled the automatic account linking, then the two recipe userIds will be linked, and `r2`'s primary user will be `r1`. Therefore, we will have the following mapping:
+
+```text
+r1 -> [r1, r2]
+```
+
+If you have not enabled automatic account linking, then you will have two distinct users:
+
+```text
+r1 -> [r1]
+r2 -> [r2]
+```
+
+Where the email password user is `r1` and Google login user is `r2`.
+
+## User object fields explained
+
+- `id`: This will be the primary user ID of the user (See the section above for an example). This value can change if the user is linked to another user.
+- `timeJoined`: This is the time (in MS since epoch), when the user first signed up. If a new login method is added for a user, this value is not updated.
+- `isPrimaryUser`: This is a boolean value, which is `true` if the user can accept other login methods from other users. For example, when we link two users, `u1` and `u2`, such that post linking, the primary user ID is that of `u1`'s, then `u1` must have `isPrimaryUser` as `true`, and `u2` must have `isPrimaryUser` as `false`.
