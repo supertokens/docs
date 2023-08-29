@@ -429,7 +429,13 @@ module.exports = {
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",
         "common-customizations/change-email",
-        "common-customizations/account-linking",
+        {
+          type: "category",
+          label: "Account Linking",
+          items: [
+            "common-customizations/account-linking/overview"
+          ]
+        },
         {
           type: "category",
           label: "Email Verification",

@@ -434,7 +434,13 @@ module.exports = {
         "common-customizations/get-user-info",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
-        "common-customizations/account-linking",
+        {
+          type: "category",
+          label: "Account Linking",
+          items: [
+            "common-customizations/account-linking/overview"
+          ]
+        },
         "common-customizations/change-password",
         "common-customizations/change-email-post-login",
         {
