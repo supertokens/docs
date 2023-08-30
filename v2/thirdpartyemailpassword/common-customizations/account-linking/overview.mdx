@@ -20,3 +20,49 @@ Account linking is the process of associating multiple authentication methods wi
 The other method is to do [manual account linking](./manual-account-linking). Here, you (the developer) can make your own API which uses the account linking functions provided by our backend SDK to link two accounts. This API can then be called, for example, by your support team whenever needed.
 
 We will explore both these methods in the next pages.
+
+## Important concepts
+
+### User object
+Please make sure you are familiar with the [user object](../../user-object) structure before proceeding.
+
+### Primary user vs non primary user
+The `isPrimaryUser` boolean in the user object dictates if the user is a primary user or not.
+
+- 1) A primary user is one whose primary user ID does not change when accounts are linked to it. A user can become a primary user if, and only if there are no other primary users with the same email, third party info or phone number as this user across all the tenants that this user is a part of.
+    
+    For example, you **cannot** have the following scenarios:
+    - User A is a primary user with email `test@example.com` using email passoword login and User B is a primary user with email `test@example.com` using social login. This is not allowed because we have two primary users with the same email.
+    - User A is a primary user with email `test@example.com` and belongs to tenant `t1` and `t2`. User B is a primary user with email `test@example.com` and belongs to tenant `t2`. This is not allowed because we have two primary users with the same email in tenant `t2` However, if User B was in tenant `t3`, or if User A was not a part of tenant `t2`, then this would be allowed.
+
+    You **can** have the following scenarios:
+    - User A is not a primary user, with email `test@example.com`, and User B is a primary user with email `test@example.com`. This is allowed because both these users aren't a primary user.
+    - User A is not a primary user, with email `test@example.com`, and User B is also not a primary user with email `test@example.com`. This is allowed because both these users aren't a primary user.
+    - User A is a primary user with email `test@exmaple.com` and is linked to User B who is not a primary user with the same email.
+
+
+- 2) For accounts to be linked, **exactly one** of the users that are being linked need to be a primary user. The resulting user ID of the linked accounts will be the primary user's ID.
+
+    For example, if we have User A who is a primary user with user ID `u1`, and we link it to User B (which is not a primary user) with user ID `u2`, then the resulting user's primary ID will be `u1`. The recipe ID (in the login methods of the user object) will continue to be `u1` for User A, and `u2` for User B.
+
+- 3) Accounts can be linked only if the resulting primary user's email / phone number / third party info is not the same as another primary user's email / phone number / third party info. For example, these accounts **cannot** be linked:
+    - User A is a primary user with email `e1`. There exists another primary user (User B) with email `e2`. Now we want to link another non primary user (User C) with email `e2`. We cannot linkg User A and User C because it would then lead to two primary users (User A & B) with the same email (`e1`).
+
+- 4) When making a user a primary user, we check for the primary user condition (point 1) across all the tenants that this user belongs to.
+
+- 5) When linking two accounts, we check that the primary user condition (point 1) and account linking condition (point 3) are satisfied across the **union** of all the tenants that the primary and the non primary user belongs to. For example, if we are linking User A (tenant `t1`, `t2`) to User B (tenant `t3`), then we will check for the conditions across `t1`, `t2`, and `t3`.
+
+## Using primary vs recipe user ID
+For most purposes, the user's primary user ID is what you would care about. For example, when a user with two login methods, email password and social login, logs in, you will get back the same primary user ID when you get their user ID from the session (or read the `sub` claim in the JWT). 
+
+However, if you want to identify what the login method used for the current session is, you can use the session's `recipeUserId` (via `session.getRecipeUserId()`) and compare its value to the `recipeUserId` in each of the `loginMethods` in the user object.
+
+There are also some functions from the backend SDK that accept a `recipeUserId` as a parameter. For example, the `updateEmailOrPassword` function from the emailpassword recipe takes in a recipeUserId so that it knows for which login method it needs to make the update for. If it took just a `string` user ID instead, and if you passed it a user's primary user ID, then it may unintentionally lead to updating the wrong login method's email or password, or may throw an error if the primary user is not an email password user.
+
+## User unlinking
+User unlinking is the process of removing a login method from a user. For example, if a user has both email password and social login, and they want to remove their social login, then you can use the unlinking function from our backend SDK.
+
+There are a few possibilities here:
+- 1) If we are unlinking a login method that **is not** associated with the primary user, then it results in two users, one would be the primary user and the other would be the non primary user. For example, if User A (primary user, with email password login) is linked with User B (social login), and then we decide to unlink User B, this will result in two separate users: User A (primary user), with one login method (email password) and User B (non primary user) with social login. The primary user ID of user B would be changed to be equal to their recipe user ID.
+- 2) If we are unlinking a login method that **is** associated with the primary user, then it results in the login method of the primary user ID being deleted. For example, if User A (primary user, with email password login) is linked with User B (social login), and then we decide to unlink User A, this will result in the email password user to be deleted. Now there will only be User B, which is a social login user, and it's primary user ID will be equal to User A's primary user ID (even though the login method for A was deleted). Any metadata, role, sessions info will continue to exist.
+- 3) If we are unlinking a User A which is a primary user ID, but it has not linked users, then it will simply result in this user to become a non primary user.
