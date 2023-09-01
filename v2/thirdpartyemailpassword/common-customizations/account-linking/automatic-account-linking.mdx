@@ -28,7 +28,7 @@ You can enable this feature by providing the following callback implementation o
 <TabItem value="nodejs">
 
 ```tsx
-import supertokens, { User } from "supertokens-node";
+import supertokens, { User, RecipeUserId } from "supertokens-node";
 import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
 
@@ -45,7 +45,16 @@ supertokens.init({
     recipeList: [
         // highlight-start
         AccountLinking.init({
-            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId, user: User | undefined, tenantId: string, userContext: any) => {
+            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, tenantId: string, userContext: any) => {
+                if (newAccountInfo.recipeUserId !== undefined && user !== undefined) {
+                    let userId = newAccountInfo.recipeUserId.getAsString();
+                    let hasInfoAssociatedWithUserId = false // TODO: add your own implementation here.
+                    if (hasInfoAssociatedWithUserId) {
+                        return {
+                            shouldAutomaticallyLink: false
+                        }
+                    }
+                }
                 return {
                     shouldAutomaticallyLink: true,
                     shouldRequireVerification: true
@@ -75,7 +84,9 @@ Coming Soon
 </BackendSDKTabs>
 
 #### Input args meaning:
-- `newAccountInfo: AccountInfoWithRecipeId`: This object contains information about the user whose account is going to be linked, or will become a primary user. The object contains the user's email, social login info and phone number (whichever they used to sign in / up with). It also contains the login method (`emailpassword`, `thirdparty`, or `passwordless`).
+- `newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }`: This object contains information about the user whose account is going to be linked, or will become a primary user. The object contains the user's email, social login info and phone number (whichever they used to sign in / up with). It also contains the login method (`emailpassword`, `thirdparty`, or `passwordless`). It may also contain the `recipeUserId` of the user that is going to be linked in case SuperTokens is attempting account linking during sign in.
+
+    Notice that in case of `newAccountInfo.recipeUserId !== undefined && user !== undefined` being `true`, we add some extra logic to check if the user ID has any info associated with them in your application db. This is to prevent data loss for this user ID (see the [migtation section below](#migration-of-user-data-when-accounts-are-linked)).
 - `user: User | undefined`: If this is not `undefined`, it means that `newAccountInfo` user is about to linked to this `user`. If this is `undefined`, it means that `newAccountInfo` user is about to become a primary user.
 - `tenant: string`: The ID of the tenant that the user is signing in / up to.
 - `userContext: any`: User defined userContext.
@@ -125,8 +136,91 @@ In each of these cases, the operation will fail and an appropriate status code w
 - For social login API call (3), the client will get a response with a status indicating to contact support, with a support status code (see below).
 
 ## Migration of user data when accounts are linked
-TODO
+When two accounts are linked the primary user ID of the non primary user changes.
+
+For example, if we have User A with with primary user ID `p1` and user B, which is a non primary user, and has a user ID of `p2`, and we link them, then the primary user ID of User B will be changed to `p1`. 
+
+This has an effect that if the user logs in with login method from User B, the `session.getUserId()` will return `p1`. If there was any older data associated with User B (against user ID `p2`), in your database, that data will essentially be "lost".
+
+To prevent this scenario, you should:
+- Make sure that you return `false` for `shouldAutomaticallyLink` boolean in the `shouldDoAutomaticAccountLinking` function implementation if there exists a `recipeUserId` in the `newAccountInfo` object, and if you have some information related to that user ID in your own database. This can be seen in the [code snippet above](#enabling-automatic-account-linking).
+
+- If you do not want to return `false` in this case, and want the accounts to be linked, then make sure to implement the `onAccountLinked` callback:
+
+    ```tsx
+    import supertokens, { User, RecipeUserId } from "supertokens-node";
+    import AccountLinking from "supertokens-node/recipe/accountlinking";
+    import { AccountInfoWithRecipeId, RecipeLevelUser } from "supertokens-node/recipe/accountlinking/types";
+
+    supertokens.init({
+        supertokens: {
+            connectionURI: "<CONNECTION_URI_HERE_FROM_THE_POPUP>",
+            apiKey: "<API_KEY_HERE_FROM_THE_POPUP>"
+        },
+        appInfo: {
+            apiDomain: "...",
+            appName: "...",
+            websiteDomain: "..."
+        },
+        recipeList: [
+            AccountLinking.init({
+                shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId  & { recipeUserId?: RecipeUserId }, user: User | undefined, tenantId: string, userContext: any) => {
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: true
+                    }
+                },
+                // highlight-start
+                onAccountLinked: async (user: User, newAccountInfo: RecipeLevelUser, userContext: any) => {
+                    let olderUserId = newAccountInfo.recipeUserId.getAsString()
+                    let newUserId = user.id;
+
+                    // TODO: migrate data from olderUserId to newUserId in your database... 
+                }
+                // highlight-end
+            })
+        ]
+    });
+    ```
+
+:::caution
+If your logic in `onAccountLinked` throws an error, then it will not be called again, and will still have resulted in the accounts being linked. 
+:::
 
 ## Support status codes
-TODO
+The following is a list of support status codes that the end user might see during their interaction with the login UI (as a general error message in the pre built UI).
 
+#### HAS_OTHER_EMAIL_OR_PHONE 
+- This can happen when creating a password reset code in the email password flow.
+- TODO.. explain why and how to fix
+
+#### IS_SIGN_UP_ALLOWED_FALSE
+- Passwordless
+- API call: consumeCodePOST & createCodePOST
+
+#### IS_SIGN_IN_ALLOWED_FALSE
+- Passwordless 
+- API call: consumeCodePOST & createCodePOST
+
+- Third party
+- API call: signInUpPOST
+Signing in case
+
+#### ANOTHER_PRIM_USER_HAS_EMAIL
+- Third party
+- API call: signInUpPOST
+Signing in, when the email has changed and another primary user has the same email.
+
+#### EMAIL_ALREADY_USED_IN_ANOTHER_ACCOUNT
+- Third party
+- API call: signInUpPOST
+
+Signing up.
+
+#### User is seeing incorrect email password combination / `WRONG_CREDENTIALS_ERROR`
+- Email password
+- API call: sign in
+
+#### User is seeing email already exists / EMAIL_ALREADY_EXISTS_ERROR
+- Email password
+- Sign up
