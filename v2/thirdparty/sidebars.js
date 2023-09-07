@@ -415,7 +415,8 @@ module.exports = {
           type: "category",
           label: "Account Linking",
           items: [
-            "common-customizations/account-linking/overview"
+            "common-customizations/account-linking/overview",
+            "common-customizations/account-linking/automatic-account-linking"
           ]
         },
         {
