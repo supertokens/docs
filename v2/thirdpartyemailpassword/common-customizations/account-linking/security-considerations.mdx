@@ -14,3 +14,36 @@ import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 
 # Security considerations for automatic account linking
 
+Below is the list of all points in time when we do account linking, and for each point, you can see the list of security checks that happen:
+
+## 1) During sign up:
+
+### Case a
+- Email is `e1`
+- Email is verified: `false` (is the case with email password sign up or social login with a provider that does not require email verification)
+
+#### Checks done:
+- i) If there is no primary user with the same email, then we disallow sign up if there exists any other non-primary account with the same email and that accoun is not verified. We do this because if we didn't, there is a risk that if this user signs up and becomes a primary user, the other account (which could be malicious), might resend a verification email and the user might click on it (since they just signed up) and verify the malicious account, thereby linking it to their account. This way, the malicious user will have access to the victim's account.
+- ii) If there exists a primary user with the same email, then we reject sign up of this new user. This is done cause if we allowed it, and this sign up is from a malicious user, then the actual user (the primary user owner) may get an email for verification, and might click it (since they did sign up previously). This will cause the new, malicious account to be linked, thereby giving the malicious user access to the victim's account. 
+
+#### What users see: 
+- i) In case of email password login, users see an account already exists error, in which case, they can try logging in with another method, or go through the password reset flow, which will create a new email password account for them as well as verify it.
+- ii) In case of social login, users will see that they should try a different login method for security reasons.
+
+### Case b
+
+- Email is `e1`
+- Email is verified: `true` (is the case with social login with a provider that requires email verification, like google, or it could be a passwordless sign up)
+
+#### Checks done:
+- i) Same as in Case 1a, point (i) above.
+- ii) If there exists a primary user with the same email, then we allow sign up only if there exists at least one login method in the primary user with email `e1` which is verified. This is done because if we didn't, then the following account takeover is possible:
+    - Malicious user signs up with email password, with email `e2`, verifies it, and becomes a primary user.
+    - They then change their email to `e1`, and keep it in an unverified state.
+    - Now the actual user (victim), does a google sign with email `e1`.
+    - If we don't stop this sign up, then the new sign up will be linked to the primary user, and the malicious user will have access to the victim's account.
+
+#### What users see: 
+- Users will see that they should try a different login method for security reasons.
+
+## 2) During sign in:
