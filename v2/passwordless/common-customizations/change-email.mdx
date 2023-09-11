@@ -109,6 +109,7 @@ import Passwordless from "supertokens-node/recipe/passwordless";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
+import {isEmailChangeAllowed} from "supertokens-node/recipe/accountlinking"
 
 let app = express();
 
@@ -122,6 +123,11 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     if (!isValidEmail(email)) {
         // TODO: handle invalid email error
         return 
+    }
+
+    if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, false))) {
+        // this can come here if you have enabled the account linking feature, and 
+        // if there is a security risk in changing this user's email.
     }
     
     // Update the email
@@ -137,6 +143,11 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
         // TODO: handle error that email exists with another account.
         return
+    }
+    if (resp.status === "EMAIL_CHANGE_NOT_ALLOWED_ERROR") {
+        // This is possible if you have enabled account linking.
+        // See our docs for account linking to know more about this. 
+        // TODO: tell the user to contact support.
     }
     throw new Error("Should never come here");
     // highlight-end
@@ -389,6 +400,7 @@ import { verifySession } from "supertokens-node/recipe/session/framework/express
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
 import supertokens from "supertokens-node";
+import {isEmailChangeAllowed} from "supertokens-node/recipe/accountlinking"
 
 let app = express();
 
@@ -409,6 +421,11 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     let isVerified = await EmailVerification.isEmailVerified(session.getRecipeUserId(), email);
 
     if (!isVerified) {
+        if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, false))) {
+            // this can come here if you have enabled the account linking feature, and 
+            // if there is a security risk in changing this user's email.
+            return res.status(400).send("Email change not allowed. Please contact support");
+        }
         // Before sending a verification email, we check if the email is already
         // being used by another user. If it is, we throw an error.
         let user = (await supertokens.getUser(session.getUserId()))!;
@@ -432,6 +449,12 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         // TODO send successful response that email verification email sent.
         return
     }
+
+    if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, true))) {
+        // this can come here if you have enabled the account linking feature, and 
+        // if there is a security risk in changing this user's email.
+        return res.status(400).send("Email change not allowed. Please contact support");
+    } 
 
     // Since the email is verified, we try and do an update
     let resp = await Passwordless.updateUser({
