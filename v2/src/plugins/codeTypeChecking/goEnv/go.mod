@@ -9,7 +9,7 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/supertokens/supertokens-golang v0.13.3-0.20230912064227-6f4ec906a3d5
+	github.com/supertokens/supertokens-golang v0.14.0
 )
 
 require (
