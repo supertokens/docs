@@ -262,9 +262,11 @@ internal class Utils {
     }
     
     internal static func saveTokenFromHeaders(httpResponse: HTTPURLResponse) {
-        guard let headerFields: [String: String] = httpResponse.allHeaderFields as? [String: String] else {
+        guard var headerFields: [String: String] = httpResponse.allHeaderFields as? [String: String] else {
             return
         }
+
+        headerFields.lowerCaseKeys()
         
         if let refreshToken: String = headerFields[SuperTokensConstants.refreshTokenHeaderKey] {
             Utils.setToken(tokenType: .refresh, value: refreshToken)

@@ -64,8 +64,9 @@ public class SuperTokensURLProtocol: URLProtocol {
         // .value is case insensitive
         if let originalAuthorizationHeader = _mutableRequest.value(forHTTPHeaderField: "Authorization") {
             let accessToken = Utils.getTokenForHeaderAuth(tokenType: .access)
+            let refreshToken = Utils.getTokenForHeaderAuth(tokenType: .refresh)
             
-            if accessToken != nil && originalAuthorizationHeader == "Bearer \(accessToken!)" {
+            if accessToken != nil && refreshToken != nil && originalAuthorizationHeader == "Bearer \(accessToken!)" {
                 // Removing headers from a request is not case insensitive
                 _mutableRequest.setValue(nil, forHTTPHeaderField: "Authorization")
                 _mutableRequest.setValue(nil, forHTTPHeaderField: "authorization")
