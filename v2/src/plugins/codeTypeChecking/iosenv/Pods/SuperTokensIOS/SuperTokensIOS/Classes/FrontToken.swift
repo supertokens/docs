@@ -103,6 +103,8 @@ internal class FrontToken {
         
         readWriteDispatchQueue.async(flags: .barrier) {
             removeTokenFromStorage()
+            Utils.setToken(tokenType: .access, value: "")
+            Utils.setToken(tokenType: .refresh, value: "")
             tokenInfoSemaphore.signal()
             executionSemaphore.signal()
         }
