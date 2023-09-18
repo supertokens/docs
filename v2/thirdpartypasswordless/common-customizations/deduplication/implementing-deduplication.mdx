@@ -22,6 +22,7 @@ Add the following override logic to `ThirdPartyPasswordless.init` on the backend
 
 ```tsx
 import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import supertokens from "supertokens-node";
 
 ThirdPartyPasswordless.init({
     contactMethod: "EMAIL", // typecheck-only, removed from output
@@ -31,12 +32,18 @@ ThirdPartyPasswordless.init({
             return {
                 ...originalImplementation,
                 thirdPartySignInUp: async function (input) {
-                    let existingUsers = await ThirdPartyPasswordless.getUsersByEmail(input.tenantId, input.email);
+                    let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+                        email: input.email
+                    });
                     if (existingUsers.length === 0) {
                         // this means this email is new so we allow sign up
                         return originalImplementation.thirdPartySignInUp(input);
                     }
-                    if (existingUsers.find(i => "email" in i && "thirdParty" in i && i.thirdParty.id === input.thirdPartyId && i.thirdParty.userId === input.thirdPartyUserId)) {
+                    if (existingUsers.find(u =>
+                        u.loginMethods.find(lM => lM.hasSameThirdPartyInfoAs({
+                            id: input.thirdPartyId,
+                            userId: input.thirdPartyUserId
+                        }) && lM.recipeId === "thirdparty") !== undefined)) {
                         // this means we are trying to sign in with the same social login. So we allow it
                         return originalImplementation.thirdPartySignInUp(input);
                     }
@@ -50,12 +57,15 @@ ThirdPartyPasswordless.init({
                 ...originalImplementation,
                 createCodePOST: async function (input) {
                     if ("email" in input) {
-                        let existingUsers = await ThirdPartyPasswordless.getUsersByEmail(input.tenantId, input.email);
+                        let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+                            email: input.email
+                        });
                         if (existingUsers.length === 0) {
                             // this means this email is new so we allow sign up
                             return originalImplementation.createCodePOST!(input);
                         }
-                        if (existingUsers.find(i => "email" in i && !("thirdParty" in i))) {
+                        if (existingUsers.find(u =>
+                            u.loginMethods.find(lM => lM.hasSameEmailAs(input.email) && lM.recipeId === "passwordless") !== undefined)) {
                             // this means that the existing user is a passwordless login user. So we allow it
                             return originalImplementation.createCodePOST!(input);
                         }
