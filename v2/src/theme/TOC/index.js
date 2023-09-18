@@ -48,6 +48,14 @@ function Headings({ toc, isChild }) {
 }
 
 const OldDocsDisclaimer = () => {
+  const goToVersioningPage = () => {
+    window.location.href = "/docs/guides/versioning";
+  }
+
+  if (window.location.pathname === "/docs/guides/versioning") {
+    return <></>;
+  }
+
   return (
     <div className={styles.tocOldDocsContainer}>
       <div className={styles.tocOldDOcsTop}>
@@ -56,9 +64,11 @@ const OldDocsDisclaimer = () => {
           Looking for older version of the documentation?
         </span>
       </div>
-      <div className={styles.tocOldDOcsButton}>
+      <button 
+        onClick={goToVersioningPage}
+        className={styles.tocOldDOcsButton}>
         Click here!
-      </div>
+      </button>
     </div>
   );
 }
