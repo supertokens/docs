@@ -49,10 +49,14 @@ function Headings({ toc, isChild }) {
 
 const OldDocsDisclaimer = () => {
   const goToVersioningPage = () => {
-    window.location.href = "/docs/guides/versioning";
+    window.location.href = "/docs/community/versioning";
   }
 
-  if (window.location.pathname === "/docs/guides/versioning") {
+  if (window.location.href.includes("/docs/guides")) {
+    return <></>;
+  }
+
+  if (window.location.href.includes("/docs/community/versioning")) {
     return <></>;
   }
 
