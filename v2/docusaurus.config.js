@@ -137,6 +137,12 @@ module.exports = {
           rehypePlugins: rehypePlugins,
           beforeDefaultRemarkPlugins,
         },
+        sitemap:{
+          changefreq: 'weekly',
+          priority: 0.5,
+          // ignorePatterns: ['/tags/**'],
+          // filename: 'sitemap.xml',
+        },
         theme: {
           // this is applied to all docs.. not just the community one.
           customCss: require.resolve('./src/css/custom.css'),
