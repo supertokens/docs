@@ -63,12 +63,12 @@ const OldDocsDisclaimer = () => {
   return (
     <div className={styles.tocOldDocsContainer}>
       <div className={styles.tocOldDOcsTop}>
-        <img src="/img/ic-binoculars.svg" className={styles.tocOldDocsIcon}/>
+        <img src="/img/ic-binoculars.svg" className={styles.tocOldDocsIcon} />
         <span className={styles.tocOldDocsText}>
           Looking for older version of the documentation?
         </span>
       </div>
-      <button 
+      <button
         onClick={goToVersioningPage}
         className={styles.tocOldDOcsButton}>
         Click here!
@@ -147,7 +147,7 @@ function TOC({ toc, showUISwitcher }) {
   const unselectedBorderColorString = "var(--ui-selector-inactive-border)";
   return (
     <div className={clsx(styles.tableOfContents, 'thin-scrollbar')}>
-      <OldDocsDisclaimer />
+      {/* <OldDocsDisclaimer /> */}
       <div
         style={{
           width: "100%",
