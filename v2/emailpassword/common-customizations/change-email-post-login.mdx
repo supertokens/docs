@@ -109,6 +109,7 @@ import EmailPassword from "supertokens-node/recipe/emailpassword";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
+import {isEmailChangeAllowed} from "supertokens-node/recipe/accountlinking"
 
 let app = express();
 
@@ -123,10 +124,15 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         // TODO: handle invalid email error
         return 
     }
+
+    if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, false))) {
+        // this can come here if you have enabled the account linking feature, and 
+        // if there is a security risk in changing this user's email.
+    }  
     
     // Update the email
     let resp = await EmailPassword.updateEmailOrPassword({
-        userId: session.getUserId(),
+        recipeUserId: session.getRecipeUserId(),
         email: email,
     });
 
@@ -138,6 +144,12 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         // TODO: handle error that email exists with another account.
         return
     }
+    if (resp.status === "EMAIL_CHANGE_NOT_ALLOWED_ERROR") {
+        // This is possible if you have enabled account linking.
+        // See our docs for account linking to know more about this. 
+        // TODO: tell the user to contact support.
+    }
+
     throw new Error("Should never come here");
     // highlight-end
 
@@ -169,7 +181,7 @@ import (
 )
 
 type RequestBody struct {
-	email string
+	Email string
 }
 
 // the following example uses net/http
@@ -191,14 +203,14 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// validate the input email
-	if !isValidEmail(requestBody.email) {
+	if !isValidEmail(requestBody.Email) {
 		// TODO: handle invalid email error
 		return
 	}
 
 	// update the email
 	userId := sessionContainer.GetUserID()
-	updateResponse, err := emailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil, nil)
+	updateResponse, err := emailpassword.UpdateEmailOrPassword(userId, &requestBody.Email, nil, nil, nil)
 
 	if err != nil {
 		// TODO: handle error
@@ -389,6 +401,8 @@ import EmailVerification from "supertokens-node/recipe/emailverification";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
+import supertokens from "supertokens-node";
+import {isEmailChangeAllowed} from "supertokens-node/recipe/accountlinking"
 
 let app = express();
 
@@ -406,32 +420,49 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     // Then, we check if the email is verified for this user ID or not.
     // It is important to understand that SuperTokens stores email verification
     // status based on the user ID AND the email, and not just the email.
-    let isVerified = await EmailVerification.isEmailVerified(session.getUserId(), email);
+    let isVerified = await EmailVerification.isEmailVerified(session.getRecipeUserId(), email);
 
     if (!isVerified) {
+        if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, false))) {
+            // this can come here if you have enabled the account linking feature, and 
+            // if there is a security risk in changing this user's email.
+            return res.status(400).send("Email change not allowed. Please contact support");
+        } 
+
         // Before sending a verification email, we check if the email is already
         // being used by another user. If it is, we throw an error.
-        let user = (await EmailPassword.getUserById(session.getUserId()))!;
-        for (let i = 0; i < user?.tenantIds.length; i++) {
-            // Since once user can be shared across many tenants, we need to check if
-            // the email already exists in any of the tenants.
-            let userWithEmail = await EmailPassword.getUserByEmail(user.tenantIds[i], email);
-            if (userWithEmail?.id !== session.getUserId()) {
-                // TODO handle error, email already exists with another user.
-                return
+        let user = (await supertokens.getUser(session.getUserId()))!;
+        for (let i = 0; i < user.tenantIds.length; i++) {
+            let usersWithSameEmail = await supertokens.listUsersByAccountInfo(user.tenantIds[i], {
+                email
+            });
+            for (let y = 0; y < usersWithSameEmail.length; y++) {
+                // Since one user can be shared across many tenants, we need to check if
+                // the email already exists in any of the tenants that belongs to this user.
+                let currUser = usersWithSameEmail[y];
+                if (currUser?.id !== session.getUserId()) {
+                    // TODO handle error, email already exists with another user.
+                    return
+                }
             }
         }
-        
+
         // Now we create and send the email verification link to the user for the new email.
         await EmailVerification.sendEmailVerificationEmail(session.getTenantId(), session.getUserId(), email);
 
         // TODO send successful response that email verification email sent.
-        return 
+        return
     }
+
+    if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, true))) {
+        // this can come here if you have enabled the account linking feature, and 
+        // if there is a security risk in changing this user's email.
+        return res.status(400).send("Email change not allowed. Please contact support");
+    }  
 
     // Since the email is verified, we try and do an update
     let resp = await EmailPassword.updateEmailOrPassword({
-        userId: session.getUserId(),
+        recipeUserId: session.getRecipeUserId(),
         email: email,
     });
 
@@ -441,7 +472,7 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     }
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
         // TODO handle error, email already exists with another user.
-        return 
+        return
     }
 
     throw new Error("Should never come here");
@@ -455,7 +486,6 @@ function isValidEmail(email: string) {
     );
     return regexp.test(email);
 }
-
 ```
 
 
@@ -477,7 +507,7 @@ import (
 )
 
 type RequestBody struct {
-	email string
+	Email string
 }
 
 // the following example uses net/http
@@ -499,7 +529,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// validate the input email
-	if !isValidEmail(requestBody.email) {
+	if !isValidEmail(requestBody.Email) {
 		// TODO: handle invalid email error
 		return
 	}
@@ -512,7 +542,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	// Then, we check if the email is verified for this user ID or not.
 	// It is important to understand that SuperTokens stores email verification
 	// status based on the user ID AND the email, and not just the email.
-	isVerified, err := emailverification.IsEmailVerified(userId, &requestBody.email)
+	isVerified, err := emailverification.IsEmailVerified(userId, &requestBody.Email)
 
 	if err != nil {
 		// TODO: handle error
@@ -531,7 +561,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 			for i := 0; i < len(user.TenantIds); i++ {
 				// Since once user can be shared across many tenants, we need to check if
 				// the email already exists in any of the tenants.
-				userWithEmail, err := emailpassword.GetUserByEmail(user.TenantIds[i], requestBody.email)
+				userWithEmail, err := emailpassword.GetUserByEmail(user.TenantIds[i], requestBody.Email)
 	
 				if err != nil {
 					// TODO: handle error
@@ -545,7 +575,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Now we create and send the email verification link to the user for the new email.
-        _, err = emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.email)
+        _, err = emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.Email)
 
         if err != nil {
             // TODO: handle error
@@ -557,7 +587,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Since the email is verified, we try and do an update
-	updateResponse, err := emailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil, nil)
+	updateResponse, err := emailpassword.UpdateEmailOrPassword(userId, &requestBody.Email, nil, nil, nil)
 
 	if err != nil {
 		// TODO: handle error
@@ -710,39 +740,39 @@ import EmailVerification from "supertokens-node/recipe/emailverification";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
-  appInfo: {
-    apiDomain: "...",
-    appName: "...",
-    websiteDomain: "...",
-  },
-  recipeList: [
-    EmailPassword.init(),
-    EmailVerification.init({
-        mode: "REQUIRED",
-        override: {
-            apis: (oI) => {
-                return {
-                    ...oI,
-                    verifyEmailPOST: async function (input) {
-                        // highlight-start
-                        let response = await oI.verifyEmailPOST!(input);
-                        if (response.status === "OK") {
-                            // This will update the email of the user to the one
-                            // that was just marked as verified by the token.
-                            await EmailPassword.updateEmailOrPassword({
-                                userId: response.user.id,
-                                email: response.user.email,
-                            });
-                        }
-                        return response;
-                        // highlight-end
-                    },
-                };
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        EmailPassword.init(),
+        EmailVerification.init({
+            mode: "REQUIRED",
+            override: {
+                apis: (oI) => {
+                    return {
+                        ...oI,
+                        verifyEmailPOST: async function (input) {
+                            // highlight-start
+                            let response = await oI.verifyEmailPOST!(input);
+                            if (response.status === "OK") {
+                                // This will update the email of the user to the one
+                                // that was just marked as verified by the token.
+                                await EmailPassword.updateEmailOrPassword({
+                                    recipeUserId: response.user.recipeUserId,
+                                    email: response.user.email,
+                                });
+                            }
+                            return response;
+                            // highlight-end
+                        },
+                    };
+                },
             },
-        },
-    }),
-    Session.init(),
-  ],
+        }),
+        Session.init(),
+    ],
 });
 ```
 

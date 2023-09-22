@@ -119,6 +119,7 @@ module.exports = {
         },
       ]
     },
+    "user-object",
     {
       type: "category",
       label: "Integrations",

@@ -121,6 +121,7 @@ module.exports = {
         },
       ],
     },
+    "user-object",
     {
       type: "category",
       label: "Integrations",
@@ -433,7 +434,16 @@ module.exports = {
         "common-customizations/get-user-info",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
-        "common-customizations/account-linking",
+        {
+          type: "category",
+          label: "Account Linking",
+          items: [
+            "common-customizations/account-linking/overview",
+            "common-customizations/account-linking/automatic-account-linking",
+            "common-customizations/account-linking/manual-account-linking",
+            "common-customizations/account-linking/security-considerations"
+          ]
+        },
         "common-customizations/change-password",
         "common-customizations/change-email-post-login",
         {
