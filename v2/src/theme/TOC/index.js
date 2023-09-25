@@ -9,6 +9,7 @@ import clsx from 'clsx';
 import useTOCHighlight from '@theme/hooks/useTOCHighlight';
 import styles from './styles.module.css';
 import { getUIModeFromStorage, updateUIMode } from "../../components/preBuiltOrCustomUISwitcher";
+import { useLocation } from '@docusaurus/router';
 const LINK_CLASS_NAME = 'table-of-contents__link';
 const ACTIVE_LINK_CLASS_NAME = 'table-of-contents__link--active';
 const TOP_OFFSET = 100;
@@ -47,17 +48,18 @@ function Headings({ toc, isChild }) {
   );
 }
 
-const OldDocsDisclaimer = () => {
+function OldDocsDisclaimer() {
+  const location = useLocation();
   const goToVersioningPage = () => {
     window.location.href = "/docs/community/versioning";
   }
 
-  if (window.location.href.includes("/docs/guides")) {
-    return <></>;
+  if (location.pathname.includes("/docs/guides")) {
+    return <div style={{height: 0}}></div>;
   }
 
-  if (window.location.href.includes("/docs/community/versioning")) {
-    return <></>;
+  if (location.pathname.includes("/docs/community/versioning")) {
+    return <div style={{height: 0}}></div>;
   }
 
   return (
@@ -147,7 +149,7 @@ function TOC({ toc, showUISwitcher }) {
   const unselectedBorderColorString = "var(--ui-selector-inactive-border)";
   return (
     <div className={clsx(styles.tableOfContents, 'thin-scrollbar')}>
-      {/* <OldDocsDisclaimer /> */}
+      <OldDocsDisclaimer />
       <div
         style={{
           width: "100%",
