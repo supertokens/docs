@@ -26,7 +26,7 @@ In order to achieve this, all the API interface and recipe interface functions t
 
 ## Example use
 
-Let's take the example mentioned above and implement it in the context of this recipe. First, we override the sign up APIs to add information into the context indicating that it's a sign up API call:
+Let's take the example mentioned above and implement it in the context of this recipe. First, we override the sign up function to add information into the context indicating that it's a sign up API call:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -48,22 +48,22 @@ SuperTokens.init({
         EmailPassword.init({
             // highlight-start
             override: {
-                apis: (originalImplementation) => {
+                functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
                         // override sign up using email / password 
-                        signUpPOST: async function (input) {
-                            if (originalImplementation.signUpPOST === undefined) {
-                                throw new Error("Should never come here");
+                        signUp: async function (input) {
+                            let resp = await originalImplementation.signUp(input);
+                            if (resp.status === "OK" && resp.user.loginMethods.length === 1) {
+                                /*
+                                 * This is called during the sign up API for email password login,
+                                 * but before calling the createNewSession function.
+                                 * We override the recipe function as shown here,
+                                 * and then set the relevant context only if it's a new user.
+                                 */
+                                input.userContext.isSignUp = true;
                             }
-
-                            // by default, the userContext object is {},
-                            // we change it to {isSignUp: true}, since this is the
-                            // sign up API, and this will tell the createNewSession function
-                            // (being called inside originalImplementation.signUpPOST)
-                            // to not create a new session in case userContext.isSignUp === true
-                            input.userContext.isSignUp = true;
-                            return originalImplementation.signUpPOST(input);
+                            return resp;
                         },
                     }
                 }
@@ -219,7 +219,8 @@ SuperTokens.init({
                                         antiCsrfToken: undefined,
                                         refreshToken: undefined,
                                     }),
-                                    getTenantId: () => "public"
+                                    getTenantId: () => "public",
+                                    getRecipeUserId: () => SuperTokens.convertToRecipeUserId(""),
                                 };
                             }
                             return originalImplementation.createNewSession(input);

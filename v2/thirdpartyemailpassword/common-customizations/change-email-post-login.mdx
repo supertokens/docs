@@ -110,6 +110,8 @@ import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpass
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
+import supertokens from "supertokens-node";
+import {isEmailChangeAllowed} from "supertokens-node/recipe/accountlinking"
 
 let app = express();
 
@@ -122,32 +124,45 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     // Validate the input email
     if (!isValidEmail(email)) {
         // TODO: handle invalid email error
-        return 
+        return
     }
 
     // Check that the account to be updated is not a social account
     {
         let userId = session!.getUserId();
-        let userAccount = await ThirdPartyEmailPassword.getUserById(userId!);
-        if (userAccount!.thirdParty !== undefined) {
+        let userAccount = await supertokens.getUser(userId!);
+        let loginMethod = userAccount?.loginMethods.find(lM => {
+            return lM.recipeUserId.getAsString() === session.getRecipeUserId().getAsString()
+        })!
+        if (loginMethod.recipeId === "thirdparty") {
             // TODO: handle error, cannot update email for third party users.
-            return 
+            return
         }
     }
-    
+
+    if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, false))) {
+        // this can come here if you have enabled the account linking feature, and 
+        // if there is a security risk in changing this user's email.
+    }
+
     // Update the email
     let resp = await ThirdPartyEmailPassword.updateEmailOrPassword({
-        userId: session.getUserId(),
+        recipeUserId: session.getRecipeUserId(),
         email: email,
     });
 
     if (resp.status === "OK") {
         // TODO: send successfully updated email response
-        return 
+        return
     }
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
         // TODO: handle error that email exists with another account.
         return
+    }
+    if (resp.status === "EMAIL_CHANGE_NOT_ALLOWED_ERROR") {
+        // This is possible if you have enabled account linking.
+        // See our docs for account linking to know more about this. 
+        // TODO: tell the user to contact support.
     }
     throw new Error("Should never come here");
     // highlight-end
@@ -160,7 +175,6 @@ function isValidEmail(email: string) {
     );
     return regexp.test(email);
 }
-
 ```
 
 
@@ -181,7 +195,7 @@ import (
 )
 
 type RequestBody struct {
-	email string
+	Email string
 }
 
 // the following example uses net/http
@@ -203,7 +217,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// validate the input email
-	if !isValidEmail(requestBody.email) {
+	if !isValidEmail(requestBody.Email) {
 		// TODO: handle invalid email error
 		return
 	}
@@ -223,7 +237,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	// update the email
     tenantId := "public"
-	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil, &tenantId)
+	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.Email, nil, nil, &tenantId)
 
 	if err != nil {
 		// TODO: handle error
@@ -426,6 +440,8 @@ import EmailVerification from "supertokens-node/recipe/emailverification";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
+import supertokens from "supertokens-node";
+import {isEmailChangeAllowed} from "supertokens-node/recipe/accountlinking"
 
 let app = express();
 
@@ -443,10 +459,13 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
 
     // Check if the user's account is not a third party account
     {
-        let sessionId = session!.getUserId();
-        let userAccount = await ThirdPartyEmailPassword.getUserById(sessionId!);
-        if (userAccount!.thirdParty !== undefined) {
-            // TODO handle error, cannot update password for third party users.
+        let userId = session!.getUserId();
+        let userAccount = await supertokens.getUser(userId!);
+        let loginMethod = userAccount?.loginMethods.find(lM => {
+            return lM.recipeUserId.getAsString() === session.getRecipeUserId().getAsString()
+        })!
+        if (loginMethod.recipeId === "thirdparty") {
+            // TODO: handle error, cannot update email for third party users.
             return
         }
     }
@@ -454,16 +473,23 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     // Then, we check if the email is verified for this user ID or not.
     // It is important to understand that SuperTokens stores email verification
     // status based on the user ID AND the email, and not just the email.
-    let isVerified = await EmailVerification.isEmailVerified(session.getUserId(), email);
+    let isVerified = await EmailVerification.isEmailVerified(session.getRecipeUserId(), email);
 
     if (!isVerified) {
+        if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, false))) {
+            // this can come here if you have enabled the account linking feature, and 
+            // if there is a security risk in changing this user's email.
+            return res.status(400).send("Email change not allowed. Please contact support");
+        }
         // Before sending a verification email, we check if the email is already
         // being used by another user. If it is, we throw an error.
-        let user = (await ThirdPartyEmailPassword.getUserById(session.getUserId()))!;
+        let user = (await supertokens.getUser(session.getUserId()))!;
         for (let i = 0; i < user?.tenantIds.length; i++) {
             // Since once user can be shared across many tenants, we need to check if
             // the email already exists in any of the tenants.
-            let usersWithEmail = await ThirdPartyEmailPassword.getUsersByEmail(user.tenantIds[i], email);
+            let usersWithEmail = await supertokens.listUsersByAccountInfo(user.tenantIds[i], {
+                email
+            });
             for (let y = 0; y < usersWithEmail.length; y++) {
                 if (usersWithEmail[y].id !== session.getUserId()) {
                     // TODO handle error, email already exists with another user.
@@ -476,18 +502,24 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         await EmailVerification.sendEmailVerificationEmail(session.getTenantId(), session.getUserId(), email);
 
         // TODO send successful response that email verification email sent.
-        return 
+        return
     }
+
+    if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, true))) {
+        // this can come here if you have enabled the account linking feature, and 
+        // if there is a security risk in changing this user's email.
+        return res.status(400).send("Email change not allowed. Please contact support");
+    } 
 
     // Since the email is verified, we try and do an update
     let resp = await ThirdPartyEmailPassword.updateEmailOrPassword({
-        userId: session.getUserId(),
+        recipeUserId: session.getRecipeUserId(),
         email: email,
     });
 
     if (resp.status === "OK") {
         // TODO: send successful response that email has been updated
-        return 
+        return
     }
     if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
         // TODO: handle error, email already exists for another account
@@ -504,7 +536,6 @@ function isValidEmail(email: string) {
     );
     return regexp.test(email);
 }
-
 ```
 
 
@@ -525,7 +556,7 @@ import (
 )
 
 type RequestBody struct {
-	email string
+	Email string
 }
 
 // the following example uses net/http
@@ -547,7 +578,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// validate the input email
-	if !isValidEmail(requestBody.email) {
+	if !isValidEmail(requestBody.Email) {
 		// TODO: handle invalid email error
 		return
 	}
@@ -568,7 +599,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	// Then, we check if the email is verified for this user ID or not.
 	// It is important to understand that SuperTokens stores email verification
 	// status based on the user ID AND the email, and not just the email.
-	isVerified, err := emailverification.IsEmailVerified(userId, &requestBody.email)
+	isVerified, err := emailverification.IsEmailVerified(userId, &requestBody.Email)
 
 	if err != nil {
 		// TODO: handle error
@@ -587,7 +618,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 			for i := 0; i < len(user.TenantIds); i++ {
 				// Since once user can be shared across many tenants, we need to check if
 				// the email already exists in any of the tenants.
-				userWithEmail, err := thirdpartyemailpassword.GetUsersByEmail(user.TenantIds[i], requestBody.email)
+				userWithEmail, err := thirdpartyemailpassword.GetUsersByEmail(user.TenantIds[i], requestBody.Email)
 	
 				if err != nil {
 					// TODO: handle error
@@ -603,7 +634,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Now we create and send the email verification link to the user for the new email.
-        _, err = emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.email)
+        _, err = emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.Email)
 
         if err != nil {
             // TODO: handle error
@@ -614,7 +645,7 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	// Since the email is verified, we try and do an update
     tenantId := "public"
-	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.email, nil, nil, &tenantId)
+	updateResponse, err := thirdpartyemailpassword.UpdateEmailOrPassword(userId, &requestBody.Email, nil, nil, &tenantId)
 
 	if err != nil {
 		// TODO: handle error
@@ -800,7 +831,7 @@ SuperTokens.init({
                             // This will update the email of the user to the one
                             // that was just marked as verified by the token.
                             await ThirdPartyEmailPassword.updateEmailOrPassword({
-                                userId: response.user.id,
+                                recipeUserId: response.user.recipeUserId,
                                 email: response.user.email,
                             });
                         }

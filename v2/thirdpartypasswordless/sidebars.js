@@ -120,6 +120,7 @@ module.exports = {
         },
       ],
     },
+    "user-object",
     {
       type: "category",
       label: "Integrations",
@@ -428,7 +429,16 @@ module.exports = {
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",
         "common-customizations/change-email",
-        "common-customizations/account-linking",
+        {
+          type: "category",
+          label: "Account Linking",
+          items: [
+            "common-customizations/account-linking/overview",
+            "common-customizations/account-linking/automatic-account-linking",
+            "common-customizations/account-linking/manual-account-linking",
+            "common-customizations/account-linking/security-considerations"
+          ]
+        },
         {
           type: "category",
           label: "Email Verification",
