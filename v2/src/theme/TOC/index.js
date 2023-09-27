@@ -67,7 +67,7 @@ function OldDocsDisclaimer() {
       <div className={styles.tocOldDOcsTop}>
         <img src="/img/ic-binoculars.svg" className={styles.tocOldDocsIcon} />
         <span className={styles.tocOldDocsText}>
-          Looking for older version of the documentation?
+          Looking for older versions of the documentation?
         </span>
       </div>
       <button
