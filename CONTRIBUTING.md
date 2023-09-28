@@ -11,6 +11,8 @@ We welcome contributions of all kinds (discussions, bug fixes, features, design 
 
 ## Modifying and seeing your changes
 
+You will need to use Node 16 for this project
+
 1. Go into the `v2` folder
 2. Run `npm i -d`
 3. Run `npm run set-up-hooks` to setup the pre-commit hooks
