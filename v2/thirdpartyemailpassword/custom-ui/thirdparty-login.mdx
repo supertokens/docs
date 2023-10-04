@@ -326,6 +326,8 @@ Coming Soon
 
 <TabItem value="ios">
 
+<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+
 For iOS you use the normal sign in with apple flow and then use the id token to login with SuperTokens
 
 ```swift
@@ -366,6 +368,8 @@ fileprivate class ViewController: UIViewController, ASAuthorizationControllerPre
 
 <TabItem value="flutter">
 
+<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+
 For flutter we use the [sign_in_with_apple](https://pub.dev/packages/sign_in_with_apple) package, make sure to follow the prerequisites steps to get the package setup. After setup use the snippet below to trigger the apple sign in flow.
 
 ```dart
@@ -373,19 +377,22 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 void loginWithApple() async {
   try {
-    var credential = await SignInWithApple.getAppleIDCredential(scopes: [
-      AppleIDAuthorizationScopes.email,
-      AppleIDAuthorizationScopes.fullName,
-      // Required for Android only
-      webAuthenticationOptions: WebAuthenticationOptions(
-        clientId: "<CLIENT_ID>",
-        redirectUri: Uri.parse(
-          "<API_DOMAIN>/<API_BASE_PATH>/callback/apple",
+    var credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+        ],
+        // Required for Android only
+        webAuthenticationOptions: WebAuthenticationOptions(
+            clientId: "<CLIENT_ID>",
+            redirectUri: Uri.parse(
+            "<API_DOMAIN>/<API_BASE_PATH>/callback/apple",
+            ),
         ),
-      ),
-    ]);
+    );
 
     String authorizationCode = credential.authorizationCode;
+    String? idToken = credential.identityToken;
     String? email = credential.email;
     String? firstname = credential.givenName;
     String? lastName = credential.familyName;
@@ -402,6 +409,10 @@ In the snippet above for Android we need to pass an additional `webAuthenticatio
 <h3> Additional steps for Android </h3>
 
 For android we also need to provide a way for the web login flow to redirect back to the app. By default the API provided by the backend SDKs redirect to the website domain you provide when initialising the SDK, we can override the API to have it redirect to our app instead. For example if you were using the Node.js SDK:
+
+<BackendSDKTabs>
+
+<TabItem value="nodejs">
 
 ```tsx
 import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
@@ -452,6 +463,73 @@ import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRec
     ^{nodeSignInUpFeatureEnd}
 })
 ```
+
+</TabItem>
+
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+	"strings"
+
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}"
+    ^{goTPModelsImport}
+	"github.com/supertokens/supertokens-golang/recipe/^{codeImportRecipeName}/^{goModelName}"
+)
+
+func main() {
+	^{codeImportRecipeName}.Init(^{goModelNameForInit}.TypeInput{
+		Override: &^{goModelName}.OverrideStruct{
+			APIs: func(originalImplementation ^{goModelName}.APIInterface) ^{goModelName}.APIInterface {
+				originalAppleRedirectPost := *originalImplementation.AppleRedirectHandlerPOST
+
+				*originalImplementation.AppleRedirectHandlerPOST = func(formPostInfoFromProvider map[string]interface{}, options tpmodels.APIOptions, userContext *map[string]interface{}) error {
+					// formPostInfoFromProvider contains all the query params attached by Apple
+					state, stateOk := formPostInfoFromProvider["state"].(string)
+
+					queryParams := []string{}
+					if (!stateOk) || state == "" { 
+						// Redirect to android app
+						for key, value := range formPostInfoFromProvider {
+							queryParams = append(queryParams, key+"="+value.(string))
+						}
+
+						queryString := ""
+						if len(queryParams) > 0 {
+							queryString = strings.Join(queryParams, "&")
+						}
+
+						// Refer to the README of sign_in_with_apple to understand what this url is
+						redirectUri := "intent://callback?" + queryString + "#Intent;package=YOUR.PACKAGE.IDENTIFIER;scheme=signinwithapple;end"
+
+						options.Res.Header().Set("Location", redirectUri)
+						options.Res.WriteHeader(http.StatusSeeOther)
+						return nil
+					} else {
+						return originalAppleRedirectPost(formPostInfoFromProvider, options, userContext)
+					}
+				}
+
+				return originalImplementation
+			},
+		},
+		^{goSignInUpFeatureStart}
+			Providers: []tpmodels.ProviderInput{
+				// ...
+			},
+		^{goSignInUpFeatureEnd}
+	})
+}
+```
+
+</TabItem>
+
+<TabItem value="python">
+
+</TabItem>
+
+</BackendSDKTabs>
 
 In the code above we override the `appleRedirectHandlerPOST` API to check if the request was made by our Android app (You can skip checking the state if you only have a mobile app and no website). `sign_in_with_apple` requires us to parse the query params sent by apple and include them in the redirect URL in a specific way, and then we simply redirect to the deep link url. Refer to the README for `sign_in_with_apple` to read about the deep link setup required in Android.
 
