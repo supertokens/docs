@@ -373,6 +373,13 @@ void loginWithApple() async {
     var credential = await SignInWithApple.getAppleIDCredential(scopes: [
       AppleIDAuthorizationScopes.email,
       AppleIDAuthorizationScopes.fullName,
+      // Required for Android only
+      webAuthenticationOptions: WebAuthenticationOptions(
+        clientId: "<CLIENT_ID>",
+        redirectUri: Uri.parse(
+          "<API_DOMAIN>/<API_BASE_PATH>/callback/apple",
+        ),
+      ),
     ]);
 
     String authorizationCode = credential.authorizationCode;
@@ -386,6 +393,64 @@ void loginWithApple() async {
   }
 }
 ```
+
+In the snippet above for Android we need to pass an additional `webAuthenticationOptions` property when signing in with Apple. This is because on Android the library uses the web login flow and we need to provide it with the client id and redirection uri. The `redirectUri` property here is the URL to which Apple will make a `POST` request after the user has logged in. The SuperTokens backend SDKs provide an API for this at `<API_DOMAIN>/<API_BASE_PATH>/callback/apple`.
+
+<h3> Additional steps for Android </h3>
+
+For android we also need to provide a way for the web login flow to redirect back to the app. By default the API provided by the backend SDKs redirect to the website domain you provide when initialising the SDK, we can override the API to have it redirect to our app instead. For example if you were using the Node.js SDK:
+
+```tsx
+import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+
+^{recipeNameCapitalLetters}.init({
+    ^{nodeSignInUpFeatureStart}
+    // highlight-start
+        override: {
+            apis: (original) => {
+                return {
+                    ...original,
+                    appleRedirectHandlerPOST: async (input) => {
+                        if (original.appleRedirectHandlerPOST === undefined) {
+                            throw Error("Should never come here");
+                        }
+
+                        // inut.formPostInfoFromProvider contains all the query params attached by Apple
+                        const stateInBase64 = input.formPostInfoFromProvider.state;
+
+                        // The web SDKs add a default state
+                        if (stateInBase64 === undefined) {
+                            // Redirect to android app
+                            // We create a dummy URL to create the query string
+                            const dummyUrl = new URL("http://localhost:8080");
+                            for (const [key, value] of Object.entries(input.formPostInfoFromProvider)) {
+                                dummyUrl.searchParams.set(key, `${value}`);
+                            }
+
+                            const queryString = dummyUrl.searchParams.toString();
+                            // Refer to the README of sign_in_with_apple to understand what this url is
+                            const redirectUrl = `intent://callback?${queryString}#Intent;package=YOUR.PACKAGE.IDENTIFIER;scheme=signinwithapple;end`;
+
+                            input.options.res.setHeader("Location", redirectUrl, false);
+                            input.options.res.setStatusCode(303);
+                            input.options.res.sendHTMLResponse("");
+                        } else {
+                            // For the web flow we can use the original implementation
+                            original.appleRedirectHandlerPOST(input);
+                        }
+                    },
+                };
+            },
+        },
+        // highlight-end
+        providers: [
+            // ...
+        ],
+    ^{nodeSignInUpFeatureEnd}
+})
+```
+
+In the code above we override the `appleRedirectHandlerPOST` API to check if the request was made by our Android app (You can skip checking the state if you only have a mobile app and no website). `sign_in_with_apple` requires us to parse the query params sent by apple and include them in the redirect URL in a specific way, and then we simply redirect to the deep link url. Refer to the README for `sign_in_with_apple` to read about the deep link setup required in Android.
 
 </TabItem>
 
