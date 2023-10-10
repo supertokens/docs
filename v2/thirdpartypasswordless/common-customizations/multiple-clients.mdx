@@ -1,0 +1,99 @@
+---
+id: multiple-clients
+title: Setting up multiple frontends for one backend
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/common-customizations/multiple-clients.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Setting up multiple frontends for one backend
+
+Many a times, you have a setup where different frontend clients query the same backend. For example, this can happen in the case of a mobile app and a web app - both of these types of clients query the same backend. Another common use case is that you may have a common testing backend that is shared across local frontend development (on `localhost`), and a staging / testing frontend (on `test.yoursite.com`).
+
+In all these cases, the location of the different frontend clients are different. In case of a mobile app, it can be a deep link to the app, in case of local development, it can be `http://localhost:3000`, for staging, it can be `https://test.yoursite.com`, etc. Not only is the domain different, but so is the protocol (http vs https).
+
+All of these have an impact on the functioning of SuperTokens. For example, if your frontend is on `localhost` and your API is `api.example.com`, then the `cookieSameSite` value for sessions should resolve to `none`, whereas if the frontend is on `test.example.com`, then the `cookieSameSite` value should resolve to `lax`. Another example is the effect on magic links, password reset or email verification links - the domains and protocols of these would need to change based on the frontend that is querying - if the query is coming from the `localhost` site, then the link URL would be `http:localhost...`, whereas if it's coming from the test site, it would be `https://test.example.com...`.
+
+In order to facilitate this, we allow you to configure an `origin` function on the backend which takes in the request object, and returns a string representing the domain of the request:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import supertokens from "supertokens-node";
+
+supertokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        // highlight-start
+        origin: (input) => {
+            if (input.request !== undefined) {
+                let origin = input.request.getHeaderValue("origin");
+                if (origin === undefined) {
+                    // this means the client is in an iframe, it's a mobile app, or
+                    // there is a privacy setting on the frontend which doesn't send
+                    // the origin
+                } else {
+                    if (origin === "https://test.example.com") {
+                        // query from the test site
+                        return "https://test.example.com";
+                    } else if (origin === "http://localhost:3000") {
+                        // query from local development
+                        return "http://localhost:3000";
+                    }
+                }
+            }
+            // in case the origin is unknown or not set, we return a default
+            // value which will be used for this request.
+            return "https://test.example.com";
+        }
+        // highlight-end
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [/* ... */]
+})
+```
+
+</TabItem>
+
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+- We remove the `websiteDomain` config in the `appInfo` config, and replace it with the `origin` config as shown above.
+- The `origin` config is a function that takes an optional request object, and returns a string representing the domain of the request. We first check for if the `request` is not provided, and if not, then we fallback on a default value. If it is provided, then we attempt to read the `origin` header from the request and return a domain based on that.
+- There may be cases where the `origin` header is not set, in which case we fallback on the default value once again. This can happen for:
+    - Mobile app frontends.
+    - Frontend in an iframe
+    - Privacy setting on the frontend.
+    In these cases, you may want to set a custom prop in all requests (in the URL as a query param) indicating the type of client, read that from the request object above and return a domain based on that.
+- There are several cases where the input request object may not be provided:
+    - In case you are calling a function like `EmailVerification.createEmailVerificationLink` manually from your APIs.
+    - In case of certain dashboard actions like sending an email verification link - here the request object is omited cause the origin will be that of the dashboard and not your frontend app.
+
+    Therefore, in these cases, it makes sense to fallback on a sensible default.
+
+:::caution
+Do not return the `origin` header as is because it can result in an attack wherein an attacker can inject their custom origin header value in the request, and the links generated (for example for password reset) would then point to their custom origin.
+
+Instead, as shown above, check for each known origin explicitly (including port and protocol), and return only known values. 
+:::

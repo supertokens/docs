@@ -472,6 +472,7 @@ module.exports = {
             "common-customizations/changing-base-path/api-base-path"
           ]
         },
+        "common-customizations/multiple-clients",
         "common-customizations/userid-format",
         {
           type: 'category',
