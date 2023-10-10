@@ -18,6 +18,8 @@ In all these cases, the location of the different frontend clients are different
 
 All of these have an impact on the functioning of SuperTokens. For example, if your frontend is on `localhost` and your API is `api.example.com`, then the `cookieSameSite` value for sessions should resolve to `none`, whereas if the frontend is on `test.example.com`, then the `cookieSameSite` value should resolve to `lax`. Another example is the effect on magic links, password reset or email verification links - the domains and protocols of these would need to change based on the frontend that is querying - if the query is coming from the `localhost` site, then the link URL would be `http:localhost...`, whereas if it's coming from the test site, it would be `https://test.example.com...`.
 
+## Step 1: Define a dynamic origin on the backend
+
 In order to facilitate this, we allow you to configure an `origin` function on the backend which takes in the request object, and returns a string representing the domain of the request:
 
 <BackendSDKTabs>
@@ -97,3 +99,26 @@ Do not return the `origin` header as is because it can result in an attack where
 
 Instead, as shown above, check for each known origin explicitly (including port and protocol), and return only known values. 
 :::
+
+## Step 2: Determine the right method for sending session tokens (cookies vs auth header)
+
+:::important
+This section is only applicable for browser based frontend config.
+:::
+
+By default, browser based apps use cookies for session tokens which are saved against the API domain. Keeping this in mind, you need to think through the right setting for [token transfer method](./sessions/token-transfer-method) based on the following scenarios:
+
+- If users can login to multiple frontends at the same time: 
+    - Via login forms on each of those frontends:
+        - For example, you have two websites: `a.example.com` and `b.example.com` (or `app1.com` and `app2.com`), and both have their respective login forms on which users can login. Both of these query the same `apiDomain` (for example, `api.example.com`). In this case, you should use header based auth and not cookie based. If you use cookie based auth, then logging into the second site will overwrite the tokens from the first site since the session tokens are saved against the api domain (which is the same for both). Using header based auth, the tokens will be saved against the frontend domains which are both different, allowing users to be logged into both the sites at the same time.
+    - Via a common login form:
+        - For example, you have `auth.example.com` which logs users into `a.example.com` and `b.example.com`. In this case, you can use cookie based sessions, with the [sub domain sharing feature](./sessions/share-sessions-across-sub-domains) enabled.
+        - If the domains are not sub domains and are entirely different base domains (like `app1.com` and `app2.com`), then you need to use SuperTokens as an OAuth provider. This feature is coming soon.
+
+- If users should not login to multiple frontends at the same time:
+    - For example, you have `test.example.com` for your staging site and `localhost:3000` for your local dev site. Both use the same `apiDomain` of `api.example.com`. In this case, you don't really care what happens if a user logs into both of these sites together. In this case, the login from the second site will overwrite the one from the first site, and that's OK. So you can continue to use cookie based auth.
+
+- If your frontend and api are on different base domains:
+    - If your frontend is on `app1.com` and your `apiDomain` is on `api.example.com`, they are said to be on different base domains. Another example is the frontend being on `localhost` and the `apiDomain` being on `api.example.com`.
+    - In this case, using cookie based auth will not work on browsers like Safari, or chrome incognito (since by default, they disallow third party cookies). So you should use header based auth instead. SuperTokens allows you to [choose header based auth for some sites, and cookies for others](./sessions/token-transfer-method). 
+    - Note that if the two domains are sub domains, or the same domain but with differnet ports, then they are considered to be on the same base domain and won't have any issues with cookie based auth.
