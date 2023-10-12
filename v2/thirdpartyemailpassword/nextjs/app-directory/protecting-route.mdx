@@ -1,0 +1,152 @@
+---
+id: protecting-route
+title: 4. Protecting a website route
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/nextjs/app-directory/protecting-route.mdx -->
+
+# 4. Protecting a website route
+
+Protecting a website route means that it cannot be accessed unless a user is signed in. If a non signed in user tries to access it, they will be redirected to the login page.
+
+First we will create a utility function to get the session information in the SSR safe way:
+
+```tsx
+import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+import Session, { SessionContainer } from 'supertokens-node/recipe/session';
+
+export async function getSSRSession(req?: NextRequest): Promise<{
+  session: SessionContainer | undefined;
+  hasToken: boolean;
+  resp?: Response;
+}> {
+  let token;
+  if (req?.cookies) {
+    token = req.cookies.get('sAccessToken')?.value;
+  } else {
+    token = cookies().get('sAccessToken')?.value;
+  }
+
+  if (req?.headers.get("Authorization")) {
+    token = req.headers.get("Authorization")!;
+    // We remove the "Bearer" from the token
+    if (token.includes("Bearer")) {
+      token = token.replace("Bearer ", "");
+    }
+  }
+
+  if (token === undefined) {
+    return {
+      session: undefined,
+      hasToken: false,
+      resp: new NextResponse('Authentication required', { status: 401 }),
+    };
+  }
+
+  let session;
+  let resp;
+
+  try {
+    session = await Session.getSessionWithoutRequestResponse(token, undefined, {
+      sessionRequired: false,
+    });
+  } catch (err) {
+    if (Session.Error.isErrorFromSuperTokens(err)) {
+      resp = new NextResponse('Authentication required', {
+        status: err.type === Session.Error.INVALID_CLAIMS ? 403 : 401,
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  return {
+    session,
+    hasToken: true,
+    resp,
+  };
+}
+```
+
+`getSSRSession` will try to fetch session information from the request or from existing cookies. We can use this function to ensure that a session exists, this function can be called in both client or server components.
+
+Let's say we want to protect the home page of your website (`/` route). In this case we first create a server component that can check if the session exists and return any session information we may need:
+
+```tsx title="app/components/home.tsx"
+import { getSSRSession } from '../sessionUtils';
+import { TryRefreshComponent } from './tryRefreshClientComponent';
+import styles from '../page.module.css';
+import { redirect } from 'next/navigation'
+
+export async function HomePage() {
+  const { session, hasToken } = await getSSRSession();
+
+  if (!session) {
+    if (!hasToken) {
+      redirect('/auth');
+    }
+    return <TryRefreshComponent />;
+  }
+
+  return (
+    <div>
+        <div>
+            <p className={styles.description}>
+                Hello world
+            </p>
+        </div>
+    </div>
+  );
+}
+```
+
+The `TryRefreshComponent` is a client component that checks if a session exists and tryies to refresh it if it is expired.
+
+```tsx title="app/components/tryRefreshClientComponent.tsx"
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter, redirect } from 'next/navigation';
+import Session from 'supertokens-auth-react/recipe/session';
+import SuperTokens from 'supertokens-auth-react';
+
+export const TryRefreshComponent = () => {
+  const router = useRouter();
+  useEffect(() => {
+    void Session.attemptRefreshingSession()
+      .then(() => {
+        router.refresh();
+      })
+      .catch(console.error);
+  }, []);
+
+  return <div>Loading...</div>;
+};
+```
+
+And then we can modify the `/app/page.tsx` file to use our server component
+
+```tsx title="app/page.tsx"
+import { HomePage } from './components/home'
+import styles from './page.module.css'
+
+export default function Home() {
+  return (
+    <main className={styles.main}>
+      <HomePage />
+    </main>
+  )
+}
+
+```
+
+:::tip Test by navigating to `/`
+You should be redirected to the login page. After that, sign in, and then visit `/` again. This time, there should be no redirection.
+:::
+
+:::important
+An example of this can be seen [here](https://github.com/supertokens/next.js/blob/canary/examples/with-supertokens/app/page.tsx).
+:::
