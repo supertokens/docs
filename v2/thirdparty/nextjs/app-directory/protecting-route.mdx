@@ -1,0 +1,170 @@
+---
+id: protecting-route
+title: 5. Checking for sessions in frontend routes
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/nextjs/app-directory/protecting-route.mdx -->
+
+# 5. Checking for sessions in frontend routes
+
+Protecting a website route means that it cannot be accessed unless a user is signed in. If a non signed in user tries to access it, they will be redirected to the login page.
+
+## Sessions with Server Components
+
+Let's say we want to protect the home page of your website (`/` route). In this case we first create a server component that can check if the session exists and return any session information we may need:
+
+```tsx title="app/components/home.tsx"
+import { getSSRSession } from '../sessionUtils';
+import { TryRefreshComponent } from './tryRefreshClientComponent';
+import styles from '../page.module.css';
+import { redirect } from 'next/navigation'
+
+export async function HomePage() {
+  const { session, hasToken } = await getSSRSession();
+
+  /**
+   * The session will be undefined if it does not exist or has expired, if the session has expired
+   * hasToken will be true because there are session tokens present (but are expired). In this case
+   * we will try to refresh the session using the TryRefreshComponent client component which will call
+   * the refresh endpoint.
+   * 
+   * If session is undefined and hasToken is false, we can safely assume that there is no session for the user
+   * and redirect them to the login page
+   */
+  if (!session) {
+    if (!hasToken) {
+      redirect('/auth');
+    }
+    return <TryRefreshComponent />;
+  }
+
+  return (
+    <div>
+        <div>
+            <p className={styles.description}>
+                Hello world
+            </p>
+        </div>
+    </div>
+  );
+}
+```
+
+`getSSRSession` is a utility function we created in the [previous step](./session-helpers.mdx). The `TryRefreshComponent` is a client component that checks if a session exists and tries to refresh the session if it is expired.
+
+```tsx title="app/components/tryRefreshClientComponent.tsx"
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter, redirect } from 'next/navigation';
+import Session from 'supertokens-auth-react/recipe/session';
+import SuperTokens from 'supertokens-auth-react';
+
+export const TryRefreshComponent = () => {
+  const router = useRouter();
+  useEffect(() => {
+    void Session.attemptRefreshingSession()
+      .then(() => {
+        router.refresh();
+      })
+      .catch(console.error);
+  }, []);
+
+  return <div>Loading...</div>;
+};
+```
+
+And then we can modify the `/app/page.tsx` file to use our server component
+
+```tsx title="app/page.tsx"
+import { HomePage } from './components/home'
+import styles from './page.module.css'
+
+export default function Home() {
+  return (
+    <main className={styles.main}>
+      <HomePage />
+    </main>
+  )
+}
+```
+
+:::tip Test by navigating to `/`
+You should be redirected to the login page. After that, sign in, and then visit `/` again. This time, there should be no redirection.
+:::
+
+:::important
+An example of this can be seen [here](https://github.com/supertokens/next.js/blob/canary/examples/with-supertokens/app/page.tsx).
+:::
+
+## Sessions with Client Components
+
+Lets create a client component for the `/` route of our website.
+
+### Using the `SessionAuth` wrapper component
+
+```tsx title="app/components/homeClientComponent.tsx"
+'use client'
+
+import { SessionAuth } from "supertokens-auth-react/recipe/session"
+
+export const HomeClientComponent = () => {
+    return (
+        <SessionAuth>
+            <div>
+                <div>
+                    <p>
+                        Client side component got userId: {session.userId}<br/>
+                    </p>
+                </div>
+            </div>
+        </SessionAuth>
+    );
+}
+```
+
+`SessionAuth` is a component exposed by the SuperTokens React SDK, it checks if a session exists and if it does not exist it wil ltry to call the refresh endpoint. If the session cannot be refreshed or does not exist at all it will redirect to the login page.
+
+At the moment the `SessionAuth` component does not support server side rendering and will only work on the client side.
+
+### Using `useSessionContext`
+
+```tsx title="app/components/homeClientComponent.tsx"
+'use client'
+
+import { useSessionContext } from "supertokens-auth-react/recipe/session"
+
+export const HomeClientComponent = () => {
+    const session = useSessionContext();
+
+    if (session.loading) {
+        return <div>Loading...</div>;
+    }
+
+    if (session.doesSessionExist === false) {
+        return <div>Session does not exist</div>;
+    }
+
+    return (
+        <div>
+            <div>
+                <p>
+                    Client side component got userId: {session.userId}<br/>
+                </p>
+            </div>
+        </div>
+    );
+}
+```
+
+`useSessionContext` lets you access the session information on the client side using the React Context API. `session.loading` indicates if the session is currently being loaded into the context, this will also refresh the session for you if it is expired. You can use `session.doesSessionExist` to check if a valid session exists and handle it accordingly. 
+
+:::info
+`useSessionContext` can be used along with the `SessionAuth` wrapper component.
+:::
+
+:::tip Test by navigating to `/`
+You should be redirected to the login page. After that, sign in, and then visit `/` again. This time, there should be no redirection.
+:::
