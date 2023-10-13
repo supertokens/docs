@@ -1,0 +1,125 @@
+---
+id: session-helpers
+title: 4. Add helper functions for sessions
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/nextjs/app-directory/session-helpers.mdx -->
+
+# 4. Add helper functions for sessions
+
+To make it easy to access session information and protect our API routes we will create some helper functions:
+
+```ts title="app/sessionUtils.ts"
+import { cookies, headers } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+import Session, { SessionContainer } from 'supertokens-node/recipe/session';
+import { ensureSuperTokensInit } from './config/backend';
+
+ensureSuperTokensInit();
+
+export async function getSSRSession(req?: NextRequest): Promise<{
+  session: SessionContainer | undefined;
+  hasToken: boolean;
+  resp?: Response;
+}> {
+  let token;
+  /**
+   * We try reading the access token from the incoming request if it exists
+   * 
+   * If the request does not exist or it does not contain an access token we try to read it
+   * from the existing cookies stored for the website
+   */
+  if (req?.cookies) {
+    token = req.cookies.get('sAccessToken')?.value;
+  } else {
+    token = cookies().get('sAccessToken')?.value;
+  }
+
+  if (req?.headers.get("Authorization")) {
+    token = req.headers.get("Authorization")!;
+    // We remove the "Bearer" from the token
+    if (token.includes("Bearer")) {
+      token = token.replace("Bearer ", "");
+    }
+  }
+
+  if (token === undefined) {
+    return {
+      session: undefined,
+      hasToken: false,
+      resp: new NextResponse('Authentication required', { status: 401 }),
+    };
+  }
+
+  let session;
+  let resp;
+
+  try {
+    session = await Session.getSessionWithoutRequestResponse(token, undefined, {
+      sessionRequired: false,
+    });
+  } catch (err) {
+    if (Session.Error.isErrorFromSuperTokens(err)) {
+      resp = new NextResponse('Authentication required', {
+        status: err.type === Session.Error.INVALID_CLAIMS ? 403 : 401,
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  return {
+    session,
+    hasToken: true,
+    resp,
+  };
+}
+
+export function updateSessionInResponse(
+    session: SessionContainer,
+    response?: NextResponse,
+  ) {
+    let tokens = session.getAllSessionTokensDangerously();
+    if (tokens.accessAndFrontTokenUpdated) {
+      const accessTokenCookie = {
+        name: 'sAccessToken',
+        value: tokens.accessToken,
+        httpOnly: true,
+        path: '/',
+        expires: Date.now() + 3153600000000,
+      };
+  
+      if (response) {
+        response.cookies.set(accessTokenCookie);
+        response.headers.set('front-token', tokens.frontToken);
+      } else {
+        cookies().set(accessTokenCookie);
+        headers().set('front-token', tokens.frontToken);
+      }
+    }
+  }
+
+export async function withSession(
+    request: NextRequest,
+    handler: (session: SessionContainer | undefined) => Promise<NextResponse>,
+  ) {
+    let { session, resp: stResponse } = await getSSRSession(request);
+    if (stResponse) {
+        return stResponse;
+    }
+    let userResponse = await handler(session);
+
+    if (session) {
+        updateSessionInResponse(session, userResponse);
+    }
+    return userResponse;
+}
+```
+
+- `getSSRSession` will be used in our frontend routes to get session information when rendering on the server side. This function tries to get the session tokens from the request cookies and headers, or from any existing cookies for the website. The `hasToken` property is useful when deciding to refresh the session because if the session does not exist and `hasToken` is `false` we can skip trying to refresh the session and redirect the user to the login page.
+
+- `withSession` will be used as a session guard for our API routes. If a session exists it will be passed to the callback, which is where we will write our API logic. If no session exists it will pass `undefined` to the callback.
+
+- `updateSessionInResponse` is a utility function that attaches session tokens to the response or existing cookies for the website.
