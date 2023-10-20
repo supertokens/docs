@@ -183,6 +183,7 @@ module.exports = {
               type: 'category',
               label: 'Using the App directory',
               items: [
+                "nextjs/app-directory/about",
                 "nextjs/app-directory/init",
                 "nextjs/app-directory/setting-up-frontend",
                 "nextjs/app-directory/setting-up-backend",
