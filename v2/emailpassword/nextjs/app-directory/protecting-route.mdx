@@ -11,15 +11,80 @@ hide_title: true
 
 Protecting a website route means that it cannot be accessed unless a user is signed in. If a non signed in user tries to access it, they will be redirected to the login page.
 
-## Sessions with Server Components
+## Sessions with Client Components
 
+Lets create a client component for the `/` route of our website.
 
-### Creating a wrapper around `SessionAuth`
-Let's say we want to protect the home page of your website (`/` route). First we will create a wrapper around the `SessionAuth` component provided by SuperTokens to allow us to use it on both server side and client side.
+### Using the `SessionAuth` wrapper component
+
+```tsx title="app/components/homeClientComponent.tsx"
+'use client'
+
+import { SessionAuth } from "supertokens-auth-react/recipe/session"
+
+export const HomeClientComponent = () => {
+    return (
+        <SessionAuth>
+            <div>
+                Hello world
+            </div>
+        </SessionAuth>
+    );
+}
+```
+
+`SessionAuth` is a component exposed by the SuperTokens React SDK, it checks if a session exists and if it does not exist it will redirect the user to the login page.
+
+:::caution
+At the moment the `SessionAuth` component does not support server side rendering and will only work on the client side. Refer to the <a href="#server-components">next section</a> of this page to learn how to use sessions on the server side.
+:::
+
+### Using `useSessionContext`
+
+```tsx title="app/components/homeClientComponent.tsx"
+'use client'
+
+import { useSessionContext } from "supertokens-auth-react/recipe/session"
+
+export const HomeClientComponent = () => {
+    const session = useSessionContext();
+
+    if (session.loading) {
+        return <div>Loading...</div>;
+    }
+
+    if (session.doesSessionExist === false) {
+        return <div>Session does not exist</div>;
+    }
+
+    return (
+        <div>
+            <div>
+                <p>
+                    Client side component got userId: {session.userId}<br/>
+                </p>
+            </div>
+        </div>
+    );
+}
+```
+
+`useSessionContext` lets you access the session information on the client side using the React Context API. `session.loading` indicates if the session is currently being loaded into the context, this will also refresh the session for you if it is expired. You can use `session.doesSessionExist` to check if a valid session exists and handle it accordingly. 
 
 :::info
-This is only needed because currently `SessionAuth` does not support server side rendering, this will be fixed in a future version of the SDK and this step can be skipped after that.
+`useSessionContext` does not need to be used along with `SessionAuth`. Since our app is wrapped by the `SuperTokensWrapper` component, the `useSessionContext` hook can be used in any of our components.
 :::
+
+:::tip Test by navigating to `/`
+You should be redirected to the login page. After that, sign in, and then visit `/` again. This time, there should be no redirection.
+:::
+
+## Sessions with Server Components {#server-components}
+
+### Creating some helper Components
+
+#### Creating a wrapper around `SessionAuth`
+Let's say we want to protect the home page of your website (`/` route). First we will create a wrapper around the `SessionAuth` component provided by SuperTokens to allow us to use it on both server side and client side.
 
 ```tsx title="app/components/sessionAuthForNextJS.tsx"
 "use client";
@@ -41,73 +106,9 @@ export const SessionAuthForNextJS = (props: Props) => {
 
 This is a client component that renders just its children on the server side and renders the children wrapped with `SessionAuth` on the client side.
 
-### Using `SessionAuthForNextJS` and checking for sessions
+#### Creating the `TryRefreshComponent`
 
-We then create a server component that can check if the session exists and return any session information we may need:
-
-```tsx title="app/components/home.tsx"
-import { NextRequest, NextResponse } from "next/server";// typecheck-only, removed from output
-import { SessionContainer, VerifySessionOptions } from "supertokens-node/recipe/session";// typecheck-only, removed from output
-import { CollectingResponse } from "supertokens-node/framework/custom";// typecheck-only, removed from output
-declare let getSSRSession: (req?: NextRequest, options?: VerifySessionOptions) => Promise<{session: SessionContainer | undefined;hasToken: boolean;hasInvalidClaims: boolean;baseResponse: CollectingResponse;nextResponse?: NextResponse;}>; // typecheck-only, removed from output
-declare let TryRefreshComponent: any; // typecheck-only, removed from output
-declare let SessionAuthForNextJS: any; // typecheck-only, removed from output
-import styles from "../page.module.css";
-import { redirect } from "next/navigation";
-
-export async function HomePage() {
-    const { session, hasToken, hasInvalidClaims } = await getSSRSession();
-
-    /**
-     * The session will be undefined if it does not exist or has expired, if the session has expired
-     * hasToken will be true because there are session tokens present (but are expired). In this case
-     * we will try to refresh the session using the TryRefreshComponent client component which will call
-     * the refresh endpoint.
-     * 
-     * If session is undefined and hasToken is false, we can safely assume that there is no session for the user
-     * and redirect them to the login page
-     * 
-     * hasInvalidClaims indicates that some of the session claims have failed validation, for example if email
-     * verification is required but the user has not verified their email.
-     */
-    if (!session) {
-        if (!hasToken) {
-            /**
-             * This means that the user is not logged in. If you want to display some other UI in this
-             * case, you can do so here.
-             */
-            return redirect("/auth");
-        }
-
-        if (hasInvalidClaims) {
-          /**
-           * This will make sure that the user is redirected based on their session claims. For example they
-           * will be redirected to the email verification screen if needed.
-           * 
-           * We pass in no children in this case to prevent hydration issues and still be able to redirect the
-           * user.
-           */
-            return <SessionAuthForNextJS />;
-        } else {
-            return <TryRefreshComponent />;
-        }
-    }
-
-    /**
-     * SessionAuthForNextJS will handle proper redirection for the user based on the different session states.
-     * It will redirect to the login page if the session does not exist etc.
-     */
-    return (
-        <SessionAuthForNextJS>
-            <div>
-                Hello world
-            </div>
-        </SessionAuthForNextJS>
-    );
-}
-```
-
-`getSSRSession` is a utility function we created in the [previous step](./session-helpers.mdx). The `TryRefreshComponent` is a client component that checks if a session exists and tries to refresh the session if it is expired.
+This component will refres hthe user's session if their current session has expired.
 
 ```tsx title="app/components/tryRefreshClientComponent.tsx"
 "use client";
@@ -155,6 +156,71 @@ export const TryRefreshComponent = () => {
 };
 ```
 
+### Using `SessionAuthForNextJS` and checking for sessions
+
+We then create a server component that can check if the session exists and return any session information we may need:
+
+```tsx title="app/components/home.tsx"
+import { NextRequest, NextResponse } from "next/server";// typecheck-only, removed from output
+import { SessionContainer, VerifySessionOptions } from "supertokens-node/recipe/session";// typecheck-only, removed from output
+import { CollectingResponse } from "supertokens-node/framework/custom";// typecheck-only, removed from output
+declare let getSSRSession: (req?: NextRequest, options?: VerifySessionOptions) => Promise<{session: SessionContainer | undefined;hasToken: boolean;hasInvalidClaims: boolean;baseResponse: CollectingResponse;nextResponse?: NextResponse;}>; // typecheck-only, removed from output
+declare let TryRefreshComponent: any; // typecheck-only, removed from output
+declare let SessionAuthForNextJS: any; // typecheck-only, removed from output
+import styles from "../page.module.css";
+import { redirect } from "next/navigation";
+
+export async function HomePage() {
+    const { session, hasToken, hasInvalidClaims } = await getSSRSession();
+    
+    // `session` will be undefined if it does not exist or has expired
+    if (!session) {
+        if (!hasToken) {
+            /**
+             * This means that the user is not logged in. If you want to display some other UI in this
+             * case, you can do so here.
+             */
+            return redirect("/auth");
+        }
+
+        /**
+         * `hasInvalidClaims` indicates that session claims did not pass validation. For example if email
+         * verification is required but the user's email has not been verified.
+         */
+        if (hasInvalidClaims) {
+          /**
+           * This will make sure that the user is redirected based on their session claims. For example they
+           * will be redirected to the email verification screen if needed.
+           * 
+           * We pass in no children in this case to prevent hydration issues and still be able to redirect the
+           * user.
+           */
+            return <SessionAuthForNextJS />;
+        } else {
+            /**
+             * This means that the session does not exist but we have session tokens for the user. In this case
+             * the `TryRefreshComponent` will try to refresh the session.
+             */
+            return <TryRefreshComponent />;
+        }
+    }
+
+    /**
+     * SessionAuthForNextJS will handle proper redirection for the user based on the different session states.
+     * It will redirect to the login page if the session does not exist etc.
+     */
+    return (
+        <SessionAuthForNextJS>
+            <div>
+                Your user id is: {session.getUserId()}
+            </div>
+        </SessionAuthForNextJS>
+    );
+}
+```
+
+`getSSRSession` is a utility function we created in the [previous step](./session-helpers.mdx). The `TryRefreshComponent` is a client component that checks if a session exists and tries to refresh the session if it is expired.
+
 And then we can modify the `/app/page.tsx` file to use our server component
 
 ```tsx title="app/page.tsx"
@@ -176,70 +242,4 @@ You should be redirected to the login page. After that, sign in, and then visit 
 
 :::important
 An example of this can be seen [here](https://github.com/supertokens/next.js/blob/canary/examples/with-supertokens/app/page.tsx).
-:::
-
-## Sessions with Client Components
-
-Lets create a client component for the `/` route of our website.
-
-### Using the `SessionAuth` wrapper component
-
-```tsx title="app/components/homeClientComponent.tsx"
-'use client'
-
-import { SessionAuth } from "supertokens-auth-react/recipe/session"
-
-export const HomeClientComponent = () => {
-    return (
-        <SessionAuth>
-            <div>
-                Hello world
-            </div>
-        </SessionAuth>
-    );
-}
-```
-
-`SessionAuth` is a component exposed by the SuperTokens React SDK, it checks if a session exists and if it does not exist it wil ltry to call the refresh endpoint. If the session cannot be refreshed or does not exist at all it will redirect to the login page.
-
-At the moment the `SessionAuth` component does not support server side rendering and will only work on the client side.
-
-### Using `useSessionContext`
-
-```tsx title="app/components/homeClientComponent.tsx"
-'use client'
-
-import { useSessionContext } from "supertokens-auth-react/recipe/session"
-
-export const HomeClientComponent = () => {
-    const session = useSessionContext();
-
-    if (session.loading) {
-        return <div>Loading...</div>;
-    }
-
-    if (session.doesSessionExist === false) {
-        return <div>Session does not exist</div>;
-    }
-
-    return (
-        <div>
-            <div>
-                <p>
-                    Client side component got userId: {session.userId}<br/>
-                </p>
-            </div>
-        </div>
-    );
-}
-```
-
-`useSessionContext` lets you access the session information on the client side using the React Context API. `session.loading` indicates if the session is currently being loaded into the context, this will also refresh the session for you if it is expired. You can use `session.doesSessionExist` to check if a valid session exists and handle it accordingly. 
-
-:::info
-`useSessionContext` can be used along with the `SessionAuth` wrapper component.
-:::
-
-:::tip Test by navigating to `/`
-You should be redirected to the login page. After that, sign in, and then visit `/` again. This time, there should be no redirection.
 :::
