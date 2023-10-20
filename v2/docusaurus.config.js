@@ -409,4 +409,8 @@ module.exports = {
       },
     ]
   ],
+  clientModules:[
+    //used to intercept client side navigation and fire analytics events.
+    require.resolve("./src/plugins/locationInterceptor")
+  ]
 };
