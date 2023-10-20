@@ -1,0 +1,89 @@
+---
+id: session-verification-middleware
+title: Using the Next.js middleware
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/nextjs/app-directory/session-verification-middleware.mdx -->
+
+# Using the Next.js middleware
+
+:::important
+This method is an alternative method for using sessions in an API. If you are already using [session guards](./session-verification-session-guard.mdx), you can skip this step.
+:::
+
+## Setting up the middleware
+
+In the middleware we check if a session exists using the `withSession` helper function we created [here](./session-helpers.mdx) and set the user's user id to the request headers using the session object. You can set other information in the same way.
+
+:::caution
+You cannot pass the full session container through the middleware because the Next.js middleware does not allow objects to be passed. If you need to access the full session container in your APIs switch to using [session guards](./session-verification-session-guard.mdx).
+:::
+
+```tsx title="middleware.tsx"
+declare let withSession: (request: NextRequest,handler: (session: SessionContainer | undefined) => Promise<NextResponse>,options?: VerifySessionOptions) => void; // typecheck-only, removed from output
+import { VerifySessionOptions } from 'supertokens-node/recipe/session' // typecheck-only, removed from output
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { SessionContainer } from 'supertokens-node/recipe/session'
+// @ts-ignore
+import { withSession } from './app/sessionUtils';
+
+
+export async function middleware(
+  request: NextRequest & { session?: SessionContainer }
+) {
+  if (request.headers.has("x-user-id")) {
+    console.warn("The FE tried to pass x-user-id, which is only supposed to be a backend internal header. Ignoring.");
+    request.headers.delete("x-user-id");
+  }
+
+  if (request.nextUrl.pathname.startsWith('/api/auth')) {
+    /**
+     * /api/auth/* endpoints are exposed by the SuperTokens SDK, 
+     * we do not want to modify the request for these routes
+     */
+    return NextResponse.next()
+  }
+
+  return withSession(request, async (session) => {
+    if (session === undefined) {
+      return NextResponse.next()
+    }
+    return NextResponse.next({
+      headers: {
+        // You cannot attach the full session object here
+        'x-user-id': session.getUserId(),
+      },
+    })
+  })
+}
+
+export const config = {
+  matcher: '/api/:path*',
+}
+```
+
+## Fetching the user ID in your APIs
+
+The middleware will run for all routes, we can read information set by the middleware in the API routes:
+
+```tsx title="app/api/userid/route.ts"
+import { NextResponse, NextRequest } from "next/server";
+
+export function GET(request: NextRequest) {
+  const userId = request.headers.get("x-user-id");
+
+  // The middleware only adds the userId if a session exists
+  if (userId === null) {
+    return new NextResponse("Authentication required", { status: 401 });
+  }
+
+  return NextResponse.json({
+    userId,
+  });
+}
+```
+
+This creates a `GET` request for the `/api/userid` route which returns the user id of the currently logged in user.

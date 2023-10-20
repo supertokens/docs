@@ -174,20 +174,48 @@ module.exports = {
             logoUrl: '/img/logos/next-logo.png'
           },
           items: [
-            "nextjs/about",
-            "nextjs/init",
-            "nextjs/setting-up-frontend",
-            "nextjs/setting-up-backend",
-            "nextjs/protecting-route",
             {
               type: 'category',
-              label: '5. Session verification',
+              label: 'Using the App directory',
               items: [
-                "nextjs/session-verification/in-api",
-                "nextjs/session-verification/in-ssr"
+                "nextjs/app-directory/about",
+                "nextjs/app-directory/init",
+                "nextjs/app-directory/setting-up-frontend",
+                "nextjs/app-directory/setting-up-backend",
+                "nextjs/app-directory/session-helpers",
+                "nextjs/app-directory/protecting-route",
+                {
+                  type: "category",
+                  label: "6. Checking for sessions in API routes",
+                  items: [
+                    "nextjs/app-directory/session-verification-session-guard",
+                    "nextjs/app-directory/session-verification-middleware",
+                  ],
+                },
+                "nextjs/app-directory/server-components-requests",
+                "nextjs/app-directory/next-steps"
               ],
             },
-            "nextjs/next-steps"
+            {
+              type: 'category',
+              label: 'Using the Pages directory',
+              items: [
+                "nextjs/about",
+                "nextjs/init",
+                "nextjs/setting-up-frontend",
+                "nextjs/setting-up-backend",
+                "nextjs/protecting-route",
+                {
+                  type: 'category',
+                  label: '5. Session verification',
+                  items: [
+                    "nextjs/session-verification/in-api",
+                    "nextjs/session-verification/in-ssr"
+                  ],
+                },
+                "nextjs/next-steps"
+              ],
+            },
           ],
         },
         {
