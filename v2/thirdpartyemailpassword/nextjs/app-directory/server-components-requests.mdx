@@ -2,14 +2,21 @@
 id: server-components-requests
 title: 7. Making requests from Server Components
 hide_title: true
+show_ui_switcher: true
 ---
 
 <!-- COPY DOCS -->
 <!-- ./thirdpartyemailpassword/nextjs/app-directory/server-components-requests.mdx -->
 
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+
 # 7. Making requests from Server Components
 
 Lets modify the Home page we made in a [previous step](../protecting-route.mdx) to make a call to this API
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
 
 ```tsx title="app/components/home.tsx"
 import { NextRequest, NextResponse } from "next/server";// typecheck-only, removed from output
@@ -81,3 +88,98 @@ export async function HomePage() {
 ```
 
 We use `session` returned by `getSSRSession` to get the access token of the user. We can then send the access token as a header to the API. When the API calls `withSession` it will try to read the access token from the headers and if a session exists it will return the information. You can use the `session` object to fetch other information such as `session.getUserId()`.
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+```tsx title="app/components/home.tsx"
+import { NextRequest, NextResponse } from "next/server";// typecheck-only, removed from output
+import { SessionContainer, VerifySessionOptions } from "supertokens-node/recipe/session";// typecheck-only, removed from output
+import { CollectingResponse } from "supertokens-node/framework/custom";// typecheck-only, removed from output
+declare let getSSRSession: (req?: NextRequest, options?: VerifySessionOptions) => Promise<{session: SessionContainer | undefined;hasToken: boolean;hasInvalidClaims: boolean;baseResponse: CollectingResponse;nextResponse?: NextResponse;}>; // typecheck-only, removed from output
+declare let TryRefreshComponent: any; // typecheck-only, removed from output
+import { redirect } from "next/navigation";
+// @ts-ignore
+import { getSSRSession } from "../sessionUtils";
+// @ts-ignore
+import { TryRefreshComponent } from "./tryRefreshClientComponent";
+
+export async function HomePage() {
+    const { session, hasToken, hasInvalidClaims } = await getSSRSession();
+    
+    // `session` will be undefined if it does not exist or has expired
+    if (!session) {
+        if (!hasToken) {
+            /**
+             * This means that the user is not logged in. If you want to display some other UI in this
+             * case, you can do so here.
+             */
+            return redirect("/auth");
+        }
+
+        /**
+         * `hasInvalidClaims` indicates that session claims did not pass validation. For example if email
+         * verification is required but the user's email has not been verified.
+         */
+        if (hasInvalidClaims) {
+          /**
+           * This means that one of the session claims is invalid. You should redirect the user to
+           * the appropriate page depending on which claim is invalid.
+           */
+          return <div>Invalid Session Claims</div>
+        } else {
+            /**
+             * This means that the session does not exist but we have session tokens for the user. In this case
+             * the `TryRefreshComponent` will try to refresh the session.
+             */
+            return <TryRefreshComponent />;
+        }
+    }
+
+    // highlight-start
+    const userInfoResponse = await fetch('http://localhost:3000/api/user', {
+      headers: {
+        /**
+         * We read the access token from the session and use that as a Bearer token when
+         * making network requests.
+         */
+        Authorization: 'Bearer ' + session.getAccessToken(),
+      },
+    });
+
+    let message = "";
+
+    if (userInfoResponse.status === 200) {
+        message = `Your user id is: ${session.getUserId()}`
+    } else if (userInfoResponse.status === 500) {
+        message = "Something went wrong"
+    } else if (userInfoResponse.status === 401) {
+        // The TryRefreshComponent will try to refresh the session
+        return <TryRefreshComponent />
+    } else if (userInfoResponse.status === 403) {
+        /**
+         * This means that one of the session claims is invalid. You should redirect the user to
+         * the appropriate page depending on which claim is invalid.
+         */
+        return <div>Invalid Session Claims</div>;
+    }
+
+    // You can use `userInfoResponse` to read the users session information
+    // highlight-end
+    
+    return (
+        <div>
+            {message}
+        </div>
+    );
+}
+```
+
+APIs that require sessions will return status:
+- `401` if there is no valid session or if the session has expired. In this case we return the `TryRefreshComponent` component which will try to refresh the session or redirect to the login page if the session cant be refreshed.
+- `403` if one or more of the session claims fail their validation. In this case you should check which session claim failed and redirect the user accordingly. For example to check for the email verification claim you can refer to [this page](../../common-customizations/email-verification/protecting-routes.mdx#protecting-frontend-routes--cust).
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
