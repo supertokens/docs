@@ -211,7 +211,7 @@ async function checkCodeSnippets(language) {
         })
     } else if (language === "go") {
         await new Promise((res, rej) => {
-            exec("cd src/plugins/codeTypeChecking/goEnv/ && go build ./...", function (err, stdout, stderr) {
+            exec("cd src/plugins/codeTypeChecking/goEnv/ && go mod tidy && go build ./...", function (err, stdout, stderr) {
                 if (err) {
                     console.log('\x1b[31m%s\x1b[0m', stdout);
                     console.log('\x1b[31m%s\x1b[0m', err);
