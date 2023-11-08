@@ -393,6 +393,7 @@ module.exports = {
               label: 'Sign Up Form',
               items: [
                 "common-customizations/signup-form/adding-fields",
+                "common-customizations/signup-form/adding-custom-components",
                 "common-customizations/signup-form/changing-field-labels",
                 "common-customizations/signup-form/field-validators",
               ],
