@@ -395,7 +395,7 @@ module.exports = {
                 "common-customizations/signup-form/adding-fields",
                 "common-customizations/signup-form/adding-custom-components",
                 "common-customizations/signup-form/changing-field-labels",
-                "common-customizations/signup-form/setting-default-values",
+                "common-customizations/signup-form/adding-default-values",
                 "common-customizations/signup-form/field-validators",
               ],
             },
