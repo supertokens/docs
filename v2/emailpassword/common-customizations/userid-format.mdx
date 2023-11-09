@@ -1,14 +1,185 @@
 ---
 id: userid-format
-title: Changing user ID format
+title: Assigning custom user IDs
 hide_title: true
 ---
 
-<!-- COPY DOCS -->
-<!-- ./thirdpartyemailpassword/common-customizations/userid-format.mdx -->
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
 
-# Changing user ID format
+# Assigning custom user IDs
 
-:::info
-Docs for this are coming soon
-:::
+This feature allows you to change the default SuperTokens user ID (UUID v4) to a value that you prefer. There are two primary use cases for this:
+- Use case 1: During [migration of users](../migration/account-creation/user-id-mapping)
+- Use case 2: If you prefer a different user ID format than the default one.
+
+The way this feature works is that SuperTokens will store and manage the user ID mapping in the SuperTokens core. So when that users logs in, you will get back the mapped (the custom) user ID instead of the SuperTokens user ID.
+
+Features like user roles, user metadata, session will also all work based on the custom user ID.
+
+## Use case 1: Migration of users
+This topic is better covered [under the migration section](../migration/account-creation/user-creation). The main purpose of this is that you can retain the existing user IDs of your users when migrating them to SuperTokens. This makes it easier to migrate users without having to update the user IDs in your database.
+
+## Use case 2: If you prefer a different user ID format than the default one.
+
+You can call the user ID mapping function post sign up as shown below. It is important to know that user ID mapping can only be done, before there is any other data (session, roles etc) associated with the user.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+import { RecipeUserId } from "supertokens-node";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        EmailPassword.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        // override the email password sign up function
+                        signUp: async function (input) {
+                            let response = await originalImplementation.signUp(input);
+
+                            if (response.status === "OK" && response.user.loginMethods.length === 1) {
+                                // highlight-start
+                                let externalUserId = "<CUSTOM USER ID>"
+                                await SuperTokens.createUserIdMapping({ superTokensUserId: response.user.id, externalUserId })
+                                
+                                // we modify the response object to have the custom user ID.
+                                response.user.id = externalUserId
+                                response.user.loginMethods[0].recipeUserId = new RecipeUserId(externalUserId);
+                                // highlight-end
+                            }
+
+                            return response;
+                        },
+                    }
+                }
+            }
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			emailpassword.Init(&epmodels.TypeInput{
+				//highlight-start
+				Override: &epmodels.OverrideStruct{
+					Functions: func(originalImplementation epmodels.RecipeInterface) epmodels.RecipeInterface {
+						// create a copy of the originalImplementation
+						originaSignUp := *originalImplementation.SignUp
+
+						// override the email password sign up function
+						(*originalImplementation.SignUp) = func(email, password string, tenantId string, userContext supertokens.UserContext) (epmodels.SignUpResponse, error) {
+
+							resp, err := originaSignUp(email, password, tenantId, userContext)
+							if err != nil {
+								return epmodels.SignUpResponse{}, err
+							}
+
+							if resp.OK != nil {
+                                // highlight-start
+								externalUserId := "<CUSTOM USER ID>"
+								_, err := supertokens.CreateUserIdMapping(resp.OK.User.ID, externalUserId, nil, nil)
+								if err != nil {
+									return epmodels.SignUpResponse{}, err
+								}
+								resp.OK.User.ID = externalUserId
+								// highlight-end
+							}
+
+							return resp, err
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.asyncio import create_user_id_mapping
+from supertokens_python.recipe import emailpassword, session
+from supertokens_python.recipe.emailpassword.interfaces import RecipeInterface, SignUpOkResult
+from typing import Dict, Any
+
+
+def override_emailpassword_functions(original_implementation: RecipeInterface) -> RecipeInterface:
+    original_sign_up = original_implementation.sign_up
+
+    async def sign_up(
+        email: str,
+        password: str,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ):
+        result = await original_sign_up(email, password, tenant_id, user_context)
+
+        if isinstance(result, SignUpOkResult):
+            # highlight-start
+            external_user_id = "<CUSTOM USER ID>"
+            await create_user_id_mapping(result.user.user_id, external_user_id)
+            result.user.user_id = external_user_id
+            # highlight-end
+
+        return result
+
+    original_implementation.sign_up = sign_up
+
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
+    recipe_list=[
+        emailpassword.init(
+            # highlight-start
+            override=emailpassword.InputOverrideConfig(
+                functions=override_emailpassword_functions
+            ),
+            # highlight-end
+        ),
+        session.init(),
+    ]
+)
+
+```
+</TabItem>
+</BackendSDKTabs>
