@@ -406,6 +406,7 @@ module.exports = {
               items: [
                 "common-customizations/signin-form/changing-field-labels",
                 "common-customizations/signin-form/field-validators",
+                "common-customizations/signin-form/adding-default-values",
               ]
             },
             {
