@@ -1,14 +1,271 @@
 ---
 id: userid-format
-title: Changing user ID format
+title: Assigning custom user IDs
 hide_title: true
 ---
 
 <!-- COPY DOCS -->
 <!-- ./thirdpartyemailpassword/common-customizations/userid-format.mdx -->
 
-# Changing user ID format
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
 
-:::info
-Docs for this are coming soon
-:::
+# Assigning custom user IDs
+
+This feature allows you to change the default SuperTokens user ID (UUID v4) to a value that you prefer. There are two primary use cases for this:
+- Use case 1: During [migration of users](../migration/account-creation/user-id-mapping)
+- Use case 2: If you prefer a different user ID format than the default one.
+
+The way this feature works is that SuperTokens will store and manage the user ID mapping in the SuperTokens core. So when that users logs in, you will get back the mapped (the custom) user ID instead of the SuperTokens user ID.
+
+Features like user roles, user metadata, session will also all work based on the custom user ID.
+
+## Use case 1: Migration of users
+This topic is better covered [under the migration section](../migration/account-creation/user-creation). The main purpose of this is that you can retain the existing user IDs of your users when migrating them to SuperTokens. This makes it easier to migrate users without having to update the user IDs in your database.
+
+## Use case 2: If you prefer a different user ID format than the default one.
+
+You can call the user ID mapping function post sign up as shown below. It is important to know that user ID mapping can only be done, before there is any other data (session, roles etc) associated with the user.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import Session from "supertokens-node/recipe/session";
+import { RecipeUserId } from "supertokens-node";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdPartyEmailPassword.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        // override the email password sign up function
+                        emailPasswordSignUp: async function (input) {
+                            let response = await originalImplementation.emailPasswordSignUp(input);
+
+                            if (response.status === "OK" && response.user.loginMethods.length === 1) {
+                                // highlight-start
+                                let externalUserId = "<CUSTOM USER ID>"
+                                await SuperTokens.createUserIdMapping({ superTokensUserId: response.user.id, externalUserId })
+                                
+                                // we modify the response object to have the custom user ID.
+                                response.user.id = externalUserId
+                                response.user.loginMethods[0].recipeUserId = new RecipeUserId(externalUserId);
+                                // highlight-end
+                            }
+
+                            return response;
+                        },
+
+                        // override the thirdparty sign in / up function
+                        thirdPartySignInUp: async function (input) {
+                            let response = await originalImplementation.thirdPartySignInUp(input);
+
+                            if (response.status === "OK") {
+                                if (response.createdNewRecipeUser && response.user.loginMethods.length === 1) {
+                                    // highlight-start
+                                    let externalUserId = "<CUSTOM USER ID>"
+                                    await SuperTokens.createUserIdMapping({ superTokensUserId: response.user.id, externalUserId })
+                                    
+                                    // we modify the response object to have the custom user ID.
+                                    response.user.id = externalUserId
+                                    response.user.loginMethods[0].recipeUserId = new RecipeUserId(externalUserId);
+                                    // highlight-end
+                                }
+                            }
+
+                            return response;
+                        }
+                    }
+                }
+            }
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+				//highlight-start
+				Override: &tpepmodels.OverrideStruct{
+					Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
+						// create a copy of the originalImplementation
+						originalEmailPasswordSignUp := *originalImplementation.EmailPasswordSignUp
+						originalThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
+
+						// override the email password sign up function
+						(*originalImplementation.EmailPasswordSignUp) = func(email, password string, tenantId string, userContext supertokens.UserContext) (tpepmodels.SignUpResponse, error) {
+
+							resp, err := originalEmailPasswordSignUp(email, password, tenantId, userContext)
+							if err != nil {
+								return tpepmodels.SignUpResponse{}, err
+							}
+
+							if resp.OK != nil {
+                                // highlight-start
+								externalUserId := "<CUSTOM USER ID>"
+								_, err := supertokens.CreateUserIdMapping(resp.OK.User.ID, externalUserId, nil, nil)
+								if err != nil {
+									return tpepmodels.SignUpResponse{}, err
+								}
+								resp.OK.User.ID = externalUserId
+								// highlight-end
+							}
+
+							return resp, err
+						}
+
+						// override the thirdparty sign in / up function
+						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, oAuthTokens tpmodels.TypeOAuthTokens, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
+
+							resp, err := originalThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
+							if err != nil {
+								return tpepmodels.SignInUpResponse{}, err
+							}
+
+							if resp.OK != nil {
+								if resp.OK.CreatedNewUser {
+									// highlight-start
+                                    externalUserId := "<CUSTOM USER ID>"
+                                    _, err := supertokens.CreateUserIdMapping(resp.OK.User.ID, externalUserId, nil, nil)
+                                    if err != nil {
+                                        return tpepmodels.SignInUpResponse{}, err
+                                    }
+                                    resp.OK.User.ID = externalUserId
+                                    // highlight-end
+								}
+							}
+
+							return resp, err
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.asyncio import create_user_id_mapping
+from supertokens_python.recipe import thirdpartyemailpassword, session
+from supertokens_python.recipe.thirdpartyemailpassword.interfaces import RecipeInterface, EmailPasswordSignUpOkResult
+from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
+from typing import Dict, Any
+
+
+def override_thirdpartyemailpassword_functions(original_implementation: RecipeInterface) -> RecipeInterface:
+    original_thirdparty_sign_in_up = original_implementation.thirdparty_sign_in_up
+    original_emailpassword_sign_up = original_implementation.emailpassword_sign_up
+
+    async def emailpassword_sign_up(
+        email: str,
+        password: str,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ):
+        result = await original_emailpassword_sign_up(email, password, tenant_id, user_context)
+
+        if isinstance(result, EmailPasswordSignUpOkResult):
+            # highlight-start
+            external_user_id = "<CUSTOM USER ID>"
+            await create_user_id_mapping(result.user.user_id, external_user_id)
+            result.user.user_id = external_user_id
+            # highlight-end
+
+        return result
+
+    async def thirdparty_sign_in_up(
+        third_party_id: str,
+        third_party_user_id: str,
+        email: str,
+        oauth_tokens: Dict[str, Any],
+        raw_user_info_from_provider: RawUserInfoFromProvider,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ):
+        result = await original_thirdparty_sign_in_up(third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
+
+        # user object contains the ID and email of the user
+        user = result.user
+        print(user)
+
+        # This is the response from the OAuth 2 provider that contains their tokens or user info.
+        provider_access_token = result.oauth_tokens["access_token"]
+        print(provider_access_token)
+
+        if result.raw_user_info_from_provider.from_user_info_api is not None:
+            first_name = result.raw_user_info_from_provider.from_user_info_api["first_name"]
+            print(first_name)
+
+        if result.created_new_user:
+            # highlight-start
+            external_user_id = "<CUSTOM USER ID>"
+            await create_user_id_mapping(result.user.user_id, external_user_id)
+            result.user.user_id = external_user_id
+            # highlight-end
+
+        return result
+
+    original_implementation.emailpassword_sign_up = emailpassword_sign_up
+    original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
+
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
+    recipe_list=[
+        thirdpartyemailpassword.init(
+            # highlight-start
+            override=thirdpartyemailpassword.InputOverrideConfig(
+                functions=override_thirdpartyemailpassword_functions
+            ),
+            # highlight-end
+            providers=[]
+        ),
+        session.init(),
+    ]
+)
+```
+</TabItem>
+</BackendSDKTabs>
+
+
