@@ -403,7 +403,7 @@ module.exports = {
               label: 'Email password sign up form',
               items: [
                 "common-customizations/signup-form/adding-fields",
-                "common-customizations/signup-form/changing-field-labels",
+                "common-customizations/signup-form/additional-field-props",
                 "common-customizations/signup-form/field-validators",
               ],
             },
@@ -411,7 +411,7 @@ module.exports = {
               type: "category",
               label: "Email password sign in form",
               items: [
-                "common-customizations/signin-form/changing-field-labels",
+                "common-customizations/signin-form/additional-field-props",
                 "common-customizations/signin-form/field-validators",
               ]
             },
