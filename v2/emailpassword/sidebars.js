@@ -401,9 +401,8 @@ module.exports = {
               type: "category",
               label: "Sign In Form",
               items: [
-                "common-customizations/signin-form/changing-field-labels",
+                "common-customizations/signin-form/changing-field-props",
                 "common-customizations/signin-form/field-validators",
-                "common-customizations/signin-form/adding-default-values",
               ]
             },
             {
