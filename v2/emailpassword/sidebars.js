@@ -393,7 +393,7 @@ module.exports = {
               label: 'Sign Up Form',
               items: [
                 "common-customizations/signup-form/adding-fields",
-                "common-customizations/signup-form/additional-field-props",
+                "common-customizations/signup-form/customising-each-form-field",
                 "common-customizations/signup-form/field-validators",
               ],
             },
@@ -401,7 +401,7 @@ module.exports = {
               type: "category",
               label: "Sign In Form",
               items: [
-                "common-customizations/signin-form/additional-field-props",
+                "common-customizations/signin-form/customising-each-form-field",
                 "common-customizations/signin-form/field-validators",
               ]
             },
