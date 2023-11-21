@@ -22,7 +22,7 @@
 //  THE SOFTWARE.
 //
 
-#if !(os(watchOS) || os(Linux) || os(Windows))
+#if canImport(SystemConfiguration)
 
 import Foundation
 import SystemConfiguration
@@ -91,7 +91,7 @@ open class NetworkReachabilityManager {
     open var flags: SCNetworkReachabilityFlags? {
         var flags = SCNetworkReachabilityFlags()
 
-        return (SCNetworkReachabilityGetFlags(reachability, &flags)) ? flags : nil
+        return SCNetworkReachabilityGetFlags(reachability, &flags) ? flags : nil
     }
 
     /// The current network reachability status.
@@ -113,8 +113,7 @@ open class NetworkReachabilityManager {
     private let reachability: SCNetworkReachability
 
     /// Protected storage for mutable state.
-    @Protected
-    private var mutableState = MutableState()
+    private let mutableState = Protected(MutableState())
 
     // MARK: - Initialization
 
@@ -168,21 +167,39 @@ open class NetworkReachabilityManager {
                              onUpdatePerforming listener: @escaping Listener) -> Bool {
         stopListening()
 
-        $mutableState.write { state in
+        mutableState.write { state in
             state.listenerQueue = queue
             state.listener = listener
         }
 
-        var context = SCNetworkReachabilityContext(version: 0,
-                                                   info: Unmanaged.passUnretained(self).toOpaque(),
-                                                   retain: nil,
-                                                   release: nil,
-                                                   copyDescription: nil)
+        let weakManager = WeakManager(manager: self)
+
+        var context = SCNetworkReachabilityContext(
+            version: 0,
+            info: Unmanaged.passUnretained(weakManager).toOpaque(),
+            retain: { info in
+                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)
+                _ = unmanaged.retain()
+
+                return UnsafeRawPointer(unmanaged.toOpaque())
+            },
+            release: { info in
+                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)
+                unmanaged.release()
+            },
+            copyDescription: { info in
+                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)
+                let weakManager = unmanaged.takeUnretainedValue()
+                let description = weakManager.manager?.flags?.readableDescription ?? "nil"
+
+                return Unmanaged.passRetained(description as CFString)
+            }
+        )
         let callback: SCNetworkReachabilityCallBack = { _, flags, info in
             guard let info = info else { return }
 
-            let instance = Unmanaged<NetworkReachabilityManager>.fromOpaque(info).takeUnretainedValue()
-            instance.notifyListener(flags)
+            let weakManager = Unmanaged<WeakManager>.fromOpaque(info).takeUnretainedValue()
+            weakManager.manager?.notifyListener(flags)
         }
 
         let queueAdded = SCNetworkReachabilitySetDispatchQueue(reachability, reachabilityQueue)
@@ -202,7 +219,7 @@ open class NetworkReachabilityManager {
     open func stopListening() {
         SCNetworkReachabilitySetCallback(reachability, nil, nil)
         SCNetworkReachabilitySetDispatchQueue(reachability, nil)
-        $mutableState.write { state in
+        mutableState.write { state in
             state.listener = nil
             state.listenerQueue = nil
             state.previousStatus = nil
@@ -219,13 +236,21 @@ open class NetworkReachabilityManager {
     func notifyListener(_ flags: SCNetworkReachabilityFlags) {
         let newStatus = NetworkReachabilityStatus(flags)
 
-        $mutableState.write { state in
+        mutableState.write { state in
             guard state.previousStatus != newStatus else { return }
 
             state.previousStatus = newStatus
 
             let listener = state.listener
             state.listenerQueue?.async { listener?(newStatus) }
+        }
+    }
+
+    private final class WeakManager {
+        weak var manager: NetworkReachabilityManager?
+
+        init(manager: NetworkReachabilityManager?) {
+            self.manager = manager
         }
     }
 }
@@ -241,7 +266,7 @@ extension SCNetworkReachabilityFlags {
     var canConnectWithoutUserInteraction: Bool { canConnectAutomatically && !contains(.interventionRequired) }
     var isActuallyReachable: Bool { isReachable && (!isConnectionRequired || canConnectWithoutUserInteraction) }
     var isCellular: Bool {
-        #if os(iOS) || os(tvOS)
+        #if os(iOS) || os(tvOS) || (swift(>=5.9) && os(visionOS))
         return contains(.isWWAN)
         #else
         return false
