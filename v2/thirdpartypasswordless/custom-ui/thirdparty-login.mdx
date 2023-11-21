@@ -300,13 +300,15 @@ This flow is not applicable for web apps.
 
 <TabItem value="mobile">
 
-<h2>Flow 1a: Authorization code grant flow (Sign in with Apple example)</h2>
+<h2>Flow 1a: Authorization code grant flow</h2>
+
+<h3>Sign in with Apple example</h3>
 
 <FrontendMobileSubTabs>
 
 <TabItem value="reactnative">
 
-<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+<h4>Step 1) Fetching the authorisation token on the frontend</h4>
 
 This involves setting up the [react-native-apple-authentication library](https://github.com/invertase/react-native-apple-authentication) in your app. Checkout their `README` for steps on how to integrate their SDK into your application. The minimum scope required by SuperTokens is the one that gives the user's email (In case of Apple, that could be the user's actual email or the proxy email provided by Apple - it doesn't really matter).
 
@@ -316,7 +318,7 @@ Once the integration is done, you should call the `appleAuth.performRequest` fun
 
 <TabItem value="android">
 
-<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+<h4>Step 1) Fetching the authorisation token on the frontend</h4>
 
 :::info
 Coming Soon
@@ -326,7 +328,7 @@ Coming Soon
 
 <TabItem value="ios">
 
-<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+<h4>Step 1) Fetching the authorisation token on the frontend</h4>
 
 For iOS you use the normal sign in with apple flow and then use the id token to login with SuperTokens
 
@@ -368,7 +370,7 @@ fileprivate class ViewController: UIViewController, ASAuthorizationControllerPre
 
 <TabItem value="flutter">
 
-<h3>Step 1) Fetching the authorisation token on the frontend</h3>
+<h4>Step 1) Fetching the authorisation token on the frontend</h4>
 
 For flutter we use the [sign_in_with_apple](https://pub.dev/packages/sign_in_with_apple) package, make sure to follow the prerequisites steps to get the package setup. After setup use the snippet below to trigger the apple sign in flow.
 
@@ -406,7 +408,7 @@ void loginWithApple() async {
 
 In the snippet above for Android we need to pass an additional `webAuthenticationOptions` property when signing in with Apple. This is because on Android the library uses the web login flow and we need to provide it with the client id and redirection uri. The `redirectUri` property here is the URL to which Apple will make a `POST` request after the user has logged in. The SuperTokens backend SDKs provide an API for this at `<API_DOMAIN>/<API_BASE_PATH>/callback/apple`.
 
-<h3> Additional steps for Android </h3>
+<h4> Additional steps for Android </h4>
 
 For android we also need to provide a way for the web login flow to redirect back to the app. By default the API provided by the backend SDKs redirect to the website domain you provide when initialising the SDK, we can override the API to have it redirect to our app instead. For example if you were using the Node.js SDK:
 
@@ -583,7 +585,224 @@ In the code above we override the `appleRedirectHandlerPOST` API to check if the
 
 </FrontendMobileSubTabs>
 
-<h3>Step 2) Calling the signinup API to consume the authorisation token</h3>
+<h4>Step 2) Calling the signinup API to consume the authorisation token</h4>
+
+<AppInfoForm askForAPIDomain showMultiTenancyTab>
+
+Once you have the authorisation code from the auth provider, you need to call the signinup API exposed by our backend SDK as shown below:
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
+--header 'rid: ^{codeImportRecipeName}' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+    "thirdPartyId": "apple",
+    "clientType": "...",
+    "redirecURIInfo": {
+        "redirectURIOnProviderDashboard": "^{form_apiDomain}^{form_apiBasePath}/callback/apple",
+        "redirectURIQueryParams": {
+            "code": "...",
+            "user": {
+                "name":{
+                    "firstName":"...",
+                    "lastName":"..."
+                },
+                "email":"..."
+            }
+        }
+    }
+}'
+```
+
+:::important
+- On iOS, the client id set in the backend should be the same as the bundle identifier for your app.
+- The `clientType` input is optional, and is required only if you have initialised more than one client in the provide on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
+- On iOS, `redirectURIOnProviderDashboard` doesn't matter and its value can be a universal link configured for your app.
+- On Android, the `redirectURIOnProviderDashboard` should match the one configured on the Apple developer dashboard.
+- The `user` object contains information provided by Apple.
+:::
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This is returned if the social / SSO provider did not provider an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
+- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen due to automatic account linking. Please see our docs for account linking for more information.
+
+:::note
+On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
+:::
+
+</AppInfoForm>
+
+<h3>Sign in with Google Example</h3>
+
+<FrontendMobileSubTabs>
+
+<TabItem value="reactnative">
+
+<h4>Step 1) Fetching the authorisation token on the frontend</h4>
+
+This involves setting up the [@react-native-google-signin/google-signin](https://github.com/react-native-google-signin/google-signin) in your app. Checkout their `README` for steps on how to integrate their SDK into your application. The minimum scope required by SuperTokens is the one that gives the user's email.
+
+Once the library is set up, use `GoogleSignin.configure` and  `GoogleSignin.signIn` to trigger the login flow and sign the user in with Google. Refer to [our example app](https://github.com/supertokens/supertokens-react-native/blob/master/examples/with-thirdparty/google.ts) to see the full code for this.
+
+```tsx
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+
+export const performGoogleSignIn = async (): Promise<boolean> => {
+  GoogleSignin.configure({
+    webClientId: "GOOGLE_WEB_CLIENT_ID",
+    iosClientId: "GOOGLE_IOS_CLIENT_ID",
+  });
+
+  try {
+    const user = await GoogleSignin.signIn({});
+    const authCode = user.serverAuthCode;
+
+    // Refer to step 2
+
+    return true;
+  } catch (e) {
+    console.log("Google sign in failed with error", e);
+  }
+
+  return false;
+};
+```
+
+</TabItem>
+
+<TabItem value="android">
+
+<h4>Step 1) Fetching the authorisation token on the frontend</h4>
+
+Follow the official Google Sign In guide to set up their library and sign the user in with Google. Fetch the authorization code from the google sign in result. For a full example refer to [our example app](https://github.com/supertokens/supertokens-android/blob/master/examples/with-thirdparty/app/src/main/java/com/supertokens/supertokensexample/LoginActivity.kt#L62).
+
+```kotlin
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.util.Log
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+
+class LoginActivity : AppCompatActivity() {
+    private lateinit var googleResultLauncher: ActivityResultLauncher<Intent>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        googleResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            onGoogleResultReceived(it)
+        }
+    }
+
+    private fun signInWithGoogle() {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestServerAuthCode("GOOGLE_WEB_CLIENT_ID")
+            .requestEmail()
+            .build()
+
+        val googleClient = GoogleSignIn.getClient(this, gso)
+        val signInIntent = googleClient.signInIntent
+
+        googleResultLauncher.launch(signInIntent)
+    }
+
+    private fun onGoogleResultReceived(it: ActivityResult) {
+        val task = GoogleSignIn.getSignedInAccountFromIntent(it.data)
+        val account = task.result
+        val authCode = account.serverAuthCode
+
+        // Refer to step 2
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="ios">
+
+<h4>Step 1) Fetching the authorisation token on the frontend</h4>
+
+For iOS we use the `GoogleSignIn` library, follow the [official guide](https://developers.google.com/identity/sign-in/ios/start-integrating) to set up the library and sign the user in with Google. Use the result of google sign in to get the authorization code. For a full example refer to [our example app](https://github.com/supertokens/supertokens-ios/blob/master/examples/with-thirdparty/with-thirdparty/LoginScreen/LoginScreenViewController.swift).
+
+```swift
+import UIKit
+import GoogleSignIn
+
+fileprivate class LoginScreenViewController: UIViewController {
+    @IBAction func onGoogleCliked() {
+        GIDSignIn.sharedInstance.signIn(withPresenting: self) { signInResult, error in
+            guard error == nil else { return }
+
+            guard let authCode: String = signInResult?.serverAuthCode as? String else {
+                print("Google login did not return an authorisation code")
+                return
+            }
+            
+            // Refer to step 2
+        }
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="flutter">
+
+<h4>Step 1) Fetching the authorisation token on the frontend</h4>
+
+For flutter we use the [google_sign_in](https://pub.dev/packages/google_sign_in) package, make sure to follow the prerequisites steps to get the package setup. After setup use the snippet below to trigger the google sign in flow. For a full example refer to [our example app](https://github.com/supertokens/supertokens-flutter/blob/master/examples/with-thirdparty/lib/screens/login.dart).
+
+```dart
+import 'package:google_sign_in/google_sign_in.dart';
+
+Future<void> loginWithGoogle() async {
+    GoogleSignIn googleSignIn;
+
+    if (Platform.isAndroid) {
+      googleSignIn = GoogleSignIn(
+        serverClientId: "GOOGLE_WEB_CLIENT_ID",
+        scopes: [
+          'email',
+        ],
+      );
+    } else {
+      googleSignIn = GoogleSignIn(
+        clientId: "GOOGLE_IOS_CLIENT_ID",
+        serverClientId: "GOOGLE_WEB_CLIENT_ID",
+        scopes: [
+          'email',
+        ],
+      );
+    }
+
+    GoogleSignInAccount? account = await googleSignIn.signIn();
+
+    if (account == null) {
+        print("Google sign in was aborted");
+        return;
+    }
+
+    String? authCode = account.serverAuthCode;
+
+    if (authCode == null) {
+        print("Google sign in did not return a server auth code");
+        return;
+    }
+
+    // Refer to step 2
+  }
+```
+
+</TabItem>
+
+</FrontendMobileSubTabs>
+
+<h4>Step 2) Calling the signinup API to consume the authorisation token</h4>
 
 <AppInfoForm askForAPIDomain showMultiTenancyTab>
 
@@ -717,101 +936,17 @@ On success, the backend will send back session tokens as part of the response he
 
 ----------------
 
-<h2>Flow 2: Via OAuth / Access token (Sign in with Google example)</h2>
-
-<FrontendMobileSubTabs>
-
-<TabItem value="reactnative">
+<h2>Flow 2: Via OAuth / Access token</h2>
 
 <h3>Step 1) Fetching the OAuth / access tokens on the frontend</h3>
 
-You can use the [react-native-app-auth library](https://github.com/FormidableLabs/react-native-app-auth) in your app to integrate with Google and get the user's access token. The minimum scope that is required by SuperTokens is one that gives you the user's email - in case of Google login, it is `"https://www.googleapis.com/auth/userinfo.email"`.
+1. Sign in with the social provider. The minimum required scope is the one that provides access to the user's email. You can use any library to sign in with the social provider.
+2. Get the access token on the frontend.
+3. Get the id token from the sign in result if it is available.
 
-:::important
-When setting up on the Google dashboard, you need to generate OAuth credentials for an Android application which will be used for both iOS and Android. Google does not provide a client secret in this case, so on the backend, you can omit the `clientSecret` config in the `clients` array.
+:::info
+If you are using a social provider that does not provide an access token on the frontend you can use "Flow 1a" in these docs instead.
 :::
-
-<h3>Step 2) Calling the signinup API to use the OAuth tokens</h3>
-
-<AppInfoForm askForAPIDomain showMultiTenancyTab>
-
-Once you have the `access_token` or the `id_token` from the auth provider, you need to call the signinup API exposed by our backend SDK as shown below:
-
-```bash
-curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
---header 'rid: ^{codeImportRecipeName}' \
---header 'Content-Type: application/json; charset=utf-8' \
---data-raw '{
-    "thirdPartyId": "google",
-    "clientType": "...",
-    "oAuthTokens": {
-        "access_token": "..."
-    },
-}'
-```
-
-:::important
-- If you don't have the `access_token`, you can send the `id_token` instead.
-- The `clientType` input is optional, and is required only if you have initialised more than one client in the provide on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
-:::
-
-The response body from the API call has a `status` property in it:
-- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
-- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This is returned if the social / SSO provider did not provider an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
-- `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
-- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen due to automatic account linking. Please see our docs for account linking for more information.
-
-:::note
-On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
-:::
-
-</AppInfoForm>
-
-</TabItem>
-
-<TabItem value="android">
-
-For Android, Google recommends you to use their [official Android library](https://developers.google.com/identity/sign-in/android/start-integrating), which follows "Flow 1a" in these docs.
-
-Essentially, the library will give you back a one time use auth code from Google which you can send to the `/signinup` API (as shown in Flow 1a -> Step 2) to exchange it with an access token and the user's information.
-
-:::important
-On Google's dashboard, you need to create both a Web client and an Android for your app. The Android client will be used to interact with the native Google login APIs, the Web client will be used to request the authorization code when triggering the login flow with Google.
-
-You also need to provide the Android client with the SHA-1 fingerprint of your keystore to prevent errors when logging in.
-:::
-
-</TabItem>
-
-<TabItem value="ios">
-
-<h3>Step 1) Fetching the OAuth / access tokens on the frontend</h3>
-
-For iOS, you use the [official guide](https://developers.google.com/identity/sign-in/ios/start-integrating) for setting up Sign in with Google in your app. After the user successfully signs in, you can access the access token and id token from the Google signin result.
-
-```swift
-import UIKit
-import GoogleSignIn
-
-fileprivate class ViewController: UIViewController {
-    func signInWithGoogle() {
-        let config = GIDConfiguration(clientID: "<CLIENT_ID>")
-
-        GIDSignIn.sharedInstance.signIn(with: config, presenting: self) {
-            user, error in
-            guard error == nil, let _user: GIDGoogleUser = user else {
-                // Sign in failed
-                return
-            }
-
-            let accessToken = _user.authentication.accessToken
-            let idToken = _user.authentication.idToken
-
-            // TODO: See next step
-        }
-    }
-}
-```
 
 <h3>Step 2) Calling the signinup API to use the OAuth tokens</h3>
 
@@ -849,84 +984,6 @@ On success, the backend will send back session tokens as part of the response he
 :::
 
 </AppInfoForm>
-
-</TabItem>
-
-<TabItem value="flutter">
-
-<h3>Step 1) Fetching the OAuth / access tokens on the frontend</h3>
-
-You can follow the instructions for the [official google login](https://pub.dev/packages/google_sign_in) library for flutter to set up your app for google login. After setting up, use the snippet below to login with google and get the access token and id token.
-
-```dart
-import 'package:google_sign_in/google_sign_in.dart';
-
-void loginWithGoogle() async {
-  GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-    ],
-  );
-
-  try {
-    var response = await _googleSignIn.signIn();
-
-    if (response == null) {
-      // Login was aborted
-      return;
-    }
-
-    var authentication = await response.authentication;
-    String? accessToken = authentication.accessToken;
-    String? idToken = authentication.idToken;
-
-    // TODO: See next step
-  } catch(e) {
-    // Google sign in failed
-  }
-}
-```
-
-<h3>Step 2) Calling the signinup API to use the OAuth tokens</h3>
-
-<AppInfoForm askForAPIDomain showMultiTenancyTab>
-
-Once you have the `access_token` or the `id_token` from the auth provider, you need to call the signinup API exposed by our backend SDK as shown below:
-
-```bash
-curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/signinup' \
---header 'rid: ^{codeImportRecipeName}' \
---header 'Content-Type: application/json; charset=utf-8' \
---data-raw '{
-    "thirdPartyId": "google",
-    "clientType": "...",
-    "oAuthTokens": {
-        "access_token": "...",
-        "id_token": "..."
-    },
-}'
-```
-
-:::important
-- The `clientType` input is optional, and is required only if you have initialised more than one client in the provide on the backend (See the "Social / SSO login for both, web and mobile apps" section below).
-- If you have the `id_token`, you can send that along with the `access_token`.
-:::
-
-The response body from the API call has a `status` property in it:
-- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
-- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This is returned if the social / SSO provider did not provider an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
-- `status: "GENERAL_ERROR"`: This is only possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend.
-- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen due to automatic account linking. Please see our docs for account linking for more information.
-
-:::note
-On success, the backend will send back session tokens as part of the response headers which will be automatically handled by our frontend SDK for you.
-:::
-
-</AppInfoForm>
-
-</TabItem>
-
-</FrontendMobileSubTabs>
 
 </TabItem>
 
