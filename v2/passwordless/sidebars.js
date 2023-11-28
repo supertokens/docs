@@ -560,6 +560,7 @@ module.exports = {
               ],
             },
             "advanced-customizations/user-context",
+            "advanced-customizations/backend-sdk-core-interceptor",
           ],
         },
         {

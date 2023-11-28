@@ -616,7 +616,7 @@ module.exports = {
                 "advanced-customizations/frontend-hooks/redirection-callback"
               ],
             },
-            "advanced-customizations/user-context",],
+            "advanced-customizations/user-context", "advanced-customizations/backend-sdk-core-interceptor"],
         },
         {
           type: "category",
