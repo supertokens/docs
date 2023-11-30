@@ -47,7 +47,15 @@ module.exports = {
                     "pre-built-ui/setup/core/saas-setup"
                   ],
                 },
-                "pre-built-ui/setup/dashboard",
+                {
+                  type: 'category',
+                  label: "Step 4: User management dashboard",
+                  items: [
+                    "pre-built-ui/setup/user-management-dashboard/setup",
+                    "pre-built-ui/setup/user-management-dashboard/users-listing-and-details",
+                    "pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions"
+                  ]
+                },
               ]
             },
             "pre-built-ui/handling-session-tokens",
@@ -104,7 +112,15 @@ module.exports = {
                     "custom-ui/init/core/saas-setup"
                   ],
                 },
-                "custom-ui/init/dashboard",
+                {
+                  type: 'category',
+                  label: "Step 4: User management dashboard",
+                  items: [
+                    "custom-ui/init/user-management-dashboard/setup",
+                    "custom-ui/init/user-management-dashboard/users-listing-and-details",
+                    "custom-ui/init/user-management-dashboard/managing-user-roles-and-permissions"
+                  ]
+                },
               ]
             },
             "custom-ui/thirdparty-login",
