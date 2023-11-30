@@ -267,7 +267,9 @@ module.exports = {
                 "advanced-customizations/frontend-hooks/pre-api",
                 "advanced-customizations/frontend-hooks/handle-event"
               ],
-            },],
+            },
+            "advanced-customizations/backend-sdk-core-interceptor"
+          ],
         },
         {
           type: "category",
