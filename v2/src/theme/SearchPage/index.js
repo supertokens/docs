@@ -19,9 +19,10 @@ import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
 import {useTitleFormatter, usePluralForm} from '@docusaurus/theme-common';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {useAllDocsData} from '@theme/hooks/useDocs';
-import useSearchQuery from '@theme/hooks/useSearchQuery';
 import Translate, {translate} from '@docusaurus/Translate';
 import styles from './styles.module.css';
+
+const URL_SEARCH_KEY = "q"
 
 // Very simple pluralization: probably good enough for now
 function useDocumentsFoundPlural() {
@@ -39,6 +40,15 @@ function useDocumentsFoundPlural() {
         {count},
       ),
     );
+}
+
+function updateSearchPath(value){
+  if (history.pushState) {
+    let searchParams = new URLSearchParams(window.location.search);
+    searchParams.set(URL_SEARCH_KEY, value);
+    let newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + searchParams.toString();
+    window.history.pushState({path: newurl}, '', newurl);
+  } 
 }
 
 function useDocsSearchVersionsHelpers() {
@@ -80,7 +90,7 @@ function SearchPage() {
   const documentsFoundPlural = useDocumentsFoundPlural();
 
   const docsSearchVersionsHelpers = useDocsSearchVersionsHelpers();
-  const {searchValue, updateSearchPath} = useSearchQuery();
+  const searchValue = new URLSearchParams(window.location.search).get(URL_SEARCH_KEY)
   const [searchQuery, setSearchQuery] = useState(searchValue);
   const initialSearchResultState = {
     items: [],
@@ -282,7 +292,6 @@ function SearchPage() {
     }
   }, [searchValue]);
 
-  console.log("render")
 
   return (
     <>
