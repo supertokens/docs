@@ -163,6 +163,18 @@ module.exports = {
     [
       '@docusaurus/plugin-content-docs',
       {
+        id: 'search',
+        path: 'search',
+        routeBasePath: 'docs/search',
+        sidebarPath: false,
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
         id: 'emailpassword',
         path: 'emailpassword',
         routeBasePath: 'docs/emailpassword',
