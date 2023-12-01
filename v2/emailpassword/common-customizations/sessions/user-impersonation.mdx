@@ -1,0 +1,607 @@
+---
+id: user-impersonation
+title: User Impersonation
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./session/common-customizations/sessions/user-impersonation.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs";
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import TabItem from "@theme/TabItem";
+import CustomAdmonition from "/src/components/customAdmonition"
+
+# User Impersonation
+
+This allows you to login as another user in your application without entering their credentials. This is useful for testing purposes, or for customer support.
+
+:::caution
+Since this feature allows you to login as any user in your application, it should be protected to only allow admins or custom support staff to use it. You can use any method to protect this API. For example:
+- API Key
+- Session with an admin role
+- Only allowing certain IP addresses to query the API
+:::
+
+In this guide, we will assume that you will be using the "Session with an admin role" approach.
+
+We will implement this feature by creating a new API endpoint that accepts an email, phone number, or just a user ID and returns the session tokens for that user. On page reload, the admin will be logged in as the user they selected.
+
+In order for this to work, admins will need to first login into the application as themselves. Once their session is created (just like any regular user's session), then they can call the API via a frontend UI that's only shown to them (you can detect the admin role on the frontend by seeing [this guide](/docs/userroles/protecting-routes#protecting-frontend-routes)).
+
+Here is the API code (assuming that the input is an email ID):
+
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import Session from "supertokens-node/recipe/session";
+import supertokens from "supertokens-node";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let app = express();
+
+app.post(
+    "/impersonate", 
+    verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin")
+        ],
+    }),
+    async (req, res) => {
+
+    let email = "..."; // read from request body
+
+    let user = await supertokens.listUsersByAccountInfo("public", {
+        email
+    });
+
+    if (user.length === 0) {
+        throw new Error("User does not exist");
+    }
+
+    await Session.createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
+        isImpersonation: true,
+    });
+
+    /* a new session has been created.
+     * - an access & refresh token has been attached to the response's cookie
+     * - a new row has been inserted into the database for this new session
+    */
+
+    res.json({ message: "Impersonation successful!" });
+})
+```
+
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import Session from "supertokens-node/recipe/session";
+import supertokens from "supertokens-node";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/impersonate",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    overrideGlobalClaimValidators: async (globalValidators) => [
+                        ...globalValidators,
+                        UserRoles.UserRoleClaim.validators.includes("admin")
+                    ],
+                }),
+            },
+        ],
+    },
+    handler: async (req, res) => {
+
+        let email = "..."; // read from request body
+
+        let user = await supertokens.listUsersByAccountInfo("public", {
+            email
+        });
+
+        if (user.length === 0) {
+            throw new Error("User does not exist");
+        }
+
+        await Session.createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
+            isImpersonation: true,
+        });
+
+        /* a new session has been created.
+        * - an access & refresh token has been attached to the response's cookie
+        * - a new row has been inserted into the database for this new session
+        */
+        return res.response({ message: "Impersonation successful!" }).code(200);
+    },
+});
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import Session from "supertokens-node/recipe/session";
+import supertokens from "supertokens-node";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let fastify = Fastify();
+
+fastify.post(
+    "/impersonate",
+    {
+        preHandler: verifySession({
+            overrideGlobalClaimValidators: async (globalValidators) => [
+                ...globalValidators,
+                UserRoles.UserRoleClaim.validators.includes("admin")
+            ],
+        }),
+    },
+    async (req, res) => {
+
+    let email = "..."; // read from request body
+
+    let user = await supertokens.listUsersByAccountInfo("public", {
+        email
+    });
+
+    if (user.length === 0) {
+        throw new Error("User does not exist");
+    }
+
+    await Session.createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
+        isImpersonation: true,
+    });
+
+    /* a new session has been created.
+     * - an access & refresh token has been attached to the response's cookie
+     * - a new row has been inserted into the database for this new session
+    */
+
+    res.send({ message: "Impersonation successful!" });
+})
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { middleware } from "supertokens-node/framework/awsLambda"
+import Session from "supertokens-node/recipe/session";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import supertokens from "supertokens-node";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+async function impersonate(awsEvent: SessionEvent) {
+    let email = "..."; // read from request body
+
+    let user = await supertokens.listUsersByAccountInfo("public", {
+        email
+    });
+
+    if (user.length === 0) {
+        throw new Error("User does not exist");
+    }
+
+    await Session.createNewSession(awsEvent, awsEvent, "public", user[0].loginMethods[0].recipeUserId, {
+        isImpersonation: true,
+    });
+
+    /* a new session has been created.
+     * - an access & refresh token has been attached to the response's cookie
+     * - a new row has been inserted into the database for this new session
+    */
+
+    return {
+        body: JSON.stringify({ message: "Impersonation successful!" }),
+        statusCode: 200,
+    };
+}
+
+exports.handler = verifySession(impersonate, {
+    overrideGlobalClaimValidators: async (globalValidators) => ([
+        ...globalValidators, 
+        UserRoles.UserRoleClaim.validators.includes("admin")
+    ])
+});
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import Session from "supertokens-node/recipe/session";
+import supertokens from "supertokens-node";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let router = new KoaRouter();
+
+router.post(
+    "/impersonate",
+    verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => ([
+            ...globalValidators, 
+            UserRoles.UserRoleClaim.validators.includes("admin")
+        ])
+    }), 
+    async (ctx, next) => {
+    let email = "..."; // read from request body
+
+    let user = await supertokens.listUsersByAccountInfo("public", {
+        email
+    });
+
+    if (user.length === 0) {
+        throw new Error("User does not exist");
+    }
+
+    await Session.createNewSession(ctx, ctx, "public", user[0].loginMethods[0].recipeUserId, {
+        isImpersonation: true,
+    });
+
+    /* a new session has been created.
+     * - an access & refresh token has been attached to the response's cookie
+     * - a new row has been inserted into the database for this new session
+    */
+
+    ctx.body = { message: "Impersonation successful!" };
+})
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import supertokens from "supertokens-node";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+class Login {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/impersonate")
+    @intercept(verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => ([
+            ...globalValidators, 
+            UserRoles.UserRoleClaim.validators.includes("admin")
+        ])
+    }))
+    @response(200)
+    async handler() {
+        let email = "..."; // read from request body
+
+        let user = await supertokens.listUsersByAccountInfo("public", {
+            email
+        });
+
+        if (user.length === 0) {
+            throw new Error("User does not exist");
+        }
+
+        await Session.createNewSession(this.ctx, this.ctx, "public", user[0].loginMethods[0].recipeUserId, {
+            isImpersonation: true,
+        });
+        return { message: "Impersonation successful!" };
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { createNewSession } from "supertokens-node/recipe/session";
+import { SessionRequest } from "supertokens-node/framework/express";
+import supertokens from "supertokens-node";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+export default async function impersonate(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                overrideGlobalClaimValidators: async (globalValidators) => ([
+                    ...globalValidators, 
+                    UserRoles.UserRoleClaim.validators.includes("admin")
+                ])
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+
+    let email = "..."; // read from request body
+
+    let user = await supertokens.listUsersByAccountInfo("public", {
+        email
+    });
+
+    if (user.length === 0) {
+        throw new Error("User does not exist");
+    }
+
+    await superTokensNextWrapper(
+        async (next) => {
+            // highlight-next-line
+            await createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
+                isImpersonation: true,
+            });
+        },
+        req,
+        res
+    );
+    res.json({
+        message: "Impersonation successful!"
+    });
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```ts
+import { Controller, Post, Res, Req, UseGuards } from "@nestjs/common";
+import type { Response, Request } from "express";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import { createNewSession, SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+import supertokens from "supertokens-node";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+@Controller()
+export class ExampleController {
+  // For more information about "AuthGuard" and the "Session" decorator please read our NestJS guide.
+  @Post("impersonate")
+  @UseGuards(new AuthGuard({
+    overrideGlobalClaimValidators: async (globalValidators: SessionClaimValidator[]) => ([
+        ...globalValidators, 
+        UserRoles.UserRoleClaim.validators.includes("admin")
+    ])
+  }))
+  async postLogin(@Req() req: Request, @Res() res: Response): Promise<{ message: string }> {
+    let email = "..."; // read from request body
+
+    let user = await supertokens.listUsersByAccountInfo("public", {
+        email
+    });
+
+    if (user.length === 0) {
+        throw new Error("User does not exist");
+    }
+
+    await createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
+        isImpersonation: true,
+    });
+
+    /* a new session has been created.
+     * - an access & refresh token has been attached to the response's cookie
+     * - a new row has been inserted into the database for this new session
+     */
+
+    return { message: "Impersonation successful!" };
+  }
+}
+```
+
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+				globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+				return globalClaimValidators, nil
+			},
+		}, impersonate).ServeHTTP(rw, r)
+	})
+}
+
+func impersonate(w http.ResponseWriter, r *http.Request) {
+	email := "..." // read from request body
+
+	// we are using emailpassword recipe here, but you can use the recipe you use
+	// as well..
+	user, err := emailpassword.GetUserByEmail("public", email)
+	if err != nil {
+		// Send 500 to client
+		return
+	}
+
+	if user == nil {
+		// Send 400 to client cause user does not exist
+		return
+	}
+
+	_, err = session.CreateNewSession(r, w, "public", user.ID, map[string]interface{}{
+		"isImpersonation": true,
+	}, nil)
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			// Send 500 to client
+		}
+		return
+	}
+
+	/* a new session has been created.
+	 * - an access & refresh token has been attached to the response's cookie
+	 * - a new row has been inserted into the database for this new session
+	 */
+
+	// Send 200 success to client
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session.asyncio import create_new_session
+from fastapi.responses import JSONResponse
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.emailpassword.asyncio import get_user_by_email
+from fastapi import Request
+
+
+@app.post("/impersonate")  # type: ignore
+async def impersonate(
+    request: Request,
+    session: SessionContainer = Depends(
+        verify_session(
+            # We add the UserRoleClaim's includes validator
+            override_global_claim_validators=lambda global_validators, session, user_context: global_validators
+            + [UserRoleClaim.validators.includes("admin")]
+        )
+    ),
+):
+    email = "..."  # get from request body
+
+    # we use the email password recipe here, but you can use the recipe you use
+    user = await get_user_by_email("public", email)
+
+    if user is None:
+        # return a 400 error to the client
+        return
+
+    await create_new_session(request, "public", user.user_id, {"isImpersonation": True})
+
+    # a new session has been created.
+    # - an access & refresh token has been attached to the response's cookie
+    # - a new row has been inserted into the database for this new session
+
+    return JSONResponse({"message": "Impersonation complete!"})
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from supertokens_python.recipe.session.syncio import create_new_session
+from flask import jsonify
+from flask.wrappers import Request
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.emailpassword.syncio import get_user_by_email
+
+@app.route("/impersonate", methods=["POST"])  # type: ignore
+@verify_session(
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators
+    + [UserRoleClaim.validators.includes("admin")]
+)
+def login(request: Request):
+    email = "..."  # get from request body
+
+    # we use the email password recipe here, but you can use the recipe you use
+    user = get_user_by_email("public", email)
+
+    if user is None:
+        # return a 400 error to the client
+        return
+
+    create_new_session(request, "public", user.user_id, {"isImpersonation": True})
+
+    # a new session has been created.
+    # - an access & refresh token has been attached to the response's cookie
+    # - a new row has been inserted into the database for this new session
+
+    return jsonify({"message": "Impersonation complete!"})
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from supertokens_python.recipe.session.asyncio import create_new_session
+from django.http import HttpRequest, JsonResponse
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.emailpassword.asyncio import get_user_by_email
+
+@verify_session(
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+)
+async def impersonate(request: HttpRequest):
+    email = "..."  # get from request body
+
+    # we use the email password recipe here, but you can use the recipe you use
+    user = await get_user_by_email("public", email)
+
+    if user is None:
+        # return a 400 error to the client
+        return
+
+    await create_new_session(request, "public", user.user_id, {"isImpersonation": True})
+
+    # a new session has been created.
+    # - an access & refresh token has been attached to the response's cookie
+    # - a new row has been inserted into the database for this new session
+
+    return JsonResponse({"message": "User logged in!"})
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+</TabItem>
+</BackendSDKTabs>
+
+<CustomAdmonition type="multi-tenancy">
+
+Notice that we pass in the `"public"` tenantId to the function call above. This is the default tenantId in SuperTokens. If you are using the multi tenancy feature and want to login into a different tenant, you can replace `"public"` with the tenantId you want to login into. 
+
+You can fetch this tenantId based on the admin user's tenant (from their session), or you can pass it in the request body.
+
+</CustomAdmonition>
+
+- The API is supposed to be called from your frontend application such that our frontend SDKs' network interceptors are running.
+- In the API above, we first run session verification and make sure that the user has the admin role. If not, the API will return a `403` to the frontend.
+- We then fetch the target user based on their email ID. If the user does not exist, we throw an error (which you can map to a `400` status code).
+- We then create a new session using the target user's user ID. We pass in the `isImpersonation` flag as `true` in the access token payload so that we can detect this on the frontend and show a message to the admin user that they are now impersonating the target user (this is UI you would have to build if you want to). You can also use this custom access token payload to protect certain APIs which the admin cannot call, even if in impersonation mode. In the code we use `isImpersonation`, but you can use anything else you like. In fact, you can even add the admin user's user ID to the access token payload (with a key like `adminUserId`), for logging purposes.
+- The new session tokens will be attached to the response and overwrite the existing admin session. Cookies will be used if the request contains the `st-auth-mode: "cookie"` header, otherwise the mode will be header based auth. Since you would be calling this API via our frontend interceptors, you do not need to explicitly set this header since our frontend SDK does this on its own. 
+- Once impersonated, the admin user will be able to logout of the target user's session by clicking on the sign out button of your app - nothing special needs to be done there.

@@ -363,6 +363,7 @@ module.exports = {
         },
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/anonymous-session",
+        "common-customizations/sessions/user-impersonation",
         "common-customizations/sessions/fetching-tenant-id",
         "common-customizations/sessions/with-websocket",
         {
