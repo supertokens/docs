@@ -153,12 +153,31 @@ module.exports = {
       }
     ],
     [
+       "./src/plugins/transformOpenSearchLink",
+       //used to transform the opensearch.xml location in the metatags.
+      {
+        id: "transform-opensearch-link"
+      }
+    ],
+    [
       "./src/plugins/copyDocsAndCodeTypeChecking",
       {
         // used for copying docs content via the <-COPY DOCS-> directive
         // used for do code type checking as well AFTER running cop docs
         id: "copy-docs-and-code-type-checking",
       }
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'search',
+        path: 'search',
+        routeBasePath: 'docs/search',
+        sidebarPath: false,
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
     ],
     [
       '@docusaurus/plugin-content-docs',
