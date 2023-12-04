@@ -18,13 +18,13 @@ module.exports = () => {
     }
 
     async function writeToHTML(filePath,modifiedContent) {
-        return new Promise((res, rej) => {
+        return new Promise((resolve, reject) => {
             try {
                 fs.writeFile(filePath, modifiedContent, "utf8", err => {
                     if (err) {
-                        return rej(err);
+                        return reject(err);
                     } else {
-                        return res();
+                        return resolve();
                     }
                 });
             } catch (error) {

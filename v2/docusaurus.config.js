@@ -18,7 +18,7 @@ let beforeDefaultRemarkPlugins = [
 ];
 
 let rehypePlugins = [
-  require('./src/plugins/addNofollowToExternalLinks'),
+  require('./src/plugins/addNofollowToExternalLinks')
 ];
 
 module.exports = {
