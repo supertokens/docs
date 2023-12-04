@@ -18,7 +18,7 @@ let beforeDefaultRemarkPlugins = [
 ];
 
 let rehypePlugins = [
-  require('./src/plugins/addNofollowToExternalLinks')
+  require('./src/plugins/addNofollowToExternalLinks'),
 ];
 
 module.exports = {
@@ -150,6 +150,13 @@ module.exports = {
       "./src/plugins/reactBundle",
       {
         id: "react-bundle",
+      }
+    ],
+    [
+       "./src/plugins/transformOpenSearchLink",
+       //used to transform the opensearch.xml location in the metatags.
+      {
+        id: "transform-opensearch-link"
       }
     ],
     [

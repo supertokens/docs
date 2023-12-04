@@ -42,14 +42,6 @@ function useDocumentsFoundPlural() {
     );
 }
 
-function updateSearchPath(value){
-  if (history.pushState) {
-    let searchParams = new URLSearchParams(window.location.search);
-    searchParams.set(URL_SEARCH_KEY, value);
-    let newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + searchParams.toString();
-    window.history.pushState({path: newurl}, '', newurl);
-  } 
-}
 
 function useDocsSearchVersionsHelpers() {
   const allDocsData = useAllDocsData();
@@ -78,6 +70,21 @@ function useDocsSearchVersionsHelpers() {
   };
 }
 
+function useSearchQueryValue(){
+   
+  const searchValue = ExecutionEnvironment.canUseDOM ? new URLSearchParams(window.location.search).get(URL_SEARCH_KEY) ?? "" : ""
+
+  function updateSearchPath(value){
+    if (history.pushState) {
+      let searchParams = new URLSearchParams(window.location.search);
+      searchParams.set(URL_SEARCH_KEY, value);
+      let newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + searchParams.toString();
+      window.history.pushState({path: newurl}, '', newurl);
+    }
+  }
+  return [searchValue, updateSearchPath]  
+}
+
 function SearchPage() {
   const {
     siteConfig: {
@@ -90,7 +97,7 @@ function SearchPage() {
   const documentsFoundPlural = useDocumentsFoundPlural();
 
   const docsSearchVersionsHelpers = useDocsSearchVersionsHelpers();
-  const searchValue = new URLSearchParams(window.location.search).get(URL_SEARCH_KEY)
+  const [searchValue, updateSearchPath] = useSearchQueryValue()
   const [searchQuery, setSearchQuery] = useState(searchValue);
   const initialSearchResultState = {
     items: [],
