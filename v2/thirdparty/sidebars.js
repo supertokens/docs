@@ -329,6 +329,16 @@ module.exports = {
           items: [
             "capacitor-integration/about"
           ],
+        },
+        {
+          type: 'category',
+          label: 'T4 App',
+          customProps: {
+            logoUrl: '/img/logos/t4-app.png'
+          },
+          items: [
+            "t4-app/about"
+          ],
         }
       ],
     },
