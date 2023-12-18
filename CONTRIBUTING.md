@@ -207,6 +207,30 @@ CODE_TYPE_CHECK=all npm run start
 
 You may need to add something to the code that is necessary for type checking but shouldn't appear in the output documentation. You can do this by adding a comment to the end of the line stating: `typecheck-only, removed from output`. Lines ending with this comment will be removed from the output but kept for type checking.
 
+Omitting substrings from the final output while retaining them for type checking can be achieved using the `__OMIT_START__` and `__OMIT_END__` specifier. This is particularly useful for incorporating type annotations into code snippets without including them in the end result. Consider the following example:
+
+```mjs
+function square(num__OMIT_START__: number__OMIT_END__) {
+  return num * num;
+}
+```
+
+During code checking, the plugin will analyze the following code:
+
+```mjs
+function square(num: number) {
+  return num * num;
+}
+```
+
+However, the final output will exclude type annotations:
+
+```mjs
+function square(num) {
+  return num * num;
+}
+```
+
 #### Tips JS / TS
 - If you need to purposely tell TS to ignore errors in the next line, you can add a `// @ts-ignore` comment in your code snippets. This will make the TS checker pass. The type checking engine will also remove these from the final code output so that users don't see this unnecessarily.
 - If you are working with snippets that use an older version of supertokens-node you can use a custom import for that version. For example some snippets use `supertokens-node7` as the import to fix typing. The type checking engine replaces this with `supertokens-node`. NOTE: If you need to add another node version as a custom import, please modify the type checking script to replace the import statement to use `supertokens-node`
