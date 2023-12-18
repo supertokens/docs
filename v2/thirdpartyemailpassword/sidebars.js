@@ -283,12 +283,18 @@ module.exports = {
           items: [
             "serverless/with-aws-lambda/about",
             "serverless/with-aws-lambda/frontend",
-            "serverless/with-aws-lambda/backend-config",
-            "serverless/with-aws-lambda/auth-serverless",
-            "serverless/with-aws-lambda/api-gateway-config",
             {
               type: 'category',
-              label: '5. Session Verification',
+              label: '2. Backend config',
+              items: [
+                "serverless/with-aws-lambda/setup-lambda-layer",
+                "serverless/with-aws-lambda/setup-lambda",
+                "serverless/with-aws-lambda/setup-api-gateway",
+              ],
+            },
+            {
+              type: 'category',
+              label: '3. Session Verification',
               items: [
                 "serverless/with-aws-lambda/session-verification",
                 "serverless/with-aws-lambda/authorizer",
