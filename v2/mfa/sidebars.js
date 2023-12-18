@@ -1,6 +1,7 @@
 module.exports = {
   sidebar: [
     "introduction",
+    "important-concepts",
     "how-it-works",
     {
       type: 'category',

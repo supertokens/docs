@@ -1,0 +1,51 @@
+---
+id: important-concepts
+title: Important concepts
+hide_title: true
+---
+
+# Important concepts
+
+## Auth factor IDs 
+Each auth challenge has a factor ID in SuperTokens:
+- Email password auth: `emailpassword`
+- Social login / enterprise SSO auth: `thirdparty`
+- Passwordless:
+    - With email OTP: `email-otp`
+    - With SMS OTP: `sms-otp`
+    - With email magic link: `email-link`
+    - With SMS magic link: `sms-link`
+- TOTP: `totp`
+
+These factor IDs will be used to configure the MFA requirements for users, and also will be used to indicate which auth challenges have been completed in the current session.
+
+## How are auth factors marked as completed?
+We indicate the status of which auth factors are completed and which are pending via the session's access token payload. We store the following claim structre in the access token for this:
+
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+        },
+        "n": ["totp"]
+    }
+}
+```
+- `c` stands for `completed`, and `n` stands for `next`.
+- The above payload indicates that the `emailpassword` auth factor has been completed, and the `totp` auth factor is pending, and will have to be completed next for the user to finish auth.
+- The number against the `emailpassword` factor is the timestamp (in seconds since epoch) at which the factor was completed.
+- If there are multiple items in the `n` array, then it means that the user can complete any one of those factors to finish auth.
+- Once a factor in the `n` array is completed, the `n` array can be refilled with other factors based on the MFA requirements for the user. In this way, we can achieve more than MFA beyond just two factors.
+
+Each time an auth factor is completed, the SuperTokens backend adds it to the `c` (completed) object, and then re-evaluates the `n` (next) array based on the MFA requirements for the user. This is done by calling the `getMFARequirementsForAuth` function from the MFA recipe, which you can override to return the factors required for the user. In this guide, we will show you how to override this function to achieve different forms of MFA experiences.
+
+## First vs addition auth factors
+There is a clear distinction that is made between first and additional factors in the SDK. When calling `MFA.init` on the backend, you need to provide a list of allowed first factors (or if using multi tenancy, you can configure the first factors on a per tenant basis and leave the `init` array empty).
+
+The first factors are those that are allowed to create a new session, whereas any other factor will only be allowed to modify an existing session. In case the user calls an additional factor's API without a session, the API will return an error.
+
+## Limitations of MFA
+Magic link via email / SMS is only supported as a first factor. The reason we don't support it as a second factor is that if the magic link is opened on a different device, there would be no reference to the existing session (which was created post first factor completion). This would lead to the creation of a brand new session if magic link is allowed as a first factor, else it would lead to an error state.
+
+Instead, we support OTP based auth via email / SMS which achieves the same level of security as a magic link.
