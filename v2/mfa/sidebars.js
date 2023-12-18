@@ -2,6 +2,7 @@ module.exports = {
   sidebar: [
     "introduction",
     "important-concepts",
+    "backend-setup",
     "how-it-works",
     {
       type: 'category',
