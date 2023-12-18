@@ -321,6 +321,10 @@ async function getRecipeName(mdFile) {
 async function addCodeSnippetToEnvHelper(codeSnippet, language, mdFile, codeBlockCountInFile) {
     // we replace all the variables here so that the code can compile:
 
+    // Excluding __OMIT_START__ and __OMIT_END__ tags from the code snippet before running the type check plugin
+    // We need to do this before intializing ogCodeSnippet to prevent false warnings about not using docs variables
+    codeSnippet = codeSnippet.replace(/__OMIT_START__([\s\S]*?)__OMIT_END__/g, '$1');
+
     let ogCodeSnippet = codeSnippet;
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_connection_uri_comment}", "");
     codeSnippet = codeSnippet.replaceAll("^{coreInjector_uri}", "\"\",");
@@ -574,6 +578,9 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
     // If it has a value, check if it is using a variable. If it is then replace otherwise skip
     if (child.value) {
         var valueCopy = child.value;
+
+        // Exclude sections marked by __OMIT_START__ and __OMIT_END__ from the code snippet, along with the tags themselves
+        valueCopy = valueCopy.replace(/__OMIT_START__[\s\S]*?__OMIT_END__\n?/g, '');
 
         let eachLine = valueCopy.split("\n");
         let newLines = [];
