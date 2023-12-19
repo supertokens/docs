@@ -145,3 +145,271 @@ In the above, we are enabling email password and passwordless for the tenant, ho
 :::important
 If you do not configure a `firstFactors` array on a tenant config, then it will pick up the values from the `firstFactors` array in the `MultiFactorAuth.init` from the backend's `init` config.
 :::
+
+## Configuring a second factor
+
+In this section, we will see how to configure SuperTokens so that a second factor is required for all users during sign up and during sign in. We will use TOTP as an example for the second factor.
+
+### Single tenant setup
+This can be achieved easily by the following code snippet:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import Passwordless from "supertokens-node/recipe/passwordless"
+import MultiFactorAuth from "superTokens-node/recipe/multifactorauth"
+import totp from "supertokens-node/recipe/totp"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        ThirdPartyEmailPassword.init({
+            //...
+        }),
+        Passwordless.init({
+            contactMethod: "EMAIL",
+            flowType: "USER_INPUT_CODE"
+        }),
+        totp.init(),
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+                            return "totp"
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+In the above snippet, we have confgured email password and social login as the first factor, followed by totp as the second factor.
+
+After sign in or sign up, SuperTokens calls the `getMFARequirementsForAuth` function to get a list of secondary factors for the user. The returned value is stored in the session's access token payload's `n` array which indicates that this factor needs to be completed next, before the user has access to the full application. If the returned factor is already completed, then it's not readded into the `n` array.
+
+In the above example, we are simply returning `"totp"` as a required factor for all users, but you can also dynamically decide which factor to return based on the `input` arguments, which contains the `User` object, the `tenantId` and the current session's access token payload. In fact, the default implementation of `getMFARequirementsForAuth` returns the set of factors that are specifically enabled for this user (see next section).
+
+The output of this function can be more complex than just a `string`. You can also return an object which tells SuperTokens that any one of the factors need to be completed: 
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import MultiFactorAuth from "superTokens-node/recipe/multifactorauth"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+                            // highlight-start
+                            return {
+                                oneOf: ["totp", "email-otp"]
+                            }
+                            // highlight-end
+                        }
+                    }
+                }
+            }
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+Or that all of the factors in the returned array need to be completed:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import MultiFactorAuth from "superTokens-node/recipe/multifactorauth"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+                            // highlight-start
+                            return {
+                                allOf: ["totp", "email-otp"]
+                            }
+                            // highlight-end
+                        }
+                    }
+                }
+            }
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+You can even add a third factor to the auth flow based on the set of factors that are completed as shown below. For example, if you want to have email password / social login as the first factor followed by TOTP and then email OTP, you could do the following:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import MultiFactorAuth from "superTokens-node/recipe/multifactorauth"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+                            // highlight-start
+                            let currentCompletedFactors = MultiFactorAuth.MultiFactorAuthClaim.getValueFromPayload(input.accessTokenPayload)
+                            if ("totp" in currentCompletedFactors) {
+                                // this means the totp factor is completed
+                                return "email-otp"
+                            } else {
+                                // this means we have not finished totp yet, and we want 
+                                // to do that right after first factor login
+                                return "totp"
+                            }
+                            // highlight-end
+                        }
+                    }
+                }
+            }
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+Finally, you can return `undefined` from `getMFARequirementsForAuth` if you don't want any further MFA done for the current user.
+
+All of the above is only useful to populate the values of the [`n` and `c` values](./important-concepts#how-are-auth-factors-marked-as-completed) in the session's access token payload. However, you still need to [protect the frontend and API routes](./protect-routes) to ensure that those resources are given access to only if the user has an empty `n` array (indicating that all factors have been completed).
+
+
+### Multi tenant setup
+TODO
+
+### Functions to help with configuring a second factor for each user optionally
+TODO
