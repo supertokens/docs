@@ -9,6 +9,7 @@ import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 import TabItem from '@theme/TabItem';
 import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
 import CoreInjector from "/src/components/coreInjector"
+import CustomAdmonition from "/src/components/customAdmonition"
 
 <MFAPaidBanner />
 
@@ -548,4 +549,181 @@ Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-i
 Notice that the input to the function contains the `requiredSecondaryFactorsForTenant` array. This would be the same list that you passed to the tenant config when creating / modifying the tenant as shown in the previous steps.
 
 ### Functions to help with configuring a second factor for each user optionally
-TODO
+
+Instead of configuring a factor for all users in your app, or for all users within a tenant, you may want to implement a flow in which users do MFA only if they have enabled it for themselves. Here, users may also want to choose what factors they would like to enable for themselves.
+
+This flow is usually achieved by allowing users to configure their MFA preferences in the settings page in your app's frontend. We don't yet provide a pre built UI for this, but in this section, we will talk about how to setup this up on the backend.
+
+You want to start by creating an API that does [session verification](/docs/session/common-customizations/sessions/session-verification-in-api/overview), and then enable the desired factor for the user. For example, if the user wants to enable TOTP, then you would call the following function in your API:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+async function enableMFAForUser(userId: string) {
+    await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(userId, "totp")
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+The effect of the above function call is that in the default implementation of `getMFARequirementsForAuth`, we take into account the factors that are specifically enabled for the input user. By default, if you add several factors for a user ID, then it would require them to complete any one of those secondary factors during login.
+
+If you want to change the default behaviour from "any one of" to something else (like "all of"), you can do so by overriding the `getMFARequirementsForAuth` function:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import MultiFactorAuth from "superTokens-node/recipe/multifactorauth"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // ...
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // highlight-start
+                        getMFARequirementsForAuth: async function (input) {
+                            return [{
+                                allOf: input.requiredSecondaryFactorsForUser
+                            }]
+                        }
+                        // highlight-end
+                    }
+                }
+            }
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+Once you call the `addToRequiredSecondaryFactorsForUser` function for a user, SuperTokens will save this preference in the usermetadata JSON of the user. For example, if you add `"totp"` as a requred secondary factor for a user, this will be saved in the metadata JSON as:
+
+```json
+{
+    "_supertokens": {
+        "requiredSecondaryFactors": ["totp"]
+    }
+}
+```
+
+You can view this JSON on the [user details page of the user management dashboard](/docs/userdashboard/users-listing-and-details) and modify it manually if you like.
+
+In order to know the factors that have been enabled for a user, you can use the following function:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+async function isTotpEnabledForUser(userId: string) {
+    let factors = await MultiFactorAuth.getRequiredSecondaryFactorsForUser(userId)
+    return factors.includes("totp")
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+Using the above function, you can build your settings page on the frontend which displays the existing enabled factors for the user, and allow users to enable / disable factors as they like.
+
+Once you have enabled a factor for a user, you take them to that factor screen if they have not previously already setup the factor. To know if a factor is setup, you can call the following function: 
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+async function isTotpSetupForUser(userId: string) {
+    let factors = await MultiFactorAuth.getFactorsSetupForUser(userId)
+    return factors.includes("totp")
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+A factor is considered setup if the user has gone through that factor's flow at least once. For example, if the user has created and verified a TOTP device, only then will the `getFactorsSetupForUser` function return `totp` as part of the array. Likewise, if the user has completed `email-otp` or `email-link` once, only then will these factors be a part of the returned array. Let's take two examples:
+- The first time the user enables TOTP, then the result of `getFactorsSetupForUser` will not contain `"totp"`. So you should redirect the user to the totp setup screen. Once they add and verify a device, then `getFactorsSetupForUser` will return `["totp"]` even if they later disable totp from the settings page and renable it.
+- Let's say that the first factor for a user is `emailpassword`, and the second factor is `email-otp`. Once they sign up, SuperTokens already knows the email for the user, so when they are doing the `email-otp` step, then they will not be asked to enter their email again (i.e. an OTP will be sent to them directly). However, until they actually complete the OTP flow, `getFactorsSetupForUser` will not return `["email-otp"]` as part of the output.
+
+:::important
+In the edge case that the a factor is enabled for a user, but they sign out before setting it up, then when they login next, SuperTokens will still ask them to complete the factor at that time. If SuperTokens doesn't have the required information (like no TOTP devcice for totp auth), then users will be asked to setup a device at that point in time.
+:::
