@@ -363,12 +363,10 @@ export default async function impersonate(req: SessionRequest, res: any) {
 <TabItem value="nextjs-app">
 
 ```tsx
-import { serialize } from "cookie";
 import { NextResponse, NextRequest } from "next/server";
 import SuperTokens from "supertokens-node";
-import { withSession } from "supertokens-node/nextjs";
+import { withPreParsedRequestResponse } from "supertokens-node/nextjs";
 import { CollectingResponse, PreParsedRequest } from "supertokens-node/framework/custom";
-import { HTTPMethod } from "supertokens-node/types";
 import { createNewSession } from "supertokens-node/recipe/session";
 // @ts-ignore
 import { backendConfig } from "@/app/config/backend";
@@ -376,88 +374,20 @@ import { backendConfig } from "@/app/config/backend";
 SuperTokens.init(backendConfig());
 
 export function POST(req: NextRequest) {
-    return withSession(req, async (session) => {
-        const query = Object.fromEntries(new URL(req.url).searchParams.entries());
-        const cookies: Record<string, string> = Object.fromEntries(
-            req.cookies.getAll().map((cookie) => [cookie.name, cookie.value])
-        );
-
-        /**
-         * Pre parsed request is a wrapper exposed by SuperTokens. It is used as a helper to detect if the
-         * original request contains session tokens. We then use this pre parsed request to call `getSession`
-         * to check if there is a valid session.
-         */
-        let baseRequest = new PreParsedRequest({
-            method: req.method as HTTPMethod,
-            url: req.url,
-            query: query,
-            headers: req.headers,
-            cookies: cookies,
-            getFormBody: () => req!.formData(),
-            getJSONBody: () => req!.json(),
-        });
-
-        /**
-         * Collecting response is a wrapper exposed by SuperTokens. In this case we are using an empty
-         * CollectingResponse when calling `getSession`. If the request contains valid session tokens
-         * the SuperTokens SDK will attach all the relevant tokens to the collecting response object which
-         * we can then use to return those session tokens in the final result (refer to `withSession` in this file)
-         */
-        let baseResponse = new CollectingResponse();
-
+    return withPreParsedRequestResponse(req, async (baseRequest: PreParsedRequest, baseResponse: CollectingResponse) => {
         let email = "..."; // read from request body
 
         let users = await SuperTokens.listUsersByAccountInfo("public", { email });
-    
+
         if (users.length === 0) {
             throw new Error("User does not exist");
         }
 
-        await createNewSession(baseRequest, baseResponse, "public", users[0].loginMethods[0].recipeUserId, {
+        const session = await createNewSession(baseRequest, baseResponse, "public", users[0].loginMethods[0].recipeUserId, {
             isImpersonation: true,
         });
-    
-        let didAddCookies = false;
-        let didAddHeaders = false;
 
-        const response = NextResponse.json({  message: "Impersonation successful!" });
-
-        for (const respCookie of baseResponse.cookies) {
-            didAddCookies = true;
-            response.headers.append(
-                "Set-Cookie",
-                serialize(respCookie.key, respCookie.value, {
-                    domain: respCookie.domain,
-                    expires: new Date(respCookie.expires),
-                    httpOnly: respCookie.httpOnly,
-                    path: respCookie.path,
-                    sameSite: respCookie.sameSite,
-                    secure: respCookie.secure,
-                })
-            );
-        }
-
-        baseResponse.headers.forEach((value: string, key: string) => {
-            didAddHeaders = true;
-            response.headers.set(key, value);
-        });
-
-        /**
-         * For some deployment services (Vercel for example) production builds can return cached results for
-         * APIs with older header values. In this case if the session tokens have changed (because of refreshing
-         * for example) the cached result would still contain the older tokens and sessions would stop working.
-         *
-         * As a result, if we add cookies or headers from base response we also set the Cache-Control header
-         * to make sure that the final result is not a cached version.
-         */
-        if (didAddCookies || didAddHeaders) {
-            if (!response.headers.has("Cache-Control")) {
-                // This is needed for production deployments with Vercel
-                response.headers.set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
-            }
-        }
-    
-        return response;
+        return NextResponse.json({ message: "Impersonation successful" });
     });
 }
 ```

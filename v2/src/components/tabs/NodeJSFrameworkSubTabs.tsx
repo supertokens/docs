@@ -14,7 +14,7 @@ export default function NodeJSFrameworkSubTabs(props: any) {
                 { label: 'Koa', value: 'koa' },
                 { label: 'Loopback', value: 'loopback' },
                 { label: 'AWS Lambda / Netlify', value: 'awsLambda' },
-                { label: 'Next.js', value: 'nextjs' },
+                { label: 'Next.js (Pages Dir)', value: 'nextjs' },
                 { label: 'Next.js (App Dir)', value: 'nextjs-app' },
                 { label: 'NestJS', value: 'nestjs' },
             ]}>
