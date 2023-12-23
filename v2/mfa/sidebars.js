@@ -3,6 +3,7 @@ module.exports = {
     "introduction",
     "important-concepts",
     "backend-setup",
+    "frontend-setup",
     "how-it-works",
     {
       type: 'category',
