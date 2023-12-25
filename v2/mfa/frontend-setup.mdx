@@ -66,11 +66,90 @@ supertokens.init({
 In the above snippet, we have configured thirdparty and email password as first factors. The second factor is configured [on the backend](./backend-setup), and is determined based on the [`n` array in the MFA claim in the session](./important-concepts#how-are-auth-factors-marked-as-completed). For example:
 - If the `n` array in the session is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
 - If the `n` array in the session is empty, that means no login challenge is needed anymore, and the user will be redirected to the success screen, which is `/` by default.
+- If the `n` array has multiple items, we will show the user a [factor chooser screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
 
 If you notice, in the above code snippet, we have added `Passwordless.init` as well, and this handles cases where the second factor is `otp-email` or `otp-sms`. For TOTP, we have a different recipe as shown later in this guide.
 
 ## Multi tenant setup
-TODO
+For a multi factor setup, the first factors is decided based on [the configuration of the tenant](./backend-setup#multi-tenant-setup). Each tenant has a `firstFactors` array configuration which will determine the login options shown for that tenant. For MFA, the login options will be determined by the [`requiredSecondaryFactors` config on the tenant](./backend-setup#multi-tenant-setup-1), or based on the customisations for `getMFARequirementsForAuth` on the backend.
+
+To tell the frontend to dynamically load the factors based on the tenant, we need to give it four things:
+- The current tenantId
+- Enable dynamic login methods
+- Add `MultiFactorAuth.init` to the recipe list without any configured `firstFactors`
+- Init all the recipes that can be possibly used by any tenant as the first or second factor.
+
+<FrontendPreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+```tsx
+import supertokens from "supertokens-auth-react"
+import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword"
+import Passwordless from "supertokens-auth-react/recipe/passwordless"
+import MultiFactorAuth from "superTokens-auth-react/recipe/multifactorauth"
+import Multitenancy from "supertokens-auth-react/recipe/multitenancy"
+
+supertokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    // highlight-next-line
+    usesDynamicLoginMethods: true,
+    recipeList: [
+        Multitenancy.init({
+            override: {
+                functions: (oI) => {
+                    return {
+                        ...oI,
+                        // highlight-start
+                        getTenantId: (input) => {
+                            // Implement the following based on the UX flow you want for
+                            // tenant discovery
+                            return "TODO.."
+                        }
+                        // highlight-end
+                    }
+                }
+            }
+        }),
+        ThirdPartyEmailPassword.init( /* ... */),
+        Passwordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+        }),
+        // highlight-start
+        MultiFactorAuth.init()
+        // highlight-end
+    ]
+})
+```
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+- In the above code snippet, we have added `ThirdPartyEmailPassword` and  `Passwordless` as the auth methods. This works for a variety of use cases like:
+    - The first factor for any tenant can be third party or email password login, and the second factor can be passwordless login (`otp-email` or `otp-sms`).
+    - The first factor for any tenant can be email password, with, or without a second factor (like `otp-email`)..
+    - The first factor for any tenant can be third party, with, or without a second factor (like `otp-email`)..
+    - The first factor for any tenant can be passwordless login (with magic link), with or without a second factor (like `otp-email`).
+    - You can even change `passwordles.init` to using `thirdpartypasswordless.init` if you want to have the first factor for any tenant to be thirdparty or passwordless login, with or without a second factor (like `otp-email`).
+- We have initialised `MultiFactorAuth` without any configured `firstFactors` because we want the frontend to dynamically load the first factors based on the tenant. Therefore, we have also set `usesDynamicLoginMethods: true` in the `supertokens.init` call.
+- We have initialised `Multitenancy` as well, and provided a skeleton for `getTenantId`. You need to implement this function based on the UX flow you want for tenant discovery. For examlpe, [here is a common UX flow in which we decide the tenant ID based on the current sub domain](/docs/thirdpartyemailpassword/common-customizations/multi-tenancy/sub-domain-login).
+
+:::important
+- If you do initialise the `firstFactors` array for `MultiFactorAuth.init()` on the frontend, it will be ignored when `usesDynamicLoginMethods: true` is set.
+- If the tenant doesn't have the `firstFactors` array set, then the list of first factors that are rendered would be based on the [login methods that are enabled in that tenant's config](/docs/multitenancy/new-tenant#basic-tenant-creation).
+:::
+
+The second factor for a tenant is determined based on the [`secondaryFactors` config for the tenant](./backend-setup#multi-tenant-setup-1), or based on any custom implementation for the `getMFARequirementsForAuth` function. If the current user has specific MFA methods enabled for them, those will also be shown as options as well. Overall, the list of secondary factors will be used to build the [`n` array in the MFA claim in the session](./important-concepts#how-are-auth-factors-marked-as-completed). For example: 
+- If the `n` array in the session is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
+- If the `n` array in the session is empty, that means no login challenge is needed anymore, and the user will be redirected to the success screen, which is `/` by default.
+- If the `n` array has multiple items, we will show the user a [factor chooser screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
+
+In the subsequent sections, we will walk through specific MFA setup examples for your reference.
 
 </PreBuiltUIContent>
 
