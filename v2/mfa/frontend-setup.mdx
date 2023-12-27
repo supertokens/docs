@@ -10,6 +10,8 @@ import TabItem from '@theme/TabItem';
 import CustomAdmonition from "/src/components/customAdmonition"
 import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
 import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
 
 <MFAPaidBanner />
 
@@ -161,9 +163,6 @@ There are of course other similar cases, and in all of them, the pre built UI on
 
 The way to solve these errors is to recheck your config and make sure that they are correct.
 
-## The access denied screen
-TODO (when will this be shown?)
-
 </PreBuiltUIContent>
 
 <CustomUIContent>
@@ -183,14 +182,126 @@ After the first factor sign in is over, to know the next auth challenge, the fro
 
 This means that the user has completed the email password login, and the next auth challenge is TOTP.
 
+## Initialise the MFA recipe on the frontend
+
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+
+<TabItem value="npm">
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import Session from 'supertokens-web-js/recipe/session';
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        MultiFactorAuth.init()
+    ],
+});
+```
+
+</TabItem>
+
+<TabItem value="script">
+
+```tsx
+import supertokens from "supertokens-web-js-script";
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokens^{recipeNameCapitalLetters} from 'supertokens-web-js-script/recipe/^{codeImportRecipeName}'
+import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
+supertokens.init({
+    appInfo: {
+        apiDomain: "^{form_apiDomain}",
+        apiBasePath: "^{form_apiBasePath}",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        supertokensMultiFactorAuth.init()
+    ],
+});
+```
+
+</TabItem>
+
+
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+:::success
+This step is not applicable for mobile apps. Please see the next section.
+:::
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+## Factor lifecycle overview
+
 The overall lifecycle of a factor post sign in is as follows:
-- First the frontend needs to check the values of the `n` array. If this array is empty, then the user has completed MFA. If there are multiple values in this array, then the frontend needs to show these options to the user and ask them to pick one of them.
-- TODO..
+
+### Step 1: Asking for the first factor
+This is the same as setting up a recipe as per the other recipe guides. So please follow those.
+
+### Step 2: Checking the `n` array
+After the first factor has been completed, the frontend needs to check the values of the `n` array:
+- If this array is empty, then the user has completed MFA.
+- If there are multiple values in this array, then the frontend needs to show these options to the user and ask them to pick one of them.
+- If there is only one item, and it's not the `access-denied` factor ID, then the UI can directly ask t he user to complete that factor.
+- If there is only one item, and it's the `access-denied` factor ID, then the UI can show the access denied screen, along with a logout button. You can read more about this later on in this page.
+
+### Step 3: Checking for factor setup
+Once the user has picked a specific factor (or if `n` contains just one item), you need to check if that factor has already been setup for that user. A factor is setup already if:
+- For `totp`: The user has already added a totp device and verified it.
+- For `otp-email`: The user has a passwordless loginMethod that has an email associated with it.
+- For `link-email`: The user has a passwordless loginMethod that has an email associated with it. Note that this is not a valid secondary factor, but is a valie first factor.
+- For `otp-sms`: The user has a passwordless loginMethod that has a phone number associated with it.
+- For `link-sms`: The user has a passwordless loginMethod that has a phone number associated with it. Note that this is not a valid secondary factor, but is a valie first factor.
+- For `emailpassword`: The user has an email password loginMethod.
+- For `thirdparty`: The user has a third party loginMethod.
+
+If the user has the factor already setup, you can skip the setup step and directly ask them for the challenge:
+- For `totp`: Ask them to enter the OTP.
+- For `otp-email`: Send them an email with the OTP, and ask them to enter the OTP.
+- For `otp-sms`: Send them an SMS with the OTP, and ask them to enter the OTP.
+- For `emailpassword`: Ask them to enter their password.
+- For `thirdparty`: Ask them to login using the third party provider.
+
+In case the user does not have the factor setup, you need to ask them to set it up first:
+- For `totp`: Ask them to scan the QR code and enter the TOTP to verify the device.
+- For `otp-email`: Ask them to enter their email and send them an email with the OTP. Once they enter the OTP, a passwordless user will be created and associated with their user object. Note that if you already have the user's email from another login method (see later), you do not need to ask them to enter their email again. In that way, it would be similar to as if the factor is already setup, but technically, it is not.
+- For `otp-sms`: Ask them to enter their phone number and send them an SMS with the OTP. Once they enter the OTP, a passwordless user will be created and associated with their user object. Note that if you already have the user's phone number from another login method (see later), you do not need to ask them to enter their phone number again. In that way, it would be similar to as if the factor is already setup, but technically, it is not.
+- For `emailpassword`: Ask them to enter their email and password. Once they enter the password, an email password user will be created and associated with their user object. Note that if you already have the user's email from another login method (see later), you do not need to ask them to enter their email again. In that way, it would be similar to as if the factor is already setup, but technically, it is not. Here you would be calling the sign up API, vs in the other case (where the factor is already setup), you would be calling the sign in API.
+- For `thirdparty`: Ask them to login using the third party provider. Once they login, a third party user will be created and associated with their user object.
+
+In the later guides of this recipe, we will walk through each of these use cases in detail. For now though, if you want to know the status of any factor, you can call the following API:
+
+TODO... Write about calling API of MFA Info.
+
+:::important
+During factor setup, the backend may reject the setup request due to security reasons, in which case you will have to show an appropriate support request message so that the user can contact you to resolve the issue. This is explained in the later section in this page.
+:::
 
 </CustomUIContent>
 
 </PreBuiltOrCustomUISwitcher>
 
+
+## The access denied factor
+TODO (when will this be shown?)
 
 ## Handling support cases
 There are some situations in which users may be locked out of their accounts and would need you to do certain steps to unlock their accounts. These cases are:
