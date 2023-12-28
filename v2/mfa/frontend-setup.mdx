@@ -12,6 +12,7 @@ import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/s
 import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
 import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import AppInfoForm from "/src/components/appInfoForm"
 
 <MFAPaidBanner />
 
@@ -281,7 +282,135 @@ In case the user does not have the factor setup, you need to ask them to set it 
 
 In the later guides of this recipe, we will walk through each of these use cases in detail. For now though, if you want to know the status of any factor, you can call the following API:
 
-TODO... Write about calling API of MFA Info.
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+
+<TabItem value="npm">
+
+```tsx
+import MultifactorAuth from "supertokens-web-js/recipe/multifactorauth"
+import Session from "supertokens-web-js/recipe/session"
+
+async function fetchMFAInfo() {
+    if (await Session.doesSessionExist()) {
+        try {
+            let mfaInfo = await MultifactorAuth.resyncSessionAndFetchMFAInfo()
+            let factorEmails = mfaInfo.emails;
+            let factorPhoneNumbers = mfaInfo.phoneNumbers;
+
+            let emailsForOTPEmail = factorEmails["otp-email"];
+            let phoneNumbersForOTPSms = factorEmails["otp-sms"];
+            let isTotpSetup = mfaInfo.factorsThatAreAlreadySetup.includes("totp");
+            let isOTPEmailSetup = mfaInfo.factorsThatAreAlreadySetup.includes("otp-email");
+            let isOTPSmsSetup = mfaInfo.factorsThatAreAlreadySetup.includes("otp-sms");
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="script">
+
+```tsx
+import supertokensMultiFactorAuth from "supertokens-web-js-script/recipe/multifactorauth"
+import supertokensSession from "supertokens-web-js-script/recipe/session"
+async function fetchMFAInfo() {
+    if (await supertokensSession.doesSessionExist()) {
+        try {
+            let mfaInfo = await supertokensMultiFactorAuth.resyncSessionAndFetchMFAInfo()
+            let factorEmails = mfaInfo.emails;
+            let factorPhoneNumbers = mfaInfo.phoneNumbers;
+
+            let emailsForOTPEmail = factorEmails["otp-email"];
+            let phoneNumbersForOTPSms = factorEmails["otp-sms"];
+            let isTotpSetup = mfaInfo.factorsThatAreAlreadySetup.includes("totp");
+            let isOTPEmailSetup = mfaInfo.factorsThatAreAlreadySetup.includes("otp-email");
+            let isOTPSmsSetup = mfaInfo.factorsThatAreAlreadySetup.includes("otp-sms");
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+    }
+}
+```
+
+</TabItem>
+
+</NpmOrScriptTabs>
+
+- In the above code snippet, we fetch all the relevant information to know what state a factor is in so that we can decide if we should ask the user to setup the factor (for example create a new TOTP device), or just ask them to solve the auth challenge instead (for example, showing the enter TOTP screen).
+- The function is called `resyncSessionAndFetchMFAInfo` because it does two things:
+    - fetches the MFA info that you can consume to decide what state a factor is in.
+    - resyncs the value of the `n` array in the session's access token payload. As such, it's theoretically possible that the `n` array has changed when we call this function, so we should re-check if the current factor (that we are going to show the user) is still in the `n` array.
+
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+Call the following API when you want to know the status of any factor. Notice that the API call requires the session's access token as an input:
+
+```bash
+curl --location --request PUT '^{form_apiDomain}^{form_apiBasePath}/mfa/info' \
+--header 'rid: multifactorauth' \
+--header 'Authorization: Bearer ...'
+```
+
+</AppInfoForm>
+
+- In the above code snippet, we fetch all the relevant information to know what state a factor is in so that we can decide if we should ask the user to setup the factor (for example create a new TOTP device), or just ask them to solve the auth challenge instead (for example, showing the enter TOTP screen).
+- The API is `PUT` and not `GET` because it does two things:
+    - fetches the MFA info that you can consume to decide what state a factor is in.
+    - resyncs the value of the `n` array in the session's access token payload. As such, it's theoretically possible that the `n` array has changed when we call this function, so we should re-check if the current factor (that we are going to show the user) is still in the `n` array.
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+- The struture of the raw JSON response is as follows:
+    ```json
+    {
+        "status": "OK",
+        "factorsThatAreAlreadySetup": ["totp", "otp-email", "..."],
+        "emails": {
+            "otp-email": ["email1", "email2"],
+            "link-email": ["email1", "email2"],
+        },
+        "phoneNumbers": {
+            "otp-sms": ["phone1", "phone2"],
+            "link-sms": ["phone1", "phone2"],
+        }
+    }
+    ```
+
+    - `factorsThatAreAlreadySetup` is an array that contains all factors that have been setup by the user. If the current factor is a part of this array, it means that you can directly take the user to the factor challenge screen. If your factor depends on an email or phone number (like in the case of `otp-sms` or `otp-email`), then you can find the email to send the code to in the `emails` or `phoneNumbers` object in the response with the key as the current factor ID.
+    - `emails` is an object in which the key are all the factor IDs support by SuperTokens (and any custom factor ID added by you). The values against each of the keys is a list of emails that can be used to complete the factor. The first email (inddex 0) in the list is the preferred email to use for the factor. We calculate the order based on the first factor chosen by the user, and if the factor was already setup or not.
+
+    If the array is empty, it means that there is no email associated with the user for that factor. This can happen only if the factor was not already setup. In this case, you should take the user to a screen to ask them to first enter an email, and then to the challenge screen.
+
+    We will further go into this flow in our common flows guide later on.
+    - `phoneNumbers` is similar to the `emails` object, except that it contains phone numbers for factors that are based on phone numbers.
 
 :::important
 During factor setup, the backend may reject the setup request due to security reasons, in which case you will have to show an appropriate support request message so that the user can contact you to resolve the issue. This is explained in the later section in this page.
