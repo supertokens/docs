@@ -11,18 +11,20 @@ type SdkType = {
     displayName: string;
 };
 
+enum LocalStorageKeys {
+    SELECTED_FRONTEND = "selected_frontend_sdk",
+    SELECTED_BACKEND = "selected_backend_sdk"
+}
+
 export default function CompatibilityMatrix() {
+    const { cachedSelectedBackendSDK, cachedSelectedFrontendSDK } = useCachedSdkSelection();
+
     const [supportedFrontendSdks, setSupportedFrontendSdks] = useState<SdkType[] | undefined>(undefined);
     const [supportedBackendSdks, setSupportedBackedSdks] = useState<SdkType[] | undefined>(undefined);
 
-    const [selectedFrontendSdk, setSelectedFrontendSdk] = useState<SdkType | undefined>({
-        id: "auth-react",
-        displayName: "auth-react"
-    });
-    const [selectedBackendSdk, setSelectedBackendnSdk] = useState<SdkType | undefined>({
-        id: "node",
-        displayName: "node"
-    });
+    const [selectedFrontendSdk, setSelectedFrontendSdk] = useState<SdkType | undefined>(cachedSelectedFrontendSDK);
+    const [selectedBackendSdk, setSelectedBackendnSdk] = useState<SdkType | undefined>(cachedSelectedBackendSDK);
+
     const [selectedCoreVersion, setSelectedCoreVersion] = useState<SdkType | undefined>(undefined);
     const [selectedBackendSdkVersion, setSelectedBackendSdkVersion] = useState<SdkType | undefined>(undefined);
 
@@ -30,6 +32,7 @@ export default function CompatibilityMatrix() {
 
     let selectableCoreVersions: SdkType[] = [];
     let selectableBackendSdkVersions: SdkType[] = [];
+    let selectableFrontendSdkVersions: string[] = [];
 
     if (compatibilityMatrix !== undefined) {
         selectableCoreVersions = compatibilityMatrix.cores.map(version => {
@@ -55,6 +58,21 @@ export default function CompatibilityMatrix() {
                 };
             });
         }
+        const _selectedBackendSdkVersion =
+            selectedBackendSdkVersion === undefined ? selectableBackendSdkVersions[0] : selectedBackendSdkVersion;
+
+        if (_selectedBackendSdkVersion !== undefined) {
+            const indexKey = _selectedBackendSdkVersion.id
+                .split(".")
+                .slice(0, -1)
+                .join(".");
+            selectableFrontendSdkVersions = compatibilityMatrix.driverToFrontend[indexKey];
+        }
+    }
+
+    function cacheSdkSelection(frontendSdk: SdkType | undefined, backendSdk: SdkType | undefined) {
+        localStorage.setItem(LocalStorageKeys.SELECTED_FRONTEND, JSON.stringify(frontendSdk));
+        localStorage.setItem(LocalStorageKeys.SELECTED_BACKEND, JSON.stringify(backendSdk));
     }
 
     useEffect(() => {
@@ -64,7 +82,7 @@ export default function CompatibilityMatrix() {
                 const supportedBackendsResponse = await getSupportedDrivers();
                 setSupportedFrontendSdks(supportedFrotendsResponse.frontends);
                 setSupportedBackedSdks(supportedBackendsResponse.drivers);
-            } catch (error) {
+            } catch (_) {
                 alert("Something went wrong, Please try again!");
             }
         }
@@ -77,19 +95,19 @@ export default function CompatibilityMatrix() {
                 try {
                     const response = await getCompatibility(selectedBackendSdk.id, selectedFrontendSdk.id);
                     setCompatibilityMatrix(response);
-                } catch (error) {
-                    console.log({ error });
+                } catch (_) {
                     alert("Something went wrong, Please try again!");
                 }
             }
         }
         getCompatibilityMatrix();
+        cacheSdkSelection(selectedFrontendSdk, selectedBackendSdk);
     }, [selectedBackendSdk, selectedFrontendSdk]);
 
     return (
         <section>
             <div className="compatibility_matrix_box">
-                <div className="compatibility_matrix_box_header">
+                <div className="compatibility_matrix_box_header border-radius-top-11">
                     <span className="compatibility_matrix_title_one">Select SDK</span>
                 </div>
                 <div className="compatibility_matrix_box_body">
@@ -123,20 +141,27 @@ export default function CompatibilityMatrix() {
             </div>
             {selectedBackendSdk !== undefined && selectedFrontendSdk !== undefined ? (
                 <div className="sdk-selection-container-bottom">
-                    <div className="compatibility_matrix_box w-half">
-                        <div className="compatibility_matrix_box_header">
+                    <div className="compatibility_matrix_box">
+                        <div className="compatibility_matrix_box_header border-radius-top-11">
                             <span className="compatibility_matrix_title_two">supertokens-core</span>
                         </div>
-                        <div className="compatibility_matrix_box_body  border-radius-0">
+                        <div className="compatibility_matrix_box_body sdk_version_select_container">
                             {compatibilityMatrix !== undefined ? (
                                 <Select
                                     onOptionSelect={setSelectedCoreVersion}
                                     options={selectableCoreVersions}
-                                    selectedOption={selectedCoreVersion}
+                                    selectedOption={
+                                        selectedCoreVersion === undefined
+                                            ? selectableCoreVersions[0]
+                                            : selectedCoreVersion
+                                    }
                                 />
                             ) : (
                                 <div className="shimmer" style={{ height: "30px", minWidth: "140px" }}></div>
                             )}
+                        </div>
+                        <div className="compatibility_matrix_box_header">
+                            <span className="compatibility_matrix_title_two">{selectedBackendSdk.displayName}</span>
                         </div>
                         <div className="version-pills-container">
                             {selectableBackendSdkVersions.map(({ id }) => {
@@ -144,26 +169,54 @@ export default function CompatibilityMatrix() {
                             })}
                         </div>
                     </div>
-                    <div className="compatibility_matrix_box w-half">
-                        <div className="compatibility_matrix_box_header">
+                    <div className="compatibility_matrix_box">
+                        <div className="compatibility_matrix_box_header border-radius-top-11">
                             <span className="compatibility_matrix_title_two">{selectedBackendSdk.displayName}</span>
                         </div>
-                        <div className="compatibility_matrix_box_body border-radius-0">
+                        <div className="compatibility_matrix_box_body sdk_version_select_container">
                             {compatibilityMatrix !== undefined ? (
                                 <Select
                                     onOptionSelect={setSelectedBackendSdkVersion}
                                     options={selectableBackendSdkVersions}
-                                    selectedOption={selectedBackendSdkVersion}
+                                    selectedOption={
+                                        selectedBackendSdkVersion === undefined
+                                            ? selectableBackendSdkVersions[0]
+                                            : selectedBackendSdkVersion
+                                    }
                                 />
                             ) : (
                                 <div className="shimmer" style={{ height: "30px", minWidth: "140px" }}></div>
                             )}
+                        </div>
+                        <div className="compatibility_matrix_box_header">
+                            <span className="compatibility_matrix_title_two">{selectedFrontendSdk.displayName}</span>
+                        </div>
+                        <div className="version-pills-container">
+                            {selectableFrontendSdkVersions.map(version => {
+                                return <span className="version-pill">{version}</span>;
+                            })}
                         </div>
                     </div>
                 </div>
             ) : null}
         </section>
     );
+}
+
+function useCachedSdkSelection() {
+    const cachedSelectedFrontendSDK = localStorage.getItem(LocalStorageKeys.SELECTED_FRONTEND);
+    const cachedSelectedBackendSDK = localStorage.getItem(LocalStorageKeys.SELECTED_BACKEND);
+
+    return {
+        cachedSelectedFrontendSDK:
+            cachedSelectedFrontendSDK !== "undefined" && cachedSelectedFrontendSDK !== null
+                ? (JSON.parse(cachedSelectedFrontendSDK) as SdkType)
+                : undefined,
+        cachedSelectedBackendSDK:
+            cachedSelectedBackendSDK !== "undefined" && cachedSelectedBackendSDK !== null
+                ? (JSON.parse(cachedSelectedBackendSDK) as SdkType)
+                : undefined
+    };
 }
 
 type SelectProps = {
