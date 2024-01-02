@@ -78,9 +78,9 @@ export default function CompatibilityMatrix() {
     useEffect(() => {
         async function getSupportedSdks() {
             try {
-                const supportedFrotendsResponse = await getSupportedFrontends();
+                const supportedFrontendsResponse = await getSupportedFrontends();
                 const supportedBackendsResponse = await getSupportedDrivers();
-                setSupportedFrontendSdks(supportedFrotendsResponse.frontends);
+                setSupportedFrontendSdks(supportedFrontendsResponse.frontends);
                 setSupportedBackedSdks(supportedBackendsResponse.drivers);
             } catch (_) {
                 alert("Something went wrong, Please try again!");
