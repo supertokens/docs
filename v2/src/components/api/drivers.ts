@@ -15,13 +15,12 @@ export type GetSupportedDriversResponse = {
 
 /**
  * Fetches a list of supported drivers in format {id: string, displayName: string}
- * @param planType free or commercial
  */
-export default async function getSupportedDrivers(planType: any): Promise<GetSupportedDriversResponse> {
+export default async function getSupportedDrivers(): Promise<GetSupportedDriversResponse> {
     let options: httpNetworking.GETRequestConfig = {
         timeout: 50000,
         params: {
-            planType: planType === "COMMERCIAL_TRIAL" ? "COMMERCIAL" : planType,
+            planType: "FREE",
             mode: "PRODUCTION"
         }
     };
