@@ -19,14 +19,21 @@ export default function CompatibilitySelect({
     disabled = false
 }: CompatibilitySelectProps) {
     const [showOptions, setShowOptions] = useState(false);
+
+    function openSelect() {
+        if (disabled === false) {
+            setShowOptions(true);
+        }
+    }
+
     return (
         <div
             className={`select-container ${disabled === true ? "disabled" : ""}`}
             onMouseLeave={() => setShowOptions(false)}
-            onMouseEnter={() => setShowOptions(true)}
+            onMouseEnter={() => openSelect()}
             //	this code make sure that the select options show up in the mobile view
             //	since there will be no onMouseEnter event there.
-            onClick={() => setShowOptions(true)}
+            onClick={() => openSelect()}
         >
             <div className="select-action">
                 <span>{selectedOption !== undefined ? selectedOption.displayName : "Please select"} </span>
