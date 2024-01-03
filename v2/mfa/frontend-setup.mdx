@@ -13,6 +13,7 @@ import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
 import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
 import AppInfoForm from "/src/components/appInfoForm"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 
 <MFAPaidBanner />
 
@@ -66,10 +67,12 @@ supertokens.init({
 
 </FrontendPreBuiltUITabs>
 
-In the above snippet, we have configured thirdparty and email password as first factors. The second factor is configured [on the backend](./backend-setup), and is determined based on the [`n` array in the MFA claim in the session](./important-concepts#how-are-auth-factors-marked-as-completed). For example:
-- If the `n` array in the session is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
-- If the `n` array in the session is empty, that means no login challenge is needed anymore, and the user will be redirected to the success screen, which is `/` by default.
+In the above snippet, we have configured thirdparty and email password as first factors. The second factor is configured [on the backend](./backend-setup), and is determined based on the boolean value of  [`v` in the MFA claim in the session](./important-concepts#how-are-auth-factors-marked-as-completed). If the `v` is `false` in the session, it means that there are still factors pending before the user has completed login. In this case, the frontend SDK calls the MFAInfo endpoint (see more about this later) on the backend which returns the list of factors (`string[]`) that the user must complete next. For example: 
+- If the next array is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
 - If the `n` array has multiple items, we will show the user a [factor chooser screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
+- If the `next` is empty, it means that:
+    - There is a misconfig on the backend. This would show an access denied screen to the user. OR;
+    - There is another claim that needs to be finished first (like email verification), before the next MFA challenge can be shown. This can happen if you configure the backend's `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email is verified.
 
 If you notice, in the above code snippet, we have added `Passwordless.init` as well, and this handles cases where the second factor is `otp-email` or `otp-sms`. For TOTP, we have a different recipe as shown later in this guide.
 
@@ -147,10 +150,12 @@ supertokens.init({
 - If the tenant doesn't have the `firstFactors` array set, then the list of first factors that are rendered would be based on the [login methods that are enabled in that tenant's config](/docs/multitenancy/new-tenant#basic-tenant-creation).
 :::
 
-The second factor for a tenant is determined based on the [`secondaryFactors` config for the tenant](./backend-setup#multi-tenant-setup-1), or based on any custom implementation for the `getMFARequirementsForAuth` function. If the current user has specific MFA methods enabled for them, those will also be shown as options as well. Overall, the list of secondary factors will be used to build the [`n` array in the MFA claim in the session](./important-concepts#how-are-auth-factors-marked-as-completed). For example: 
-- If the `n` array in the session is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
-- If the `n` array in the session is empty, that means no login challenge is needed anymore, and the user will be redirected to the success screen, which is `/` by default.
+The second factor for a tenant is determined based on the [`secondaryFactors` config for the tenant](./backend-setup#multi-tenant-setup-1), or based on any custom implementation for the `getMFARequirementsForAuth` function. If the current user has specific MFA methods enabled for them, those will also be shown as options as well. Overall, the list of secondary factors will be used to build the `next` array returned from the MFAInfo endpoint (see more about this later). For example: 
+- If the next array is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
 - If the `n` array has multiple items, we will show the user a [factor chooser screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
+- If the `next` is empty, it means that:
+    - There is a misconfig on the backend. This would show an access denied screen to the user. OR;
+    - There is another claim that needs to be finished first (like email verification), before the next MFA challenge can be shown. This can happen if you configure the backend's `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email is verified.
 
 In the subsequent sections, we will walk through specific MFA setup examples for your reference.
 
@@ -170,12 +175,12 @@ After the first factor sign in is over, to know the next auth challenge, the fro
         "c": {
             "emailpassword": 1702877939,
         },
-        "n": ["totp"]
+        "v": false
     }
 }
 ```
 
-This means that the user has completed the email password login, and the next auth challenge is TOTP.
+This means that the user has completed the email password login, and that there are still MFA login challenge(s) remaining (`v` is `false`).
 
 ## Initialise the MFA recipe on the frontend
 
@@ -236,7 +241,7 @@ supertokens.init({
 <TabItem value="mobile">
 
 :::success
-This step is not applicable for mobile apps. Please see the next section.
+This step is not applicable for mobile apps. Please continue reading.
 :::
 
 </TabItem>
@@ -250,17 +255,170 @@ The overall lifecycle of a factor post sign in is as follows:
 ### Step 1: Asking for the first factor
 This is the same as setting up a recipe as per the other recipe guides. So please follow those.
 
-### Step 2: Checking the `n` array
-After the first factor has been completed, the frontend needs to check the values of the `n` array:
-- If this array is empty, then the user has completed MFA.
+### Step 2: Checking the `v` boolean value in the MFA claim
+After the first factor has been completed, the frontend needs to check if there are any pending MFA challenges. This can be done by reading the `v` claim from the session as shown below:
+
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+
+<TabItem value="npm">
+
+```tsx
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import Session from "supertokens-web-js/recipe/session";
+
+async function isAllMFACompleted() {
+    if (await Session.doesSessionExist()) {
+        let mfaClaim = await Session.getClaimValue({
+            claim: MultiFactorAuth.MultiFactorAuthClaim
+        });
+        if (mfaClaim === undefined) {
+            // this can happen during migration where the session is an older one
+            // that was created before MFA was introduced on the backend
+            return true;
+        } else {
+            return mfaClaim.v
+        }
+    } else {
+        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="script">
+
+```tsx
+import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+async function isAllMFACompleted() {
+    if (await supertokensSession.doesSessionExist()) {
+        let mfaClaim = await supertokensSession.getClaimValue({
+            claim: supertokensMultiFactorAuth.MultiFactorAuthClaim
+        });
+        if (mfaClaim === undefined) {
+            // this can happen during migration where the session is an older one
+            // that was created before MFA was introduced on the backend
+            return true;
+        } else {
+            return mfaClaim.v
+        }
+    } else {
+        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+    }
+}
+```
+
+</TabItem>
+
+
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<FrontendMobileSubTabs>
+
+<TabItem value="reactnative">
+
+```tsx
+import SuperTokens from 'supertokens-react-native';
+
+async function isAllMFACompleted() {
+    if (await SuperTokens.doesSessionExist()) {
+
+        // highlight-start
+        let isMFACompleted: boolean = (await SuperTokens.getAccessTokenPayloadSecurely())["st-mfa"].v;
+        return isMFACompleted
+        // highlight-end
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="android">
+
+```kotlin
+import android.app.Application
+import com.supertokens.session.SuperTokens
+import org.json.JSONObject
+
+class MainApplication: Application() {
+    fun isAllMFACompleted() {
+        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
+        val isMFACompleted: Boolean = (accessTokenPayload.get("st-mfa") as JSONObject).get("v") as Boolean;
+        return isMFACompleted;
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="ios">
+
+```swift
+import UIKit
+import SuperTokensIOS
+
+fileprivate class ViewController: UIViewController {
+    func isAllMFACompleted() {
+        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let mfaObject: [String: Any] = accessTokenPayload["st-mfa"] as? [String: Any], let isMFACompleted: Boolean = mfaObject["v"] as? Boolean {
+            return isMFACompleted;
+        }
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="flutter">
+
+```dart
+import 'package:supertokens_flutter/supertokens.dart';
+
+Future<void> isAllMFACompleted() async {
+    var accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
+
+    if (accessTokenPayload.containsKey("st-mfa")) {
+      Map<String, dynamic> mfaObject = accessTokenPayload["st-mfa"];
+
+      if (mfaObject.containsKey("v")) {
+        Boolean isMFACompleted = mfaObject["v"];
+
+        return isMFACompleted;
+      }
+    }
+}
+```
+
+</TabItem>
+
+</FrontendMobileSubTabs>
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+
+### Step 3: Checking the `next` array
+Once we determine that MFA is still pending, we need to get the list of factors the user must do next. We can do this by calling the MFA Info endpoint (see later) which returns a list of next (`string[]`) factors:
 - If there are multiple values in this array, then the frontend needs to show these options to the user and ask them to pick one of them.
 - If there is only one item, then the UI can directly ask the user to complete that factor.
+- If this array is empty, then:
+    - There is a misconfig on the backend. This would show an access denied screen to the user. OR;
+    - There is another claim that needs to be finished first (like email verification), before the next MFA challenge can be shown. This can happen if you configure the backend's `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email is verified.
 
-### Step 3: Checking for factor setup
-Once the user has picked a specific factor (or if `n` contains just one item), you need to check if that factor has already been setup for that user. A factor is setup already if:
+### Step 4: Checking for factor setup
+Once the user has picked a specific factor (or if `next` contains just one item), you need to check if that factor has already been setup for that user. A factor is setup already if:
 - For `totp`: The user has already added a totp device and verified it.
 - For `otp-email`: The user has a passwordless loginMethod that has an email associated with it.
-- For `link-email`: The user has a passwordless loginMethod that has an email associated with it. Note that this is not a valid secondary factor, but is a valie first factor.
+- For `link-email`: The user has a passwordless loginMethod that has an email associated with it. Note that this is not a valid secondary factor, but is a valid first factor.
 - For `otp-sms`: The user has a passwordless loginMethod that has a phone number associated with it.
 - For `link-sms`: The user has a passwordless loginMethod that has a phone number associated with it. Note that this is not a valid secondary factor, but is a valie first factor.
 - For `emailpassword`: The user has an email password loginMethod.
@@ -280,7 +438,21 @@ In case the user does not have the factor setup, you need to ask them to set it 
 - For `emailpassword`: Ask them to enter their email and password. Once they enter the password, an email password user will be created and associated with their user object. Note that if you already have the user's email from another login method (see later), you do not need to ask them to enter their email again. In that way, it would be similar to as if the factor is already setup, but technically, it is not. Here you would be calling the sign up API, vs in the other case (where the factor is already setup), you would be calling the sign in API.
 - For `thirdparty`: Ask them to login using the third party provider. Once they login, a third party user will be created and associated with their user object.
 
-In the later guides of this recipe, we will walk through each of these use cases in detail. For now though, if you want to know the status of any factor, you can call the following API:
+In the later guides of this recipe, we will walk through each of these use cases in detail. For now though, if you want to know the status of any factor, you can get that by calling the MFA Info endpoint (see later).
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
+## MFA Info endpoint
+
+This is an important endpoint which can be used to:
+- Know which factors are pending for the user (referred to as the the `next` array in our docs).
+- Update the `v` and `c` values in the MFA claim.
+- Get a list of all factors that are already setup for the session user.
+- For each factor, get a list of emails / phone numbers that can be used for that factor.
+
+Our pre built UI uses this API automatically, but you can also always call this API manually if you are building a custom UI:
 
 <FrontendCustomUITabs>
 
@@ -306,6 +478,7 @@ async function fetchMFAInfo() {
             let isTotpSetup = mfaInfo.factorsThatAreAlreadySetup.includes("totp");
             let isOTPEmailSetup = mfaInfo.factorsThatAreAlreadySetup.includes("otp-email");
             let isOTPSmsSetup = mfaInfo.factorsThatAreAlreadySetup.includes("otp-sms");
+            let next = mfaInfo.next;
         } catch (err: any) {
             if (err.isSuperTokensGeneralError === true) {
                 // this may be a custom error message sent from the API by you.
@@ -339,6 +512,7 @@ async function fetchMFAInfo() {
             let isTotpSetup = mfaInfo.factorsThatAreAlreadySetup.includes("totp");
             let isOTPEmailSetup = mfaInfo.factorsThatAreAlreadySetup.includes("otp-email");
             let isOTPSmsSetup = mfaInfo.factorsThatAreAlreadySetup.includes("otp-sms");
+            let next = mfaInfo.next;
         } catch (err: any) {
             if (err.isSuperTokensGeneralError === true) {
                 // this may be a custom error message sent from the API by you.
@@ -357,10 +531,10 @@ async function fetchMFAInfo() {
 
 </NpmOrScriptTabs>
 
-- In the above code snippet, we fetch all the relevant information to know what state a factor is in so that we can decide if we should ask the user to setup the factor (for example create a new TOTP device), or just ask them to solve the auth challenge instead (for example, showing the enter TOTP screen).
+- In the above code snippet, we fetch the list of factors which the user must complete next (in the `next` array) and also all the relevant information to know what state each factor is in so that we can decide if we should ask the user to setup the factor (for example create a new TOTP device), or just ask them to solve the auth challenge instead (for example, showing the enter TOTP screen).
 - The function is called `resyncSessionAndFetchMFAInfo` because it does two things:
-    - fetches the MFA info that you can consume to decide what state a factor is in.
-    - resyncs the value of the `n` array in the session's access token payload. As such, it's theoretically possible that the `n` array has changed when we call this function, so we should re-check if the current factor (that we are going to show the user) is still in the `n` array.
+    - fetches the MFA info that you can consume to know the `next` array and what state each factor is in.
+    - resyncs the value of the `v` and `c` in the session's MFA claim. As such, it's theoretically possible that the value of `v` changes when we call this function, so we should re-check that value once we call this API.
 
 
 </TabItem>
@@ -379,10 +553,10 @@ curl --location --request PUT '^{form_apiDomain}^{form_apiBasePath}/mfa/info' \
 
 </AppInfoForm>
 
-- In the above code snippet, we fetch all the relevant information to know what state a factor is in so that we can decide if we should ask the user to setup the factor (for example create a new TOTP device), or just ask them to solve the auth challenge instead (for example, showing the enter TOTP screen).
+- In the above code snippet, we fetch the list of factors which the user must complete next (in the `next` array) and also all the relevant information to know what state each factor is in so that we can decide if we should ask the user to setup the factor (for example create a new TOTP device), or just ask them to solve the auth challenge instead (for example, showing the enter TOTP screen).
 - The API is `PUT` and not `GET` because it does two things:
-    - fetches the MFA info that you can consume to decide what state a factor is in.
-    - resyncs the value of the `n` array in the session's access token payload. As such, it's theoretically possible that the `n` array has changed when we call this function, so we should re-check if the current factor (that we are going to show the user) is still in the `n` array.
+    - fetches the MFA info that you can consume to know the `next` array and what state each factor is in.
+    - resyncs the value of the `v` and `c` in the session's MFA claim. As such, it's theoretically possible that the value of `v` changes when we call this function, so we should re-check that value once we call this API.
 
 </TabItem>
 
@@ -400,7 +574,8 @@ curl --location --request PUT '^{form_apiDomain}^{form_apiBasePath}/mfa/info' \
         "phoneNumbers": {
             "otp-sms": ["+1234567890", "+1098765432"],
             "link-sms": ["+1234567890", "+1098765432"],
-        }
+        },
+        "next": ["otp-sms", "..."]
     }
     ```
 
@@ -411,14 +586,14 @@ curl --location --request PUT '^{form_apiDomain}^{form_apiBasePath}/mfa/info' \
 
     We will further go into this flow in our common flows guide later on.
     - `phoneNumbers` is similar to the `emails` object, except that it contains phone numbers for factors that are based on phone numbers.
-
-:::important
-During factor setup, the backend may reject the setup request due to security reasons, in which case you will have to show an appropriate support request message so that the user can contact you to resolve the issue. This is explained in the later section in this page.
-:::
-
-</CustomUIContent>
-
-</PreBuiltOrCustomUISwitcher>
+    - The `next` array determines the list of factors which the user must completed next. For example:
+        - If the next array is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
+        - If the `n` array has multiple items:
+            - For the pre built UI, we will show the user a [factor chooser screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
+            - For custom UI, you would need to make this screen on your own.
+        - If the `next` is empty, it means that:
+            - There is a misconfig on the backend. This would show an access denied screen to the user. OR;
+            - There is another claim that needs to be finished first (like email verification), before the next MFA challenge can be shown. This can happen if you configure the backend's `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email is verified.
 
 ## Handling support cases
 There are some situations in which users may be locked out of their accounts and would need you to do certain steps to unlock their accounts. These cases are:
