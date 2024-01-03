@@ -97,7 +97,7 @@ function RecipeCard(recipeInfo: RecipeCardInfo) {
 
     return (
         <a href={url} onClick={handleCardClick} className={`${styles.stRecipeCardContainer} ${styles[recipeInfo.className]}`}>
-            <img src={imageSrc} />
+            <img src={imageSrc} alt={linkTitle} />
             <span style={{
                 color: "#58a6ff"
             }}>{linkTitle}</span>
