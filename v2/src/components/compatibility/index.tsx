@@ -145,6 +145,8 @@ export default function CompatibilityMatrix() {
     useEffect(() => {
         getCompatibilityMatrix();
         cacheSdkSelection(selectedFrontendSdk, selectedBackendSdk);
+        setSelectedBackendSdkVersion(undefined);
+        setSelectedCoreVersion(undefined);
     }, [selectedBackendSdk, selectedFrontendSdk]);
 
     return (
@@ -232,6 +234,11 @@ export default function CompatibilityMatrix() {
                                     </span>
                                 );
                             })}
+                            {compatableBackendSdkVersions.length === 0 && compatibilityMatrix !== undefined ? (
+                                <div className="warning-message">
+                                    <p>This SDK is not compatible with selected core version.</p>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                     <div className="compatibility_matrix_box">
@@ -264,6 +271,11 @@ export default function CompatibilityMatrix() {
                                     </span>
                                 );
                             })}
+                            {compatableFrontendSdkVersions.length === 0 && compatibilityMatrix !== undefined ? (
+                                <div className="warning-message">
+                                    <p>This SDK is not compatible with selected backend SDK version.</p>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>
