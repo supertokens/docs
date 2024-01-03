@@ -273,18 +273,24 @@ export default function CompatibilityMatrix() {
 }
 
 function useCachedSdkSelection() {
-    const cachedSelectedFrontendSDK = localStorage.getItem(LocalStorageKeys.SELECTED_FRONTEND);
-    const cachedSelectedBackendSDK = localStorage.getItem(LocalStorageKeys.SELECTED_BACKEND);
+    if (typeof window !== "undefined") {
+        const cachedSelectedFrontendSDK = localStorage.getItem(LocalStorageKeys.SELECTED_FRONTEND);
+        const cachedSelectedBackendSDK = localStorage.getItem(LocalStorageKeys.SELECTED_BACKEND);
 
+        return {
+            cachedSelectedFrontendSDK:
+                cachedSelectedFrontendSDK !== "undefined" && cachedSelectedFrontendSDK !== null
+                    ? (JSON.parse(cachedSelectedFrontendSDK) as CompatibilitySelectOptionType)
+                    : undefined,
+            cachedSelectedBackendSDK:
+                cachedSelectedBackendSDK !== "undefined" && cachedSelectedBackendSDK !== null
+                    ? (JSON.parse(cachedSelectedBackendSDK) as CompatibilitySelectOptionType)
+                    : undefined
+        };
+    }
     return {
-        cachedSelectedFrontendSDK:
-            cachedSelectedFrontendSDK !== "undefined" && cachedSelectedFrontendSDK !== null
-                ? (JSON.parse(cachedSelectedFrontendSDK) as CompatibilitySelectOptionType)
-                : undefined,
-        cachedSelectedBackendSDK:
-            cachedSelectedBackendSDK !== "undefined" && cachedSelectedBackendSDK !== null
-                ? (JSON.parse(cachedSelectedBackendSDK) as CompatibilitySelectOptionType)
-                : undefined
+        cachedSelectedFrontendSDK: undefined,
+        cachedSelectedBackendSDK: undefined
     };
 }
 
