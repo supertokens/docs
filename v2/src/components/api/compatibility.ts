@@ -11,18 +11,13 @@ export type GetCompatibilityResponse = {
     driverToFrontend: { [key: string]: string[] };
 };
 
-export async function getCompatibility(
-    planType: "FREE" | "COMMERCIAL",
-    driver: string,
-    plugin: string,
-    frontend: string
-): Promise<GetCompatibilityResponse> {
+export async function getCompatibility(driver: string, frontend: string): Promise<GetCompatibilityResponse> {
     let options: httpNetworking.GETRequestConfig = {
         timeout: 50000,
         params: {
-            planType,
+            planType: "FREE",
+            plugin: "postgresql",
             driver,
-            plugin,
             frontend
         }
     };

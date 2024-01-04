@@ -1,613 +1,326 @@
-import * as React from 'react';
-
-import { getCompatibility, GetCompatibilityResponse } from '../api/compatibility';
-import getSupportedDrivers, { GetSupportedDriversResponse_Driver } from '../api/drivers';
-import getSupportedFrontends, { GetSupportedFrontendsResponse_Frontend } from '../api/frontends';
-import getSupportedPlugins, { GetSupportedPluginsResponse_Plugin } from '../api/plugins';
 import "./style.css";
 
-type Props = {
+import React, { useEffect, useState } from "react";
 
-};
+import getSupportedFrontends from "../api/frontends";
+import getSupportedDrivers from "../api/drivers";
+import { GetCompatibilityResponse, getCompatibility } from "../api/compatibility";
+import { CompatibilitySelectOptionType } from "./CompatibilitySelect";
+import Select from "./CompatibilitySelect";
 
-type State = {
-    isFetchingPageData: boolean,
-    isFetchingCompatibility: boolean,
-    isPageError: boolean,
-    plugins: GetSupportedPluginsResponse_Plugin[],
-    drivers: GetSupportedDriversResponse_Driver[],
-    frontends: GetSupportedFrontendsResponse_Frontend[],
-    selectedPlugin: string,
-    selectedDriver: string,
-    selectedFrontend: string,
-    compatibilityData: GetCompatibilityResponse,
-    shouldShowCompatibility: boolean,
-};
+enum LocalStorageKeys {
+    SELECTED_FRONTEND = "selected_frontend_sdk",
+    SELECTED_BACKEND = "selected_backend_sdk"
+}
 
-type Plan = "FREE" | "COMMERCIAL";
+export default function CompatibilityMatrix() {
+    const { cachedSelectedBackendSDK, cachedSelectedFrontendSDK } = useCachedSdkSelection();
 
-export default class CompatibilityMatrix extends React.PureComponent<Props, State> {
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            isFetchingPageData: true,
-            isFetchingCompatibility: true,
-            isPageError: false,
-            plugins: [],
-            drivers: [],
-            frontends: [],
-            selectedPlugin: "postgresql",
-            selectedDriver: "",
-            selectedFrontend: "",
-            compatibilityData: {
-                cores: [],
-                coreToDriver: {},
-                coreToPlugin: {},
-                driverToFrontend: {},
-            },
-            shouldShowCompatibility: false,
-        };
-    }
+    const [supportedFrontendSdks, setSupportedFrontendSdks] = useState<CompatibilitySelectOptionType[] | undefined>(
+        undefined
+    );
+    const [supportedBackendSdks, setSupportedBackedSdks] = useState<CompatibilitySelectOptionType[] | undefined>(
+        undefined
+    );
 
-    getCurrentPlanType = (): Plan => {
-        let isPro = window.location.href.includes("/pro/");
+    const [selectedFrontendSdk, setSelectedFrontendSdk] = useState<CompatibilitySelectOptionType | undefined>(
+        cachedSelectedFrontendSDK
+    );
+    const [selectedBackendSdk, setSelectedBackendnSdk] = useState<CompatibilitySelectOptionType | undefined>(
+        cachedSelectedBackendSDK
+    );
 
-        if (isPro) {
-            return "COMMERCIAL";
+    const [selectedCoreVersion, setSelectedCoreVersion] = useState<CompatibilitySelectOptionType | undefined>(
+        undefined
+    );
+    const [selectedBackendSdkVersion, setSelectedBackendSdkVersion] = useState<
+        CompatibilitySelectOptionType | undefined
+    >(undefined);
+
+    const [compatibilityMatrix, setCompatibilityMatrix] = useState<GetCompatibilityResponse | undefined>(undefined);
+
+    const [isFailedFetchSupportedSdks, setIsFailedFetchSupportedSdks] = useState(false);
+    const [isFailedFetchCompatibilityMatrix, setIsFailedFetchCompatibilityMatrix] = useState(false);
+
+    let selectableCoreVersions: CompatibilitySelectOptionType[] = [];
+    let selectableBackendSdkVersions: CompatibilitySelectOptionType[] = [];
+
+    let compatableFrontendSdkVersions: string[] = [];
+    let compatableBackendSdkVersions: string[] = [];
+
+    if (compatibilityMatrix !== undefined) {
+        selectableCoreVersions = Object.keys(compatibilityMatrix.coreToDriver).map(version => {
+            return {
+                id: version,
+                displayName: `${version}.X`
+            };
+        });
+
+        selectableBackendSdkVersions = Object.keys(compatibilityMatrix.driverToFrontend).map(version => {
+            return {
+                id: version,
+                displayName: `${version}.X`
+            };
+        });
+
+        const _selectedCoreVersion =
+            selectedCoreVersion === undefined ? selectableCoreVersions[0] : selectedCoreVersion;
+
+        const _selectedBackendSdkVersion =
+            selectedBackendSdkVersion === undefined ? selectableBackendSdkVersions[0] : selectedBackendSdkVersion;
+
+        if (_selectedCoreVersion !== undefined) {
+            compatableBackendSdkVersions = compatibilityMatrix.coreToDriver[_selectedCoreVersion.id];
         }
 
-        return "FREE";
-    }
-
-    getFrameworkDropdown = () => {
-        return (
-            <div
-                className="compatibility-select-container">
-                <div
-                    className="compatibility-select-title">
-                    Select a backend SDK
-                </div>
-
-                <select
-                    onChange={this.onDriverSelected}
-                    value={this.state.selectedDriver}>
-                    <option key="placeholder" value="" disabled hidden>Please select</option>
-                    {
-                        this.state.drivers.map(driver => {
-                            return (
-                                <option key={driver.id} value={driver.id}>{driver.displayName}</option>
-                            );
-                        })
-                    }
-                </select>
-            </div>
-        );
-    }
-
-    getDatabaseDropdown = () => {
-        return (
-            <div
-                style={{
-                    marginTop: "20px",
-                }}
-                className="compatibility-select-container">
-                <div
-                    className="compatibility-select-title">
-                    Select a database
-                </div>
-
-                <div
-                    style={{
-                        marginTop: "20px",
-                        fontSize: "14px",
-                    }}>
-                    If using our managed service, please select PostgreSQL
-                </div>
-
-                <select
-                    onChange={this.onPluginSelected}
-                    value={this.state.selectedPlugin}>
-                    <option key="placeholder" value="" disabled hidden>Please select</option>
-                    {
-                        this.state.plugins.map(plugin => {
-                            return (
-                                <option key={plugin.id} value={plugin.id}>{plugin.displayName}</option>
-                            );
-                        })
-                    }
-                </select>
-            </div>
-        );
-    }
-
-    getFrontendDropdown = () => {
-        return (
-            <div
-                style={{
-                    marginTop: "20px",
-                }}
-                className="compatibility-select-container">
-                <div
-                    className="compatibility-select-title">
-                    Select a frontend SDK
-                </div>
-
-                <select
-                    onChange={this.onFrontendSelected}
-                    value={this.state.selectedFrontend}>
-                    <option key="placeholder" value="" disabled hidden>Please select</option>
-                    {
-                        this.state.frontends.map(frontend => {
-                            return (
-                                <option key={frontend.id} value={frontend.id}>{frontend.displayName}</option>
-                            );
-                        })
-                    }
-                </select>
-            </div>
-        );
-    }
-
-    getDivider = () => {
-        return (
-            <div
-                style={{
-                    width: "100%",
-                    height: "1px",
-                    backgroundColor: "#dddddd",
-                    marginTop: "40px",
-                    marginBottom: "40px",
-                }}>
-
-            </div>
-        );
-    }
-
-    getTableHeader = (firstTitle: string, secondTitle: string, firstHoverText: string, secondHoverText: string) => {
-        return (
-            <div
-                className="compatibility-table-header-row">
-                <div
-                    style={{
-                        borderTopLeftRadius: "6px",
-                    }}
-                    className="compatibility-table-header">
-                    <div
-                        className="compatibility-table-header-text">
-                        {firstTitle}
-                    </div>
-                </div>
-
-                <div
-                    style={{
-                        borderTopRightRadius: "6px",
-                        borderLeftWidth: "1px",
-                        borderLeftColor: "#1a1a1a",
-                        borderLeftStyle: "solid",
-                    }}
-                    className="compatibility-table-header">
-                    <div
-                        className="compatibility-table-header-text">
-                        {secondTitle}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    getCoreToDriver = () => {
-        if (Object.keys(this.state.compatibilityData.coreToDriver).length === 0) {
-            return null;
+        if (_selectedBackendSdkVersion !== undefined) {
+            compatableFrontendSdkVersions = compatibilityMatrix.driverToFrontend[_selectedBackendSdkVersion.id];
         }
-        const currentSelectedCore = this.state.selectedDriver
-        let displayName = ''
-        for (let i = 0; i < this.state.drivers.length; i++) {
-            const currentElement = this.state.drivers[i]
-            if (currentElement.id === currentSelectedCore) {
-                displayName = currentElement.displayName
+    }
+
+    function cacheSdkSelection(
+        frontendSdk: CompatibilitySelectOptionType | undefined,
+        backendSdk: CompatibilitySelectOptionType | undefined
+    ) {
+        localStorage.setItem(LocalStorageKeys.SELECTED_FRONTEND, JSON.stringify(frontendSdk));
+        localStorage.setItem(LocalStorageKeys.SELECTED_BACKEND, JSON.stringify(backendSdk));
+    }
+
+    async function getSupportedSdks() {
+        setIsFailedFetchSupportedSdks(false);
+        setSupportedFrontendSdks(undefined);
+        setSupportedBackedSdks(undefined);
+        try {
+            const supportedFrontendsResponse = await getSupportedFrontends();
+            const supportedBackendsResponse = await getSupportedDrivers();
+            setSupportedFrontendSdks(supportedFrontendsResponse.frontends);
+            setSupportedBackedSdks(supportedBackendsResponse.drivers);
+        } catch (_) {
+            setIsFailedFetchSupportedSdks(true);
+        }
+    }
+
+    async function getCompatibilityMatrix() {
+        setIsFailedFetchCompatibilityMatrix(false);
+        setCompatibilityMatrix(undefined);
+        if (selectedBackendSdk !== undefined && selectedFrontendSdk !== undefined) {
+            try {
+                const response = await getCompatibility(selectedBackendSdk.id, selectedFrontendSdk.id);
+                setCompatibilityMatrix(response);
+            } catch (_) {
+                setIsFailedFetchCompatibilityMatrix(true);
+            }
+        }
+    }
+
+    function renderErrorMessage() {
+        function handleRetry() {
+            if (isFailedFetchSupportedSdks === true) {
+                getSupportedSdks();
+            }
+
+            if (isFailedFetchCompatibilityMatrix === true) {
+                getCompatibilityMatrix();
             }
         }
 
-        return (
-            <div
-                className="compatibility-table-section-container">
-                <div
-                    className="compatibility-table">
-                    {this.getTableHeader("supertokens-core", `${displayName}`, "", "")}
-                    {
-                        Object.keys(this.state.compatibilityData.coreToDriver).map((key, index) => {
-                            let current = this.state.compatibilityData.coreToDriver[key];
-                            let isLast = index === Object.keys(this.state.compatibilityData.coreToDriver).length - 1;
-
-                            return (
-                                <div
-                                    className="compatibility-table-row">
-                                    <div
-                                        style={{
-                                            backgroundColor: index % 2 === 0 ? "#363636" : "#292929",
-                                            borderBottomLeftRadius: isLast ? "6px" : "0px",
-                                        }}
-                                        className="compatibility-table-col">
-                                        {key}.X
-                                    </div>
-                                    <div
-                                        style={{
-                                            backgroundColor: index % 2 === 0 ? "#363636" : "#292929",
-                                            borderBottomRightRadius: isLast ? "6px" : "0px",
-                                            borderLeftWidth: "1px",
-                                            borderLeftColor: "#1a1a1a",
-                                            borderLeftStyle: "solid",
-                                        }}
-                                        className="compatibility-table-col">
-                                        {
-                                            current.map((ver, index) => {
-                                                return (
-                                                    <span
-                                                        style={{
-                                                            marginTop: index === 0 ? "0px" : "10px"
-                                                        }}>
-                                                        {ver}
-                                                    </span>
-                                                );
-                                            })
-                                        }
-                                    </div>
-                                </div>
-                            );
-                        })
-                    }
-                </div>
-            </div>
-        );
-    }
-
-    getCoreToPlugin = () => {
-        if (Object.keys(this.state.compatibilityData.coreToPlugin).length === 0) {
-            return null;
-        }
-        const currentSelectedPlugin = this.state.selectedPlugin
-        let displayName = ''
-        for (let i = 0; i < this.state.plugins.length; i++) {
-            const currentElement = this.state.plugins[i]
-            if (currentElement.id === currentSelectedPlugin) {
-                displayName = currentElement.displayName
-            }
-        }
-
-        return (
-            <div
-                className="compatibility-table-section-container">
-                <div
-                    className="compatibility-table">
-                    {this.getTableHeader("SuperTokens core version", `${displayName} plugin version`, "", "")}
-                    {
-                        Object.keys(this.state.compatibilityData.coreToPlugin).map((key, index) => {
-                            let current = this.state.compatibilityData.coreToPlugin[key];
-                            let isLast = index === Object.keys(this.state.compatibilityData.coreToPlugin).length - 1;
-
-                            return (
-                                <div
-                                    className="compatibility-table-row">
-                                    <div
-                                        style={{
-                                            backgroundColor: index % 2 === 0 ? "#363636" : "#292929",
-                                            borderBottomLeftRadius: isLast ? "6px" : "0px",
-                                        }}
-                                        className="compatibility-table-col">
-                                        {key}.X
-                                    </div>
-                                    <div
-                                        style={{
-                                            backgroundColor: index % 2 === 0 ? "#363636" : "#292929",
-                                            borderBottomRightRadius: isLast ? "6px" : "0px",
-                                            borderLeftWidth: "1px",
-                                            borderLeftColor: "#1a1a1a",
-                                            borderLeftStyle: "solid",
-                                        }}
-                                        className="compatibility-table-col">
-                                        {
-                                            current.map((ver, index) => {
-                                                return (
-                                                    <span
-                                                        style={{
-                                                            marginTop: index === 0 ? "0px" : "10px"
-                                                        }}>
-                                                        {ver}
-                                                    </span>
-                                                );
-                                            })
-                                        }
-                                    </div>
-                                </div>
-                            );
-                        })
-                    }
-                </div>
-            </div>
-        );
-    }
-
-    getDriverToFrontend = () => {
-        if (Object.keys(this.state.compatibilityData.driverToFrontend).length === 0) {
-            return null;
-        }
-        const currentSelectedFrontendSdk = this.state.selectedFrontend
-        let displayName = ''
-        for (let i = 0; i < this.state.frontends.length; i++) {
-            const currentElement = this.state.frontends[i]
-            if (currentElement.id === currentSelectedFrontendSdk) {
-                displayName = currentElement.displayName
-            }
-        }
-
-        let sdkDisplayName = ''
-        for (const item of this.state.drivers) {
-            if (item.id === this.state.selectedDriver) {
-                sdkDisplayName = item.displayName
-            }
-        }
-
-        return (
-            <div
-                className="compatibility-table-section-container">
-                <div
-                    className="compatibility-table">
-                    {this.getTableHeader(`${sdkDisplayName}`, `${displayName}`, "", "")}
-                    {
-                        Object.keys(this.state.compatibilityData.driverToFrontend).map((key, index) => {
-                            let current = this.state.compatibilityData.driverToFrontend[key];
-                            let isLast = index === Object.keys(this.state.compatibilityData.driverToFrontend).length - 1;
-                            return (
-                                <div
-                                    className="compatibility-table-row">
-                                    <div
-                                        style={{
-                                            backgroundColor: index % 2 === 0 ? "#363636" : "#292929",
-                                            borderBottomLeftRadius: isLast ? "6px" : "0px",
-                                        }}
-                                        className="compatibility-table-col">
-                                        {key}.X
-                                    </div>
-                                    <div
-                                        style={{
-                                            backgroundColor: index % 2 === 0 ? "#363636" : "#292929",
-                                            borderBottomRightRadius: isLast ? "6px" : "0px",
-                                            borderLeftWidth: "1px",
-                                            borderLeftColor: "#1a1a1a",
-                                            borderLeftStyle: "solid",
-                                        }}
-                                        className="compatibility-table-col">
-                                        {
-                                            current.map((ver, index) => {
-                                                return (
-                                                    <span
-                                                        style={{
-                                                            marginTop: index === 0 ? "0px" : "10px"
-                                                        }}>
-                                                        {ver}
-                                                    </span>
-                                                );
-                                            })
-                                        }
-                                    </div>
-                                </div>
-                            );
-                        })
-                    }
-                </div>
-            </div>
-        );
-    }
-
-    getCompatibilityContent = () => {
-        if (this.state.isFetchingCompatibility) {
+        if (isFailedFetchCompatibilityMatrix === true || isFailedFetchSupportedSdks === true) {
             return (
-                <div
-                    style={{
-                        width: "100%",
-                        display: "flex",
-                        justifyContent: "center",
-                    }}>
-                    <div className="st-spinner"></div>
+                <div className="error-message">
+                    <AlertIcon />
+                    <p>
+                        Something went wrong! please <span onClick={handleRetry}>Try again.</span>
+                    </p>
                 </div>
             );
         }
 
-        return (
-            <div
-                style={{ width: "100%" }}>
-                {/* {this.getCoreToPlugin()} */}
-                {/* {this.getDivider()} */}
-                {this.getCoreToDriver()}
-                {this.getDivider()}
-                {this.getDriverToFrontend()}
-            </div>
-        );
+        return null;
     }
 
-    render() {
-        if (this.state.isFetchingPageData) {
-            return (
-                <div
-                    id="compatibility-root">
-                    <div
-                        style={{
-                            width: "100%",
-                            height: "60vh",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                        }}>
-                        <div className="st-spinner" />
-                    </div>
+    useEffect(() => {
+        getSupportedSdks();
+    }, []);
+
+    useEffect(() => {
+        getCompatibilityMatrix();
+        cacheSdkSelection(selectedFrontendSdk, selectedBackendSdk);
+        setSelectedBackendSdkVersion(undefined);
+        setSelectedCoreVersion(undefined);
+    }, [selectedBackendSdk, selectedFrontendSdk]);
+
+    return (
+        <section>
+            <div className="compatibility_matrix_box">
+                <div className="compatibility_matrix_box_header border-radius-top-11">
+                    <span className="compatibility_matrix_title_one">Select SDK</span>
                 </div>
-            );
-        }
-
-        if (this.state.isPageError) {
-            return (
-                <div
-                    id="compatibility-root">
-                    <div
-                        style={{
-                            width: "100%",
-                            height: "60vh",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                        }}>
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
-                            }}>
-                            <div
-                                style={{
-                                    fontSize: "22px",
-                                    fontWeight: "bold",
-                                }}>
-                                Something went wrong
-                            </div>
-
-                            <div
-                                onClick={this.onPageErrorRetryClicked}
-                                style={{
-                                    display: "flex",
-                                    paddingLeft: "20px",
-                                    paddingRight: "20px",
-                                    paddingTop: "10px",
-                                    paddingBottom: "10px",
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    cursor: "pointer",
-                                    fontSize: "18px",
-                                    borderRadius: "6px",
-                                    backgroundColor: "#f2f2f2",
-                                    marginTop: "20px"
-                                }}>
-                                Try again
-                            </div>
+                <div className="compatibility_matrix_box_body">
+                    <div className="sdk-selection-container">
+                        <div>
+                            <span className="compatibility_matrix_text_one">Backend SDK</span>
+                            {supportedBackendSdks !== undefined ? (
+                                <Select
+                                    onOptionSelect={setSelectedBackendnSdk}
+                                    options={supportedBackendSdks}
+                                    selectedOption={selectedBackendSdk}
+                                />
+                            ) : isFailedFetchSupportedSdks === true ? (
+                                <Select
+                                    disabled
+                                    onOptionSelect={setSelectedBackendnSdk}
+                                    options={[]}
+                                    selectedOption={undefined}
+                                />
+                            ) : (
+                                <div className="shimmer"></div>
+                            )}
+                        </div>
+                        <div>
+                            <span className="compatibility_matrix_text_one">Frontend SDK</span>
+                            {supportedFrontendSdks !== undefined ? (
+                                <Select
+                                    onOptionSelect={setSelectedFrontendSdk}
+                                    options={supportedFrontendSdks}
+                                    selectedOption={selectedFrontendSdk}
+                                />
+                            ) : isFailedFetchSupportedSdks === true ? (
+                                <Select
+                                    disabled
+                                    onOptionSelect={setSelectedFrontendSdk}
+                                    options={[]}
+                                    selectedOption={undefined}
+                                />
+                            ) : (
+                                <div className="shimmer"></div>
+                            )}
                         </div>
                     </div>
                 </div>
-            );
-        }
-
-        return (
-            <div
-                id="compatibility-root">
-                {this.getFrameworkDropdown()}
-                {/* {this.getDatabaseDropdown()} */}
-                {this.getFrontendDropdown()}
-
-                {
-                    this.state.shouldShowCompatibility &&
-                    this.getDivider()
-                }
-
-                {
-                    this.state.shouldShowCompatibility &&
-                    this.getCompatibilityContent()
-                }
             </div>
-        );
+            {renderErrorMessage()}
+            {selectedBackendSdk !== undefined &&
+            selectedFrontendSdk !== undefined &&
+            isFailedFetchCompatibilityMatrix === false &&
+            isFailedFetchSupportedSdks === false ? (
+                <div className="sdk-selection-container-bottom">
+                    <div className="compatibility_matrix_box">
+                        <div className="compatibility_matrix_box_header border-radius-top-11">
+                            <span className="compatibility_matrix_title_two">supertokens-core</span>
+                        </div>
+                        <div className="compatibility_matrix_box_body sdk_version_select_container">
+                            {compatibilityMatrix !== undefined ? (
+                                <Select
+                                    onOptionSelect={setSelectedCoreVersion}
+                                    options={selectableCoreVersions}
+                                    selectedOption={
+                                        selectedCoreVersion === undefined
+                                            ? selectableCoreVersions[0]
+                                            : selectedCoreVersion
+                                    }
+                                />
+                            ) : (
+                                <div className="shimmer"></div>
+                            )}
+                        </div>
+                        <div className="compatibility_matrix_box_header">
+                            <span className="compatibility_matrix_title_two">{selectedBackendSdk.displayName}</span>
+                        </div>
+                        <div className="version-pills-container">
+                            {compatableBackendSdkVersions.map(version => {
+                                return (
+                                    <span key={version} className="version-pill">
+                                        {version}
+                                    </span>
+                                );
+                            })}
+                            {compatableBackendSdkVersions.length === 0 && compatibilityMatrix !== undefined ? (
+                                <div className="warning-message">
+                                    <p>This SDK is not compatible with selected core version.</p>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                    <div className="compatibility_matrix_box">
+                        <div className="compatibility_matrix_box_header border-radius-top-11">
+                            <span className="compatibility_matrix_title_two">{selectedBackendSdk.displayName}</span>
+                        </div>
+                        <div className="compatibility_matrix_box_body sdk_version_select_container">
+                            {compatibilityMatrix !== undefined ? (
+                                <Select
+                                    onOptionSelect={setSelectedBackendSdkVersion}
+                                    options={selectableBackendSdkVersions}
+                                    selectedOption={
+                                        selectedBackendSdkVersion === undefined
+                                            ? selectableBackendSdkVersions[0]
+                                            : selectedBackendSdkVersion
+                                    }
+                                />
+                            ) : (
+                                <div className="shimmer"></div>
+                            )}
+                        </div>
+                        <div className="compatibility_matrix_box_header">
+                            <span className="compatibility_matrix_title_two">{selectedFrontendSdk.displayName}</span>
+                        </div>
+                        <div className="version-pills-container">
+                            {compatableFrontendSdkVersions.map(version => {
+                                return (
+                                    <span key={version} className="version-pill">
+                                        {version}
+                                    </span>
+                                );
+                            })}
+                            {compatableFrontendSdkVersions.length === 0 && compatibilityMatrix !== undefined ? (
+                                <div className="warning-message">
+                                    <p>This SDK is not compatible with selected backend SDK version.</p>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+        </section>
+    );
+}
+
+function useCachedSdkSelection() {
+    if (typeof window !== "undefined") {
+        const cachedSelectedFrontendSDK = localStorage.getItem(LocalStorageKeys.SELECTED_FRONTEND);
+        const cachedSelectedBackendSDK = localStorage.getItem(LocalStorageKeys.SELECTED_BACKEND);
+
+        return {
+            cachedSelectedFrontendSDK:
+                cachedSelectedFrontendSDK !== "undefined" && cachedSelectedFrontendSDK !== null
+                    ? (JSON.parse(cachedSelectedFrontendSDK) as CompatibilitySelectOptionType)
+                    : undefined,
+            cachedSelectedBackendSDK:
+                cachedSelectedBackendSDK !== "undefined" && cachedSelectedBackendSDK !== null
+                    ? (JSON.parse(cachedSelectedBackendSDK) as CompatibilitySelectOptionType)
+                    : undefined
+        };
     }
+    return {
+        cachedSelectedFrontendSDK: undefined,
+        cachedSelectedBackendSDK: undefined
+    };
+}
 
-    componentDidMount() {
-        this.fetchPageData();
-    }
-
-    fetchPageData = async () => {
-        try {
-            let planType: Plan = this.getCurrentPlanType();
-
-            let pluginsResponse = await getSupportedPlugins(planType);
-            let driversResponse = await getSupportedDrivers(planType);
-            let frontendsResponse = await getSupportedFrontends();
-
-            let plugins = pluginsResponse.plugins;
-            let drivers = driversResponse.drivers;
-            let frontends = frontendsResponse.frontends;
-
-            this.setState(oldState => ({
-                ...oldState,
-                isFetchingPageData: false,
-                isPageError: false,
-                plugins: [...plugins],
-                drivers: [...drivers],
-                frontends: [...frontends],
-            }));
-        } catch (e) {
-            this.setState(oldState => ({
-                ...oldState,
-                isFetchingPageData: false,
-                isPageError: true,
-            }));
-        }
-    }
-
-    onPageErrorRetryClicked = () => {
-        window.location.reload();
-    }
-
-    onPluginSelected = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        let value = event.target.value;
-        this.setState(oldState => ({
-            ...oldState,
-            selectedPlugin: value,
-        }), () => {
-            this.fetchCompatibilityIfNeeded();
-        });
-    }
-
-    onDriverSelected = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        let value = event.target.value;
-        this.setState(oldState => ({
-            ...oldState,
-            selectedDriver: value,
-        }), () => {
-            this.fetchCompatibilityIfNeeded();
-        });
-    }
-
-    onFrontendSelected = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        let value = event.target.value;
-        this.setState(oldState => ({
-            ...oldState,
-            selectedFrontend: value,
-        }), () => {
-            this.fetchCompatibilityIfNeeded();
-        });
-    }
-
-    fetchCompatibilityIfNeeded = async () => {
-        if (this.state.selectedDriver === "" || this.state.selectedFrontend === "" || this.state.selectedPlugin === "") {
-            return;
-        }
-
-        this.setState(oldState => ({
-            ...oldState,
-            isFetchingCompatibility: true,
-            shouldShowCompatibility: true,
-        }));
-
-        try {
-            const compatibilityResponse = await getCompatibility(this.getCurrentPlanType(),
-                this.state.selectedDriver, this.state.selectedPlugin, this.state.selectedFrontend);
-            this.setState(oldState => ({
-                ...oldState,
-                isFetchingCompatibility: false,
-                compatibilityData: { ...compatibilityResponse },
-            }));
-        } catch (e) {
-            this.setState(oldState => ({
-                ...oldState,
-                isFetchingCompatibility: false,
-                shouldShowCompatibility: false,
-                isPageError: true,
-            }));
-        }
-    }
+function AlertIcon() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="13" viewBox="0 0 15 13" fill="none">
+            <path
+                d="M12.1384 12.7207H2.00263C1.37291 12.7207 0.807657 12.3958 0.490607 11.8517C0.173557 11.3077 0.169627 10.6558 0.480087 10.1079L5.54796 1.16457C5.86277 0.609024 6.43195 0.277344 7.0705 0.277344C7.70905 0.277344 8.27822 0.609024 8.59303 1.16457L13.6609 10.1079C13.9714 10.6558 13.9674 11.3077 13.6504 11.8517C13.3333 12.3958 12.7681 12.7207 12.1384 12.7207Z"
+                fill="#ED344E"
+            />
+            <path
+                d="M7.07081 0.527341C6.52348 0.527341 6.03561 0.811631 5.76577 1.28783L0.697899 10.2311C0.431789 10.7007 0.435169 11.2595 0.706929 11.7259C0.978679 12.1922 1.46317 12.4707 2.00293 12.4707H12.1387C12.6784 12.4707 13.1629 12.1922 13.4347 11.7259C13.7064 11.2595 13.7098 10.7007 13.4437 10.2311L8.37584 1.28783C8.106 0.811631 7.61814 0.527341 7.07081 0.527341ZM7.07081 0.0273438C7.7493 0.0273438 8.42779 0.365335 8.81085 1.04132L13.8787 9.98462C14.6342 11.3179 13.6711 12.9707 12.1387 12.9707H2.00293C0.470478 12.9707 -0.492632 11.3179 0.262888 9.98462L5.33076 1.04132C5.71382 0.365335 6.39231 0.0273438 7.07081 0.0273438Z"
+                fill="#DE233D"
+            />
+            <path
+                d="M7.92898 4.70916L7.81818 8.78303H6.77841L6.66477 4.70916H7.92898ZM7.2983 10.6012C7.1108 10.6012 6.94981 10.5349 6.81534 10.4023C6.68087 10.2679 6.61458 10.1069 6.61648 9.91939C6.61458 9.73378 6.68087 9.57469 6.81534 9.44212C6.94981 9.30954 7.1108 9.24325 7.2983 9.24325C7.47822 9.24325 7.63636 9.30954 7.77273 9.44212C7.90909 9.57469 7.97822 9.73378 7.98011 9.91939C7.97822 10.0444 7.94508 10.159 7.88068 10.2631C7.81818 10.3654 7.7358 10.4478 7.63352 10.5103C7.53125 10.5709 7.41951 10.6012 7.2983 10.6012Z"
+                fill="white"
+            />
+        </svg>
+    );
 }

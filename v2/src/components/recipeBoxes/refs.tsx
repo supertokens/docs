@@ -21,7 +21,7 @@ export default function Refs(props: { text: string, path: string, icon: string, 
 
     return <a href={props.path} className={`recipe_box`} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
         <div className="recipe_box__icon_wrapper">
-            <img src={hover ? imageOnHover.default : image.default} alt="" />
+            <img src={hover ? imageOnHover.default : image.default} alt={props.text} />
         </div>
         <div className="recipe_box__text">{props.text}</div>
     </a>
