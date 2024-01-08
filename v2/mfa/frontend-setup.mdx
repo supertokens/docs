@@ -407,7 +407,7 @@ Future<void> isAllMFACompleted() async {
 
 
 ### Step 3: Checking the `next` array
-Once we determine that MFA is still pending, we need to get the list of factors the user must do next. We can do this by calling the MFA Info endpoint (see later) which returns a list of next (`string[]`) factors:
+Once we determine that MFA is still pending, we need to get the list of factors the user must do next. We can do this by calling the [MFA Info endpoint](#mfa-info-endpoint) which returns a list of next (`string[]`) factors:
 - If there are multiple values in this array, then the frontend needs to show these options to the user and ask them to pick one of them.
 - If there is only one item, then the UI can directly ask the user to complete that factor.
 - If this array is empty, then:
@@ -438,7 +438,7 @@ In case the user does not have the factor setup, you need to ask them to set it 
 - For `emailpassword`: Ask them to enter their email and password. Once they enter the password, an email password user will be created and associated with their user object. Note that if you already have the user's email from another login method (see later), you do not need to ask them to enter their email again. In that way, it would be similar to as if the factor is already setup, but technically, it is not. Here you would be calling the sign up API, vs in the other case (where the factor is already setup), you would be calling the sign in API.
 - For `thirdparty`: Ask them to login using the third party provider. Once they login, a third party user will be created and associated with their user object.
 
-In the later guides of this recipe, we will walk through each of these use cases in detail. For now though, if you want to know the status of any factor, you can get that by calling the MFA Info endpoint (see later).
+In the later guides of this recipe, we will walk through each of these use cases in detail. For now though, if you want to know the status of any factor, you can get that by calling the [MFA Info endpoint](#mfa-info-endpoint).
 
 </CustomUIContent>
 
@@ -606,4 +606,45 @@ curl --location --request PUT '^{form_apiDomain}^{form_apiBasePath}/mfa/info' \
 ### Handling support cases
 There are some situations in which users may be locked out of their accounts and would need you to do certain steps to unlock their accounts. These cases are:
 
-TODO.
+#### ERR_CODE_009
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signin POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_NOT_ALLOWED",
+            "reason": "The factor you are trying to complete is not setup with the current user account."
+        }
+        ```
+    - The pre built UI never shows this error. It's only possible to get this error if you are using the custom UI, and if you have implmented an unusual flow (see next point).
+- An example scenario of when this can happen is that there exist two accounts, both created by the same user:
+    - Account 1: Is social login with google and email `e1`
+    - Account 2: Is email password with email `e1`
+
+ Both accounts are not linked. Now, a user first logs in with Account 1, and then is asked to create a password for that account. The step for creating a password will call the emailpassword sign up API which will result in a `EMAIL_ALREADY_EXISTS_ERROR`. If the frontend then tries to call the sign in API with `e1` and the supplied password, it will result in this support code. This is indeed a strange flow, but it is theoretically possible.
+
+- To resolve this, we recommend that you only call the emailpassword sign in API for MFA if the MFA endpoint API indicates that the `emailpassword` factor is already setup, else display the `EMAIL_ALREADY_EXISTS_ERROR` that's returned from the sign up API. To resolve the sign up API issue, you will have to manually link the two accounts in question.
+
+#### ERR_CODE_010
+- This can happen when the second factor is `otp-email`, `otp-sms`, `link-email` or `link-sms`:
+    - API Path is `/signinup/code/consume POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "The factor you are trying to complete is not setup with the current user account."
+        }
+        ```
+    - The pre build UI on the frontend displays this error in the following way:
+    <img src="/img/account-linking/err_010.png" alt="Pre built UI screenshot showing error message for ERR_CODE_001." style={{
+        height: "400px"
+    }}/>
+- An example scenario of when this can happen is that there exist two accounts, both created by the same user:
+    - Account 1: Is social login with google and email `e1`
+    - Account 2: Is passwordless login with email `e1`
+
+ Both accounts are not linked. Now, a user first logs in with Account 1, and then is asked to do an `otp-email` second factor. When the consume code API is called, with the right code, this error is returned since SuperTokens will not auto link the two accounts and thus can't proceed. The reason we don't auto link the accounts is cause there might be some data associated with Account 2, which may get "lost" during account linking (due to primary user ID change of Account 2).
+
+- To resolve this, you will have to manually link the two accounts in question, and make sure that data from the non primary account is transferred to the primary one (if applicable).
+
+TODO...
