@@ -1,20 +1,13 @@
-import React, {useState, useEffect} from "react";
+import React, {useState } from "react";
 import "./recipeBox.css"
 
-type size = "small" | "large"
+type Size = "small" | "large"
 
-export default function AuthMode(props: { text: string, size: size, path: string, icon: string, img?: string }) {
-    const [image, setImage] = useState({default: ""});
-    const [imageOnHover, setImageOnHover] = useState({default: ""});
-    const [imageToShow, setImageToShow] = useState({default: ""});
+export default function AuthMode(props: { text: string, size: Size, path: string, icon: string, img?: string }) {
     const [hover, setHover] = useState(false);
-    useEffect(() => {
-        setImage(require(`../../../static/img/guides/${props.icon}.svg`));
-        setImageOnHover(require(`../../../static/img/guides/${props.icon}-orange.svg`));
-        if(props.size == "large" && props.img) {
-            setImageToShow(require(`../../../static/img/guides/${props.img}.png`))
-        }
-    }, [props.size]);
+    
+    const regularIconPath = `/img/guides/${props.icon}.svg`;
+    const onHoverIconPath = `/img/guides/${props.icon}-orange.svg`;
 
     const handleMouseOver = () => {
         setHover(true);
@@ -25,7 +18,7 @@ export default function AuthMode(props: { text: string, size: size, path: string
 
     return <a href={props.path} className={`recipe_box ${props.size}`} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
         <div className="recipe_box__icon_wrapper">
-            <img src={hover ? imageOnHover.default : image.default} alt={props.text} />
+            <img src={hover ? onHoverIconPath : regularIconPath} alt={props.text} />
         </div>
         <div className="recipe_box__text">{props.text}</div>
         <div className="recipe_box__full_image">
