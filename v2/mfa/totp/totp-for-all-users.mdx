@@ -1,0 +1,255 @@
+---
+id: totp-for-all-users
+title: TOTP required for all users
+hide_title: true
+show_ui_switcher: true
+---
+
+import MFAPaidBanner from '../../community/reusableMD/mfa/MFAPaidBanner.mdx'
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import CoreInjector from "/src/components/coreInjector"
+import CustomAdmonition from "/src/components/customAdmonition"
+import {Question, Answer}from "/src/components/question"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+
+<MFAPaidBanner />
+
+# TOTP required for all users
+
+In this page, we will show you how to implement an MFA policy that requires all users to use TOTP before they get access to your application.
+
+:::note
+We assume that the first factor is [email password or social login](/docs/thirdpartyemailpassword/introduction), but the same set of steps will be applicable for other first factor types as well.
+:::
+
+## Single tenant setup
+
+### Backend setup
+To start with, we cofigure the backend in the following way:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import totp from "supertokens-node/recipe/totp"
+import Session from "supertokens-node/recipe/session"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init(),
+        ThirdPartyEmailPassword.init({
+            //...
+        }),
+        // highlight-next-line
+        totp.init(),
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+                            return ["totp"]
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+- Notice that we have initialised the TOTP recipe in the `recipeList`.
+- We also override the `getMFARequirementsForAuth` function to indicate that `totp` must be completed before the user can access the app. Notice that we do not check for the userId there, and return `totp` for all users.
+
+Once the user finishes the first factor (for example, with emailpassword), their session access token payload will look like this:
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+        },
+        "v": false
+    }
+}
+```
+
+The `v` being `false` indicates that there are still factors that are pending. After the user has finished totp, the payload will look like:
+
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+            "totp": 1702877999
+        },
+        "v": true
+    }
+}
+```
+
+Indicating that the user has finished all required factors, and should be allowed to access the app.
+
+### Frontend setup
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+We start by modifying the `init` function call on the frontend like so:
+
+<FrontendPreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+```tsx
+import supertokens from "supertokens-auth-react"
+import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword"
+import Passwordless from "supertokens-auth-react/recipe/passwordless"
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
+import totp from "supertokens-auth-react/recipe/totp"
+
+supertokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        ThirdPartyEmailPassword.init( /* ... */),
+        // highlight-start
+        totp.init(),
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"]
+        })
+        // highlight-end
+    ]
+})
+```
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+- Just like on the backend, we init the `totp` recipe in the `recipeList`.
+- We also init the `MultiFactorAuth` recipe, and pass in the first factors that we want to use. In this case, that would be `emailpassword` and `thirdparty` - same as the backend.
+
+Next, we need to add the TOTP pre built UI when rendering the SuperTokens component:
+
+<FrontendPreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+<Question
+    question="Do you use react-router-dom?">
+<Answer title="Yes">
+
+```tsx
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
+import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui"; 
+import { TOTPPreBuiltUI } from "supertokens-auth-react/recipe/totp/prebuiltui";
+import reactRouterDOM, { Routes, BrowserRouter as Router, Route } from "react-router-dom";
+
+function App() {
+  return (
+    <SuperTokensWrapper>
+      <div className="App">
+        <Router>
+          <div className="fill">
+            <Routes>
+              // highlight-start 
+              {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [ThirdPartyEmailPasswordPreBuiltUI, TOTPPreBuiltUI])}
+              // highlight-end 
+              // ... other routes
+            </Routes>
+          </div>
+        </Router>
+      </div>
+    </SuperTokensWrapper>
+  );
+}
+```
+
+</Answer>
+
+<Answer title="No">
+
+```tsx
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
+import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui"; 
+import { TOTPPreBuiltUI } from "supertokens-auth-react/recipe/totp/prebuiltui";
+
+function App() {
+  // highlight-start
+  if (canHandleRoute([ThirdPartyEmailPasswordPreBuiltUI, TOTPPreBuiltUI])) {
+      return getRoutingComponent([ThirdPartyEmailPasswordPreBuiltUI, TOTPPreBuiltUI])
+  }
+  // highlight-end
+  return (
+    <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>
+  );
+}
+```
+
+</Answer>
+
+</Question>
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+With the above configuration, users will see emailpassword or social login UI when they visit the auth page. After completing that, users will be redirected to `/auth/mfa/totp` (assuming that the `websiteBasePath` is `/auth`) where they will be asked to setup the factor, or complete the TOTP challenge if they have already setup the factor before. The UI for this screen looks like:
+- [Factor Setup UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/totp-mfa--device-setup-with-single-next-option)
+- [Verification UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/totp-mfa--verification-with-single-next-option) (In case the factor is already setup before).
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+TODO..
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
+## Multi tenant setup
+
+TODO..
+
+## Protecting frontend and backend routes

@@ -4,6 +4,14 @@ module.exports = {
     "important-concepts",
     "backend-setup",
     "frontend-setup",
+    {
+      type: 'category',
+      label: 'TOTP',
+      collapsed: true,
+      items: [
+        "totp/totp-for-all-users"
+      ],
+    },
     "how-it-works",
     {
       type: 'category',
