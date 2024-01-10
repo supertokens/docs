@@ -14,6 +14,10 @@ import CustomAdmonition from "/src/components/customAdmonition"
 import {Question, Answer}from "/src/components/question"
 import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import AppInfoForm from "/src/components/appInfoForm"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 
 <MFAPaidBanner />
 
@@ -241,6 +245,219 @@ With the above configuration, users will see emailpassword or social login UI wh
 </PreBuiltUIContent>
 
 <CustomUIContent>
+
+We start by initialising the MFA and TOTP recipe on the frontend like so:
+
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+
+<TabItem value="npm">
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import Totp from "supertokens-web-js/recipe/totp";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        // highlight-start
+        MultiFactorAuth.init(),
+        Totp.init()
+        // highlight-end
+    ],
+});
+```
+
+</TabItem>
+
+<TabItem value="script">
+
+```tsx
+import supertokens from "supertokens-web-js-script";
+import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
+import supertokensTotp from "supertokens-web-js-script/recipe/totp";
+supertokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        // highlight-start
+        supertokensMultiFactorAuth.init(),
+        supertokensTotp.init()
+        // highlight-end
+    ],
+});
+```
+
+</TabItem>
+
+
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+:::success
+This step is not applicable for mobile apps. Please continue reading.
+:::
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+After the first factor login, you should start by [checking the access token payload and see if the MFA claim's `v` boolean is `false`](../frontend-setup#step-2-checking-the---custv-boolean-value-in-the-mfa-claim--cust). If it's not, then we can redeirect the user to the application page.
+
+If it's `false`, the frontend then needs to [call the MFA endpoint](../frontend-setup#mfa-info-endpoint) to get information about which factor the user should be asked to complete next. Based on the backend config in this page, the `next` array will contain `["totp"]`.
+
+There are two possibilities here:
+- Case 1: The user needs to setup a TOTP device cause they don't have any.
+- Case 2: The user already has a verified device setup and needs to complete the TOTP challenge.
+
+We can know which case it is by checking if `"totp"` is one of the items in the `factorsThatAreAlreadySetup` array that is returned from the API call above. If it is in the array, then it's case 2, otherwise it's case 1.
+
+#### Case 1 implementation: User needs to setup a new TOTP device
+In this case, we do two things:
+- Call an API on the backend to create a device. This returns the device secret that can be displayed to the user. The user is supposed to scan this using their authenticator app, to add a new entry for your app in their authenticator app.
+- Then the user needs to enter the TOTP code that's displayed to them in the app, and this needs to be sent to the backend to mark the device as verified. Once a device is marked as verified, only then will the `factorsThatAreAlreadySetup` array contain `"totp"` the next time they login.
+
+To create a new device, call the following API:
+
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+
+<TabItem value="npm">
+
+```tsx
+import Totp from "supertokens-web-js/recipe/totp"
+import Session from "supertokens-web-js/recipe/session"
+
+async function createNewTotpDevice() {
+    if (await Session.doesSessionExist()) {
+        try {
+            let deviceResponse = await Totp.createDevice();
+            if (deviceResponse.status === "DEVICE_ALREADY_EXISTS_ERROR") {
+                // this should only come here if you are passing a custom device name when calling the above function.
+                throw new Error("Should never come here")
+                // device created successfully
+            }
+            // device created successfully
+            let qrCodeString = deviceResponse.qrCodeString;
+            let secret = deviceResponse.secret;
+
+            // TODO: display a QR code based on qrCodeString, and also an option to view
+            // the secret if the user is unable to scan the QR code.
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("TOTP device creation can only happen after the first factor is complete and when a session exists")
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="script">
+
+```tsx
+import supertokensTotp from "supertokens-web-js-script/recipe/totp"
+import supertokensSession from "supertokens-web-js-script/recipe/session"
+async function createNewTotpDevice() {
+    if (await supertokensSession.doesSessionExist()) {
+        try {
+            let deviceResponse = await supertokensTotp.createDevice();
+            if (deviceResponse.status === "DEVICE_ALREADY_EXISTS_ERROR") {
+                // this should only come here if you are passing a custom device name when calling the above function.
+                throw new Error("Should never come here")
+                // device created successfully
+            }
+            // device created successfully
+            let qrCodeString = deviceResponse.qrCodeString;
+            let secret = deviceResponse.secret;
+
+            // TODO: display a QR code based on qrCodeString, and also an option to view
+            // the secret if the user is unable to scan the QR code.
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("TOTP device creation can only happen after the first factor is complete and when a session exists")
+    }
+}
+```
+
+</TabItem>
+
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+Call the following API when you want to know the status of any factor. Notice that the API call requires the session's access token as an input (this should be added by our frontend SDK automatically):
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/totp/device' \
+--header 'rid: totp' \
+--header 'Authorization: Bearer ...'
+```
+
+</AppInfoForm>
+
+The above API call returns the following response:
+
+```json
+{
+    "status": "OK",
+    "issuerName": "...",
+    "deviceName": "TOTP Device 1",
+    "secret": "....",
+    "userIdentifier": "user@example.com",
+    "qrCodeString": "..."    
+} | {
+    "status": "DEVICE_ALREADY_EXISTS_ERROR" | "GENERAL_ERROR"
+}
+```
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+- When device registeration is successful, the API returns the `secret` and `qrCodeString` which are to be displayed to the user. For React apps, we recommend using the [react-qr-code library](https://github.com/rosskhanas/react-qr-code) to display the QR code.
+- The API call can also take a `deviceName` (as a POST body prop) which attemps to create a TOTP device with the provideed name. A status of `"DEVICE_ALREADY_EXISTS_ERROR"` is returned in case a verified device with the input name already exists. In this case, you should ask the user to enter a different name. Note that this status is only returned in case you are passing in a custom device name. The default naming strategy is to name the device "TOTP Device N", where we start N from 1, and keep increasing it.
+- A status of `"GENERAL_ERROR"` is returned in case you specifically return that from a backend API override.
+
+Once a device has been created, and scanned, you need to ask the user to enter the TOTP and send that to the API as shown in Case 2 below.
+
+#### Case 2 implementation: User needs to complete the TOTP challenge
 
 TODO..
 
