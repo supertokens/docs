@@ -576,17 +576,17 @@ The above API call returns the following response:
 
 ```json
 {
-        "status": "OK";
-        "wasAlreadyVerified": false;
+        "status": "OK",
+        "wasAlreadyVerified": false
 } | {
-        "status": "INVALID_TOTP_ERROR";
-        "currentNumberOfFailedAttempts": 1;
-        "maxNumberOfFailedAttempts": 5;
+        "status": "INVALID_TOTP_ERROR",
+        "currentNumberOfFailedAttempts": 1,
+        "maxNumberOfFailedAttempts": 5
 } | {
-        "status": "LIMIT_REACHED_ERROR";
-        "retryAfterMs": 900000;
+        "status": "LIMIT_REACHED_ERROR",
+        "retryAfterMs": 900000
 } | {
-        "status": "UNKNOWN_DEVICE_ERROR" | "GENERAL_ERROR";
+        "status": "UNKNOWN_DEVICE_ERROR" | "GENERAL_ERROR"
 }
 ```
 
@@ -599,11 +599,145 @@ The above API call returns the following response:
 - A status of `INVALID_TOTP_ERROR` means that the user has entered the an incorrect TOTP and needs to retry. The response contains two other props:
     - `currentNumberOfFailedAttempts`: The number of times the user has entered an incorrect TOTP so far.
     - `maxNumberOfFailedAttempts`: The maximum number of times the user can enter an incorrect TOTP before they are asked to wait (see `status: LIMIT_REACHED_ERROR`). This is set to 5 by default in the core. You can change this value by setting the `totp_max_attempts` in the core config.
-- A status of `LIMIT_REACHED_ERROR` indicates that the user has entered an incorrectt TOTP too many times and must wait before trying again (otherwise even valie TOTPs will fail). The waiting period is indicated by the `retryAfterMs` prop in the response body. By default, it is 15 mins, but it can be chanegd by setting the value for `totp_rate_limit_cooldown_sec` in the core config.
+- A status of `LIMIT_REACHED_ERROR` indicates that the user has entered an incorrect TOTP too many times and must wait before trying again (otherwise even valie TOTPs will fail). The waiting period is indicated by the `retryAfterMs` prop in the response body. By default, it is 15 mins, but it can be chanegd by setting the value for `totp_rate_limit_cooldown_sec` in the core config.
 - A status of `UNKNOWN_DEVICE_ERROR` is possible due to a racce condition in which the device is somehow deleted before the verification call is made.
 - A status of `GENERAL_ERROR` is possible if you specifically return that from a backend API override.
 
+On successful verification of a device, the `totp` factor is marked as completed and the `v` value is updated in the session based on if there are any more factors that the user needs to complete. The next step would be to check this `v` value in the MFA claim and redirect the user to the application page, or get information about the next factor using the [MFA info endpoint](../frontend-setup#mfa-info-endpoint).
+
 #### Case 2 implementation: User needs to complete the TOTP challenge
+
+This case is when the user already has a device setup (`totp` is in `factorsThatAreAlreadySetup`), and needs to complete the TOTP challenge. In this case, you should show the user an input box asking them to enter their TOTP from the authenticator app and then call the following API:
+
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+
+<TabItem value="npm">
+
+```tsx
+import Totp from "supertokens-web-js/recipe/totp"
+import Session from "supertokens-web-js/recipe/session"
+
+async function verifyTotpCode(userInputTotp: string) {
+    if (await Session.doesSessionExist()) {
+        try {
+            let verifyResponse = await Totp.verifyCode({
+                totp: userInputTotp,
+            });
+            if (verifyResponse.status === "LIMIT_REACHED_ERROR") {
+                // this can happen if the user has entered a wrong TOTP too many times.
+                window.alert("Totp incorrect. Please try again in " + (verifyResponse.retryAfterMs / 1000) + " seconds");
+            } else if (verifyResponse.status === "INVALID_TOTP_ERROR") {
+                window.alert("Totp incorrect. Please try again");
+            } else {
+                // Code verified successfully
+            }
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("TOTP code verification can only happen after the first factor is complete and when a session exists")
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="script">
+
+```tsx
+import supertokensTotp from "supertokens-web-js-script/recipe/totp"
+import supertokensSession from "supertokens-web-js-script/recipe/session"
+async function verifyTotpCode(userInputTotp: string) {
+    if (await supertokensSession.doesSessionExist()) {
+        try {
+            let verifyResponse = await supertokensTotp.verifyCode({
+                totp: userInputTotp,
+            });
+            if (verifyResponse.status === "LIMIT_REACHED_ERROR") {
+                // this can happen if the user has entered a wrong TOTP too many times.
+                window.alert("Totp incorrect. Please try again in " + (verifyResponse.retryAfterMs / 1000) + " seconds");
+            } else if (verifyResponse.status === "INVALID_TOTP_ERROR") {
+                window.alert("Totp incorrect. Please try again");
+            } else {
+                // Code verified successfully
+            }
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("TOTP code verification can only happen after the first factor is complete and when a session exists")
+    }
+}
+```
+
+</TabItem>
+
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+Notice that the API call requires the session's access token as an input (this should be added by our frontend SDK automatically):
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/totp/verify' \
+--header 'rid: totp' \
+--header 'Authorization: Bearer ...'
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "totp": "..."
+}'
+```
+
+</AppInfoForm>
+
+The above API call returns the following response:
+
+```json
+{
+        "status": "OK" | "UNKNOWN_USER_ID_ERROR"
+} | {
+        "status": "INVALID_TOTP_ERROR",
+        "currentNumberOfFailedAttempts": 1,
+        "maxNumberOfFailedAttempts": 5,
+} | {
+        "status": "LIMIT_REACHED_ERROR",
+        "retryAfterMs": 900000,
+} | {
+        "status": "GENERAL_ERROR"
+}
+```
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+- A `status: OK` indicates that verification was successful. SuperTokens tries and verifies the input TOTP against all verified devices that belong to this user.
+- A status of `INVALID_TOTP_ERROR` means that the user has entered the an incorrect TOTP and needs to retry. The response contains two other props:
+    - `currentNumberOfFailedAttempts`: The number of times the user has entered an incorrect TOTP so far.
+    - `maxNumberOfFailedAttempts`: The maximum number of times the user can enter an incorrect TOTP before they are asked to wait (see `status: LIMIT_REACHED_ERROR`). This is set to 5 by default in the core. You can change this value by setting the `totp_max_attempts` in the core config.
+- A status of `LIMIT_REACHED_ERROR` indicates that the user has entered an incorrect TOTP too many times and must wait before trying again (otherwise even valie TOTPs will fail). The waiting period is indicated by the `retryAfterMs` prop in the response body. By default, it is 15 mins, but it can be chanegd by setting the value for `totp_rate_limit_cooldown_sec` in the core config.
+- A status of `UNKNOWN_USER_ID_ERROR` is possible due to a racce condition in which all devices that the user had are deleted by the time this API is called. In this case, you can ask users to setup a new device.
+- A status of `GENERAL_ERROR` is possible if you specifically return that from a backend API override.
+
+On successful verification of the code, the `totp` factor is marked as completed and the `v` value is updated in the session based on if there are any more factors that the user needs to complete. The next step would be to check this `v` value in the MFA claim and redirect the user to the application page, or get information about the next factor using the [MFA info endpoint](../frontend-setup#mfa-info-endpoint).
 
 </CustomUIContent>
 
