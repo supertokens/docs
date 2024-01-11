@@ -1,0 +1,250 @@
+---
+id: totp-for-opt-in-users
+title: TOTP for specific users
+hide_title: true
+show_ui_switcher: true
+---
+
+import MFAPaidBanner from '../../community/reusableMD/mfa/MFAPaidBanner.mdx'
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import CoreInjector from "/src/components/coreInjector"
+import CustomAdmonition from "/src/components/customAdmonition"
+import {Question, Answer}from "/src/components/question"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import AppInfoForm from "/src/components/appInfoForm"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
+
+<MFAPaidBanner />
+
+# TOTP for specific users
+
+In this page, we will show you how to implement an MFA policy that requires certain users to do TOTP. You can decide which those users are based on any criteria. For example:
+- Only users that have an `admin` role require to do TOTP; OR
+- Only users that have enabled TOTP on their account require to do TOTP; OR
+- Only users that have a paid account require to do TOTP.
+
+Whatever the criteria is, the steps to implementing this type of a flow is the same.
+
+:::note
+We assume that the first factor is [email password or social login](/docs/thirdpartyemailpassword/introduction), but the same set of steps will be applicable for other first factor types as well.
+:::
+
+## Single tenant setup
+
+### Backend setup
+
+<details><summary>Example 1: Only enable TOTP for users that have an `admin` role</summary>
+
+To start with, we cofigure the backend in the following way:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import totp from "supertokens-node/recipe/totp"
+import Session from "supertokens-node/recipe/session"
+import UserRoles from "supertokens-node/recipe/userroles"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init(),
+        UserRoles.init(),
+        ThirdPartyEmailPassword.init({
+            //...
+        }),
+        // highlight-next-line
+        totp.init(),
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+                            let roles = await UserRoles.getRolesForUser(input.tenantId, input.user.id)
+                            if (roles.roles.includes("admin")) {
+                                // we only want totp for admins
+                                return ["totp"]
+                            } else {
+                                // no MFA for non admin users.
+                                return []
+                            }
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+
+We override the `getMFARequirementsForAuth` function to indicate that `totp` must be completed only for users that have the `admin` role. You can also have any other criteria here.
+
+</details>
+
+<details><summary>Example 2: Ask for TOTP only for users that have enabled TOTP on their account</summary>
+
+To start with, we cofigure the backend in the following way:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth"
+import totp from "supertokens-node/recipe/totp"
+import Session from "supertokens-node/recipe/session"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init(),
+        ThirdPartyEmailPassword.init({
+            //...
+        }),
+        // highlight-start
+        totp.init({
+            override: {
+                apis: (oI) => {
+                    return {
+                        ...oI,
+                        verifyDevicePOST: async function (input) {
+                            let response = await oI.verifyDevicePOST(input);
+                            if (response.status === "OK") {
+                                // device successfully verified. First we save that this user has enabled TOTP in the user metadata.
+                                // The multifactorauth recipe will pick this value up next time the user is trying to login, and
+                                // ask them to enter the TOTP code.
+                                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(input.session.getUserId(), MultiFactorAuth.FACTORS.TOTP);
+
+                                // then we mark the TOTP factor as complete for this session, so that the user is not asked to enter the TOTP
+                                // code in this session since they have just completed it now.
+                                await MultiFactorAuth.markFactorAsCompleteInSession(input.session, MultiFactorAuth.FACTORS.TOTP);
+                            }
+                            return response;
+                        }
+                    }
+                }
+            }
+        }),
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+        })
+        // highlight-end
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+We simply initialise the multi factor auth recipe here without any override to `getMFARequirementsForAuth`. The default implementation of this function already checks what factors are enabled for a user and returns those. So all we need to do is mark `totp` as enabled for a user as soon as they have setup a device successfuly. This happens in the `verifyDevicePOST` API override as seen above - once a device is verified, we mark the `totp` factor as enabled for the user, and the next time they login, they will be asked to complete the TOTP challenge.
+
+</details>
+
+In both of the examples above, notice that we have initialised the TOTP recipe in the `recipeList`. Here are some of the configrations you can add to the `totp.init` function:
+- `issuer`: This is the name that will show up in the TOTP app for the user. By default, this is equal to the `appName` config, however, you can change it to something else using this property.
+- `defaultSkew`: The default value of this is `1`, which means that TOTP codes that were generated 1 tick before, and that will be generated 1 tick after from the current tick will be accepted at any given time (including the TOTP of the current tick, of course).
+-  `defaultPeriod`: The default value of this is `30`, which means that the current tick is valie for 30 seconds. So by default, a TOTP code that's just shown to the user, is valid for 60 seconds (`defaultPeriod + defaultSkew*defaultPeriod` seconds)
+- `getUserIdentifierInfoForUserId`: This is a function which takes in a userId and returns an identifier for the user (if there is one). By default, this is the email or phone number of the user from the first factor, but you can change that behaviour by providing an implementation for this function.
+
+Once the user finishes the first factor (for example, with emailpassword), their session access token payload will look like this (for those that require TOTP):
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+        },
+        "v": false
+    }
+}
+```
+
+The `v` being `false` indicates that there are still factors that are pending. After the user has finished totp, the payload will look like:
+
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+            "totp": 1702877999
+        },
+        "v": true
+    }
+}
+```
+
+Indicating that the user has finished all required factors, and should be allowed to access the app.
+
+### Frontend setup
+
+TODO...
+
+## Multi tenant setup
+
+### Backend setup
+TODO...
+
+### Frontend setup
+TODO...
+
+## Protecting frontend and backend routes
+
+See the section on [protecting frontend and backend routes](../protect-routes).

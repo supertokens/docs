@@ -9,7 +9,8 @@ module.exports = {
       label: 'TOTP',
       collapsed: true,
       items: [
-        "totp/totp-for-all-users"
+        "totp/totp-for-all-users",
+        "totp/totp-for-opt-in-users",
       ],
     },
     "how-it-works",
