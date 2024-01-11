@@ -426,7 +426,7 @@ async function createNewTotpDevice() {
 
 <AppInfoForm askForAPIDomain>
 
-Call the following API when you want to know the status of any factor. Notice that the API call requires the session's access token as an input (this should be added by our frontend SDK automatically):
+Notice that the API call requires the session's access token as an input (this should be added by our frontend SDK automatically):
 
 ```bash
 curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/totp/device' \
@@ -459,14 +459,151 @@ The above API call returns the following response:
     - The `secret` and `qrCodeString` which are to be displayed to the user. For React apps, we recommend using the [react-qr-code library](https://github.com/rosskhanas/react-qr-code) to display the QR code.
     - The `issuerName` is the name will show up on the TOTP app for the user. By default, this is equal to the `appName` config on the backend sdk, however, you can change it to something else in the backend `totp.init` config.
     - The `userIdentifier` is the email / phone number of the user based on the first factor. This will also be shown in the TOTP app along with the `issuerName`.
-- The API call can also take a `deviceName` (as a POST body prop) which attemps to create a TOTP device with the provideed name. A status of `"DEVICE_ALREADY_EXISTS_ERROR"` is returned in case a verified device with the input name already exists. In this case, you should ask the user to enter a different name. Note that this status is only returned in case you are passing in a custom device name. The default naming strategy is to name the device "TOTP Device N", where we start N from 1, and keep increasing it.
+- The API call can also take a `deviceName` (as a POST body prop) which attemps to create a TOTP device with the provideed name. A status of `"DEVICE_ALREADY_EXISTS_ERROR"` is returned in case a verified device with the input name already exists. In this case, you should ask the user to enter a different name. Note that this status is only returned in case you are passing in a custom device name. The default naming strategy is to name the device "TOTP Device N", where we start N from 1, and keep increasing it. This value can be used to identify a device from the backend point of view, for operations like deleting a device.
 - A status of `"GENERAL_ERROR"` is returned in case you specifically return that from a backend API override.
 
-Once a device has been created, and scanned, you need to ask the user to enter the TOTP and send that to the API as shown in Case 2 below.
+Once a device has been created, and scanned, you need to ask the user to enter the TOTP and call the API below to verify it:
+
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+
+<TabItem value="npm">
+
+```tsx
+import Totp from "supertokens-web-js/recipe/totp"
+import Session from "supertokens-web-js/recipe/session"
+
+async function verifyTotpDevice(deviceName: string, userInputTotp: string) {
+    if (await Session.doesSessionExist()) {
+        try {
+            let verifyResponse = await Totp.verifyDevice({
+                deviceName,
+                totp: userInputTotp,
+            });
+            if (verifyResponse.status === "UNKNOWN_DEVICE_ERROR") {
+                // this can happen due to a race condition wherein the device is deleted before verifying.
+                window.alert("Something went wrong. Please reload and try again");
+            } else if (verifyResponse.status === "LIMIT_REACHED_ERROR") {
+                // this can happen if the user has entered a wrong TOTP too many times.
+                window.alert("Totp incorrect. Please try again in " + (verifyResponse.retryAfterMs / 1000) + " seconds");
+            } else if (verifyResponse.status === "INVALID_TOTP_ERROR") {
+                window.alert("Totp incorrect. Please try again");
+            } else {
+                // Device verified successfully
+            }
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("TOTP device verification can only happen after the first factor is complete and when a session exists")
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="script">
+
+```tsx
+import supertokensTotp from "supertokens-web-js-script/recipe/totp"
+import supertokensSession from "supertokens-web-js-script/recipe/session"
+async function verifyTotpDevice(deviceName: string, userInputTotp: string) {
+    if (await supertokensSession.doesSessionExist()) {
+        try {
+            let verifyResponse = await supertokensTotp.verifyDevice({
+                deviceName,
+                totp: userInputTotp,
+            });
+            if (verifyResponse.status === "UNKNOWN_DEVICE_ERROR") {
+                // this can happen due to a race condition wherein the device is deleted before verifying.
+                window.alert("Something went wrong. Please reload and try again");
+            } else if (verifyResponse.status === "LIMIT_REACHED_ERROR") {
+                // this can happen if the user has entered a wrong TOTP too many times.
+                window.alert("Totp incorrect. Please try again in " + (verifyResponse.retryAfterMs / 1000) + " seconds");
+            } else if (verifyResponse.status === "INVALID_TOTP_ERROR") {
+                window.alert("Totp incorrect. Please try again");
+            } else {
+                // Device verified successfully
+            }
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("TOTP device verification can only happen after the first factor is complete and when a session exists")
+    }
+}
+```
+
+</TabItem>
+
+</NpmOrScriptTabs>
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<AppInfoForm askForAPIDomain>
+
+Notice that the API call requires the session's access token as an input (this should be added by our frontend SDK automatically):
+
+```bash
+curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/totp/device/verify' \
+--header 'rid: totp' \
+--header 'Authorization: Bearer ...'
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "deviceName": "...",
+    "totp": "..."
+}'
+```
+
+</AppInfoForm>
+
+The above API call returns the following response:
+
+```json
+{
+        "status": "OK";
+        "wasAlreadyVerified": false;
+} | {
+        "status": "INVALID_TOTP_ERROR";
+        "currentNumberOfFailedAttempts": 1;
+        "maxNumberOfFailedAttempts": 5;
+} | {
+        "status": "LIMIT_REACHED_ERROR";
+        "retryAfterMs": 900000;
+} | {
+        "status": "UNKNOWN_DEVICE_ERROR" | "GENERAL_ERROR";
+}
+```
+
+</TabItem>
+
+</FrontendCustomUITabs>
+
+- The `deviceName`, which is an input to the API is one of the props returned from the previous API call to create a device.
+- When verification is successful (`status: "OK"`), the device is marked as verified in the database and can be used for the TOTP challenge next time around. The boolean `wasAlreadyVerified` indicates if the device was already verified before this call was made.
+- A status of `INVALID_TOTP_ERROR` means that the user has entered the an incorrect TOTP and needs to retry. The response contains two other props:
+    - `currentNumberOfFailedAttempts`: The number of times the user has entered an incorrect TOTP so far.
+    - `maxNumberOfFailedAttempts`: The maximum number of times the user can enter an incorrect TOTP before they are asked to wait (see `status: LIMIT_REACHED_ERROR`). This is set to 5 by default in the core. You can change this value by setting the `totp_max_attempts` in the core config.
+- A status of `LIMIT_REACHED_ERROR` indicates that the user has entered an incorrectt TOTP too many times and must wait before trying again (otherwise even valie TOTPs will fail). The waiting period is indicated by the `retryAfterMs` prop in the response body. By default, it is 15 mins, but it can be chanegd by setting the value for `totp_rate_limit_cooldown_sec` in the core config.
+- A status of `UNKNOWN_DEVICE_ERROR` is possible due to a racce condition in which the device is somehow deleted before the verification call is made.
+- A status of `GENERAL_ERROR` is possible if you specifically return that from a backend API override.
 
 #### Case 2 implementation: User needs to complete the TOTP challenge
-
-TODO..
 
 </CustomUIContent>
 
