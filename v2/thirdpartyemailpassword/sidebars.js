@@ -203,11 +203,10 @@ module.exports = {
                 "nextjs/app-directory/init",
                 "nextjs/app-directory/setting-up-frontend",
                 "nextjs/app-directory/setting-up-backend",
-                "nextjs/app-directory/session-helpers",
                 "nextjs/app-directory/protecting-route",
                 {
                   type: "category",
-                  label: "6. Checking for sessions in API routes",
+                  label: "5. Checking for sessions in API routes",
                   items: [
                     "nextjs/app-directory/session-verification-session-guard",
                     "nextjs/app-directory/session-verification-middleware",
