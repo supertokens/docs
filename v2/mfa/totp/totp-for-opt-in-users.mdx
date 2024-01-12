@@ -539,7 +539,7 @@ In order to add a new device, you can call the following function from the front
 import MultiFactorAuth from 'supertokens-auth-react/recipe/multifactorauth';
 
 async function redirectToTotpSetupScreen() {
-    MultiFactorAuth.redirectToFactor("totp", true, true)
+    MultiFactorAuth.redirectToFactor(MultiFactorAuth.Factors.TOTP, true, true)
 }
 ```
 
@@ -575,7 +575,191 @@ In order to create a new device, you should redirect the user to a page which cr
 ## Multi tenant setup
 
 ### Backend setup
-TODO...
+A user can be a part of several tenants. So if you want TOTP to be enabled for a specific user across all the tenants that they are a part of, the steps are the same as in the [Backend setup](#backend-setup) section above.
+
+However, if you want TOTP to be enabled for a specific user, for a specific tenant (or a sub set of tenants that the user is a part of), then you will have to add additional logic to the `getMFARequirementsForAuth` function override. Modifying the example code from the [Backend setup](#backend-setup) section above:
+
+<details><summary>Example 1: Only enable TOTP for users that have an `admin` role</summary>
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import totp from "supertokens-node/recipe/totp"
+import Session from "supertokens-node/recipe/session"
+import UserRoles from "supertokens-node/recipe/userroles"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init(),
+        UserRoles.init(),
+        ThirdPartyEmailPassword.init({
+            //...
+        }),
+        // highlight-next-line
+        totp.init(),
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+                            let roles = await UserRoles.getRolesForUser(input.tenantId, input.user.id)
+                            // highlight-next-line
+                            if (roles.roles.includes("admin") && await shouldRequireTotpForTenant(input.tenantId)) {
+                                // we only want totp for admins
+                                return ["totp"]
+                            } else {
+                                // no MFA for non admin users.
+                                return []
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    ]
+})
+
+// highlight-start
+async function shouldRequireTotpForTenant(tenantId: string): Promise<boolean> {
+    // your logic here to determine if we care about totp for this tenant or not.
+    return true;
+}
+// highlight-end
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+- The implementation of `shouldRequireTotpForTenant` is entirely up to you.
+
+</details>
+
+<details><summary>Example 2: Ask for TOTP only for users that have enabled TOTP on their account</summary>
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth"
+import totp from "supertokens-node/recipe/totp"
+import Session from "supertokens-node/recipe/session"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init(),
+        ThirdPartyEmailPassword.init({
+            //...
+        }),
+        totp.init({
+            override: {
+                apis: (oI) => {
+                    return {
+                        ...oI,
+                        verifyDevicePOST: async function (input) {
+                            let response = await oI.verifyDevicePOST(input);
+                            if (response.status === "OK") {
+                                // device successfully verified. First we save that this user has enabled TOTP in the user metadata.
+                                // The multifactorauth recipe will pick this value up next time the user is trying to login, and
+                                // ask them to enter the TOTP code.
+                                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(input.session.getUserId(), MultiFactorAuth.FACTORS.TOTP);
+                            }
+                            return response;
+                        }
+                    }
+                }
+            }
+        }),
+        MultiFactorAuth.init({
+            firstFactors: ["emailpassword", "thirdparty"],
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+                            if (input.requiredSecondaryFactorsForUser.includes("totp")) {
+                                // this means that the user has finished setting up a device from their settings page.
+                                if (await shouldRequireTotpForTenant(input.tenantId)) {
+                                    return ["totp"]
+                                }
+                            }
+                            // no totp required for input.user, with the input.tenant.
+                            return []
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+})
+
+// highlight-start
+async function shouldRequireTotpForTenant(tenantId: string): Promise<boolean> {
+    // your logic here to determine if we care about totp for this tenant or not.
+    return true;
+}
+// highlight-end
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+- We provide an override for `getMFARequirementsForAuth` which checks if TOTP is enabled for the user, and also take into account the tenantId to decide if we want to have this user go through the TOTP flow whilst logging into this tenant. The implementation of `shouldRequireTotpForTenant` is entirely up to you.
+
+</details>
 
 ### Frontend setup
 TODO...
