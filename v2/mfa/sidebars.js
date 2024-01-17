@@ -13,6 +13,15 @@ module.exports = {
         "totp/totp-for-opt-in-users",
       ],
     },
+    {
+      type: 'category',
+      label: 'Email / SMS OTP',
+      collapsed: true,
+      items: [
+        "email-sms-otp/otp-for-all-users",
+        "email-sms-otp/otp-for-opt-in-users",
+      ],
+    },
     "how-it-works",
     {
       type: 'category',
