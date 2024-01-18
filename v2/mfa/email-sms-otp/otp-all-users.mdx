@@ -258,7 +258,7 @@ function App() {
 
 With the above configuration, users will see emailpassword or social login UI when they visit the auth page. After completing that, users will be redirected to `/auth/mfa/otp-email` (assuming that the `websiteBasePath` is `/auth`) where they will be asked to complete the OTP challenge. The UI for this screen looks like:
 - [Factor Setup UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--setup-single-next-option) (This is in case the first factor doesn't provide an email for the user. In our example, the first factor does provide an email since it's email password or social login).
-- [Verification UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--verification-with-single-next-option) (In case the factor is already setup before).
+- [Verification UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--verification-with-single-next-option).
 
 :::caution
 If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialise the Passwordless recipe again. You just have to make sure that the `contactMethod` and `flowType` are set correctly.
@@ -378,11 +378,11 @@ On successful verification of the code, the `email-otp` factor is marked as comp
 
 ## Multi tenant setup
 
-In a multi tenancy setup, you may want to enable TOTP for all users, across all tenants, or for all users within specific tenants. For enabling for all users across all tenants, it's the same steps as in the [single tenant setup](#single-tenant-setup) section above, so in this section, we will focus on enabling TOTP for all users within specific tenants.
+In a multi tenancy setup, you may want to enable email / phone OTP for all users, across all tenants, or for all users within specific tenants. For enabling for all users across all tenants, it's the same steps as in the [single tenant setup](#single-tenant-setup) section above, so in this section, we will focus on enabling OTP for all users within specific tenants.
 
 ### Backend setup
 
-To start, we will initialise the TOTP and the MultiFactorAuth recipes in the following way:
+To start, we will initialise the Passwordless and the MultiFactorAuth recipes in the following way:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -391,7 +391,7 @@ To start, we will initialise the TOTP and the MultiFactorAuth recipes in the fol
 import supertokens from "supertokens-node";
 import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
-import totp from "supertokens-node/recipe/totp"
+import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
 
 supertokens.init({
@@ -409,7 +409,10 @@ supertokens.init({
             //...
         }),
         // highlight-start
-        totp.init(),
+        Passwordless.init({
+            contactMethod: "EMAIL",
+            flowType: "USER_INPUT_CODE"
+        }),
         MultiFactorAuth.init()
         // highlight-end
     ]
@@ -435,7 +438,7 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 
 Unlike the single tenant setup, we do not provide any config to the `MultiFactorAuth` recipe cause all the necessary configuration will be done on a tenant level.
 
-To configure TOTP requirement for a tenant, we can call the following API:
+To configure email-otp requirement for a tenant, we can call the following API:
 
 <BackendSDKTabs enableCurl>
 
@@ -448,8 +451,9 @@ async function createNewTenant() {
     let resp = await Multitenancy.createOrUpdateTenant("customer1", {
         emailPasswordEnabled: true,
         thirdPartyEnabled: true,
+        passwordlessEnabled: true,
         firstFactors: ["emailpassword", "thirdparty"],
-        requiredSecondaryFactors: ["totp"]
+        requiredSecondaryFactors: ["otp-email"]
     });
 
     if (resp.createdNew) {
@@ -488,8 +492,9 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/appid-<APP_ID>
     "tenantId": "customer1",
     "emailPasswordEnabled": true,
     "thirdPartyEnabled": true,
+    "passwordlessEnabled": true,
     "firstFactors": ["emailpassword", "thirdparty"],
-    "requiredSecondaryFactors": ["totp"]
+    "requiredSecondaryFactors": ["otp-email"]
 }'
 ```
 
@@ -500,7 +505,7 @@ curl --location --request PUT '^{coreInjector_uri_without_quotes}/appid-<APP_ID>
 </BackendSDKTabs>
 
 - In the above, we set the `firstFactors` to `["emailpassword", "thirdparty"]` to indicate that the first factor can be either emailpassword or thirdparty. We also configure that `emailPasswordEnabled` and `thirdPartyEnabled` are enabled for the tenant.
-- We set the `requiredSecondaryFactors` to `["totp"]` to indicate that TOTP is required for all users in this tenant. The default implementation of `getMFARequirementsForAuth` in the `MultiFactorAuth` takes this into account.
+- We set the `requiredSecondaryFactors` to `["otp-email"]` to indicate that OTP email is required for all users in this tenant. The default implementation of `getMFARequirementsForAuth` in the `MultiFactorAuth` takes this into account. We also set `passwordlessEnabled` to `true` since the `otp-email` factor is provided by the `Passwordless` recipe.
 
 Once the user finishes the first factor (for example, with emailpassword), their session access token payload will look like this:
 ```json
@@ -514,14 +519,14 @@ Once the user finishes the first factor (for example, with emailpassword), their
 }
 ```
 
-The `v` being `false` indicates that there are still factors that are pending. After the user has finished totp, the payload will look like:
+The `v` being `false` indicates that there are still factors that are pending. After the user has finished otp-email challenge, the payload will look like:
 
 ```json
 {
     "st-mfa": {
         "c": {
             "emailpassword": 1702877939,
-            "totp": 1702877999
+            "otp-email": 1702877999
         },
         "v": true
     }
@@ -530,100 +535,9 @@ The `v` being `false` indicates that there are still factors that are pending. A
 
 Indicating that the user has finished all required factors, and should be allowed to access the app.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+:::caution
+If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialise the Passwordless recipe again. You just have to make sure that the `contactMethod` and `flowType` are set correctly.
+:::
 
 
 ### Frontend setup
@@ -642,7 +556,7 @@ We start by modifying the `init` function call on the frontend like so:
 import supertokens from "supertokens-auth-react"
 import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword"
 import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
-import totp from "supertokens-auth-react/recipe/totp"
+import Passwordless from "supertokens-auth-react/recipe/passwordless"
 import Multitenancy from "supertokens-auth-react/recipe/multitenancy"
 
 supertokens.init({
@@ -656,7 +570,10 @@ supertokens.init({
     recipeList: [
         ThirdPartyEmailPassword.init( /* ... */),
         // highlight-start
-        totp.init(),
+        Passwordless.init({
+            contactMethod: "EMAIL",
+            flowType: "USER_INPUT_CODE"
+        }),
         MultiFactorAuth.init(),
         Multitenancy.init({
             override: {
@@ -679,12 +596,12 @@ supertokens.init({
 
 </FrontendPreBuiltUITabs>
 
-- Just like on the backend, we init the `totp` recipe in the `recipeList`.
+- Just like on the backend, we init the `Passwordless` recipe in the `recipeList`. Make sure that the config for it is consistent with whats on the backend.
 - We also init the `MultiFactorAuth` recipe. Notice that unlike the single tenant setup, we do not specify the `firstFactors` here. That information is fetched based on the tenantId you provide the SDK with.
 - We have set `usesDynamicLoginMethods: true` so that the SDK knows to fetch the login methods dynamically based on the tenantId.
 - Finally, we init the multi tenancy recipe and provide a method for getting the tenantId. 
 
-Next, we need to add the TOTP pre built UI when rendering the SuperTokens component:
+Next, we need to add the Passwordless pre built UI when rendering the SuperTokens component:
 
 <FrontendPreBuiltUITabs>
 
@@ -698,7 +615,7 @@ Next, we need to add the TOTP pre built UI when rendering the SuperTokens compon
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui"; 
-import { TOTPPreBuiltUI } from "supertokens-auth-react/recipe/totp/prebuiltui";
+import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
 import reactRouterDOM, { Routes, BrowserRouter as Router, Route } from "react-router-dom";
 
 function App() {
@@ -709,7 +626,7 @@ function App() {
           <div className="fill">
             <Routes>
               // highlight-start 
-              {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [ThirdPartyEmailPasswordPreBuiltUI, TOTPPreBuiltUI])}
+              {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])}
               // highlight-end 
               // ... other routes
             </Routes>
@@ -729,12 +646,12 @@ function App() {
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
 import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui"; 
-import { TOTPPreBuiltUI } from "supertokens-auth-react/recipe/totp/prebuiltui";
+import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
 
 function App() {
   // highlight-start
-  if (canHandleRoute([ThirdPartyEmailPasswordPreBuiltUI, TOTPPreBuiltUI])) {
-      return getRoutingComponent([ThirdPartyEmailPasswordPreBuiltUI, TOTPPreBuiltUI])
+  if (canHandleRoute([ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])) {
+      return getRoutingComponent([ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])
   }
   // highlight-end
   return (
@@ -751,9 +668,13 @@ function App() {
 
 </FrontendPreBuiltUITabs>
 
-With the above configuration, users will see the first and second factor based on the tenant configuration. For the tenant we configured above, users will see email password or social login first. After completing that, users will be redirected to `/auth/mfa/totp` (assuming that the `websiteBasePath` is `/auth`) where they will be asked to setup the factor, or complete the TOTP challenge if they have already setup the factor before. The UI for this screen looks like:
-- [Factor Setup UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/totp-mfa--device-setup-with-single-next-option)
-- [Verification UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/totp-mfa--verification-with-single-next-option) (In case the factor is already setup before).
+With the above configuration, users will see the first and second factor based on the tenant configuration. For the tenant we configured above, users will see email password or social login first. After completing that, users will be redirected to `/auth/mfa/otp-email` (assuming that the `websiteBasePath` is `/auth`) where they will be asked complete the OTP challenge. The UI for this screen looks like:
+- [Factor Setup UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--setup-single-next-option) (This is in case the first factor doesn't provide an email for the user. In our example, the first factor does provide an email since it's email password or social login).
+- [Verification UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--verification-with-single-next-option).
+
+:::caution
+If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialise the Passwordless recipe again. You just have to make sure that the `contactMethod` and `flowType` are set correctly.
+:::
 
 </PreBuiltUIContent>
 
@@ -765,16 +686,6 @@ The steps here are the same as in [the single tenant setup above](#frontend-setu
 
 </PreBuiltOrCustomUISwitcher>
 
-<!-- COPY SECTION -->
-<!-- ./mfa/totp/totp-for-all-users.mdx -->
-<!-- 1 -->
-
 ## Protecting frontend and backend routes
 
 See the section on [protecting frontend and backend routes](../protect-routes).
-
-## Frontend events, pre and post API hooks
-
-TODO..
-
-<!-- END COPY SECTION -->
