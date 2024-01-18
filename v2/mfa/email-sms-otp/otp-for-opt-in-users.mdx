@@ -2,7 +2,6 @@
 id: otp-for-opt-in-users
 title: OTP for specific users
 hide_title: true
-show_ui_switcher: true
 ---
 
 import MFAPaidBanner from '../../community/reusableMD/mfa/MFAPaidBanner.mdx'
@@ -23,10 +22,10 @@ import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 
 # OTP for specific users
 
-In this page, we will show you how to implement an MFA policy that requires certain users to do TOTP. You can decide which those users are based on any criteria. For example:
-- Only users that have an `admin` role require to do TOTP; OR
-- Only users that have enabled TOTP on their account require to do TOTP; OR
-- Only users that have a paid account require to do TOTP.
+In this page, we will show you how to implement an MFA policy that requires certain users to do the OTP challenge via email or sms. You can decide which those users are based on any criteria. For example:
+- Only users that have an `admin` role require to do OTP; OR
+- Only users that have enabled OTP on their account require to do OTP; OR
+- Only users that have a paid account require to do OTP.
 
 Whatever the criteria is, the steps to implementing this type of a flow is the same.
 
@@ -38,9 +37,9 @@ We assume that the first factor is [email password or social login](/docs/thirdp
 
 ### Backend setup
 
-<details><summary>Example 1: Only enable TOTP for users that have an `admin` role</summary>
+<details><summary>Example 1: Only enable OTP for users that have an `admin` role</summary>
 
-To start with, we cofigure the backend in the following way:
+To start with, we configure the backend in the following way:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -49,7 +48,7 @@ To start with, we cofigure the backend in the following way:
 import supertokens from "supertokens-node";
 import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
-import totp from "supertokens-node/recipe/totp"
+import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
 import UserRoles from "supertokens-node/recipe/userroles"
 
@@ -69,7 +68,10 @@ supertokens.init({
             //...
         }),
         // highlight-next-line
-        totp.init(),
+        Passwordless.init({
+            contactMethod: "EMAIL",
+            flowType: "USER_INPUT_CODE"
+        }),
         MultiFactorAuth.init({
             firstFactors: ["emailpassword", "thirdparty"],
             // highlight-start
@@ -80,8 +82,8 @@ supertokens.init({
                         getMFARequirementsForAuth: async function (input) {
                             let roles = await UserRoles.getRolesForUser(input.tenantId, input.user.id)
                             if (roles.roles.includes("admin")) {
-                                // we only want totp for admins
-                                return ["totp"]
+                                // we only want otp-email for admins
+                                return ["otp-email"]
                             } else {
                                 // no MFA for non admin users.
                                 return []
@@ -114,13 +116,13 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </BackendSDKTabs>
 
 
-We override the `getMFARequirementsForAuth` function to indicate that `totp` must be completed only for users that have the `admin` role. You can also have any other criteria here.
+We override the `getMFARequirementsForAuth` function to indicate that `otp-email` must be completed only for users that have the `admin` role. You can also have any other criteria here.
 
 </details>
 
-<details><summary>Example 2: Ask for TOTP only for users that have enabled TOTP on their account</summary>
+<details><summary>Example 2: Ask for OTP only for users that have enabled OTP on their account</summary>
 
-To start with, we cofigure the backend in the following way:
+To start with, we configure the backend in the following way:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -129,7 +131,7 @@ To start with, we cofigure the backend in the following way:
 import supertokens from "supertokens-node";
 import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
 import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth"
-import totp from "supertokens-node/recipe/totp"
+import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
 
 supertokens.init({
@@ -147,18 +149,22 @@ supertokens.init({
             //...
         }),
         // highlight-start
-        totp.init({
+        Passwordless.init({
+            contactMethod: "EMAIL",
+            flowType: "USER_INPUT_CODE",
             override: {
                 apis: (oI) => {
                     return {
                         ...oI,
-                        verifyDevicePOST: async function (input) {
-                            let response = await oI.verifyDevicePOST!(input);
-                            if (response.status === "OK") {
-                                // device successfully verified. First we save that this user has enabled TOTP in the user metadata.
+                        consumeCodePOST: async function (input) {
+                            let response = await oI.consumeCodePOST!(input);
+                            if (response.status === "OK" && input.session !== undefined) {
+                                // We do this only if a session exists, which means that it's not being called for first factor login.
+                                
+                                // OTP challenge completed successfully. We save that this user has enabled otp-email in the user metadata.
                                 // The multifactorauth recipe will pick this value up next time the user is trying to login, and
                                 // ask them to enter the TOTP code.
-                                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(input.session.getUserId(), MultiFactorAuth.FactorIds.TOTP);
+                                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(input.session.getUserId(), MultiFactorAuth.FactorIds.OTP_EMAIL);
                             }
                             return response;
                         }
@@ -191,15 +197,12 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </TabItem>
 </BackendSDKTabs>
 
-We simply initialise the multi factor auth recipe here without any override to `getMFARequirementsForAuth`. The default implementation of this function already checks what factors are enabled for a user and returns those. So all we need to do is mark `totp` as enabled for a user as soon as they have setup a device successfuly. This happens in the `verifyDevicePOST` API override as shown above. Once a device is verified, we mark the `totp` factor as enabled for the user, and the next time they login, they will be asked to complete the TOTP challenge.
+- We simply initialise the multi factor auth recipe here without any override to `getMFARequirementsForAuth`. The default implementation of this function already checks what factors are enabled for a user and returns those. So all we need to do is mark `otp-email` as enabled for a user as soon as they have completed the OTP challenge successfuly. This happens in the `consumeCodePOST` API override as shown above. Once the code is consumed successfully, we mark the `otp-email` factor as enabled for the user, and the next time they login, they will be asked to complete the OTP challenge.
+- Notice that before we call `addToRequiredSecondaryFactorsForUser`, we check if there is an input session or not. We only want to call `addToRequiredSecondaryFactorsForUser` function if there is a session which indicates that the user has finished some first factor already.
 
 </details>
 
-In both of the examples above, notice that we have initialised the TOTP recipe in the `recipeList`. Here are some of the configrations you can add to the `totp.init` function:
-- `issuer`: This is the name that will show up in the TOTP app for the user. By default, this is equal to the `appName` config, however, you can change it to something else using this property.
-- `defaultSkew`: The default value of this is `1`, which means that TOTP codes that were generated 1 tick before, and that will be generated 1 tick after from the current tick will be accepted at any given time (including the TOTP of the current tick, of course).
--  `defaultPeriod`: The default value of this is `30`, which means that the current tick is valie for 30 seconds. So by default, a TOTP code that's just shown to the user, is valid for 60 seconds (`defaultPeriod + defaultSkew*defaultPeriod` seconds)
-- `getUserIdentifierInfoForUserId`: This is a function which takes in a userId and returns an identifier for the user (if there is one). By default, this is the email or phone number of the user from the first factor, but you can change that behaviour by providing an implementation for this function.
+In both of the examples above, notice that we have initialised the Passwordless recipe in the `recipeList`. In this example, we only want to enable email based OTP, so we set the `contactMethod` to `EMAIL` and `flowType` to `USER_INPUT_CODE` (i.e. otp). If instead, you want to use phone sms based OTP, you should set the contact method to `PHONE`. If you want to give users both the options, or for some users use email, and for others use phone, you should set `contactMethod` to `EMAIL_OR_PHONE`.
 
 Once the user finishes the first factor (for example, with emailpassword), their session access token payload will look like this (for those that require TOTP):
 ```json
@@ -213,14 +216,14 @@ Once the user finishes the first factor (for example, with emailpassword), their
 }
 ```
 
-The `v` being `false` indicates that there are still factors that are pending. After the user has finished totp, the payload will look like:
+The `v` being `false` indicates that there are still factors that are pending. After the user has finished email-otp, the payload will look like:
 
 ```json
 {
     "st-mfa": {
         "c": {
             "emailpassword": 1702877939,
-            "totp": 1702877999
+            "email-otp": 1702877999
         },
         "v": true
     }
@@ -229,24 +232,23 @@ The `v` being `false` indicates that there are still factors that are pending. A
 
 Indicating that the user has finished all required factors, and should be allowed to access the app.
 
+:::caution
+If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialise the Passwordless recipe again.
+:::
+
 ### Frontend setup
 
 There are two parts to this:
-- Configuring the frontend to show the TOTP UI when required during login / sign up
-- Allowing users to enable / disable TOTP on their account via the settings page (If you are following Example 2 from above).
+- Configuring the frontend to show the OTP challenge UI when required during login / sign up
+- Allowing users to enable / disable OTP challenge on their account via the settings page (If you are following Example 2 from above).
 
-The first part is identical to the steps mentioned in [this section](./totp-for-all-users#frontend-setup), so please follow that.
+The first part is identical to the steps mentioned in [this section](./otp-for-all-users#frontend-setup), so please follow that.
 
-The second part, which is only applicable in case you want to allow users to enable / disable TOTP themselves, can be achieved by creating the following flow on your frontend:
-- When the user navigates to their settings page, you can show them if TOTP is enabled or not.
-- If enabled, you can show them a list of current TOTP devices with options to remove any.
-- If enabled, you can show them an option to add a new TOTP device.
+The second part, which is only applicable in case you want to allow users to enable / disable OTP themselves, can be achieved by creating the following flow on your frontend:
+- When the user navigates to their settings page, you can show them if OTP challenge is enabled or not.
+- If enabled, you can allow them to disable it, or vice versa.
 
-In order to know if the user has enabled TOTP, you can make an API your backend which calls the following function:
-
-<!-- COPY SECTION -->
-<!-- ./mfa/backend-setup.mdx -->
-<!-- 1 -->
+In order to know if the user has enabled OTP, you can make an API your backend which calls the following function:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -254,9 +256,9 @@ In order to know if the user has enabled TOTP, you can make an API your backend 
 ```ts
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
-async function isTotpEnabledForUser(userId: string) {
+async function isOTPEmailEnabledForUser(userId: string) {
     let factors = await MultiFactorAuth.getRequiredSecondaryFactorsForUser(userId)
-    return factors.includes("totp")
+    return factors.includes("otp-email")
 }
 ```
 
@@ -277,9 +279,7 @@ Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-i
 </TabItem>
 </BackendSDKTabs>
 
-<!-- END COPY SECTION -->
-
-If the user wants to enable or disable TOTP for them, you can make an API on your backend which calls the following function:
+If the user wants to enable or disable otp-email for them, you can make an API on your backend which calls the following function:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -288,11 +288,11 @@ If the user wants to enable or disable TOTP for them, you can make an API on you
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 async function enableMFAForUser(userId: string) {
-    await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(userId, "totp")
+    await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(userId, "otp-email")
 }
 
 async function disableMFAForUser(userId: string) {
-    await MultiFactorAuth.removeFromRequiredSecondaryFactorsForUser(userId, "totp")
+    await MultiFactorAuth.removeFromRequiredSecondaryFactorsForUser(userId, "otp-email")
 }
 ```
 
@@ -313,273 +313,19 @@ Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-i
 </TabItem>
 </BackendSDKTabs>
 
-In order to list existing TOTP devices on the frontend, you can call the following API:
-
-<FrontendCustomUITabs>
-
-<TabItem value="web">
-
-<NpmOrScriptTabs>
-
-<TabItem value="npm">
-
-```tsx
-import Session from "supertokens-web-js/recipe/session"
-import Totp from "supertokens-web-js/recipe/totp"
-
-async function fetchTOTPDevices() {
-    if (await Session.doesSessionExist()) {
-        try {
-            let totpDevicesResponse = await Totp.listDevices();
-            for (let i = 0; i < totpDevicesResponse.devices.length; i++) {
-                let currDevice = totpDevicesResponse.devices[i];
-                console.log(currDevice.name) // by default, this will be like "TOTP Device 1"
-                console.log(currDevice.verified)
-            }
-        } catch (err: any) {
-            if (err.isSuperTokensGeneralError === true) {
-                // this may be a custom error message sent from the API by you.
-                window.alert(err.message);
-            } else {
-                window.alert("Oops! Something went wrong.");
-            }
-        }
-    } else {
-        throw new Error("Illegal function call: Please only call this function if a session exists")
-    }
-}
-```
-
-</TabItem>
-
-<TabItem value="script">
-
-```tsx
-import supertokensSession from "supertokens-web-js-script/recipe/session"
-import supertokensTotp from "supertokens-web-js-script/recipe/totp"
-async function fetchTOTPDevices() {
-    if (await supertokensSession.doesSessionExist()) {
-        try {
-            let totpDevicesResponse = await supertokensTotp.listDevices();
-            for (let i = 0; i < totpDevicesResponse.devices.length; i++) {
-                let currDevice = totpDevicesResponse.devices[i];
-                console.log(currDevice.name) // by default, this will be like "TOTP Device 1"
-                console.log(currDevice.verified)
-            }
-        } catch (err: any) {
-            if (err.isSuperTokensGeneralError === true) {
-                // this may be a custom error message sent from the API by you.
-                window.alert(err.message);
-            } else {
-                window.alert("Oops! Something went wrong.");
-            }
-        }
-    } else {
-        throw new Error("Illegal function call: Please only call this function if a session exists")
-    }
-}
-```
-
-</TabItem>
-
-</NpmOrScriptTabs>
-
-</TabItem>
-
-<TabItem value="mobile">
-
-<AppInfoForm askForAPIDomain>
-
-Notice that the API call requires the session's access token as an input (this should be added by our frontend SDK automatically):
-
-```bash
-curl --location --request GET '^{form_apiDomain}^{form_apiBasePath}/totp/device/list' \
---header 'rid: totp' \
---header 'Authorization: Bearer ...'
-```
-
-</AppInfoForm>
-
-The output from the API call is as follows:
-
-```json
-{
-    "status": "OK",
-    "devices": {
-        "name": "TOTP Device 1",
-        "period": 30,
-        "skew": 1,
-        "verified": true
-    }[];
-} | {
-    "status": "GENERAL_ERROR"
-}
-```
-
-</TabItem>
-
-</FrontendCustomUITabs>
-
-- A `status: OK` will contain the list of all devices that exist for this user, across all of the user's tenants. We recommend only showing the devices that are `verified` to the user.
-- A `status: GENERAL_ERROR`: This is possible if you have overriden the backend API to send back a custom error message which should be displayed on the frontend
-
-In order to remove a device, you can call the following API from the frontend:
-
-<FrontendCustomUITabs>
-
-<TabItem value="web">
-
-<NpmOrScriptTabs>
-
-<TabItem value="npm">
-
-```tsx
-import Session from "supertokens-web-js/recipe/session"
-import Totp from "supertokens-web-js/recipe/totp"
-
-async function removeTOTPDevices(deviceName: string) {
-    if (await Session.doesSessionExist()) {
-        try {
-            await Totp.removeDevice({
-                deviceName
-            });
-            // device is removed
-        } catch (err: any) {
-            if (err.isSuperTokensGeneralError === true) {
-                // this may be a custom error message sent from the API by you.
-                window.alert(err.message);
-            } else {
-                window.alert("Oops! Something went wrong.");
-            }
-        }
-    } else {
-        throw new Error("Illegal function call: Please only call this function if a session exists")
-    }
-}
-```
-
-</TabItem>
-
-<TabItem value="script">
-
-```tsx
-import supertokensSession from "supertokens-web-js-script/recipe/session"
-import supertokensTotp from "supertokens-web-js-script/recipe/totp"
-async function removeTOTPDevices(deviceName: string) {
-    if (await supertokensSession.doesSessionExist()) {
-        try {
-            await supertokensTotp.removeDevice({
-                deviceName
-            });
-            // device is removed
-        } catch (err: any) {
-            if (err.isSuperTokensGeneralError === true) {
-                // this may be a custom error message sent from the API by you.
-                window.alert(err.message);
-            } else {
-                window.alert("Oops! Something went wrong.");
-            }
-        }
-    } else {
-        throw new Error("Illegal function call: Please only call this function if a session exists")
-    }
-}
-```
-
-</TabItem>
-
-</NpmOrScriptTabs>
-
-</TabItem>
-
-<TabItem value="mobile">
-
-<AppInfoForm askForAPIDomain>
-
-Notice that the API call requires the session's access token as an input (this should be added by our frontend SDK automatically):
-
-```bash
-curl --location --request POST '^{form_apiDomain}^{form_apiBasePath}/totp/device/remove' \
---header 'rid: totp' \
---header 'Authorization: Bearer ...'
---header 'Content-Type: application/json' \
---data-raw '{
-    "deviceName": "..."
-}'
-```
-
-</AppInfoForm>
-
-The output from the API call is as follows:
-
-```json
-{
-    "status": "OK",
-    "didDeviceExist": true;
-} | {
-    "status": "GENERAL_ERROR"
-}
-```
-
-</TabItem>
-
-</FrontendCustomUITabs>
-
-
-<PreBuiltOrCustomUISwitcher>
-
-<PreBuiltUIContent>
-
-<FrontendPreBuiltUITabs>
-<TabItem value="reactjs">
-
-In order to add a new device, you can call the following function from the frontend. This function will redirect the user to the TOTP create device pre built UI. After the user has finished the new device creation and verification, they will be redirected back to the current page:
-
-```tsx
-import MultiFactorAuth from 'supertokens-auth-react/recipe/multifactorauth';
-
-async function redirectToTotpSetupScreen() {
-    MultiFactorAuth.redirectToFactor(MultiFactorAuth.Factors.TOTP, true, true)
-}
-```
-
-- In the snippet above, we redirect to the [TOTP factor setup screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/totp-mfa--device-setup-with-single-next-option). The second argument represents a boolean for `forceSetup` which we set to true since we want the user to setup a new TOTP device. The third arg is also `true` since we want to redirect back to the current page after the user has finished setting up the device.
-- You can also just redirect the user to `/{websiteBasePath}/mfa/totp?setup=true&redirectToPath={currentPath}` if you don't want to use the above function.
-
-
-</TabItem>
-
-<TabItem value="angular">
-
-In order to add a new device, you can redirect the user to `/{websiteBasePath}/mfa/totp?setup=true&redirectToPath={currentPath}` from your settings page. This will show the [TOTP factor setup screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/totp-mfa--device-setup-with-single-next-option) to the user:
-- We add the query param of `setup=true` because we want to create a new device.
-- The `redirectToPath` query param will also tell our SDK to redirect the user back to the current page after they have finished creating the device.
-
-</TabItem>
-
-</FrontendPreBuiltUITabs>
-
-After the user has finished creating a device, our backend override for `verifyDevicePOST` (see "Example 2" in [Backend setup section](#backend-setup) above) will add totp as a required factor for this user, so that next time they login, they will be asked to complete the TOTP challenge.
-
-</PreBuiltUIContent>
-
-<CustomUIContent>
-
-In order to create a new device, you should redirect the user to a page which creates a new TOTP device on the backend, asks the user to scan the QR code and then to enter the TOTP in order to verify the new device. This can be achieved by calling the functions mentioned in [this section](./totp-for-all-users#case-1-implementation-user-needs-to-setup-a-new-totp-device--cust).
-
-</CustomUIContent>
-
-</PreBuiltOrCustomUISwitcher>
+:::note
+If instead you want to work with `otp-phone`, you can replace `otp-email` with `otp-phone` in the above snippets. Also make sure that the `contactMethod` is set to `PHONE` in the Passwordless recipe on the frontend (for pre built UI) and backend.
+:::
 
 
 ## Multi tenant setup
 
 ### Backend setup
-A user can be a part of several tenants. So if you want TOTP to be enabled for a specific user across all the tenants that they are a part of, the steps are the same as in the [Backend setup](#backend-setup) section above.
+A user can be a part of several tenants. So if you want OTP to be enabled for a specific user across all the tenants that they are a part of, the steps are the same as in the [Backend setup](#backend-setup) section above.
 
-However, if you want TOTP to be enabled for a specific user, for a specific tenant (or a sub set of tenants that the user is a part of), then you will have to add additional logic to the `getMFARequirementsForAuth` function override. Modifying the example code from the [Backend setup](#backend-setup) section above:
+However, if you want OTP to be enabled for a specific user, for a specific tenant (or a sub set of tenants that the user is a part of), then you will have to add additional logic to the `getMFARequirementsForAuth` function override. Modifying the example code from the [Backend setup](#backend-setup) section above:
 
-<details><summary>Example 1: Only enable TOTP for users that have an `admin` role</summary>
+<details><summary>Example 1: Only enable OTP for users that have an `admin` role</summary>
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -588,7 +334,7 @@ However, if you want TOTP to be enabled for a specific user, for a specific tena
 import supertokens from "supertokens-node";
 import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
-import totp from "supertokens-node/recipe/totp"
+import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
 import UserRoles from "supertokens-node/recipe/userroles"
 
@@ -608,7 +354,10 @@ supertokens.init({
             //...
         }),
         // highlight-next-line
-        totp.init(),
+        Passwordless.init({
+            contactMethod: "EMAIL",
+            flowType: "USER_INPUT_CODE"
+        }),
         MultiFactorAuth.init({
             firstFactors: ["emailpassword", "thirdparty"],
             override: {
@@ -618,9 +367,9 @@ supertokens.init({
                         getMFARequirementsForAuth: async function (input) {
                             let roles = await UserRoles.getRolesForUser(input.tenantId, input.user.id)
                             // highlight-next-line
-                            if (roles.roles.includes("admin") && await shouldRequireTotpForTenant(input.tenantId)) {
-                                // we only want totp for admins
-                                return ["totp"]
+                            if (roles.roles.includes("admin") && await shouldRequireOTPEmailForTenant(input.tenantId)) {
+                                // we only want otp-email for admins
+                                return ["otp-email"]
                             } else {
                                 // no MFA for non admin users.
                                 return []
@@ -634,8 +383,8 @@ supertokens.init({
 })
 
 // highlight-start
-async function shouldRequireTotpForTenant(tenantId: string): Promise<boolean> {
-    // your logic here to determine if we care about totp for this tenant or not.
+async function shouldRequireOTPEmailForTenant(tenantId: string): Promise<boolean> {
+    // your logic here to determine if we care about otp-email for this tenant or not.
     return true;
 }
 // highlight-end
@@ -658,11 +407,11 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </TabItem>
 </BackendSDKTabs>
 
-- The implementation of `shouldRequireTotpForTenant` is entirely up to you.
+- The implementation of `shouldRequireOTPEmailForTenant` is entirely up to you.
 
 </details>
 
-<details><summary>Example 2: Ask for TOTP only for users that have enabled TOTP on their account</summary>
+<details><summary>Example 2: Ask for OTP only for users that have enabled OTP on their account</summary>
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -671,7 +420,7 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 import supertokens from "supertokens-node";
 import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
 import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth"
-import totp from "supertokens-node/recipe/totp"
+import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
 
 supertokens.init({
@@ -688,18 +437,22 @@ supertokens.init({
         ThirdPartyEmailPassword.init({
             //...
         }),
-        totp.init({
+        Passwordless.init({
+            contactMethod: "EMAIL",
+            flowType: "USER_INPUT_CODE",
             override: {
                 apis: (oI) => {
                     return {
                         ...oI,
-                        verifyDevicePOST: async function (input) {
-                            let response = await oI.verifyDevicePOST!(input);
-                            if (response.status === "OK") {
-                                // device successfully verified. First we save that this user has enabled TOTP in the user metadata.
+                        consumeCodePOST: async function (input) {
+                            let response = await oI.consumeCodePOST!(input);
+                            if (response.status === "OK" && input.session !== undefined) {
+                                // We do this only if a session exists, which means that it's not being called for first factor login.
+                                
+                                // OTP challenge completed successfully. We save that this user has enabled otp-email in the user metadata.
                                 // The multifactorauth recipe will pick this value up next time the user is trying to login, and
                                 // ask them to enter the TOTP code.
-                                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(input.session.getUserId(), MultiFactorAuth.FactorIds.TOTP);
+                                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(input.session.getUserId(), MultiFactorAuth.FactorIds.OTP_EMAIL);
                             }
                             return response;
                         }
@@ -715,10 +468,9 @@ supertokens.init({
                     return {
                         ...originalImplementation,
                         getMFARequirementsForAuth: async function (input) {
-                            if (input.requiredSecondaryFactorsForUser.includes("totp")) {
-                                // this means that the user has finished setting up a device from their settings page.
-                                if (await shouldRequireTotpForTenant(input.tenantId)) {
-                                    return ["totp"]
+                            if (input.requiredSecondaryFactorsForUser.includes("otp-email")) {
+                                if (await shouldRequireOTPEmailForTenant(input.tenantId)) {
+                                    return ["otp-email"]
                                 }
                             }
                             // no totp required for input.user, with the input.tenant.
@@ -733,8 +485,8 @@ supertokens.init({
 })
 
 // highlight-start
-async function shouldRequireTotpForTenant(tenantId: string): Promise<boolean> {
-    // your logic here to determine if we care about totp for this tenant or not.
+async function shouldRequireOTPEmailForTenant(tenantId: string): Promise<boolean> {
+    // your logic here to determine if we care about otp-email for this tenant or not.
     return true;
 }
 // highlight-end
@@ -757,23 +509,13 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </TabItem>
 </BackendSDKTabs>
 
-- We provide an override for `getMFARequirementsForAuth` which checks if TOTP is enabled for the user, and also take into account the tenantId to decide if we want to have this user go through the TOTP flow whilst logging into this tenant. The implementation of `shouldRequireTotpForTenant` is entirely up to you.
+We provide an override for `getMFARequirementsForAuth` which checks if otp-email is enabled for the user, and also take into account the tenantId to decide if we want to have this user go through the otp-email flow whilst logging into this tenant. The implementation of `shouldRequireOTPEmailForTenant` is entirely up to you.
 
 </details>
 
 ### Frontend setup
 The frontend setup is identical to the [frontend setup](#frontend-setup) section above.
 
-<!-- COPY SECTION -->
-<!-- ./mfa/totp/totp-for-all-users.mdx -->
-<!-- 1 -->
-
 ## Protecting frontend and backend routes
 
 See the section on [protecting frontend and backend routes](../protect-routes).
-
-## Frontend events, pre and post API hooks
-
-TODO..
-
-<!-- END COPY SECTION -->
