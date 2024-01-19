@@ -22,6 +22,7 @@ module.exports = {
         "email-sms-otp/otp-for-opt-in-users",
       ],
     },
+    "protect-routes",
     "how-it-works",
     {
       type: 'category',
