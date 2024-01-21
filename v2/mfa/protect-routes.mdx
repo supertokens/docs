@@ -930,23 +930,32 @@ function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
 
 <TabItem value="angular">
 
+By default, when you do `MultiFactorAuth.init` in `supertokens.init` on the frontend, SuperTokens will add a default validator check that runs whenever you call the `Session.validateClaims` function. This validator checks if the `v` value in the [MFA claim](./important-concepts#how-are-auth-factors-marked-as-completed) is `true` or not.
+
 ```tsx
-import Session from "supertokens-auth-react/recipe/session";
-import { EmailVerificationClaim } from "supertokens-auth-react/recipe/emailverification";
+import Session from "supertokens-web-js/recipe/session";
+import { MultiFactorAuthClaim } from "supertokens-web-js/recipe/multifactorauth";
 
 async function shouldLoadRoute(): Promise<boolean> {
     if (await Session.doesSessionExist()) {
         let validationErrors = await Session.validateClaims();
 
         if (validationErrors.length === 0) {
-            // user has verified their email address
+            // user has finished all MFA factors.
             return true;
         } else {
-          for (const err of validationErrors) {
-              if (err.validatorId === EmailVerificationClaim.id) {
-                  // email is not verified
-              }
-          }
+            for (const err of validationErrors) {
+                if (err.validatorId === MultiFactorAuthClaim.id) {
+                    // user has not finished MFA factors.
+                    let mfaClaimValue = await Session.getClaimValue({
+                        claim: MultiFactorAuthClaim
+                    });
+                    if (!("totp" in mfaClaimValue!.c)) {
+                        // the user has not finished totp
+                        return false;
+                    }
+                }
+            }
         }
     }
     // a session does not exist, or email is not verified
@@ -954,55 +963,9 @@ async function shouldLoadRoute(): Promise<boolean> {
 }
 ```
 
-In your protected routes, you need to first check if a session exists, and then call the Session.validateClaims function as shown above. This function inspects the session's contents and runs claim validators on them. If a claim validator fails, it will be reflected in the validationErrors variable. The EmailVerificationClaim validator will be automatically checked by this function since you have initialized the email verification recipe.
+In your protected routes, you need to first check if a session exists, and then call the Session.validateClaims function as shown above. This function inspects the session's contents and runs claim validators on them. If a claim validator fails, it will be reflected in the `validationErrors` variable. The `MultiFactorAuthClaim` validator will be automatically checked by this function since you have initialized the MFA recipe.
 
-<details><summary>Checking validation error</summary>
-
-In case the `validationErrors` array is not empty, you can loop through the errors to know which claim has failed:
-
-```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
-
-async function shouldLoadRoute() {
-    let validationErrors = await Session.validateClaims(/*{...}*/);
-    // highlight-start
-    for (const err of validationErrors) {
-        if (err.validatorId === EmailVerificationClaim.id) {
-            // email verification claim check failed
-        } else {
-            // some other claim check failed (from the global validators list)
-        }
-    }
-    // highlight-end
-}
-```
-
-</details>
-
-<details><summary>Manually checking verification status</summary>
-If you want to have more complex access control, you can either create your own validator, or you can get the boolean from the session as follows, and check it yourself:
-
-```tsx
-import Session from "supertokens-web-js/recipe/session";
-import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
-
-async function shouldLoadRoute(): Promise<boolean> {
-    if (await Session.doesSessionExist()) {
-        // highlight-start
-        let isVerified = await Session.getClaimValue({claim: EmailVerificationClaim});
-        if (isVerified) {
-            // user has verified their email address
-            return true;
-        }
-        // highlight-end
-    }
-    // either a session does not exist, or the user has not verified their email address
-    return false
-}
-```
-
-</details>
+In case the claim fails, you can get the claim value and check which factor is not completed. In the above code, we check that if it's the TOTP factor that is missing when the claim fails and return `false` from this function. However, it's really up to you for what you want to do next. For example, you could redirect the user to the TOTP factor screen.
 
 </TabItem>
 
@@ -1024,57 +987,40 @@ async function shouldLoadRoute(): Promise<boolean> {
 
 <TabItem value="web">
 
+By default, when you do `MultiFactorAuth.init` in `supertokens.init` on the frontend, SuperTokens will add a default validator check that runs whenever you call the `Session.validateClaims` function. This validator checks if the `v` value in the [MFA claim](./important-concepts#how-are-auth-factors-marked-as-completed) is `true` or not.
+
 <NpmOrScriptTabs>
 <TabItem value="npm">
 
 ```tsx
 import Session from "supertokens-web-js/recipe/session";
-import { EmailVerificationClaim, sendVerificationEmail } from "supertokens-web-js/recipe/emailverification";
+import { MultiFactorAuthClaim } from "supertokens-web-js/recipe/multifactorauth";
 
 async function shouldLoadRoute(): Promise<boolean> {
     if (await Session.doesSessionExist()) {
-        // highlight-start
         let validationErrors = await Session.validateClaims();
 
         if (validationErrors.length === 0) {
-            // user has verified their email address
+            // user has finished all MFA factors.
             return true;
         } else {
-          for (const err of validationErrors) {
-              if (err.validatorId === EmailVerificationClaim.id) {
-                  // email is not verified
-                  // Send the verification email to the user
-                  await sendEmail();
-              }
-          }
+            for (const err of validationErrors) {
+                if (err.validatorId === MultiFactorAuthClaim.id) {
+                    // user has not finished MFA factors.
+                    let mfaClaimValue = await Session.getClaimValue({
+                        claim: MultiFactorAuthClaim
+                    });
+                    if (!("totp" in mfaClaimValue!.c)) {
+                        // the user has not finished totp
+                        return false;
+                    }
+                }
+            }
         }
-        // highlight-end
     }
     // a session does not exist, or email is not verified
     return false
 }
-
-async function sendEmail() {
-    try {
-        let response = await sendVerificationEmail();
-        if (response.status === "EMAIL_ALREADY_VERIFIED_ERROR") {
-            // This can happen if the info about email verification in the session was outdated.
-            // Redirect the user to the home page
-            window.location.assign("/home");
-        } else {
-            // email was sent successfully.
-            window.alert("Please check your email and click the link in it")
-        }
-    } catch (err: any) {
-        if (err.isSuperTokensGeneralError === true) {
-            // this may be a custom error message sent from the API by you.
-            window.alert(err.message);
-        } else {
-            window.alert("Oops! Something went wrong.");
-        }
-    }
-}
-
 ```
 
 </TabItem>
@@ -1082,103 +1028,46 @@ async function sendEmail() {
 
 ```tsx
 import supertokensSession from "supertokens-web-js-script/recipe/session";
-import supertokensEmailVerification from "supertokens-web-js-script/recipe/emailverification";
+import supertokensMultiFactorAuth from "supertokens-web-js-script/recipe/multifactorauth";
 async function shouldLoadRoute(): Promise<boolean> {
     if (await supertokensSession.doesSessionExist()) {
-        // highlight-start
         let validationErrors = await supertokensSession.validateClaims();
 
         if (validationErrors.length === 0) {
-            // user has verified their email address
+            // user has finished all MFA factors.
             return true;
         } else {
-          for (const err of validationErrors) {
-              if (err.validatorId === supertokensEmailVerification.EmailVerificationClaim.id) {
-                  // email is not verified
-                  // Send the verification email to the user
-                  await sendEmail();
-              }
-          }
+            for (const err of validationErrors) {
+                if (err.validatorId === supertokensMultiFactorAuth.MultiFactorAuthClaim.id) {
+                    // user has not finished MFA factors.
+                    let mfaClaimValue = await supertokensSession.getClaimValue({
+                        claim: supertokensMultiFactorAuth.MultiFactorAuthClaim
+                    });
+                    if (!("totp" in mfaClaimValue!.c)) {
+                        // the user has not finished totp
+                        return false;
+                    }
+                }
+            }
         }
-        // highlight-end
     }
     // a session does not exist, or email is not verified
     return false
 }
-
-async function sendEmail() {
-    try {
-        let response = await supertokensEmailVerification.sendVerificationEmail();
-        if (response.status === "EMAIL_ALREADY_VERIFIED_ERROR") {
-            // This can happen if the info about email verification in the session was outdated.
-            // Redirect the user to the home page
-            window.location.assign("/home");
-        } else {
-            // email was sent successfully.
-            window.alert("Please check your email and click the link in it")
-        }
-    } catch (err: any) {
-        if (err.isSuperTokensGeneralError === true) {
-            // this may be a custom error message sent from the API by you.
-            window.alert(err.message);
-        } else {
-            window.alert("Oops! Something went wrong.");
-        }
-    }
-}
 ```
 
 </TabItem>
-
-:::note
-The API for sending an email verification email requires an active session. If you are using our frontend SDKs, then the session tokens should automatically get attached to the request.
-:::
-
 </NpmOrScriptTabs>
 
-In your protected routes, you need to first check if a session exists, and then call the `Session.validateClaims` function as shown above. This function inspects the session's contents and runs claim validators on them. If a claim validator fails, it will be reflected in the `validationErrors` variable. The `EmailVerificationClaim` validator will be automatically checked by this function since you have initialized the email verification recipe.
+In your protected routes, you need to first check if a session exists, and then call the Session.validateClaims function as shown above. This function inspects the session's contents and runs claim validators on them. If a claim validator fails, it will be reflected in the `validationErrors` variable. The `MultiFactorAuthClaim` validator will be automatically checked by this function since you have initialized the MFA recipe.
 
-<details><summary>Handling 403 responses on the frontend</summary>
-
-<AppInfoForm askForAPIDomain>
-
-If your frontend queries a protected API on your backend and it fails with a 403, you can call the `validateClaims` function and loop through the errors to know which claim has failed:
-
-```tsx
-import axios from "axios";
-import Session from "supertokens-web-js/recipe/session";
-import { EmailVerificationClaim } from "supertokens-web-js/recipe/emailverification";
-
-async function callProtectedRoute() {
-    try {
-        let response = await axios.get("^{form_apiDomain}/protectedroute");
-    } catch (error) {
-        // highlight-start
-        if (axios.isAxiosError(error) && error.response?.status === 403) {
-            let validationErrors = await Session.validateClaims();
-            for (let err of validationErrors) {
-                if (err.validatorId === EmailVerificationClaim.id) {
-                    // email verification claim check failed
-                    // We call the sendEmail function defined in the previous section to send the verification email.
-                    // await sendEmail();
-                } else {
-                    // some other claim check failed (from the global validators list)
-                }
-            }
-            // highlight-end
-
-        }
-    }
-}
-```
-
-</AppInfoForm>
-
-</details>
+In case the claim fails, you can get the claim value and check which factor is not completed. In the above code, we check that if it's the TOTP factor that is missing when the claim fails and return `false` from this function. However, it's really up to you for what you want to do next. For example, you could redirect the user to the TOTP factor screen.
 
 </TabItem>
 
 <TabItem value="mobile">
+
+In your app, you can check the [MFA claim](./important-concepts#how-are-auth-factors-marked-as-completed) values to know which factors have been completed by the user and take action based on that. 
 
 <AppInfoForm askForAPIDomain>
 
@@ -1189,16 +1078,16 @@ async function callProtectedRoute() {
 ```tsx
 import SuperTokens from 'supertokens-react-native';
 
-async function checkIfEmailIsVerified() {
+async function checkIfMFAIsCompleted() {
     if (await SuperTokens.doesSessionExist()) {
 
         // highlight-start
-        let isVerified: boolean = (await SuperTokens.getAccessTokenPayloadSecurely())["st-ev"].v;
+        let isMFACompleted: boolean = (await SuperTokens.getAccessTokenPayloadSecurely())["st-mfa"].v;
 
-        if (isVerified) {
+        if (isMFACompleted) {
             // TODO..
         } else {
-            // You can trigger the sending of the verification email by calling `^{form_apiDomain}^{form_apiBasePath}/user/email/verify/token`
+            // You can check the `c` object from ["st-mfa"] prop to see which factors have been completed by the user
         }
         // highlight-end
     }
@@ -1215,13 +1104,13 @@ import com.supertokens.session.SuperTokens
 import org.json.JSONObject
 
 class MainApplication: Application() {
-    fun checkIfEmailIsVerified() {
+    fun checkIfMFAIsCompleted() {
         val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
-        val isVerified: Boolean = (accessTokenPayload.get("st-ev") as JSONObject).get("v") as Boolean
-        if (isVerified) {
+        val isMFACompleted: Boolean = (accessTokenPayload.get("st-mfa") as JSONObject).get("v") as Boolean
+        if (isMFACompleted) {
             // TODO..
         } else {
-            // You can trigger the sending of the verification email by calling `^{form_apiDomain}^{form_apiBasePath}/user/email/verify/token`
+            // You can check the `c` object from ["st-mfa"] prop to see which factors have been completed by the user
         }
     }
 }
@@ -1236,12 +1125,12 @@ import UIKit
 import SuperTokensIOS
 
 fileprivate class ViewController: UIViewController {
-    func checkIfEmailIsVerified() {
-        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let emailVerificationObject: [String: Any] = accessTokenPayload["st-ev"] as? [String: Any], let isVerified: Bool = emailVerificationObject["v"] as? Bool {
-            if isVerified {
+    func checkIfMFAIsCompleted() {
+        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let mfaObject: [String: Any] = mfaObject["st-mfa"] as? [String: Any], let isMFACompleted: Bool = mfaObject["v"] as? Bool {
+            if isMFACompleted {
                 // Email is verified
             } else {
-                // You can trigger the sending of the verification email by calling `^{form_apiDomain}^{form_apiBasePath}/user/email/verify/token`
+                // You can check the `c` object from ["st-mfa"] prop to see which factors have been completed by the user
             }
         }
     }
@@ -1255,19 +1144,19 @@ fileprivate class ViewController: UIViewController {
 ```dart
 import 'package:supertokens_flutter/supertokens.dart';
 
-Future<void> checkIfEmailIsVerified() async {
+Future<void> checkIfMFAIsCompleted() async {
     var accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
 
-    if (accessTokenPayload.containsKey("st-ev")) {
-      Map<String, dynamic> emailVerificationObject = accessTokenPayload["st-ev"];
+    if (accessTokenPayload.containsKey("st-mfa")) {
+      Map<String, dynamic> mfaObject = accessTokenPayload["st-mfa"];
 
-      if (emailVerificationObject.containsKey("v")) {
-        bool isVerified = emailVerificationObject["v"];
+      if (mfaObject.containsKey("v")) {
+        bool isMFACompleted = mfaObject["v"];
 
-        if (isVerified) {
-          // Email is verified
+        if (isMFACompleted) {
+            // Email is verified
         } else {
-          // You can trigger the sending of the verification email by calling `^{form_apiDomain}^{form_apiBasePath}/user/email/verify/token`
+            // You can check the `c` object from ["st-mfa"] prop to see which factors have been completed by the user
         }
       }
     }
@@ -1278,13 +1167,9 @@ Future<void> checkIfEmailIsVerified() async {
 
 </FrontendMobileSubTabs>
 
-<details><summary>Handling 403 responses on the frontend</summary>
-
-If your frontend queries a protected API on your backend and it fails with a 403, you can check the value of the `st-ev` claim in the access token payload. If it is set to false you can send the verification email
-
-</details>
-
 </AppInfoForm>
+
+If the MFA claim value is missing in the access token payload, then it means that the session was created before you enabled MFA on the backend. In this case, you can call the [MFA Info](./frontend-setup#mfa-info-endpoint) endpoint which will add the MFA claim to the session and check again.
 
 </TabItem>
 </FrontendCustomUITabs>
