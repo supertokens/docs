@@ -15,9 +15,850 @@ import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
 import AppInfoForm from "/src/components/appInfoForm"
 import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 import {Question, Answer}from "/src/components/question"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
 
 <MFAPaidBanner />
 
 # Protecting frontend and backend routes
 
 In thie section, we will talk about how to protect your frontend and backend routes to make them accessible only when the user has finished all the MFA challenges configured for them.
+
+In both the backend and the frontend, we will protect routes based on the value of [MFA claim in the session's access token payload](./important-concepts#how-are-auth-factors-marked-as-completed).
+
+## Protecting API routes
+
+### The default behaviour
+When you call `MultiFactorAuth.init` in the `supertokens.init` on the backend, SuperTokens **automatically adds a session claim validator globally**. This validator checks that the value of `v` in the [MFA claim](./important-concepts#how-are-auth-factors-marked-as-completed) is `true` before allowing the request to proceed. If the value of `v` is `false`, the validator will send a 403 error to the frontend.
+
+:::important
+This validator is added globally, which means that everytime you use `verifySession` or `getSession` from our backend SDKs, this check will happen. This means that you don't need to add any extra code on a per API level to enforce MFA.
+:::
+
+### Excluding routes from the default check
+If you wish to not have the default validator check in a certain backend route, you can exclude that when calling `verifySession` in the following way:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+let app = express();
+
+app.post(
+    "/update-blog",
+    verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+    }),
+    async (req: SessionRequest, res) => {
+        // The user may or may not have completed the MFA required factors since we exclude
+        // that from the globalValidators
+    }
+);
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    overrideGlobalClaimValidators: async (globalValidators) => {
+                        return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+                    },
+                }),
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        // The user may or may not have completed the MFA required factors since we exclude
+        // that from the globalValidators
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+    }),
+}, async (req: SessionRequest, res) => {
+    // The user may or may not have completed the MFA required factors since we exclude
+    // that from the globalValidators
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+async function updateBlog(awsEvent: SessionEvent) {
+    // The user may or may not have completed the MFA required factors since we exclude
+    // that from the globalValidators
+};
+
+exports.handler = verifySession(updateBlog, {
+    overrideGlobalClaimValidators: async (globalValidators) => {
+        return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+    },
+});
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import {SessionContext} from "supertokens-node/framework/koa";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+    }), async (ctx: SessionContext, next) => {
+    // The user may or may not have completed the MFA required factors since we exclude
+    // that from the globalValidators
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+class Example {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/update-blog")
+    @intercept(verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+    }))
+    @response(200)
+    async handler() {
+        // The user may or may not have completed the MFA required factors since we exclude
+        // that from the globalValidators
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+// highlight-start
+export default async function example(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                overrideGlobalClaimValidators: async (globalValidators) => {
+                    return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+                },
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+    // The user may or may not have completed the MFA required factors since we exclude
+    // that from the globalValidators
+}
+```
+
+</TabItem>
+<TabItem value="nextjs-app">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withSession(request, async (err, session) => {
+        if (err) {
+            return NextResponse.json(err, { status: 500 });
+        }
+        // The user may or may not have completed the MFA required factors since we exclude
+        // that from the globalValidators
+        return NextResponse.json({})
+    },
+    {
+        // highlight-start
+        overrideGlobalClaimValidators: async (globalValidators) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard({
+    overrideGlobalClaimValidators: async (globalValidators: SessionClaimValidator[]) => {
+        return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+    },
+  }))
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    // The user may or may not have completed the MFA required factors since we exclude
+    // that from the globalValidators
+    return true;
+  }
+}
+```
+</TabItem>
+
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+The same modification can be done for `getSession` as well.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Manually checking the MFA claim value
+If you want to have a more complex logic for doing authorisation based on the MFA claim (other than checking if `v` is `true`), you can do it in this way:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let app = express();
+
+app.post(
+    "/update-blog",
+    verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+    }),
+    async (req: SessionRequest, res) => {
+        let mfaClaimValue = await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        if (mfaClaimValue === undefined) {
+            // this means that there is no MFA claim information in the session. This can happen if the session was created
+            // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+            // in the following way:
+            await req.session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+            mfaClaimValue = (await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+        }
+
+        let completedFactors = mfaClaimValue.c;
+        if ("totp" in completedFactors) {
+            // the user has finished totp
+        } else {
+            // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+            // claim validation error in the following way:
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+        }
+    }
+);
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    overrideGlobalClaimValidators: async (globalValidators) => {
+                        return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+                    },
+                }),
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        let mfaClaimValue = await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        if (mfaClaimValue === undefined) {
+            // this means that there is no MFA claim information in the session. This can happen if the session was created
+            // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+            // in the following way:
+            await req.session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+            mfaClaimValue = (await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+        }
+
+        let completedFactors = mfaClaimValue.c;
+        if ("totp" in completedFactors) {
+            // the user has finished totp
+        } else {
+            // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+            // claim validation error in the following way:
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+        }
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+    }),
+}, async (req: SessionRequest, res) => {
+    let mfaClaimValue = await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    if (mfaClaimValue === undefined) {
+        // this means that there is no MFA claim information in the session. This can happen if the session was created
+        // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+        // in the following way:
+        await req.session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+        mfaClaimValue = (await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+    }
+
+    let completedFactors = mfaClaimValue.c;
+    if ("totp" in completedFactors) {
+        // the user has finished totp
+    } else {
+        // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+        // claim validation error in the following way:
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User has not finished TOTP",
+            payload: [{
+                id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                reason: {
+                    message: "Factor validation failed: totp not completed",
+                    factorId: "totp",
+                },
+            }]
+        })
+    }
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+async function updateBlog(awsEvent: SessionEvent) {
+    let mfaClaimValue = await awsEvent.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    if (mfaClaimValue === undefined) {
+        // this means that there is no MFA claim information in the session. This can happen if the session was created
+        // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+        // in the following way:
+        await awsEvent.session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+        mfaClaimValue = (await awsEvent.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+    }
+
+    let completedFactors = mfaClaimValue.c;
+    if ("totp" in completedFactors) {
+        // the user has finished totp
+    } else {
+        // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+        // claim validation error in the following way:
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User has not finished TOTP",
+            payload: [{
+                id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                reason: {
+                    message: "Factor validation failed: totp not completed",
+                    factorId: "totp",
+                },
+            }]
+        })
+    }
+};
+
+exports.handler = verifySession(updateBlog, {
+    overrideGlobalClaimValidators: async (globalValidators) => {
+        return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+    },
+});
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession({
+    overrideGlobalClaimValidators: async (globalValidators) => {
+        return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+    },
+}), async (ctx: SessionContext, next) => {
+    let mfaClaimValue = await ctx.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    if (mfaClaimValue === undefined) {
+        // this means that there is no MFA claim information in the session. This can happen if the session was created
+        // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+        // in the following way:
+        await ctx.session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+        mfaClaimValue = (await ctx.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+    }
+
+    let completedFactors = mfaClaimValue.c;
+    if ("totp" in completedFactors) {
+        // the user has finished totp
+    } else {
+        // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+        // claim validation error in the following way:
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User has not finished TOTP",
+            payload: [{
+                id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                reason: {
+                    message: "Factor validation failed: totp not completed",
+                    factorId: "totp",
+                },
+            }]
+        })
+    }
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+class Example {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/update-blog")
+    @intercept(verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+    }))
+    @response(200)
+    async handler() {
+        let mfaClaimValue = await (this.ctx as any).session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        if (mfaClaimValue === undefined) {
+            // this means that there is no MFA claim information in the session. This can happen if the session was created
+            // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+            // in the following way:
+            await (this.ctx as any).session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+            mfaClaimValue = (await (this.ctx as any).session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+        }
+
+        let completedFactors = mfaClaimValue.c;
+        if ("totp" in completedFactors) {
+            // the user has finished totp
+        } else {
+            // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+            // claim validation error in the following way:
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+        }
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+// highlight-start
+export default async function example(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                overrideGlobalClaimValidators: async (globalValidators) => {
+                    return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+                },
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+    let mfaClaimValue = await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    if (mfaClaimValue === undefined) {
+        // this means that there is no MFA claim information in the session. This can happen if the session was created
+        // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+        // in the following way:
+        await req.session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+        mfaClaimValue = (await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+    }
+
+    let completedFactors = mfaClaimValue.c;
+    if ("totp" in completedFactors) {
+        // the user has finished totp
+    } else {
+        // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+        // claim validation error in the following way:
+        await superTokensNextWrapper(
+            async (next) => {
+                throw new STError({
+                    type: "INVALID_CLAIMS",
+                    message: "User has not finished TOTP",
+                    payload: [{
+                        id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                        reason: {
+                            message: "Factor validation failed: totp not completed",
+                            factorId: "totp",
+                        },
+                    }]
+                })
+            },
+            req,
+            res
+        )
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs-app">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withSession(request, async (err, session) => {
+        if (err) {
+            return NextResponse.json(err, { status: 500 });
+        }
+        let mfaClaimValue = await session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        if (mfaClaimValue === undefined) {
+            // this means that there is no MFA claim information in the session. This can happen if the session was created
+            // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+            // in the following way:
+            await session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+            mfaClaimValue = (await session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+        }
+
+        let completedFactors = mfaClaimValue.c;
+        if ("totp" in completedFactors) {
+            // the user has finished totp
+        } else {
+            // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+            // claim validation error in the following way:
+            const error = new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+            return NextResponse.json(error, { status: 403 });
+        }
+        return NextResponse.json({})
+    },
+        {
+            // highlight-start
+            overrideGlobalClaimValidators: async (globalValidators) => {
+                return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+            },
+            // highlight-end
+        });
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+@Controller()
+export class ExampleController {
+    @Post('example')
+    @UseGuards(new AuthGuard({
+        overrideGlobalClaimValidators: async (globalValidators: SessionClaimValidator[]) => {
+            return globalValidators.filter(validator => validator.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+        },
+    }))
+    async postExample(@Session() session: SessionContainer): Promise<boolean> {
+        let mfaClaimValue = await session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        if (mfaClaimValue === undefined) {
+            // this means that there is no MFA claim information in the session. This can happen if the session was created
+            // prior to you enabling the MFA recipe on the backend. So here, we can add the value of the MFA claim to the session
+            // in the following way:
+            await session!.fetchAndSetClaim(MultiFactorAuth.MultiFactorAuthClaim);
+            mfaClaimValue = (await session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim))!;
+        }
+
+        let completedFactors = mfaClaimValue.c;
+        if ("totp" in completedFactors) {
+            // the user has finished totp
+        } else {
+            // the user has not finished totp. You can choose to do anything you like here, for example, we may throw a 
+            // claim validation error in the following way:
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+        }
+        return true;
+    }
+}
+```
+</TabItem>
+
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+- In the code snippet above, we remove the default validator that was added to the global validators (which checks if the `v` value in the claim is true or not). You don't need to do this, but in the code snippet above, we show it anyway.
+- Then in the API logic, we manually fetch the claim value, and then check if TOTP has been completed or not. If it hasn't, we send back a 403 error to the frontend.
+
+You can use a similar approach as shown above to do any kind of check.
+
+### When using a JWT verification lib
+TODO..
+
+## Protecting frontend routes
