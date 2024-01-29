@@ -24,6 +24,7 @@ module.exports = {
     },
     "protect-routes",
     "with-email-verification",
+    "migration",
     "how-it-works",
     {
       type: 'category',
