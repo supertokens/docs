@@ -36,9 +36,9 @@ To start off, you need to add the email verification recipe to your SuperTokens 
 This guide is only applicable for when the email verifcation mode is `REQUIRED` because for `OPTIONAL` mode, the email verification challenge is not asked by the pre built Ui during the sign up process anyway.
 :::
 
-The default behaviour of is that for `REQUIRED` mode of email verification, the user will be asked to complete the email verification challenge after they have completed all the MFA challenges, assuming that the email is still in an unverified state. For example, if the user has emailpassword as the first factor, and then TOTP as a second factor, then SuperTokens will ask for email verification after the user has setup a TOTP device in the sign up flow. However, if the second factor is email OTP, then the user will not be asked for an email verification challenge since the email is already verified (via the email OTP flow).
+The default behaviour of is that for `REQUIRED` mode of email verification, the user will be asked to complete the email verification challenge first, and then all of the MFA challenges. For example, if the user has emailpassword as the first factor, and then TOTP as a second factor, then SuperTokens will ask the user to do email password login, followed by email verification, followed by TOTP.
 
-If you want to switch the order where email verification happens before any of the secondary factors of MFA, then you should do the following:
+If you want to switch the order where email verification happens after the secondary factors of MFA, then you should do the following:
 
 <FrontendPreBuiltUITabs>
 
@@ -69,7 +69,7 @@ supertokens.init({
                         getGlobalClaimValidators: (input) => {
                             let emailVerificationClaimValidator = input.claimValidatorsAddedByOtherRecipes.find(v => v.id === EmailVerification.EmailVerificationClaim.id)!;
                             let filteredValidators = input.claimValidatorsAddedByOtherRecipes.filter(v => v.id !== EmailVerification.EmailVerificationClaim.id);
-                            return [emailVerificationClaimValidator, ...filteredValidators];
+                            return [...filteredValidators, emailVerificationClaimValidator];
                         }
                         // highlight-end
                     }
@@ -80,7 +80,7 @@ supertokens.init({
 })
 ```
 
-In the snippet above, we override the `getGlobalClaimValidators` function in the Session recipe to add the email verification validator as the first item in the returned validators array. This ensures that post the first factor sign up, the first validator that fails in the email verificaiton one, which will redirect the user to the email verification page.
+In the snippet above, we override the `getGlobalClaimValidators` function in the Session recipe to add the email verification validator at the end of the returned validators array. This ensures that post the first factor sign up, the first validator that fails is the MFA one which will redirect the user to complete the MFA factors.
 
 </TabItem>
 
@@ -98,13 +98,13 @@ For custom UI, since you control the routing of the app, it's entirely up to you
 
 
 :::caution
-If you are using email-otp MFA factor as a form of email verification, you should also have emailverification recipe initialised in `REQUIRED` mode on the backend. This is for security reasons wherein during the sign up process, when asking for the email-otp challenge, the email the OTP is sent to is decided on the frontend (automatically). In this case, the following scenario is possible:
+If you are using email-otp MFA factor as a form of email verification, you should also have emailverification recipe initialised in `REQUIRED` mode on the backend (no need to add it on the frontend since users won't see that UI). This is for security reasons wherein during the sign up process, when asking for the email-otp challenge, the email the OTP is sent to is decided on the frontend (automatically). In this case, the following scenario is possible:
 - User signs up with email `A`
 - An email OTP challenge is shown to the user, and an OTP to email `A` is sent automatically.
 - The user manually calls the OTP create code API with email `B` and their session token, and verifies the OTP via a call to the consume code API.
 - The user refreshes the page and the email-otp challenge is completed.
 
-Now of course, this is not the desired flow when you want to use email-otp as a form of email verification. To prevent this, you should have the emailverification recipe initialised in `REQUIRED` mode on the backend. This will ensure that the email that is verified is the one from the first factor (email `A`).
+Now of course, this is not the desired flow when you want to use email-otp as a form of email verification. To prevent this, you should have the emailverification recipe initialised in `REQUIRED` mode on the backend. This will ensure that the email verification claim validator will only pass if the email that's verified is the one from the first factor (email `A`).
 
 The above case is only possible during sign up, and not sign in.
 :::
