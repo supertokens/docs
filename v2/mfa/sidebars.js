@@ -23,6 +23,7 @@ module.exports = {
       ],
     },
     "protect-routes",
+    "with-email-verification",
     "how-it-works",
     {
       type: 'category',

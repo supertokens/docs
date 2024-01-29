@@ -1,0 +1,97 @@
+---
+id: with-email-verification
+title: Using MFA with email verification
+hide_title: true
+show_ui_switcher: true
+---
+
+import MFAPaidBanner from '../community/reusableMD/mfa/MFAPaidBanner.mdx'
+import TabItem from '@theme/TabItem';
+import CustomAdmonition from "/src/components/customAdmonition"
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import AppInfoForm from "/src/components/appInfoForm"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
+import {Question, Answer}from "/src/components/question"
+
+<MFAPaidBanner />
+
+# Using MFA with email verification
+
+To start off, you need to add the email verification recipe to your SuperTokens setup as usual. Here are the links to the email verification recipe setup depending for each of the auth recipes we offer (The content is the same for all, it's just repeated in the individual auth recipe docs for convenience):
+
+- [EmailPassword](/docs/emailpassword/common-customizations/email-verification/about)
+- [ThirdParty](/docs/thirdparty/common-customizations/email-verification/about)
+- [Passwordless](/docs/passwordless/common-customizations/email-verification/about)
+- [ThirdPartyEmailPassword](/docs/thirdpartyemailpassword/common-customizations/email-verification/about)
+- [ThirdPartyPasswordless](/docs/thirdpartypasswordless/common-customizations/email-verification/about)
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+:::important
+This guide is only applicable for when the email verifcation mode is `REQUIRED` because for `OPTIONAL` mode, the email verification challenge is not asked by the pre built Ui during the sign up process anyway.
+:::
+
+The default behaviour of is that for `REQUIRED` mode of email verification, the user will be asked to complete the email verification challenge after they have completed all the MFA challenges, assuming that the email is still in an unverified state. For example, if the user has emailpassword as the first factor, and then TOTP as a second factor, then SuperTokens will ask for email verification after the user has setup a TOTP device in the sign up flow. However, if the second factor is email OTP, then the user will not be asked for an email verification challenge since the email is already verified (via the email OTP flow).
+
+If you want to switch the order where email verification happens before any of the secondary factors of MFA, then you should do the following:
+
+<FrontendPreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+```tsx
+import supertokens from "supertokens-auth-react"
+import EmailVerification from "supertokens-auth-react/recipe/emailverification";
+import Session from "supertokens-auth-react/recipe/session";
+
+supertokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        // other recipes...
+        EmailVerification.init({
+            mode: "REQUIRED",
+        }),
+        Session.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // highlight-start
+                        getGlobalClaimValidators: (input) => {
+                            let emailVerificationClaimValidator = input.claimValidatorsAddedByOtherRecipes.find(v => v.id === EmailVerification.EmailVerificationClaim.id)!;
+                            let filteredValidators = input.claimValidatorsAddedByOtherRecipes.filter(v => v.id !== EmailVerification.EmailVerificationClaim.id);
+                            return [emailVerificationClaimValidator, ...filteredValidators];
+                        }
+                        // highlight-end
+                    }
+                }
+            }
+        })
+    ]
+})
+```
+
+In the snippet above, we override the `getGlobalClaimValidators` function in the Session recipe to add the email verification validator as the first item in the returned validators array. This ensures that post the first factor sign up, the first validator that fails in the email verificaiton one, which will redirect the user to the email verification page.
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+For custom UI, since you control the routing of the app, it's entirely up to you as to when you want to ask the user to verify their email during the sign up process. Whilst the user's email is in an unverified state, the invalid claims array returned from a call to `await Session.validateClaims` will contain the email verification ID along with other invalid claims. The order in which you want to resolve each is up to you.
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
