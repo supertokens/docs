@@ -697,7 +697,8 @@ module.exports = {
           ],
         },
         "migration/data-migration",
-        "migration/session-migration"
+        "migration/session-migration",
+        "migration/mfa-migration"
       ],
     },
     {
