@@ -24,26 +24,43 @@ module.exports = {
     },
     "protect-routes",
     "with-email-verification",
-    "migration",
-    "how-it-works",
     {
       type: 'category',
-      label: 'Backend Setup',
-      collapsed: false,
+      label: 'Migration',
+      collapsed: true,
       items: [
-        "backend/first-factor",
-        "backend/second-factor",
-        "backend/protecting-api",
+        "migration",
+        "legacy-to-new",
+        "old-sdk-to-new"
       ],
     },
-    "frontend-custom",
     {
       type: 'category',
-      label: 'Using pre-built UI',
+      label: 'Legacy MFA method',
+      collapsed: true,
       items: [
-        "pre-built-ui/init",
-        "pre-built-ui/showing-login-ui",
-        "pre-built-ui/protecting-routes"
+        "legacy-method/legacy-vs-new",
+        "legacy-method/how-it-works",
+        {
+          type: 'category',
+          label: 'Backend Setup',
+          collapsed: false,
+          items: [
+            "legacy-method/backend/first-factor",
+            "legacy-method/backend/second-factor",
+            "legacy-method/backend/protecting-api",
+          ],
+        },
+        "legacy-method/frontend-custom",
+        {
+          type: 'category',
+          label: 'Using pre-built UI',
+          items: [
+            "legacy-method/pre-built-ui/init",
+            "legacy-method/pre-built-ui/showing-login-ui",
+            "legacy-method/pre-built-ui/protecting-routes"
+          ],
+        },
       ],
     },
   ]

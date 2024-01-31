@@ -1,0 +1,118 @@
+---
+id: old-sdk-to-new
+title: Migration from an older SuperTokens SDK to a newer one
+hide_title: true
+---
+
+import MFAPaidBanner from '../community/reusableMD/mfa/MFAPaidBanner.mdx'
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import CoreInjector from "/src/components/coreInjector"
+import CustomAdmonition from "/src/components/customAdmonition"
+
+<MFAPaidBanner />
+
+# Migration from an older SuperTokens SDK to a newer one
+
+This section is applicable to those who want to enable MFA for the first time and are already using SuperTokens in production. The following are the steps you need to take:
+- Make sure that you have updated your SuperTokens core, backend SDK and frontend SDK that supports MFA (you can find these versions in the CHANGELOG.md files in their respective github repository). Make sure to read the migration guide for each of the breaking version upgrades. You should aim to get your existing feature set working with the new version of SuperTokens before you enable MFA.
+- Follow the backend and frontend setup we have in this guide along with the factor specific setup (TOTP or email / sms OTP).
+
+
+## If enabling MFA for all users at once
+
+If you have enabled MFA for all users, then existing logged in users will need to complete the scondary factor as soon as they visit your app / website once you have pushed the changes to production.
+
+If you have clients like mobile apps, which take time to upgrade across your entire user base, then you may want to remove the global MFA validator on the backend and make it run only when you know that the request is coming from an updated client:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import { ClaimValidationResult } from "supertokens-node/recipe/session/types";
+import SuperTokens, { getRequestFromUserContext } from "supertokens-node";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { UserContext } from "supertokens-node/types"
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // other recipes..
+        Session.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // highlight-start
+                        getGlobalClaimValidators: (input) => {
+                            // We remove the existing default MFA validator which checks that
+                            // the client has finished MFA.
+                            let newValidatorsArray = input.claimValidatorsAddedByOtherRecipes.filter(v => v.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+
+                            // We create an instance of the default validator that is added
+                            // by SuperTokens so that we can make modificationts to it
+                            let originalValidator = MultiFactorAuth.MultiFactorAuthClaim.validators.hasCompletedMFARequirementForAuth();
+
+                            // We create a custom validator based on the default validator
+                            let customValidator = {
+                                ...originalValidator,
+                                validate: async (payload: any, userContext: UserContext): Promise<ClaimValidationResult> => {
+                                    // We only want to run the validation check
+                                    // if we know that the client is not an older one.
+                                    // In this examlpe, we do this based on the header
+                                    // in the API request, but the logic here can be
+                                    // anything that you like.
+                                    let request = getRequestFromUserContext(userContext);
+                                    if (request !== undefined) {
+                                        let isOlderClient = request.getHeaderValue("clilent-version") !== "2.0";
+                                        if (isOlderClient) {
+                                            // we return true early for older clients.
+                                            return {
+                                                isValid: true
+                                            }
+                                        }
+                                    }
+
+                                    // for newer clients, we call the original validate function
+                                    // which will check the claim value in the session.
+                                    return originalValidator.validate(payload, userContext);
+                                }
+                            }
+
+                            return [customValidator, ...newValidatorsArray];
+                        }
+                        // highlight-end
+                    }
+                }
+            }
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+:::caution
+You want to add the above exception only for a certain amount of time until you force all users to update their mobile app. This is because the exception method can be used as a way for malicious users to bypass MFA by spoofing that they are using an older client.
+:::
