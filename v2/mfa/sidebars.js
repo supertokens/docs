@@ -24,6 +24,7 @@ module.exports = {
     },
     "protect-routes",
     "with-email-verification",
+    "step-up-auth",
     {
       type: 'category',
       label: 'Migration',
