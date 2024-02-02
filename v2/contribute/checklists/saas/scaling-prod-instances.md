@@ -1,10 +1,10 @@
 ---
 id: scaling-prod-instances
-title: Adding Load Balancer for production deployment
+title: Adding Load Balancer for production deployment for older saas architecture
 hide_title: true
 ---
 
-# Adding Load Balancer for production deployment
+# Adding Load Balancer for production deployment for older saas architecture
 
 - call API:
 ```
