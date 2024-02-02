@@ -15,6 +15,8 @@ import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs"
 import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
 import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
 import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 
 <MFAPaidBanner />
 
@@ -571,4 +573,315 @@ You can check for this structure and the `factorId` to decide what factor to sho
 
 ## Step 4) Checking for step up auth on page navigation
 
-TODO..
+Sometimes, you may want to ask users to complete step up auth before displaying a page on the frontend. This is a different scenario that the above steps cause here, you do not want to reply on an API call to fail, instead you want to check for the step up auth condition before rendering the page itself. 
+
+To do this, we read the access token payload on the frontend and check the completed time of the factor we care about before rendering the page. If the completed time is older than 5 mins (as an example), we should redirect the user to the factor challenge page.
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+<FrontendPreBuiltUITabs>
+
+<TabItem value="reactjs">
+
+```tsx
+import React from "react";
+import { SessionAuth, useClaimValue } from 'supertokens-auth-react/recipe/session';
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth";
+import { DateProviderReference } from "supertokens-auth-react/utils/dateProvider"
+
+const VerifiedRoute = (props: React.PropsWithChildren<any>) => {
+    return (
+        <SessionAuth>
+            <InvalidClaimHandler>
+                {props.children}
+            </InvalidClaimHandler>
+        </SessionAuth>
+    );
+}
+
+function InvalidClaimHandler(props: React.PropsWithChildren<any>) {
+    let claimValue = useClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    if (claimValue.loading) {
+        return null;
+    }
+
+    if (claimValue.value === undefined) {
+        // this means that the MFA claim does not exist in the session. This can happen if the session was created
+        // before you had enabled MFA on the backend. We call the refresh function which will add the claim to the 
+        // session and cause a rerender.
+        MultiFactorAuth.MultiFactorAuthClaim.refresh({});
+        return null;
+    }
+
+    let totpCompletedTime = claimValue.value.c["totp"]
+    if (totpCompletedTime === undefined || totpCompletedTime < (DateProviderReference.getReferenceOrThrow().dateProvider.now() - 1000 * 60 * 5)) {
+        return <div>You need to complete TOTP before seeing this page. Please <a href={"/auth/mfa/totp?redirectToPath=" + window.location.pathname}>click here</a> to finish to proceed.</div>
+    }
+
+    // the user has finished TOTP, so we can render the children
+    return <div>{props.children}</div>;
+}
+```
+- In case the session's payload does not have the MFA claim, we call the `refresh` function on the claim. This will cause the claim to be fetched from the backend and added to the session. This will cause a rerender, and the `claimValue` variable will be updated with the new value.
+- Finally, we check if the user has completed TOTP within the last 5 mins or not. If not, we show a message to the user, and ask them to complete TOTP.
+- Notice that we use a `DateProviderReference` class exported by SuperTokens instead of just doing `Date.now()`. This is done to take into account any clock skew that may exist between the frontend and the backend server.
+
+</TabItem>
+
+<TabItem value="angular">
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { MultiFactorAuthClaim } from "supertokens-web-js/recipe/multifactorauth";
+import { DateProviderReference } from "supertokens-web-js/utils/dateProvider";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        let validationErrors = await Session.validateClaims();
+
+        if (validationErrors.length === 0) {
+            // since all default claim validators have passed, we now check for if the user has finished TOTP
+            // within the last 5 mins
+            let mfaClaimValue = await Session.getClaimValue({ claim: MultiFactorAuthClaim });
+            if (mfaClaimValue === undefined) {
+                await MultiFactorAuthClaim.refresh({});
+                return await shouldLoadRoute();
+            }
+            let totpCompletedTime = mfaClaimValue.c["totp"];
+            if (totpCompletedTime === undefined || totpCompletedTime < (DateProviderReference.getReferenceOrThrow().dateProvider.now() - 1000 * 60 * 5)) {
+                // ths user needs to complete TOTP since it's been more than 5 mins since they completed it.
+                return false;
+            }
+            return true;
+        } else {
+            // handle other validation failure events...
+        }
+    }
+    // a session does not exist, or email is not verified
+    return false
+}
+```
+
+- In your protected routes, you need to first check if a session exists, and then call the Session.validateClaims function as shown above. If that passes, it means all the default claim validators have passed (checks that are applied to all routes in general), and we can check for the step up auth check next.
+- For checking for step up auth, we get the MFA claim value from the session (or refresh it if it doesn't exist), and then check if TOTP was completed within the last 5 mins. Only if it was, we return true, else we return false.
+- Notice that we use a `DateProviderReference` class exported by SuperTokens instead of just doing `Date.now()`. This is done to take into account any clock skew that may exist between the frontend and the backend server.
+
+</TabItem>
+
+<TabItem value="vue">
+
+~COPY-TABS=angular
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+<FrontendCustomUITabs>
+
+<TabItem value="web">
+
+<NpmOrScriptTabs>
+<TabItem value="npm">
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { MultiFactorAuthClaim } from "supertokens-web-js/recipe/multifactorauth";
+import { DateProviderReference } from "supertokens-web-js/utils/dateProvider";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        let validationErrors = await Session.validateClaims();
+
+        if (validationErrors.length === 0) {
+            // since all default claim validators have passed, we now check for if the user has finished TOTP
+            // within the last 5 mins
+            let mfaClaimValue = await Session.getClaimValue({ claim: MultiFactorAuthClaim });
+            if (mfaClaimValue === undefined) {
+                await MultiFactorAuthClaim.refresh({});
+                return await shouldLoadRoute();
+            }
+            let totpCompletedTime = mfaClaimValue.c["totp"];
+            if (totpCompletedTime === undefined || totpCompletedTime < (DateProviderReference.getReferenceOrThrow().dateProvider.now() - 1000 * 60 * 5)) {
+                // ths user needs to complete TOTP since it's been more than 5 mins since they completed it.
+                return false;
+            }
+            return true;
+        } else {
+            // handle other validation failure events...
+        }
+    }
+    // a session does not exist, or email is not verified
+    return false
+}
+```
+
+</TabItem>
+<TabItem value="script">
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensMultiFactorAuth from "supertokens-web-js-script/recipe/multifactorauth";
+import supertokensDateProviderReference from "supertokens-web-js-script/utils/dateProvider";
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+        let validationErrors = await supertokensSession.validateClaims();
+
+        if (validationErrors.length === 0) {
+            // since all default claim validators have passed, we now check for if the user has finished TOTP
+            // within the last 5 mins
+            let mfaClaimValue = await supertokensSession.getClaimValue({ claim: supertokensMultiFactorAuth.MultiFactorAuthClaim });
+            if (mfaClaimValue === undefined) {
+                await supertokensMultiFactorAuth.MultiFactorAuthClaim.refresh({});
+                return await shouldLoadRoute();
+            }
+            let totpCompletedTime = mfaClaimValue.c["totp"];
+            if (totpCompletedTime === undefined || totpCompletedTime < (supertokensDateProviderReference.getReferenceOrThrow().dateProvider.now() - 1000 * 60 * 5)) {
+                // ths user needs to complete TOTP since it's been more than 5 mins since they completed it.
+                return false;
+            }
+            return true;
+        } else {
+            // handle other validation failure events...
+        }
+    }
+    // a session does not exist, or email is not verified
+    return false
+}
+```
+
+</TabItem>
+</NpmOrScriptTabs>
+
+- In your protected routes, you need to first check if a session exists, and then call the Session.validateClaims function as shown above. If that passes, it means all the default claim validators have passed (checks that are applied to all routes in general), and we can check for the step up auth check next.
+- For checking for step up auth, we get the MFA claim value from the session (or refresh it if it doesn't exist), and then check if TOTP was completed within the last 5 mins. Only if it was, we return true, else we return false.
+- Notice that we use a `DateProviderReference` class exported by SuperTokens instead of just doing `Date.now()`. This is done to take into account any clock skew that may exist between the frontend and the backend server.
+
+</TabItem>
+
+<TabItem value="mobile">
+
+<FrontendMobileSubTabs>
+
+<TabItem value="reactnative">
+
+```tsx
+import SuperTokens from 'supertokens-react-native';
+
+async function checkIfMFAIsCompleted() {
+    if (await SuperTokens.doesSessionExist()) {
+
+        // highlight-start
+        let isMFACompleted: boolean = (await SuperTokens.getAccessTokenPayloadSecurely())["st-mfa"].v;
+        if (isMFACompleted) {
+            let completedFactors = (await SuperTokens.getAccessTokenPayloadSecurely())["st-mfa"].c;
+            if (completedFactors["totp"] === undefined || completedFactors["totp"] < (Date.now() - 1000*60*5)) {
+                // user has not finished TOTP MFA in the last 5 minutes
+            }
+        } else {
+            // You can check the `c` object from ["st-mfa"] prop to see which factors have been completed by the user
+        }
+        // highlight-end
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="android">
+
+```kotlin
+import android.app.Application
+import com.supertokens.session.SuperTokens
+import org.json.JSONObject
+
+class MainApplication: Application() {
+    fun checkIfMFAIsCompleted() {
+        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
+        val isMFACompleted: Boolean = (accessTokenPayload.get("st-mfa") as JSONObject).get("v") as Boolean
+        if (isMFACompleted) {
+            // All required factors for MFA have been completed
+            val completedFactors: Boolean = (accessTokenPayload.get("st-mfa") as JSONObject).get("c") as Map<String, Number>;
+            if (!completedFactors.contains("totp") || completedFactors.get("totp") < System.currentTimeInMill() - 1000*60*5) {
+                // user has not finished TOTP MFA in the last 5 minutes
+            }
+        } else {
+            // You can check the `c` object from ["st-mfa"] prop to see which factors have been completed by the user
+        }
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="ios">
+
+```swift
+import UIKit
+import SuperTokensIOS
+
+fileprivate class ViewController: UIViewController {
+    func checkIfMFAIsCompleted() {
+        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let mfaObject: [String: Any] = mfaObject["st-mfa"] as? [String: Any], let isMFACompleted: Bool = mfaObject["v"] as? Bool {
+            if isMFACompleted {
+                // All required factors for MFA have been completed
+                let mfaCompletedFactors: [String: Any] = mfaObject["c"] as? [String: Any];
+                if mfaCompletedFactors["totp"] == nil || mfaCompletedFactors["totp"] < (Date().timeIntervalSince1970 - 1000*60*5) {
+                    // user has not finished TOTP MFA in the last 5 minutes
+                }
+            } else {
+                // You can check the `c` object from ["st-mfa"] prop to see which factors have been completed by the user
+            }
+        }
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="flutter">
+
+```dart
+import 'package:supertokens_flutter/supertokens.dart';
+
+Future<void> checkIfMFAIsCompleted() async {
+    var accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
+
+    if (accessTokenPayload.containsKey("st-mfa")) {
+      Map<String, dynamic> mfaObject = accessTokenPayload["st-mfa"];
+
+      if (mfaObject.containsKey("v")) {
+        bool isMFACompleted = mfaObject["v"];
+
+        if (isMFACompleted) {
+            // All required factors for MFA have been completed
+            Map<String, dynamic> mfaCompletedFactors = mfaObject["c"];
+            if (mfaCompletedFactors["totp"] == null || mfaCompletedFactors["totp"] < (DateTime.now().millisecondsSinceEpoch - 1000*60*5)) {
+                // user has not finished TOTP MFA in the last 5 minutes
+            }
+        } else {
+            // You can check the `c` object from ["st-mfa"] prop to see which factors have been completed by the user
+        }
+      }
+    }
+}
+```
+
+</TabItem>
+
+</FrontendMobileSubTabs>
+
+- In your protected routes, you need to first check if a session exists, and then check that the user has finished all the basic MFA factors for logging in (by checking the value of the `v` boolean in the MFA claim session). If that passes, we can check for the step up auth check next.
+- For checking for step up auth, we get the MFA claim value from the session, and then check if TOTP was completed within the last 5 mins. Only if it was, we return true, else we return false.
+
+</TabItem>
+</FrontendCustomUITabs>
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
