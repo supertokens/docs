@@ -2,6 +2,7 @@
 id: step-up-auth
 title: Step up auth
 hide_title: true
+show_ui_switcher: true
 ---
 
 import MFAPaidBanner from '../community/reusableMD/mfa/MFAPaidBanner.mdx'
@@ -10,6 +11,10 @@ import TabItem from '@theme/TabItem';
 import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
 import CoreInjector from "/src/components/coreInjector"
 import CustomAdmonition from "/src/components/customAdmonition"
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
 
 <MFAPaidBanner />
 
@@ -24,4 +29,546 @@ SuperTokens allows you to implement step up auth using the following factors:
 
 You can implement these as full page navigations, or as popups on the current page.
 
-TODO...
+## Step 1) Adding backend validators
+To protect sensitive APIs with step up auth, you need to check that the user has completed the required auth challenge within a certain amount of time. If they haven't, you should return a `403` to the frontend which highlights which factor is required. The frontend can then consume this and show the auth challenge to the user.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let app = express();
+
+app.post(
+    "/update-blog",
+    verifySession(),
+    async (req: SessionRequest, res) => {
+        let mfaClaim = await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        const totpCompletedTime = mfaClaim!.c["totp"];
+        if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+            // this means that the user had completed the TOTP challenge more than 5 minutes ago
+            // so we should ask them to complete it again
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+        }
+        // continue with API logic...
+    }
+);
+```
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession(),
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        let mfaClaim = await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        const totpCompletedTime = mfaClaim!.c["totp"];
+        if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+            // this means that the user had completed the TOTP challenge more than 5 minutes ago
+            // so we should ask them to complete it again
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+        }
+        // continue with API logic...
+
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession(),
+}, async (req: SessionRequest, res) => {
+    let mfaClaim = await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    const totpCompletedTime = mfaClaim!.c["totp"];
+    if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+        // this means that the user had completed the TOTP challenge more than 5 minutes ago
+        // so we should ask them to complete it again
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User has not finished TOTP",
+            payload: [{
+                id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                reason: {
+                    message: "Factor validation failed: totp not completed",
+                    factorId: "totp",
+                },
+            }]
+        })
+    }
+    // continue with API logic...
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+async function updateBlog(awsEvent: SessionEvent) {
+    let mfaClaim = await awsEvent.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    const totpCompletedTime = mfaClaim!.c["totp"];
+    if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+        // this means that the user had completed the TOTP challenge more than 5 minutes ago
+        // so we should ask them to complete it again
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User has not finished TOTP",
+            payload: [{
+                id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                reason: {
+                    message: "Factor validation failed: totp not completed",
+                    factorId: "totp",
+                },
+            }]
+        })
+    }
+    // continue with API logic...
+};
+
+exports.handler = verifySession(updateBlog);
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession(), async (ctx: SessionContext, next) => {
+    let mfaClaim = await ctx.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    const totpCompletedTime = mfaClaim!.c["totp"];
+    if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+        // this means that the user had completed the TOTP challenge more than 5 minutes ago
+        // so we should ask them to complete it again
+        throw new STError({
+            type: "INVALID_CLAIMS",
+            message: "User has not finished TOTP",
+            payload: [{
+                id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                reason: {
+                    message: "Factor validation failed: totp not completed",
+                    factorId: "totp",
+                },
+            }]
+        })
+    }
+    // continue with API logic...
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+class Example {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/update-blog")
+    @intercept(verifySession())
+    @response(200)
+    async handler() {
+        let mfaClaim = await (this.ctx as any).session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        const totpCompletedTime = mfaClaim!.c["totp"];
+        if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+            // this means that the user had completed the TOTP challenge more than 5 minutes ago
+            // so we should ask them to complete it again
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+        }
+        // continue with API logic...
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+// highlight-start
+export default async function example(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession()(req, res, next);
+        },
+        req,
+        res
+    )
+    let mfaClaim = await req.session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+    const totpCompletedTime = mfaClaim!.c["totp"];
+    if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+        // this means that the user had completed the TOTP challenge more than 5 minutes ago
+        // so we should ask them to complete it again
+        await superTokensNextWrapper(
+            async (next) => {
+                throw new STError({
+                    type: "INVALID_CLAIMS",
+                    message: "User has not finished TOTP",
+                    payload: [{
+                        id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                        reason: {
+                            message: "Factor validation failed: totp not completed",
+                            factorId: "totp",
+                        },
+                    }]
+                })
+            },
+            req,
+            res
+        )
+    }
+    // continue with API logic...
+}
+```
+
+</TabItem>
+<TabItem value="nextjs-app">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withSession(request, async (err, session) => {
+        if (err) {
+            return NextResponse.json(err, { status: 500 });
+        }
+        let mfaClaim = await session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        const totpCompletedTime = mfaClaim!.c["totp"];
+        if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+            // this means that the user had completed the TOTP challenge more than 5 minutes ago
+            // so we should ask them to complete it again
+            const error = new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+            return NextResponse.json(error, { status: 403 });
+        }
+        // continue with API logic...
+        return NextResponse.json({})
+    });
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import { Error as STError } from "supertokens-node/recipe/session"
+
+@Controller()
+export class ExampleController {
+    @Post('example')
+    @UseGuards(new AuthGuard())
+    async postExample(@Session() session: SessionContainer): Promise<boolean> {
+        let mfaClaim = await session!.getClaimValue(MultiFactorAuth.MultiFactorAuthClaim);
+        const totpCompletedTime = mfaClaim!.c["totp"];
+        if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000*60*5)) {
+            // this means that the user had completed the TOTP challenge more than 5 minutes ago
+            // so we should ask them to complete it again
+            throw new STError({
+                type: "INVALID_CLAIMS",
+                message: "User has not finished TOTP",
+                payload: [{
+                    id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                    reason: {
+                        message: "Factor validation failed: totp not completed",
+                        factorId: "totp",
+                    },
+                }]
+            })
+        }
+        // continue with API logic...
+        return true;
+    }
+}
+```
+</TabItem>
+
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+- When calling the `verifySession`, SuperTokens makes sure that the session is valid and that the user has completed all the requreied auth factors at some point in time. This enforces the basic check that the user has finished MFA during login.
+- We then further check that if the user has finished the TOTP login method within the last 5 mins. If they haven't, we send back a 403 to the frontend for the frontend to handle.
+- You can check other factor types in this was as well. For example, if you want to check that the user has done email OTP in the last 5 mins, you can use the factor ID of `email-otp`, or if you want to check that the user has entered their account password in the last 5 mins, you can check `emailpassword` factor ID.
+- If users have different login methods, and / or different MFA configurations, you may want to first check what factor applies to them. You can check their login method by fetching the user object using the `getUser` function from our SDK, and then matching the `session.getRecipeId()` to the login methods in the user object. As per the MFA factors, you can see which ones are enabled for this user by using the `MultiFactorAuth.getRequiredSecondaryFactorsForUser` function. For performance reasons, you may want to put this information in the session's access token payload of the user in the `createNewSession` override function of the session recipe.
+
+## Step 2) Preventing factor setup during step up auth
+By default, SuperTokens allows a factor setup (for example, creating a new TOTP device), as long as the user has a session and has completed all the MFA factors required during login. This opens up a security issue when it comes to completing step up auth. Consider the following scenario:
+- The user has logged in and completed TOTP
+- After 5 mins, the user tries to do a sensitive action and the API for that fails with a 403 (cause of the check in step 1, above).
+- The user is shown the TOTP challenge on the frontend. However, instead of completing that, they call the create TOTP device API which would succeed and then use the new TOTP device to complete the factor challenge required for the API.
+
+This allows someome malicious to bypass step up auth. In order to prevent this, we need to override one fo the MFA recipe functions on the backend to enforce that the factor setup can only happen if the user is not in a step up auth state:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import { Error as STError } from "supertokens-node/recipe/session"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+
+        MultiFactorAuth.init({
+            firstFactors: [/*...*/],
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // highlight-start
+                        assertAllowedToSetupFactorElseThrowInvalidClaimError: async (input) => {
+                            await originalImplementation.assertAllowedToSetupFactorElseThrowInvalidClaimError(input);
+
+                            // if the above did not throw, it means that the user has logged in and has completed all the required
+                            // factors for login. So now we check specifically for the step up auth case:
+                            if (input.factorId === "totp" && input.factorsSetUpForUser.includes("totp")) {
+                                // this is an example of checking for totp, but you can also use other factor IDs.
+                                const totpCompletedTime = input.completedFactors["totp"];
+                                if (totpCompletedTime === undefined || totpCompletedTime < (Date.now() - 1000 * 60 * 5)) {
+                                    // this means that the user had completed the TOTP challenge more than 5 minutes ago
+                                    // so we should ask them to complete it again
+                                    throw new STError({
+                                        type: "INVALID_CLAIMS",
+                                        message: "User has not finished TOTP",
+                                        payload: [{
+                                            id: MultiFactorAuth.MultiFactorAuthClaim.key,
+                                            reason: {
+                                                message: "Factor validation failed: totp not completed",
+                                                factorId: "totp",
+                                            },
+                                        }]
+                                    })
+                                }
+                            }
+                        }
+                        // highlight-end
+                    }
+                }
+            }
+        })
+    ]
+})
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming soon.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming soon.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+- The function `assertAllowedToSetupFactorElseThrowInvalidClaimError` is called by SuperTokens whenever the client calls an API to setup a new factor (for example, create a new TOTP device). So we do our checks in this function and throw an error in case we have to to prevent factor setup.
+- In the override logic, we first call the original implementation. This will throw in case the user has not completely logged in yet (for example, they have finished the first factor, but not the required second factor).
+- Then we check if the user has TOTP already setup for them, if they haven't, then we allow the factor setup (otherwise the user would not be able to complete the step up auth challenge). If they have, we do the same check we did in step 1 - checking if the user has finished TOTP in the last 5 mins or not. If they haven't, we disallow factor setup.
+
+The customisation above prevents the security issue highlighted in the beginning of this step.
+
+## Step 3) Handling `403` on the frontend
+The JSON body of the step up auth claim failure will look like this:
+
+```json
+{
+  "message": "invalid claim",
+  "claimValidationErrors": [
+    {
+      "id": "st-mfa",
+      "reason": {
+        "message": "Factor validation failed: totp not completed",
+        "factorId": "totp",
+      }
+    }
+  ]
+}
+```
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+You can check for this structure and the `factorId` to decide what factor to show on the frontend. You have two options to show the UI to the user:
+
+### Full page redirect to the factor
+To redirect the user to as factor challenge page and then navigate them back to the current page, you can use the following function:
+
+<FrontendPreBuiltUITabs>
+<TabItem value="reactjs">
+
+```tsx
+import MultiFactorAuth from 'supertokens-auth-react/recipe/multifactorauth';
+
+async function redirectToTotpSetupScreen() {
+    MultiFactorAuth.redirectToFactor(MultiFactorAuth.Factors.TOTP, false, true)
+}
+```
+
+- In the snippet above, we redirect to the [TOTP factor setup screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/totp-mfa--device-setup-with-single-next-option). The second argument represents a boolean for `forceSetup` which we set to false since we do not want to ask the user to create a new device. The third arg is also `true` since we want to redirect back to the current page after the user has finished setting up the device.
+- You can also just redirect the user to `/{websiteBasePath}/mfa/totp?redirectToPath={currentPath}` if you don't want to use the above function.
+
+
+</TabItem>
+
+<TabItem value="angular">
+
+In order to add a new device, you can redirect the user to `/{websiteBasePath}/mfa/totp?redirectToPath={currentPath}` from your settings page. This will show the [TOTP factor setup screen](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/totp-mfa--device-setup-with-single-next-option) to the user. The `redirectToPath` query param will also tell our SDK to redirect the user back to the current page after they have finished creating the device.
+
+</TabItem>
+
+</FrontendPreBuiltUITabs>
+
+### Show the factor in a popup
+Checkout the docs for embedding the pre built UI factor components in a page / popup:
+- [TOTP](./totp/embed)
+- [Email / SMS OTP](./email-sms-otp/embed)
+- [Password](./password/embed)
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+You can check for this structure and the `factorId` to decide what factor to show on the frontend.
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
+## Step 4) Checking for step up auth on page navigation
+
+TODO..
