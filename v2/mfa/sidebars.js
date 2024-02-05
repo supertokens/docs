@@ -11,6 +11,7 @@ module.exports = {
       items: [
         "totp/totp-for-all-users",
         "totp/totp-for-opt-in-users",
+        "totp/embed",
       ],
     },
     {
