@@ -21,6 +21,7 @@ module.exports = {
       items: [
         "email-sms-otp/otp-for-all-users",
         "email-sms-otp/otp-for-opt-in-users",
+        "email-sms-otp/embed"
       ],
     },
     "protect-routes",
