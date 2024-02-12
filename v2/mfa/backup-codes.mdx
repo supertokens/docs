@@ -1,13 +1,13 @@
 ---
 id: backup-codes
-title: Implementing backup codes
+title: Implementing backup / recovery codes
 hide_title: true
 show_ui_switcher: true
 ---
 
 import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
 
-# Implementing backup codes
+# Implementing backup / recovery codes
 
 Backup codes is one of the ways in which end users can recover their account in case they loose their second factor device. At the moment, SuperTokens does not have an in built implementation for backup codes, however, you can customise our SDKs to add this feature. This guide will show you how to implement backup codes in your application.
 
@@ -18,9 +18,13 @@ Backup codes is one of the ways in which end users can recover their account in 
 ## How it works
 We allow users to generate a backup code after they have setup MFA. This backup code will be associated with their userID in their user metadata JSON. Once users want to use their backup code, we show them a UI to enter their code which calls an API that verifies the backup code and adds a flag in their session indicating that they have correctly supplied a backup code. Post that, we use this flag to allow users to create a new MFA device (for example a new TOTP device), even if they already have one registered on their account. User can then go about adding a new device and completing MFA using that.
 
+:::important
+The guide below focuses on TOTP as a second factor, but something similar can be implemented for Passwordless as well.
+:::
+
 ## Step 1: Adding an API to generate backup codes on the backend
 
-Here is an [example API](https://github.com/supertokens/supertokens-auth-react/blob/feat/mfa/base/examples/with-multifactorauth-recovery-codes/backend/index.ts#L52) for how you can create a recovery code. In here, we create a secure random string, and save the hashed version in the user metadata JSON. This API returns the plain text recovery code to the frontend to display to the user.
+Here is an [example API](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-multifactorauth-recovery-codes/backend/index.ts#L52) for how you can create a recovery code. In here, we create a secure random string, and save the hashed version in the user metadata JSON. This API returns the plain text recovery code to the frontend to display to the user.
 
 ## Step 2: Allowing users to generate a backup code when they finish MFA setup
 
@@ -52,6 +56,55 @@ Once on the page, the UI calls the API we created in the previous step to create
 
 ## Step 3: Showing users UI to use their backup code on the MFA challenge UI
 
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+This can be achieved by creating a "Lost device?" button in the pre built UI that asks the user to enter the TOTP challenge. Once they click on this, users will be redirected to a page in which they can enter their backup code, after which (if verified), they will be further redirected to the create a new TOTP device page.
+
+[Here is how you can override our pre built UI](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-multifactorauth-recovery-codes/frontend/src/App.tsx#L19) to display the "Lost device?" button.
+
+[Here is an example implementation](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-multifactorauth-recovery-codes/frontend/src/RecoveryCode/index.tsx) of a page which asks the user to enter their backup code and calls as API (see next step) to check if the code is correct or not.
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+You should make a UI that asks the user to enter their backup code and call the API to verify it and mark it as "in use" (see next step). You want to give the option for users to enter their backup code when asked for the MFA challenge.
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
 ## Step 4: Modifying the user's session to mark that they have verified their backup code
 
+On the backend, we [create an API](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-multifactorauth-recovery-codes/backend/index.ts#L64) which accepts the recovery code entered by the user, checks that it matches the hashed version stored in the user's metadata JSON, and if it does, we mark it as "in use" in the user's session payload. We do this by saving the `recoverCodeHash` in the session payload which will then later be checked in the next step to force enable TOTP device creation.
+
+<PreBuiltOrCustomUISwitcher>
+
+<PreBuiltUIContent>
+
+On the frontend, once this API returns a success, we should navigate the user to the create a new TOTP device screen. You can see how this is done [here](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-multifactorauth-recovery-codes/frontend/src/RecoveryCode/index.tsx#L20).
+
+</PreBuiltUIContent>
+
+<CustomUIContent>
+
+On the frontend, once this API returns a success, we should navigate the user to the create a new TOTP device screen.
+
+</CustomUIContent>
+
+</PreBuiltOrCustomUISwitcher>
+
 ## Step 5: Force allowing users to setup a new device
+
+There are the steps here:
+- Force enabling TOTP device creation if the `recoveryCodeHash` is in the user's session's access token payload.
+- Deleting the recovery code from the user's metadata JSON once they have consumed it to create a new device. 
+- Redirecting the user to the page that shows their new recovery code after they have setup their new device.
+
+The first step can be achieved by overriding [this function](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-multifactorauth-recovery-codes/backend/config.ts#L68) on the backend. By default, the `assertAllowedToSetupFactorElseThrowInvalidClaimError` function will throw an error in case a TOTP device already exists and the user is trying to setup a new TOTP device during the sign in process (for security reasons). However, we modify this to check if the access token payload contains the `recoveryCodeHash` and that it matches the one in the user metadata JSON. If it does, we allow new device setup, since we know that the user had previously entered their recovery code successfully.
+
+During the TOTP device setup, users [this API](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-multifactorauth-recovery-codes/backend/config.ts#L45) will be called from the frontend. If this API succeeds, then it means that a new TOTP device was created for the user and they have completed the TOTP challenge for the current session. So on success, we remove the old recovery code from the metadata in case the session has the `recoveryCodeHash` set. This way, the old recovery code is no longer usable. 
+
+Finally, after a successful creation of a new TOTP device, the frontend should redirect the user to the page which shows the new recovery code for the user (see step 2 above).
