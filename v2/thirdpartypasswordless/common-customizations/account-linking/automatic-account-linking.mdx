@@ -98,18 +98,6 @@ Coming Soon
 
 You can use the input of the function to dynamically decide if you want to do account linking for a particular user and / or login method or not.
 
-:::caution
-If enabling automatic account linking for **an existing user base**, then before you enable it, you need to mark existing users as primary users so that future sign ups / ins with the same email / phone, but with a different login method, get linked to the existing user (as opposed to the other way around).
-
-To do this, you should create a script that:
-- [Loops through all users](../user-pagination) in your app (oldest first).
-- For each user, fetch the user's ID and call the [create primary user](./manual-account-linking#creating-a-primary-user) function on them **if their email is verified**.
-    - If at any point, you find that primary user creation failed because of `ACCOUNT_INFO_ALREADY_ASSOCIATED_WITH_ANOTHER_PRIMARY_USER_ID_ERROR` error, then it means that there is already another user with the same email / phone number that is already a primary user. In this case, you don't need to take any action for the current user (that failed) since they will be auto linked to the existing user when they sign in next with this method. As a side effect of this, their primary user ID will change when their account will be linked. To do any data migration at this point, see [this section on this page](#migration-of-user-data-when-accounts-are-linked).
-    - If you have two users with the same email / phone number, you can even pick which one of them will become a primary user based on your own logic. For example, instead of just making the oldest user the primary user, you can choose the one that has more activity on your app.
-- You can also do the above via [direct API calls to the core](https://app.swaggerhub.com/apis/supertokens/CDI).
-- When looping through users, and if you are using our managed service, make sure to add artificial delay in the loop to not breach [our rate limits](../../rate-limits). In case the API call or function calls throws an error with a `429`, please wait for a few seconds and then retry the call.
-- In order to be able to do this, you will first need to enable account linking feature in the SuperTokens core. For self hosted core, you can get a license key by [signing up](https://supertokens.com/auth), and for managed service users, you can enable the feature [from the dashboard](https://supertokens.com/dashboard-saas).
-:::
 
 ## Different scenarios of automatic account linking
 
@@ -372,6 +360,55 @@ The following is a list of support status codes that the end user might see duri
     There exists a primary, social login account with email `e1`, sign in with Google. There also exists an email password account (owned by the attacker) that is unverified with the same email `e1` (this is not a primary user). Now if the attacker tries to sign in with email password, they will see this error. We do this because if we didn't, then the attacker might send an email verification email on sign in, and the actual user may click on it (since they had previously signed up). Upon verifying that account, the attacker's account will be linked to the victim's account.
 
 - To resolve this issue, you can ask the user to try the reset password flow.
+
+### ERR_CODE_020
+- This can happen during association of a third party login to an existing session's account.
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_020)"
+        }
+        ```
+- This can happen when the thirdparty account that is trying to be linked to the session's account is not verified. It could happen when you are trying to associate a social login account to a user, but that social account's email is not verified (and if the email of that account is not the same as the current session's account's email). 
+- To resolve this, you can return `shouldRequireVerification` as `false` in the `shouldDoAutomaticAccountLinking` function implementation, or you can only allow users to link social login accounts that give verified accounts.
+
+### ERR_CODE_021
+- This can happen during association of a third party login to an existing session's account.
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_021)"
+        }
+        ```
+- This can happen when the thirdparty account that is trying to be linked to the session's account is already linked with another primary user.
+
+### ERR_CODE_022
+- This can happen during association of a third party login to an existing session's account.
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_022)"
+        }
+        ```
+- This can happen when the thirdparty account that is trying to be linked to the session's account has the same email as another primary user. 
+
+### ERR_CODE_023
+- This can happen during association of a third party login to an existing session's account.
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_023)"
+        }
+        ```
+- In order to link the third party user with the session user, we need to make sure that the session user is a primary user. However, that can fail if there exists another primary user with the same email, and in this case, this error is returned to the frontend.
 
 ### Changing the error message on the frontend
 If you want to display a different message to the user, or use a different status code, you can change them on the frontend via [the language translation feature](../translations).
