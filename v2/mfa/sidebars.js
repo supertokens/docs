@@ -38,6 +38,7 @@ module.exports = {
         "old-sdk-to-new"
       ],
     },
+    "security",
     {
       type: 'category',
       label: 'Legacy MFA method',
