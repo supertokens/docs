@@ -709,6 +709,7 @@ module.exports = {
             "user-roles/delete-roles",
           ],
         },
+        "mfa"
       ]
     },
     "rate-limits",

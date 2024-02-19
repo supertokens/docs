@@ -674,7 +674,8 @@ module.exports = {
             "user-roles/get-all-roles",
             "user-roles/delete-roles",
           ],
-        }
+        },
+        "mfa"
       ]
     },
     "rate-limits",
