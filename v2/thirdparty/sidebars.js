@@ -670,7 +670,8 @@ module.exports = {
             "user-roles/delete-roles",
           ],
         },
-        "mfa"
+        "mfa",
+        "multi-tenant"
       ]
     },
     "rate-limits",
