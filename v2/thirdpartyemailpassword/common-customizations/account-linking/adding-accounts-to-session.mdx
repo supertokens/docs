@@ -8,6 +8,7 @@ hide_title: true
 <!-- ./thirdpartyemailpassword/common-customizations/account-linking/adding-accounts-to-session.mdx -->
 
 import AccountLinkingPaidBanner from '../../../community/reusableMD/accountlinking/AccountLinkingPaidBanner.mdx'
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 
 <AccountLinkingPaidBanner />
 
@@ -25,8 +26,163 @@ The frontend code snippets below refer to the `supertokens-web-js` SDK. You can 
 
 ## Linking a social account to an existing user account
 
-TODO..
+### Step 1: Enable account linking on the backend SDK
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import supertokens, { User, RecipeUserId } from "supertokens-node";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
+import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
+import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "<CONNECTION_URI_HERE_FROM_THE_POPUP>",
+        apiKey: "<API_KEY_HERE_FROM_THE_POPUP>"
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // highlight-start
+        AccountLinking.init({
+            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: any) => {
+                if (user === undefined) {
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: true
+                    }
+                }
+                if (session !== undefined && session.getUserId() === user.id) {
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: true
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                }
+            }
+        })
+        // highlight-end
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+In the above implementation of `shouldDoAutomaticAccountLinking`, we only allow account linking if the input session is present. This means that we are trying to link a social login account to an existing session user. Otherwise, we do not allow account linking, which means that first factor account linking is disabled. If you want to enable that too, you can see [this page](./automatic-account-linking).
+
+### Step 2: Create a UI to show social login buttons and handle login
+
+Create your own UI which asks the user to pick a social login provider to connect to. Once they click on one, you will redirect them to that provider's page. Post login, the provider will redirect the user back to your application (on the same path as the first factor login) after which you will call our APIs to consume the OAuth tokens and link the user.
+
+The exact implementation of the above can be found [here](../../custom-ui/thirdparty-login). The two big differences in the implementation are:
+- When you call the signinup API, you need to provide the session's access token in the request. If you are using our frontend SDK, this is done automatically via our frontend network interceptors. The access token will enable the backend to get a session and then link the social login account to session user.
+- There are new types of failure scenarios when callilng the signinup API which are not possible during first factor login. To learn more about them, see the [error codes section](./automatic-account-linking#err_code_001) (> `ERR_CODE_008`).
+
+### Step 3: Extract the social login access token and user peofile info on the backend
+
+Once you call the signinup API from the frontend, SuperTokens will verify the OAuth tokens and fetch the user's profile info from the third party provider. SuperTokens will also link the newly created recipe user to the session user.
+
+To fetch the new user object and also the third party profile, you can override the signinup recipe function:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdPartyEmailPassword.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // override the thirdparty sign in / up function
+                        thirdPartySignInUp: async function (input) {
+                            let response = await originalImplementation.thirdPartySignInUp(input);
+
+                            if (response.status === "OK") {
+
+                                let accessToken = response.oAuthTokens["access_token"];
+
+                                let firstName = response.rawUserInfoFromProvider.fromUserInfoAPI!["first_name"];
+
+                                if (input.session !== undefined && response.user.id === input.session.getUserUd()) {
+                                    if (response.createdNewRecipeUser && response.user.loginMethods.length > 1) {
+                                        // new social account was linked to session user
+                                    } else {
+                                        // social account was already linked to the session
+                                        // user from before
+                                    }
+                                }
+                            }
+
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+- Notice in the above snippet that we check for `input.session !== undefined && response.user.id === input.session.getUserUd()`. This ensures that we run our custom logic only if it's linking a social account to your session account, and not during first factor login.
 
 ## Adding a password to an existing account
 
-TODO..
+### Step 1: Enable account linking on the backend SDK
+
+### Step 2: Create a UI to show a password input to the user and handle the submit event

@@ -48,6 +48,11 @@ supertokens.init({
         // highlight-start
         AccountLinking.init({
             shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: any) => {
+                if (session !== undefined) {
+                    return {
+                        shouldAutomaticallyLink: false
+                    }
+                }
                 if (newAccountInfo.recipeUserId !== undefined && user !== undefined) {
                     let userId = newAccountInfo.recipeUserId.getAsString();
                     let hasInfoAssociatedWithUserId = false // TODO: add your own implementation here.
@@ -90,7 +95,7 @@ Coming Soon
 
     Notice that in case of `newAccountInfo.recipeUserId !== undefined && user !== undefined` being `true`, we add some extra logic to check if the user ID has any info associated with them in your application db. This is to prevent data loss for this user ID (see the [migtation section below](#migration-of-user-data-when-accounts-are-linked)).
 - `user: User | undefined`: If this is not `undefined`, it means that `newAccountInfo` user is about to linked to this `user`. If this is `undefined`, it means that `newAccountInfo` user is about to become a primary user.
-- `session: SessionContainerInterface | undefined`: The session object of the user that is about to be linked. This is `undefined` if it's the first factor login. If a user has completed the first factor, and calls a sign up / in API again of some login method (either for MFA or for social login linking), then the `session` object will be defined.
+- `session: SessionContainerInterface | undefined`: The session object of the user that is about to be linked. This is `undefined` if it's the first factor login. If a user has completed the first factor, and calls a sign up / in API again of some login method (either for MFA or for social login linking), then the `session` object will be defined. In the above snippet, we prevent account linking if a session is defined so that account linking only happens during the first factor login.
 - `tenant: string`: The ID of the tenant that the user is signing in / up to.
 - `userContext: any`: User defined userContext.
 
@@ -363,6 +368,58 @@ The following is a list of support status codes that the end user might see duri
     There exists a primary, social login account with email `e1`, sign in with Google. There also exists an email password account (owned by the attacker) that is unverified with the same email `e1` (this is not a primary user). Now if the attacker tries to sign in with email password, they will see this error. We do this because if we didn't, then the attacker might send an email verification email on sign in, and the actual user may click on it (since they had previously signed up). Upon verifying that account, the attacker's account will be linked to the victim's account.
 
 - To resolve this issue, you can ask the user to try the reset password flow.
+
+### ERR_CODE_014
+- This can happen when adding a password to an existing session user:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_014)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - Let's say that the app is confgured to not have autmatic account linking during the first factor.
+    - A user creates an email password account with email `e1`, verifies it, and links social login account to it with email `e2`.
+    - The user logs out, and then creates a social login account with email `e1`. Then, they are asked to add a password to this account. Since an email password account with `e1` already exists, SuperTokens will try and link that to this new account, but fail, since the email password account with `e1` is already a primary user.
+
+- To resolve this, we recommend that manually link the `e1` social login account with the `e1` email password account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
+
+### ERR_CODE_015
+- This can happen when adding a password to an existing session user:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_015)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - A user creates a social login account with email `e1` which becomes a primary user.
+    - The user logs out, and creates another social login account with email `e2`, which also becomes a primary user.
+    - The user is asked to add a password for the new account with an option to also specify an email with it (this is strange, but theoritically possible). They now enter the email `e1` for the email password account.
+    - This will cause this type of error since the linking of the new social logn and email account will fail since there already exists another primary user with the same (`e1`) email.
+
+- To resolve this, we recommend not allowing users to specify an email when asking them to add a password for their account.
+
+### ERR_CODE_016
+- This can happen when adding a password to an existing session user:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_016)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - Let's say that the app is configured to not have automatic account linking during the first factor.
+    - A user signs up with a social login account using Google with email `e1`, and they add another social account, with Facebook, with the same email.
+    - The user logs out and creates another social login account with email `e1` (say Github), and then tries and adds a password to this account with email `e1`. Here, SuperTokens will try and make the Github login a primary user, but fail, since the email `e1` is already a primary user (with Google login). 
+
+- To resolve this, we recommend that manually link the `e1` Github social login account with the `e1` Google social login account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
 
 ### ERR_CODE_020
 - This can happen during association of a third party login to an existing session's account.
