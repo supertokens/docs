@@ -97,7 +97,7 @@ Then you will have to create your own UI which asks the user to pick a social lo
 
 The exact implementation of the above can be found [here](../../custom-ui/thirdparty-login). The two big differences in the implementation are:
 - When you call the signinup API, you need to provide the session's access token in the request. If you are using our frontend SDK, this is done automatically via our frontend network interceptors. The access token will enable the backend to get a session and then link the social login account to session user.
-- There are new types of failure scenarios when callilng the signinup API which are not possible during first factor login. To learn more about them, see the [error codes section](./automatic-account-linking#err_code_001) (> `ERR_CODE_008`).
+- There are new types of failure scenarios when calling the signinup API which are not possible during first factor login. To learn more about them, see the [error codes section](./automatic-account-linking#err_code_001) (> `ERR_CODE_008`).
 
 ### Step 3: Extract the social login access token and user peofile info on the backend
 
@@ -110,7 +110,7 @@ To fetch the new user object and also the third party profile, you can override 
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
@@ -123,15 +123,15 @@ SuperTokens.init({
         connectionURI: "...",
     },
     recipeList: [
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
             // highlight-start
             override: {
                 functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
                         // override the thirdparty sign in / up function
-                        thirdPartySignInUp: async function (input) {
-                            let response = await originalImplementation.thirdPartySignInUp(input);
+                        signInUp: async function (input) {
+                            let response = await originalImplementation.signInUp(input);
 
                             if (response.status === "OK") {
 
@@ -139,7 +139,7 @@ SuperTokens.init({
 
                                 let firstName = response.rawUserInfoFromProvider.fromUserInfoAPI!["first_name"];
 
-                                if (input.session !== undefined && response.user.id === input.session.getUserUd()) {
+                                if (input.session !== undefined && response.user.id === input.session.getUserId()) {
                                     if (response.createdNewRecipeUser && response.user.loginMethods.length > 1) {
                                         // new social account was linked to session user
                                     } else {
@@ -178,11 +178,11 @@ Coming Soon
 </TabItem>
 </BackendSDKTabs>
 
-Notice in the above snippet that we check for `input.session !== undefined && response.user.id === input.session.getUserUd()`. This ensures that we run our custom logic only if it's linking a social account to your session account, and not during first factor login.
+Notice in the above snippet that we check for `input.session !== undefined && response.user.id === input.session.getUserId()`. This ensures that we run our custom logic only if it's linking a social account to your session account, and not during first factor login.
 
 ## Adding a password to an existing account
 
-### Step 1: Enable account linking on the backend SDK
+### Step 1: Enable account linking and emailpassword on the backend SDK
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -192,6 +192,7 @@ import supertokens, { User, RecipeUserId } from "supertokens-node";
 import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
 import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
+import EmailPassword from "supertokens-node/recipe/emailpassword"
 
 supertokens.init({
     supertokens: {
@@ -205,6 +206,7 @@ supertokens.init({
     },
     recipeList: [
         // highlight-start
+        EmailPassword.init(),
         AccountLinking.init({
             shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: any) => {
                 if (user === undefined) {
@@ -256,13 +258,13 @@ If you want to use password based auth as a second factor, or for step up auth, 
 
 First, you will need to detect if there already exists a password for the user. This can be done by inspecting the [user object](../../user-object) on the backend and checking if there is an `emailpassword` login method.
 
-Then, if no such login method exists, you will have to show a UI in which the user can add a password to their account. The default password validation rules can be found [here](../signup-form/field-validators#changing-the-default-email-and-password-validators).
+Then, if no such login method exists, you will have to show a UI in which the user can add a password to their account. The default password validation rules can be found [here](/docs/emailpassword/common-customizations/signup-form/field-validators#changing-the-default-email-and-password-validators).
 
 You will also need to fetch the email of the user before you call the email password sign up API. Once again, you can fetch this using the the user object. If the user object does not have an email (which can only happen if the first factor is phone OTP), then you should ask the user to go through an email OTP flow (via out passwordless recipe) before asking them to set a password. Thge email OTP flow will also result in a passwordless user account being created and linked to the session user.
 
-Once you have the email on the frontend, you should call the [sign up API](../../custom-ui/email-password-login#sign-up-form). The two big differences in the implementation are:
+Once you have the email on the frontend, you should call the [sign up API](/docs/emailpassword/custom-ui/email-password-login#sign-up-form). The two big differences in the implementation are:
 - When you call the signup API, you need to provide the session's access token in the request. If you are using our frontend SDK, this is done automatically via our frontend network interceptors. The access token will enable the backend to get a session and then link the email password account to session user.
-- There are new types of failure scenarios when callilng the signup API which are not possible during first factor login. To learn more about them, see the [error codes section](./automatic-account-linking#err_code_001) (> `ERR_CODE_008`).
+- There are new types of failure scenarios when calling the signup API which are not possible during first factor login. To learn more about them, see the [error codes section](./automatic-account-linking#err_code_001) (> `ERR_CODE_008`).
 
 ### Step 3: Checking for email match in the backend sign up API
 Since the email is specified on the frontend, we want to verify it in the backend API before using it (since we shouldn't trust the frontend). This can be easily done by overriding the email password sign up API:
@@ -272,7 +274,7 @@ Since the email is specified on the frontend, we want to verify it in the backen
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
@@ -285,13 +287,13 @@ SuperTokens.init({
         connectionURI: "...",
     },
     recipeList: [
-        ThirdPartyEmailPassword.init({
+        EmailPassword.init({
             // highlight-start
             override: {
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        emailPasswordSignUpPOST: async function (input) {
+                        signUpPOST: async function (input) {
                             if (input.session !== undefined) {
                                 // this means that we are trying to add a password to the session user
                                 const inputEmail = input.formFields.find(f => f.id === "email")!.value;
@@ -305,7 +307,7 @@ SuperTokens.init({
                                     }
                                 }
                             }
-                            return await originalImplementation.emailPasswordSignUpPOST!(input);
+                            return await originalImplementation.signUpPOST!(input);
                         }
                     }
                 }
