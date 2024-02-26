@@ -1,0 +1,335 @@
+---
+id: adding-accounts-to-session
+title: Linking social accounts or adding a password to an existing account
+hide_title: true
+---
+
+import AccountLinkingPaidBanner from '../../../community/reusableMD/accountlinking/AccountLinkingPaidBanner.mdx'
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+
+<AccountLinkingPaidBanner />
+
+# Linking social accounts or adding a password to an existing account
+
+There may be scenarios in which you want to link a social account to an existing user account, or add a password to an account that was created using a social provider (or passwordless login). This guide will walk you through how to do this.
+
+The idea here is that we reuse the existing sign up APIs, but call them with a session's access token. The APIs will then create a new recipe user for that login method based on the input, and then link that to the session user. Of course, there are security checks done to ensure there is no account takeover risk, and we will go through them in this guide as well.
+
+:::caution
+We do not provide pre built UIs for this flow since it's probably something you want to add in your settings page or during the sign up process, so this guide will focus on which APIs to call from your own UI.
+
+The frontend code snippets below refer to the `supertokens-web-js` SDK. You can continue to use this even if you have initialised our `supertokens-auth-react` SDK, on the frontend. 
+:::
+
+## Linking a social account to an existing user account
+
+### Step 1: Enable account linking on the backend SDK
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import supertokens, { User, RecipeUserId } from "supertokens-node";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
+import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
+import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "...",
+        apiKey: "..."
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // highlight-start
+        AccountLinking.init({
+            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: any) => {
+                if (user === undefined) {
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: true
+                    }
+                }
+                if (session !== undefined && session.getUserId() === user.id) {
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: true
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                }
+            }
+        })
+        // highlight-end
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+In the above implementation of `shouldDoAutomaticAccountLinking`, we only allow account linking if the input session is present. This means that we are trying to link a social login account to an existing session user. Otherwise, we do not allow account linking which means that first factor account linking is disabled. If you want to enable that too, you can see [this page](./automatic-account-linking).
+
+### Step 2: Create a UI to show social login buttons and handle login
+
+First, you will need to detect which social login methods are already linked to the user. This can be done by inspecting the [user object](../../user-object) on the backend and checking the `thirdParty.id` property (the values will be like `google`, `facebook` etc).
+
+Then you will have to create your own UI which asks the user to pick a social login provider to connect to. Once they click on one, you will redirect them to that provider's page. Post login, the provider will redirect the user back to your application (on the same path as the first factor login) after which you will call our APIs to consume the OAuth tokens and link the user.
+
+The exact implementation of the above can be found [here](../../custom-ui/thirdparty-login). The two big differences in the implementation are:
+- When you call the signinup API, you need to provide the session's access token in the request. If you are using our frontend SDK, this is done automatically via our frontend network interceptors. The access token will enable the backend to get a session and then link the social login account to session user.
+- There are new types of failure scenarios when callilng the signinup API which are not possible during first factor login. To learn more about them, see the [error codes section](./automatic-account-linking#err_code_001) (> `ERR_CODE_008`).
+
+### Step 3: Extract the social login access token and user peofile info on the backend
+
+Once you call the signinup API from the frontend, SuperTokens will verify the OAuth tokens and fetch the user's profile info from the third party provider. SuperTokens will also link the newly created recipe user to the session user.
+
+To fetch the new user object and also the third party profile, you can override the signinup recipe function:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdPartyEmailPassword.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        // override the thirdparty sign in / up function
+                        thirdPartySignInUp: async function (input) {
+                            let response = await originalImplementation.thirdPartySignInUp(input);
+
+                            if (response.status === "OK") {
+
+                                let accessToken = response.oAuthTokens["access_token"];
+
+                                let firstName = response.rawUserInfoFromProvider.fromUserInfoAPI!["first_name"];
+
+                                if (input.session !== undefined && response.user.id === input.session.getUserUd()) {
+                                    if (response.createdNewRecipeUser && response.user.loginMethods.length > 1) {
+                                        // new social account was linked to session user
+                                    } else {
+                                        // social account was already linked to the session
+                                        // user from before
+                                    }
+                                }
+                            }
+
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+Notice in the above snippet that we check for `input.session !== undefined && response.user.id === input.session.getUserUd()`. This ensures that we run our custom logic only if it's linking a social account to your session account, and not during first factor login.
+
+## Adding a password to an existing account
+
+### Step 1: Enable account linking on the backend SDK
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import supertokens, { User, RecipeUserId } from "supertokens-node";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
+import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
+import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "...",
+        apiKey: "..."
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        // highlight-start
+        AccountLinking.init({
+            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: any) => {
+                if (user === undefined) {
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: true
+                    }
+                }
+                if (session !== undefined && session.getUserId() === user.id) {
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: true
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                }
+            }
+        })
+        // highlight-end
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
+In the above implementation of `shouldDoAutomaticAccountLinking`, we only allow account linking if the input session is present. This means that we are trying to link an email password account to an existing session user. Otherwise, we do not allow account linking which means that first factor account linking is disabled. If you want to enable that too, you can see [this page](./automatic-account-linking).
+
+### Step 2: Create a UI to show a password input to the user and handle the submit event
+
+:::important
+If you want to use password based auth as a second factor, or for step up auth, see our docs in the [MFA recipe](/docs/mfa/introduction) instead. The guide below is only meant for if you want to add a password for a user and allow them to login via email password for first factor login.
+:::
+
+First, you will need to detect if there already exists a password for the user. This can be done by inspecting the [user object](../../user-object) on the backend and checking if there is an `emailpassword` login method.
+
+Then, if no such login method exists, you will have to show a UI in which the user can add a password to their account. The default password validation rules can be found [here](../signup-form/field-validators#changing-the-default-email-and-password-validators).
+
+You will also need to fetch the email of the user before you call the email password sign up API. Once again, you can fetch this using the the user object. If the user object does not have an email (which can only happen if the first factor is phone OTP), then you should ask the user to go through an email OTP flow (via out passwordless recipe) before asking them to set a password. Thge email OTP flow will also result in a passwordless user account being created and linked to the session user.
+
+Once you have the email on the frontend, you should call the [sign up API](../../custom-ui/email-password-login#sign-up-form). The two big differences in the implementation are:
+- When you call the signup API, you need to provide the session's access token in the request. If you are using our frontend SDK, this is done automatically via our frontend network interceptors. The access token will enable the backend to get a session and then link the email password account to session user.
+- There are new types of failure scenarios when callilng the signup API which are not possible during first factor login. To learn more about them, see the [error codes section](./automatic-account-linking#err_code_001) (> `ERR_CODE_008`).
+
+### Step 3: Checking for email match in the backend sign up API
+Since the email is specified on the frontend, we want to verify it in the backend API before using it (since we shouldn't trust the frontend). This can be easily done by overriding the email password sign up API:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdPartyEmailPassword.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        emailPasswordSignUpPOST: async function (input) {
+                            if (input.session !== undefined) {
+                                // this means that we are trying to add a password to the session user
+                                const inputEmail = input.formFields.find(f => f.id === "email")!.value;
+                                let sessionUserId = input.session.getUserId();
+                                let userObject = await SuperTokens.getUser(sessionUserId);
+                                if (userObject!.emails.find(e => e === inputEmail) === undefined) {
+                                    // this means that the input email does not belong to this user.
+                                    return {
+                                        status: "GENERAL_ERROR",
+                                        message: "Cannot use this email to add a password for this user"
+                                    }
+                                }
+                            }
+                            return await originalImplementation.emailPasswordSignUpPOST!(input);
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+<TabItem value="python">
+
+:::note
+Coming Soon
+:::
+
+</TabItem>
+</BackendSDKTabs>

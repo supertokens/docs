@@ -448,6 +448,13 @@ module.exports = {
         "common-customizations/get-user-info",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
+        {
+          type: "category",
+          label: "Account Linking",
+          items: [
+            "common-customizations/account-linking/adding-accounts-to-session"
+          ]
+        },
         "common-customizations/change-magic-link-url",
         "common-customizations/change-code-lifetime",
         "common-customizations/change-email",
