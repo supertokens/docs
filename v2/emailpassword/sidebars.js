@@ -10,53 +10,53 @@ module.exports = {
       items: [
         "introduction",
         {
-          type: 'category',
-          label: 'Quick setup with Pre built UI',
+          type: "category",
+          label: "Quick setup with Pre built UI",
           customProps: {
             categoryIcon: "lightning",
           },
           items: [
             {
-              type: 'category',
-              label: 'Setup',
+              type: "category",
+              label: "Setup",
               collapsed: false,
               items: [
                 "pre-built-ui/setup/frontend",
                 "pre-built-ui/setup/backend",
                 {
-                  type: 'category',
-                  label: 'Step 3: Core',
+                  type: "category",
+                  label: "Step 3: Core",
                   items: [
                     {
-                      type: 'category',
-                      label: 'Self hosted',
+                      type: "category",
+                      label: "Self hosted",
                       items: [
                         "pre-built-ui/setup/core/with-docker",
                         "pre-built-ui/setup/core/without-docker",
                         {
-                          type: 'category',
-                          label: 'Database Setup',
+                          type: "category",
+                          label: "Database Setup",
                           items: [
                             "pre-built-ui/setup/database-setup/mysql",
                             "pre-built-ui/setup/database-setup/postgresql",
-                            "pre-built-ui/setup/database-setup/rename-database-tables"
+                            "pre-built-ui/setup/database-setup/rename-database-tables",
                           ],
-                        }
+                        },
                       ],
                     },
-                    "pre-built-ui/setup/core/saas-setup"
+                    "pre-built-ui/setup/core/saas-setup",
                   ],
                 },
                 {
-                  type: 'category',
+                  type: "category",
                   label: "Step 4: User management dashboard",
                   items: [
                     "pre-built-ui/setup/user-management-dashboard/setup",
                     "pre-built-ui/setup/user-management-dashboard/users-listing-and-details",
-                    "pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions"
-                  ]
+                    "pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions",
+                  ],
                 },
-              ]
+              ],
             },
             "pre-built-ui/handling-session-tokens",
             "pre-built-ui/securing-routes",
@@ -65,64 +65,64 @@ module.exports = {
             "pre-built-ui/enable-email-verification",
             "pre-built-ui/multitenant-login",
             {
-              type: 'category',
-              label: 'Further Reading',
+              type: "category",
+              label: "Further Reading",
               items: [
                 "pre-built-ui/further-reading/email-password-login",
                 "pre-built-ui/further-reading/password-reset",
-                "pre-built-ui/further-reading/email-verification"
-              ]
+                "pre-built-ui/further-reading/email-verification",
+              ],
             },
           ],
         },
         {
-          type: 'category',
-          label: 'Using your own UI / Custom UI',
+          type: "category",
+          label: "Using your own UI / Custom UI",
           customProps: {
             categoryIcon: "pencil",
           },
           items: [
             {
-              type: 'category',
-              label: 'Initialisation',
+              type: "category",
+              label: "Initialisation",
               collapsed: false,
               items: [
                 "custom-ui/init/frontend",
                 "custom-ui/init/backend",
                 {
-                  type: 'category',
-                  label: 'Step 3: Core',
+                  type: "category",
+                  label: "Step 3: Core",
                   items: [
                     {
-                      type: 'category',
-                      label: 'Self hosted',
+                      type: "category",
+                      label: "Self hosted",
                       items: [
                         "custom-ui/init/core/with-docker",
                         "custom-ui/init/core/without-docker",
                         {
-                          type: 'category',
-                          label: 'Database Setup',
+                          type: "category",
+                          label: "Database Setup",
                           items: [
                             "custom-ui/init/database-setup/mysql",
                             "custom-ui/init/database-setup/postgresql",
-                            "custom-ui/init/database-setup/rename-database-tables"
+                            "custom-ui/init/database-setup/rename-database-tables",
                           ],
-                        }
+                        },
                       ],
                     },
-                    "custom-ui/init/core/saas-setup"
+                    "custom-ui/init/core/saas-setup",
                   ],
                 },
                 {
-                  type: 'category',
+                  type: "category",
                   label: "Step 4: User management dashboard",
                   items: [
                     "custom-ui/init/user-management-dashboard/setup",
                     "custom-ui/init/user-management-dashboard/users-listing-and-details",
-                    "custom-ui/init/user-management-dashboard/managing-user-roles-and-permissions"
-                  ]
+                    "custom-ui/init/user-management-dashboard/managing-user-roles-and-permissions",
+                  ],
                 },
-              ]
+              ],
             },
             "custom-ui/email-password-login",
             "custom-ui/handling-session-tokens",
@@ -133,7 +133,7 @@ module.exports = {
             "custom-ui/multitenant-login",
           ],
         },
-      ]
+      ],
     },
     "user-object",
     {
@@ -142,43 +142,41 @@ module.exports = {
       customProps: {
         logoUrl: [
           {
-            url: '/img/logos/hasura-logo.png',
-            label: 'Hasura',
+            url: "/img/logos/hasura-logo.png",
+            label: "Hasura",
           },
           {
-            url: '/img/logos/graphql-logo.png',
-            label: 'GraphQL',
+            url: "/img/logos/graphql-logo.png",
+            label: "GraphQL",
           },
           {
-            url: '/img/logos/next-logo.png',
-            label: 'NextJS',
+            url: "/img/logos/next-logo.png",
+            label: "NextJS",
           },
           {
-            url: '/img/logos/nest-logo.svg',
-            label: 'NestJS',
+            url: "/img/logos/nest-logo.svg",
+            label: "NestJS",
           },
           {
-            url: '/img/logos/aws-lambda.svg',
-            label: 'AWS Lambda',
+            url: "/img/logos/aws-lambda.svg",
+            label: "AWS Lambda",
           },
         ],
       },
       items: [
         {
-          type: 'category',
-          label: 'Hasura',
+          type: "category",
+          label: "Hasura",
           customProps: {
-            logoUrl: '/img/logos/hasura-logo.png'
+            logoUrl: "/img/logos/hasura-logo.png",
           },
-          items: [
-            "hasura-integration/with-jwt"
-          ],
+          items: ["hasura-integration/with-jwt"],
         },
         {
-          type: 'category',
-          label: 'GraphQL',
+          type: "category",
+          label: "GraphQL",
           customProps: {
-            logoUrl: '/img/logos/graphql-logo.png'
+            logoUrl: "/img/logos/graphql-logo.png",
           },
           items: [
             "graphql-integration/backend-setup",
@@ -186,15 +184,15 @@ module.exports = {
           ],
         },
         {
-          type: 'category',
-          label: 'NextJS',
+          type: "category",
+          label: "NextJS",
           customProps: {
-            logoUrl: '/img/logos/next-logo.png'
+            logoUrl: "/img/logos/next-logo.png",
           },
           items: [
             {
-              type: 'category',
-              label: 'Using the App directory',
+              type: "category",
+              label: "Using the App directory",
               items: [
                 "nextjs/app-directory/about",
                 "nextjs/app-directory/init",
@@ -210,12 +208,12 @@ module.exports = {
                   ],
                 },
                 "nextjs/app-directory/server-components-requests",
-                "nextjs/app-directory/next-steps"
+                "nextjs/app-directory/next-steps",
               ],
             },
             {
-              type: 'category',
-              label: 'Using the Pages directory',
+              type: "category",
+              label: "Using the Pages directory",
               items: [
                 "nextjs/about",
                 "nextjs/init",
@@ -223,43 +221,54 @@ module.exports = {
                 "nextjs/setting-up-backend",
                 "nextjs/protecting-route",
                 {
-                  type: 'category',
-                  label: '5. Session verification',
+                  type: "category",
+                  label: "5. Session verification",
                   items: [
                     "nextjs/session-verification/in-api",
-                    "nextjs/session-verification/in-ssr"
+                    "nextjs/session-verification/in-ssr",
                   ],
                 },
-                "nextjs/next-steps"
+                "nextjs/next-steps",
               ],
             },
           ],
         },
         {
-          type: 'category',
-          label: 'NestJS',
+          type: "category",
+          label: "Remix",
           customProps: {
-            logoUrl: '/img/logos/nest-logo.svg'
+            logoUrl: "/img/logos/remix.ico",
           },
           items: [
-            "nestjs/guide",
+            "remix/remix-integration-overview",
+            "remix/configure-initialize-supertokens",
+            "remix/frontend-auth-route",
+            "remix/integrating-login-ui",
+            "remix/exposing-auth-apis",
+            "remix/next-steps",
           ],
         },
         {
-          type: 'category',
-          label: 'RedwoodJS',
+          type: "category",
+          label: "NestJS",
           customProps: {
-            logoUrl: '/img/logos/redwood-logo.png',
+            logoUrl: "/img/logos/nest-logo.svg",
           },
-          items: [
-            "redwood/about"
-          ],
+          items: ["nestjs/guide"],
         },
         {
-          type: 'category',
-          label: 'Netlify',
+          type: "category",
+          label: "RedwoodJS",
           customProps: {
-            logoUrl: '/img/logos/netlify.svg'
+            logoUrl: "/img/logos/redwood-logo.png",
+          },
+          items: ["redwood/about"],
+        },
+        {
+          type: "category",
+          label: "Netlify",
+          customProps: {
+            logoUrl: "/img/logos/netlify.svg",
           },
           items: [
             "serverless/with-netlify/about",
@@ -267,21 +276,21 @@ module.exports = {
             "serverless/with-netlify/backend-config",
             "serverless/with-netlify/auth-serverless",
             "serverless/with-netlify/session-verification",
-            "serverless/with-netlify/next-steps"
+            "serverless/with-netlify/next-steps",
           ],
         },
         {
-          type: 'category',
-          label: 'AWS Lambda',
+          type: "category",
+          label: "AWS Lambda",
           customProps: {
-            logoUrl: '/img/logos/aws-lambda.svg'
+            logoUrl: "/img/logos/aws-lambda.svg",
           },
           items: [
             "serverless/with-aws-lambda/about",
             "serverless/with-aws-lambda/frontend",
             {
-              type: 'category',
-              label: '2. Backend config',
+              type: "category",
+              label: "2. Backend config",
               items: [
                 "serverless/with-aws-lambda/setup-lambda-layer",
                 "serverless/with-aws-lambda/setup-lambda",
@@ -289,8 +298,8 @@ module.exports = {
               ],
             },
             {
-              type: 'category',
-              label: '3. Session Verification',
+              type: "category",
+              label: "3. Session Verification",
               items: [
                 "serverless/with-aws-lambda/session-verification",
                 "serverless/with-aws-lambda/authorizer",
@@ -298,14 +307,14 @@ module.exports = {
               ],
             },
             "serverless/with-aws-lambda/next-steps",
-            "serverless/with-aws-lambda/appsync-integration"
+            "serverless/with-aws-lambda/appsync-integration",
           ],
         },
         {
-          type: 'category',
-          label: 'Supabase',
+          type: "category",
+          label: "Supabase",
           customProps: {
-            logoUrl: '/img/logos/supabase-logo.jpg'
+            logoUrl: "/img/logos/supabase-logo.jpg",
           },
           items: [
             "supabase-intergration/about",
@@ -314,39 +323,33 @@ module.exports = {
             "supabase-intergration/supabase-client",
             "supabase-intergration/backend-signup-override",
             "supabase-intergration/frontend",
-            "supabase-intergration/policies"
+            "supabase-intergration/policies",
           ],
         },
         {
-          type: 'category',
-          label: 'Vercel',
+          type: "category",
+          label: "Vercel",
           customProps: {
-            logoUrl: '/img/logos/vercel.jpeg'
+            logoUrl: "/img/logos/vercel.jpeg",
           },
-          items: [
-            "serverless/with-vercel/about"
-          ],
+          items: ["serverless/with-vercel/about"],
         },
         {
-          type: 'category',
-          label: 'Capacitor',
+          type: "category",
+          label: "Capacitor",
           customProps: {
-            logoUrl: '/img/logos/capacitorjs-icon.svg'
+            logoUrl: "/img/logos/capacitorjs-icon.svg",
           },
-          items: [
-            "capacitor-integration/about"
-          ],
+          items: ["capacitor-integration/about"],
         },
         {
-          type: 'category',
-          label: 'T4 App',
+          type: "category",
+          label: "T4 App",
           customProps: {
-            logoUrl: '/img/logos/t4-app.png'
+            logoUrl: "/img/logos/t4-app.png",
           },
-          items: [
-            "t4-app/about"
-          ],
-        }
+          items: ["t4-app/about"],
+        },
       ],
     },
     {
@@ -361,8 +364,8 @@ module.exports = {
             "common-customizations/sessions/session-verification-in-api/overview",
             "common-customizations/sessions/session-verification-in-api/verify-session",
             "common-customizations/sessions/session-verification-in-api/get-session",
-            "common-customizations/sessions/with-jwt/jwt-verification"
-          ]
+            "common-customizations/sessions/with-jwt/jwt-verification",
+          ],
         },
         "common-customizations/sessions/protecting-frontend-routes",
         "common-customizations/sessions/with-jwt/read-jwt",
@@ -372,8 +375,8 @@ module.exports = {
           label: "Reading / modifying session claims",
           items: [
             "common-customizations/sessions/claims/access-token-payload",
-            "common-customizations/sessions/claims/claim-validators"
-          ]
+            "common-customizations/sessions/claims/claim-validators",
+          ],
         },
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/anonymous-session",
@@ -390,8 +393,8 @@ module.exports = {
             "common-customizations/sessions/same-site-cookie",
             "common-customizations/sessions/jwt-signing-key-rotation",
             "common-customizations/sessions/change-session-timeout",
-            "common-customizations/sessions/access-token-blacklisting"
-          ]
+            "common-customizations/sessions/access-token-blacklisting",
+          ],
         },
         "common-customizations/sessions/share-sessions-across-sub-domains",
         "common-customizations/sessions/token-transfer-method",
@@ -404,25 +407,25 @@ module.exports = {
             "common-customizations/sessions/fetch-sessions-for-user",
             "common-customizations/sessions/in-iframe",
             "common-customizations/sessions/error-handling",
-            "common-customizations/sessions/disable-interception"
-          ]
+            "common-customizations/sessions/disable-interception",
+          ],
         },
-      ]
+      ],
     },
     {
-      type: 'category',
-      label: 'Auth flow customizations',
+      type: "category",
+      label: "Auth flow customizations",
       collapsed: true,
       items: [
         "common-customizations/handling-signup-success",
         "common-customizations/handling-signin-success",
         {
-          type: 'category',
-          label: 'Sign In / Up',
+          type: "category",
+          label: "Sign In / Up",
           items: [
             {
-              type: 'category',
-              label: 'Sign Up Form',
+              type: "category",
+              label: "Sign Up Form",
               items: [
                 "common-customizations/signup-form/adding-fields",
                 "common-customizations/signup-form/customising-each-form-field",
@@ -435,7 +438,7 @@ module.exports = {
               items: [
                 "common-customizations/signin-form/customising-each-form-field",
                 "common-customizations/signin-form/field-validators",
-              ]
+              ],
             },
             {
               type: "category",
@@ -448,11 +451,11 @@ module.exports = {
                   label: "Common UX flows",
                   items: [
                     "common-customizations/multi-tenancy/common-domain-login",
-                    "common-customizations/multi-tenancy/sub-domain-login"
-                  ]
+                    "common-customizations/multi-tenancy/sub-domain-login",
+                  ],
                 },
                 "common-customizations/multi-tenancy/multi-app",
-              ]
+              ],
             },
             "common-customizations/signup-form/toc-privacypolicy",
             "common-customizations/embed-sign-in-up-form",
@@ -473,9 +476,8 @@ module.exports = {
             "common-customizations/reset-password/embed-in-page",
             "common-customizations/reset-password/post-reset-password",
             "common-customizations/reset-password/changing-token-lifetime",
-            "common-customizations/reset-password/generate-link-manually"
-
-          ]
+            "common-customizations/reset-password/generate-link-manually",
+          ],
         },
         {
           type: "category",
@@ -489,26 +491,26 @@ module.exports = {
             "common-customizations/email-verification/changing-token-lifetime",
             "common-customizations/email-verification/changing-style",
             "common-customizations/email-verification/changing-email-verification-status",
-            "common-customizations/email-verification/generate-link-manually"
-          ]
+            "common-customizations/email-verification/generate-link-manually",
+          ],
         },
         {
-          type: 'category',
-          label: 'Email Delivery',
+          type: "category",
+          label: "Email Delivery",
           items: [
             "email-delivery/about",
             "email-delivery/default",
             {
-              type: 'category',
-              label: 'Method 2) SMTP service',
+              type: "category",
+              label: "Method 2) SMTP service",
               items: [
                 "email-delivery/smtp/configure-smtp",
-                "email-delivery/smtp/change-email-content"
-              ]
+                "email-delivery/smtp/change-email-content",
+              ],
             },
             "email-delivery/custom-method",
-            "email-delivery/pre-post-email"
-          ]
+            "email-delivery/pre-post-email",
+          ],
         },
         {
           type: "category",
@@ -516,18 +518,18 @@ module.exports = {
           items: [
             "common-customizations/password-hashing/about",
             "common-customizations/password-hashing/bcrypt",
-            "common-customizations/password-hashing/argon2"
-          ]
+            "common-customizations/password-hashing/argon2",
+          ],
         },
         {
-          type: 'category',
-          label: 'User Metadata',
+          type: "category",
+          label: "User Metadata",
           items: [
             "common-customizations/usermetadata/about",
             "common-customizations/usermetadata/setup",
             "common-customizations/usermetadata/store-data",
             "common-customizations/usermetadata/get-data",
-            "common-customizations/usermetadata/clear-data"
+            "common-customizations/usermetadata/clear-data",
           ],
         },
         {
@@ -536,8 +538,8 @@ module.exports = {
           items: [
             "common-customizations/styling/changing-colours",
             "common-customizations/styling/changing-style",
-            "common-customizations/styling/shadow-dom"
-          ]
+            "common-customizations/styling/shadow-dom",
+          ],
         },
         "common-customizations/translations",
         {
@@ -545,70 +547,71 @@ module.exports = {
           label: "Changing base path",
           items: [
             "common-customizations/changing-base-path/website-base-path",
-            "common-customizations/changing-base-path/api-base-path"
-          ]
+            "common-customizations/changing-base-path/api-base-path",
+          ],
         },
         "common-customizations/multiple-clients",
         "common-customizations/userid-format",
         {
-          type: 'category',
-          label: 'Backend and frontend overrides (actions, hooks and UI customisation)',
+          type: "category",
+          label:
+            "Backend and frontend overrides (actions, hooks and UI customisation)",
           items: [
             "advanced-customizations/overview",
             "advanced-customizations/user-context/custom-request-properties",
             {
-              type: 'category',
-              label: 'React component override',
+              type: "category",
+              label: "React component override",
               items: [
                 "advanced-customizations/react-component-override/about",
-                "advanced-customizations/react-component-override/usage"
+                "advanced-customizations/react-component-override/usage",
               ],
             },
             {
-              type: 'category',
-              label: 'Frontend functions override',
+              type: "category",
+              label: "Frontend functions override",
               items: [
                 "advanced-customizations/frontend-functions-override/about",
-                "advanced-customizations/frontend-functions-override/usage"
+                "advanced-customizations/frontend-functions-override/usage",
               ],
             },
             {
-              type: 'category',
-              label: 'Backend functions override',
+              type: "category",
+              label: "Backend functions override",
               items: [
                 "advanced-customizations/backend-functions-override/about",
-                "advanced-customizations/backend-functions-override/usage"
+                "advanced-customizations/backend-functions-override/usage",
               ],
             },
             {
-              type: 'category',
-              label: 'APIs override',
+              type: "category",
+              label: "APIs override",
               items: [
                 "advanced-customizations/apis-override/about",
                 "advanced-customizations/apis-override/usage",
                 {
-                  type: 'category',
-                  label: 'Sending custom response',
+                  type: "category",
+                  label: "Sending custom response",
                   items: [
                     "advanced-customizations/apis-override/custom-response/api-override",
                     "advanced-customizations/apis-override/custom-response/throwing-error",
-                    "advanced-customizations/apis-override/custom-response/general-error"
+                    "advanced-customizations/apis-override/custom-response/general-error",
                   ],
                 },
-                "advanced-customizations/apis-override/disabling"
+                "advanced-customizations/apis-override/disabling",
               ],
             },
             {
-              type: 'category',
-              label: 'Frontend hooks',
+              type: "category",
+              label: "Frontend hooks",
               items: [
                 "advanced-customizations/frontend-hooks/pre-api",
                 "advanced-customizations/frontend-hooks/handle-event",
-                "advanced-customizations/frontend-hooks/redirection-callback"
+                "advanced-customizations/frontend-hooks/redirection-callback",
               ],
             },
             "advanced-customizations/user-context",
-            "advanced-customizations/backend-sdk-core-interceptor"
+            "advanced-customizations/backend-sdk-core-interceptor",
           ],
         },
         {
@@ -629,10 +632,10 @@ module.exports = {
                 "common-customizations/cli/start",
                 "common-customizations/cli/list",
                 "common-customizations/cli/stop",
-                "common-customizations/cli/uninstall"
-              ]
+                "common-customizations/cli/uninstall",
+              ],
             },
-          ]
+          ],
         },
         {
           type: "category",
@@ -643,28 +646,28 @@ module.exports = {
               label: "Disable sign up / implement invite flow",
               items: [
                 "common-customizations/disable-sign-up/overview",
-                "common-customizations/disable-sign-up/emailpassword-changes"
-              ]
+                "common-customizations/disable-sign-up/emailpassword-changes",
+              ],
             },
             {
               type: "category",
               label: "Implement username and password login",
               items: [
                 "common-customizations/username-password/overview",
-                "common-customizations/username-password/emailpassword-changes"
-              ]
+                "common-customizations/username-password/emailpassword-changes",
+              ],
             },
-          ]
+          ],
         },
       ],
     },
     {
-      type: 'category',
-      label: 'Additional Features',
+      type: "category",
+      label: "Additional Features",
       items: [
         {
-          type: 'category',
-          label: 'User Roles',
+          type: "category",
+          label: "User Roles",
           items: [
             "user-roles/initialisation",
             "user-roles/creating-role",
@@ -674,36 +677,36 @@ module.exports = {
             "user-roles/get-all-roles",
             "user-roles/delete-roles",
           ],
-        }
-      ]
+        },
+      ],
     },
     "rate-limits",
     {
-      type: 'category',
-      label: 'Testing & Debugging',
+      type: "category",
+      label: "Testing & Debugging",
       items: [
         "testing/testing-with-postman",
         "troubleshooting/how-to-troubleshoot",
-        "troubleshooting/cors-issues"
+        "troubleshooting/cors-issues",
       ],
     },
     {
-      type: 'category',
-      label: 'Migration',
+      type: "category",
+      label: "Migration",
       items: [
         "migration/about",
         {
-          type: 'category',
-          label: 'Step 1) Account Creation',
+          type: "category",
+          label: "Step 1) Account Creation",
           items: [
             "migration/account-creation/user-creation",
             "migration/account-creation/user-id-mapping",
             "migration/account-creation/email-verification",
-            "migration/account-creation/ep-migration-without-password-hash"
+            "migration/account-creation/ep-migration-without-password-hash",
           ],
         },
         "migration/data-migration",
-        "migration/session-migration"
+        "migration/session-migration",
       ],
     },
     {
@@ -715,8 +718,8 @@ module.exports = {
         "appinfo",
         "sdks",
         "apis",
-        "compatibility-table"
+        "compatibility-table",
       ],
     },
-  ]
+  ],
 };
