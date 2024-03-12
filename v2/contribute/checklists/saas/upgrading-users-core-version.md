@@ -1043,3 +1043,8 @@ ALTER TABLE emailpassword_pswd_reset_tokens ADD CONSTRAINT emailpassword_pswd_re
 
 ALTER TABLE emailpassword_pswd_reset_tokens ADD COLUMN email VARCHAR(256);
 ```
+
+### 7.0 to 8.0
+```sql
+ALTER TABLE user_roles DROP CONSTRAINT IF EXISTS user_roles_role_fkey;
+```

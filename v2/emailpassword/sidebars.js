@@ -465,6 +465,13 @@ module.exports = {
         "common-customizations/get-user-info",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
+        {
+          type: "category",
+          label: "Account Linking",
+          items: [
+            "common-customizations/account-linking/adding-accounts-to-session"
+          ]
+        },
         "common-customizations/change-password",
         "common-customizations/change-email-post-login",
         {
@@ -679,6 +686,10 @@ module.exports = {
           ],
         },
       ],
+        },
+        "mfa",
+        "multi-tenant"
+      ]
     },
     "rate-limits",
     {
@@ -707,6 +718,7 @@ module.exports = {
         },
         "migration/data-migration",
         "migration/session-migration",
+        "migration/mfa-migration"
       ],
     },
     {
