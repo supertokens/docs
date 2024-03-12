@@ -716,7 +716,7 @@ module.exports = {
         },
         "mfa",
         "multi-tenant"
-      ]
+      ],
     },
     "rate-limits",
     {
