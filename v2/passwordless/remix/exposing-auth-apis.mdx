@@ -1,0 +1,150 @@
+---
+id: exposing-auth-apis
+title: Exposing the SuperTokens Authentication APIs
+hide_title: false
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/remix/exposing-auth-apis.mdx -->
+
+The following shows how to configure and expose the backend APIs for authentication using SuperTokens. We will create catch-all API route to handle requests made to SuperTokens authentication APIs.
+
+:::tip
+You can change the authentication API route by setting the `apiBasePath` property in the `appInfo` object in the `appInfo.tsx` file.
+:::
+
+## Create a Route for SuperTokens Authentication APIs
+
+Create a `api.auth.$.tsx` file in the `routes` folder. `api.auth.$.tsx` will use the middleware exposed by `supertokens-node`, which exposes all the APIs like sign-in, sign-up, etc.
+
+At this stage, your `app/routes` folder should now resemble the following:
+
+```bash
+┣ 📂app
+┃ ┣ 📂routes
+┃ ┃ ┣ 📜_index.tsx
+┃ ┃ ┣ 📜api.auth.$.tsx
+┃ ┃ ┗ 📜auth.$.tsx
+```
+
+## Expose the SuperTokens APIs
+
+```tsx title="/app/routes/api/auth/$.tsx"
+import { json } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs } from "react-router-dom";
+import { getAppDirRequestHandler } from "supertokens-node/nextjs";
+
+const handleCall = getAppDirRequestHandler(Response);
+
+export type PartialRemixRequest = {
+  method: string;
+  url: string;
+  headers: Headers;
+  formData: () => Promise<FormData>;
+  json: () => Promise<unknown>;
+  cookies: {
+    getAll: () => { name: string; value: string }[];
+  };
+};
+
+function createPartialRemixRequest(request: Request): PartialRemixRequest {
+  const headers = new Headers();
+  request.headers.forEach((value: string, key: string) => { 
+    headers.append(key, value);
+  });
+
+  return {
+    method: request.method as string,
+    url: request.url as string,
+    headers: headers,
+    formData: async () => await request.formData(),
+    json: async () => await request.json(),
+    cookies: {
+      getAll: () => {
+        const cookieHeader = request.headers.get("Cookie");
+        if (cookieHeader) {
+          return cookieHeader.split(";").map((cookieString: string) => {
+            const [name, value] = cookieString.trim().split("=");
+            return { name, value } as { name: string; value: string };
+          });
+        } else {
+          return [];
+        }
+      },
+    },
+  };
+}
+// Action function for handling POST requests
+export async function action({ request }: ActionFunctionArgs) {
+  try {
+    // Structure the request
+    const partialRemixRequest = createPartialRemixRequest(request);
+    // Route the request and get response
+    const res = await handleCall(partialRemixRequest);
+    return res;
+  } catch (error) {
+    console.error(
+      "The request made to the following url didn't work:",
+      request.url
+    );
+    // Return internal server error
+    return json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// Loader function for handling GET requests that also adds cache control headers
+export async function loader({ request }: LoaderFunctionArgs) {
+  try {
+    // Structure the request
+    const partialRemixRequest = createPartialRemixRequest(request);
+    // Route the request and get response
+    const res = await handleCall(partialRemixRequest);
+    // Add cache control headers if not present
+    if (!res.headers.has("Cache-Control")) {
+      res.headers.set(
+        "Cache-Control",
+        "no-cache, no-store, max-age=0, must-revalidate"
+      );
+    }
+    return res;
+  } catch (error) {
+    console.error(
+      "The request made to the following url didn't work:",
+      request.url
+    );
+    // Return internal server error
+    return json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+```
+
+Let's review the code:
+
+1. A request is received by either the `action` or `loader` function for POST and GET requests.
+2. The request undergoes structuring, ensuring it aligns with the structure accepted by getAppDirRequestHandler.
+3. It passed to the `handleCall` function responsible for routing the request to the appropriate authentication API handler provided by SuperTokens.
+4. Upon processing the request, handleCall generates a response stored in the `res` variable.
+5. The generated response is returned from the action or loader function. If an error occurs during request processing, appropriate error handling is performed.
+
+If the request is a GET request and no Cache-Control header is present in the response, the header is added to prevent caching of authentication API responses.
+
+## Configure the Auth APIs Catch-All Route
+
+In `remix.config.mjs`, configure the catch-all route for authentication APIs to precisely match the `/auth` route, ensuring that all authentication APIs are directed to the designated `api.auth.$.tsx` component.
+
+Here's an example `remix.config.mjs`:
+
+```tsx title="/app/routes/api/remix.config.mjs"
+// @ts-ignore 
+export const routes = async (defineRoutes) => {
+// @ts-ignore 
+  return defineRoutes((route) => {
+    route("/auth/", "api.auth.$.tsx");
+  });
+};
+```
+
+## Test the Login Widget
+
+If you can now sign in or sign up, the backend setup is complete! If not, please feel free to ask questions on [Discord](https://supertokens.com/discord).
+import { JsxEmit } from "typescript"
