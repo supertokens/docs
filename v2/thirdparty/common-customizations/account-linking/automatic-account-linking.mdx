@@ -32,11 +32,12 @@ You can enable this feature by providing the following callback implementation o
 import supertokens, { User, RecipeUserId } from "supertokens-node";
 import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
+import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
 
 supertokens.init({
     supertokens: {
-        connectionURI: "<CONNECTION_URI_HERE_FROM_THE_POPUP>",
-        apiKey: "<API_KEY_HERE_FROM_THE_POPUP>"
+        connectionURI: "...",
+        apiKey: "..."
     },
     appInfo: {
         apiDomain: "...",
@@ -46,7 +47,12 @@ supertokens.init({
     recipeList: [
         // highlight-start
         AccountLinking.init({
-            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, tenantId: string, userContext: any) => {
+            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: any) => {
+                if (session !== undefined) {
+                    return {
+                        shouldAutomaticallyLink: false
+                    }
+                }
                 if (newAccountInfo.recipeUserId !== undefined && user !== undefined) {
                     let userId = newAccountInfo.recipeUserId.getAsString();
                     let hasInfoAssociatedWithUserId = false // TODO: add your own implementation here.
@@ -89,6 +95,7 @@ Coming Soon
 
     Notice that in case of `newAccountInfo.recipeUserId !== undefined && user !== undefined` being `true`, we add some extra logic to check if the user ID has any info associated with them in your application db. This is to prevent data loss for this user ID (see the [migtation section below](#migration-of-user-data-when-accounts-are-linked)).
 - `user: User | undefined`: If this is not `undefined`, it means that `newAccountInfo` user is about to linked to this `user`. If this is `undefined`, it means that `newAccountInfo` user is about to become a primary user.
+- `session: SessionContainerInterface | undefined`: The session object of the user that is about to be linked. This is `undefined` if it's the first factor login. If a user has completed the first factor, and calls a sign up / in API again of some login method (either for MFA or for social login linking), then the `session` object will be defined. In the above snippet, we prevent account linking if a session is defined so that account linking only happens during the first factor login.
 - `tenant: string`: The ID of the tenant that the user is signing in / up to.
 - `userContext: any`: User defined userContext.
 
@@ -98,18 +105,6 @@ Coming Soon
 
 You can use the input of the function to dynamically decide if you want to do account linking for a particular user and / or login method or not.
 
-:::caution
-If enabling automatic account linking for **an existing user base**, then before you enable it, you need to mark existing users as primary users so that future sign ups / ins with the same email / phone, but with a different login method, get linked to the existing user (as opposed to the other way around).
-
-To do this, you should create a script that:
-- [Loops through all users](../user-pagination) in your app (oldest first).
-- For each user, fetch the user's ID and call the [create primary user](./manual-account-linking#creating-a-primary-user) function on them **if their email is verified**.
-    - If at any point, you find that primary user creation failed because of `ACCOUNT_INFO_ALREADY_ASSOCIATED_WITH_ANOTHER_PRIMARY_USER_ID_ERROR` error, then it means that there is already another user with the same email / phone number that is already a primary user. In this case, you don't need to take any action for the current user (that failed) since they will be auto linked to the existing user when they sign in next with this method. As a side effect of this, their primary user ID will change when their account will be linked. To do any data migration at this point, see [this section on this page](#migration-of-user-data-when-accounts-are-linked).
-    - If you have two users with the same email / phone number, you can even pick which one of them will become a primary user based on your own logic. For example, instead of just making the oldest user the primary user, you can choose the one that has more activity on your app.
-- You can also do the above via [direct API calls to the core](https://app.swaggerhub.com/apis/supertokens/CDI).
-- When looping through users, and if you are using our managed service, make sure to add artificial delay in the loop to not breach [our rate limits](../../rate-limits). In case the API call or function calls throws an error with a `429`, please wait for a few seconds and then retry the call.
-- In order to be able to do this, you will first need to enable account linking feature in the SuperTokens core. For self hosted core, you can get a license key by [signing up](https://supertokens.com/auth), and for managed service users, you can enable the feature [from the dashboard](https://supertokens.com/dashboard-saas).
-:::
 
 ## Different scenarios of automatic account linking
 
@@ -165,11 +160,12 @@ To prevent this scenario, you should:
     import supertokens, { User, RecipeUserId } from "supertokens-node";
     import AccountLinking from "supertokens-node/recipe/accountlinking";
     import { AccountInfoWithRecipeId, RecipeLevelUser } from "supertokens-node/recipe/accountlinking/types";
+    import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
 
     supertokens.init({
         supertokens: {
-            connectionURI: "<CONNECTION_URI_HERE_FROM_THE_POPUP>",
-            apiKey: "<API_KEY_HERE_FROM_THE_POPUP>"
+            connectionURI: "...",
+            apiKey: "..."
         },
         appInfo: {
             apiDomain: "...",
@@ -178,7 +174,7 @@ To prevent this scenario, you should:
         },
         recipeList: [
             AccountLinking.init({
-                shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId  & { recipeUserId?: RecipeUserId }, user: User | undefined, tenantId: string, userContext: any) => {
+                shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: any) => {
                     return {
                         shouldAutomaticallyLink: true,
                         shouldRequireVerification: true
@@ -372,6 +368,107 @@ The following is a list of support status codes that the end user might see duri
     There exists a primary, social login account with email `e1`, sign in with Google. There also exists an email password account (owned by the attacker) that is unverified with the same email `e1` (this is not a primary user). Now if the attacker tries to sign in with email password, they will see this error. We do this because if we didn't, then the attacker might send an email verification email on sign in, and the actual user may click on it (since they had previously signed up). Upon verifying that account, the attacker's account will be linked to the victim's account.
 
 - To resolve this issue, you can ask the user to try the reset password flow.
+
+### ERR_CODE_014
+- This can happen when adding a password to an existing session user:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_014)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - Let's say that the app is confgured to not have autmatic account linking during the first factor.
+    - A user creates an email password account with email `e1`, verifies it, and links social login account to it with email `e2`.
+    - The user logs out, and then creates a social login account with email `e1`. Then, they are asked to add a password to this account. Since an email password account with `e1` already exists, SuperTokens will try and link that to this new account, but fail, since the email password account with `e1` is already a primary user.
+
+- To resolve this, we recommend that manually link the `e1` social login account with the `e1` email password account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
+
+### ERR_CODE_015
+- This can happen when adding a password to an existing session user:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_015)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - A user creates a social login account with email `e1` which becomes a primary user.
+    - The user logs out, and creates another social login account with email `e2`, which also becomes a primary user.
+    - The user is asked to add a password for the new account with an option to also specify an email with it (this is strange, but theoritically possible). They now enter the email `e1` for the email password account.
+    - This will cause this type of error since the linking of the new social logn and email account will fail since there already exists another primary user with the same (`e1`) email.
+
+- To resolve this, we recommend not allowing users to specify an email when asking them to add a password for their account.
+
+### ERR_CODE_016
+- This can happen when adding a password to an existing session user:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_016)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - Let's say that the app is configured to not have automatic account linking during the first factor.
+    - A user signs up with a social login account using Google with email `e1`, and they add another social account, with Facebook, with the same email.
+    - The user logs out and creates another social login account with email `e1` (say Github), and then tries and adds a password to this account with email `e1`. Here, SuperTokens will try and make the Github login a primary user, but fail, since the email `e1` is already a primary user (with Google login). 
+
+- To resolve this, we recommend that manually link the `e1` Github social login account with the `e1` Google social login account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
+
+### ERR_CODE_020
+- This can happen during association of a third party login to an existing session's account.
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_020)"
+        }
+        ```
+- This can happen when the thirdparty account that is trying to be linked to the session's account is not verified. It could happen when you are trying to associate a social login account to a user, but that social account's email is not verified (and if the email of that account is not the same as the current session's account's email). 
+- To resolve this, you can return `shouldRequireVerification` as `false` in the `shouldDoAutomaticAccountLinking` function implementation, or you can only allow users to link social login accounts that give verified accounts.
+
+### ERR_CODE_021
+- This can happen during association of a third party login to an existing session's account.
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_021)"
+        }
+        ```
+- This can happen when the thirdparty account that is trying to be linked to the session's account is already linked with another primary user.
+
+### ERR_CODE_022
+- This can happen during association of a third party login to an existing session's account.
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_022)"
+        }
+        ```
+- This can happen when the thirdparty account that is trying to be linked to the session's account has the same email as another primary user. 
+
+### ERR_CODE_023
+- This can happen during association of a third party login to an existing session's account.
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_023)"
+        }
+        ```
+- In order to link the third party user with the session user, we need to make sure that the session user is a primary user. However, that can fail if there exists another primary user with the same email as the session user, and in this case, this error is returned to the frontend.
 
 ### Changing the error message on the frontend
 If you want to display a different message to the user, or use a different status code, you can change them on the frontend via [the language translation feature](../translations).

@@ -496,7 +496,8 @@ module.exports = {
             "common-customizations/account-linking/overview",
             "common-customizations/account-linking/automatic-account-linking",
             "common-customizations/account-linking/manual-account-linking",
-            "common-customizations/account-linking/security-considerations"
+            "common-customizations/account-linking/security-considerations",
+            "common-customizations/account-linking/adding-accounts-to-session"
           ]
         },
         {
@@ -709,6 +710,8 @@ module.exports = {
             "user-roles/delete-roles",
           ],
         },
+        "mfa",
+        "multi-tenant"
       ]
     },
     "rate-limits",
@@ -736,7 +739,8 @@ module.exports = {
           ],
         },
         "migration/data-migration",
-        "migration/session-migration"
+        "migration/session-migration",
+        "migration/mfa-migration"
       ],
     },
     {
