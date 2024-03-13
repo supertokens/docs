@@ -243,6 +243,7 @@ module.exports = {
             "remix/frontend-auth-route",
             "remix/integrating-login-ui",
             "remix/exposing-auth-apis",
+            "remix/protecting-frontend-routes",
             "remix/next-steps",
           ],
         },
