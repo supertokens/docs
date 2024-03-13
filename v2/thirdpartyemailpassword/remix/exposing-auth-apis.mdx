@@ -13,9 +13,86 @@ The following shows how to configure and expose the backend APIs for authenticat
 You can change the authentication API route by setting the `apiBasePath` property in the `appInfo` object in the `appInfo.tsx` file.
 :::
 
+## Create an Auth APIs Request Handler
+
+Before integrating authentication APIs, we need a request handler to transform the request returned by Remix into a format that Supertokens can understand and process effectively.
+
+To do so, within the `app`, create a `lib` directory (if one does not exist), and create a `authAPIRequestHandler.js` file.
+
+Paste the following code into `authAPIRequestHandler.js`:
+
+```tsx title="/app/lib/authAPIRequestHandler.tsx"
+import { middleware, PreParsedRequest, CollectingResponse } from "supertokens-node/lib/build/framework/custom/index.js";
+import { serialize } from "cookie";
+
+export type PartialRemixRequest = {
+  method: string;
+  url: string;
+  headers: Headers;
+  formData: () => Promise<FormData>;
+  json: () => Promise<unknown>;
+  cookies: {
+    getAll: () => { name: string; value: string }[];
+  };
+};
+
+export type HTTPMethod = "post" | "get" | "delete" | "put" | "options" | "trace";
+
+export default function handleAuthAPIRequest<T extends PartialRemixRequest>(RemixResponse: typeof Response) {
+    const stMiddleware = middleware<T>((req) => {
+        const query = Object.fromEntries(new URL(req.url).searchParams.entries());
+        const cookies: Record<string, string> = Object.fromEntries(
+            req.cookies.getAll().map((cookie) => [cookie.name, cookie.value])
+        );
+
+        return new PreParsedRequest({
+            method: req.method as HTTPMethod,
+            url: req.url,
+            query: query,
+            headers: req.headers,
+            cookies,
+            getFormBody: () => req.formData(),
+            getJSONBody: () => req.json(),
+        });
+    });
+
+    return async function handleCall(req: T) {
+        const baseResponse = new CollectingResponse();
+
+        const { handled, error } = await stMiddleware(req, baseResponse);
+
+        if (error) {
+            throw error;
+        }
+        if (!handled) {
+            return new RemixResponse("Not found", { status: 404 });
+        }
+
+        for (const respCookie of baseResponse.cookies) {
+            baseResponse.headers.append(
+                "Set-Cookie",
+                serialize(respCookie.key, respCookie.value, {
+                    domain: respCookie.domain,
+                    expires: new Date(respCookie.expires),
+                    httpOnly: respCookie.httpOnly,
+                    path: respCookie.path,
+                    sameSite: respCookie.sameSite,
+                    secure: respCookie.secure,
+                })
+            );
+        }
+
+        return new RemixResponse(baseResponse.body, {
+            headers: baseResponse.headers,
+            status: baseResponse.statusCode,
+        });
+    };
+}
+```
+
 ## Create a Route for SuperTokens Authentication APIs
 
-Create a `api.auth.$.tsx` file in the `routes` folder. `api.auth.$.tsx` will use the middleware exposed by `supertokens-node`, which exposes all the APIs like sign-in, sign-up, etc.
+Create a catch-all route for SuperTokens authentication APIs called `api.auth.$.tsx` in the `routes` folder. `api.auth.$.tsx` will use the middleware exposed by `supertokens-node`, which exposes all the APIs like sign-in, sign-up, etc.
 
 At this stage, your `app/routes` folder should now resemble the following:
 
@@ -29,23 +106,17 @@ At this stage, your `app/routes` folder should now resemble the following:
 
 ## Expose the SuperTokens APIs
 
-```tsx title="/app/routes/api/auth/$.tsx"
+Add the following code to the `api.auth.$.tsx` file created previously to expose the SuperTokens authentication APIs:
+
+```tsx title="/app/routes/api.auth.$.tsx"
 import { json } from "@remix-run/node";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "react-router-dom";
-import { getAppDirRequestHandler } from "supertokens-node/nextjs";
+// @ts-ignore 
+import handleAuthAPIRequest from '../lib/authAPIRequestHandler.js';
+// @ts-ignore 
+import { PartialRemixRequest } from "../lib/superTokensTypes.js"
 
-const handleCall = getAppDirRequestHandler(Response);
-
-export type PartialRemixRequest = {
-  method: string;
-  url: string;
-  headers: Headers;
-  formData: () => Promise<FormData>;
-  json: () => Promise<unknown>;
-  cookies: {
-    getAll: () => { name: string; value: string }[];
-  };
-};
+const handleCall = handleAuthAPIRequest(Response);
 
 function createPartialRemixRequest(request: Request): PartialRemixRequest {
   const headers = new Headers();
@@ -77,29 +148,18 @@ function createPartialRemixRequest(request: Request): PartialRemixRequest {
 // Action function for handling POST requests
 export async function action({ request }: ActionFunctionArgs) {
   try {
-    // Structure the request
     const partialRemixRequest = createPartialRemixRequest(request);
-    // Route the request and get response
     const res = await handleCall(partialRemixRequest);
     return res;
   } catch (error) {
-    console.error(
-      "The request made to the following url didn't work:",
-      request.url
-    );
-    // Return internal server error
     return json({ error: "Internal server error" }, { status: 500 });
   }
 }
-
 // Loader function for handling GET requests that also adds cache control headers
 export async function loader({ request }: LoaderFunctionArgs) {
   try {
-    // Structure the request
     const partialRemixRequest = createPartialRemixRequest(request);
-    // Route the request and get response
     const res = await handleCall(partialRemixRequest);
-    // Add cache control headers if not present
     if (!res.headers.has("Cache-Control")) {
       res.headers.set(
         "Cache-Control",
@@ -108,11 +168,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
     return res;
   } catch (error) {
-    console.error(
-      "The request made to the following url didn't work:",
-      request.url
-    );
-    // Return internal server error
     return json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -121,30 +176,31 @@ export async function loader({ request }: LoaderFunctionArgs) {
 Let's review the code:
 
 1. A request is received by either the `action` or `loader` function for POST and GET requests.
-2. The request undergoes structuring, ensuring it aligns with the structure accepted by getAppDirRequestHandler.
-3. It passed to the `handleCall` function responsible for routing the request to the appropriate authentication API handler provided by SuperTokens.
-4. Upon processing the request, handleCall generates a response stored in the `res` variable.
+2. The request undergoes structuring, ensuring it aligns with the structure accepted by `handleAuthAPIRequest`.
+3. It request is passed to the `handleCall` function responsible for routing the request to the appropriate authentication API handler provided by SuperTokens.
+4. Upon processing the request, `handleCall` generates a response stored in the `res` variable.
 5. The generated response is returned from the action or loader function. If an error occurs during request processing, appropriate error handling is performed.
 
-If the request is a GET request and no Cache-Control header is present in the response, the header is added to prevent caching of authentication API responses.
+If the request is a **GET** request and no Cache-Control header is present in the response, the header is added to prevent caching of authentication API responses.
 
-## Configure the Auth APIs Catch-All Route
+## Enable Polyfills in the Remix Configuration
 
-In `remix.config.mjs`, configure the catch-all route for authentication APIs to precisely match the `/auth` route, ensuring that all authentication APIs are directed to the designated `api.auth.$.tsx` component.
-
-Here's an example `remix.config.mjs`:
+In `remix.config.mjs`, polyfills need to be enabled for SuperTokens to function properly. Add the following code:
 
 ```tsx title="/app/routes/api/remix.config.mjs"
-// @ts-ignore 
-export const routes = async (defineRoutes) => {
-// @ts-ignore 
-  return defineRoutes((route) => {
-    route("/auth/", "api.auth.$.tsx");
-  });
+/** @type {import('@remix-run/dev').AppConfig} */
+export default {
+  ignoredRouteFiles: ["**/*.css"],
+  browserNodeBuiltinsPolyfill: {
+    modules: { punycode: true, zlib: true, querystring: true, util: true, buffer: true },
+    globals: {
+      Buffer: true,
+    },
+  }
 };
 ```
 
 ## Test the Login Widget
 
 If you can now sign in or sign up, the backend setup is complete! If not, please feel free to ask questions on [Discord](https://supertokens.com/discord).
-import { JsxEmit } from "typescript"
+
