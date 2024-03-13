@@ -1,0 +1,232 @@
+---
+id: exposing-auth-apis
+title: Exposing the SuperTokens Authentication APIs
+hide_title: false
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/remix/exposing-auth-apis.mdx -->
+
+The following shows how to configure and expose the backend APIs for authentication using SuperTokens. We will create catch-all API route to handle requests made to SuperTokens authentication APIs.
+
+:::tip
+You can change the authentication API route by setting the `apiBasePath` property in the `appInfo` object in the `appInfo.tsx` file.
+:::
+
+## Create an Auth APIs Request Handler
+
+Before integrating authentication APIs, we need a request handler to transform the request returned by Remix into a format that Supertokens can understand and process effectively.
+
+To do so, within the `app` folder, create a `lib` folder (if one does not exist), and create an `authAPIRequestHandler.ts` file.
+
+Paste the following code into `authAPIRequestHandler.ts`:
+
+```tsx title="/app/lib/authAPIRequestHandler.ts"
+import { middleware, PreParsedRequest, CollectingResponse } from "supertokens-node/lib/build/framework/custom/index.js";
+import { serialize } from "cookie";
+// @ts-ignore 
+import { HTTPMethod, PartialRemixRequest } from '../lib/superTokensTypes'
+
+export default function handleAuthAPIRequest<T extends PartialRemixRequest>(RemixResponse: typeof Response) {
+    const stMiddleware = middleware<T>((req) => {
+        const query = Object.fromEntries(new URL(req.url).searchParams.entries());
+        const cookies: Record<string, string> = Object.fromEntries(
+            (req.cookies.getAll() as { name: string, value: string }[]).map((cookie) => [cookie.name, cookie.value])
+        );
+
+        return new PreParsedRequest({
+            method: req.method as HTTPMethod,
+            url: req.url,
+            query: query,
+            headers: req.headers,
+            cookies,
+            getFormBody: () => req.formData(),
+            getJSONBody: () => req.json(),
+        });
+    });
+
+    return async function handleCall(req: T) {
+        const baseResponse = new CollectingResponse();
+
+        const { handled, error } = await stMiddleware(req, baseResponse);
+
+        if (error) {
+            throw error;
+        }
+        if (!handled) {
+            return new RemixResponse("Not found", { status: 404 });
+        }
+
+        for (const respCookie of baseResponse.cookies) {
+            baseResponse.headers.append(
+                "Set-Cookie",
+                serialize(respCookie.key, respCookie.value, {
+                    domain: respCookie.domain,
+                    expires: new Date(respCookie.expires),
+                    httpOnly: respCookie.httpOnly,
+                    path: respCookie.path,
+                    sameSite: respCookie.sameSite,
+                    secure: respCookie.secure,
+                })
+            );
+        }
+
+        return new RemixResponse(baseResponse.body, {
+            headers: baseResponse.headers,
+            status: baseResponse.statusCode,
+        });
+    };
+}
+```
+
+Your `app/lib` folder should resemble the following:
+
+```bash
+📦app
+ ┣ 📂lib
+ ┃ ┣ 📜authAPIRequestHandler.ts
+```
+
+## Create a Types Definition File
+
+For `authAPIRequestHandler.ts` to work, you must create a type definition file called `superTokensTypes.ts` located in the `app/lib` folder.
+
+```tsx title="/app/lib/superTokensTypes.ts"
+export type PartialRemixRequest = {
+  method: string;
+  url: string;
+  headers: Headers;
+  formData: () => Promise<FormData>;
+  json: () => Promise<unknown>;
+  cookies: {
+    getAll: () => { name: string; value: string }[];
+  };
+};
+
+export type HTTPMethod = "post" | "get" | "delete" | "put" | "options" | "trace";
+```
+
+Your `app/lib` folder should resemble the following:
+
+```bash
+📦app
+ ┣ 📂lib
+ ┃ ┣ 📜authAPIRequestHandler.ts
+ ┃ ┗ 📜superTokensTypes.ts
+```
+
+We'll add more types to this file later.
+
+## Create a Route for SuperTokens Authentication APIs
+
+Create a catch-all route for SuperTokens authentication APIs called `api.auth.$.tsx` in the `routes` folder. `api.auth.$.tsx` will use the middleware exposed by `supertokens-node`, which exposes all the APIs like sign-in, sign-up, etc.
+
+At this stage, your `app/routes` folder should now resemble the following:
+
+```bash
+┣ 📂app
+┃ ┣ 📂routes
+┃ ┃ ┣ 📜_index.tsx
+┃ ┃ ┣ 📜api.auth.$.tsx
+┃ ┃ ┗ 📜auth.$.tsx
+```
+
+## Expose the SuperTokens APIs
+
+Add the following code to the `api.auth.$.tsx` file created previously to expose the SuperTokens authentication APIs:
+
+```tsx title="/app/routes/api.auth.$.tsx"
+import { json } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs } from "react-router-dom";
+// @ts-ignore 
+import handleAuthAPIRequest from '../lib/authAPIRequestHandler.js';
+// @ts-ignore 
+import { PartialRemixRequest } from "../lib/superTokensTypes.js"
+
+const handleCall = handleAuthAPIRequest(Response);
+
+function createPartialRemixRequest(request: Request): PartialRemixRequest {
+  const headers = new Headers();
+  request.headers.forEach((value: string, key: string) => { 
+    headers.append(key, value);
+  });
+
+  return {
+    method: request.method as string,
+    url: request.url as string,
+    headers: headers,
+    formData: async () => await request.formData(),
+    json: async () => await request.json(),
+    cookies: {
+      getAll: () => {
+        const cookieHeader = request.headers.get("Cookie");
+        if (cookieHeader) {
+          return cookieHeader.split(";").map((cookieString: string) => {
+            const [name, value] = cookieString.trim().split("=");
+            return { name, value } as { name: string; value: string };
+          });
+        } else {
+          return [];
+        }
+      },
+    },
+  };
+}
+// Action function for handling POST requests
+export async function action({ request }: ActionFunctionArgs) {
+  try {
+    const partialRemixRequest = createPartialRemixRequest(request);
+    const res = await handleCall(partialRemixRequest);
+    return res;
+  } catch (error) {
+    return json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+// Loader function for handling GET requests that also adds cache control headers
+export async function loader({ request }: LoaderFunctionArgs) {
+  try {
+    const partialRemixRequest = createPartialRemixRequest(request);
+    const res = await handleCall(partialRemixRequest);
+    if (!res.headers.has("Cache-Control")) {
+      res.headers.set(
+        "Cache-Control",
+        "no-cache, no-store, max-age=0, must-revalidate"
+      );
+    }
+    return res;
+  } catch (error) {
+    return json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+```
+
+Let's review the code:
+
+1. A request is received by either the `action` or `loader` function for POST and GET requests.
+2. The request undergoes structuring, ensuring it aligns with the structure accepted by `handleAuthAPIRequest`.
+3. It request is passed to the `handleCall` function responsible for routing the request to the appropriate authentication API handler provided by SuperTokens.
+4. Upon processing the request, `handleCall` generates a response stored in the `res` variable.
+5. The generated response is returned from the action or loader function. If an error occurs during request processing, appropriate error handling is performed.
+
+If the request is a **GET** request and no Cache-Control header is present in the response, the header is added to prevent caching of authentication API responses.
+
+## Enable Polyfills in the Remix Configuration
+
+In `remix.config.mjs`, polyfills need to be enabled for SuperTokens to function properly. Add the following code:
+
+```tsx title="/app/routes/api/remix.config.mjs"
+/** @type {import('@remix-run/dev').AppConfig} */
+export default {
+  ignoredRouteFiles: ["**/*.css"],
+  browserNodeBuiltinsPolyfill: {
+    modules: { punycode: true, zlib: true, querystring: true, util: true, buffer: true },
+    globals: {
+      Buffer: true,
+    },
+  }
+};
+```
+
+## Test the Login Widget
+
+If you can now sign in or sign up, the backend setup is complete! If not, please feel free to ask questions on [Discord](https://supertokens.com/discord).
