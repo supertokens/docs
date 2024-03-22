@@ -1048,3 +1048,9 @@ ALTER TABLE emailpassword_pswd_reset_tokens ADD COLUMN email VARCHAR(256);
 ```sql
 ALTER TABLE user_roles DROP CONSTRAINT IF EXISTS user_roles_role_fkey;
 ```
+
+### 8.0 to 9.0
+```sql
+ALTER TABLE totp_user_devices ADD COLUMN IF NOT EXISTS created_at BIGINT default 0;
+ALTER TABLE totp_user_devices ALTER COLUMN created_at DROP DEFAULT;
+```
