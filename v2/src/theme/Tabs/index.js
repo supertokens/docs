@@ -95,7 +95,7 @@ function Tabs(props) {
   return (
     <div
       className={clsx(
-        'tabs-container',
+        'docs-tabs-container',
         {
           'sub-tab': isSubTab
         }
