@@ -93,6 +93,9 @@ export default function NavbarItem({ type, ...props }) {
     if (toReplace === "nodejs") {
       toReplace = "node";
     }
+    if (toReplace === "community") {
+      toReplace = "core"
+    }
 
     newProps = {
       ...props,
