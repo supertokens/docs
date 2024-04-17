@@ -4,9 +4,6 @@ title: 4. Inserting users into Supabase when they sign up
 hide_title: true
 ---
 
-<!-- COPY DOCS -->
-<!-- ./thirdpartyemailpassword/supabase-intergration/backend-signup-override.mdx -->
-
 # Inserting Users into Supabase when they sign up
 
 In our example app there are two ways for signing up a user. Email-Password and Social Login based authentication. We will need to override both these APIs such that when a user signs up, their email mapped to their userId is stored in Supabase.
@@ -14,12 +11,9 @@ In our example app there are two ways for signing up a user. Email-Password and 
 ## Step 1: Overriding the Email-Password signup function
 
 ```ts
-// config/backendConfig.ts
-
-import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
 import SessionNode from "supertokens-node/recipe/session";
 import { TypeInput, AppInfo } from "supertokens-node/types";
-import jwt from "jsonwebtoken";
 
 // take a look at the Creating Supabase Client section to see how to define getSupabase
 let getSupabase: any;
@@ -38,19 +32,14 @@ let backendConfig = (): TypeInput => {
         },
         appInfo,
         recipeList: [
-            ^{recipeNameCapitalLetters}.init({
-                providers: [/*...*/],
+            EmailPassword.init({
                 override: {
                     apis: (originalImplementation) => {
                         return {
                             ...originalImplementation,
                             // the emailPasswordSignUpPOST function handles sign up via Email-Password
-                            emailPasswordSignUpPOST: async function (input) {
-                                if (originalImplementation.emailPasswordSignUpPOST === undefined) {
-                                    throw Error("Should never come here");
-                                }
-
-                                let response = await originalImplementation.emailPasswordSignUpPOST(input);
+                            signUpPOST: async function (input) {
+                                let response = await originalImplementation.signUpPOST!(input);
 
                                 if (response.status === "OK" && response.user.loginMethods.length === 1 && input.session === undefined) {
 
@@ -82,17 +71,16 @@ let backendConfig = (): TypeInput => {
         isInServerlessEnv: true,
     };
 };
-
 ```
 
-We will be changing the the Email-Password signup flow by overriding the `emailPasswordSignUpPost` api. When a user signs up we will retrieve the `supabase_token` from the user's `accessTokenPayload`(this was added in the previous step where we changed the `createNewSession` function) and use it to query Supabase to insert the new user's information.
+We will be changing the the Email-Password signup flow by overriding the `signUpPost` api. When a user signs up we will retrieve the `supabase_token` from the user's `accessTokenPayload`(this was added in the previous step where we changed the `createNewSession` function) and use it to query Supabase to insert the new user's information.
 
 ## Step 2: Overriding the Social Provider login function:
 
 ```ts
 // config/backendConfig.ts
 
-import ^{recipeNameCapitalLetters} from "supertokens-node/recipe/^{codeImportRecipeName}";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
 import SessionNode from "supertokens-node/recipe/session";
 import { TypeInput, AppInfo } from "supertokens-node/types";
 
@@ -113,30 +101,18 @@ let backendConfig = (): TypeInput => {
         },
         appInfo,
         recipeList: [
-            ^{recipeNameCapitalLetters}.init({
-                providers: [/*...*/],
+            ThirdParty.init({
+                signInAndUpFeature: {
+                    providers: [/*...*/],
+                },
                 override: {
                     apis: (originalImplementation) => {
                         return {
                             ...originalImplementation,
-
-                            // the emailPasswordSignUpPOST function handles sign up via Email-Password
-                            emailPasswordSignUpPOST: async function (input) {
-                                if (originalImplementation.emailPasswordSignUpPOST === undefined) {
-                                    throw Error("Should never come here");
-                                }
-                                // TODO: look at the previous section to see how this function is defined
-                                return await originalImplementation.emailPasswordSignUpPOST(input)
-                            },
-
                             // the thirdPartySignInUpPost function handles sign up/in via Social login
-                            thirdPartySignInUpPOST: async function (input) {
-                                if (originalImplementation.thirdPartySignInUpPOST === undefined) {
-                                    throw Error("Should never come here");
-                                }
-
+                            signInUpPOST: async function (input) {
                                 // call the sign up/in api for social login
-                                let response = await originalImplementation.thirdPartySignInUpPOST(input);
+                                let response = await originalImplementation.signInUpPOST!(input);
 
                                 // check that there is no issue with sign up and that a new user is created
                                 if (response.status === "OK" && response.createdNewRecipeUser && response.user.loginMethods.length === 1 && input.session === undefined) {
@@ -171,4 +147,4 @@ let backendConfig = (): TypeInput => {
 };
 ```
 
-We will be changing the Social Login flow by overriding the `thirdPartySignInUpPost` api. We will first check that the user logging in  is a new user. If they are a new user we will retrieve the `supabase_token` from their `accessTokenPayload` and use it to map their email to userId in Supabase.
+We will be changing the Social Login flow by overriding the `signInUpPost` api. We will first check that the user logging in  is a new user. If they are a new user we will retrieve the `supabase_token` from their `accessTokenPayload` and use it to map their email to userId in Supabase.
