@@ -737,19 +737,10 @@ module.exports = {
       label: 'Migration',
       items: [
         "migration/about",
-        {
-          type: 'category',
-          label: 'Step 1) Account Creation',
-          items: [
-            "migration/account-creation/user-creation",
-            "migration/account-creation/user-id-mapping",
-            "migration/account-creation/email-verification",
-            "migration/account-creation/ep-migration-without-password-hash"
-          ],
-        },
-        "migration/data-migration",
+        "migration/bulk-user-import",
         "migration/session-migration",
-        "migration/mfa-migration"
+        "migration/bulk-user-import-schema-examples",
+        "migration/ep-migration-without-password-hash"
       ],
     },
     {
