@@ -33,7 +33,8 @@ Let's take the example mentioned above and implement it in the context of this r
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
 
 SuperTokens.init({
     appInfo: {
@@ -45,7 +46,33 @@ SuperTokens.init({
         connectionURI: "...",
     },
     recipeList: [
-        ThirdPartyPasswordless.init({
+        ThirdParty.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUp: async function (input) {
+                            let resp = await originalImplementation.signInUp(input);
+                            if (resp.status === "OK" && resp.createdNewRecipeUser && resp.user.loginMethods.length === 1 && input.session === undefined) {
+                                /*
+                                 * This is called during the signInUp API for third party login,
+                                 * but before calling the createNewSession function.
+                                 * At the start of the API, we do not know if it will result in a 
+                                 * sign in or a sign up, so we cannot override the API function.
+                                 * Instead, we override the recipe function as shown here,
+                                 * and then set the relevant context only if it's a new user.
+                                 */
+                                input.userContext.isSignUp = true;
+                            }
+                            return resp;
+                        },
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Passwordless.init({
             // @ts-ignore
             contactMethod: "...",
             // highlight-start
@@ -75,23 +102,7 @@ SuperTokens.init({
                                 input.userContext.isSignUp = true;
                             }
                             return resp;
-                        },
-
-                        thirdPartySignInUp: async function (input) {
-                            let resp = await originalImplementation.thirdPartySignInUp(input);
-                            if (resp.status === "OK" && resp.createdNewRecipeUser && resp.user.loginMethods.length === 1 && input.session === undefined) {
-                                /*
-                                 * This is called during the signInUp API for third party login,
-                                 * but before calling the createNewSession function.
-                                 * At the start of the API, we do not know if it will result in a 
-                                 * sign in or a sign up, so we cannot override the API function.
-                                 * Instead, we override the recipe function as shown here,
-                                 * and then set the relevant context only if it's a new user.
-                                 */
-                                input.userContext.isSignUp = true;
-                            }
-                            return resp;
-                        },
+                        }
                     };
                 },
             }
@@ -282,7 +293,6 @@ Then we consume that context in the `createNewSession` function to return an emp
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
@@ -295,8 +305,7 @@ SuperTokens.init({
         connectionURI: "...",
     },
     recipeList: [
-        // @ts-ignore
-        ThirdPartyPasswordless.init({/* See previous step... */ }),
+        // Other recipes..
         Session.init({
             override: {
                 functions: (originalImplementation) => {
