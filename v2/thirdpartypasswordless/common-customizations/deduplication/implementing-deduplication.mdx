@@ -15,87 +15,99 @@ The approach to implementing account deduplication is to override the backend fu
 - If a user does not exist, we call the original implementation; Else
 - We return a message to the frontend telling the user why sign up was rejected.
 
-Add the following override logic to `ThirdPartyPasswordless.init` on the backend
+Add the following override logic to `ThirdParty` and `Passwordless` config on the backend
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import Passwordless from "supertokens-node/recipe/passwordless";
 import supertokens from "supertokens-node";
 
-ThirdPartyPasswordless.init({
-    contactMethod: "EMAIL", // typecheck-only, removed from output
-    flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // typecheck-only, removed from output
-    override: {
-        functions: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                thirdPartySignInUp: async function (input) {
-                    let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
-                        email: input.email
-                    });
-                    if (existingUsers.length === 0) {
-                        // this means this email is new so we allow sign up
-                        return originalImplementation.thirdPartySignInUp(input);
-                    }
-                    if (existingUsers.find(u =>
-                        u.loginMethods.find(lM => lM.hasSameThirdPartyInfoAs({
-                            id: input.thirdPartyId,
-                            userId: input.thirdPartyUserId
-                        }) && lM.recipeId === "thirdparty") !== undefined)) {
-                        // this means we are trying to sign in with the same social login. So we allow it
-                        return originalImplementation.thirdPartySignInUp(input);
-                    }
-                    // this means that the email already exists with another social or passwordless login method, so we throw an error.
-                    throw new Error("Cannot sign up as email already exists");
-                }
-            }
-        },
-        apis: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                createCodePOST: async function (input) {
-                    if ("email" in input) {
-                        let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
-                            email: input.email
-                        });
-                        if (existingUsers.length === 0) {
-                            // this means this email is new so we allow sign up
-                            return originalImplementation.createCodePOST!(input);
-                        }
-                        if (existingUsers.find(u =>
-                            u.loginMethods.find(lM => lM.hasSameEmailAs(input.email) && lM.recipeId === "passwordless") !== undefined)) {
-                            // this means that the existing user is a passwordless login user. So we allow it
-                            return originalImplementation.createCodePOST!(input);
-                        }
-                        return {
-                            status: "GENERAL_ERROR",
-                            message: "Seems like you already have an account with another method. Please use that instead."
-                        }
-                    }
-                    // phone number based login, so we allow it.
-                    return originalImplementation.createCodePOST!(input);
-                },
-                thirdPartySignInUpPOST: async function (input) {
-                    try {
-                        return await originalImplementation.thirdPartySignInUpPOST!(input);
-                    } catch (err: any) {
-                        if (err.message === "Cannot sign up as email already exists") {
-                            // this error was thrown from our function override above.
-                            // so we send a useful message to the user
+let recipeList = [
+    Passwordless.init({
+        contactMethod: "EMAIL", // typecheck-only, removed from output
+        flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // typecheck-only, removed from output
+        override: {
+            apis: (originalImplementation) => {
+                return {
+                    ...originalImplementation,
+                    createCodePOST: async function (input) {
+                        if ("email" in input) {
+                            let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+                                email: input.email
+                            });
+                            if (existingUsers.length === 0) {
+                                // this means this email is new so we allow sign up
+                                return originalImplementation.createCodePOST!(input);
+                            }
+                            if (existingUsers.find(u =>
+                                u.loginMethods.find(lM => lM.hasSameEmailAs(input.email) && lM.recipeId === "passwordless") !== undefined)) {
+                                // this means that the existing user is a passwordless login user. So we allow it
+                                return originalImplementation.createCodePOST!(input);
+                            }
                             return {
                                 status: "GENERAL_ERROR",
                                 message: "Seems like you already have an account with another method. Please use that instead."
                             }
                         }
-                        throw err;
+                        // phone number based login, so we allow it.
+                        return originalImplementation.createCodePOST!(input);
+                    },
+                }
+            }
+        }
+    }),
+    ThirdParty.init({
+        override: {
+            functions: (originalImplementation) => {
+                return {
+                    ...originalImplementation,
+                    signInUp: async function (input) {
+                        let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+                            email: input.email
+                        });
+                        if (existingUsers.length === 0) {
+                            // this means this email is new so we allow sign up
+                            return originalImplementation.signInUp(input);
+                        }
+                        if (existingUsers.find(u =>
+                            u.loginMethods.find(lM => lM.hasSameThirdPartyInfoAs({
+                                id: input.thirdPartyId,
+                                userId: input.thirdPartyUserId
+                            }) && lM.recipeId === "thirdparty") !== undefined)) {
+                            // this means we are trying to sign in with the same social login. So we allow it
+                            return originalImplementation.signInUp(input);
+                        }
+                        // this means that the email already exists with another social or passwordless login method, so we throw an error.
+                        throw new Error("Cannot sign up as email already exists");
+                    }
+                }
+            },
+            apis: (originalImplementation) => {
+                return {
+                    ...originalImplementation,
+                    signInUpPOST: async function (input) {
+                        try {
+                            return await originalImplementation.signInUpPOST!(input);
+                        } catch (err: any) {
+                            if (err.message === "Cannot sign up as email already exists") {
+                                // this error was thrown from our function override above.
+                                // so we send a useful message to the user
+                                return {
+                                    status: "GENERAL_ERROR",
+                                    message: "Seems like you already have an account with another method. Please use that instead."
+                                }
+                            }
+                            throw err;
+                        }
                     }
                 }
             }
         }
-    }
-})
+    })
+]
 ```
 
 </TabItem>
