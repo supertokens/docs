@@ -192,8 +192,8 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
 )
 
 type RequestBody struct {
@@ -226,19 +226,9 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	// check that the account is not a social account
 	userId := sessionContainer.GetUserID()
-	userAccount, err := thirdpartypasswordless.GetUserByID(userId)
-	if err != nil {
-		// TODO: handle error
-		return
-	}
-
-	if userAccount.ThirdParty != nil {
-		// TODO: handle error, cannot update email for third party accounts
-		return
-	}
 
 	// update the email
-	updateResponse, err := thirdpartypasswordless.UpdatePasswordlessUser(userId, &requestBody.Email, nil)
+	updateResponse, err := passwordless.UpdateUser(userId, &requestBody.Email, nil)
 
 	if err != nil {
 		// TODO: handle error
@@ -252,6 +242,10 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	if updateResponse.EmailAlreadyExistsError != nil {
 		// TODO: handle error that email exists with another account
 		return
+	}
+
+	if updateResponse.UnknownUserIdError != nil {
+		// TODO: handle error where this user is not a passwordless user
 	}
 
 	log.Fatal("should not reach here")
@@ -552,8 +546,8 @@ import (
 	"regexp"
 
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
 )
 
 type RequestBody struct {
@@ -586,14 +580,14 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	// check that the account is not a social account
 	userId := sessionContainer.GetUserID()
-	userAccount, err := thirdpartypasswordless.GetUserById(userId)
+	userAccount, err := passwordless.GetUserByID(userId)
 	if err != nil {
 		// TODO: handle error
 		return
 	}
 
-	if userAccount.ThirdParty != nil {
-		// TODO: handle error, cannot update email for third party accounts
+	if userAccount == nil {
+		// TODO: return 400 status code saying that the user is not a passwordless user
 		return
 	}
 
@@ -608,17 +602,17 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	if !isVerified {
 		// Now we create and send the email verification link to the user for the new email.
-        _, err := emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.Email)
+		_, err := emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.Email)
 
-        if err != nil {
-            // TODO: handle error
-        }
+		if err != nil {
+			// TODO: handle error
+		}
 
-        return
+		return
 	}
 
 	// Since the email is verified, we try and do an update
-	updateResponse, err := thirdpartypasswordless.UpdatePasswordlessUser(userId, &requestBody.Email, nil)
+	updateResponse, err := passwordless.UpdateUser(userId, &requestBody.Email, nil)
 
 	if err != nil {
 		// TODO: handle error
@@ -646,7 +640,6 @@ func isValidEmail(email string) bool {
 	}
 	return emailCheck
 }
-
 ```
 
 </TabItem>
@@ -806,10 +799,9 @@ SuperTokens.init({
 import (
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -821,7 +813,6 @@ func main() {
 			WebsiteDomain: "...",
 		},
 		RecipeList: []supertokens.Recipe{
-			thirdpartypasswordless.Init(tplmodels.TypeInput{}),
 			emailverification.Init(evmodels.TypeInput{
 				Mode: evmodels.ModeRequired,
 				Override: &evmodels.OverrideStruct{
@@ -835,7 +826,7 @@ func main() {
 							if response.OK != nil {
 								// This will update the email of the user to the one
 								// that was just marked as verified by the token.
-								_, err := thirdpartypasswordless.UpdatePasswordlessUser(response.OK.User.ID, &response.OK.User.Email, nil)
+								_, err := passwordless.UpdateUser(response.OK.User.ID, &response.OK.User.Email, nil)
 								if err != nil {
 									// TODO: Handle error
 								}
