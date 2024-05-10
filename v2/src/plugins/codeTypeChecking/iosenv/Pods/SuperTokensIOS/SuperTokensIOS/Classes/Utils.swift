@@ -63,44 +63,38 @@ class NormalisedInputType {
     }
     
     internal static func sessionScopeHelper(sessionScope: String) throws -> String {
-        var trimmedSessionScope = sessionScope.trim()
-        
+        var trimmedSessionScope = sessionScope.trim().lowercased()
+
         if trimmedSessionScope.starts(with: ".") {
             trimmedSessionScope = trimmedSessionScope.substring(fromIndex: 1)
         }
-        
+
         if !trimmedSessionScope.starts(with: "http://") && !trimmedSessionScope.starts(with: "https://") {
             trimmedSessionScope = "http://" + trimmedSessionScope
         }
-        
+
         do {
             guard let url: URL = URL(string: trimmedSessionScope), let host: String = url.host else {
                 throw SDKFailableError.failableError
             }
-            
-            trimmedSessionScope = host
-            
-            if trimmedSessionScope.starts(with: ".") {
-                trimmedSessionScope = trimmedSessionScope.substring(fromIndex: 1)
-            }
-            
-            return trimmedSessionScope
+
+            return host
         } catch {
             throw SuperTokensError.initError(message: "Please provide a valid sessionScope")
         }
     }
-    
+
     internal static func normaliseSessionScopeOrThrowError(sessionScope: String) throws -> String {
         let noDotNormalised = try sessionScopeHelper(sessionScope: sessionScope)
-        
+
         if noDotNormalised == "localhost" || Utils.isIpAddress(input: noDotNormalised) {
             return noDotNormalised
         }
-        
+
         if sessionScope.starts(with: ".") {
             return "." + noDotNormalised
         }
-        
+
         return noDotNormalised
     }
     
@@ -156,42 +150,43 @@ class NormalisedInputType {
 
 internal class Utils {
     internal static func shouldDoInterception(toCheckURL: String, apiDomain: String, cookieDomain: String?) throws -> Bool {
-        let _toCheckURL: String = try NormalisedURLDomain.normaliseUrlDomainOrThrowError(input: toCheckURL)
-        var _apiDomain: String = apiDomain
-        
-        guard let urlObj: URL = URL(string: _toCheckURL), let hostname: String = urlObj.host else {
+        let normalizedToCheckURL = try NormalisedURLDomain.normaliseUrlDomainOrThrowError(input: toCheckURL)
+        guard let urlObj = URL(string: normalizedToCheckURL), let hostname = urlObj.host else {
             throw SDKFailableError.failableError
         }
-        
-        var domain = hostname
-        
-        if cookieDomain == nil {
-            domain = urlObj.port == nil ? domain : domain + ":" + "\(urlObj.port!)"
-            _apiDomain = try NormalisedURLDomain.normaliseUrlDomainOrThrowError(input: apiDomain)
-            
-            guard let apiUrlObj: URL = URL(string: _apiDomain), let apiHostName: String = apiUrlObj.host else {
+
+        let domain = hostname
+        var apiDomainAndInputDomainMatch = false
+        if !apiDomain.isEmpty {
+            let normalizedApiDomain = try NormalisedURLDomain.normaliseUrlDomainOrThrowError(input: apiDomain)
+            guard let apiUrlObj = URL(string: normalizedApiDomain), let apiHostName = apiUrlObj.host else {
                 throw SDKFailableError.failableError
             }
-            
-            return domain == (apiUrlObj.port == nil ? apiHostName : apiHostName + ":" + "\(apiUrlObj.port!)")
+            apiDomainAndInputDomainMatch = domain == apiHostName
+        }
+
+        if cookieDomain == nil || apiDomainAndInputDomainMatch {
+            // even if cookieDomain isn't undefined, if there is an exact match
+            // of api domain, ignoring the port, we return true
+            return apiDomainAndInputDomainMatch
         } else {
-            var normalisedCookieDomain = try NormalisedInputType.normaliseSessionScopeOrThrowError(sessionScope: cookieDomain!)
-            
-            if cookieDomain!.split(separator: ":").count > 1 {
-                let portString: String = String(cookieDomain!.split(separator: ":")[cookieDomain!.split(separator: ":").count - 1])
-                
-                if portString.isNumeric {
-                    normalisedCookieDomain = normalisedCookieDomain + ":" + portString
-                    domain = urlObj.port == nil ? domain : domain + ":" + "\(urlObj.port!)"
-                }
-            }
-            
-            if cookieDomain!.starts(with: ".") {
-                return ("." + domain).hasSuffix(normalisedCookieDomain)
-            } else {
-                return domain == normalisedCookieDomain
+            let normalisedSessionDomain = try NormalisedInputType.normaliseSessionScopeOrThrowError(sessionScope: cookieDomain!)
+            // Using the matchesDomainOrSubdomain function to determine match
+            return matchesDomainOrSubdomain(domain: domain, str: normalisedSessionDomain)
+        }
+    }
+
+    private static func matchesDomainOrSubdomain(domain: String, str: String) -> Bool {
+        let parts = domain.split(separator: ".").map(String.init)
+
+        for i in 0..<parts.count {
+            let subdomainCandidate = parts[i...].joined(separator: ".")
+            if subdomainCandidate == str || ".\(subdomainCandidate)" == str {
+                return true
             }
         }
+
+        return false
     }
     
     internal static func isIpAddress(input: String) -> Bool {
