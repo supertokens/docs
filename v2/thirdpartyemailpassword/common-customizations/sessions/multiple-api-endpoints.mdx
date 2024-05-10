@@ -28,9 +28,9 @@ To enable use of sessions for multiple API endpoints, you need to use the `sessi
 - `sessionTokenBackendDomain` in the frontend config must match the `cookieDomain` set in the backend config.
 :::
 
-## Step 1) Backend config
+## Step 1) Set Cookie Domain in the Backend Config
 
-You need to set the `sessionTokenBackendDomain` value to be the common top level domain. For example, if your API endpoints are `{"api.example.com", "api2.example.com", "api3.example.com"}`, the common portion of these endpoints is `".example.com"` (The dot is important). So you would need to set the following:
+You need to set the `cookieDomain` value to be the common top level domain. For example, if your API endpoints are `{"api.example.com", "api2.example.com", "api3.example.com"}`, the common portion of these endpoints is `".example.com"` (The dot is NOT important). So you would need to set the following:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
@@ -51,7 +51,7 @@ SuperTokens.init({
     recipeList: [
         Session.init({
             // highlight-next-line
-            cookieDomain: ".example.com",
+            cookieDomain: "example.com", // or ".example.com" (they both work)
         })
     ]
 });
@@ -68,7 +68,7 @@ import (
 
 func main() {
 	// highlight-next-line
-	cookieDomain := ".example.com"
+	cookieDomain := "example.com" // or ".example.com" (they both work)
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
@@ -94,7 +94,7 @@ init(
     recipe_list=[
         session.init(
             # highlight-start
-            cookie_domain='.example.com'
+            cookie_domain='example.com' # or ".example.com" (they both work)
             # highlight-end
         )
     ]
@@ -104,7 +104,7 @@ init(
 </TabItem>
 </BackendSDKTabs>
 
-The above will set the session cookies' domain to `.example.com`, allowing them to be sent to `*.example.com`.
+The above will set the session cookies' domain to `example.com`, allowing them to be sent to `*.example.com`.
 
 :::note
 Whilst the `cookieDomain` can start with a leading `.`, the value of the `apiDomain` in `appInfo` must point to an exact API domain only. This should be the API in which you want to expose all the auth related endpoints (for example `/auth/signin`).
@@ -112,7 +112,103 @@ Whilst the `cookieDomain` can start with a leading `.`, the value of the `apiDom
 For local development, you should not set the `cookieDomain` to an IP address based domain, or `.localhost` - browsers will reject these cookies. Instead, you should [alias `localhost` to a named domain and use that](https://superuser.com/questions/152146/how-to-alias-a-hostname-on-mac-osx). 
 :::
 
-## Step 2) Frontend config
+## Step 2) Set Older Cookie Domain in the Backend Config
+
+To avoid locking out users with existing sessions (they will get a 500 error when try to refresh their session), set `olderCookieDomain` to match your previous `cookieDomain`. If your `cookieDomain` was not set, you can use an empty string. However, if you don't have any existing sessions, you can skip this step entirely.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "...",
+    },
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init({
+            // highlight-next-line
+            cookieDomain: "example.com", // or ".example.com" (they both work)
+            // highlight-next-line
+            olderCookieDomain: "" // Set to an empty string if your previous cookieDomain was unset. Otherwise, use your old cookieDomain value.
+        })
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	// highlight-next-line
+	cookieDomain := "example.com"  // or ".example.com" (they both work)
+	olderCookieDomain := "" // Set to an empty string if your previous cookieDomain was unset. Otherwise, use your old cookieDomain value.
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				// highlight-next-line
+				CookieDomain: &cookieDomain,
+				// highlight-next-line
+				OlderCookieDomain: &olderCookieDomain,
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        session.init(
+            # highlight-start
+            cookie_domain='example.com',  # or ".example.com" (they both work)
+            older_cookie_domain='' # Set to an empty string if your previous cookie_domain was unset. Otherwise, use your old cookie_domain value.
+            # highlight-end
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+:::caution
+- If `olderCookieDomain` isn't set, users with older sessions will get a 500 error from the session refresh endpoint, effectively locking them out. This will continue until `olderCookieDomain` is set correctly or they clear their cookies.
+
+- The value set for `olderCookieDomain` must be kept for 1 year because the cookie lifetime of the access token on the frontend is 1 year (even though the JWT expiry is a few hours).
+
+- If you have changed the `cookieDomain` more than once within one year, to prevent a stuck state, switch to [header based auth](https://supertokens.com/docs/session/common-customizations/sessions/token-transfer-method#backend-configuration-optional) for all your clients. The important thing here is that you have to set the backend config to header even though that doc says it's optional. This is so that all clients are forced to use header based auth.
+
+- Changing the `cookieDomain` can cause a temporary spike in requests, even if the `olderCookieDomain` is set correctly. This happens because older sessions, with older cookie domain, require additional refresh calls to clear their old cookies and set new ones. This spike is a one-time event and should not recur after the update.
+:::
+
+:::info
+The `olderCookieDomain` value should be set to prevent clients from having multiple session cookies from different domains. This can happen when cookies from a previous domain are still valid and sent with requests. For instance, if your previous `cookieDomain` was `api.example.com` and the new one is `.example.com`, both sets of cookies would be sent to the apiDomain `api.example.com`, leading to an inconsistent state. This can cause issues until the older cookies are cleared. Setting `olderCookieDomain` in the configuration ensures that the SuperTokens SDK can automatically remove these older cookies.
+:::
+
+## Step 3) Frontend config
 
 You need to set the same value for `sessionTokenBackendDomain` on the frontend. This will allow the frontend SDK to apply interception and automatic refreshing across all your API calls:
 
@@ -137,7 +233,7 @@ SuperTokens.init({
     recipeList: [
         Session.init({
             // highlight-next-line 
-            sessionTokenBackendDomain: ".example.com" 
+            sessionTokenBackendDomain: "example.com"  // or ".example.com" (they both work)
         })
     ]
 });
@@ -168,7 +264,7 @@ SuperTokens.init({
     },
     recipeList: [
         Session.init({
-            sessionTokenBackendDomain: ".example.com"
+            sessionTokenBackendDomain: "example.com" // or ".example.com" (they both work)
         }),
     ],
 });
@@ -187,7 +283,7 @@ supertokens.init({
     },
     recipeList: [
         supertokensSession.init({
-            sessionTokenBackendDomain: ".example.com",
+            sessionTokenBackendDomain: "example.com", // or ".example.com" (they both work)
         })
     ],
 });
@@ -209,7 +305,7 @@ import SuperTokens from 'supertokens-react-native';
 
 SuperTokens.init({
     apiDomain: "...",
-    sessionTokenBackendDomain: ".example.com"
+    sessionTokenBackendDomain: "example.com" // or ".example.com" (they both work)
 });
 ```
 
@@ -227,7 +323,7 @@ class MainApplication: Application() {
         
         SuperTokens.Builder(this, "...")
             // highlight-next-line
-            .sessionTokenBackendDomain(".example.com")
+            .sessionTokenBackendDomain("example.com") // or ".example.com" (they both work)
             .build()
     }
 }
@@ -248,7 +344,7 @@ fileprivate class ApplicationDelegate: UIResponder, UIApplicationDelegate {
             try SuperTokens.initialize(
                 apiDomain: "...",
                 // highlight-next-line
-                sessionTokenBackendDomain: ".example.com"
+                sessionTokenBackendDomain: "example.com" // or ".example.com" (they both work)
             )
         } catch SuperTokensError.initError(let message) {
             // TODO: Handle initialization error
@@ -272,7 +368,7 @@ import 'package:supertokens_flutter/supertokens.dart';
 void initialiseSuperTokens() {
     SuperTokens.init(
         apiDomain: "...",
-        sessionTokenBackendDomain: ".example.com",
+        sessionTokenBackendDomain: "example.com", // or ".example.com" (they both work)
     );
 }
 ```
