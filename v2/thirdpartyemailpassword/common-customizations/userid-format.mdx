@@ -202,32 +202,15 @@ func main() {
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.asyncio import create_user_id_mapping
-from supertokens_python.recipe import thirdpartyemailpassword, session
-from supertokens_python.recipe.thirdpartyemailpassword.interfaces import RecipeInterface, EmailPasswordSignUpOkResult
+from supertokens_python.recipe import thirdparty, emailpassword, session
+from supertokens_python.recipe.thirdparty.interfaces import RecipeInterface as ThirdPartyRecipeInterface
+from supertokens_python.recipe.emailpassword.interfaces import RecipeInterface as EmailPasswordRecipeInterface, SignUpOkResult
 from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
 from typing import Dict, Any
 
 
-def override_thirdpartyemailpassword_functions(original_implementation: RecipeInterface) -> RecipeInterface:
-    original_thirdparty_sign_in_up = original_implementation.thirdparty_sign_in_up
-    original_emailpassword_sign_up = original_implementation.emailpassword_sign_up
-
-    async def emailpassword_sign_up(
-        email: str,
-        password: str,
-        tenant_id: str,
-        user_context: Dict[str, Any]
-    ):
-        result = await original_emailpassword_sign_up(email, password, tenant_id, user_context)
-
-        if isinstance(result, EmailPasswordSignUpOkResult):
-            # highlight-start
-            external_user_id = "<CUSTOM USER ID>"
-            await create_user_id_mapping(result.user.user_id, external_user_id)
-            result.user.user_id = external_user_id
-            # highlight-end
-
-        return result
+def override_thirdparty_functions(original_implementation: ThirdPartyRecipeInterface) -> ThirdPartyRecipeInterface:
+    original_thirdparty_sign_in_up = original_implementation.sign_in_up
 
     async def thirdparty_sign_in_up(
         third_party_id: str,
@@ -261,8 +244,31 @@ def override_thirdpartyemailpassword_functions(original_implementation: RecipeIn
 
         return result
 
-    original_implementation.emailpassword_sign_up = emailpassword_sign_up
-    original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
+    original_implementation.sign_in_up = thirdparty_sign_in_up
+
+    return original_implementation
+
+def override_emailpassword_functions(original_implementation: EmailPasswordRecipeInterface) -> EmailPasswordRecipeInterface:
+    original_emailpassword_sign_up = original_implementation.sign_up
+
+    async def emailpassword_sign_up(
+        email: str,
+        password: str,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ):
+        result = await original_emailpassword_sign_up(email, password, tenant_id, user_context)
+
+        if isinstance(result, SignUpOkResult):
+            # highlight-start
+            external_user_id = "<CUSTOM USER ID>"
+            await create_user_id_mapping(result.user.user_id, external_user_id)
+            result.user.user_id = external_user_id
+            # highlight-end
+
+        return result
+
+    original_implementation.sign_up = emailpassword_sign_up
 
     return original_implementation
 
@@ -272,13 +278,19 @@ init(
         api_domain="...", app_name="...", website_domain="..."),
     framework='...',  # type: ignore
     recipe_list=[
-        thirdpartyemailpassword.init(
+        thirdparty.init(
             # highlight-start
-            override=thirdpartyemailpassword.InputOverrideConfig(
-                functions=override_thirdpartyemailpassword_functions
+            override=thirdparty.InputOverrideConfig(
+                functions=override_thirdparty_functions
             ),
             # highlight-end
-            providers=[]
+        ),
+        emailpassword.init(
+            # highlight-start
+            override=emailpassword.InputOverrideConfig(
+                functions=override_emailpassword_functions
+            ),
+            # highlight-end
         ),
         session.init(),
     ]
