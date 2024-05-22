@@ -106,23 +106,23 @@ function CombinationRecipeDocsNotif() {
           style={{
             marginBottom: 0
           }}>If you are using our backend SDK that is lesser than the following versions, please <a style={{
-            color: "white",
+            color: "#ff9933",
             fontWeight: "bold",
             textDecoration: "underline"
           }} href={docsPath}>visit the older documentation link here</a>.</p>
         <ul>
           <li><a style={{
-            color: "white",
+            color: "#ff9933",
             fontWeight: "bold",
             textDecoration: "underline"
           }} href="https://github.com/supertokens/supertokens-node">supertokens-node</a> lesser than <b>v18.0.0</b></li>
           <li><a style={{
-            color: "white",
+            color: "#ff9933",
             fontWeight: "bold",
             textDecoration: "underline"
           }} href="https://github.com/supertokens/supertokens-python">supertokens-python</a> lesser than <b>v0.21.0</b></li>
           <li><a style={{
-            color: "white",
+            color: "#ff9933",
             fontWeight: "bold",
             textDecoration: "underline"
           }} href="https://github.com/supertokens/supertokens-golang">supertokens-golang</a> lesser than <b>v0.20.0</b></li>
