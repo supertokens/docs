@@ -561,7 +561,7 @@ async function assertThatUserIsNotRemovedDocsVariableByMistake(path, codeSnippet
     return new Promise((res, rej) => {
         fs.readFile(path, 'utf8', function (err, data) {
             if (data !== undefined) {
-                if (data.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE") && !codeSnippet.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE") && false) {
+                if (data.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE") && !codeSnippet.includes("THIS FILE CONTAINS DOCS VARIABLES. PLEASE DO NOT FORGET TO USE THOSE")) {
                     let message = "DID YOU FORGET TO USE DOCS VARIABLES IN A RECENT CODE CHANGE? PLEASE CHECK"
                         + "\n\nIf you think this error is unrelated to your changes, try deleting the `snippets` folder for all languages and run again.\n\nThe file path is: " + path
                     return rej(new Error(message));
