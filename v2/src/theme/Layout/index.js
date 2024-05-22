@@ -18,6 +18,8 @@ import Head from '@docusaurus/Head';
 import { useLocation } from '@docusaurus/router';
 import './styles.css';
 import supertokens from "supertokens-website";
+import styles from "./styles.module.css";
+
 
 if (typeof window !== 'undefined') {
   let API_DOMAIN
@@ -61,6 +63,8 @@ function OriginalLayout(props) {
 
       <AnnouncementBar />
 
+      <CombinationRecipeDocsNotif />
+
       <Navbar />
 
       <div
@@ -75,6 +79,44 @@ function OriginalLayout(props) {
       {!noFooter && <Footer />}
     </LayoutProviders>
   );
+}
+
+function CombinationRecipeDocsNotif() {
+  const location = useLocation();
+  if (location.pathname.startsWith("/docs/thirdpartyemailpassword/") ||
+    location.pathname.startsWith("/docs/thirdpartypasswordless/")) {
+    let docsPath = "https://with-combination-recipes-do-not-delete--admiring-bhabha-7b1be9.netlify.app/docs/thirdpartyemailpassword/introduction"
+    if (location.pathname.startsWith("/docs/thirdpartypasswordless/")) {
+      docsPath = "https://with-combination-recipes-do-not-delete--admiring-bhabha-7b1be9.netlify.app/docs/thirdpartypasswordless/introduction"
+    }
+    return (
+      <div
+        className={styles.displayOnlyInLargeViewport}
+        style={{
+          width: "100%",
+          background: "#ffffff0a",
+          border: "1px solid #ffffff30",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column",
+        }}>
+        <p
+          style={{
+            marginBottom: 0
+          }}>If you are using our backend SDK that is older than the following versions, please <a style={{
+            color: "white",
+            fontWeight: "bold",
+            textDecoration: "underline"
+          }} href={docsPath}>visit the older documentation link</a>.</p>
+        <ul>
+          <li>supertokens-node lesser than <b>v18.0.0</b></li>
+          <li>supertokens-python lesser than <b>v0.21.0</b></li>
+          <li>supertokens-golang lesser than <b>v0.20.0</b></li>
+        </ul>
+      </div>)
+  }
+  return null;
 }
 
 function Layout(props) {
