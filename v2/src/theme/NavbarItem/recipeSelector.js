@@ -15,11 +15,11 @@ export default function RecipeSelector(props) {
   const label = () => {
     switch (currDocs) {
       case "thirdpartyemailpassword":
-        return "ThirdPartyEmailPassword Recipe";
+        return "ThirdParty + EmailPassword Recipe";
       case "phonepassword":
         return "Phone Password Login";
       case "thirdpartypasswordless":
-        return "ThirdPartyPasswordless Recipe";
+        return "ThirdParty + Passwordless Recipe";
       case "emailpassword":
         return "EmailPassword Recipe";
       case "thirdparty":
