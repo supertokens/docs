@@ -106,7 +106,7 @@ export class AuthModule implements NestModule {
 }
 ```
 
-In the provided code sample, we convert this to a [dynamic module](https://docs.nestjs.com/modules#dynamic-modules) so we can configure parts of the SuperTokens setup within the App module. This approach allows for centralized configuration, which can be particularly beneficial when managing settings such as using distinct connection URIs for different environments, such as testing or production.
+In the provided code sample, we convert `AuthModule` to a [dynamic module](https://docs.nestjs.com/modules#dynamic-modules) so we can configure parts of the SuperTokens setup within the App module. This approach allows for centralized configuration, which can be particularly beneficial when managing settings such as using distinct connection URIs for different environments, such as testing or production.
 
 :::info
 The middleware is registered using the `configure` method in the `AuthModule` class.
@@ -402,6 +402,9 @@ export class SupertokensExceptionFilter implements ExceptionFilter {
 
 We need to add this filter as a global exception filter. You can do this in `main.ts`, right after the updated CORS settings.
 
+<AppInfoForm
+    askForWebsiteDomain={true}>
+
 ```ts title="./src/main.ts"
 import { NestFactory } from '@nestjs/core';
 // @ts-ignore
@@ -414,7 +417,7 @@ import { SupertokensExceptionFilter } from './auth/auth.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AuthModule);
   app.enableCors({
-    origin: ['http://localhost:3001'], // TODO: URL of the website domain
+    origin: ['^{form_websiteDomain}'],
     allowedHeaders: ['content-type', ...supertokens.getAllCORSHeaders()],
     credentials: true,
   });
@@ -428,6 +431,7 @@ async function bootstrap() {
 
 bootstrap();
 ```
+</AppInfoForm>
 
 ## Add a session verification guard
 
@@ -437,40 +441,25 @@ In the newly created `auth.guard.ts` file, implement session verification:
 
 ```ts title="./src/auth/auth.guard.ts"
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { Error as STError } from "supertokens-node";
-
-import { verifySession } from 'supertokens-node/recipe/session/framework/express';
-import { VerifySessionOptions } from 'supertokens-node/recipe/session';
+import { getSession, VerifySessionOptions } from 'supertokens-node/recipe/session';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly verifyOptions?: VerifySessionOptions) {}
+  constructor(private readonly getSessionOptions?: VerifySessionOptions) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  public async canActivate(context: ExecutionContext): Promise<boolean> {
     const ctx = context.switchToHttp();
 
-    let err = undefined;
+    const req = ctx.getRequest();
     const resp = ctx.getResponse();
-    // You can create an optional version of this by passing {sessionRequired: false} to verifySession
-    await verifySession(this.verifyOptions)(
-      ctx.getRequest(),
-      resp,
-      (res: any) => {
-        err = res;
-      },
-    );
 
-    if (resp.headersSent) {
-      throw new STError({
-        message: "RESPONSE_SENT",
-        type: "RESPONSE_SENT",
-      });
-    }
+    // If the session doesn't exist and {sessionRequired: true} is passed to the AuthGuard constructor (default is true),
+    // getSession will throw an error, that will be handled by the exception filter, returning a 401 response.
 
-    if (err) {
-      throw err;
-    }
-
+    // To avoid an error when the session doesn't exist, pass {sessionRequired: false} to the AuthGuard constructor.
+    // In this case, req.session will be undefined if the session doesn't exist.
+    const session = await getSession(req, resp, this.getSessionOptions);
+    req.session = session;
     return true;
   }
 }
@@ -508,11 +497,16 @@ import { Session } from './auth/session/session.decorator';
 @Controller()
 export class AppController {
   // ...
-  @Get('test')
+  @Get('/sessioninfo')
   @UseGuards(new AuthGuard())
-  async getTest(@Session() session: SessionContainer): Promise<string> {
-    // TODO: magic
-    return "magic";
+  getSessionInfo(
+    @Session() session: SessionContainer,
+  ): Record<string, unknown> {
+    return {
+      sessionHandle: session.getHandle(),
+      userId: session.getUserId(),
+      accessTokenPayload: session.getAccessTokenPayload(),
+    };
   }
 }
 ```
