@@ -341,7 +341,7 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
 
     getVisitWebsiteBasePathText = () => (
         <span>
-            You can view the login UI by visiting <code>{this.state.websiteBasePath || "/"}</code>. You can also see all designs of our pre built UI, for each page on <a href="https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/auth-page--playground" target="_blank">this link</a>.
+            You can view the login UI by visiting <code>{this.state.websiteBasePath || "/"}</code>. You can also see all designs of our pre built UI, for each page on <a href="https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/auth-page--playground" target="_blank">this link</a>.
         </span>
     )
 
