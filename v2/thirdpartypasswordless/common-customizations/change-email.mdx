@@ -106,7 +106,7 @@ def change_email():
 
 ```tsx
 // the following example uses express
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import Passwordless from "supertokens-node/recipe/passwordless";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
@@ -149,7 +149,7 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
     }
 
     // Update the email
-    let resp = await ThirdPartyPasswordless.updatePasswordlessUser({
+    let resp = await Passwordless.updateUser({
         recipeUserId: session.getRecipeUserId(),
         email: email,
     });
@@ -192,8 +192,8 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
 )
 
 type RequestBody struct {
@@ -226,19 +226,9 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	// check that the account is not a social account
 	userId := sessionContainer.GetUserID()
-	userAccount, err := thirdpartypasswordless.GetUserByID(userId)
-	if err != nil {
-		// TODO: handle error
-		return
-	}
-
-	if userAccount.ThirdParty != nil {
-		// TODO: handle error, cannot update email for third party accounts
-		return
-	}
 
 	// update the email
-	updateResponse, err := thirdpartypasswordless.UpdatePasswordlessUser(userId, &requestBody.Email, nil)
+	updateResponse, err := passwordless.UpdateUser(userId, &requestBody.Email, nil)
 
 	if err != nil {
 		// TODO: handle error
@@ -252,6 +242,10 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 	if updateResponse.EmailAlreadyExistsError != nil {
 		// TODO: handle error that email exists with another account
 		return
+	}
+
+	if updateResponse.UnknownUserIdError != nil {
+		// TODO: handle error where this user is not a passwordless user
 	}
 
 	log.Fatal("should not reach here")
@@ -275,8 +269,8 @@ func isValidEmail(email string) bool {
 ```python
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.thirdpartypasswordless.syncio import update_passwordless_user, get_user_by_id
-from supertokens_python.recipe.thirdpartypasswordless.interfaces import PasswordlessUpdateUserOkResult, PasswordlessUpdateUserEmailAlreadyExistsError
+from supertokens_python.recipe.passwordless.syncio import update_user, get_user_by_id
+from supertokens_python.recipe.passwordless.interfaces import UpdateUserOkResult, UpdateUserEmailAlreadyExistsError
 from flask import g, request, Flask
 from re import fullmatch
 
@@ -305,25 +299,22 @@ def change_email():
     user_id = session.get_user_id()
     user_info = get_user_by_id(user_id)
 
-    assert user_info is not None
-
-    if user_info.third_party_info is not None:
+    if user_info is None:
         # TODO handle error, cannot update email for social account
         return
 
     # update the users email
-    update_response = update_passwordless_user(user_id, email=email)
+    update_response = update_user(user_id, email=email)
 
-    if isinstance(update_response, PasswordlessUpdateUserOkResult):
+    if isinstance(update_response, UpdateUserOkResult):
         # TODO send successful email update response
         return
 
-    if isinstance(update_response, PasswordlessUpdateUserEmailAlreadyExistsError):
+    if isinstance(update_response, UpdateUserEmailAlreadyExistsError):
         # TODO handle error, email already exists
         return
 
     raise Exception("Should never reach here")
-
     # highlight-end
 
 
@@ -436,13 +427,13 @@ def change_email():
 
 ```tsx
 // the following example uses express
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import Passwordless from "supertokens-node/recipe/passwordless";
 import EmailVerification from "supertokens-node/recipe/emailverification";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express"
 import express from "express";
 import supertokens from "supertokens-node";
-import {isEmailChangeAllowed} from "supertokens-node/recipe/accountlinking"
+import { isEmailChangeAllowed } from "supertokens-node/recipe/accountlinking"
 
 let app = express();
 
@@ -510,10 +501,10 @@ app.post("/change-email", verifySession(), async (req: SessionRequest, res: expr
         // this can come here if you have enabled the account linking feature, and 
         // if there is a security risk in changing this user's email.
         return res.status(400).send("Email change not allowed. Please contact support");
-    } 
+    }
 
     // Since the email is verified, we try and do an update
-    let resp = await ThirdPartyPasswordless.updatePasswordlessUser({
+    let resp = await Passwordless.updateUser({
         recipeUserId: session.getRecipeUserId(),
         email: email,
     });
@@ -552,8 +543,8 @@ import (
 	"regexp"
 
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
 )
 
 type RequestBody struct {
@@ -586,14 +577,14 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	// check that the account is not a social account
 	userId := sessionContainer.GetUserID()
-	userAccount, err := thirdpartypasswordless.GetUserById(userId)
+	userAccount, err := passwordless.GetUserByID(userId)
 	if err != nil {
 		// TODO: handle error
 		return
 	}
 
-	if userAccount.ThirdParty != nil {
-		// TODO: handle error, cannot update email for third party accounts
+	if userAccount == nil {
+		// TODO: return 400 status code saying that the user is not a passwordless user
 		return
 	}
 
@@ -608,17 +599,17 @@ func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
 
 	if !isVerified {
 		// Now we create and send the email verification link to the user for the new email.
-        _, err := emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.Email)
+		_, err := emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.Email)
 
-        if err != nil {
-            // TODO: handle error
-        }
+		if err != nil {
+			// TODO: handle error
+		}
 
-        return
+		return
 	}
 
 	// Since the email is verified, we try and do an update
-	updateResponse, err := thirdpartypasswordless.UpdatePasswordlessUser(userId, &requestBody.Email, nil)
+	updateResponse, err := passwordless.UpdateUser(userId, &requestBody.Email, nil)
 
 	if err != nil {
 		// TODO: handle error
@@ -646,7 +637,6 @@ func isValidEmail(email string) bool {
 	}
 	return emailCheck
 }
-
 ```
 
 </TabItem>
@@ -656,12 +646,12 @@ func isValidEmail(email string) bool {
 ```python
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.thirdpartypasswordless.syncio import ( 
-    update_passwordless_user
+from supertokens_python.recipe.passwordless.syncio import ( 
+    update_user
 )
-from supertokens_python.recipe.thirdpartypasswordless.interfaces import (
-    PasswordlessUpdateUserEmailAlreadyExistsError,
-    PasswordlessUpdateUserOkResult
+from supertokens_python.recipe.passwordless.interfaces import (
+    UpdateUserEmailAlreadyExistsError,
+    UpdateUserOkResult
 )
 
 from supertokens_python.recipe.emailverification.syncio import (
@@ -707,13 +697,13 @@ def change_email():
         return
     
     # update the users email
-    update_response = update_passwordless_user(user_id, email=request_body["email"])
+    update_response = update_user(user_id, email=request_body["email"])
 
-    if isinstance(update_response, PasswordlessUpdateUserOkResult):
+    if isinstance(update_response, UpdateUserOkResult):
         # TODO send successful email update response
         return
 
-    if isinstance(update_response, PasswordlessUpdateUserEmailAlreadyExistsError):
+    if isinstance(update_response, UpdateUserEmailAlreadyExistsError):
         # TODO handle error, email already exists
         return
 
@@ -730,7 +720,6 @@ async def is_valid_email(value: str) -> bool:
         )
         is not None
     )
-
 ```
 
 </TabItem>
@@ -756,8 +745,8 @@ async def is_valid_email(value: str) -> bool:
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
 import EmailVerification from "supertokens-node/recipe/emailverification";
+import Passwordless from "supertokens-node/recipe/passwordless";
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
@@ -767,10 +756,7 @@ SuperTokens.init({
     websiteDomain: "...",
   },
   recipeList: [
-    ThirdPartyPasswordless.init({
-        flowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
-        contactMethod: "EMAIL_OR_PHONE"
-    }),
+    // other recipes..
     EmailVerification.init({
         mode: "REQUIRED",
         override: {
@@ -783,7 +769,7 @@ SuperTokens.init({
                         if (response.status === "OK") {
                             // This will update the email of the user to the one
                             // that was just marked as verified by the token.
-                            await ThirdPartyPasswordless.updatePasswordlessUser({
+                            await Passwordless.updateUser({
                                 recipeUserId: response.user.recipeUserId,
                                 email: response.user.email,
                             });
@@ -809,10 +795,9 @@ SuperTokens.init({
 import (
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -824,7 +809,6 @@ func main() {
 			WebsiteDomain: "...",
 		},
 		RecipeList: []supertokens.Recipe{
-			thirdpartypasswordless.Init(tplmodels.TypeInput{}),
 			emailverification.Init(evmodels.TypeInput{
 				Mode: evmodels.ModeRequired,
 				Override: &evmodels.OverrideStruct{
@@ -838,7 +822,7 @@ func main() {
 							if response.OK != nil {
 								// This will update the email of the user to the one
 								// that was just marked as verified by the token.
-								_, err := thirdpartypasswordless.UpdatePasswordlessUser(response.OK.User.ID, &response.OK.User.Email, nil)
+								_, err := passwordless.UpdateUser(response.OK.User.ID, &response.OK.User.Email, nil)
 								if err != nil {
 									// TODO: Handle error
 								}
@@ -868,14 +852,14 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import thirdpartypasswordless, emailverification
+from supertokens_python.recipe import passwordless, emailverification
 from supertokens_python.recipe.emailverification.interfaces import (
     APIInterface,
     APIOptions
 )
 
-from supertokens_python.recipe.thirdpartypasswordless.asyncio import (
-    update_passwordless_user
+from supertokens_python.recipe.passwordless.asyncio import (
+    update_user
 )
 
 from supertokens_python.recipe.emailverification.interfaces import (
@@ -890,7 +874,7 @@ from supertokens_python import (
     SupertokensConfig,
 )
 
-from supertokens_python.recipe.thirdpartypasswordless import (
+from supertokens_python.recipe.passwordless import (
     ContactEmailOrPhoneConfig
 )
 
@@ -906,7 +890,7 @@ def override_email_verification_apis(original_implementation: APIInterface):
         verification_response = await original_email_verification_verify_email_post(token, session, tenant_id, api_options, user_context)
         
         if isinstance(verification_response, EmailVerifyPostOkResult):
-            await update_passwordless_user(verification_response.user.user_id, verification_response.user.email)
+            await update_user(verification_response.user.user_id, verification_response.user.email)
         
         return verification_response
         # highlight-end
@@ -922,7 +906,7 @@ init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
     framework="flask",
     recipe_list=[
-        thirdpartypasswordless.init(
+        passwordless.init(
             flow_type="USER_INPUT_CODE_AND_MAGIC_LINK",
             contact_config=ContactEmailOrPhoneConfig()),
         emailverification.init(
@@ -935,7 +919,6 @@ init(
     ),
     ],
 )
-
 ```
 
 </TabItem>

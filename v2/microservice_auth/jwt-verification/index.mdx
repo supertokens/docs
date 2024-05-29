@@ -5,6 +5,7 @@ hide_title: true
 ---
 
 import AppInfoForm from "/src/components/appInfoForm"
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
 
 # Verify JWTs
 
@@ -15,7 +16,11 @@ When a target microservice receives a JWT, it must first verify it before procee
 - Checking the JWT claim to make sure that another microservice has queried it.
 
 ## Standard verification of a JWT
+
 ### Method 1) Using JWKS endpoint
+
+<BackendSDKTabs disableOtherFrameworks={true}>
+<TabItem value="nodejs">
 
 #### a) Get JWKS endpoint
 
@@ -47,9 +52,29 @@ JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
 });
 ```
 
-For other languages, [jwt.io](https://jwt.io/libraries) recommends some libraries that you can use for JWT verification
+</TabItem>
+<TabItem value="python">
+
+Refer to this [Github gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa) for a code reference of how use `PyJWK` to do JWT verification. The gist contains two files:
+- `jwt_verification.py` (which you can just copy / paste into your application). You will have to modify the `JWKS_URI` in this file to point to your supertokens core instance (replacing the `try.supertokens.com` part of the URL). This file is written for `sync` python apps, and can be modified to work with `async` apps as well.
+  - This file essentially exposes a function called `verify_jwt` which takes an input JWT string.
+  - This function takes care of caching public keys in memory + auto refetching if the public keys have changed (which happens automatically every 24 hours with supertokens). This will not cause any user logouts, and is just a security feature.
+- `views.py`: This is an example `GET` API which extracts the JWT token from the authorization header in the request and calls the `verify_jwt` function from the other file.
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+You can use any JWT verification library available in the Golang ecosystem.
+:::
+
+</TabItem>
+</BackendSDKTabs>
 
 ### Method 2) Using public key string
+
+<BackendSDKTabs disableOtherFrameworks={true}>
+<TabItem value="nodejs">
 
 Some JWT verification libraries require you to provide the JWT secret / public key for verification. You can obtain the JWT secret from SuperTokens in the following way:
 
@@ -126,8 +151,28 @@ Some JWT verification libraries require you to provide the JWT secret / public k
   });
   ```
 
+</TabItem>
+<TabItem value="python">
+
+:::caution
+Not applicable. Please use method 1 instead.
+:::
+
+</TabItem>
+<TabItem value="go">
+
+:::caution
+Not applicable. Please use method 1 instead.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
 ## Claim verification
 The second step is to get the JWT payload and check that it has the `"source": "microservice"` claim:
+
+<BackendSDKTabs disableOtherFrameworks={true}>
+<TabItem value="nodejs">
 
 ```tsx
 import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
@@ -157,12 +202,30 @@ JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
 });
 ```
 
+</TabItem>
+<TabItem value="python">
+
+Referring once again to this [Github gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa), we can see in `views.py`, between lines 20 and 28, that we are checking for the value of a certain claim in the decoded JWT payload. You can do something similar and check for the `source` claim whose value must be `microservice`. If it is, then all's good, else you can return a 401.
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Snippet coming soon.
+:::
+
+</TabItem>
+</BackendSDKTabs>
+
 ## M2M and frontend session verification for the same API
 You may have a setup wherein the same API is called from the frontend as well as from other microservices. The frontend session works differently than m2m sessions, so we have to account for both forms of token inputs. 
 
 Our approach here would be to first attempt frontend session verification, and if that fails, then attempt m2m jwt verification (using the above method). If both fails, then we send back a `401` response.
 
-We will use the [`getSession` function](https://supertokens.com/docs/session/common-customizations/sessions/session-verification-in-api/get-session) for frontend session verification (we use node js express as an exmaple below, but the code snippet for your framework can be seen in the `getSession` function docs).
+We will use the [`getSession` function](https://supertokens.com/docs/session/common-customizations/sessions/session-verification-in-api/get-session) for frontend session verification.
+
+<BackendSDKTabs disableOtherFrameworks={true}>
+<TabItem value="nodejs">
 
 ```tsx
 import express from "express";
@@ -217,5 +280,45 @@ app.post("/like-comment", async (req, res, next) => {
 - Notice that we add the `sessionRequired: false` option when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function will return `undefined`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function will throw a try refresh token error, sending a 401 to the frontend. This will trigger a session refresh flow as expected.
 - If the `getSession` function returns `undefined`, it means that the session is not from the frontend and we can attempt a microservice auth verification using the JWT verification method shown previously in this page.
 - If that fails too, we can send back a `401` response.
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_session
+from django.http import HttpRequest
+from typing import Union
+
+async def like_comment(request: HttpRequest):
+    session = await get_session(request, session_required=False)
+    user_id = ""
+    if session is not None:
+        user_id = session.get_user_id()
+    else:
+        jwt: Union[str, None] = request.headers.get("Authorization") # type: ignore
+        if jwt is None:
+            # return a 401 unauthorised error...
+            pass
+        else:
+            jwt = jwt.split("Bearer ")[1]
+            # JWT verification (see previous step)
+            pass
+
+    print(user_id)  # TODO
+```
+
+- Notice that we add the `sessionRequired: false` option when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function will return `None`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function will throw a try refresh token error, sending a 401 to the frontend. This will trigger a session refresh flow as expected.
+- If the `getSession` function returns `None`, it means that the session is not from the frontend and we can attempt a microservice auth verification using the JWT verification method shown previously in this page.
+- If that fails too, we can send back a `401` response.
+
+</TabItem>
+<TabItem value="go">
+
+:::note
+Snippet coming soon.
+:::
+
+</TabItem>
+</BackendSDKTabs>
 
 </AppInfoForm>

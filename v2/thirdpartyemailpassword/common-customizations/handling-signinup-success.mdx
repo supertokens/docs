@@ -28,7 +28,8 @@ This method allows you to fire events immediately after a successful sign in / u
 
 ```tsx
 import SuperTokens from "supertokens-auth-react";
-import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword";
+import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 import Session from "supertokens-auth-react/recipe/session";
 
 SuperTokens.init({
@@ -38,12 +39,24 @@ SuperTokens.init({
         websiteDomain: "..."
     },
     recipeList: [
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
             // highlight-start
             onHandleEvent: async (context) => {
-                if (context.action === "SESSION_ALREADY_EXISTS") {
-                    // TODO:
-                } else if (context.action === "SUCCESS") {
+                if (context.action === "SUCCESS") {
+                    let { id, emails } = context.user;
+                    if (context.isNewRecipeUser && context.user.loginMethods.length === 1) {
+                        // TODO: Sign up
+                    } else {
+                        // TODO: Sign in
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        EmailPassword.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SUCCESS") {
                     let { id, emails } = context.user;
                     if (context.isNewRecipeUser && context.user.loginMethods.length === 1) {
                         // TODO: Sign up
@@ -85,16 +98,17 @@ This section is not applicable for custom UI since you will be calling the sign 
 ### Sign in / sign up override
 
 For this, you'll have to override the following recipe functions in the `init` function call, on the backend:
-- `emailPasswordSignUp`: Sign up with email & password
-- `emailPasswordSignIn`: Sign in with email & password
-- `thirdPartySignInUp`: Sign in or up with third party
+- `emailPassword signUp`: Sign up with email & password
+- `emailPassword signIn`: Sign in with email & password
+- `thirdParty signInUp`: Sign in or up with third party
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
 import Session from "supertokens-node/recipe/session";
 
 SuperTokens.init({
@@ -107,44 +121,18 @@ SuperTokens.init({
         connectionURI: "...",
     },
     recipeList: [
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
             // highlight-start
             override: {
                 functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
 
-                        // override the email password sign up function
-                        emailPasswordSignUp: async function (input) {
-                            // TODO: some pre sign up logic
-
-                            let response = await originalImplementation.emailPasswordSignUp(input);
-
-                            if (response.status === "OK" && response.user.loginMethods.length === 1 && input.session === undefined) {
-                                // TODO: some post sign up logic
-                            }
-
-                            return response;
-                        },
-
-                        // override the email password sign in function
-                        emailPasswordSignIn: async function (input) {
-                            // TODO: some pre sign in logic
-
-                            let response = await originalImplementation.emailPasswordSignIn(input);
-
-                            if (response.status === "OK" && input.session === undefined) {
-                                // TODO: some post sign in logic
-                            }
-
-                            return response;
-                        },
-
                         // override the thirdparty sign in / up function
-                        thirdPartySignInUp: async function (input) {
+                        signInUp: async function (input) {
                             // TODO: Some pre sign in / up logic
 
-                            let response = await originalImplementation.thirdPartySignInUp(input);
+                            let response = await originalImplementation.signInUp(input);
 
                             if (response.status === "OK") {
 
@@ -168,6 +156,43 @@ SuperTokens.init({
             }
             // highlight-end
         }),
+        EmailPassword.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        // override the email password sign up function
+                        signUp: async function (input) {
+                            // TODO: some pre sign up logic
+
+                            let response = await originalImplementation.signUp(input);
+
+                            if (response.status === "OK" && response.user.loginMethods.length === 1 && input.session === undefined) {
+                                // TODO: some post sign up logic
+                            }
+
+                            return response;
+                        },
+
+                        // override the email password sign in function
+                        signIn: async function (input) {
+                            // TODO: some pre sign in logic
+
+                            let response = await originalImplementation.signIn(input);
+
+                            if (response.status === "OK" && input.session === undefined) {
+                                // TODO: some post sign in logic
+                            }
+
+                            return response;
+                        },
+                    }
+                }
+            }
+            // highlight-end
+        }),
         Session.init({ /* ... */ })
     ]
 });
@@ -180,9 +205,10 @@ SuperTokens.init({
 import (
 	"fmt"
 
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
 	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -190,23 +216,22 @@ func main() {
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
+			emailpassword.Init(&epmodels.TypeInput{
 				//highlight-start
-				Override: &tpepmodels.OverrideStruct{
-					Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
+				Override: &epmodels.OverrideStruct{
+					Functions: func(originalImplementation epmodels.RecipeInterface) epmodels.RecipeInterface {
 						// create a copy of the originalImplementation
-						originalEmailPasswordSignUp := *originalImplementation.EmailPasswordSignUp
-						originalEmailPasswordSignIn := *originalImplementation.EmailPasswordSignIn
-						originalThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
+						originalEmailPasswordSignUp := *originalImplementation.SignUp
+						originalEmailPasswordSignIn := *originalImplementation.SignIn
 
 						// override the email password sign up function
-						(*originalImplementation.EmailPasswordSignUp) = func(email, password string, tenantId string, userContext supertokens.UserContext) (tpepmodels.SignUpResponse, error) {
+						(*originalImplementation.SignUp) = func(email, password string, tenantId string, userContext supertokens.UserContext) (epmodels.SignUpResponse, error) {
 
 							// TODO: some pre sign up logic
 
 							resp, err := originalEmailPasswordSignUp(email, password, tenantId, userContext)
 							if err != nil {
-								return tpepmodels.SignUpResponse{}, err
+								return epmodels.SignUpResponse{}, err
 							}
 
 							if resp.OK != nil {
@@ -217,13 +242,13 @@ func main() {
 						}
 
 						// override the email password sign in function
-						(*originalImplementation.EmailPasswordSignIn) = func(email, password string, tenantId string, userContext supertokens.UserContext) (tpepmodels.SignInResponse, error) {
+						(*originalImplementation.SignIn) = func(email, password string, tenantId string, userContext supertokens.UserContext) (epmodels.SignInResponse, error) {
 
 							// TODO: some pre sign in logic
 
 							resp, err := originalEmailPasswordSignIn(email, password, tenantId, userContext)
 							if err != nil {
-								return tpepmodels.SignInResponse{}, err
+								return epmodels.SignInResponse{}, err
 							}
 
 							if resp.OK != nil {
@@ -233,14 +258,26 @@ func main() {
 							return resp, err
 						}
 
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+			thirdparty.Init(&tpmodels.TypeInput{
+				//highlight-start
+				Override: &tpmodels.OverrideStruct{
+					Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
+						// create a copy of the originalImplementation
+						originalThirdPartySignInUp := *originalImplementation.SignInUp
+
 						// override the thirdparty sign in / up function
-						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID, thirdPartyUserID, email string, oAuthTokens tpmodels.TypeOAuthTokens, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext supertokens.UserContext) (tpepmodels.SignInUpResponse, error) {
+						(*originalImplementation.SignInUp) = func(thirdPartyID, thirdPartyUserID, email string, oAuthTokens tpmodels.TypeOAuthTokens, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext supertokens.UserContext) (tpmodels.SignInUpResponse, error) {
 
 							// TODO: some pre sign in / up logic
 
 							resp, err := originalThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
 							if err != nil {
-								return tpepmodels.SignInUpResponse{}, err
+								return tpmodels.SignInUpResponse{}, err
 							}
 
 							if resp.OK != nil {
@@ -278,46 +315,15 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import thirdpartyemailpassword, session
-from supertokens_python.recipe.thirdpartyemailpassword.interfaces import RecipeInterface, EmailPasswordSignInOkResult, EmailPasswordSignUpOkResult
+from supertokens_python.recipe import thirdparty, emailpassword, session
+from supertokens_python.recipe.thirdparty.interfaces import RecipeInterface as ThirdPartyRecipeInterface
+from supertokens_python.recipe.emailpassword.interfaces import RecipeInterface as EmailPasswordRecipeInterface, SignInOkResult, SignUpOkResult
 from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
 from typing import Dict, Any
 
 # highlight-start
-def override_thirdpartyemailpassword_functions(original_implementation: RecipeInterface) -> RecipeInterface:
-    original_thirdparty_sign_in_up = original_implementation.thirdparty_sign_in_up
-    original_emailpassword_sign_up = original_implementation.emailpassword_sign_up
-    original_emailpassword_sign_in = original_implementation.emailpassword_sign_in
-
-    async def emailpassword_sign_up(
-        email: str,
-        password: str,
-        tenant_id: str,
-        user_context: Dict[str, Any]
-    ):
-        # TODO: some pre sign up logic
-        result = await original_emailpassword_sign_up(email, password, tenant_id, user_context)
-
-        if isinstance(result, EmailPasswordSignUpOkResult):
-            # TODO: some post sign up logic
-            pass
-
-        return result
-
-    async def emailpassword_sign_in(
-        email: str,
-        password: str,
-        tenant_id: str,
-        user_context: Dict[str, Any]
-    ):
-        # TODO: some pre sign in logic
-        result = await original_emailpassword_sign_in(email, password, tenant_id, user_context)
-
-        if isinstance(result, EmailPasswordSignInOkResult):
-            # TODO: some post sign in logic
-            pass
-
-        return result
+def override_thirdparty_functions(original_implementation: ThirdPartyRecipeInterface) -> ThirdPartyRecipeInterface:
+    original_thirdparty_sign_in_up = original_implementation.sign_in_up
 
     async def thirdparty_sign_in_up(
         third_party_id: str,
@@ -351,9 +357,46 @@ def override_thirdpartyemailpassword_functions(original_implementation: RecipeIn
         
         return result
 
-    original_implementation.emailpassword_sign_up = emailpassword_sign_up
-    original_implementation.emailpassword_sign_in = emailpassword_sign_in
-    original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
+    original_implementation.sign_in_up = thirdparty_sign_in_up
+
+    return original_implementation
+
+def override_emailpassword_functions(original_implementation: EmailPasswordRecipeInterface) -> EmailPasswordRecipeInterface:
+    original_emailpassword_sign_up = original_implementation.sign_up
+    original_emailpassword_sign_in = original_implementation.sign_in
+
+    async def emailpassword_sign_up(
+        email: str,
+        password: str,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ):
+        # TODO: some pre sign up logic
+        result = await original_emailpassword_sign_up(email, password, tenant_id, user_context)
+
+        if isinstance(result, SignUpOkResult):
+            # TODO: some post sign up logic
+            pass
+
+        return result
+
+    async def emailpassword_sign_in(
+        email: str,
+        password: str,
+        tenant_id: str,
+        user_context: Dict[str, Any]
+    ):
+        # TODO: some pre sign in logic
+        result = await original_emailpassword_sign_in(email, password, tenant_id, user_context)
+
+        if isinstance(result, SignInOkResult):
+            # TODO: some post sign in logic
+            pass
+
+        return result
+
+    original_implementation.sign_up = emailpassword_sign_up
+    original_implementation.sign_in = emailpassword_sign_in
 
     return original_implementation
 # highlight-end
@@ -362,13 +405,19 @@ init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
     framework='...', # type: ignore
     recipe_list=[
-        thirdpartyemailpassword.init(
+        thirdparty.init(
 			# highlight-start
-            override=thirdpartyemailpassword.InputOverrideConfig(
-                functions=override_thirdpartyemailpassword_functions
+            override=thirdparty.InputOverrideConfig(
+                functions=override_thirdparty_functions
             ),
 			# highlight-end
-            providers=[]
+        ),
+        emailpassword.init(
+			# highlight-start
+            override=emailpassword.InputOverrideConfig(
+                functions=override_emailpassword_functions
+            ),
+			# highlight-end
         ),
         session.init(),
     ]
@@ -377,7 +426,7 @@ init(
 </TabItem>
 </BackendSDKTabs>
 
-Using the code above, if `createdNewUser` is `true` or in `emailPasswordSignUpPOST`, you can (for example):
+Using the code above, if `createdNewUser` is `true` or in `emailPassword signUpPOST`, you can (for example):
 - Add the user's ID and their info to your own database (in addition to it being stored in SuperTokens).
 - Send analytics events about a sign up.
 - Send a welcome email to the user.
@@ -385,14 +434,14 @@ Using the code above, if `createdNewUser` is `true` or in `emailPasswordSignUpPO
 
 ### Accessing custom form fields during email password sign up
 
-During email password sign up, if you would like to access the custom form fields that you may have added, you can do so by overriding the `emailPasswordSignUpPOST` API:
+During email password sign up, if you would like to access the custom form fields that you may have added, you can do so by overriding the `emailPassword signUpPOST` API:
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
 
 // backend
@@ -406,14 +455,14 @@ SuperTokens.init({
         connectionURI: "...",
     },
     recipeList: [
-        ThirdPartyEmailPassword.init({
+        EmailPassword.init({
             override: {
                 apis: (originalImplementation) => {
                     return {
                         ...originalImplementation,
-                        emailPasswordSignUpPOST: async function (input) {
-                            // First we call the original implementation of emailPasswordSignUpPOST.
-                            let response = await originalImplementation.emailPasswordSignUpPOST!(input);
+                        signUpPOST: async function (input) {
+                            // First we call the original implementation of signUpPOST.
+                            let response = await originalImplementation.signUpPOST!(input);
 
                             // Post sign up response, we check if it was successful
                             if (response.status === "OK" && response.user.loginMethods.length === 1 && input.session === undefined) {
@@ -456,9 +505,8 @@ SuperTokens.init({
 import (
 	"fmt"
 
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartyemailpassword/tpepmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -466,18 +514,18 @@ func main() {
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			thirdpartyemailpassword.Init(&tpepmodels.TypeInput{
-				Override: &tpepmodels.OverrideStruct{
+			emailpassword.Init(&epmodels.TypeInput{
+				Override: &epmodels.OverrideStruct{
 					//highlight-start
-					APIs: func(originalImplementation tpepmodels.APIInterface) tpepmodels.APIInterface {
-						originalEmailPasswordSignUpPOST := *originalImplementation.EmailPasswordSignUpPOST
+					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+						originalEmailPasswordSignUpPOST := *originalImplementation.SignUpPOST
 
-						(*originalImplementation.EmailPasswordSignUpPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (tpepmodels.SignUpPOSTResponse, error) {
+						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
 
 							// pre API logic...
 							resp, err := originalEmailPasswordSignUpPOST(formFields, tenantId, options, userContext)
 							if err != nil {
-								return tpepmodels.SignUpPOSTResponse{}, err
+								return epmodels.SignUpPOSTResponse{}, err
 							}
 
 							if resp.OK != nil {
@@ -504,7 +552,7 @@ func main() {
 						return originalImplementation
 					},
 					//highlight-end
-					Functions: func(originalImplementation tpepmodels.RecipeInterface) tpepmodels.RecipeInterface {
+					Functions: func(originalImplementation epmodels.RecipeInterface) epmodels.RecipeInterface {
 						// TODO: From previous code snippet...
 						return originalImplementation
 					},
@@ -520,25 +568,25 @@ func main() {
 
 ```python
 from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import thirdpartyemailpassword
-from supertokens_python.recipe.thirdpartyemailpassword.interfaces import APIInterface, EmailPasswordAPIOptions, EmailPasswordSignUpPostOkResult, RecipeInterface
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions, SignUpPostOkResult, RecipeInterface
 from typing import Dict, Any, List
 from supertokens_python.recipe.emailpassword.types import FormField
 
 # highlight-start
-def override_thirdpartyemailpassword_apis(original_implementation: APIInterface):
-    original_emailpassword_sign_up_post = original_implementation.emailpassword_sign_up_post
+def override_emailpassword_apis(original_implementation: APIInterface):
+    original_emailpassword_sign_up_post = original_implementation.sign_up_post
 
     async def emailpassword_sign_up_post(
         form_fields: List[FormField],
         tenant_id: str,
-        api_options: EmailPasswordAPIOptions,
+        api_options: APIOptions,
         user_context: Dict[str, Any]
     ):
         # call the default behaviour as show below
         result = await original_emailpassword_sign_up_post(form_fields, tenant_id, api_options, user_context)
 
-        if isinstance(result, EmailPasswordSignUpPostOkResult):
+        if isinstance(result, SignUpPostOkResult):
             # TODO: sign up successful
 
             # here we fetch a custom form field for the user's name.
@@ -556,7 +604,7 @@ def override_thirdpartyemailpassword_apis(original_implementation: APIInterface)
         
         return result
 
-    original_implementation.emailpassword_sign_up_post = emailpassword_sign_up_post
+    original_implementation.sign_up_post = emailpassword_sign_up_post
     return original_implementation
 
 def override_thirdpartyemailpassword_functions(original_implementation: RecipeInterface):
@@ -568,10 +616,10 @@ init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
     framework='...', # type: ignore
     recipe_list=[
-        thirdpartyemailpassword.init(
+        emailpassword.init(
 			# highlight-start
-            override=thirdpartyemailpassword.InputOverrideConfig(
-                apis=override_thirdpartyemailpassword_apis
+            override=emailpassword.InputOverrideConfig(
+                apis=override_emailpassword_apis
             )
 			# highlight-end
         )
@@ -582,10 +630,10 @@ init(
 </BackendSDKTabs>
 
 ### API override vs Functions override
-For most purposes, you should be using Functions override. Functions override logic is called whenever the API is called from the frontend as well as if you call the sign up / sign in functions yourself manually via the SDK (like `thirdpartyemailpassword.emailPasswordSignIn(...)`).
+For most purposes, you should be using Functions override. Functions override logic is called whenever the API is called from the frontend as well as if you call the sign up / sign in functions yourself manually via the SDK (like `emailpassword.signIn(...)`).
 
-For example, when the frontend calls the email password sign up API, the SDK invokes the `API.emailPasswordSignUpPOST` above. When you call the original implementation of this function, that function calls the `Functions.emailPasswordSignUp` function first, and if that's successful, it calls the Session recipe's `createNewSession` function.
+For example, when the frontend calls the email password sign up API, the SDK invokes the `API.signUpPOST` above. When you call the original implementation of this function, that function calls the `Functions.signUp` function first, and if that's successful, it calls the Session recipe's `createNewSession` function.
 
-Therefore, if you want to associate a role with a user, you would want to do that in the `Functions.emailPasswordSignUp` function since then those roles would get added to the session in the subsequent call to the `Session.createNewSession` function. If instead, you associate a role to the user in the `API.emailPasswordSignUpPOST` (after calling the original implementation), the role will not be automatically added to the session since the `Session.createNewSession` would have already been called before the original implementation returns.
+Therefore, if you want to associate a role with a user, you would want to do that in the `Functions.signUp` function since then those roles would get added to the session in the subsequent call to the `Session.createNewSession` function. If instead, you associate a role to the user in the `API.signUpPOST` (after calling the original implementation), the role will not be automatically added to the session since the `Session.createNewSession` would have already been called before the original implementation returns.
 
-The only time it makes sense to override the API functions is if you want to access an argument that's not available in the recipe function. For example, the custom form fields for email password sign up is an input to the `API.emailPasswordSignUpPOST`, but not to the `Functions.emailPasswordSignUp`, so if you want to access the form fields, you should override the `API.emailPasswordSignUpPOST` as shown above. You can also always add the formFields to the userContext object and read it later in the `Functions.emailPasswordSignUp` override, but then you would lose the typing of the form field array structure (which is not a runtime problem, but just a slightly bad developer experience).
+The only time it makes sense to override the API functions is if you want to access an argument that's not available in the recipe function. For example, the custom form fields for email password sign up is an input to the `API.signUpPOST`, but not to the `Functions.signUp`, so if you want to access the form fields, you should override the `API.signUpPOST` as shown above. You can also always add the formFields to the userContext object and read it later in the `Functions.signUp` override, but then you would lose the typing of the form field array structure (which is not a runtime problem, but just a slightly bad developer experience).

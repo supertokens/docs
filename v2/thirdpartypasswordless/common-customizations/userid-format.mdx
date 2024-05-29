@@ -30,7 +30,8 @@ You can call the user ID mapping function post sign up as shown below. It is imp
 
 ```tsx
 import SuperTokens from "supertokens-node";
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session";
 import { RecipeUserId } from "supertokens-node";
 
@@ -41,18 +42,15 @@ SuperTokens.init({
         websiteDomain: "..."
     },
     recipeList: [
-        ThirdPartyPasswordless.init({
-            contactMethod: "EMAIL", // This example will work with any contactMethod
-            flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // This example will work with any flowType
-
+        ThirdParty.init({
             override: {
                 functions: (originalImplementation) => {
                     return {
                         ...originalImplementation,
                         // override the thirdparty sign in / up API
-                        thirdPartySignInUp: async function (input) {
+                        signInUp: async function (input) {
 
-                            let response = await originalImplementation.thirdPartySignInUp(input);
+                            let response = await originalImplementation.signInUp(input);
 
                             if (response.status === "OK") {
                                 let { id, emails } = response.user;
@@ -65,7 +63,7 @@ SuperTokens.init({
                                     // highlight-start
                                     let externalUserId = "<CUSTOM USER ID>"
                                     await SuperTokens.createUserIdMapping({ superTokensUserId: response.user.id, externalUserId })
-                                    
+
                                     // we modify the response object to have the custom user ID.
                                     response.user.id = externalUserId
                                     response.user.loginMethods[0].recipeUserId = new RecipeUserId(externalUserId);
@@ -75,7 +73,18 @@ SuperTokens.init({
 
                             return response;
                         },
+                    }
+                }
+            }
+        }),
+        Passwordless.init({
+            contactMethod: "EMAIL", // This example will work with any contactMethod
+            flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // This example will work with any flowType
 
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
                         consumeCode: async (input) => {
                             // First we call the original implementation of consumeCode.
                             const response = await originalImplementation.consumeCode(input);
@@ -92,7 +101,7 @@ SuperTokens.init({
                                     // highlight-start
                                     let externalUserId = "<CUSTOM USER ID>"
                                     await SuperTokens.createUserIdMapping({ superTokensUserId: response.user.id, externalUserId })
-                                    
+
                                     // we modify the response object to have the custom user ID.
                                     response.user.id = externalUserId
                                     response.user.loginMethods[0].recipeUserId = new RecipeUserId(externalUserId);
@@ -114,10 +123,10 @@ SuperTokens.init({
 
 ```go
 import (
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
 	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
@@ -125,22 +134,21 @@ func main() {
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
-			thirdpartypasswordless.Init(tplmodels.TypeInput{
-				Override: &tplmodels.OverrideStruct{
-					Functions: func(originalImplementation tplmodels.RecipeInterface) tplmodels.RecipeInterface {
+			thirdparty.Init(&tpmodels.TypeInput{
+				Override: &tpmodels.OverrideStruct{
+					Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
 
 						// create a copy of the original function
-						originalConsumeCode := *originalImplementation.ConsumeCode
-						originalThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
+						originalSignInUp := *originalImplementation.SignInUp
 
 						// override the thirdparty sign in / up function
-						(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID string, thirdPartyUserID string, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext *map[string]interface{}) (tplmodels.ThirdPartySignInUp, error) {
+						(*originalImplementation.SignInUp) = func(thirdPartyID string, thirdPartyUserID string, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext *map[string]interface{}) (tpmodels.SignInUpResponse, error) {
 
 							// TODO: some pre sign in / up logic
 
-							resp, err := originalThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
+							resp, err := originalSignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
 							if err != nil {
-								return tplmodels.ThirdPartySignInUp{}, err
+								return tpmodels.SignInUpResponse{}, err
 							}
 
 							if resp.OK != nil {
@@ -149,7 +157,7 @@ func main() {
 									externalUserId := "<CUSTOM USER ID>"
 									_, err := supertokens.CreateUserIdMapping(resp.OK.User.ID, externalUserId, nil, nil)
 									if err != nil {
-										return tplmodels.ThirdPartySignInUp{}, err
+										return tpmodels.SignInUpResponse{}, err
 									}
 									resp.OK.User.ID = externalUserId
 									// highlight-end
@@ -160,13 +168,24 @@ func main() {
 							return resp, err
 						}
 
+						return originalImplementation
+					},
+				},
+			}),
+			passwordless.Init(plessmodels.TypeInput{
+				Override: &plessmodels.OverrideStruct{
+					Functions: func(originalImplementation plessmodels.RecipeInterface) plessmodels.RecipeInterface {
+
+						// create a copy of the original function
+						originalConsumeCode := *originalImplementation.ConsumeCode
+
 						// override the passwordless sign in up function
-						(*originalImplementation.ConsumeCode) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, userContext supertokens.UserContext) (tplmodels.ConsumeCodeResponse, error) {
+						(*originalImplementation.ConsumeCode) = func(userInput *plessmodels.UserInputCodeWithDeviceID, linkCode *string, preAuthSessionID string, tenantId string, userContext supertokens.UserContext) (plessmodels.ConsumeCodeResponse, error) {
 
 							// First we call the original implementation of ConsumeCode.
 							response, err := originalConsumeCode(userInput, linkCode, preAuthSessionID, tenantId, userContext)
 							if err != nil {
-								return tplmodels.ConsumeCodeResponse{}, err
+								return plessmodels.ConsumeCodeResponse{}, err
 							}
 
 							if response.OK != nil {
@@ -175,7 +194,7 @@ func main() {
 									externalUserId := "<CUSTOM USER ID>"
 									_, err := supertokens.CreateUserIdMapping(response.OK.User.ID, externalUserId, nil, nil)
 									if err != nil {
-										return tplmodels.ConsumeCodeResponse{}, err
+										return plessmodels.ConsumeCodeResponse{}, err
 									}
 									response.OK.User.ID = externalUserId
 									// highlight-end
@@ -192,7 +211,6 @@ func main() {
 		},
 	})
 }
-
 ```
 
 </TabItem>
@@ -201,14 +219,14 @@ func main() {
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.asyncio import create_user_id_mapping
-from supertokens_python.recipe import thirdpartypasswordless, session, passwordless
-from supertokens_python.recipe.thirdpartypasswordless.interfaces import RecipeInterface, ConsumeCodeOkResult
+from supertokens_python.recipe import thirdparty, session, passwordless
+from supertokens_python.recipe.thirdparty.interfaces import RecipeInterface as ThirdPartyRecipeInterface
+from supertokens_python.recipe.passwordless.interfaces import RecipeInterface as PasswordlessRecipeInterface, ConsumeCodeOkResult
 from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
 from typing import Dict, Any, Union
 
-def override_thirdpartypasswordless_functions(original_implementation: RecipeInterface) -> RecipeInterface:
-    original_thirdparty_sign_in_up = original_implementation.thirdparty_sign_in_up
-    original_consume_code = original_implementation.consume_code
+def override_thirdparty_functions(original_implementation: ThirdPartyRecipeInterface) -> ThirdPartyRecipeInterface:
+    original_thirdparty_sign_in_up = original_implementation.sign_in_up
 
     async def thirdparty_sign_in_up(
         third_party_id: str,
@@ -241,6 +259,14 @@ def override_thirdpartypasswordless_functions(original_implementation: RecipeInt
             # highlight-end
         
         return result
+                
+
+    original_implementation.sign_in_up = thirdparty_sign_in_up
+
+    return original_implementation
+
+def override_passwordless_functions(original_implementation: PasswordlessRecipeInterface) -> PasswordlessRecipeInterface:
+    original_consume_code = original_implementation.consume_code
     
     async def consume_code(
         pre_auth_session_id: str,
@@ -273,8 +299,6 @@ def override_thirdpartypasswordless_functions(original_implementation: RecipeInt
         
         return result
                 
-
-    original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
     original_implementation.consume_code = consume_code
 
     return original_implementation
@@ -283,17 +307,23 @@ init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
     framework='...', # type: ignore
     recipe_list=[
-        thirdpartypasswordless.init(
+        thirdparty.init(
+			# highlight-start
+            override=thirdparty.InputOverrideConfig(
+                functions=override_thirdparty_functions
+            ),
+			# highlight-end
+        ),
+        passwordless.init(
             contact_config=passwordless.ContactConfig(
                 contact_method="EMAIL", # This example will work with any contactMethod
             ),
             flow_type="USER_INPUT_CODE_AND_MAGIC_LINK", # This example will work with any flowType
 			# highlight-start
-            override=thirdpartypasswordless.InputOverrideConfig(
-                functions=override_thirdpartypasswordless_functions
+            override=passwordless.InputOverrideConfig(
+                functions=override_passwordless_functions
             ),
 			# highlight-end
-            providers=[]
         ),
         session.init(),
     ]
