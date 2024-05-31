@@ -5,6 +5,24 @@ import StackViewer from "./StackViewer";
 export default function IsRecipeInit(props: React.PropsWithChildren<{
     recipe: string
 }>) {
+
+    if (props.recipe === "mfa") {
+        return (
+            <StackViewer
+                showIf={(selection) => {
+                    let isInit = false;
+                    selection.tenants.forEach(t => {
+                        if (t.secondFactors.length > 0) {
+                            isInit = true;
+                        }
+                    })
+                    return isInit;
+                }}
+                useDiv={false}
+            >{props.children}</StackViewer>
+        );
+    }
+
     return (
         <StackViewer
             showIf={(selection) => {
