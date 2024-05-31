@@ -11,6 +11,7 @@ export default function StackView(props: React.PropsWithChildren<{
             secondFactors: SecondFactors
         })[]
     }): boolean
+    useDiv?: boolean
 }>) {
     let selection = getSelection();
 
@@ -19,7 +20,7 @@ export default function StackView(props: React.PropsWithChildren<{
     }
 
     if (props.showIf(selection)) {
-        return props.children === undefined ? null : <div>{props.children}</div>;
+        return props.children === undefined ? null : (props.useDiv === undefined || props.useDiv ? <div>{props.children}</div> : <span>{props.children}</span>);
     }
 
     return null;
