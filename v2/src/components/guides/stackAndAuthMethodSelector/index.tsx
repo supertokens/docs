@@ -1,12 +1,5 @@
 import * as React from "react";
-
-type FrontendChoice = "react" | "angular" | "vue" | "vanillajs" | "nextjs" | "remix" | undefined;
-
-type BackendChoice = "nodejs" | "golang" | "python" | "php" | "c#" | "java" | "ruby" | undefined;
-
-type FirstFactors = ("emailpassword" | "passwordless" | "thirdparty")[]
-
-type SecondFactors = ("totp" | "otp-phone" | "otp-email")[]
+import { FrontendChoice, BackendChoice, FirstFactors, SecondFactors } from "../utils"
 
 export default function StackAndAuthMethodSelector() {
 
@@ -47,6 +40,10 @@ export default function StackAndAuthMethodSelector() {
                     <option value="vanillajs">Vanilla JS</option>
                     <option value="nextjs">Next.js</option>
                     <option value="remix">Remix</option>
+                    <option value="react-native">React Native</option>
+                    <option value="ios">iOS</option>
+                    <option value="android">Android</option>
+                    <option value="flutter">Flutter</option>
                 </select>
             </div>
         );
@@ -60,12 +57,13 @@ export default function StackAndAuthMethodSelector() {
                 <select id="backendChoice" value={backendChoice === undefined ? "" : backendChoice} onChange={handleBackendChange}>
                     <option value="">--Select an option--</option>
                     <option value="nodejs">Node.js</option>
+                    <option value="nextjs">Next.js API</option>
+                    <option value="remix">Remix API</option>
                     <option value="golang">Go</option>
                     <option value="python">Python</option>
                     <option value="php">PHP</option>
                     <option value="c#">C#</option>
                     <option value="java">Java</option>
-                    <option value="ruby">Ruby</option>
                 </select>
             </div>
         );
