@@ -1,5 +1,5 @@
 import * as React from "react";
-import { getSelection } from "./utils"
+import { getSelection, isMFAEnabled } from "./utils"
 
 export default function Architecture(props: {
     children: React.ReactNode,
@@ -17,13 +17,7 @@ export default function Architecture(props: {
         showWithSeparateNodeAuthServer = false;
     }
     if (selection.backend === "python" || selection.backend === "golang") {
-        let mfaEnabled = false;
-        selection.tenants.forEach(tenant => {
-            if (tenant.secondFactors.length > 0) {
-                mfaEnabled = true;
-            }
-        });
-        if (!mfaEnabled) {
+        if (!isMFAEnabled()) {
             showWithSeparateNodeAuthServer = false;
         }
     }

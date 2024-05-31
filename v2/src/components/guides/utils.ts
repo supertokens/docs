@@ -22,3 +22,16 @@ export function getSelection(): {
     }
     return JSON.parse(decodeURIComponent(selectionStr));
 }
+
+export function isMFAEnabled(): boolean {
+    const selection = getSelection();
+    if (selection === undefined) {
+        return false;
+    }
+    for (let tenant of selection.tenants) {
+        if (tenant.secondFactors.length > 0) {
+            return true;
+        }
+    }
+    return false;
+}
