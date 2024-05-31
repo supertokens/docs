@@ -103,6 +103,13 @@ export default function StackAndAuthMethodSelector() {
                     <div>Public tenant config:</div>
                     <div>First factors: {tenants[0].firstFactors.join(", ")}</div>
                     <div>Second factors: {tenants[0].secondFactors.join(", ")}</div>
+                    <div style={{
+                        height: "10px",
+                    }} />
+                    <StartGuide
+                        frontend={frontendChoice}
+                        backend={backendChoice}
+                        tenants={tenants} />
                 </div>
             );
         }
@@ -131,9 +138,36 @@ export default function StackAndAuthMethodSelector() {
                             }])
                         }
                     }} />
+                <div style={{
+                    height: "10px",
+                }} />
+                <StartGuide
+                    frontend={frontendChoice}
+                    backend={backendChoice}
+                    tenants={tenants} />
             </div>
         );
     }
+}
+
+function StartGuide(props: {
+    frontend: FrontendChoice,
+    backend: BackendChoice,
+    tenants: ({
+        tenantId: string,
+        firstFactors: FirstFactors,
+        secondFactors: SecondFactors
+    })[]
+}) {
+    return <button
+        disabled={props.tenants.length === 0}
+        onClick={() => {
+            // open new window with link
+            let queryValue = encodeURIComponent(JSON.stringify(props));
+            const url = `/docs/guides/selection-tutorial?selection=${queryValue}`;
+            window.open(url, "_blank");
+        }}
+    >Start Guide</button>;
 }
 
 function AddNewTenantUI(props: {

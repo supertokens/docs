@@ -1,3 +1,3 @@
 module.exports = {
-  sidebar: ["guides"],
+  sidebar: ["guides", "selection-tutorial"],
 };
