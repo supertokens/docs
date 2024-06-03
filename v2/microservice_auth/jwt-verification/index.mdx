@@ -64,9 +64,11 @@ Refer to this [Github gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a
 </TabItem>
 <TabItem value="go">
 
-:::note
-You can use any JWT verification library available in the Golang ecosystem.
-:::
+Refer to this [Github gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d) for a code reference of how use the Golang `jwt` lib to do session verification. The gist contains two files:
+- `verifyToken.go` (which you can just copy / paste into your application). You will have to modify the `coreUrl` in this file to point to your supertokens core instance (replacing the `try.supertokens.com` part of the URL).
+  - This file essentially exposes a function called `GetJWKS` which returns a reference to the JWKS public keys that can be used for JWT verification.
+  - This function takes care of caching public keys in memory + auto refetching if the public keys have changed (which happens automatically every 24 hours with supertokens). This will not cause any user logouts, and is just a security feature.
+- `main.go`: This is an example of how to verify a JWT using the golang JWT verification lib along with our helper function to get the JWKs keys.
 
 </TabItem>
 </BackendSDKTabs>
@@ -210,9 +212,7 @@ Referring once again to this [Github gist](https://gist.github.com/rishabhpoddar
 </TabItem>
 <TabItem value="go">
 
-:::note
-Snippet coming soon.
-:::
+Referring once again to this [Github gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d), we can see in `main.go`, between lines 32 and 44, that we are checking for the value of a certain claim in the decoded JWT payload. You can do something similar and check for the `source` claim whose value must be `microservice`. If it is, then all's good, else you can return a 401.
 
 </TabItem>
 </BackendSDKTabs>
@@ -314,9 +314,66 @@ async def like_comment(request: HttpRequest):
 </TabItem>
 <TabItem value="go">
 
-:::note
-Snippet coming soon.
-:::
+```go
+import (
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	sessionRequired := false
+	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
+		SessionRequired: &sessionRequired,
+	})
+
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		return
+	}
+
+	if sessionContainer != nil {
+		userID := sessionContainer.GetUserID()
+
+		// TODO: API logic...
+		fmt.Println(userID)
+	} else {
+		// Check for JWT in the Authorization header
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			// Return 401 Unauthorized error
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		// Split the Authorization header to get the JWT
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			// Return 401 Unauthorized error
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		jwt := parts[1]
+
+		fmt.Println(jwt)
+
+		// verify JWT based on code snippet here: https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d
+	}
+}
+```
+
+- Notice that we add the `sessionRequired: false` option when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function will return `nil`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function will return an error, and the `supertokens.ErrorHandler` will send a 401 to the frontend. This will trigger a session refresh flow as expected.
+- If the `getSession` function returns `nil`, it means that the session is not from the frontend and we can attempt a microservice auth verification using the JWT verification method shown previously in this page.
+- If that fails too, we can send back a `401` response.
 
 </TabItem>
 </BackendSDKTabs>
