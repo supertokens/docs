@@ -1,3 +1,5 @@
+import 'url-search-params-polyfill'; // this is there to polyfill URLSearchParams for SSR otherwise production build fails.
+
 export type FrontendChoice = "react" | "angular" | "vue" | "vanillajs" | "nextjs" | "remix" | "react-native" | "ios" | "android" | "flutter" | undefined;
 
 export type BackendChoice = "nodejs" | "golang" | "python" | "php" | "c#" | "java" | "nextjs" | "remix" | undefined;
