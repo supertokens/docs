@@ -1,5 +1,3 @@
-import 'url-search-params-polyfill'; // this is there to polyfill URLSearchParams for SSR otherwise production build fails.
-
 export type FrontendChoice = "react" | "angular" | "vue" | "vanillajs" | "nextjs" | "remix" | "react-native" | "ios" | "android" | "flutter" | undefined;
 
 export type BackendChoice = "nodejs" | "golang" | "python" | "php" | "c#" | "java" | "nextjs" | "remix" | undefined;
@@ -17,12 +15,16 @@ export function getSelection(): {
         secondFactors: SecondFactors
     })[]
 } | undefined {
-    let queryParams = new URLSearchParams(window.location.search);
-    let selectionStr = queryParams.get("selection");
-    if (selectionStr === null) {
+    if (typeof window !== "undefined") {
+        let queryParams = new URLSearchParams(window.location.search);
+        let selectionStr = queryParams.get("selection");
+        if (selectionStr === null) {
+            return undefined;
+        }
+        return JSON.parse(decodeURIComponent(selectionStr));
+    } else {
         return undefined;
     }
-    return JSON.parse(decodeURIComponent(selectionStr));
 }
 
 export function isMFAEnabled(): boolean {
