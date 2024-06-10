@@ -37,21 +37,24 @@ export function StackAndAuthMethodSelectorHelper() {
 
     if (frontendChoice === undefined) {
         return (
-            <div style={{ backgroundColor: '#2A2A2A', color: 'white', fontFamily: 'monospace', padding: '1rem' }}>
-                <label htmlFor="frontendChoice" style={{ color: '#ff9933', fontWeight: 'bold' }}>
+            <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                <label htmlFor="frontendChoice" style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>
                     1) Please select which frontend you use:
                 </label>
-                <div style={{ margin: '0.5rem 0' }} />
+                <div style={{ margin: '1rem 0' }} />
                 <select
                     id="frontendChoice"
                     value={frontendChoice === undefined ? "" : frontendChoice}
                     onChange={handleFrontendChange}
                     style={{
-                        backgroundColor: '#333',
+                        backgroundColor: '#424242',
                         color: 'white',
-                        padding: '0.5rem',
-                        border: '1px solid #ff9933',
+                        padding: '0.8rem',
+                        border: 'none',
+                        borderRadius: '5px',
                         outline: 'none',
+                        width: '100%',
+                        fontSize: '1rem',
                     }}
                 >
                     <option value="">--Select an option--</option>
@@ -72,15 +75,18 @@ export function StackAndAuthMethodSelectorHelper() {
 
     if (backendChoice === undefined) {
         return (
-            <div style={{ backgroundColor: '#2A2A2A', color: 'white', fontFamily: 'monospace', padding: '1rem' }}>
-                <label htmlFor="backendChoice" style={{ color: '#ff9933', fontWeight: 'bold' }}>2) Please select which backend you use:</label>
-                <div style={{ margin: '0.5rem 0' }} />
+            <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                <label htmlFor="backendChoice" style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>2) Please select which backend you use:</label>
+                <div style={{ margin: '1rem 0' }} />
                 <select id="backendChoice" value={backendChoice === undefined ? "" : backendChoice} onChange={handleBackendChange} style={{
-                    backgroundColor: '#333',
+                    backgroundColor: '#424242',
                     color: 'white',
-                    padding: '0.5rem',
-                    border: '1px solid #ff9933',
+                    padding: '0.8rem',
+                    border: 'none',
+                    borderRadius: '5px',
                     outline: 'none',
+                    width: '100%',
+                    fontSize: '1rem',
                 }}>
                     <option value="">--Select an option--</option>
                     <option value="nodejs">Node.js</option>
@@ -98,38 +104,55 @@ export function StackAndAuthMethodSelectorHelper() {
 
     if (isMultiTenantSetup === undefined) {
         return (
-            <div style={{ backgroundColor: '#2A2A2A', color: 'white', fontFamily: 'monospace', padding: '1rem' }}>
-                <label htmlFor="multiTenantSetup" style={{ color: '#ff9933', fontWeight: 'bold' }}>
-                    3) Is this a multi-tenant setup?
+            <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                <label htmlFor="multiTenantSetup" style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                    3) Is this a multi-tenant / multi-org setup?
                 </label>
-                <div style={{ margin: '0.5rem 0' }} />
-                <button
-                    onClick={() => handleMultiTenantChange(true)}
-                    style={{
-                        backgroundColor: '#333',
-                        color: 'white',
-                        padding: '0.5rem 1rem',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        marginRight: '0.5rem',
-                    }}
-                >
-                    Yes
-                </button>
-                <button
-                    onClick={() => handleMultiTenantChange(false)}
-                    style={{
-                        backgroundColor: '#333',
-                        color: 'white',
-                        padding: '0.5rem 1rem',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                    }}
-                >
-                    No
-                </button>
+                <div style={{ margin: '1rem 0', display: 'flex', justifyContent: 'left' }} >
+                    <button
+                        onClick={() => handleMultiTenantChange(true)}
+                        style={{
+                            backgroundColor: '#FF9800',
+                            color: 'white',
+                            padding: '0.8rem 1.5rem',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            marginRight: '1rem',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                            transition: 'background-color 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F57C00'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF9800'}
+                    >
+                        Yes
+                    </button>
+                    <button
+                        onClick={() => handleMultiTenantChange(false)}
+                        style={{
+                            backgroundColor: '#FF9800',
+                            color: 'white',
+                            padding: '0.8rem 1.5rem',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                            transition: 'background-color 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F57C00'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF9800'}
+                    >
+                        No
+                    </button>
+                </div>
             </div>
         );
     }
@@ -151,11 +174,13 @@ export function StackAndAuthMethodSelectorHelper() {
             );
         } else {
             return (
-                <div>
-                    <div style={{ color: '#ff9933', fontWeight: 'bold' }}>Public tenant config:</div>
-                    <div>First factors: {tenants[0].firstFactors.join(', ')}</div>
-                    <div>Second factors: {tenants[0].secondFactors.join(', ')}</div>
-                    <div style={{ height: '10px' }} />
+                <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>Public tenant config:</div>
+                    <div style={{ marginTop: '1rem', fontSize: '1rem' }}>
+                        <div>First factors: {tenants[0].firstFactors.join(', ')}</div>
+                        <div>Second factors: {tenants[0].secondFactors.join(', ')}</div>
+                    </div>
+                    <div style={{ height: '20px' }} />
                     <StartGuide
                         frontend={frontendChoice}
                         backend={backendChoice}
@@ -166,21 +191,21 @@ export function StackAndAuthMethodSelectorHelper() {
         }
     } else {
         return (
-            <div>
+            <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
                 {tenants.map((tenant) => (
-                    <div key={tenant.tenantId}>
-                        <div style={{ color: '#ff9933', fontWeight: 'bold' }}>
-                            -------Tenant Id: {tenant.tenantId}-------
+                    <div key={tenant.tenantId} style={{ marginBottom: '1.5rem' }}>
+                        <div style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                            Tenant Id: {tenant.tenantId}
                         </div>
-                        <div>First factors: {tenant.firstFactors.join(', ')}</div>
-                        <div>Second factors: {tenant.secondFactors.join(', ')}</div>
-                        <div style={{ height: '10px' }} />
+                        <div style={{ marginTop: '0.5rem', fontSize: '1rem' }}>
+                            <div>First factors: {tenant.firstFactors.join(', ')}</div>
+                            <div>Second factors: {tenant.secondFactors.join(', ')}</div>
+                        </div>
                     </div>
                 ))}
 
                 <AddNewTenantUI
                     addNewTenant={(t, f, s) => {
-                        // if tenants does not contain t, add it
                         if (!tenants.find((tenant) => tenant.tenantId === t)) {
                             setTenants([
                                 ...tenants,
@@ -193,7 +218,7 @@ export function StackAndAuthMethodSelectorHelper() {
                         }
                     }}
                 />
-                <div style={{ height: '10px' }} />
+                <div style={{ height: '20px' }} />
                 <StartGuide frontend={frontendChoice} backend={backendChoice} tenants={tenants} />
             </div>
         );
@@ -213,19 +238,33 @@ function StartGuide(props: {
         <button
             disabled={props.tenants.length === 0}
             onClick={() => {
-                // open new window with link
                 let queryValue = encodeURIComponent(JSON.stringify(props));
                 const url = `/docs/guides/selection-tutorial?selection=${queryValue}`;
                 window.open(url, "_blank");
             }}
             style={{
-                backgroundColor: props.tenants.length === 0 ? '#ccc' : '#ff9933',
+                backgroundColor: props.tenants.length === 0 ? '#9E9E9E' : '#FF9800',
                 color: 'white',
-                padding: '0.5rem 1rem',
+                padding: '0.8rem 1.5rem',
                 border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
+                borderRadius: '5px',
+                cursor: props.tenants.length === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '1rem',
                 fontWeight: 'bold',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                transition: 'background-color 0.3s ease',
+            }}
+            onMouseEnter={(e) => {
+                if (props.tenants.length > 0) {
+                    e.currentTarget.style.backgroundColor = '#F57C00';
+                }
+            }}
+            onMouseLeave={(e) => {
+                if (props.tenants.length > 0) {
+                    e.currentTarget.style.backgroundColor = '#FF9800';
+                }
             }}
         >
             Start Guide
@@ -244,33 +283,43 @@ function AddNewTenantUI(props: {
             <button
                 onClick={() => setIsAddingTenant(true)}
                 style={{
-                    backgroundColor: '#ff9933',
+                    backgroundColor: '#FF9800',
                     color: 'white',
-                    padding: '0.5rem 1rem',
+                    padding: '0.8rem 1.5rem',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: '5px',
                     cursor: 'pointer',
+                    fontSize: '1rem',
                     fontWeight: 'bold',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    transition: 'background-color 0.3s ease',
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F57C00'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF9800'}
             >
-                Add New Tenant
+                Add New Tenant / Org
             </button>
         );
     } else {
         return (
-            <div style={{ border: '1px solid #ff9933', padding: '1rem', borderRadius: '4px' }}>
-                <div style={{ color: '#ff9933', fontWeight: 'bold' }}>Tenant name:</div>
+            <div style={{ border: '2px solid #FF9800', padding: '1.5rem', borderRadius: '10px', marginTop: '1.5rem' }}>
+                <div style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>Tenant / Org name:</div>
                 <input
                     type="text"
                     value={tenantId}
                     onChange={(e) => setTenantId(e.target.value)}
                     style={{
-                        backgroundColor: '#333',
+                        backgroundColor: '#424242',
                         color: 'white',
-                        padding: '0.5rem',
-                        border: '1px solid #ff9933',
-                        borderRadius: '4px',
+                        padding: '0.8rem',
+                        border: 'none',
+                        borderRadius: '5px',
                         outline: 'none',
+                        width: '100%',
+                        fontSize: '1rem',
+                        marginTop: '0.5rem',
                     }}
                 />
 
@@ -314,42 +363,39 @@ function FirstAndSecondFactorChoice(props: {
 
     if (!firstFactorSelectionCompleted) {
         return (
-            <div style={{ border: '1px solid #ff9933', padding: '1rem', borderRadius: '4px' }}>
-                <label style={{ color: '#ff9933', fontWeight: 'bold' }}>Please select your first factor auth methods:</label>
-                <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <div style={{ border: '2px solid #FF9800', padding: '1.5rem', borderRadius: '10px', marginTop: '1.5rem' }}>
+                <label style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>Please select your first factor auth methods:</label>
+                <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', fontSize: '1rem', color: 'white' }}>
                         <input
                             type="checkbox"
-                            id="emailpassword"
                             value="emailpassword"
                             checked={firstFactors.includes("emailpassword")}
                             onChange={handleFirstFactorChange}
-                            style={{ marginRight: '0.5rem' }}
+                            style={{ marginRight: '0.8rem' }}
                         />
-                        <label htmlFor="emailpassword" style={{ color: 'white' }}>Email & Password</label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        Email & Password
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', fontSize: '1rem', color: 'white' }}>
                         <input
                             type="checkbox"
-                            id="passwordless"
                             value="passwordless"
                             checked={firstFactors.includes("passwordless")}
                             onChange={handleFirstFactorChange}
-                            style={{ marginRight: '0.5rem' }}
+                            style={{ marginRight: '0.8rem' }}
                         />
-                        <label htmlFor="passwordless" style={{ color: 'white' }}>Passwordless</label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        Passwordless
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', fontSize: '1rem', color: 'white' }}>
                         <input
                             type="checkbox"
-                            id="thirdparty"
                             value="thirdparty"
                             checked={firstFactors.includes("thirdparty")}
                             onChange={handleFirstFactorChange}
-                            style={{ marginRight: '0.5rem' }}
+                            style={{ marginRight: '0.8rem' }}
                         />
-                        <label htmlFor="thirdparty" style={{ color: 'white' }}>Third-party</label>
-                    </div>
+                        Third-party
+                    </label>
                 </div>
                 <button
                     disabled={firstFactors.length === 0}
@@ -357,14 +403,29 @@ function FirstAndSecondFactorChoice(props: {
                         setFirstFactorSelectionCompleted(true)
                     }}
                     style={{
-                        backgroundColor: firstFactors.length === 0 ? '#ccc' : '#ff9933',
+                        backgroundColor: firstFactors.length === 0 ? '#9E9E9E' : '#FF9800',
                         color: 'white',
-                        padding: '0.5rem 1rem',
+                        padding: '0.8rem 1.5rem',
                         border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
+                        borderRadius: '5px',
+                        cursor: firstFactors.length === 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '1rem',
                         fontWeight: 'bold',
-                        marginTop: '1rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                        transition: 'background-color 0.3s ease',
+                        marginTop: '1.5rem',
+                    }}
+                    onMouseEnter={(e) => {
+                        if (firstFactors.length > 0) {
+                            e.currentTarget.style.backgroundColor = '#F57C00';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (firstFactors.length > 0) {
+                            e.currentTarget.style.backgroundColor = '#FF9800';
+                        }
                     }}
                 >
                     Next
@@ -375,42 +436,39 @@ function FirstAndSecondFactorChoice(props: {
 
     if (!secondFactorSelectionCompleted) {
         return (
-            <div style={{ border: '1px solid #ff9933', padding: '1rem', borderRadius: '4px' }}>
-                <label style={{ color: '#ff9933', fontWeight: 'bold' }}>Please select your second factor auth methods:</label>
-                <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <div style={{ border: '2px solid #FF9800', padding: '1.5rem', borderRadius: '10px', marginTop: '1.5rem' }}>
+                <label style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>Please select your second factor auth methods:</label>
+                <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', fontSize: '1rem', color: 'white' }}>
                         <input
                             type="checkbox"
-                            id="totp"
                             value="totp"
                             checked={secondFactors.includes("totp")}
                             onChange={handleSecondFactorChange}
-                            style={{ marginRight: '0.5rem' }}
+                            style={{ marginRight: '0.8rem' }}
                         />
-                        <label htmlFor="totp" style={{ color: 'white' }}>TOTP</label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        TOTP
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', fontSize: '1rem', color: 'white' }}>
                         <input
                             type="checkbox"
-                            id="otp-phone"
                             value="otp-phone"
                             checked={secondFactors.includes("otp-phone")}
                             onChange={handleSecondFactorChange}
-                            style={{ marginRight: '0.5rem' }}
+                            style={{ marginRight: '0.8rem' }}
                         />
-                        <label htmlFor="otp-phone" style={{ color: 'white' }}>SMS OTP</label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        SMS OTP
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', fontSize: '1rem', color: 'white' }}>
                         <input
                             type="checkbox"
-                            id="otp-email"
                             value="otp-email"
                             checked={secondFactors.includes("otp-email")}
                             onChange={handleSecondFactorChange}
-                            style={{ marginRight: '0.5rem' }}
+                            style={{ marginRight: '0.8rem' }}
                         />
-                        <label htmlFor="otp-email" style={{ color: 'white' }}>Email OTP</label>
-                    </div>
+                        Email OTP
+                    </label>
                 </div>
                 <button
                     onClick={() => {
@@ -418,15 +476,22 @@ function FirstAndSecondFactorChoice(props: {
                         props.setFactors(firstFactors, secondFactors);
                     }}
                     style={{
-                        backgroundColor: secondFactors.length === 0 ? '#ccc' : '#ff9933',
+                        backgroundColor: '#FF9800',
                         color: 'white',
-                        padding: '0.5rem 1rem',
+                        padding: '0.8rem 1.5rem',
                         border: 'none',
-                        borderRadius: '4px',
+                        borderRadius: '5px',
                         cursor: 'pointer',
+                        fontSize: '1rem',
                         fontWeight: 'bold',
-                        marginTop: '1rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                        transition: 'background-color 0.3s ease',
+                        marginTop: '1.5rem',
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F57C00'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF9800'}
                 >
                     {secondFactors.length === 0 ? "Skip" : "Next"}
                 </button>
