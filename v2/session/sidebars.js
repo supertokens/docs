@@ -25,6 +25,7 @@ module.exports = {
                   items: [
                     "quick-setup/core/with-docker",
                     "quick-setup/core/without-docker",
+                    "quick-setup/core/self-hosted-with-aws",
                     {
                       type: 'category',
                       label: 'Database Setup',
