@@ -19,9 +19,7 @@ Lets modify the Home page we made in a [previous step](../protecting-route.mdx) 
 <PreBuiltUIContent>
 
 ```tsx title="app/components/home.tsx"
-import { getSSRSession } from "supertokens-node/nextjs";
-import { SessionContainer } from "supertokens-node/recipe/session";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 declare let TryRefreshComponent: any; // typecheck-only, removed from output
 declare let SessionAuthForNextJS: any; // typecheck-only, removed from output
 import { redirect } from "next/navigation";
@@ -29,64 +27,112 @@ import { redirect } from "next/navigation";
 import { TryRefreshComponent } from "./tryRefreshClientComponent";
 // @ts-ignore
 import { SessionAuthForNextJS } from "./sessionAuthForNextJS";
+import jwksClient from "jwks-rsa";
+import JsonWebToken from "jsonwebtoken";
+import type { JwtHeader, JwtPayload, SigningKeyCallback } from "jsonwebtoken";
 // @ts-ignore
-import { ensureSuperTokensInit } from "../config/backend";
+import { appInfo } from "../config/appInfo";
 
-ensureSuperTokensInit();
+const client = jwksClient({
+    jwksUri: `${appInfo.apiDomain}${appInfo.apiBasePath}/jwt/jwks.json`,
+});
 
-async function getSSRSessionHelper(): Promise<{ session: SessionContainer | undefined; hasToken: boolean; hasInvalidClaims: boolean, error: Error | undefined }> {
-    let session: SessionContainer | undefined;
-    let hasToken = false;
-    let hasInvalidClaims = false;
-    let error: Error | undefined = undefined;
-    
+function getAccessToken(): string | undefined {
+    return cookies().get("sAccessToken")?.value;
+}
+
+function getPublicKey(header: JwtHeader, callback: SigningKeyCallback) {
+    client.getSigningKey(header.kid, (err, key) => {
+        if (err) {
+            callback(err);
+        } else {
+            const signingKey = key?.getPublicKey();
+            callback(null, signingKey);
+        }
+    });
+}
+
+async function verifyToken(token: string): Promise<JwtPayload> {
+    return new Promise((resolve, reject) => {
+        JsonWebToken.verify(token, getPublicKey, {}, (err, decoded) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(decoded as JwtPayload);
+            }
+        });
+    });
+}
+
+/**
+ * A helper function to retrieve session details on the server side.
+ *
+ * NOTE: This function does not use the getSSRSession function from the supertokens-node SDK
+ * because getSession can update the access token. These updated tokens would not be
+ * propagated to the client side, as request interceptors do not run on the server side.
+ */
+async function getSSRSessionHelper(): Promise<{
+    accessTokenPayload: JwtPayload | undefined;
+    hasToken: boolean;
+    error: Error | undefined;
+}> {
+    const accessToken = getAccessToken();
+    const hasToken = !!accessToken;
     try {
-        ({ session, hasToken, hasInvalidClaims } = await getSSRSession(cookies().getAll(), headers()));
-    } catch (err: any) {
-        error = err;
+        if (accessToken) {
+            const decoded = await verifyToken(accessToken);
+            return { accessTokenPayload: decoded, hasToken, error: undefined };
+        }
+        return { accessTokenPayload: undefined, hasToken, error: undefined };
+    } catch (error) {
+        if (error instanceof JsonWebToken.TokenExpiredError) {
+            return { accessTokenPayload: undefined, hasToken, error: undefined };
+        }
+        return { accessTokenPayload: undefined, hasToken, error: error as Error };
     }
-    return { session, hasToken, hasInvalidClaims, error };
 }
 
 export async function HomePage() {
-    const { session, hasToken, hasInvalidClaims, error } = await getSSRSessionHelper();
+    const { accessTokenPayload, hasToken, error } = await getSSRSessionHelper();
 
     if (error) {
-        return (
-            <div>
-                Something went wrong while trying to get the session. Error - {error.message}
-            </div>
-        )
+        return <div>Something went wrong while trying to get the session. Error - {error.message}</div>;
     }
 
-    if (!session) {
+    // `accessTokenPayload` will be undefined if it the session does not exist or has expired
+    if (accessTokenPayload === undefined) {
         if (!hasToken) {
+            /**
+             * This means that the user is not logged in. If you want to display some other UI in this
+             * case, you can do so here.
+             */
             return redirect("/auth");
         }
 
-        if (hasInvalidClaims) {
-            return <SessionAuthForNextJS />;
-        } else {
-            // To learn about why the 'key' attribute is required refer to: https://github.com/supertokens/supertokens-node/issues/826#issuecomment-2092144048
-            return <TryRefreshComponent key={Date.now()} />;
-        }
+        /**
+         * This means that the session does not exist but we have session tokens for the user. In this case
+         * the `TryRefreshComponent` will try to refresh the session.
+         *
+         * To learn about why the 'key' attribute is required refer to: https://github.com/supertokens/supertokens-node/issues/826#issuecomment-2092144048
+         */
+        return <TryRefreshComponent key={Date.now()} />;
     }
 
     // highlight-start
     const userInfoResponse = await fetch('http://localhost:3000/api/user', {
       headers: {
         /**
-         * We read the access token from the session and use that as a Bearer token when
+         * We read the access token from the cookies and use that as a Bearer token when
          * making network requests.
          */
-        Authorization: 'Bearer ' + session.getAccessToken(),
+        Authorization: 'Bearer ' + getAccessToken(),
       },
     });
 
     let message = "";
 
     if (userInfoResponse.status === 200) {
-        message = `Your user id is: ${session.getUserId()}`
+        message = `Your user id is: ${accessTokenPayload.sub}`
     } else if (userInfoResponse.status === 500) {
         message = "Something went wrong"
     } else if (userInfoResponse.status === 401) {
@@ -111,52 +157,91 @@ export async function HomePage() {
 }
 ```
 
-We use `session` returned by `getSSRSession` to get the access token of the user. We can then send the access token as a header to the API. When the API calls `withSession` it will try to read the access token from the headers and if a session exists it will return the information. You can use the `session` object to fetch other information such as `session.getUserId()`.
+We read the access token of the user from cookies.  We can then send the access token as a header to the API. When the API calls `withSession` it will try to read the access token from the headers and if a session exists it will return the session information.
 
 </PreBuiltUIContent>
 
 <CustomUIContent>
 
 ```tsx title="app/components/home.tsx"
-import { getSSRSession } from "supertokens-node/nextjs";
-import { SessionContainer } from "supertokens-node/recipe/session";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 declare let TryRefreshComponent: any; // typecheck-only, removed from output
 import { redirect } from "next/navigation";
 // @ts-ignore
-import { TryRefreshComponent } from "./tryRefreshClientComponent";
+import { TryRefreshComponent } from "./tryRefreshClientComponent";import jwksClient from "jwks-rsa";
+import JsonWebToken from "jsonwebtoken";
+import type { JwtHeader, JwtPayload, SigningKeyCallback } from "jsonwebtoken";
 // @ts-ignore
-import { ensureSuperTokensInit } from "../config/backend";
+import { appInfo } from "../config/appInfo";
 
-ensureSuperTokensInit();
+const client = jwksClient({
+    jwksUri: `${appInfo.apiDomain}${appInfo.apiBasePath}/jwt/jwks.json`,
+});
 
-async function getSSRSessionHelper(): Promise<{ session: SessionContainer | undefined; hasToken: boolean; hasInvalidClaims: boolean, error: Error | undefined }> {
-    let session: SessionContainer | undefined;
-    let hasToken = false;
-    let hasInvalidClaims = false;
-    let error: Error | undefined = undefined;
-    
+function getAccessToken(): string | undefined {
+    return cookies().get("sAccessToken")?.value;
+}
+
+function getPublicKey(header: JwtHeader, callback: SigningKeyCallback) {
+    client.getSigningKey(header.kid, (err, key) => {
+        if (err) {
+            callback(err);
+        } else {
+            const signingKey = key?.getPublicKey();
+            callback(null, signingKey);
+        }
+    });
+}
+
+async function verifyToken(token: string): Promise<JwtPayload> {
+    return new Promise((resolve, reject) => {
+        JsonWebToken.verify(token, getPublicKey, {}, (err, decoded) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(decoded as JwtPayload);
+            }
+        });
+    });
+}
+
+/**
+ * A helper function to retrieve session details on the server side.
+ *
+ * NOTE: This function does not use the getSSRSession function from the supertokens-node SDK
+ * because getSession can update the access token. These updated tokens would not be
+ * propagated to the client side, as request interceptors do not run on the server side.
+ */
+async function getSSRSessionHelper(): Promise<{
+    accessTokenPayload: JwtPayload | undefined;
+    hasToken: boolean;
+    error: Error | undefined;
+}> {
+    const accessToken = getAccessToken();
+    const hasToken = !!accessToken;
     try {
-        ({ session, hasToken, hasInvalidClaims } = await getSSRSession(cookies().getAll(), headers()));
-    } catch (err: any) {
-        error = err;
+        if (accessToken) {
+            const decoded = await verifyToken(accessToken);
+            return { accessTokenPayload: decoded, hasToken, error: undefined };
+        }
+        return { accessTokenPayload: undefined, hasToken, error: undefined };
+    } catch (error) {
+        if (error instanceof JsonWebToken.TokenExpiredError) {
+            return { accessTokenPayload: undefined, hasToken, error: undefined };
+        }
+        return { accessTokenPayload: undefined, hasToken, error: error as Error };
     }
-    return { session, hasToken, hasInvalidClaims, error };
 }
 
 export async function HomePage() {
-    const { session, hasToken, hasInvalidClaims, error } = await getSSRSessionHelper();
+    const { accessTokenPayload, hasToken, error } = await getSSRSessionHelper();
 
     if (error) {
-        return (
-            <div>
-                Something went wrong while trying to get the session. Error - {error.message}
-            </div>
-        )
+        return <div>Something went wrong while trying to get the session. Error - {error.message}</div>;
     }
-    
-    // `session` will be undefined if it does not exist or has expired
-    if (!session) {
+
+    // `accessTokenPayload` will be undefined if it the session does not exist or has expired
+    if (accessTokenPayload === undefined) {
         if (!hasToken) {
             /**
              * This means that the user is not logged in. If you want to display some other UI in this
@@ -166,41 +251,29 @@ export async function HomePage() {
         }
 
         /**
-         * `hasInvalidClaims` indicates that session claims did not pass validation. For example if email
-         * verification is required but the user's email has not been verified.
+         * This means that the session does not exist but we have session tokens for the user. In this case
+         * the `TryRefreshComponent` will try to refresh the session.
+         *
+         * To learn about why the 'key' attribute is required refer to: https://github.com/supertokens/supertokens-node/issues/826#issuecomment-2092144048
          */
-        if (hasInvalidClaims) {
-          /**
-           * This means that one of the session claims is invalid. You should redirect the user to
-           * the appropriate page depending on which claim is invalid.
-           */
-          return <div>Invalid Session Claims</div>
-        } else {
-            /**
-             * This means that the session does not exist but we have session tokens for the user. In this case
-             * the `TryRefreshComponent` will try to refresh the session.
-             *
-             * To learn about why the 'key' attribute is required refer to: https://github.com/supertokens/supertokens-node/issues/826#issuecomment-2092144048
-             */
-            return <TryRefreshComponent key={Date.now()} />;
-        }
+        return <TryRefreshComponent key={Date.now()} />;
     }
 
     // highlight-start
     const userInfoResponse = await fetch('http://localhost:3000/api/user', {
       headers: {
         /**
-         * We read the access token from the session and use that as a Bearer token when
+         * We read the access token from the cookies and use that as a Bearer token when
          * making network requests.
          */
-        Authorization: 'Bearer ' + session.getAccessToken(),
+        Authorization: 'Bearer ' + getAccessToken(),
       },
     });
 
     let message = "";
 
     if (userInfoResponse.status === 200) {
-        message = `Your user id is: ${session.getUserId()}`
+        message = `Your user id is: ${accessTokenPayload.sub}`
     } else if (userInfoResponse.status === 500) {
         message = "Something went wrong"
     } else if (userInfoResponse.status === 401) {
