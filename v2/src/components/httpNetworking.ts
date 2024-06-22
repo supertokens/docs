@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAnalytics } from "./utils";
 
 export enum HTTP_REQUEST_ERROR {
     SESSION_EXPIRED,
@@ -100,10 +101,11 @@ export async function simpleGETRequest(url: string, userConfig: any = {}, versio
             "api-version": version + ""
         }
     };
-
+    let frontTokenExists = cookieExists("sFrontToken");
     let response = await axios.get(url, userConfig);
     let data = await response.data;
     let headers = response.headers;
+    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data, headers };
 }
 
@@ -119,9 +121,11 @@ export async function simplePOSTRequest(url: string, data: any, userConfig: POST
             "api-version": version + ""
         }
     };
+    let frontTokenExists = cookieExists("sFrontToken");
     let response = await axios.post(url, data, userConfig);
     let responseData = response.data;
     let headers = response.headers;
+    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data: responseData, headers, status: response.status, statusText: response.statusText };
 }
 
@@ -137,10 +141,11 @@ export async function simplePATCHRequest(url: string, data: any, userConfig: PAT
             "api-version": version + ""
         }
     };
-
+    let frontTokenExists = cookieExists("sFrontToken");
     let response = await axios.patch(url, data, userConfig);
     let responseData = response.data;
     let headers = response.headers;
+    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data: responseData, headers };
 }
 
@@ -156,10 +161,11 @@ export async function simplePUTRequest(url: string, data: any, userConfig: POSTR
             "api-version": version + ""
         }
     };
-
+    let frontTokenExists = cookieExists("sFrontToken");
     let response = await axios.put(url, data, userConfig);
     let responseData = response.data;
     let headers = response.headers;
+    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data: responseData, headers };
 }
 
@@ -178,10 +184,49 @@ export async function simpleDELETERequest(url: string, userConfig: DELETERequest
             "api-version": version + ""
         }
     };
-
+    let frontTokenExists = cookieExists("sFrontToken");
     delete userConfig.params;
     let response = await axios.delete(url, userConfig);
     let data = await response.data;
     let headers = response.headers;
+    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data, headers };
 }
+
+function sendAnalyticsIfFrontTokenRemoved(url: string, frontTokenExists: boolean, headers: any) {
+    if (!frontTokenExists) {
+        return;
+    }
+    let updatedFrontTokenExists = cookieExists("sFrontToken");
+    if (!updatedFrontTokenExists) {
+        // this means it was removed between the api call!
+        // send analytics
+        sendAuthAnalytics("front_token_removed", {
+            url,
+            headers
+        });
+    }
+}
+
+function cookieExists(name: string) {
+    const cookies = document.cookie;
+    const regex = new RegExp("(^|; )" + encodeURIComponent(name) + "=");
+    return regex.test(cookies);
+}
+
+const sendAuthAnalytics = (eventName: string, payload: Record<string, unknown>, version = "v1") => {
+    getAnalytics().then((stAnalytics: any) => {
+        if (stAnalytics === undefined) {
+            console.log("mocked event send:", eventName, version, payload);
+            return;
+        }
+        stAnalytics.sendEvent(
+            eventName,
+            {
+                type: "auth",
+                ...payload
+            },
+            version
+        );
+    });
+};
