@@ -677,6 +677,7 @@ module.exports = {
         "multi-tenant"
       ]
     },
+    "scalability",
     "rate-limits",
     {
       type: 'category',
