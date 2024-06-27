@@ -153,8 +153,8 @@ module.exports = {
       }
     ],
     [
-       "./src/plugins/transformOpenSearchLink",
-       //used to transform the opensearch.xml location in the metatags.
+      "./src/plugins/transformOpenSearchLink",
+      //used to transform the opensearch.xml location in the metatags.
       {
         id: "transform-opensearch-link"
       }
@@ -213,6 +213,7 @@ module.exports = {
         id: 'guides',
         path: 'guides',
         routeBasePath: 'docs/guides',
+        sidebarPath: require.resolve('./guides/sidebars.js'),
         editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
@@ -428,7 +429,7 @@ module.exports = {
       },
     ]
   ],
-  clientModules:[
+  clientModules: [
     //used to intercept client side navigation and fire analytics events.
     require.resolve("./src/plugins/locationInterceptor")
   ]
