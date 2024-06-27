@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAnalytics } from "./utils";
+import { getAnalytics, sendSDKLogsToBackend } from "./utils";
 
 export enum HTTP_REQUEST_ERROR {
     SESSION_EXPIRED,
@@ -105,7 +105,7 @@ export async function simpleGETRequest(url: string, userConfig: any = {}, versio
     let response = await axios.get(url, userConfig);
     let data = await response.data;
     let headers = response.headers;
-    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
+    await sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data, headers };
 }
 
@@ -125,7 +125,7 @@ export async function simplePOSTRequest(url: string, data: any, userConfig: POST
     let response = await axios.post(url, data, userConfig);
     let responseData = response.data;
     let headers = response.headers;
-    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
+    await sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data: responseData, headers, status: response.status, statusText: response.statusText };
 }
 
@@ -145,7 +145,7 @@ export async function simplePATCHRequest(url: string, data: any, userConfig: PAT
     let response = await axios.patch(url, data, userConfig);
     let responseData = response.data;
     let headers = response.headers;
-    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
+    await sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data: responseData, headers };
 }
 
@@ -165,7 +165,7 @@ export async function simplePUTRequest(url: string, data: any, userConfig: POSTR
     let response = await axios.put(url, data, userConfig);
     let responseData = response.data;
     let headers = response.headers;
-    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
+    await sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data: responseData, headers };
 }
 
@@ -189,11 +189,11 @@ export async function simpleDELETERequest(url: string, userConfig: DELETERequest
     let response = await axios.delete(url, userConfig);
     let data = await response.data;
     let headers = response.headers;
-    sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
+    await sendAnalyticsIfFrontTokenRemoved(url, frontTokenExists, headers);
     return { data, headers };
 }
 
-function sendAnalyticsIfFrontTokenRemoved(url: string, frontTokenExists: boolean, headers: any) {
+async function sendAnalyticsIfFrontTokenRemoved(url: string, frontTokenExists: boolean, headers: any) {
     if (!frontTokenExists) {
         return;
     }
@@ -205,6 +205,7 @@ function sendAnalyticsIfFrontTokenRemoved(url: string, frontTokenExists: boolean
             url,
             headers
         });
+        await sendSDKLogsToBackend()
     }
 }
 

@@ -18,6 +18,7 @@ import Head from '@docusaurus/Head';
 import { useLocation } from '@docusaurus/router';
 import './styles.css';
 import supertokens from "supertokens-website";
+import {overrideConsoleImplementation,saveSDKLogsConsoleOverride} from '../../components/utils'
 import styles from "./styles.module.css";
 
 
@@ -31,11 +32,12 @@ if (typeof window !== 'undefined') {
     API_DOMAIN = "https://dev.api.supertokens.com"
     API_BASE_PATH = "/0/auth"
   }
-
+  overrideConsoleImplementation(saveSDKLogsConsoleOverride);
   let sessionExpiredStatusCode = 401;
   supertokens.init({
     apiDomain: API_DOMAIN,
     apiBasePath: API_BASE_PATH,
+    enableDebugLogs:true,
     sessionExpiredStatusCode,
     preAPIHook: async (context) => {
       return {
