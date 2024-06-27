@@ -1,4 +1,5 @@
 import React from "react";
+import axios from "axios";
 
 declare global {
     interface Window {
@@ -106,4 +107,70 @@ export const recursiveMapAllChildren = (
 
 export function mockDelay(timeout = 2000) {
     return new Promise(resolve => setTimeout(resolve, timeout));
+}
+
+export function isDev() {
+    return window.location.host.startsWith("localhost");
+}
+
+
+const isSuperTokensSDKLog = (data: any) => {
+    return typeof data === "string" && data.includes("supertokens-website-ver:");
+};
+
+type ConsoleLog = typeof globalThis.console.log;
+
+export const overrideConsoleImplementation = (customImplementation: ConsoleLog) => {
+    const oldConsoleLogImplementation = globalThis.console.log;
+    globalThis.console.log = (data) => {
+        customImplementation(data, oldConsoleLogImplementation);
+    };
+};
+
+export const SDK_LOGS_STORAGE_KEY = "Supertokens-sdk-logs";
+
+export const saveSDKLogsConsoleOverride = (data: any, oldConsoleImplementation: ConsoleLog) => {
+    if (isSuperTokensSDKLog(data)) {
+        const logArrayStr = localStorage.getItem(SDK_LOGS_STORAGE_KEY) || "[]";
+        const logArray = JSON.parse(logArrayStr) as string[];
+
+        if (logArray.length === 1000) {
+            logArray.shift();
+        }
+        logArray.push(data);
+
+        localStorage.setItem(SDK_LOGS_STORAGE_KEY, JSON.stringify(logArray));
+    } else {
+        oldConsoleImplementation(data);
+    }
+};
+
+export async function sendSDKLogsToBackend() {
+    const sdkLogs = localStorage.getItem(SDK_LOGS_STORAGE_KEY) || "[]";
+    const parsedSDKLogs = JSON.parse(sdkLogs);
+
+    if (isDev()) {
+        console.log(parsedSDKLogs, "auth_error_sdk_logs");
+        localStorage.removeItem(SDK_LOGS_STORAGE_KEY);
+    } else {
+        await axios
+            .post(
+                "https://api.supertokens.com/0/antcs/ents",
+                {
+                    eventName: "auth_error_sdk_logs",
+                    data: {
+                        version: "1",
+                        userId: "1",
+                        timestamp: Date.now(),
+                        page: "",
+                        type: "auth_error_sdk_logs",
+                        logs: parsedSDKLogs,
+                    },
+                },
+                {}
+            )
+            .then(() => {
+                localStorage.removeItem(SDK_LOGS_STORAGE_KEY);
+            });
+    }
 }
