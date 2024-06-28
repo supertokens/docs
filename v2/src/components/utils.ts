@@ -81,20 +81,20 @@ export function recursiveMap(children: any, fn: any, filterDescendants?: (comp: 
 export const recursiveMapAllChildren = (
     children: any,
     fn: (child: React.ReactElement) => React.ReactElement
-  ): any => {
+): any => {
     let result = React.Children.map(children, child => {
-      if (!React.isValidElement(child)) {
-        return child;
-      }
-  
-      if ((child as React.ReactElement).props.children) {
-        const props = {
-          children: recursiveMapAllChildren((child as React.ReactElement).props.children, fn)
+        if (!React.isValidElement(child)) {
+            return child;
         }
-        child = React.cloneElement(child, props);
-      }
-  
-      return fn(child);
+
+        if ((child as React.ReactElement).props.children) {
+            const props = {
+                children: recursiveMapAllChildren((child as React.ReactElement).props.children, fn)
+            }
+            child = React.cloneElement(child, props);
+        }
+
+        return fn(child);
     });
     if (result.length === 1) {
         if (children.props === undefined || children.props.children === undefined ||
@@ -103,7 +103,7 @@ export const recursiveMapAllChildren = (
         }
     }
     return result
-  }
+}
 
 export function mockDelay(timeout = 2000) {
     return new Promise(resolve => setTimeout(resolve, timeout));
@@ -151,7 +151,6 @@ export async function sendSDKLogsToBackend() {
 
     if (isDev()) {
         console.log(parsedSDKLogs, "auth_error_sdk_logs");
-        localStorage.removeItem(SDK_LOGS_STORAGE_KEY);
     } else {
         await axios
             .post(
@@ -169,8 +168,5 @@ export async function sendSDKLogsToBackend() {
                 },
                 {}
             )
-            .then(() => {
-                localStorage.removeItem(SDK_LOGS_STORAGE_KEY);
-            });
     }
 }
