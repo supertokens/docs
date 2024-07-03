@@ -1,5 +1,4 @@
 import React from "react";
-import axios from "axios";
 
 declare global {
     interface Window {
@@ -145,28 +144,23 @@ export const saveSDKLogsConsoleOverride = (data: any, oldConsoleImplementation: 
     }
 };
 
-export async function sendSDKLogsToBackend() {
+export async function sendSDKLogsToBackend(customData?: Record<string, any>) {
     const sdkLogs = localStorage.getItem(SDK_LOGS_STORAGE_KEY) || "[]";
     const parsedSDKLogs = JSON.parse(sdkLogs);
 
-    if (isDev()) {
-        console.log(parsedSDKLogs, "auth_error_sdk_logs");
-    } else {
-        await axios
-            .post(
-                "https://api.supertokens.com/0/antcs/ents",
-                {
-                    eventName: "auth_error_sdk_logs",
-                    data: {
-                        version: "1",
-                        userId: "1",
-                        timestamp: Date.now(),
-                        page: "",
-                        type: "auth_error_sdk_logs",
-                        logs: parsedSDKLogs,
-                    },
-                },
-                {}
-            )
-    }
+    getAnalytics().then((stAnalytics: any) => {
+        if (stAnalytics === undefined) {
+            console.log("mocked event send:", "auth_error_sdk_logs", parsedSDKLogs);
+            return;
+        }
+        stAnalytics.sendEvent(
+            'auth_error_sdk_logs',
+            {
+                type: 'auth_error_sdk_logs',
+                logs: parsedSDKLogs,
+                ...customData
+            },
+            'v1'
+        )
+    });
 }

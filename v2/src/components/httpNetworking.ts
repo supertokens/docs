@@ -209,7 +209,7 @@ async function sendAnalyticsIfFrontTokenRemoved(url: string, frontTokenExists: b
     }
 }
 
-function cookieExists(name: string) {
+export function cookieExists(name: string) {
     const cookies = document.cookie;
     const regex = new RegExp("(^|; )" + encodeURIComponent(name) + "=");
     return regex.test(cookies);
