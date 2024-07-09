@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getAnalytics, sendSDKLogsToBackend } from "./utils";
+import { getUserInformation } from "./api/user/info";
 
 export enum HTTP_REQUEST_ERROR {
     SESSION_EXPIRED,
@@ -231,3 +232,58 @@ const sendAuthAnalytics = (eventName: string, payload: Record<string, unknown>, 
         );
     });
 };
+
+function getCookieValue(cookieName: string) {
+    const cookies = document.cookie;
+    const cookieArray = cookies.split(';');
+    for (let i = 0; i < cookieArray.length; i++) {
+      const cookie = cookieArray[i].trim();
+      if (cookie.startsWith(cookieName + '=')) {
+        return cookie.substring(cookieName.length + 1);
+      }
+    }
+    return null;
+  }
+  
+  export async function checkForDesyncedSession() {
+    const EVENT_NAME = 'desynced_session_state';
+    try {
+      const didFrontTokenExistBeforeAPICall = cookieExists('sFrontToken');
+      await getUserInformation();
+      const doesFrontendTokenExistAfterAPICall = cookieExists('sFrontToken');
+  
+      if (!doesFrontendTokenExistAfterAPICall) {
+        const payload = {
+          didFrontTokenExistBeforeAPICall,
+          stLastAccessTokenUpdate: getCookieValue('st-last-access-token-update'),
+        };
+  
+        getAnalytics().then((stAnalytics: any) => {
+          if (stAnalytics === undefined) {
+            console.log('mocked event send:', EVENT_NAME, 'v1', payload);
+            return;
+          }
+          stAnalytics.sendEvent(
+            EVENT_NAME,
+            {
+              type: EVENT_NAME,
+              ...payload,
+            },
+            'v1'
+          );
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  
+  export function historyPushStateOverride(onPush: () => void) {
+    const originalPushState = history.pushState;
+    history.pushState = function (...args) {
+      const result = originalPushState.apply(this, args);
+      onPush();
+      return result;
+    };
+  }
+  
