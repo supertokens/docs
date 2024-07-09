@@ -19,7 +19,7 @@ import { useLocation } from '@docusaurus/router';
 import './styles.css';
 import supertokens from "supertokens-website";
 import {overrideConsoleImplementation,saveSDKLogsConsoleOverride, sendSDKLogsToBackend} from '../../components/utils'
-import {cookieExists} from '../../components/httpNetworking'
+import {checkForDesyncedSession, cookieExists, historyPushStateOverride} from '../../components/httpNetworking'
 import styles from "./styles.module.css";
 
 
@@ -72,6 +72,8 @@ if (typeof window !== 'undefined') {
       }
     }
   });
+  checkForDesyncedSession();
+  historyPushStateOverride(checkForDesyncedSession);
 }
 
 function OriginalLayout(props) {
