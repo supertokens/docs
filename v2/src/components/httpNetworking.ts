@@ -247,19 +247,18 @@ function getCookieValue(cookieName: string) {
   
   export async function checkForDesyncedSession() {
     const EVENT_NAME = 'desynced_session_state';
+    const didFrontTokenExistBeforeAPICall = cookieExists("sFrontToken");
+
     try {
-      const didFrontTokenExistBeforeAPICall = cookieExists('sFrontToken');
-      await getUserInformation();
-      const doesFrontendTokenExistAfterAPICall = cookieExists('sFrontToken');
-  
-      if (!doesFrontendTokenExistAfterAPICall) {
-        const payload = {
-          didFrontTokenExistBeforeAPICall,
-          stLastAccessTokenUpdate: getCookieValue('st-last-access-token-update'),
-        };
-  
-        getAnalytics().then((stAnalytics: any) => {
-          if (stAnalytics === undefined) {
+        await getUserInformation();
+        const doesFrontendTokenExistAfterAPICall = cookieExists("sFrontToken");
+        if (!doesFrontendTokenExistAfterAPICall) {
+            const payload = {
+                didFrontTokenExistBeforeAPICall,
+                stLastAccessTokenUpdate: getCookieValue("st-last-access-token-update"),
+            };
+            getAnalytics().then((stAnalytics: any) => {
+                if (stAnalytics === undefined) {
             console.log('mocked event send:', EVENT_NAME, 'v1', payload);
             return;
           }
@@ -273,8 +272,34 @@ function getCookieValue(cookieName: string) {
           );
         });
       }
-    } catch (e) {
-      // ignore
+    } catch (e:any) {
+        if (
+            "response" in e &&
+            e.response.status === 401 &&
+            e.response.data &&
+            e.response.data.message === "try refresh token"
+        ) {
+            if (!cookieExists("sFrontToken")) {
+                const payload = {
+                    didFrontTokenExistBeforeAPICall,
+                    stLastAccessTokenUpdate: getCookieValue("st-last-access-token-update"),
+                };
+                getAnalytics().then((stAnalytics: any) => {
+                    if (stAnalytics === undefined) {
+                        console.log("mocked event send:", EVENT_NAME, "v1", payload);
+                        return;
+                    }
+                    stAnalytics.sendEvent(
+                        EVENT_NAME,
+                        {
+                            type: EVENT_NAME,
+                            ...payload
+                        },
+                        "v1"
+                    );
+                });
+            }
+        }
     }
   }
   
