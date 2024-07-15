@@ -256,6 +256,7 @@ function getCookieValue(cookieName: string) {
             const payload = {
                 didFrontTokenExistBeforeAPICall,
                 stLastAccessTokenUpdate: getCookieValue("st-last-access-token-update"),
+                statusCode: 200
             };
             getAnalytics().then((stAnalytics: any) => {
                 if (stAnalytics === undefined) {
@@ -283,6 +284,7 @@ function getCookieValue(cookieName: string) {
                 const payload = {
                     didFrontTokenExistBeforeAPICall,
                     stLastAccessTokenUpdate: getCookieValue("st-last-access-token-update"),
+                    statusCode: 401
                 };
                 getAnalytics().then((stAnalytics: any) => {
                     if (stAnalytics === undefined) {
