@@ -9,6 +9,7 @@ show_ui_switcher: true
 <!-- ./thirdpartyemailpassword/nextjs/session-verification/in-ssr.mdx -->
 
 import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import CoreInjector from "/src/components/coreInjector"
 
 # 5b. Session verification in getServerSideProps
 
@@ -18,66 +19,114 @@ This is applicable for when verifying a session in `getServerSideProps` or `getI
 
 For this guide, we will assume that we want to pass the logged in user's ID as a prop to a protected route. An easier method to achieve this would be to [directly get the user ID from the frontend](../../common-customizations/get-user-info#on-the-frontend), but for this example, we will pass it from the server side.
 
-## 1) We use `getSession` in `getServerSideProps`
+## 1) We parse the `accessToken` JWT in `getServerSideProps`
 
 :::important
 If using `getInitialProps`, the method described below applies as well. The only difference is the way the props are returned (see comments in the code).
 :::
 
+<CoreInjector showTenantId={false}>
 
 ```tsx
-import Session from 'supertokens-node/recipe/session'
-import supertokensNode from 'supertokens-node'
-// @ts-ignore
-import { backendConfig } from '../config/backendConfig'
+import jwksClient from "jwks-rsa";
+import JsonWebToken from "jsonwebtoken";
+import type { JwtHeader, JwtPayload, SigningKeyCallback } from "jsonwebtoken";
+import { GetServerSidePropsContext } from 'next';
 
-export async function getServerSideProps(context: any) {
+const client = jwksClient({
+  jwksUri: "^{coreInjector_uri_without_quotes}/.well-known/jwks.json",
+  async fetcher(jwksUri) {
+    return fetch(jwksUri).then((res) => res.json());
+  },
+});
 
-    // this runs on the backend, so we must call init on supertokens-node SDK
-    supertokensNode.init(backendConfig())
+function getAccessToken(context: GetServerSidePropsContext ): string | undefined {
+  return context.req.cookies["sAccessToken"];
+}
 
-    // this will contain the session object post verification
-    let session
+function getPublicKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, (err, key) => {
+      if (err) {
+          callback(err);
+      } else {
+          const signingKey = key?.getPublicKey();
+          callback(null, signingKey);
+      }
+  });
+}
 
-    try {
-        // getSession will do session verification for us
-        session = await Session.getSession(context.req, context.res, {
-        overrideGlobalClaimValidators: () => {
-          // this makes it so that no custom session claims are checked
-          return []
-        }})
-    } catch (err: any) {
-        if (err.type === Session.Error.TRY_REFRESH_TOKEN) {
+async function verifyToken(token: string): Promise<JwtPayload> {
+  return new Promise((resolve, reject) => {
+      JsonWebToken.verify(token, getPublicKey, {}, (err, decoded) => {
+          if (err) {
+              reject(err);
+          } else {
+              resolve(decoded as JwtPayload);
+          }
+      });
+  });
+}
 
-            // in this case, the session is still valid, only the access token has expired.
-            // The refresh token is not sent to this route as it's tied to the /api/auth/session/refresh API paths.
-            // So we must send a "signal" to the frontend which will then call the 
-            // refresh API and reload the page.
+/**
+* A helper function to retrieve session details on the server side.
+*
+* NOTE: This function does not use the getSession or verifySession functions from the supertokens-node SDK
+* because they can update the access token. These updated tokens would not be
+* propagated to the client side, as request interceptors do not run on the server side.
+*/
+async function getSSRSessionHelper(context: GetServerSidePropsContext): Promise<{
+  accessTokenPayload: JwtPayload | undefined;
+  hasToken: boolean;
+  error: Error | undefined;
+}> {
+  const accessToken = getAccessToken(context);
+  const hasToken = !!accessToken;
+  try {
+      if (accessToken) {
+          const decoded = await verifyToken(accessToken);
+          return { accessTokenPayload: decoded, hasToken, error: undefined };
+      }
+      return { accessTokenPayload: undefined, hasToken, error: undefined };
+  } catch (error) {
+      if (error instanceof JsonWebToken.TokenExpiredError) {
+          return { accessTokenPayload: undefined, hasToken, error: undefined };
+      }
+      return { accessTokenPayload: undefined, hasToken, error: error as Error };
+  }
+}
 
-            return { props: { fromSupertokens: 'needs-refresh' } }
-            // or return {fromSupertokens: 'needs-refresh'} in case of getInitialProps
-        } else if (err.type === Session.Error.UNAUTHORISED) {
-            // in this case, there is no session, or it has been revoked on the backend.
-            // either way, sending this response will make the frontend try and refresh
-            // which will fail and redirect the user to the login screen.
-            return { props: { fromSupertokens: 'needs-refresh' } }
-        }
-        
-        throw err
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+    const { accessTokenPayload, error } = await getSSRSessionHelper(context);
+
+    if (error) {
+      throw error;
     }
 
-    // session verification is successful and we can pass
-    // the user's ID to the frontend.
+    if (accessTokenPayload === undefined) {
+      // This occurs if the token has expired or doesn't exist.
+      // Either way, sending this response prompts the frontend to attempt a session refresh.
+      // 
+      // Case 1: Token doesn't exist
+      // - The refresh will fail, and the user will be redirected to the login page.
+      // 
+      // Case 2: Token has expired
+      // - The client will call the refresh API and update the session tokens.
+    
+      return { props: { fromSupertokens: 'needs-refresh' } }
+      // or return {fromSupertokens: 'needs-refresh'} in case of getInitialProps
+    }
 
     return {
-        props: { userId: session!.getUserId() },
+        props: { userId: accessTokenPayload.sub }
     }
-    // or return {userId: session.getUserId()} in case of getInitialProps
+
+    // or return { userId: accessTokenPayload.sub } in case of getInitialProps
 }
 ```
+</CoreInjector>
 
 :::caution
-Do not use the `verifySession` function here. The reason is that this will send a reply to the client in case of `TRY_REFRESH_TOKEN`, and here, we want to catch that error and send a custom reply.
+Don't use getSession or verifySession here. They might update the session tokens, and since our request interceptors don't run server-side, the updated token won't be propagated to the client side.
 :::
 
 ## 2) Doing manual refresh on the frontend
@@ -196,7 +245,7 @@ On success, `getServerSideProps` returns
 {
     // Refer to Step 1)
     // @ts-ignore
-    props: { userId: session.getUserId() }
+    props: { userId: accessTokenPayload.sub }
 }
 ```
 

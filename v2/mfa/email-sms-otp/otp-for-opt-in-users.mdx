@@ -22,6 +22,10 @@ import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 
 # OTP for specific users
 
+:::important
+Before reading the below, please first go through the setup for [OTP for all users](./otp-for-all-users) to understand the basics of how MFA with OTP works, and then come back here.
+:::
+
 In this page, we will show you how to implement an MFA policy that requires certain users to do the OTP challenge via email or sms. You can decide which those users are based on any criteria. For example:
 - Only users that have an `admin` role require to do OTP; OR
 - Only users that have enabled OTP on their account require to do OTP; OR
@@ -47,7 +51,8 @@ To start with, we configure the backend in the following way:
 ```ts
 import supertokens, { User, RecipeUserId, } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
 import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
@@ -68,7 +73,10 @@ supertokens.init({
     recipeList: [
         Session.init(),
         UserRoles.init(),
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
             //...
         }),
         // highlight-start
@@ -78,16 +86,25 @@ supertokens.init({
         }),
         AccountLinking.init({
             shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                // This will enable first factor account linking. 
-                // For example, if a user logs in via email password with email e1, 
-                // and then signs out and logs in via Google with the same email, 
-                // we will link the accounts (as long as the email password user's email is 
-                // verified).
-                // It will also enable account linking for MFA purposes.
-                return {
-                    shouldAutomaticallyLink: true,
-                    shouldRequireVerification: true
+                if (session === undefined) {
+                    // we do not want to do first factor account linking by default. To enable that,
+                    // please see the automatic account linking docs in the recipe docs for your first factor.
+                    return {
+                        shouldAutomaticallyLink: false
+                    };
                 }
+                if (user === undefined || session.getUserId() === user.id) {
+                    // if it comes here, it means that a session exists, and we are trying to link the 
+                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
+                    // linking here.
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: false
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                };
             }
         }),
         // highlight-end
@@ -152,7 +169,8 @@ To start with, we configure the backend in the following way:
 ```ts
 import supertokens, { User, RecipeUserId, } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
 import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth"
 import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
@@ -171,7 +189,10 @@ supertokens.init({
     },
     recipeList: [
         Session.init(),
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
             //...
         }),
         // highlight-start
@@ -200,16 +221,25 @@ supertokens.init({
         }),
         AccountLinking.init({
             shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                // This will enable first factor account linking. 
-                // For example, if a user logs in via email password with email e1, 
-                // and then signs out and logs in via Google with the same email, 
-                // we will link the accounts (as long as the email password user's email is 
-                // verified).
-                // It will also enable account linking for MFA purposes.
-                return {
-                    shouldAutomaticallyLink: true,
-                    shouldRequireVerification: true
+                if (session === undefined) {
+                    // we do not want to do first factor account linking by default. To enable that,
+                    // please see the automatic account linking docs in the recipe docs for your first factor.
+                    return {
+                        shouldAutomaticallyLink: false
+                    };
                 }
+                if (user === undefined || session.getUserId() === user.id) {
+                    // if it comes here, it means that a session exists, and we are trying to link the 
+                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
+                    // linking here.
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: false
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                };
             }
         }),
         MultiFactorAuth.init({
@@ -247,7 +277,9 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 
 In both of the examples above, notice that we have initialised the Passwordless recipe in the `recipeList`. In this example, we only want to enable email based OTP, so we set the `contactMethod` to `EMAIL` and `flowType` to `USER_INPUT_CODE` (i.e. otp). If instead, you want to use phone sms based OTP, you should set the contact method to `PHONE`. If you want to give users both the options, or for some users use email, and for others use phone, you should set `contactMethod` to `EMAIL_OR_PHONE`.
 
-We have also enabled the account linking feature since [it's required for MFA to work](../important-concepts#relation-of-account-linking-and-mfa). The above enables account linking for first and second factor login, but if you only want to enable it for second factor, see [this section](../backend-setup#enabling-account-linking-only-for-mfa-purposes).
+We have also enabled the account linking feature since [it's required for MFA to work](../important-concepts#relation-of-account-linking-and-mfa). The above enables account linking for second factor only, but if you also want to enable it for first factor, see [this section](/docs/thirdpartyemailpassword/common-customizations/account-linking/automatic-account-linking).
+
+Notice that we have set `shouldRequireVerification: false` for account linking. It means that the second factor can be linked to the first factor even though the first factor is not verified. If you want to do email verification of the first factor before setting up the second factor (for example if the first factor is email password, and the second is phone OTP), then you can set this boolean to `true`, and also init the email verification recipe on the frontend and backend in `REQUIRED` mode.
 
 Once the user finishes the first factor (for example, with emailpassword), their session access token payload will look like this (for those that require OTP):
 ```json
@@ -378,7 +410,9 @@ However, if you want OTP to be enabled for a specific user, for a specific tenan
 ```ts
 import supertokens, { User, RecipeUserId, } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
+
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
 import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
@@ -399,7 +433,10 @@ supertokens.init({
     recipeList: [
         Session.init(),
         UserRoles.init(),
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
             //...
         }),
         // highlight-next-line
@@ -409,16 +446,25 @@ supertokens.init({
         }),
         AccountLinking.init({
             shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                // This will enable first factor account linking. 
-                // For example, if a user logs in via email password with email e1, 
-                // and then signs out and logs in via Google with the same email, 
-                // we will link the accounts (as long as the email password user's email is 
-                // verified).
-                // It will also enable account linking for MFA purposes.
-                return {
-                    shouldAutomaticallyLink: true,
-                    shouldRequireVerification: true
+                if (session === undefined) {
+                    // we do not want to do first factor account linking by default. To enable that,
+                    // please see the automatic account linking docs in the recipe docs for your first factor.
+                    return {
+                        shouldAutomaticallyLink: false
+                    };
                 }
+                if (user === undefined || session.getUserId() === user.id) {
+                    // if it comes here, it means that a session exists, and we are trying to link the 
+                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
+                    // linking here.
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: false
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                };
             }
         }),
         MultiFactorAuth.init({
@@ -478,7 +524,8 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 ```ts
 import supertokens, { User, RecipeUserId, } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
 import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth"
 import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
@@ -497,7 +544,10 @@ supertokens.init({
     },
     recipeList: [
         Session.init(),
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
             //...
         }),
         Passwordless.init({
@@ -525,16 +575,25 @@ supertokens.init({
         }),
         AccountLinking.init({
             shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                // This will enable first factor account linking. 
-                // For example, if a user logs in via email password with email e1, 
-                // and then signs out and logs in via Google with the same email, 
-                // we will link the accounts (as long as the email password user's email is 
-                // verified).
-                // It will also enable account linking for MFA purposes.
-                return {
-                    shouldAutomaticallyLink: true,
-                    shouldRequireVerification: true
+                if (session === undefined) {
+                    // we do not want to do first factor account linking by default. To enable that,
+                    // please see the automatic account linking docs in the recipe docs for your first factor.
+                    return {
+                        shouldAutomaticallyLink: false
+                    };
                 }
+                if (user === undefined || session.getUserId() === user.id) {
+                    // if it comes here, it means that a session exists, and we are trying to link the 
+                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
+                    // linking here.
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: false
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                };
             }
         }),
         MultiFactorAuth.init({
@@ -602,8 +661,8 @@ By default, the email template used for otp-email login is [as shown here](https
 
 If you would like to learn more about this, or change the content of the email, or the method by which they are sent, checkout the email / sms delivery section in the recipe docs:
 - [Passwordless email delivery config](/docs/passwordless/email-delivery/about)
-- [ThirdPartyPasswordless email delivery config](/docs/thirdpartypasswordless/email-delivery/about)
+- [ThirdParty + Passwordless email delivery config](/docs/thirdpartypasswordless/email-delivery/about)
 - [Passwordless SMS delivery config](/docs/passwordless/sms-delivery/about)
-- [ThirdPartyPasswordless SMS delivery config](/docs/thirdpartypasswordless/sms-delivery/about)
+- [ThirdParty + Passwordless SMS delivery config](/docs/thirdpartypasswordless/sms-delivery/about)
 
 <!-- END COPY SECTION -->

@@ -103,6 +103,12 @@ Coming Soon
 - `shouldAutomaticallyLink`: If this is `true`, it means that the `newAccountInfo` will be linked or will become a primary user during this API call (assuming a set of security checks pass). If this is `false`, it means that there will be no account linking related operation during this API call.
 - `shouldRequireVerification`: If this is `true`, that account linking operations will only happen if the `newAccountInfo` is verified. **We strongly recommend keeping it set to `true` for security reasons.**
 
+:::important
+If you are returning `shouldRequireVerification` as `true`, then you need to also [enable the email verification recipe](../email-verification/about) in `REQUIRED` mode. This means that if the login method does not inherently verify the email (like for email password login), SuperTokens will require the user to go through the email verification flow first and then attempt auto linking of the account. For other login methods like sign in with Google, the email is already verified during login, so the user will not be asked to verify the email again, and account linking will be tried immediately.
+
+If you enable email verification in `OPTIONAL` mode, then whilst the user can access the account after email password login, account linking will only be attempted after they have verified their email later on. This is risky because whilst the user had access to their email password account after sign up, they could loose access to that after verification and after account linking has been completed due to the change in the primary user ID (though we provide a callback - see below - to help you migrate data from one user ID to another).
+:::
+
 You can use the input of the function to dynamically decide if you want to do account linking for a particular user and / or login method or not.
 
 
@@ -248,24 +254,7 @@ The following is a list of support status codes that the end user might see duri
 
 
 ### ERR_CODE_003
-- This can happen during the passwordless recipe's create or consume code API (during sign in):
-    - API path and method: `/signinup/code POST` or `/signinup/code/consume POST`
-    - Output JSON:
-    ```json
-    {
-        "status": "SIGN_IN_UP_NOT_ALLOWED",
-        "reason": "Cannot sign in / up due to security reasons. Please try a different login method or contact support. (ERR_CODE_003)"
-    }
-    ```
-    - The pre build UI on the frontend displays this error in the following way:
-    <img src="/img/account-linking/err_003.png" alt="Pre built UI screenshot showing error message for ERR_CODE_003." style={{
-        height: "400px"
-    }}/>
-
-- Below is as example scenario for when this status is returned (one amongst many):
-    A malicious user has a passwordless account with email `e1`. The victim has an email password login method with `e2`, which is verified. Both of these are non primary users since you have account linking switched off. Then you switch on automatic account linking. Now the attacker somehow changes their email to `e2` (via a support ticket perhaps), but it's in an unverified state. In this case, when the attacker enters email `e2` in the passwordless login box, this error code will show up. We do this because if we didn't, then the attacker might send a magic link to `e2`, and if the victim clicks on it, then the attacker's account will be linked to the victim's account. Even though the attacker won't be able to login to that account again, linking a potentially malicious account to a victim's account is not a good idea.
-
-- To resolve this issue, you either mark the unverified account as verified, or then delete that particular login method / account. **You can do these actions using our user management dashboard.**
+This used to be an error code which is no longer valid and can be ignored.
 
 ### ERR_CODE_004
 - This can happen during the thirdparty recipe's signinup API (during sign in):
@@ -469,6 +458,18 @@ The following is a list of support status codes that the end user might see duri
         }
         ```
 - In order to link the third party user with the session user, we need to make sure that the session user is a primary user. However, that can fail if there exists another primary user with the same email as the session user, and in this case, this error is returned to the frontend.
+
+### ERR_CODE_024
+- This happens during third party sign in, when the user is trying to sign in with a non-primary user, and the third party provider does not verify their email, and their exists a primary user with the same email. This can also happen the other way around wherein the user is trying to sign in with the primary user (unverified email), and there exists a non-primary user with the same email. 
+    - API Path is `/signinup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_024)"
+        }
+        ```
+- This can be resolved by deleting the (non primary) user that has the same email ID, or by manually marking the email of the user as verified for the login method that they are trying to sign in with.
 
 ### Changing the error message on the frontend
 If you want to display a different message to the user, or use a different status code, you can change them on the frontend via [the language translation feature](../translations).

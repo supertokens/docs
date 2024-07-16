@@ -22,13 +22,13 @@ This is the legacy method of implementing MFA. It has several [disadvantages](..
 
 ## First factor UI
 
-If you have correctly followed the frontend setup guide in the [ThirdPartyEmailPassword recipe](https://supertokens.com/docs/thirdpartyemailpassword/quick-setup/frontend), you should see the login UI when you visit `^{form_websiteDomain}^{form_websiteBasePath}?rid=thirdpartyemailpassword`. 
+You should see the third party + email password login UI when you visit `^{form_websiteDomain}^{form_websiteBasePath}`. 
 
 No further step is required for the first factor.
 
 ## Create and add the `SecondFactor` claim validator
 
-We will create a [custom claim](https://supertokens.com/docs/session/common-customizations/sessions/claims/claim-validators) called `SecondFactorClaim` which will be responsible to check if the second factor has been completed or not. Then we can use the result in various places to protect frontend routes (in the subsequent steps).
+We will create a [custom claim](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-legacy-2fa/src/secondFactorClaim.tsx) called `SecondFactorClaim` which will be responsible to check if the second factor has been completed or not. Then we can use the result in various places to protect frontend routes (in the subsequent steps).
 
 Create a file called `SecondFactorClaim.tsx` in which you can add the following code:
 ```tsx
@@ -54,6 +54,7 @@ import SuperTokens from "supertokens-auth-react";
 import Session from "supertokens-auth-react/recipe/session";
 // @ts-ignore
 import SecondFactorClaim from "./SecondFactorClaim";
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth";
 
 SuperTokens.init({
     appInfo: {
@@ -71,7 +72,12 @@ SuperTokens.init({
                     ...oI,
                     // highlight-start
                     getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => {
-                        return [...claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()];
+                        return [
+                            SecondFactorClaim.validators.isTrue(),
+                            ...claimValidatorsAddedByOtherRecipes.filter(
+                                (v) => v.id !== MultiFactorAuth.MultiFactorAuthClaim.id
+                            ),
+                        ];
                     },
                     // highlight-end
                 }),
@@ -81,110 +87,70 @@ SuperTokens.init({
 });
 ```
 
+In the above, we add the `SecondFactorClaim.validators.isTrue()` validator so that whenever you use `SessionAuth`, we check that the second factor claim is set to true, if not, it will redirect to `/second-factor` (as defined in the claim validator). We also remove the in build `MultiFactorAuth.MultiFactorAuthClaim` since we are not using the full in built MFA recipe (as this is the legacy method).
+
 ## Second factor UI
 
 For this guide, we will be showing the second factor UI on `/second-factor`.
 
-### 1) Disable the default UI
-```tsx
-import SuperTokens from "supertokens-auth-react";
-import Passwordless from "supertokens-auth-react/recipe/passwordless";
+### 1) Create the second factor UI on `/second-factor`
 
-SuperTokens.init({
-    appInfo: {
-        appName: "^{form_appName}",
-        apiDomain: "^{form_apiDomain}",
-        websiteDomain: "^{form_websiteDomain}",
-        apiBasePath: "^{form_apiBasePath}",
-        websiteBasePath: "^{form_websiteBasePath}"
-    },
-    recipeList: [
-        Passwordless.init({
-            contactMethod: "PHONE",
-            // highlight-start
-            signInUpFeature: {
-                // this will prevent the passwordless UI from being rendered when you 
-                // visit ^{form_websiteDomain}^{form_websiteBasePath}?rid=passwordless
-                disableDefaultUI: true,
-            },
-            // highlight-end
-        })
-    ],
-})
-```
+Copy & paste the code for the second-factor UI from [our demo app right here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-legacy-2fa/src/SecondFactor/index.tsx).
 
-### 2) Create the second factor UI on `/second-factor`
-
-Copy & paste the code for the second-factor UI from [our demo app right here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-thirdpartyemailpassword-2fa-passwordless/src/SecondFactor/index.tsx).
-
-This component customises the `Passwordless.SignInUpTheme` component to:
+This component customises the `AuthPageTheme` component to:
+- Renders the pre built `AuthPage` with passwordless, `otp-phone` factor.
 - Add a button to "login with another account" which allows users to redo the first factor.
 - Redirects the user to the `/` route in case the second factor has already been completed.
 - Auto sends the OTP to the user in case they are signing in and we already know their phone number. 
 
-### 3) Override the passwordless UI components to change the header text and disable the change phone number button
+### 2) Override the passwordless UI components to change the header text and disable the change phone number button
 
 Copy / Paste the following override customisations in the `Passwordless.init` function call:
 
 ```tsx
 import React from "react";
-import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
-import Passwordless, { PasswordlessComponentsOverrideProvider } from "supertokens-auth-react/recipe/passwordless";
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import { PasswordlessComponentsOverrideProvider } from "supertokens-auth-react/recipe/passwordless";
 import { useSessionContext } from "supertokens-auth-react/recipe/session";
+import { AuthRecipeComponentsOverrideContextProvider } from "supertokens-auth-react/ui";
 
-SuperTokens.init({
-    appInfo: {
-        appName: "^{form_appName}",
-        apiDomain: "^{form_apiDomain}",
-        websiteDomain: "^{form_websiteDomain}",
-        apiBasePath: "^{form_apiBasePath}",
-        websiteBasePath: "^{form_websiteBasePath}"
-    },
-    recipeList: [
-        Passwordless.init({
-            contactMethod: "PHONE",
-            signInUpFeature: {
-                // this will prevent the passwordless UI from being rendered when you 
-                // visit ^{form_websiteDomain}^{form_websiteBasePath}?rid=passwordless
-                disableDefaultUI: true,
-            },
-        })
-    ],
-})
 
 function App() {
     return (
         <SuperTokensWrapper>
-            <PasswordlessComponentsOverrideProvider
-                // highlight-start
+            <AuthRecipeComponentsOverrideContextProvider
                 components={{
-                    PasswordlessSignInUpHeader_Override: () => {
-                        return (
+                    AuthPageHeader_Override: ({ DefaultComponent, ...props }) => {
+                        if (props.factorIds.includes("otp-phone")) {
                             <div
                                 style={{
                                     fontSize: "30px",
                                     marginBottom: "10px",
                                 }}>
                                 Second factor auth
-                            </div>
-                        );
-                    },
-                    // we override the component which shows the change phone number button
-                    PasswordlessUserInputCodeFormFooter_Override: ({ DefaultComponent, ...props }) => {
-                        const session = useSessionContext();
-
-                        if (session.loading !== true && session.accessTokenPayload.phoneNumber === undefined) {
-                            // this will show the change phone number button
-                            return <DefaultComponent {...props} />;
+                            </div>;
                         }
-
-                        // this will hide the change phone number button
-                        return null;
+                        return <DefaultComponent {...props} />;
                     },
                 }}>
-                // highlight-end
-                {/* Rest of the JSX */}
-            </PasswordlessComponentsOverrideProvider>
+                <PasswordlessComponentsOverrideProvider
+                    components={{
+                        // we override the component which shows the change phone number button
+                        PasswordlessUserInputCodeFormFooter_Override: ({ DefaultComponent, ...props }) => {
+                            const session = useSessionContext();
+
+                            if (session.loading !== true && session.accessTokenPayload.phoneNumber === undefined) {
+                                // this will show the change phone number button
+                                return <DefaultComponent {...props} />;
+                            }
+
+                            // this will hide the change phone number button
+                            return null;
+                        },
+                    }}>
+                    {/* Rest of the JSX */}
+                </PasswordlessComponentsOverrideProvider>
+            </AuthRecipeComponentsOverrideContextProvider>
         </SuperTokensWrapper>
     );
 }
@@ -193,7 +159,7 @@ export default App;
 
 </AppInfoForm>
 
-## 4) Disaplay the second factor component on your app's router
+### 3) Display the second factor component on your app's router
 
 Finally, we add the custom component we copy / pasted before to our router:
 
@@ -206,8 +172,11 @@ import * as reactRouterDom from "react-router-dom";
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import { SessionAuth } from "supertokens-auth-react/recipe/session";
+import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifactorauth/prebuiltui"
 import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
-import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui";
+import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui"
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui"
+
 // @ts-ignore
 import SecondFactor from "./SecondFactor";
 
@@ -216,13 +185,13 @@ function App() {
         <SuperTokensWrapper>
             <div className="App">
                 <div className="fill">
-                    <Routes> 
-                        {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])}
+                    <Routes>
+                        {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [ThirdPartyPreBuiltUI, EmailPasswordPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])}
                         // highlight-start
                         <Route
                             path="/second-factor"
                             element={
-                                <SessionAuth>
+                                <SessionAuth key="/second-factor">
                                     <SecondFactor />
                                 </SessionAuth>
                             }

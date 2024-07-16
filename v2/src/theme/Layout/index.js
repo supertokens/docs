@@ -18,6 +18,10 @@ import Head from '@docusaurus/Head';
 import { useLocation } from '@docusaurus/router';
 import './styles.css';
 import supertokens from "supertokens-website";
+import {overrideConsoleImplementation,saveSDKLogsConsoleOverride, sendSDKLogsToBackend} from '../../components/utils'
+import {checkForDesyncedSession, cookieExists, historyPushStateOverride} from '../../components/httpNetworking'
+import styles from "./styles.module.css";
+
 
 if (typeof window !== 'undefined') {
   let API_DOMAIN
@@ -29,11 +33,31 @@ if (typeof window !== 'undefined') {
     API_DOMAIN = "https://dev.api.supertokens.com"
     API_BASE_PATH = "/0/auth"
   }
-
+  overrideConsoleImplementation(saveSDKLogsConsoleOverride);
   let sessionExpiredStatusCode = 401;
   supertokens.init({
     apiDomain: API_DOMAIN,
     apiBasePath: API_BASE_PATH,
+    enableDebugLogs: true,
+    cookieHandler: (original) => {
+      return {
+          ...original,
+          setCookie: (cookieString) => {
+              const cookieName = cookieString.split(";")[0].split("=")[0];
+              if (cookieName === "sFrontToken") {
+                  let cookieValue = cookieString.split(";")[0].split("=")[1].trim();
+                  if (cookieValue === "" && cookieExists("sFrontToken")) {
+                      const stack = new Error().stack;
+                      sendSDKLogsToBackend({
+                          stack,
+                          title: "front_token_cookie_removed",
+                      });
+                  }
+              }
+              return original.setCookie(cookieString);
+          },
+      };
+  },
     sessionExpiredStatusCode,
     preAPIHook: async (context) => {
       return {
@@ -48,6 +72,8 @@ if (typeof window !== 'undefined') {
       }
     }
   });
+  checkForDesyncedSession();
+  historyPushStateOverride(checkForDesyncedSession);
 }
 
 function OriginalLayout(props) {
@@ -60,6 +86,8 @@ function OriginalLayout(props) {
       <SkipToContent />
 
       <AnnouncementBar />
+
+      <CombinationRecipeDocsNotif />
 
       <Navbar />
 
@@ -75,6 +103,57 @@ function OriginalLayout(props) {
       {!noFooter && <Footer />}
     </LayoutProviders>
   );
+}
+
+function CombinationRecipeDocsNotif() {
+  const location = useLocation();
+  if (location.pathname.startsWith("/docs/thirdpartyemailpassword/") ||
+    location.pathname.startsWith("/docs/thirdpartypasswordless/")) {
+    let docsPath = "https://with-combination-recipes-do-not-delete--admiring-bhabha-7b1be9.netlify.app/docs/thirdpartyemailpassword/introduction"
+    if (location.pathname.startsWith("/docs/thirdpartypasswordless/")) {
+      docsPath = "https://with-combination-recipes-do-not-delete--admiring-bhabha-7b1be9.netlify.app/docs/thirdpartypasswordless/introduction"
+    }
+    return (
+      <div
+        className={styles.displayOnlyInLargeViewport}
+        style={{
+          width: "100%",
+          background: "#ffffff0a",
+          border: "1px solid #ffffff30",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column",
+          paddingTop: "10px"
+        }}>
+        <p
+          style={{
+            marginBottom: 0
+          }}>If you are using our backend SDK that is lesser than the following versions, please <a style={{
+            color: "#ff9933",
+            fontWeight: "bold",
+            textDecoration: "underline"
+          }} href={docsPath}>visit the older documentation link here</a>.</p>
+        <ul>
+          <li><a style={{
+            color: "#ff9933",
+            fontWeight: "bold",
+            textDecoration: "underline"
+          }} href="https://github.com/supertokens/supertokens-node">supertokens-node</a> lesser than <b>v18.0.0</b></li>
+          <li><a style={{
+            color: "#ff9933",
+            fontWeight: "bold",
+            textDecoration: "underline"
+          }} href="https://github.com/supertokens/supertokens-python">supertokens-python</a> lesser than <b>v0.21.0</b></li>
+          <li><a style={{
+            color: "#ff9933",
+            fontWeight: "bold",
+            textDecoration: "underline"
+          }} href="https://github.com/supertokens/supertokens-golang">supertokens-golang</a> lesser than <b>v0.20.0</b></li>
+        </ul>
+      </div>)
+  }
+  return null;
 }
 
 function Layout(props) {

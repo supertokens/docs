@@ -40,7 +40,8 @@ To start with, we configure the backend in the following way:
 ```ts
 import supertokens, { User, RecipeUserId, } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
 import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
@@ -59,7 +60,10 @@ supertokens.init({
     },
     recipeList: [
         Session.init(),
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
             //...
         }),
         // highlight-start
@@ -69,16 +73,25 @@ supertokens.init({
         }),
         AccountLinking.init({
             shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                // This will enable first factor account linking. 
-                // For example, if a user logs in via email password with email e1, 
-                // and then signs out and logs in via Google with the same email, 
-                // we will link the accounts (as long as the email password user's email is 
-                // verified).
-                // It will also enable account linking for MFA purposes.
-                return {
-                    shouldAutomaticallyLink: true,
-                    shouldRequireVerification: true
+                if (session === undefined) {
+                    // we do not want to do first factor account linking by default. To enable that,
+                    // please see the automatic account linking docs in the recipe docs for your first factor.
+                    return {
+                        shouldAutomaticallyLink: false
+                    };
                 }
+                if (user === undefined || session.getUserId() === user.id) {
+                    // if it comes here, it means that a session exists, and we are trying to link the 
+                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
+                    // linking here.
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: false
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                };
             }
         }),
         // highlight-end
@@ -122,7 +135,8 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </BackendSDKTabs>
 
 - Notice that we have initialised the Passwordless recipe in the `recipeList`. In this example, we only want to enable email based OTP, so we set the `contactMethod` to `EMAIL` and `flowType` to `USER_INPUT_CODE` (i.e. otp). If instead, you want to use phone sms based OTP, you should set the contact method to `PHONE`. If you want to give users both the options, or for some users use email, and for others use phone, you should set `contactMethod` to `EMAIL_OR_PHONE`.
-- We have also enabled the account linking feature since [it's required for MFA to work](../important-concepts#relation-of-account-linking-and-mfa). The above enables account linking for first and second factor login, but if you only want to enable it for second factor, see [this section](../backend-setup#enabling-account-linking-only-for-mfa-purposes).
+- We have also enabled the account linking feature since [it's required for MFA to work](../important-concepts#relation-of-account-linking-and-mfa). The above enables account linking for second factor only, but if you also want to enable it for first factor, see [this section](/docs/thirdpartyemailpassword/common-customizations/account-linking/automatic-account-linking).
+- Notice that we have set `shouldRequireVerification: false` for account linking. It means that the second factor can be linked to the first factor even though the first factor is not verified. If you want to do email verification of the first factor before setting up the second factor (for example if the first factor is email password, and the second is phone OTP), then you can set this boolean to `true`, and also init the email verification recipe on the frontend and backend in `REQUIRED` mode.
 - We also override the `getMFARequirementsForAuth` function to indicate that `otp-email` must be completed before the user can access the app. Notice that we do not check for the userId there, and return `otp-email` for all users. You can also return `otp-phone` instead if you want users to complete the OTP challenge via a phone SMS. Finally, if you want to give users an option for email or phone, you can return the following array from the function:
 
     ```json
@@ -179,7 +193,8 @@ We start by modifying the `init` function call on the frontend like so:
 
 ```tsx
 import supertokens from "supertokens-auth-react"
-import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword"
+import ThirdParty from "supertokens-auth-react/recipe/thirdparty"
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword"
 import Passwordless from "supertokens-auth-react/recipe/passwordless"
 import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
 
@@ -190,7 +205,8 @@ supertokens.init({
         websiteDomain: "...",
     },
     recipeList: [
-        ThirdPartyEmailPassword.init( /* ... */),
+        ThirdParty.init(/* ... */),
+        EmailPassword.init( /* ... */),
         // highlight-start
         Passwordless.init({
             contactMethod: "EMAIL"
@@ -226,7 +242,9 @@ Next, we need to add the Passwordless pre built UI when rendering the SuperToken
 ```tsx
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
-import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui"; 
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui"; 
+import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui"; 
+import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifactorauth/prebuiltui"
 import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
 import reactRouterDOM, { Routes, BrowserRouter as Router, Route } from "react-router-dom";
 
@@ -238,7 +256,7 @@ function App() {
           <div className="fill">
             <Routes>
               // highlight-start 
-              {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])}
+              {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])}
               // highlight-end 
               // ... other routes
             </Routes>
@@ -257,13 +275,15 @@ function App() {
 ```tsx
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
-import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui"; 
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui"; 
+import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui"; 
+import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifactorauth/prebuiltui"
 import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
 
 function App() {
   // highlight-start
-  if (canHandleRoute([ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])) {
-      return getRoutingComponent([ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])
+  if (canHandleRoute([EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])) {
+      return getRoutingComponent([EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])
   }
   // highlight-end
   return (
@@ -281,8 +301,8 @@ function App() {
 </FrontendPreBuiltUITabs>
 
 With the above configuration, users will see emailpassword or social login UI when they visit the auth page. After completing that, users will be redirected to `/auth/mfa/otp-email` (assuming that the `websiteBasePath` is `/auth`) where they will be asked to complete the OTP challenge. The UI for this screen looks like:
-- [Factor Setup UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--setup-single-next-option) (This is in case the first factor doesn't provide an email for the user. In our example, the first factor does provide an email since it's email password or social login).
-- [Verification UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--verification-with-single-next-option).
+- [Factor Setup UI](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/passwordless-mfa--setup-email) (This is in case the first factor doesn't provide an email for the user. In our example, the first factor does provide an email since it's email password or social login).
+- [Verification UI](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/passwordless-mfa--verification).
 
 :::caution
 If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialise the Passwordless recipe again. You just have to make sure that the `contactMethod` is set correctly.
@@ -378,7 +398,7 @@ We can know which case it is by checking if the `emails` object returned from [M
 #### Case 1 implementation: User needs to enter their email
 In this case, we need to create a form wherein the user can enter their email. Once they submit the form, we need to call the [createCode API](/docs/passwordless/custom-ui/login-otp).
 
-After this API call, you can show the user the enter OTP screen, and call the [consumeCode API](/docs/passwordless/custom-ui/login-otp#step-3-verifying-the-input-otp).
+After this API call, you can show the user the enter OTP screen, and call the [consumeCode API](/docs/passwordless/custom-ui/login-otp#step-3-verifying-the-input-otp). If the API call returns a `RESTART_FLOW_ERROR`, you can handle this by asking the user to enter their email once again and then call the `createCode` function.
 
 #### Case 2 implementation: User needs to complete the OTP challenge
 
@@ -388,11 +408,15 @@ This case is when the user already has an email associated with their account an
 
 You can even show a UI here asking the user to pick an email from the array if you like. Either way, when you have an email, you can all the [createCode API](/docs/passwordless/custom-ui/login-otp) to send the code to that email.
 
-After this API call, you can show the user the enter OTP screen, and call the [consumeCode API](/docs/passwordless/custom-ui/login-otp#step-3-verifying-the-input-otp).
+After this API call, you can show the user the enter OTP screen, and call the [consumeCode API](/docs/passwordless/custom-ui/login-otp#step-3-verifying-the-input-otp). If the API call returns a `RESTART_FLOW_ERROR`, you can handle this by calling the `createCode` function once again in the background.
 
 :::note
 Notice that in Case 2, there is no UI for the user to enter an email. That happens silently. The user only sees the enter OTP screen.
 :::
+
+We recommend that you add a sign out button when showing the second factor (case 1 or case 2) so that users can use this to escape out of the flow in case they are unable to complete the second factor. When the sign out button is clicked, you want to:
+- Call the `await clearLoginAttemptInfo()` function (if on web) to clear the state that's set in th browser storage when calling the `createCode` function.
+- Call the sign out function / API to clear the tokens.
 
 On successful verification of the code, the `otp-email` factor is marked as completed and the `v` value is updated in the session based on if there are any more factors that the user needs to complete. The next step would be to check this `v` value in the MFA claim and redirect the user to the application page, or get information about the next factor using the [MFA info endpoint](../frontend-setup#mfa-info-endpoint).
 
@@ -414,7 +438,8 @@ To start, we will initialise the Passwordless and the MultiFactorAuth recipes in
 ```ts
 import supertokens, { User, RecipeUserId, } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdPartyEmailPassword from "supertokens-node/recipe/thirdpartyemailpassword"
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
 import Passwordless from "supertokens-node/recipe/passwordless"
 import Session from "supertokens-node/recipe/session"
@@ -433,7 +458,10 @@ supertokens.init({
     },
     recipeList: [
         Session.init(),
-        ThirdPartyEmailPassword.init({
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
             //...
         }),
         // highlight-start
@@ -443,16 +471,25 @@ supertokens.init({
         }),
         AccountLinking.init({
             shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                // This will enable first factor account linking. 
-                // For example, if a user logs in via email password with email e1, 
-                // and then signs out and logs in via Google with the same email, 
-                // we will link the accounts (as long as the email password user's email is 
-                // verified).
-                // It will also enable account linking for MFA purposes.
-                return {
-                    shouldAutomaticallyLink: true,
-                    shouldRequireVerification: true
+                if (session === undefined) {
+                    // we do not want to do first factor account linking by default. To enable that,
+                    // please see the automatic account linking docs in the recipe docs for your first factor.
+                    return {
+                        shouldAutomaticallyLink: false
+                    };
                 }
+                if (user === undefined || session.getUserId() === user.id) {
+                    // if it comes here, it means that a session exists, and we are trying to link the 
+                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
+                    // linking here.
+                    return {
+                        shouldAutomaticallyLink: true,
+                        shouldRequireVerification: false
+                    }
+                }
+                return {
+                    shouldAutomaticallyLink: false
+                };
             }
         }),
         MultiFactorAuth.init()
@@ -600,7 +637,8 @@ We start by modifying the `init` function call on the frontend like so:
 
 ```tsx
 import supertokens from "supertokens-auth-react"
-import ThirdPartyEmailPassword from "supertokens-auth-react/recipe/thirdpartyemailpassword"
+import ThirdParty from "supertokens-auth-react/recipe/thirdparty"
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword"
 import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
 import Passwordless from "supertokens-auth-react/recipe/passwordless"
 import Multitenancy from "supertokens-auth-react/recipe/multitenancy"
@@ -614,7 +652,12 @@ supertokens.init({
     // highlight-next-line
     usesDynamicLoginMethods: true,
     recipeList: [
-        ThirdPartyEmailPassword.init( /* ... */),
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
+            //...
+        }),
         // highlight-start
         Passwordless.init({
             contactMethod: "EMAIL"
@@ -659,7 +702,9 @@ Next, we need to add the Passwordless pre built UI when rendering the SuperToken
 ```tsx
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
-import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui"; 
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
+import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui"; 
+import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifactorauth/prebuiltui"
 import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
 import reactRouterDOM, { Routes, BrowserRouter as Router, Route } from "react-router-dom";
 
@@ -671,7 +716,7 @@ function App() {
           <div className="fill">
             <Routes>
               // highlight-start 
-              {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])}
+              {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])}
               // highlight-end 
               // ... other routes
             </Routes>
@@ -690,13 +735,15 @@ function App() {
 ```tsx
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
-import { ThirdPartyEmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/thirdpartyemailpassword/prebuiltui"; 
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
+import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui"; 
+import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifactorauth/prebuiltui"
 import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
 
 function App() {
   // highlight-start
-  if (canHandleRoute([ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])) {
-      return getRoutingComponent([ThirdPartyEmailPasswordPreBuiltUI, PasswordlessPreBuiltUI])
+  if (canHandleRoute([EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])) {
+      return getRoutingComponent([EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])
   }
   // highlight-end
   return (
@@ -714,8 +761,8 @@ function App() {
 </FrontendPreBuiltUITabs>
 
 With the above configuration, users will see the first and second factor based on the tenant configuration. For the tenant we configured above, users will see email password or social login first. After completing that, users will be redirected to `/auth/mfa/otp-email` (assuming that the `websiteBasePath` is `/auth`) where they will be asked complete the OTP challenge. The UI for this screen looks like:
-- [Factor Setup UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--setup-single-next-option) (This is in case the first factor doesn't provide an email for the user. In our example, the first factor does provide an email since it's email password or social login).
-- [Verification UI](https://6571be2867f75556541fde98-xieqfaxuuo.chromatic.com/?path=/story/passwordless-mfa--verification-with-single-next-option).
+- [Factor Setup UI](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/passwordless-mfa--setup-email) (This is in case the first factor doesn't provide an email for the user. In our example, the first factor does provide an email since it's email password or social login).
+- [Verification UI](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/passwordless-mfa--verification).
 
 :::caution
 If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialise the Passwordless recipe again. You just have to make sure that the `contactMethod` is set correctly.
@@ -744,8 +791,8 @@ By default, the email template used for otp-email login is [as shown here](https
 
 If you would like to learn more about this, or change the content of the email, or the method by which they are sent, checkout the email / sms delivery section in the recipe docs:
 - [Passwordless email delivery config](/docs/passwordless/email-delivery/about)
-- [ThirdPartyPasswordless email delivery config](/docs/thirdpartypasswordless/email-delivery/about)
+- [ThirdParty + Passwordless email delivery config](/docs/thirdpartypasswordless/email-delivery/about)
 - [Passwordless SMS delivery config](/docs/passwordless/sms-delivery/about)
-- [ThirdPartyPasswordless SMS delivery config](/docs/thirdpartypasswordless/sms-delivery/about)
+- [ThirdParty + Passwordless SMS delivery config](/docs/thirdpartypasswordless/sms-delivery/about)
 
 <!-- END COPY SECTION -->

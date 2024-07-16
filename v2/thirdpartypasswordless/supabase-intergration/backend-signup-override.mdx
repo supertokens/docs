@@ -13,7 +13,7 @@ In our example app there are two ways for signing up a user. Email-Password and 
 ```ts
 // config/backendConfig.ts
 
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import Passwordless from "supertokens-node/recipe/passwordless";
 import SessionNode from "supertokens-node/recipe/session";
 import { TypeInput, AppInfo } from "supertokens-node/types";
 
@@ -34,7 +34,7 @@ let backendConfig = (): TypeInput => {
         },
         appInfo,
         recipeList: [
-            ThirdPartyPasswordless.init({
+            Passwordless.init({
                 flowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
                 contactMethod: "EMAIL",
                 override: {
@@ -88,7 +88,8 @@ We will be changing the Passwordless flow by overriding the `consumeCodePOST` ap
 ```ts
 // config/backendConfig.ts
 
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import Passwordless from "supertokens-node/recipe/passwordless"
 import SessionNode from "supertokens-node/recipe/session";
 import { TypeInput, AppInfo } from "supertokens-node/types";
 
@@ -109,10 +110,9 @@ let backendConfig = (): TypeInput => {
         },
         appInfo,
         recipeList: [
-            ThirdPartyPasswordless.init({
-                contactMethod: "EMAIL",
-                flowType: "MAGIC_LINK",
-                providers: [/*...*/],
+            Passwordless.init({
+                contactMethod: "EMAIL", // works with other values as well
+                flowType: "MAGIC_LINK", // works with other values as well
                 override: {
                     apis: (originalImplementation) => {
                         return {
@@ -128,15 +128,20 @@ let backendConfig = (): TypeInput => {
 
                                 return await originalImplementation.consumeCodePOST(input)
                             },
-
-                            // the thirdPartySignInUpPost function handles sign up/in via Social login
-                            thirdPartySignInUpPOST: async function (input) {
-                                if (originalImplementation.thirdPartySignInUpPOST === undefined) {
-                                    throw Error("Should never come here");
-                                }
+                        };
+                    },
+                },
+            }),
+            ThirdParty.init({
+                override: {
+                    apis: (originalImplementation) => {
+                        return {
+                            ...originalImplementation,
+                            // the signInUpPOST function handles sign up/in via Social login
+                            signInUpPOST: async function (input) {
 
                                 // call the sign up/in api for social login
-                                let response = await originalImplementation.thirdPartySignInUpPOST(input);
+                                let response = await originalImplementation.signInUpPOST!(input);
 
                                 // check that there is no issue with sign up and that a new user is created
                                 if (response.status === "OK" && response.createdNewRecipeUser && response.user.loginMethods.length === 1 && input.session === undefined) {
@@ -171,4 +176,4 @@ let backendConfig = (): TypeInput => {
 };
 ```
 
-We will be changing the Social Login flow by overriding the `thirdPartySignInUpPost` api. We will first check that the user logging in  is a new user. If they are a new user we will retrieve the `supabase_token` from their `accessTokenPayload` and use it to map their email to userId in Supabase.
+We will be changing the Social Login flow by overriding the `signInUpPost` api. We will first check that the user logging in  is a new user. If they are a new user we will retrieve the `supabase_token` from their `accessTokenPayload` and use it to map their email to userId in Supabase.

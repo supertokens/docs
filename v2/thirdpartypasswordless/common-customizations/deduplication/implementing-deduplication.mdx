@@ -15,87 +15,99 @@ The approach to implementing account deduplication is to override the backend fu
 - If a user does not exist, we call the original implementation; Else
 - We return a message to the frontend telling the user why sign up was rejected.
 
-Add the following override logic to `ThirdPartyPasswordless.init` on the backend
+Add the following override logic to `ThirdParty` and `Passwordless` config on the backend
 
 <BackendSDKTabs>
 <TabItem value="nodejs">
 
 ```tsx
-import ThirdPartyPasswordless from "supertokens-node/recipe/thirdpartypasswordless";
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import Passwordless from "supertokens-node/recipe/passwordless";
 import supertokens from "supertokens-node";
 
-ThirdPartyPasswordless.init({
-    contactMethod: "EMAIL", // typecheck-only, removed from output
-    flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // typecheck-only, removed from output
-    override: {
-        functions: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                thirdPartySignInUp: async function (input) {
-                    let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
-                        email: input.email
-                    });
-                    if (existingUsers.length === 0) {
-                        // this means this email is new so we allow sign up
-                        return originalImplementation.thirdPartySignInUp(input);
-                    }
-                    if (existingUsers.find(u =>
-                        u.loginMethods.find(lM => lM.hasSameThirdPartyInfoAs({
-                            id: input.thirdPartyId,
-                            userId: input.thirdPartyUserId
-                        }) && lM.recipeId === "thirdparty") !== undefined)) {
-                        // this means we are trying to sign in with the same social login. So we allow it
-                        return originalImplementation.thirdPartySignInUp(input);
-                    }
-                    // this means that the email already exists with another social or passwordless login method, so we throw an error.
-                    throw new Error("Cannot sign up as email already exists");
-                }
-            }
-        },
-        apis: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                createCodePOST: async function (input) {
-                    if ("email" in input) {
-                        let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
-                            email: input.email
-                        });
-                        if (existingUsers.length === 0) {
-                            // this means this email is new so we allow sign up
-                            return originalImplementation.createCodePOST!(input);
-                        }
-                        if (existingUsers.find(u =>
-                            u.loginMethods.find(lM => lM.hasSameEmailAs(input.email) && lM.recipeId === "passwordless") !== undefined)) {
-                            // this means that the existing user is a passwordless login user. So we allow it
-                            return originalImplementation.createCodePOST!(input);
-                        }
-                        return {
-                            status: "GENERAL_ERROR",
-                            message: "Seems like you already have an account with another method. Please use that instead."
-                        }
-                    }
-                    // phone number based login, so we allow it.
-                    return originalImplementation.createCodePOST!(input);
-                },
-                thirdPartySignInUpPOST: async function (input) {
-                    try {
-                        return await originalImplementation.thirdPartySignInUpPOST!(input);
-                    } catch (err: any) {
-                        if (err.message === "Cannot sign up as email already exists") {
-                            // this error was thrown from our function override above.
-                            // so we send a useful message to the user
+let recipeList = [
+    Passwordless.init({
+        contactMethod: "EMAIL", // typecheck-only, removed from output
+        flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // typecheck-only, removed from output
+        override: {
+            apis: (originalImplementation) => {
+                return {
+                    ...originalImplementation,
+                    createCodePOST: async function (input) {
+                        if ("email" in input) {
+                            let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+                                email: input.email
+                            });
+                            if (existingUsers.length === 0) {
+                                // this means this email is new so we allow sign up
+                                return originalImplementation.createCodePOST!(input);
+                            }
+                            if (existingUsers.find(u =>
+                                u.loginMethods.find(lM => lM.hasSameEmailAs(input.email) && lM.recipeId === "passwordless") !== undefined)) {
+                                // this means that the existing user is a passwordless login user. So we allow it
+                                return originalImplementation.createCodePOST!(input);
+                            }
                             return {
                                 status: "GENERAL_ERROR",
                                 message: "Seems like you already have an account with another method. Please use that instead."
                             }
                         }
-                        throw err;
+                        // phone number based login, so we allow it.
+                        return originalImplementation.createCodePOST!(input);
+                    },
+                }
+            }
+        }
+    }),
+    ThirdParty.init({
+        override: {
+            functions: (originalImplementation) => {
+                return {
+                    ...originalImplementation,
+                    signInUp: async function (input) {
+                        let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+                            email: input.email
+                        });
+                        if (existingUsers.length === 0) {
+                            // this means this email is new so we allow sign up
+                            return originalImplementation.signInUp(input);
+                        }
+                        if (existingUsers.find(u =>
+                            u.loginMethods.find(lM => lM.hasSameThirdPartyInfoAs({
+                                id: input.thirdPartyId,
+                                userId: input.thirdPartyUserId
+                            }) && lM.recipeId === "thirdparty") !== undefined)) {
+                            // this means we are trying to sign in with the same social login. So we allow it
+                            return originalImplementation.signInUp(input);
+                        }
+                        // this means that the email already exists with another social or passwordless login method, so we throw an error.
+                        throw new Error("Cannot sign up as email already exists");
+                    }
+                }
+            },
+            apis: (originalImplementation) => {
+                return {
+                    ...originalImplementation,
+                    signInUpPOST: async function (input) {
+                        try {
+                            return await originalImplementation.signInUpPOST!(input);
+                        } catch (err: any) {
+                            if (err.message === "Cannot sign up as email already exists") {
+                                // this error was thrown from our function override above.
+                                // so we send a useful message to the user
+                                return {
+                                    status: "GENERAL_ERROR",
+                                    message: "Seems like you already have an account with another method. Please use that instead."
+                                }
+                            }
+                            throw err;
+                        }
                     }
                 }
             }
         }
-    }
-})
+    })
+]
 ```
 
 </TabItem>
@@ -105,99 +117,112 @@ ThirdPartyPasswordless.init({
 import (
 	"errors"
 
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
 	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless"
-	"github.com/supertokens/supertokens-golang/recipe/thirdpartypasswordless/tplmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
 func main() {
-	thirdpartypasswordless.Init(tplmodels.TypeInput{
-		Override: &tplmodels.OverrideStruct{
-			Functions: func(originalImplementation tplmodels.RecipeInterface) tplmodels.RecipeInterface {
-				ogThirdPartySignInUp := *originalImplementation.ThirdPartySignInUp
+	_ = []supertokens.Recipe{
+		passwordless.Init(plessmodels.TypeInput{
+			Override: &plessmodels.OverrideStruct{
+				APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
+					originalCreateCodePOST := *originalImplementation.CreateCodePOST
 
-				(*originalImplementation.ThirdPartySignInUp) = func(thirdPartyID string, thirdPartyUserID string, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext *map[string]interface{}) (tplmodels.ThirdPartySignInUp, error) {
-					existingUsers, err := thirdpartypasswordless.GetUsersByEmail(tenantId, email)
-					if err != nil {
-						return tplmodels.ThirdPartySignInUp{}, err
-					}
+					(*originalImplementation.CreateCodePOST) = func(email, phoneNumber *string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+						if email != nil {
+							thirdPartyExistingUsers, err := thirdparty.GetUsersByEmail(tenantId, *email)
+							if err != nil {
+								return plessmodels.CreateCodePOSTResponse{}, err
+							}
 
-					if len(existingUsers) == 0 {
-						// this means this email is new so we allow sign up
-						return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
-					}
+							if len(thirdPartyExistingUsers) == 0 {
+								// this means this email is either a new user or an existing passwordless user, so we allow
+								return originalCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
+							}
 
-					isSignIn := false
-					for _, user := range existingUsers {
-						if user.ThirdParty != nil && user.ThirdParty.ID == thirdPartyID && user.ThirdParty.UserID == thirdPartyUserID {
-							// this means we are trying to sign in with the same social login. So we allow it
-							isSignIn = true
+							return plessmodels.CreateCodePOSTResponse{
+								GeneralError: &supertokens.GeneralErrorResponse{
+									Message: "Seems like you already have an account with another method. Please use that instead.",
+								},
+							}, nil
 						}
+						// phone number based login, so we allow it.
+						return originalCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
 					}
-					if isSignIn {
-						return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
-					}
-					return tplmodels.ThirdPartySignInUp{}, errors.New("Cannot sign up as email already exists")
-				}
 
-				return originalImplementation
+					return originalImplementation
+				},
 			},
+		}),
+		thirdparty.Init(&tpmodels.TypeInput{
+			Override: &tpmodels.OverrideStruct{
+				Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
+					ogSignInUp := *originalImplementation.SignInUp
 
-			APIs: func(originalImplementation tplmodels.APIInterface) tplmodels.APIInterface {
-				originalSignInUpPOST := *originalImplementation.ThirdPartySignInUpPOST
-				originalCreateCodePOST := *originalImplementation.CreateCodePOST
-
-				(*originalImplementation.CreateCodePOST) = func(email, phoneNumber *string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
-					if email != nil {
-						existingUsers, err := thirdpartypasswordless.GetUsersByEmail(tenantId, *email)
+					(*originalImplementation.SignInUp) = func(thirdPartyID string, thirdPartyUserID string, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext *map[string]interface{}) (tpmodels.SignInUpResponse, error) {
+						existingUsers, err := thirdparty.GetUsersByEmail(tenantId, email)
 						if err != nil {
-							return plessmodels.CreateCodePOSTResponse{}, err
+							return tpmodels.SignInUpResponse{}, err
 						}
-						isSignIn := false
 
+						emailPasswordExistingUser, err := passwordless.GetUserByEmail(tenantId, email)
+						if err != nil {
+							return tpmodels.SignInUpResponse{}, err
+						}
+
+						if emailPasswordExistingUser != nil {
+							return tpmodels.SignInUpResponse{}, errors.New("Cannot sign up as email already exists")
+						}
+
+						if len(existingUsers) == 0 {
+							// this means this email is new so we allow sign up
+							return ogSignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
+						}
+
+						isSignIn := false
 						for _, user := range existingUsers {
-							if user.ThirdParty == nil {
-								// this means that the existing user is a passwordless login user. So we allow it
+							if user.ThirdParty.ID == thirdPartyID && user.ThirdParty.UserID == thirdPartyUserID {
+								// this means we are trying to sign in with the same social login. So we allow it
 								isSignIn = true
 							}
 						}
-
 						if isSignIn {
-							return originalCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
+							return ogSignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
 						}
-						return plessmodels.CreateCodePOSTResponse{
-							GeneralError: &supertokens.GeneralErrorResponse{
-								Message: "Seems like you already have an account with another method. Please use that instead.",
-							},
-						}, nil
-					}
-					// phone number based login, so we allow it.
-					return originalCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
-				}
-
-				(*originalImplementation.ThirdPartySignInUpPOST) = func(provider *tpmodels.TypeProvider, input tpmodels.TypeSignInUpInput, tenantId string, options tpmodels.APIOptions, userContext *map[string]interface{}) (tplmodels.ThirdPartySignInUpPOSTResponse, error) {
-
-					resp, err := originalSignInUpPOST(provider, input, tenantId, options, userContext)
-
-					if err.Error() == "Cannot sign up as email already exists" {
-						// this error was thrown from our function override above.
-						// so we send a useful message to the user
-						return tplmodels.ThirdPartySignInUpPOSTResponse{
-							GeneralError: &supertokens.GeneralErrorResponse{
-								Message: "Seems like you already have an account with another method. Please use that instead.",
-							},
-						}, nil
+						return tpmodels.SignInUpResponse{}, errors.New("Cannot sign up as email already exists")
 					}
 
-					return resp, err
-				}
+					return originalImplementation
+				},
 
-				return originalImplementation
+				APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
+					originalSignInUpPOST := *originalImplementation.SignInUpPOST
+
+					(*originalImplementation.SignInUpPOST) = func(provider *tpmodels.TypeProvider, input tpmodels.TypeSignInUpInput, tenantId string, options tpmodels.APIOptions, userContext *map[string]interface{}) (tpmodels.SignInUpPOSTResponse, error) {
+
+						resp, err := originalSignInUpPOST(provider, input, tenantId, options, userContext)
+
+						if err != nil && err.Error() == "Cannot sign up as email already exists" {
+							// this error was thrown from our function override above.
+							// so we send a useful message to the user
+							return tpmodels.SignInUpPOSTResponse{
+								GeneralError: &supertokens.GeneralErrorResponse{
+									Message: "Seems like you already have an account with another method. Please use that instead.",
+								},
+							}, nil
+						}
+
+						return resp, err
+					}
+
+					return originalImplementation
+				},
 			},
-		},
-	})
+		}),
+	}
 }
 ```
 
@@ -207,15 +232,17 @@ func main() {
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.types import GeneralErrorResponse
-from supertokens_python.recipe import thirdpartypasswordless
-from supertokens_python.recipe.thirdpartypasswordless.asyncio import get_users_by_email
-from supertokens_python.recipe.thirdpartypasswordless.interfaces import APIInterface, RecipeInterface, ThirdPartySignInUpOkResult, ThirdPartyAPIOptions, PasswordlessAPIOptions
+from supertokens_python.recipe import passwordless, thirdparty
+from supertokens_python.recipe.passwordless.asyncio import get_user_by_email as get_users_by_email_passwordless
+from supertokens_python.recipe.thirdparty.asyncio import get_users_by_email as get_users_by_email_thirdparty
+from supertokens_python.recipe.passwordless.interfaces import APIInterface as PasswordlessAPIInterface, APIOptions as PasswordlessAPIOptions
+from supertokens_python.recipe.thirdparty.interfaces import RecipeInterface, SignInUpOkResult, APIInterface as ThirdPartyAPIInterface, APIOptions as ThirdPartyAPIOptions
 from typing import Union, Dict, Any
 from supertokens_python.recipe.thirdparty.provider import Provider, RedirectUriInfo
 from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
 
-def override_thirdpartypasswordless_functions(original_implementation: RecipeInterface):
-    original_thirdparty_sign_in_up = original_implementation.thirdparty_sign_in_up
+def override_thirdparty_functions(original_implementation: RecipeInterface):
+    original_thirdparty_sign_in_up = original_implementation.sign_in_up
 
     async def thirdparty_sign_in_up(
         third_party_id: str,
@@ -225,48 +252,60 @@ def override_thirdpartypasswordless_functions(original_implementation: RecipeInt
         raw_user_info_from_provider: RawUserInfoFromProvider,
         tenant_id: str,
         user_context: Dict[str, Any]
-    ) -> ThirdPartySignInUpOkResult:
-        existing_users = await get_users_by_email(tenant_id, email, user_context)
+    ) -> SignInUpOkResult:
+        existing_users = await get_users_by_email_thirdparty(tenant_id, email, user_context)
+        passwordless_user = await get_users_by_email_passwordless(tenant_id, email, user_context)
+
+        if passwordless_user is not None:
+            raise Exception("Cannot sign up as email already exists")
+        
         if (len(existing_users) == 0):
             # this means this email is new so we allow sign up
             return await original_thirdparty_sign_in_up(third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
 
-        if (len([x for x in existing_users if
-                x.third_party_info is not None and x.third_party_info.id == third_party_id and
-                 x.third_party_info.user_id == third_party_user_id]) > 0):
-            # this means we are trying to sign in with the same social login. So we allow it
+        is_sign_in = False
+        for user in existing_users:
+            if user.third_party_info.id == third_party_id and user.third_party_info.user_id == third_party_user_id:
+                is_sign_in = True
+                break
+        
+        if is_sign_in:
             return await original_thirdparty_sign_in_up(third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
 
         # this means that the email already exists with another social or passwordless login method.
         # so we throw an error.
         raise Exception("Cannot sign up as email already exists")
 
-    original_implementation.thirdparty_sign_in_up = thirdparty_sign_in_up
+    original_implementation.sign_in_up = thirdparty_sign_in_up
 
     return original_implementation
 
 
-def override_thirdpartypasswordless_apis(original_implementation: APIInterface):
-    original_sign_in_up_post = original_implementation.thirdparty_sign_in_up_post
+def override_passwordless_apis(original_implementation: PasswordlessAPIInterface):
     original_create_code_post = original_implementation.create_code_post
 
     async def create_code_post(email: Union[str, None], phone_number: Union[str, None], tenant_id: str, api_options: PasswordlessAPIOptions,
                                user_context: Dict[str, Any],
                                ):
         if email is not None:
-            existing_users = await get_users_by_email(tenant_id, email, user_context)
-            if (len(existing_users) == 0):
-                # this means this email is new so we allow sign up
-                return await original_create_code_post(email, phone_number, tenant_id, api_options, user_context)
+            existing_user = await get_users_by_email_passwordless(tenant_id, email, user_context)
 
-            if (len([x for x in existing_users if x.third_party_info is None]) > 0):
-                # this means that the existing user is a passwordless login user. So we allow it
+            third_party_existing_users = await get_users_by_email_thirdparty(tenant_id, email, user_context)
+            
+            if (existing_user is None and len(third_party_existing_users) == 0):
+                # this means this email is new so we allow sign up
                 return await original_create_code_post(email, phone_number, tenant_id, api_options, user_context)
 
             return GeneralErrorResponse("Seems like you already have an account with another social login provider. Please use that instead.")
 
         # phone number based login, so we allow it.
         return await original_create_code_post(email, phone_number, tenant_id, api_options, user_context)
+
+    original_implementation.create_code_post = create_code_post
+    return original_implementation
+
+def override_thirdparty_apis(original_implementation: ThirdPartyAPIInterface):
+    original_sign_in_up_post = original_implementation.sign_in_up_post
 
     async def sign_in_up_post(
         provider: Provider,
@@ -283,8 +322,7 @@ def override_thirdpartypasswordless_apis(original_implementation: APIInterface):
                 return GeneralErrorResponse("Seems like you already have an account with another method. Please use that instead.")
             raise e
 
-    original_implementation.thirdparty_sign_in_up_post = sign_in_up_post
-    original_implementation.create_code_post = create_code_post
+    original_implementation.sign_in_up_post = sign_in_up_post
     return original_implementation
 
 
@@ -293,13 +331,18 @@ init(
         api_domain="...", app_name="...", website_domain="..."),
     framework='...',  # type: ignore
     recipe_list=[
-        thirdpartypasswordless.init(
+        passwordless.init(
             contact_config=...,  # type: ignore
             flow_type="...",  # type: ignore
-            override=thirdpartypasswordless.InputOverrideConfig(
-                apis=override_thirdpartypasswordless_apis,
-                functions=override_thirdpartypasswordless_functions
+            override=passwordless.InputOverrideConfig(
+                apis=override_passwordless_apis,
             ),
+        ),
+        thirdparty.init(
+            override=thirdparty.InputOverrideConfig(
+                apis=override_thirdparty_apis,
+                functions=override_thirdparty_functions
+            )
         )
     ]
 )
@@ -308,13 +351,13 @@ init(
 </TabItem>
 </BackendSDKTabs>
 
-In the above code snippet, we override the `thirdPartySignInUpPOST` and the `createCodePOST` API as well as the `thirdPartySignInUp` recipe function.
+In the above code snippet, we override the `signInUpPOST` (third party recipe) and the `createCodePOST` (passwordless recipe) API as well as the `signInUp` recipe function.
 
-The `thirdPartySignInUpPOST` API is called by the frontend after the user is redirected back to your app from the third party provider's login page. The API then exchanges the auth code with the provider and calls the `signInUp` function with the user's email and thirdParty info.
+The `signInUpPOST` API is called by the frontend after the user is redirected back to your app from the third party provider's login page. The API then exchanges the auth code with the provider and calls the `signInUp` function with the user's email and thirdParty info.
 
 The `createCodePOST` API is called when the user enters their email, or phone number during passwordless login. This API generates the passwordless OTP / link and sends it to the user's email / phone.
 
-We override the `thirdPartySignInUp` recipe function to:
+We override the `signInUp` recipe function to:
 - Get all ThirdParty or Passwordless users that have the same input email.
 - If no users exist with that email, it means that this is a new email and so we call the `originalImplementation` function which creates a new user.
 - If instead, a user exists, but has the same `thirdPartyId` and `thirdPartyUserId`, implying that this is a sign in (for example a user who had signed up with Google is signing in with Google), we again allow the operation by calling the `originalImplementation` function.
