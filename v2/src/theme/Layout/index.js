@@ -18,6 +18,8 @@ import Head from '@docusaurus/Head';
 import { useLocation } from '@docusaurus/router';
 import './styles.css';
 import supertokens from "supertokens-website";
+import {overrideConsoleImplementation,saveSDKLogsConsoleOverride, sendSDKLogsToBackend} from '../../components/utils'
+import {checkForDesyncedSession, cookieExists, historyPushStateOverride} from '../../components/httpNetworking'
 import styles from "./styles.module.css";
 
 
@@ -31,11 +33,31 @@ if (typeof window !== 'undefined') {
     API_DOMAIN = "https://dev.api.supertokens.com"
     API_BASE_PATH = "/0/auth"
   }
-
+  overrideConsoleImplementation(saveSDKLogsConsoleOverride);
   let sessionExpiredStatusCode = 401;
   supertokens.init({
     apiDomain: API_DOMAIN,
     apiBasePath: API_BASE_PATH,
+    enableDebugLogs: true,
+    cookieHandler: (original) => {
+      return {
+          ...original,
+          setCookie: (cookieString) => {
+              const cookieName = cookieString.split(";")[0].split("=")[0];
+              if (cookieName === "sFrontToken") {
+                  let cookieValue = cookieString.split(";")[0].split("=")[1].trim();
+                  if (cookieValue === "" && cookieExists("sFrontToken")) {
+                      const stack = new Error().stack;
+                      sendSDKLogsToBackend({
+                          stack,
+                          title: "front_token_cookie_removed",
+                      });
+                  }
+              }
+              return original.setCookie(cookieString);
+          },
+      };
+  },
     sessionExpiredStatusCode,
     preAPIHook: async (context) => {
       return {
@@ -50,6 +72,8 @@ if (typeof window !== 'undefined') {
       }
     }
   });
+  checkForDesyncedSession();
+  historyPushStateOverride(checkForDesyncedSession);
 }
 
 function OriginalLayout(props) {

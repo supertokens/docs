@@ -80,20 +80,20 @@ export function recursiveMap(children: any, fn: any, filterDescendants?: (comp: 
 export const recursiveMapAllChildren = (
     children: any,
     fn: (child: React.ReactElement) => React.ReactElement
-  ): any => {
+): any => {
     let result = React.Children.map(children, child => {
-      if (!React.isValidElement(child)) {
-        return child;
-      }
-  
-      if ((child as React.ReactElement).props.children) {
-        const props = {
-          children: recursiveMapAllChildren((child as React.ReactElement).props.children, fn)
+        if (!React.isValidElement(child)) {
+            return child;
         }
-        child = React.cloneElement(child, props);
-      }
-  
-      return fn(child);
+
+        if ((child as React.ReactElement).props.children) {
+            const props = {
+                children: recursiveMapAllChildren((child as React.ReactElement).props.children, fn)
+            }
+            child = React.cloneElement(child, props);
+        }
+
+        return fn(child);
     });
     if (result.length === 1) {
         if (children.props === undefined || children.props.children === undefined ||
@@ -102,8 +102,65 @@ export const recursiveMapAllChildren = (
         }
     }
     return result
-  }
+}
 
 export function mockDelay(timeout = 2000) {
     return new Promise(resolve => setTimeout(resolve, timeout));
+}
+
+export function isDev() {
+    return window.location.host.startsWith("localhost");
+}
+
+
+const isSuperTokensSDKLog = (data: any) => {
+    return typeof data === "string" && data.includes("supertokens-website-ver:");
+};
+
+type ConsoleLog = typeof globalThis.console.log;
+
+export const overrideConsoleImplementation = (customImplementation: ConsoleLog) => {
+    const oldConsoleLogImplementation = globalThis.console.log;
+    globalThis.console.log = (data) => {
+        customImplementation(data, oldConsoleLogImplementation);
+    };
+};
+
+export const SDK_LOGS_STORAGE_KEY = "Supertokens-sdk-logs";
+
+export const saveSDKLogsConsoleOverride = (data: any, oldConsoleImplementation: ConsoleLog) => {
+    if (isSuperTokensSDKLog(data)) {
+        const logArrayStr = localStorage.getItem(SDK_LOGS_STORAGE_KEY) || "[]";
+        const logArray = JSON.parse(logArrayStr) as string[];
+
+        if (logArray.length === 1000) {
+            logArray.shift();
+        }
+        logArray.push(data);
+
+        localStorage.setItem(SDK_LOGS_STORAGE_KEY, JSON.stringify(logArray));
+    } else {
+        oldConsoleImplementation(data);
+    }
+};
+
+export async function sendSDKLogsToBackend(customData?: Record<string, any>) {
+    const sdkLogs = localStorage.getItem(SDK_LOGS_STORAGE_KEY) || "[]";
+    const parsedSDKLogs = JSON.parse(sdkLogs);
+
+    getAnalytics().then((stAnalytics: any) => {
+        if (stAnalytics === undefined) {
+            console.log("mocked event send:", "auth_error_sdk_logs", parsedSDKLogs);
+            return;
+        }
+        stAnalytics.sendEvent(
+            'auth_error_sdk_logs',
+            {
+                type: 'auth_error_sdk_logs',
+                logs: parsedSDKLogs,
+                ...customData
+            },
+            'v1'
+        )
+    });
 }
