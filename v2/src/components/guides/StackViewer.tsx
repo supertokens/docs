@@ -1,15 +1,11 @@
 import * as React from "react";
-import { getSelection, BackendChoice, FrontendChoice, FirstFactors, SecondFactors } from "./utils"
+import { getSelection, BackendChoice, FrontendChoice, AuthMethods } from "./utils"
 
 export default function StackView(props: React.PropsWithChildren<{
     showIf(selection: {
         frontend: FrontendChoice,
         backend: BackendChoice,
-        tenants: ({
-            tenantId: string,
-            firstFactors: FirstFactors,
-            secondFactors: SecondFactors
-        })[]
+        selectedAuthMethod: AuthMethods
     }): boolean
     useDiv?: boolean
 }>): any {

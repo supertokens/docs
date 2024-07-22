@@ -1,5 +1,4 @@
 import * as React from "react";
-import { FirstFactors, SecondFactors } from "./utils"
 import StackViewer from "./StackViewer";
 
 export default function IsRecipeInit(props: React.PropsWithChildren<{
@@ -10,13 +9,7 @@ export default function IsRecipeInit(props: React.PropsWithChildren<{
         return (
             <StackViewer
                 showIf={(selection) => {
-                    let isInit = false;
-                    selection.tenants.forEach(t => {
-                        if (t.secondFactors.length > 0) {
-                            isInit = true;
-                        }
-                    })
-                    return isInit;
+                    return selection.selectedAuthMethod === "mfa"
                 }}
                 useDiv={false}
             >{props.children}</StackViewer>
@@ -26,13 +19,7 @@ export default function IsRecipeInit(props: React.PropsWithChildren<{
     return (
         <StackViewer
             showIf={(selection) => {
-                let isInit = false;
-                selection.tenants.forEach(t => {
-                    if (t.firstFactors.includes(props.recipe as any) || t.secondFactors.includes(props.recipe as any)) {
-                        isInit = true;
-                    }
-                })
-                return isInit;
+                return selection.selectedAuthMethod.includes(props.recipe);
             }}
             useDiv={false}
         >{props.children}</StackViewer>
