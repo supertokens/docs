@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FrontendChoice, BackendChoice, AuthMethods } from "../utils"
+import { FrontendChoice, BackendChoice, AuthMethods, FRAMEWORKS_WITH_ONLY_CUSTOM_UI } from "../utils"
 
 export default function StackAndAuthMethodSelector() {
     return (
@@ -17,6 +17,8 @@ export function StackAndAuthMethodSelectorHelper() {
 
     const [selectedAuthMethod, setSelectedAuthMethod] = React.useState<AuthMethods | undefined>(undefined);
 
+    const [isCustomUI, setIsCustomUI] = React.useState<boolean | undefined>(undefined);
+
     // const [tenants, setTenants] = React.useState<({
     //     tenantId: string,
     //     firstFactors: FirstFactors,
@@ -24,7 +26,11 @@ export function StackAndAuthMethodSelectorHelper() {
     // })[]>([]);
 
     const handleFrontendChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setFrontendChoice(event.target.value as FrontendChoice);
+        let frontend = event.target.value as FrontendChoice;
+        setFrontendChoice(frontend);
+        if (FRAMEWORKS_WITH_ONLY_CUSTOM_UI.includes(frontend)) {
+            setIsCustomUI(true);
+        }
     };
 
     const handleBackendChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -64,7 +70,6 @@ export function StackAndAuthMethodSelectorHelper() {
                     <option value="vanillajs">Vanilla JS</option>
                     <option value="nextjs">Next.js</option>
                     <option value="remix">Remix</option>
-                    <option value="capacitor">Capacitor</option>
                     <option value="react-native">React Native</option>
                     <option value="ios">iOS</option>
                     <option value="android">Android</option>
@@ -139,12 +144,54 @@ export function StackAndAuthMethodSelectorHelper() {
         );
     }
 
+    if (isCustomUI === undefined) {
+        return (
+            <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                <label style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                    4) Do you want to use a custom UI?
+                </label>
+                <div style={{ margin: '1rem 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <button
+                        onClick={() => setIsCustomUI(true)}
+                        style={{
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            padding: '0.8rem 2rem',
+                            border: 'none',
+                            borderRadius: '5px',
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Yes
+                    </button>
+                    <button
+                        onClick={() => setIsCustomUI(false)}
+                        style={{
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                            padding: '0.8rem 2rem',
+                            border: 'none',
+                            borderRadius: '5px',
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        No
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
             <StartGuide
                 frontend={frontendChoice}
                 backend={backendChoice}
                 selectedAuthMethod={selectedAuthMethod}
+                isCustomUI={isCustomUI}
             />
         </div>
     );
@@ -154,6 +201,7 @@ function StartGuide(props: {
     frontend: FrontendChoice,
     backend: BackendChoice,
     selectedAuthMethod: AuthMethods
+    isCustomUI: boolean
 }) {
     return (
         <button

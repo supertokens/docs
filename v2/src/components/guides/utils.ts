@@ -1,8 +1,10 @@
-export type FrontendChoice = "react" | "angular" | "vue" | "vanillajs" | "nextjs" | "remix" | "react-native" | "ios" | "android" | "flutter" | "capacitor" | undefined;
+export type FrontendChoice = "react" | "angular" | "vue" | "vanillajs" | "nextjs" | "remix" | "react-native" | "ios" | "android" | "flutter" | undefined;
 
 export type BackendChoice = "nodejs" | "golang" | "python" | "php" | "c#" | "java" | "nextjs" | "remix" | undefined;
 
 export type AuthMethods = "emailpassword" | "thirdparty" | "passwordless" | "thirdpartyemailpassword" | "thirdpartypasswordless" | "all-auth" | "mfa" | "multi-tenant";
+
+export const FRAMEWORKS_WITH_ONLY_CUSTOM_UI: FrontendChoice[] = ["vanillajs", "react-native", "ios", "android", "flutter"]
 
 // export type FirstFactors = ("emailpassword" | "passwordless" | "thirdparty")[]
 
