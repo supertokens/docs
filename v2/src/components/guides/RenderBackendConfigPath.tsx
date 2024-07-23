@@ -1,5 +1,5 @@
 import * as React from "react";
-import { getSelection, isMFAEnabled } from "./utils"
+import { getSelection } from "./utils"
 
 
 export default function RenderBackendConfigPath() {
@@ -18,16 +18,10 @@ export default function RenderBackendConfigPath() {
         path = "/config/backendConfig.ts"
     } else if (selection.backend === "golang") {
         path = "/backend/config.go"
-        if (isMFAEnabled()) {
-            path = "/authServer/config.ts"
-        }
     } else if (selection.backend === "python") {
         path = "/backend/config.py"
-        if (isMFAEnabled()) {
-            path = "/authServer/config.ts"
-        }
     } else {
-        path = "/authServer/config.ts"
+        throw new Error("Should never come here")
     }
 
     return (

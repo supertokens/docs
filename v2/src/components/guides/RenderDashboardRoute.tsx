@@ -1,5 +1,5 @@
 import * as React from "react";
-import { getSelection, isMFAEnabled } from "./utils"
+import { getSelection } from "./utils"
 
 
 export default function RenderDashboardRoute() {

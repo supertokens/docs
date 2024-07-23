@@ -5,17 +5,6 @@ export default function IsRecipeInit(props: React.PropsWithChildren<{
     recipe: string
 }>) {
 
-    if (props.recipe === "mfa") {
-        return (
-            <StackViewer
-                showIf={(selection) => {
-                    return selection.selectedAuthMethod === "mfa"
-                }}
-                useDiv={false}
-            >{props.children}</StackViewer>
-        );
-    }
-
     return (
         <StackViewer
             showIf={(selection) => {

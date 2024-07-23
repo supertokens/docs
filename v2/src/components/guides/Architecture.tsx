@@ -1,5 +1,5 @@
 import * as React from "react";
-import { getSelection, isMFAEnabled } from "./utils"
+import { getSelection } from "./utils"
 
 export default function Architecture(props: {
     children: React.ReactNode,
@@ -11,16 +11,7 @@ export default function Architecture(props: {
         return null;
     }
 
-    let showWithSeparateNodeAuthServer = true;
-
-    if (selection.backend === "nodejs" || selection.backend === "nextjs" || selection.backend === "remix") {
-        showWithSeparateNodeAuthServer = false;
-    }
-    if (selection.backend === "python" || selection.backend === "golang") {
-        if (!isMFAEnabled()) {
-            showWithSeparateNodeAuthServer = false;
-        }
-    }
+    let showWithSeparateNodeAuthServer = selection.applicationServer !== undefined;
 
     if (showWithSeparateNodeAuthServer === props.isWithSeparateNodeAuthServer) {
         return props.children;
