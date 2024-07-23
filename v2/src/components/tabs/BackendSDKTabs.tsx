@@ -16,6 +16,9 @@ export default function BackendSDKTabs(props: any) {
     if (!props.disablePython) {
         values.push({ label: 'Python', value: 'python' });
     }
+    if (props.enableJava) {
+        values.push({ label: 'Java', value: 'java' });
+    }
     if (props.enableCurl) {
         values.push({ label: 'cURL', value: 'curl' });
     }
