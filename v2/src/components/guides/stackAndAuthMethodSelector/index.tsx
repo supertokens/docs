@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FrontendChoice, BackendChoice, AuthMethods, FRAMEWORKS_WITH_ONLY_CUSTOM_UI } from "../utils"
+import { FrontendChoice, BackendChoice, AuthMethods, FRAMEWORKS_WITH_ONLY_CUSTOM_UI, BackendFramework } from "../utils"
 
 export default function StackAndAuthMethodSelector() {
     return (
@@ -14,6 +14,8 @@ export function StackAndAuthMethodSelectorHelper() {
     const [frontendChoice, setFrontendChoice] = React.useState<FrontendChoice>(undefined);
 
     const [backendChoice, setBackendChoice] = React.useState<BackendChoice>(undefined);
+
+    const [backendFramework, setBackendFramework] = React.useState<BackendFramework | undefined>(undefined);
 
     const [selectedAuthMethod, setSelectedAuthMethod] = React.useState<AuthMethods | undefined>(undefined);
 
@@ -34,7 +36,19 @@ export function StackAndAuthMethodSelectorHelper() {
     };
 
     const handleBackendChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setBackendChoice(event.target.value as BackendChoice);
+        const backend = event.target.value as BackendChoice;
+        setBackendChoice(backend);
+        if (backend === "nodejs") {
+            setBackendFramework("express");
+        } else if (backend === "golang") {
+            setBackendFramework("http");
+        } else if (backend !== "python") {
+            setBackendFramework(undefined);
+        }
+    };
+
+    const handleBackendFrameworkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setBackendFramework(event.target.value as BackendFramework);
     };
 
     const handleAuthMethodChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -108,16 +122,47 @@ export function StackAndAuthMethodSelectorHelper() {
         );
     }
 
-    if (selectedAuthMethod === undefined) {
+    if (backendChoice === "python" && backendFramework === undefined) {
         return (
             <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
-                <label htmlFor="frontendChoice" style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                    3) Please select auth method:
+                <label htmlFor="backendFramework" style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                    3) Which backend framework do you use?
                 </label>
                 <div style={{ margin: '1rem 0' }} />
                 <select
-                    id="frontendChoice"
-                    value={frontendChoice === undefined ? "" : frontendChoice}
+                    id="backendFramework"
+                    value={backendFramework === undefined ? "" : backendFramework}
+                    onChange={handleBackendFrameworkChange}
+                    style={{
+                        backgroundColor: '#424242',
+                        color: 'white',
+                        padding: '0.8rem',
+                        border: 'none',
+                        borderRadius: '5px',
+                        outline: 'none',
+                        width: '100%',
+                        fontSize: '1rem',
+                    }}
+                >
+                    <option value="">--Select an option--</option>
+                    <option value="flask">Flask</option>
+                    <option value="fastapi">FastAPI</option>
+                    <option value="drf">Django Rest Framework</option>
+                </select>
+            </div>
+        );
+    }
+
+    if (selectedAuthMethod === undefined) {
+        return (
+            <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                <label htmlFor="authMethod" style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                    {backendChoice === "python" ? "4" : "3"}) Please select auth method:
+                </label>
+                <div style={{ margin: '1rem 0' }} />
+                <select
+                    id="authMethod"
+                    value={selectedAuthMethod === undefined ? "" : selectedAuthMethod}
                     onChange={handleAuthMethodChange}
                     style={{
                         backgroundColor: '#424242',
@@ -148,7 +193,7 @@ export function StackAndAuthMethodSelectorHelper() {
         return (
             <div style={{ backgroundColor: '#1E1E1E', color: 'white', fontFamily: 'Arial, sans-serif', padding: '2rem', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
                 <label style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                    4) Do you want to use a custom UI?
+                    {backendChoice === "python" ? "5" : "4"}) Do you want to use a custom UI?
                 </label>
                 <div style={{ margin: '1rem 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -190,6 +235,7 @@ export function StackAndAuthMethodSelectorHelper() {
             <StartGuide
                 frontend={frontendChoice}
                 backend={backendChoice}
+                backendFramework={backendFramework}
                 selectedAuthMethod={selectedAuthMethod}
                 isCustomUI={isCustomUI}
             />
@@ -200,6 +246,7 @@ export function StackAndAuthMethodSelectorHelper() {
 function StartGuide(props: {
     frontend: FrontendChoice,
     backend: BackendChoice,
+    backendFramework: BackendFramework | undefined,
     selectedAuthMethod: AuthMethods
     isCustomUI: boolean
 }) {

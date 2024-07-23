@@ -2,6 +2,8 @@ export type FrontendChoice = "react" | "angular" | "vue" | "vanillajs" | "nextjs
 
 export type BackendChoice = "nodejs" | "golang" | "python" | "php" | "c#" | "java" | "nextjs" | "remix" | undefined;
 
+export type BackendFramework = "express" | "flask" | "fastapi" | "drf" | "http"
+
 export type AuthMethods = "emailpassword" | "thirdparty" | "passwordless" | "thirdpartyemailpassword" | "thirdpartypasswordless" | "all-auth" | "mfa" | "multi-tenant";
 
 export const FRAMEWORKS_WITH_ONLY_CUSTOM_UI: FrontendChoice[] = ["vanillajs", "react-native", "ios", "android", "flutter"]
