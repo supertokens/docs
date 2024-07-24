@@ -30,5 +30,11 @@ export default function ShowIfHasExamlpeApp(props: {
         return null;
     }
 
+    if (selection.backend === "nodejs") {
+        if (selection.backendFramework === "nodejs-other") {
+            return null;
+        }
+    }
+
     return props.children;
 }
