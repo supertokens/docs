@@ -2,10 +2,8 @@ import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
-import { recursiveMapAllChildren } from "../utils";
-import AngularUIImplementation from "../reusableSnippets/angularUIImplementation";
 import VueUIImplementation from "../reusableSnippets/vueUIImplementation";
-import { Answer } from "../question"
+import { recursiveMapAllChildren } from "../utils";
 
 const copyTabIdentifier = "~COPY-TABS=";
 
@@ -17,9 +15,9 @@ export default function FrontendPreBuiltUITabs(props: any) {
   ];
 
   if (props.showMobileTab !== undefined) {
-    values.push({ 
-      label: "Mobile", 
-      value: "mobile", 
+    values.push({
+      label: "Mobile",
+      value: "mobile",
     });
   }
 
