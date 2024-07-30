@@ -603,6 +603,15 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
             }
 
             /**
+             * For snippets that contain supertokensUIInit, we add the dic id param parameter
+             */
+            if (line.includes("supertokensUIInit(")) {
+                line = line.split("supertokensUIInit(").join("supertokensUIInit(\"supertokensui\", ");
+                newLines.push(line);
+                continue;
+            }
+
+            /**
              * For snippets that use v5 react-router-dom we use react-router-dom5 to import
              * If the import contains react-router-dom5 we replace it with react-router-dom for the final
              * rendered snippet
