@@ -44,7 +44,7 @@ export default function RecipeSelector(props) {
   };
   useEffect(() => {
     const closeDropDown = (e) => {
-      if (e.target.classList[0].startsWith("recipe_selector")) {
+      if (e.target.classList[0]?.startsWith("recipe_selector")) {
         // no-op
       } else {
         setOpen(false);
