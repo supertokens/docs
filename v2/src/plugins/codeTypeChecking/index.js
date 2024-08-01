@@ -373,6 +373,12 @@ Enabled: true,
         }
         codeSnippet = `export { }\n// Original: ${mdFile}\n${codeSnippet}`; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
 
+        // vue requires use of <script> in the TS snippet, which is valid, but causes compilation errors. So we remove them in case vue is in the snippet:
+        if (codeSnippet.includes("\"vue\"") || codeSnippet.includes("'vue'")) {
+            codeSnippet = codeSnippet.replaceAll("<script lang=\"ts\">", "");
+            codeSnippet = codeSnippet.replaceAll("</script>", "");
+        }
+
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName, { recursive: true }, async (err) => {

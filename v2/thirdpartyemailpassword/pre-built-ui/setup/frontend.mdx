@@ -334,100 +334,99 @@ Before we initialize the `supertokens-web-js` SDK let's see how we will use it i
     askForAPIDomain
     askForWebsiteDomain>
 
-Before we initialize the `supertokens-auth-react` SDK let's see how we will use it in our Vue app
+Before we initialize the `supertokens-web-js` SDK let's see how we will use it in our Vue app
 
 **Architecture**
 
-- The `supertokens-auth-react` SDK is responsible for rendering the login UI, handling authentication flows and session management.
-- Using `supertokens-auth-react`'s pre-built UI does not increase application's bundle size. React is only added to authentication-related routes. 
+- The `supertokens-web-js` SDK is responsible for session management and providing helper functions to check if a session exists, or validate the access token claims on the frontend (for example, to check for user roles before showing some UI). We will initialise this SDK on the root of your Vue app, so that all pages in your app can use it.
+- We will create a `^{form_websiteBasePath}*` route in the Vue app which will render our pre built UI which will also need to be initialised, but only on that route.
 
 **Creating the `^{form_websiteBasePath}` route**
 
-- Create a new file `AuthView.vue`, this Vue component will be used to render the auth component
-
-- Create a react component `Supertokens.tsx`. This component will be used to render appropriate UI when user visits the login page.
-
-    ```tsx title="/components/Supertokens.tsx"
-    import * as SuperTokens from "supertokens-auth-react";
-    import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
-    ^{prebuiltuiimport}
-
-    // highlight-start
-    function SuperTokensReactComponent(props: any) {
-        if (canHandleRoute([^{recipePreBuiltUINameCapitalLetters}])) {
-            return getRoutingComponent([^{recipePreBuiltUINameCapitalLetters}]);
-        }
-        return "Route not found";
-    }
-    // highlight-end
-
-    export default SuperTokensReactComponent;
-    ```
-
-- Load `SuperTokensReactComponent` in the `AuthView.vue`  component
-
-    ```html title="/views/AuthView.vue"
+- Create a new file `AuthView.vue`, this Vue component will be used to render the auth component:
+    ```tsx
+    import {init as supertokensUIInit} from "supertokens-auth-react-script";
+    import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty";
+    import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword";
+    import supertokensUISession from "supertokens-auth-react-script/recipe/session";
     <script lang="ts">
-    import * as React from "react";
-    import * as ReactDOM from "react-dom";
-    import SuperTokensReactComponent from "../components/Supertokens";
-    export default {
-        mounted: () => {
-            ReactDOM.render(
-                React.createElement(SuperTokensReactComponent as React.FC),
-                document.getElementById("authId")
-            );
-        },
-    };
+        import { defineComponent, onMounted, onUnmounted } from 'vue';
+        export default defineComponent({
+            setup() {
+                const loadScript = (src: string) => {
+                    const script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.src = src;
+                    script.id = 'supertokens-script';
+                    script.onload = () => {
+                        supertokensUIInit({
+                            appInfo: {
+                                appName: "^{form_appName}",
+                                apiDomain: "^{form_apiDomain}",
+                                websiteDomain: "^{form_websiteDomain}",
+                                apiBasePath: "^{form_apiBasePath}",
+                                websiteBasePath: "^{form_websiteBasePath}"
+                            },
+                            recipeList: [
+                                supertokensUIEmailPassword.init(),
+                                supertokensUIThirdParty.init({
+                                    signInAndUpFeature: {
+                                        providers: [
+                                            supertokensUIThirdParty.Github.init(),
+                                            supertokensUIThirdParty.Google.init(),
+                                            supertokensUIThirdParty.Facebook.init(),
+                                            supertokensUIThirdParty.Apple.init(),
+                                        ]
+                                    }
+                                }),
+                                supertokensUISession.init(),
+                            ],
+                        });
+                    };
+                    document.body.appendChild(script);
+                };
+
+                onMounted(() => {
+                    loadScript('https://cdn.jsdelivr.net/gh/supertokens/prebuiltui@v0.44.0/build/static/js/main.38fe3894.js');
+                });
+
+                onUnmounted(() => {
+                    const script = document.getElementById('supertokens-script');
+                    if (script) {
+                        script.remove();
+                    }
+                });
+            },
+        });
     </script>
 
     <template>
-        <main>
-            <div id="authId" />
-        </main>
+        <div id="supertokensui" />
     </template>
     ```
+    - In the `loadScript` function, we provide the SuperTokens config for the UI. We add the emailpassword, session and social login recipes along with Github, Google, Facebook and Apple login buttons. 
 
-- Initialize the `supertokens-auth-react` SDK in your Vue app's `main.ts` file. This will provide session management across your entire application.
+- Initialize the `supertokens-web-js` SDK in your Vue app's `main.ts` file. This will provide session management across your entire application.
 
     ```tsx title="/main.ts "
     // @ts-ignore
     import { createApp } from "vue";
-    import * as SuperTokens from "supertokens-auth-react";
-    import * as ThirdParty from "supertokens-auth-react/recipe/thirdparty";
-    import { Github, Google, Facebook, Apple } from "supertokens-auth-react/recipe/thirdparty";
-    import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
-    import Session from "supertokens-auth-react/recipe/session";
-
+    import SuperTokens from "supertokens-web-js";
+    import Session from "supertokens-web-js/recipe/session";
     // @ts-ignore
     import App from "./App.vue";
     // @ts-ignore
     import router from "./router";
 
     SuperTokens.init({
-        // highlight-start
         appInfo: {
             appName: "^{form_appName}",
             apiDomain: "^{form_apiDomain}",
-            websiteDomain: "^{form_websiteDomain}",
             apiBasePath: "^{form_apiBasePath}",
-            websiteBasePath: "^{form_websiteBasePath}"
         },
         recipeList: [
-            ThirdParty.init({
-                signInAndUpFeature: {
-                    providers: [
-                        Github.init(),
-                        Google.init(),
-                        Facebook.init(),
-                        Apple.init(),
-                    ],
-                },
-            }),
-            EmailPassword.init(),
             Session.init(),
         ],
-        // highlight-end
     });
 
     const app = createApp(App);
@@ -435,6 +434,7 @@ Before we initialize the `supertokens-auth-react` SDK let's see how we will use 
     app.use(router);
 
     app.mount("#app");
+
     ```
 
 </AppInfoForm>
@@ -627,6 +627,8 @@ Update your Vue router so that all auth related requests load the `AuthView` com
 import { createRouter, createWebHistory } from "vue-router";
 // @ts-ignore
 import HomeView from "../views/HomeView.vue";
+// @ts-ignore
+import AuthView from "../views/AuthView.vue";
 
 const router = createRouter({
     // @ts-ignore
@@ -640,8 +642,7 @@ const router = createRouter({
         {
             path: "^{form_websiteBasePath}/:pathMatch(.*)*",
             name: "auth",
-            // @ts-ignore
-            component: () => import("../views/AuthView.vue"),
+            component: AuthView,
         },
     ],
 });
