@@ -79,7 +79,7 @@ async function addCodeSnippetToEnv(mdFile, isSwiftEnabled) {
                         } else if (currLineTrimmed === "```dart" || currLineTrimmed.startsWith("```dart ")) {
                             currentCodeLanguage = "dart";
                         } else {
-                            return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE in file ${mdFile}.`));
+                            return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE ${currLineTrimmed} in file ${mdFile}.`));
                         }
                     }
                 }
