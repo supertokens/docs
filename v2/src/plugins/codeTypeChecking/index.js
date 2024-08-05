@@ -79,7 +79,7 @@ async function addCodeSnippetToEnv(mdFile, isSwiftEnabled) {
                         } else if (currLineTrimmed === "```dart" || currLineTrimmed.startsWith("```dart ")) {
                             currentCodeLanguage = "dart";
                         } else {
-                            return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE in file ${mdFile}.`));
+                            return rej(new Error(`UNABLE TO RECOGNISE LANGUAGE ${currLineTrimmed} in file ${mdFile}.`));
                         }
                     }
                 }
@@ -373,6 +373,12 @@ Enabled: true,
         }
         codeSnippet = `export { }\n// Original: ${mdFile}\n${codeSnippet}`; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
 
+        // vue requires use of <script> in the TS snippet, which is valid, but causes compilation errors. So we remove them in case vue is in the snippet:
+        if (codeSnippet.includes("\"vue\"") || codeSnippet.includes("'vue'")) {
+            codeSnippet = codeSnippet.replaceAll("<script lang=\"ts\">", "");
+            codeSnippet = codeSnippet.replaceAll("</script>", "");
+        }
+
         let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
         await new Promise(async (res, rej) => {
             fs.mkdir('src/plugins/codeTypeChecking/jsEnv/snippets/' + folderName, { recursive: true }, async (err) => {
@@ -603,6 +609,15 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
             }
 
             /**
+             * For snippets that contain supertokensUIInit, we add the dic id param parameter
+             */
+            if (line.includes("supertokensUIInit(")) {
+                line = line.split("supertokensUIInit(").join("supertokensUIInit(\"supertokensui\", ");
+                newLines.push(line);
+                continue;
+            }
+
+            /**
              * For snippets that use v5 react-router-dom we use react-router-dom5 to import
              * If the import contains react-router-dom5 we replace it with react-router-dom for the final
              * rendered snippet
@@ -644,10 +659,10 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
             }
 
             /**
-             * For snippets that use supertokens-web-js as an HTML script we import supertokens-web-js-script for types.
+             * For snippets that use supertokens-web-js as an HTML script we import supertokens-web-js-script  and supertokens-auth-react-script  for types.
              * If the line contains this we skip adding the line
              */
-            if (line.includes("supertokens-web-js-script")) {
+            if (line.includes("supertokens-web-js-script") || line.includes("supertokens-auth-react-script")) {
                 continue;
             }
 

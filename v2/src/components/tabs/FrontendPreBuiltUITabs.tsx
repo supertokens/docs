@@ -2,10 +2,8 @@ import React from "react";
 let Tabs = require("@theme/Tabs").default;
 let TabItem = require("@theme/TabItem").default;
 import { childContainsTabItemWithValue } from "./utils";
-import { recursiveMapAllChildren } from "../utils";
-import AngularUIImplementation from "../reusableSnippets/angularUIImplementation";
 import VueUIImplementation from "../reusableSnippets/vueUIImplementation";
-import { Answer } from "../question"
+import { recursiveMapAllChildren } from "../utils";
 
 const copyTabIdentifier = "~COPY-TABS=";
 
@@ -17,9 +15,9 @@ export default function FrontendPreBuiltUITabs(props: any) {
   ];
 
   if (props.showMobileTab !== undefined) {
-    values.push({ 
-      label: "Mobile", 
-      value: "mobile", 
+    values.push({
+      label: "Mobile",
+      value: "mobile",
     });
   }
 
@@ -72,29 +70,7 @@ function DefaultReactJSTabItem() {
 }
 
 function DefaultAngularTabItem() {
-  return (
-    <TabItem value="angular" mdxType="TabItem">
-      <div className="admonition admonition-caution alert alert--warning">
-        <div className="admonition-heading">
-          <h5>
-            <span className="admonition-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-                <path fillRule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z">
-                </path>
-              </svg>
-            </span>
-            Important
-          </h5>
-        </div>
-        <div className="admonition-content">
-          SuperTokens does not provide non-React UI components. So we will be using the <code>supertokens-auth-react</code> SDK and will inject the React components to show the UI. Therefore, the code snippet below refers to the <code>supertokens-auth-react</code> SDK.
-        </div>
-      </div>
-      <div>
-        ~COPY-TABS=reactjs
-      </div>
-    </TabItem>
-  );
+  throw new Error("Should never come here cause we add angular tab item all the time");
 }
 
 function DefaultVueTabItem() {
