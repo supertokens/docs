@@ -70,7 +70,7 @@ function DefaultReactJSTabItem() {
 }
 
 function DefaultAngularTabItem() {
-  throw new Error("Should never come here cause we add angular tab item all the time");
+  return <></>;
 }
 
 function DefaultVueTabItem() {
