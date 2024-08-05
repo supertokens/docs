@@ -134,6 +134,48 @@ SuperTokens.init({
 
 </TabItem>
 
+<TabItem value="angular">
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+import supertokensUIMultitenancy from "supertokens-auth-react-script/recipe/multitenancy";
+supertokensUIInit({
+  appInfo: {
+    appName: "^{form_appName}",
+    apiDomain: "^{form_apiDomain}",
+    websiteDomain: "^{form_websiteDomain}",
+    apiBasePath: "^{form_apiBasePath}",
+    websiteBasePath: "^{form_websiteBasePath}"
+  },
+  // highlight-start
+  usesDynamicLoginMethods: true,
+  // highlight-end
+  recipeList: [
+    // Other recipes..
+    supertokensUISession.init(),
+    // highlight-start
+    supertokensUIMultitenancy.init({
+      override: {
+        functions: (oI) => {
+          return {
+            ...oI,
+            getTenantId: async () => {
+              // We treat the sub domain as the tenant ID
+              return window.location.host.split('.')[0]
+            }
+          }
+        }
+      },
+    })
+    // highlight-end
+  ]
+});
+```
+
+</TabItem>
+
 </FrontendPreBuiltUITabs>
 
 </AppInfoForm>
@@ -471,6 +513,68 @@ Session.init({
     },
 })
 ```
+Above, in `Session.init` on the frontend, we add the `hasAccessToCurrentDomain` claim validator to the global validators. This means, that [whenever we check protect a route](../sessions/protecting-frontend-routes), it will check if `hasAccessToCurrentDomain` has passed, and if not, SuperTokens will redirect to the user to their right sub domain (via the values set in the `AllowedDomainsClaim` session claim).
+
+</TabItem>
+
+<TabItem value="angular">
+
+You will have to make changes to the auth route config, as well as to the `supertokens-web-js` SDK config at the root of your application:
+
+This change is in your auth route config.
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
+import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+import supertokensMultitenancy from "supertokens-web-js-script/recipe/multitenancy";
+
+supertokensUISession.init({
+    override: {
+        functions: (oI) => ({
+            ...oI,
+            getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => [
+                ...claimValidatorsAddedByOtherRecipes,
+                {
+                    ...supertokensMultitenancy.AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
+                    onFailureRedirection: async () => {
+                        let claimValue = await supertokensUISession.getClaimValue({
+                            claim: supertokensMultitenancy.AllowedDomainsClaim,
+                        });
+                        return "https://" + claimValue![0];
+                    },
+                },
+            ],
+        }),
+    },
+})
+```
+
+This change goes in the `supertokens-web-js` SDK config at the root of your application:
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+import { AllowedDomainsClaim } from 'supertokens-web-js/recipe/multitenancy';
+
+Session.init({
+    override: {
+        functions: (oI) => ({
+            ...oI,
+            getGlobalClaimValidators: ({ claimValidatorsAddedByOtherRecipes }) => [
+                ...claimValidatorsAddedByOtherRecipes,
+                {
+                    ...AllowedDomainsClaim.validators.hasAccessToCurrentDomain(),
+                    onFailureRedirection: async () => {
+                        let claimValue = await Session.getClaimValue({
+                            claim: AllowedDomainsClaim,
+                        });
+                        return "https://" + claimValue![0];
+                    },
+                },
+            ],
+        }),
+    },
+})
+```
+
 Above, in `Session.init` on the frontend, we add the `hasAccessToCurrentDomain` claim validator to the global validators. This means, that [whenever we check protect a route](../sessions/protecting-frontend-routes), it will check if `hasAccessToCurrentDomain` has passed, and if not, SuperTokens will redirect to the user to their right sub domain (via the values set in the `AllowedDomainsClaim` session claim).
 
 </TabItem>

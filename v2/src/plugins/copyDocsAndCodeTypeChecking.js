@@ -15,6 +15,70 @@ if (typeof String.prototype.replaceAll === "undefined") {
     }
 }
 
+async function checkFrontendSDKRelatedDocs(mdPath) {
+    if (mdPath.includes("/change_me")) {
+        return
+    }
+    return new Promise((res, rej) => {
+        fs.readFile(mdPath, 'utf8', async (err, data) => {
+            // count the number of times <TabItem value="reactjs"> or <TabItem value='reactjs'> appears in the data
+            let count = (data.match(new RegExp('<TabItem value="reactjs">', 'g')) || []).length + (data.match(new RegExp('<TabItem value=\'reactjs\'>', 'g')) || []).length;
+            if (count > 0) {
+                // make sure that show_ui_switcher: true is also in the file
+                if (!mdPath.includes("pre-built-ui")) { // we do this cause the pre built UI section in the docs only talks about pre built Ui, so no custom switcher is needed for those pages.
+                    if (data.indexOf("show_ui_switcher: true") === -1) {
+                        rej(new Error("show_ui_switcher: true is not in the file: " + mdPath));
+                    }
+                }
+
+                // get count of <TabItem value="angular"> or <TabItem value='angular'> appears in the data
+                let angularCount = (data.match(new RegExp('<TabItem value="angular">', 'g')) || []).length + (data.match(new RegExp('<TabItem value=\'angular\'>', 'g')) || []).length;
+                if (angularCount !== count) {
+                    rej(new Error("The number of angular and reactjs tabs are not equal: " + mdPath));
+                }
+            }
+
+            // get the lines from the file which contain the string supertokens-auth-react-script
+            let lines = data.split("\n");
+            let linesWithScript = lines.filter(line => line.includes("supertokens-auth-react-script"));
+            if (linesWithScript.length > 0) {
+                const ALLOWED_LINES = [
+                    `import {init as supertokensUIInit} from "supertokens-auth-react-script";`,
+                    `import {init as supertokensUIInit} from "supertokens-auth-react-script"`,
+                    `import supertokensUIMultitenancy from "supertokens-auth-react-script/recipe/multitenancy";`,
+                    `import supertokensUIMultitenancy from "supertokens-auth-react-script/recipe/multitenancy"`,
+                    `import supertokensUISession from "supertokens-auth-react-script/recipe/session";`,
+                    `import supertokensUISession from "supertokens-auth-react-script/recipe/session"`,
+                    `import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword";`,
+                    `import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword"`,
+                    `import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty";`,
+                    `import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty"`,
+                    `import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless";`,
+                    `import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless"`,
+                    `import supertokensUIEmailVerification from "supertokens-auth-react-script/recipe/emailverification";`,
+                    `import supertokensUIEmailVerification from "supertokens-auth-react-script/recipe/emailverification"`,
+                    `import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth";`,
+                    `import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"`,
+                    `import supertokensUITOTP from "supertokens-auth-react-script/recipe/totp";`,
+                    `import supertokensUITOTP from "supertokens-auth-react-script/recipe/totp"`,
+                    `import supertokensUIUserRoles from "supertokens-auth-react-script/recipe/userroles";`,
+                    `import supertokensUIUserRoles from "supertokens-auth-react-script/recipe/userroles"`,
+                    `import supertokensUI from "supertokens-auth-react-script"`,
+                    `import supertokensUI from "supertokens-auth-react-script";`
+                ]
+
+                for (const line of linesWithScript) {
+                    if (!ALLOWED_LINES.includes(line.trim())) {
+                        rej(new Error("The line is not allowed: " + line + " in the file: " + mdPath));
+                    }
+                }
+            }
+
+            res();
+        });
+    });
+}
+
 module.exports = function (context, opts) {
 
     return {
@@ -35,6 +99,12 @@ module.exports = function (context, opts) {
                         if (!skipCopies || !isCopy) {
                             origDocs.push(mdPath);
                         }
+                    }
+
+                    // we check some extra conditions related to https://github.com/supertokens/docs/pull/822/ PR here
+                    // which are not related to copy docs or code type checking, but this place is fine for it anyway:
+                    for (const mdPath of results) {
+                        await checkFrontendSDKRelatedDocs(mdPath);
                     }
                     res();
                 });
