@@ -36,5 +36,11 @@ export default function ShowIfHasExamlpeApp(props: {
         }
     }
 
+    if (selection.frontend === "angular" || selection.frontend === "vue") {
+        if (selection.selectedAuthMethod === "multi-tenant") {
+            return null;
+        }
+    }
+
     return props.children;
 }
