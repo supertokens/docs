@@ -1,0 +1,115 @@
+---
+id: sessions
+title: Sessions
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/troubleshooting/sessions.mdx -->
+
+# Troubleshooting Sessions
+
+The following list is a handful of errors you can run into with Supertokens Sessions and steps to fix them:
+
+## Supertokens configuration issues
+
+You can get more details by checking the [appInfo page](../appInfo)
+
+### apiDomain
+
+* apiDomain set on the frontend doesn't match the actual API domain - so the interceptor is not called.
+
+### apiBasePath
+
+* apiBasePath does not match on the frontend and backend:
+    * This can imply that the refresh cookie is set on a different path, breaking the refresh flow.
+    * If the inital refresh API call (without a session) is returning a 200 instead of 404, it means that the user's backend is returning 200 for not found routes (which is strange), but it has happened before. This would then mean that the frontend prints the warning of front token is not being able to be set: Failed to retrieve local session state from cookies after a successful session refresh. This indicates a configuration error or that the browser is preventing cookie writes.
+* If the refresh API returns a 500 error -> this implies there are multiple session tokens (which happens cause of cookieDomain change), but you've forgotten to set the olderCookieDomain config in backend session.init.
+* If you're seeing a `tenant not found` error in your api calls, its likely that the apiBasePath is misconfigured (not matching). This can happen if something like `/api/auth` is on the frontend, and `/api` is on the backend. This way, the `auth` part of the path is considered the tenantid, which probably wont exist.
+
+### websiteDomain
+
+* websiteDomain is set to 127.0.0.1 but website is being loaded on the browser using localhost (or vice versa).
+
+### websiteBasePath
+
+* On the frontend, websiteBasePath is set to an incorrect value. This leads the auth page to navigate to some other page than what is expected.
+
+### apiGatewayPath
+
+* If you're using a reverse proxy that strips away part of the path, then be sure to configure apiGatewayPath on the frontend and backend.
+
+### cookieDomain
+
+* cookieDomain not correctly set which yields access token and others not being attached to apiDomain.
+* Changing of cookieDomain value can lead to older session tokens (refresh token) still lingering around in the browser, and if that refresh token gets picked up during session refreshing, then refreshing will always fail - even for new logins. The solution is to clear all cookies in the browser.
+* Changing cookieDomain on the backend whilst a session exists may lead to having two sAccessTokens which will cause issues like the session not being verified correctly. The solution here is to manually clear the cookies and relogin.
+
+### General configuration issues
+
+* Imported from different recipe by mistake. Verify what recipe you are importing from.
+
+## Improper Headers
+
+* sameSite is none, but user set the cookie secure flag to false.
+* Cookies have secure attribute in them, but the API domain being queried is HTTP. Either use HTTPS or remove secure attribute in development.
+* If you're seeing front-token change on the frontend during api request, (like the user id in it changing, or some claim changing) even though you have not made the change, the issue is usually due to caching. This can be solved by adding a header like `res.setHeader('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');` to your apis.
+
+### CORS Errors
+
+Check out [our section on CORS](./cors-issues) for more information.
+
+* Sometimes, CORS can be a problem during development. To solve this issue, you can disable CORS in your browser using https://alfilatov.com/posts/run-chrome-without-cors/.
+* anti-csrf is not being provided (either token if that is the mode, or custom header).
+
+#### Access-Control-Expose-Headers
+
+* `Access-Control-Expose-Headers` not set properly - which prevents frontend from reading the id-refresh-token, which prevents setting that state on the frontend.
+* `Access-Control-Expose-Headers` set to `*` - which prevents frontend from reading the front-token, which prevents setting that state on the frontend. Even though it's star, it won't work cause of using credentials.
+* You have explicitly set `Access-Control-Expose-Headers` and their values are incorrect. Your headers override ours. This can cause an issue in which the access token and stuff gets set, but the sIRTFrontend and frontToken on the cookie don't get set.
+
+#### Access-Control-Allow-Headers
+
+* `Access-Control-Allow-Headers` not set properly, failing CORS.
+
+#### Access-Control-Allow-Origin
+
+* `Access-Control-Allow-Origin` set to `*` which prevents browser from using setCredneitials: true. And if setCrednetials is false, then cookies are not sent.
+
+#### Access-Control-Allow-Credentials
+
+* `Access-Control-Allow-Credentials` may be false preventing cookies from being sent. This can happen if the frontend interception is not happening, or if you've manually set that header to false.
+
+## Implementation issues
+
+* No supertokens.init called.
+* Session.init not called, or being called after using axios / fetch (even though interceptor is being added).
+* sessionScope not correctly set yields sIRTFrontend not being set even after session refreshing returns 401 on first visit.
+* You're using another session management solution like django's built in which returns 401 causing refresh session to be called which returns 200, and then it goes in an infinite loop.
+* You're using auto generated client code (from swagger for example), which also seems to add a fetch interceptor. That fetch interceptor probably runs after ours, and if the user gives `credentials: "same-origin",` to the headers for that lib, the cookies won't be sent.
+* Your reverse proxy has a size limit on the response payload / header (can be configured on nginx). This in turn causes the access token from not being sent to the frontend, and the frontend getting a 502 (or another 5xx) error.
+* Session being created via an API that is not called by the frontend of your app. This can happen in case you are using some third party auth provider that calls their API webhook directly.
+* Calling an APi from server side rendering instead of from the client.
+* You've accidentally stored stale access token in memory and are using that in requests instead of reading each time from storage.
+* You have a proxy in the middle of frontend and backend which strips away necessary headers like cookies. This causes weird behaviour where refresh might return unauthorised and the frontend would clear frontend set cookies, but the backend sAccessToken and stuff still remains.
+* If `verifySession` returns 403, and the response contains `claimValidationErrors: id: st-ev`, this means that the user needs to go through the email verification flow.
+* document.cookie doesn't work. This usually happens in case of electron apps or some other browser emulation tech. In this case, we see infinite refreshes being called. To solve this, you should pass your own cookieHandler in the init function call.
+* Custom interceptor added which messes up refresh APIs. If using axios, you should add your interceptor AFTER both addAxiosInterceptor is called and after supertokens.init is called, this way, even if they are breaking the axios interface, it will still all work.
+* There was a case where the frontend was sending one sAccessToken, but the backend was getting 2 of them. This happened cause of some issue in golang, fiber framework which somehow caused cookies to be duplicated on the backend, and then our middleware saw two cookies instead of one.
+* When your frontend needs to run in an iframe that can be embedded in any website & third parties cookies are blocked, or If your website and API domain do not share the same top level / base domain (for example API domain is `api.abc.com` or `abc.com` and website domain is `xyz.com`), Safari won't send cookies if third party cookies are blocked. You can fix this by switching to  [header-based sessions](../common-customizations/sessions/token-transfer-method).
+
+### Using the wrong fetch
+
+* Using `node-fetch` instead of browser fetch even on client side. You might be using node-fetch for server side rendering and then not realising that they are using that for client as well. Our interceptors are added to window.fetch so your node-fetch wouldn't get the interceptors added, preventing a call to the refresh API.
+* Using sveltekit's fetch instead of window.fetch. Switch to using window.fetch.
+
+### Mobile issues
+
+* In iOS, when you open webview in the app and it has a cookie like sAccessToken, and the react native app itself has header-based auth, then when you make requests in the RN app to the backend, it adds the sAccessToken from the web UI cookie as well! So the request has both, the auth bearer token and the sAccessToken in it. Now, this works fine when there is an auth bearer token, as the backend SDK just uses that. However, if you log out in the RN app, and then when you try and login, the request will have just the sAccessToken. Now if that sAccessToken has expired, then the sign in API will send a 401, and the frontend wont even try and refresh cause it (correctly) thinks that the session doesn't exist! The way to fix this would be to enforce using [header-based auth](../common-customizations/sessions/token-transfer-method) on the backend for mobile apps.
+* In react native you may have either accidentally used `CookieManager.clearAllCookies` or you might be manually adding cookies while replacing existing ones.
+
+## Deployment issues
+
+* For domains like heroku, if the website domain and api domain are not equal or not a sub domain (disregard the .herokuapp.com common part), then same site has to be set to none. Note that this will not work on safari. Switch to using [header-based auth](../common-customizations/sessions/token-transfer-method).
+* The apiDomain and websiteDomain are on a shared domain (like azurewebsite.net) and the api and website are diffrent sub domains of this - but our SDK doesn't recognise that this is a shared domain and sets the cookie same site to lax, even though it should be none.
+* API and website domain do not share the same TLD (for example API is on `api.example.com` and website is not on `*.example.com` and not on `example.com`), so Safari will not send cookies even if `sameSite` is `none`. Switch to using [header-based auth.](../common-customizations/sessions/token-transfer-method)

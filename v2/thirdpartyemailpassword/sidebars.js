@@ -732,7 +732,9 @@ module.exports = {
       items: [
         "testing/testing-with-postman",
         "troubleshooting/how-to-troubleshoot",
-        "troubleshooting/cors-issues"
+        "troubleshooting/cors-issues",
+        "troubleshooting/sessions",
+        "troubleshooting/social-login"
       ],
     },
     {
