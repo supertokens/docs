@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import clsx from "clsx";
 import CloseIcon from "../../../static/img/recipe_selector_close.png";
-import OpenIcon from "../../../static/img/recipe_selector_open.png";
 
-import { useLocation } from '@docusaurus/router';
+import { useLocation } from "@docusaurus/router";
 
 export default function RecipeSelector(props) {
-  const { pathname } = useLocation()
+  const { pathname } = useLocation();
   const currDocs = pathname.split("/")[2];
+  const ref = useRef(null);
   const [open, setOpen] = useState(false);
   const activeSelector = (id) => {
     return id === currDocs;
@@ -42,25 +42,33 @@ export default function RecipeSelector(props) {
         return "Select Recipe";
     }
   };
-  useEffect(() => {
-    const closeDropDown = (e) => {
-      if (e.target.classList[0]?.startsWith("recipe_selector")) {
-        // no-op
-      } else {
-        setOpen(false);
-      }
-    };
-    window.addEventListener("click", closeDropDown);
+  const closeDropdownMenuOnOusideClick = useCallback((e) => {
+    if (ref.current && !ref.current.contains(e.target)) {
+      setOpen(false);
+    }
   }, []);
+
+  useEffect(() => {
+    window.addEventListener("click", closeDropdownMenuOnOusideClick);
+    return () =>
+      window.removeEventListener("click", closeDropdownMenuOnOusideClick);
+  }, []);
+
   return (
-    <div className="recipe_selector">
+    <div className="recipe_selector" ref={ref}>
       <div
         onClick={() => setOpen(!open)}
         className={clsx("recipe_selector__dropdown", { open: open })}
       >
         <span>{label()}</span>
         <div>
-          <img src={CloseIcon} style={{ transform: open ? "rotate(180deg)" : "", transition: "all 250ms linear" }} />
+          <img
+            src={CloseIcon}
+            style={{
+              transform: open ? "rotate(180deg)" : "",
+              transition: "all 250ms linear",
+            }}
+          />
         </div>
       </div>
       <div
@@ -77,7 +85,9 @@ export default function RecipeSelector(props) {
                 active: activeSelector("thirdpartyemailpassword"),
               })}
             >
-              <a href="/docs/thirdpartyemailpassword/introduction">Email password + Social / Enterprise Login</a>
+              <a href="/docs/thirdpartyemailpassword/introduction">
+                Email password + Social / Enterprise Login
+              </a>
             </li>
             <li
               className={clsx("recipe_selector__menu__auth_methods_items", {
@@ -91,28 +101,36 @@ export default function RecipeSelector(props) {
                 active: activeSelector("emailpassword"),
               })}
             >
-              <a href="/docs/emailpassword/introduction">Email password Login</a>
+              <a href="/docs/emailpassword/introduction">
+                Email password Login
+              </a>
             </li>
             <li
               className={clsx("recipe_selector__menu__auth_methods_items", {
                 active: activeSelector("thirdpartypasswordless"),
               })}
             >
-              <a href="/docs/thirdpartypasswordless/introduction">Social / Enterprise Login + Passwordless</a>
+              <a href="/docs/thirdpartypasswordless/introduction">
+                Social / Enterprise Login + Passwordless
+              </a>
             </li>
             <li
               className={clsx("recipe_selector__menu__auth_methods_items", {
                 active: activeSelector("thirdparty"),
               })}
             >
-              <a href="/docs/thirdparty/introduction">Social / Enterprise Login</a>
+              <a href="/docs/thirdparty/introduction">
+                Social / Enterprise Login
+              </a>
             </li>
             <li
               className={clsx("recipe_selector__menu__auth_methods_items", {
                 active: activeSelector("phonepassword"),
               })}
             >
-              <a href="/docs/phonepassword/introduction">Phone Password Login</a>
+              <a href="/docs/phonepassword/introduction">
+                Phone Password Login
+              </a>
             </li>
           </ul>
         </div>
@@ -152,14 +170,18 @@ export default function RecipeSelector(props) {
                 active: activeSelector("microservice_auth"),
               })}
             >
-              <a href="/docs/microservice_auth/introduction">Microservice Authentication</a>
+              <a href="/docs/microservice_auth/introduction">
+                Microservice Authentication
+              </a>
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
                 active: activeSelector("multitenancy"),
               })}
             >
-              <a href="/docs/multitenancy/introduction">Multi tenancy / organizations</a>
+              <a href="/docs/multitenancy/introduction">
+                Multi tenancy / organizations
+              </a>
             </li>
           </ul>
         </div>
