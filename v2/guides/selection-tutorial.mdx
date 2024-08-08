@@ -15,6 +15,8 @@ import IsWebFrontend from "/src/components/guides/IsWebFrontend"
 import StackViewer from "/src/components/guides/StackViewer"
 import IsRecipeInit from "/src/components/guides/IsRecipeInit"
 import RenderDashboardRoute from "/src/components/guides/RenderDashboardRoute"
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Guided Tutorial
 
@@ -23,7 +25,7 @@ Titles that are wrapped in curly brackets signal conditional steps. That text wi
 
 
 To Do: 
-- [ ] Decide on the document structure
+- [x] Decide on the document structure
 - [ ] Add an initial draft with just the text content
 - [ ] Add code snippets
 - [ ] Add the correct reference links to the docs
@@ -39,26 +41,64 @@ To Do:
 
 ## Architecture Overview
 
-architecture image
+### {No SDK Support}
 
-### {Java/C#}
+:::note
+For custom architecture we will need a image without "PHP server". Just say "Your API" or something like that.
+:::
+
+![Architecture Schema](/img/other-framework-setup.png)
+
+
+#### {Java/C#/PHP}
 
 We do not have an SDK in the language that you have chosen. You will have to deploy
-and expose a separate Node.js server from your infrastructure. 
+and expose a separate authentication server from your infrastructure. 
 
-### {Go/Python with MTA/MFA}
+#### {Go/Python with MTA/MFA}
 
 At the moment we do not support MFA, Multi-factor authentication, in the language SDK. You will have to deploy a separate Node.js server 
 and expose the authentication routes.
 
-Explain how everyting will work in this architecture
+Let's look at the example above to better undestand how everything should be set up.
+The diagram shows a simple architecture in which a client frontend communicates, through a reverse proxy, with both the Node.js/Go/Python server 
+and your existing backend API.
+- The **Frontend SDK** will call the authentication routes and will automatically refresh the authentication flow if your Backend API returns `401` responses.
+- The Node.js/Go/Python server will expose the authentication routes. It will use our **Backend SDK** to complete the authentication flows and communicate with the **SuerTokens Core Service**.
+- You current API will have to [verify](/docs/verify) the JWT session tokens in order to validate if the user is authenticated. The tokens will be attached to each request by the Frontend SDK.
+
+To get a more extensive walkthrough on how the SuperTokens Architecture works, please refer to [this page](/docs/architecture).
+
+You can also find out more instructions on how to deploy a separate authentication server in our [extensive guide](/docs/community/other-frameworks).
+
 
 ### {Anything Else}
 
-You can directly integrate our SDK into your backend API. The authentication routes will be properly exposed based on your configuration.
+<Tabs defaultValue="ms"
+values={[
+{label: 'Managed service', value: 'ms'},
+{label: 'Self hosted', value: 'ss'},
+]}>
+<TabItem value="ms">
+<img src="/img/architecture/managed_service_without_dashboard.png" alt="Flowchart of architecture when using SuperTokens managed service" />
+</TabItem>
+<TabItem value="ss">
+<img src="/img/architecture/self_hosted_without_dashboard.png" alt="Flowchart of architecture when self-hosting SuperTokens" />
+</TabItem>
+</Tabs>
 
-Explain how everyting will work in this architecture 
 
+You can directly integrate SuperTokens in your existing services. The authentication routes will be properly exposed based on your configuration.
+There are three main components that you need to keep in mind here:
+- Frontend SDK - Provides pre built UI, helper functions and / or session management on the frontend.
+- Backend SDK -  Provides a middleware which exposes all the auth related APIs for your frontend to call. It also handles session management and access control for your APIs.
+- SuperTokens Core Service - This is called by the backend SDK to maintain state in the database. This can either be self hosted using docker or be managed by us if you sign up on supertokens.com
+
+:::note 
+Should we explain other terms here? Like Recipes and stuff
+:::
+
+To get a more extensive walkthrough on how the SuperTokens Architecture works, please refer to [this page](/docs/architecture).
 
 ## Project Structure
 
@@ -88,9 +128,9 @@ There are two files included in this project.
 As the name suggests, this file configures the SuperTokens SDK and the features that your instance will use.
 In it, you will find examples for the following setup steps:
 
-1. Connecting to the SuperTokens Core Service 
-2. Specifying info about your application 
-3. Selecting and initialising the authentication recipes that you need
+1. Connecting to the **SuperTokens Core Service** 
+2. Specifying details about your application 
+3. Selecting and initialising the authentication **recipes** that you need
 4. Configuring additional functionality like session or user management
 
 ##### `index.ts`
@@ -105,52 +145,169 @@ Besides that, you will also find examples on how to configure CORS, and how to s
 should we specify the tenant endpoint info only if it is set in the config?
 :::
 
-
 #### {Node.js/NestJS}
-#### {Python}
+
+##### `/auth`
+
+This section can be copy and pasted directly into your existing project without any additional changes. 
+In here you will find abstractions for initializing the **SDK**, communicating with the [**SuperTokens Core Service**](/core-service) and common **NestJS** utilities like `guards`, `filters`, `decorators` and `middlewares`.
+
+TODO: Talk about how the middleware will expose the auth routes
+
+##### `config.ts`
+
+In here you define a set of constants that describe configurations details on how the authentication flows will work based on your specific use case.
+The file includes information on the general app config that you should provide, the [SuperTokens Core Service](/core-service) endpoint, and the [recipes](/recipes) that will be used in your deployment.
+
+##### `app.controller.ts`
+
+Check this file for examples on how to use the guards and decorators exposed by the `/auth` folder. This way you can protect your endpoints and access session specific data.
+
+##### `app.module.ts`
+
+Provides an example of how to import the authentication functionality in your main **NestJS** module.
+
+##### `module.ts`
+
+Includes a `bootstrap` call that configures CORS and sets up an exception filter that will catch any authentication related errors and return proper responses.
+
+#### {Python/FastApi}
+
+:::note
+How do we include framework specific info? Do we extend the form options?
+:::
+
+##### `config.py`
+
+The config file exports a series of variables that will be used to initialize the **SuperTokens SDK** and specify which authentication flows to include.
+In here you will find examples on how to:
+
+- Setup the the **SuperTokens Core Service** connection
+- Specify details about your application 
+- Describe which authentication **recipes** your app will use 
+- Configure additional functionality like session or user management
+
+##### `app.py`
+
+This is where the SDK gets initialised based on the configuration that we have previously defined. 
+The authentication routes get included in your app through the `get_middleware` call.
+Other than that, the file includes examples on how you can secure your routes, manage session data, and how to configure CORS settings so that authenticaiton will properly work.
+
 #### {Go}
+
+##### `config.go`
+
+The config file exports a variable that will be used to initialize the **SuperTokens SDK** and specify which authentication flows to include.
+In here you will find examples on how to:
+
+- Setup the the **SuperTokens Core Service** connection
+- Specify details about your application 
+- Describe which authentication **recipes** your app will use 
+- Configure additional functionality like session or user management
+
+##### `main.go`
+
+This is where the SDK gets initialised based on the configuration that we have previously defined. 
+The authentication routes get included in your app through the `supertokens.Middleware` call.
+Other than that, the file includes examples on how you can secure your routes, manage session data, and how to configure CORS settings so that authenticaiton will properly work.
 
 We will include references to these files throught the following sections. This way you fill find concrete instructions on how and what to change based on your selected recipes and setup. 
 
 ### `/frontend`
 
-In here you will find prebuilt components that you can customize and use in your frontend app. 
+This folder includes a basic *SPA*, single page app, that uses the [SuperTokens Frontend SDK](/frontend-sdk) and a series of prebuilt components to provide an 
+authentication UI for users.
 
 #### {React}
+
+##### `config.ts`
+
+This file exports two main constants. The `SuperTokensConfig` object that describes the properties that should be used when we initialise the SDK.
+The `PreBuiltUIList`, which includes a series of prebuilt components that will be used in the authentication flows. 
+In here you will have to adjust the `getApiDomain` and `getWebsiteDomain` functions based on your existing app setup.  
+Besides that you will also have to change the configuration options for each specific authentication recipe. But we will get into more specific on this details in the next sections.
+
+##### `App.tsx`
+
+Here is where we make use of the previously defined config and we start everything off.
+1. The SDK gets initialised based on the configuration that we have previously defined. 
+2. The entire app tree is wrapped with the `SuperTokensWrapper` component. This will provide a state context that can be used in our next components.
+2. The authentication routes get included by calling `getSuperTokensRoutesForReactRouterDom` with our previously defined UI list.
+3. Routes that should be protected by the SDK are wrapped with the `SessionAuth` component
+
 #### {Angular}
+
+##### `config.ts`
+
+This file exports two functions:
+- `initSuperTokensUI` 
+- `initSuperTokensWebJS`, 
+In here you will have to adjust the `appInfo` section based on your existing app setup. 
+Besides that you will also have to change the configuration options for each specific authentication [recipe](/recipes). But we will get into more specific on this details in the next sections.
+
+##### `app/auth`
+
+##### `app/app-routing.module.ts`
+
+##### `app/app.component.ts`
+
 #### {Vue}
 
-General overview of the frontend folder structure based on the framework selection
-How the prebuilt components are used and where they are included.
+##### `config.ts`
+
+This file exports two functions:
+- `initSuperTokensUI` 
+- `initSuperTokensWebJS`, 
+In here you will have to adjust the `appInfo` section based on your existing app setup. 
+Besides that you will also have to change the configuration options for each specific authentication [recipe](/recipes). But we will get into more specific on this details in the next sections.
+
+##### `/router`
+##### `/views`
+##### `/main.ts`
 
 
-### {For Remix/Next.js/Astro/Capacitor}
+### {For Next.js}
 
-Custom app configuration. Talk about how everything is configured.  
+:::note
+Do we include options about the app router version in the initial form? 
+:::
 
-#### {Next.js}
-#### {Remix}
-#### {Astro}
-#### {Capacitor}
+##### `/api`
+##### `/config`
+##### `/components`
+##### `/auth`
+##### `layout.tsx`
 
 ### {Does not have a Starter Project}
 
+
+#### Backend Service Structure 
+
 Follow the steps described [here](/docs/community/other-frameworks) to get a better understanding on how you can spin up a separate authentication server and the integrate it in your existing backend infrastructure.
 
-#### Backend Service Configuration
-
-Explain how the express middlewares work and why use them.
+Use the info that we already wrote for node.js/go/python.
 Link a github example app/Dockerfile setup/where is the guide? Also provide docs link on how to deploy those things.
 
-#### Frontend Configuration
+#### Frontend Structure 
 
-##### {React/Angular/Vue}
+##### {React}
 
-Show examples from github. Where are those things?
 Explain how to use the prebuilt components and where to place them.
+###### {Custom UI}
 
-##### {Custom UI with react/vue/angular}
+Show how to develop custom UI components based on the framework SDK.
 
+##### {Angular}
+
+###### {Custom UI}
+
+Show how to develop custom UI components based on the framework SDK.
+
+##### {Vue}
+
+###### {Custom UI}
+
+Show how to develop custom UI components based on the framework SDK.
 Link to github examples.
 Explain how to create different components and how to call  the authentication functions.
 
@@ -334,6 +491,7 @@ TODO...
 
 
 ---------------------
+
 
 <!-- 
 # Selection view
