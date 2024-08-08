@@ -612,7 +612,12 @@ function replaceCustomPlaceholdersInLine(child, exportedVariables) {
              * For snippets that contain supertokensUIInit, we add the dic id param parameter
              */
             if (line.includes("supertokensUIInit(")) {
-                line = line.split("supertokensUIInit(").join("supertokensUIInit(\"supertokensui\", ");
+                line = line.split("supertokensUIInit(").join("(window as any).supertokensUIInit(\"supertokensui\", ");
+                newLines.push(line);
+                continue;
+            }
+            if (line.includes("supertokensUI") && !line.includes("supertokens-auth-react-script")) {
+                line = line.split("supertokensUI").join("(window as any).supertokensUI");
                 newLines.push(line);
                 continue;
             }
