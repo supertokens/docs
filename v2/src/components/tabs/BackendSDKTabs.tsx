@@ -25,6 +25,9 @@ export default function BackendSDKTabs(props: any) {
     if (!props.disableOtherFrameworks && !props.enableCurl) {
         values.push({ label: 'Other Frameworks', value: 'otherFrameworks' });
     }
+    if (props.enableDashboard) {
+        values.push({ label: 'Dashboard', value: 'dashboard' })
+    }
 
     return (
         <Tabs
