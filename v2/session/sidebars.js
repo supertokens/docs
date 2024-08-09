@@ -315,11 +315,12 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Migration',
+      label: 'Migrating to SuperTokens',
       items: [
         "migration/session-migration",
       ],
     },
+    "upgrading-supertokens",
     {
       type: "category",
       label: "References",
