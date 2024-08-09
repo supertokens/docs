@@ -12,6 +12,7 @@ module.exports = {
         "backend/passwordless-customisation"
       ],
     },
-    "frontend"
+    "frontend",
+    "updating-supertokens"
   ]
 };
