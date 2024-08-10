@@ -1,4 +1,7 @@
 import * as React from "react";
+
+import { useHistory } from "@docusaurus/router";
+import { useLocation } from "@docusaurus/router";
 import {
   FrontendChoice,
   BackendChoice,
@@ -8,6 +11,13 @@ import {
   ApplicationServer,
   Selection,
 } from "../utils";
+
+import "./index.css";
+// select frontend
+// select backend
+// select framework (if applicable)
+// select auth method
+// select custom UI (if applicable)
 
 export default function StackAndAuthMethodSelector() {
   return (
@@ -21,7 +31,15 @@ export default function StackAndAuthMethodSelector() {
   );
 }
 
+// TODO:
+// - Fix edge cases. Right now the input works from top to bottom
+// if people first select the auth method it will break
+// - Improve the look an feel of the UI
+// - Add a status indicator of the selection state
+// - Add icons for each list item
+// - Remove the right sidebar to make sure that each list item does not overflow
 export function StackAndAuthMethodSelectorHelper() {
+  const history = useHistory();
   const [frontendChoice, setFrontendChoice] =
     React.useState<FrontendChoice>(undefined);
 
@@ -50,371 +68,279 @@ export function StackAndAuthMethodSelectorHelper() {
   //     secondFactors: SecondFactors
   // })[]>([]);
 
-  const handleFrontendChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    let frontend = event.target.value as FrontendChoice;
+  const handleFrontendChange = (frontend: FrontendChoice) => {
     setFrontendChoice(frontend);
     if (FRAMEWORKS_WITH_ONLY_CUSTOM_UI.includes(frontend)) {
       setIsCustomUI(true);
     }
   };
 
-  const handleBackendChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const backend = event.target.value;
-    if (backend === "nodejs") {
-      setBackendChoice(backend);
-      setBackendFramework(undefined);
-    } else if (backend === "golang") {
-      setBackendChoice(backend);
-      setBackendFramework("http");
-    } else if (backend === "python") {
-      setBackendChoice(backend);
-      setBackendFramework(undefined);
-    } else if (backend === "nextjs" || backend === "remix") {
-      setBackendChoice(backend);
-      setBackendFramework("NA");
-    } else {
-      setBackendChoice("nodejs");
-      setBackendFramework("express");
-      setApplicationServer(backend as ApplicationServer);
-    }
+  const handleBackendChange = (
+    backend: BackendChoice,
+    backendFramework?: BackendFramework | undefined,
+    applicationServer?: ApplicationServer | undefined,
+  ) => {
+    setBackendChoice(backend);
+    setBackendFramework(backendFramework);
+    setApplicationServer(applicationServer);
   };
 
-  const handleBackendFrameworkChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    setBackendFramework(event.target.value as BackendFramework);
-  };
-
-  const handleAuthMethodChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    let authMethod = event.target.value as AuthMethods;
-    if (
-      (authMethod === "mfa" && backendChoice === "golang") ||
-      backendChoice === "python"
-    ) {
-      setApplicationServer(backendChoice);
-      setBackendChoice("nodejs");
-      setBackendFramework("express");
-    }
+  const handleAuthMethodChange = (authMethod: AuthMethods) => {
+    // TODO: Check if this condition is correct
+    const isUnsupportedMTAorMFA =
+      (authMethod === "mfa" || authMethod === "multi-tenant") &&
+      (backendChoice === "golang" || backendChoice === "python");
     setSelectedAuthMethod(authMethod);
+    const selection: Selection = {
+      frontend: frontendChoice,
+      backend: isUnsupportedMTAorMFA ? "nodejs" : backendChoice,
+      backendFramework: isUnsupportedMTAorMFA ? "express" : backendFramework,
+      selectedAuthMethod: authMethod,
+      isCustomUI: false,
+      applicationServer: isUnsupportedMTAorMFA
+        ? backendChoice
+        : applicationServer,
+    };
+    const queryValue = encodeURIComponent(JSON.stringify(selection));
+    const url = `/docs/guides/selection-tutorial?selection=${queryValue}`;
+    history.push(url);
   };
-
-  if (frontendChoice === undefined) {
-    return (
-      <div
-        style={{
-          backgroundColor: "#1E1E1E",
-          color: "white",
-          fontFamily: "Arial, sans-serif",
-          padding: "2rem",
-          borderRadius: "10px",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <label
-          htmlFor="frontendChoice"
-          style={{ color: "#FF9800", fontWeight: "bold", fontSize: "1.2rem" }}
-        >
-          1) Please select which frontend you use:
-        </label>
-        <div style={{ margin: "1rem 0" }} />
-        <select
-          id="frontendChoice"
-          value={frontendChoice === undefined ? "" : frontendChoice}
-          onChange={handleFrontendChange}
-          style={{
-            backgroundColor: "#424242",
-            color: "white",
-            padding: "0.8rem",
-            border: "none",
-            borderRadius: "5px",
-            outline: "none",
-            width: "100%",
-            fontSize: "1rem",
-          }}
-        >
-          <option value="">--Select an option--</option>
-          <option value="react">React</option>
-          <option value="angular">Angular</option>
-          <option value="vue">Vue</option>
-          <option value="vanillajs">Vanilla JS</option>
-          <option value="nextjs">Next.js</option>
-          <option value="react-native">React Native</option>
-          <option value="ios">iOS</option>
-          <option value="android">Android</option>
-          <option value="flutter">Flutter</option>
-        </select>
-      </div>
-    );
-  }
-
-  if (backendChoice === undefined) {
-    return (
-      <div
-        style={{
-          backgroundColor: "#1E1E1E",
-          color: "white",
-          fontFamily: "Arial, sans-serif",
-          padding: "2rem",
-          borderRadius: "10px",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <label
-          htmlFor="backendChoice"
-          style={{ color: "#FF9800", fontWeight: "bold", fontSize: "1.2rem" }}
-        >
-          2) Please select which backend you use:
-        </label>
-        <div style={{ margin: "1rem 0" }} />
-        <select
-          id="backendChoice"
-          value={backendChoice === undefined ? "" : backendChoice}
-          onChange={handleBackendChange}
-          style={{
-            backgroundColor: "#424242",
-            color: "white",
-            padding: "0.8rem",
-            border: "none",
-            borderRadius: "5px",
-            outline: "none",
-            width: "100%",
-            fontSize: "1rem",
-          }}
-        >
-          <option value="">--Select an option--</option>
-          <option value="nodejs">Node.js</option>
-          <option value="nextjs">Next.js API</option>
-          <option value="remix">Remix API</option>
-          <option value="golang">Go</option>
-          <option value="python">Python</option>
-          <option value="php">PHP</option>
-          <option value="c#">C#</option>
-          <option value="java">Java</option>
-        </select>
-      </div>
-    );
-  }
-
-  if (backendChoice === "python" && backendFramework === undefined) {
-    return (
-      <div
-        style={{
-          backgroundColor: "#1E1E1E",
-          color: "white",
-          fontFamily: "Arial, sans-serif",
-          padding: "2rem",
-          borderRadius: "10px",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <label
-          htmlFor="backendFramework"
-          style={{ color: "#FF9800", fontWeight: "bold", fontSize: "1.2rem" }}
-        >
-          3) Which backend framework do you use?
-        </label>
-        <div style={{ margin: "1rem 0" }} />
-        <select
-          id="backendFramework"
-          value={backendFramework === undefined ? "" : backendFramework}
-          onChange={handleBackendFrameworkChange}
-          style={{
-            backgroundColor: "#424242",
-            color: "white",
-            padding: "0.8rem",
-            border: "none",
-            borderRadius: "5px",
-            outline: "none",
-            width: "100%",
-            fontSize: "1rem",
-          }}
-        >
-          <option value="">--Select an option--</option>
-          <option value="flask">Flask</option>
-          <option value="fastapi">FastAPI</option>
-          <option value="drf">Django Rest Framework</option>
-        </select>
-      </div>
-    );
-  }
-
-  if (backendChoice === "nodejs" && backendFramework === undefined) {
-    return (
-      <div
-        style={{
-          backgroundColor: "#1E1E1E",
-          color: "white",
-          fontFamily: "Arial, sans-serif",
-          padding: "2rem",
-          borderRadius: "10px",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <label
-          htmlFor="backendFramework"
-          style={{ color: "#FF9800", fontWeight: "bold", fontSize: "1.2rem" }}
-        >
-          3) Which backend framework do you use?
-        </label>
-        <div style={{ margin: "1rem 0" }} />
-        <select
-          id="backendFramework"
-          value={backendFramework === undefined ? "" : backendFramework}
-          onChange={handleBackendFrameworkChange}
-          style={{
-            backgroundColor: "#424242",
-            color: "white",
-            padding: "0.8rem",
-            border: "none",
-            borderRadius: "5px",
-            outline: "none",
-            width: "100%",
-            fontSize: "1rem",
-          }}
-        >
-          <option value="">--Select an option--</option>
-          <option value="express">Express</option>
-          <option value="nestjs">Nest.JS</option>
-          <option value="nodejs-other">Other</option>
-        </select>
-      </div>
-    );
-  }
-
-  if (selectedAuthMethod === undefined) {
-    return (
-      <div
-        style={{
-          backgroundColor: "#1E1E1E",
-          color: "white",
-          fontFamily: "Arial, sans-serif",
-          padding: "2rem",
-          borderRadius: "10px",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <label
-          htmlFor="authMethod"
-          style={{ color: "#FF9800", fontWeight: "bold", fontSize: "1.2rem" }}
-        >
-          {backendChoice === "python" || backendChoice === "nodejs" ? "4" : "3"}
-          ) Please select auth method:
-        </label>
-        <div style={{ margin: "1rem 0" }} />
-        <select
-          id="authMethod"
-          value={selectedAuthMethod === undefined ? "" : selectedAuthMethod}
-          onChange={handleAuthMethodChange}
-          style={{
-            backgroundColor: "#424242",
-            color: "white",
-            padding: "0.8rem",
-            border: "none",
-            borderRadius: "5px",
-            outline: "none",
-            width: "100%",
-            fontSize: "1rem",
-          }}
-        >
-          <option value="">--Select an option--</option>
-          <option value="emailpassword">Email password login</option>
-          <option value="thirdparty">Social / Enterprise login</option>
-          <option value="passwordless">
-            Passwordless (OTP / Magic link) login
-          </option>
-          <option value="thirdpartyemailpassword">
-            Social / Enterprise + Email password login
-          </option>
-          <option value="thirdpartypasswordless">
-            Social / Enterprise + Passwordless (OTP / Magic link) login
-          </option>
-          <option value="all-auth">
-            Social / Enterprise + Passwordless (OTP / Magic link) + Email
-            Password login
-          </option>
-          <option value="mfa">Multi factor login</option>
-          <option value="multi-tenant">Multi tenancy login</option>
-        </select>
-      </div>
-    );
-  }
-
-  if (isCustomUI === undefined) {
-    return (
-      <div
-        style={{
-          backgroundColor: "#1E1E1E",
-          color: "white",
-          fontFamily: "Arial, sans-serif",
-          padding: "2rem",
-          borderRadius: "10px",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <label
-          style={{ color: "#FF9800", fontWeight: "bold", fontSize: "1.2rem" }}
-        >
-          {backendChoice === "python" || backendChoice === "nodejs" ? "5" : "4"}
-          ) Do you want to use a custom UI?
-        </label>
-        <div style={{ margin: "1rem 0" }} />
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <button
-            onClick={() => setIsCustomUI(true)}
-            style={{
-              backgroundColor: "#4CAF50",
-              color: "white",
-              padding: "0.8rem 2rem",
-              border: "none",
-              borderRadius: "5px",
-              fontSize: "1rem",
-              cursor: "pointer",
-            }}
-          >
-            Yes
-          </button>
-          <button
-            onClick={() => setIsCustomUI(false)}
-            style={{
-              backgroundColor: "#f44336",
-              color: "white",
-              padding: "0.8rem 2rem",
-              border: "none",
-              borderRadius: "5px",
-              fontSize: "1rem",
-              cursor: "pointer",
-            }}
-          >
-            No
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div
-      style={{
-        backgroundColor: "#1E1E1E",
-        color: "white",
-        fontFamily: "Arial, sans-serif",
-        padding: "2rem",
-        borderRadius: "10px",
-        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-      }}
-    >
-      <StartGuide
-        frontend={frontendChoice}
-        backend={backendChoice}
-        backendFramework={backendFramework}
-        selectedAuthMethod={selectedAuthMethod}
-        isCustomUI={isCustomUI}
-        applicationServer={applicationServer}
-      />
+    <div>
+      <div>
+        <p>
+          For a set-by-step guide on how to integrate <b>SuperTokens</b> in your
+          project, please select the the options based on your tech stack{" "}
+        </p>
+      </div>
+      <div>
+        <h3>Frontend Framework</h3>
+        <ul className="toggle-grid-list">
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("react")}
+            data-selected={frontendChoice === "react"}
+          >
+            React
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("angular")}
+            data-selected={frontendChoice === "angular"}
+          >
+            Angular
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("vue")}
+            data-selected={frontendChoice === "vue"}
+          >
+            Vue
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("vanillajs")}
+            data-selected={frontendChoice === "vanillajs"}
+          >
+            Vanilla JS
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("nextjs")}
+            data-selected={frontendChoice === "nextjs"}
+          >
+            Next.js
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("react-native")}
+            data-selected={frontendChoice === "react-native"}
+          >
+            React Native
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("ios")}
+            data-selected={frontendChoice === "ios"}
+          >
+            iOS
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("android")}
+            data-selected={frontendChoice === "android"}
+          >
+            Android
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleFrontendChange("flutter")}
+            data-selected={frontendChoice === "flutter"}
+          >
+            Flutter
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <h3>Backend Technology</h3>
+        <ul className="toggle-grid-list">
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("nodejs", "express")}
+            data-selected={
+              backendChoice === "nodejs" && backendFramework === "express"
+            }
+          >
+            Node.js with Express
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("nodejs", "nestjs")}
+            data-selected={
+              backendChoice === "nodejs" && backendFramework === "nestjs"
+            }
+          >
+            Node.js with NestJS
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("nodejs", "nodejs-other")}
+            data-selected={
+              backendChoice === "nodejs" && backendFramework === "nodejs-other"
+            }
+          >
+            Node.js with Other Frameworks
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("nextjs", "NA")}
+            data-selected={backendChoice === "nextjs"}
+          >
+            Next.js API
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("golang", "http")}
+            data-selected={
+              backendChoice === "golang" && backendFramework === "http"
+            }
+          >
+            Go
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("python", "flask")}
+            data-selected={
+              backendChoice === "python" && backendFramework === "flask"
+            }
+          >
+            Python with Flask
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("python", "fastapi")}
+            data-selected={
+              backendChoice === "python" && backendFramework === "fastapi"
+            }
+          >
+            Python with FastAPI
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("python", "drf")}
+            data-selected={
+              backendChoice === "python" && backendFramework === "drf"
+            }
+          >
+            Python with Django
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("nodejs", undefined, "php")}
+            data-selected={applicationServer === "php"}
+          >
+            PHP
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("nodejs", undefined, "c#")}
+            data-selected={applicationServer === "c#"}
+          >
+            C#
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleBackendChange("nodejs", undefined, "java")}
+            data-selected={applicationServer === "java"}
+          >
+            Java
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <h3>Authentication Methods</h3>
+        <ul className="toggle-grid-list">
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleAuthMethodChange("emailpassword")}
+            data-selected={selectedAuthMethod === "emailpassword"}
+          >
+            Email/Password
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleAuthMethodChange("thirdparty")}
+            data-selected={selectedAuthMethod === "thirdparty"}
+          >
+            Social/Enterprise
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleAuthMethodChange("passwordless")}
+            data-selected={selectedAuthMethod === "passwordless"}
+          >
+            Passwordless (OTP/Magic link)
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleAuthMethodChange("thirdpartyemailpassword")}
+            data-selected={selectedAuthMethod === "thirdpartyemailpassword"}
+          >
+            Email/Password and Social/Enterprise
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleAuthMethodChange("thirdpartypasswordless")}
+            data-selected={selectedAuthMethod === "thirdpartypasswordless"}
+          >
+            Social/Enterpise and Passwordless
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleAuthMethodChange("all-auth")}
+            data-selected={selectedAuthMethod === "all-auth"}
+          >
+            Email/Password, Social/Enterpise and Passwordless
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleAuthMethodChange("mfa")}
+            data-selected={selectedAuthMethod === "mfa"}
+          >
+            Multi-Factor Authentication
+          </li>
+          <li
+            className="toggle-grid-list__item"
+            onClick={() => handleAuthMethodChange("multi-tenant")}
+            data-selected={selectedAuthMethod === "multi-tenant"}
+          >
+            Multi-Tenant Authentication
+          </li>
+        </ul>
+      </div>
     </div>
   );
 }
@@ -682,4 +608,3 @@ function StartGuide(props: Selection) {
 
 //     return null;
 // }
-
