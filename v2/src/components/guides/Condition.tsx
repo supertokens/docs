@@ -3,17 +3,63 @@ import { Selection } from "./utils";
 import { GuidePageContext } from "./GuidePageContext";
 import CodeBlock from "../../theme/CodeBlock";
 
+type EnhancedSelection = Selection & {
+  recipesVisiblity: {
+    emailPassword: boolean;
+    mta: boolean;
+    mfa: boolean;
+    passwordless: boolean;
+    thirdparty: boolean;
+  };
+  isMobile: boolean;
+  hasExampleApp: boolean;
+};
+
+// TODO:
+// Talk about creating multiple pages
+// instead of having conditions all over the place
+// It will be easier to maintain and improve in the future
+
 export const Condition = (
   props: React.PropsWithChildren<{
-    match: boolean | ((selection: Selection) => boolean);
+    match: boolean | ((selection: EnhancedSelection) => boolean);
     title?: string;
   }>,
 ) => {
   const { children, title, match } = props;
   const { selection, showOnlySelected } = React.useContext(GuidePageContext);
+  const enhancedSelection: EnhancedSelection = React.useMemo(() => {
+    return {
+      ...selection,
+      isMobile: ["react-native", "ios", "android", "flutter"].includes(
+        selection.frontend,
+      ),
+      hasExampleApp: !selection.applicationServer,
+      recipesVisiblity: {
+        emailPassword: [
+          "emailpassword",
+          "thirdpartyemailpassword",
+          "all-auth",
+        ].includes(selection.selectedAuthMethod),
+        mta: selection.selectedAuthMethod === "multi-tenant",
+        mfa: selection.selectedAuthMethod === "mfa",
+        passwordless: [
+          "passwordless",
+          "thirdpartypasswordless",
+          "all-auth",
+        ].includes(selection.selectedAuthMethod),
+        thirdparty: [
+          "thirdparty",
+          "thirdpartyemailpassword",
+          "thirdpartypasswordless",
+          "all-auth",
+        ].includes(selection.selectedAuthMethod),
+      },
+    };
+  }, [selection]);
 
   const matchesCondition =
-    typeof match === "function" ? match(selection) : match;
+    typeof match === "function" ? match(enhancedSelection) : match;
 
   if (!showOnlySelected && typeof match === "function") {
     return (

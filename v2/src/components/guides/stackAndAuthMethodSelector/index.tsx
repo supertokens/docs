@@ -62,12 +62,6 @@ export function StackAndAuthMethodSelectorHelper() {
     undefined,
   );
 
-  // const [tenants, setTenants] = React.useState<({
-  //     tenantId: string,
-  //     firstFactors: FirstFactors,
-  //     secondFactors: SecondFactors
-  // })[]>([]);
-
   const handleFrontendChange = (frontend: FrontendChoice) => {
     setFrontendChoice(frontend);
     if (FRAMEWORKS_WITH_ONLY_CUSTOM_UI.includes(frontend)) {

@@ -16,7 +16,7 @@ export const GuidePageContextProvider = ({
   children,
 }: React.PropsWithChildren<{}>) => {
   const location = useLocation();
-  const [showOnlySelected, setShowOnlySelected] = React.useState(false);
+  const [showOnlySelected, setShowOnlySelected] = React.useState(true);
 
   const selection = React.useMemo(() => {
     return getSelection(location.search);
