@@ -1,7 +1,6 @@
 import * as React from "react";
 
 import { useHistory } from "@docusaurus/router";
-import { useLocation } from "@docusaurus/router";
 import {
   FrontendChoice,
   BackendChoice,
@@ -69,6 +68,26 @@ export function StackAndAuthMethodSelectorHelper() {
     }
   };
 
+  const goToGuidePageIfReady = (selection: Selection) => {
+    if (
+      !selection.frontend ||
+      !selection.backend ||
+      !selection.selectedAuthMethod
+    ) {
+      return;
+    }
+
+    const prefix = !selection.applicationServer
+      ? "with-example-app"
+      : "without-example-app";
+    const backend = selection.applicationServer || selection.backend;
+    const frameworkSuffix = selection.backendFramework
+      ? `-${selection.backendFramework}`
+      : "";
+    const url = `/docs/guides/${prefix}/${frontendChoice}-${backend}${frameworkSuffix}?authMethod=${selection.selectedAuthMethod}`;
+    history.push(url);
+  };
+
   const handleBackendChange = (
     backend: BackendChoice,
     backendFramework?: BackendFramework | undefined,
@@ -84,7 +103,7 @@ export function StackAndAuthMethodSelectorHelper() {
     const isUnsupportedMTAorMFA =
       (authMethod === "mfa" || authMethod === "multi-tenant") &&
       (backendChoice === "golang" || backendChoice === "python");
-    setSelectedAuthMethod(authMethod);
+
     const selection: Selection = {
       frontend: frontendChoice,
       backend: isUnsupportedMTAorMFA ? "nodejs" : backendChoice,
@@ -95,9 +114,12 @@ export function StackAndAuthMethodSelectorHelper() {
         ? backendChoice
         : applicationServer,
     };
-    const queryValue = encodeURIComponent(JSON.stringify(selection));
-    const url = `/docs/guides/selection-tutorial?selection=${queryValue}`;
-    history.push(url);
+    setSelectedAuthMethod(authMethod);
+    setBackendChoice(selection.backend);
+    setBackendFramework(selection.backendFramework);
+    setApplicationServer(selection.applicationServer);
+
+    goToGuidePageIfReady(selection);
   };
 
   return (
@@ -209,7 +231,7 @@ export function StackAndAuthMethodSelectorHelper() {
           </li>
           <li
             className="toggle-grid-list__item"
-            onClick={() => handleBackendChange("nextjs", "NA")}
+            onClick={() => handleBackendChange("nextjs")}
             data-selected={backendChoice === "nextjs"}
           >
             Next.js API
