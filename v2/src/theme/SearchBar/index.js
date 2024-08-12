@@ -22,7 +22,6 @@ import {
   useActiveDocContext,
 } from '@theme/hooks/useDocs';
 
-// trigger tests
 
 let DocSearchModal = null;
 
