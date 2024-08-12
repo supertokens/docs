@@ -30,6 +30,11 @@ export default function StackAndAuthMethodSelector() {
   );
 }
 
+// Outline
+// Renamed wit-sdk to with-example-app
+// We will not create tons of files. dynamic build time page creation
+// How the no example app docs should work? we need code snippets
+// We need a global context that holds context specific info (name of the sessionVerification method)
 // TODO:
 // - Fix edge cases. Right now the input works from top to bottom
 // if people first select the auth method it will break
@@ -70,23 +75,17 @@ export function StackAndAuthMethodSelectorHelper() {
     }
   };
 
-  const goToGuidePageIfReady = (selection: Selection) => {
-    if (
-      !selection.frontend ||
-      !selection.backend ||
-      !selection.selectedAuthMethod
-    ) {
+  const goToGuidePage = () => {
+    if (!frontendChoice || !backendChoice || !selectedAuthMethod) {
       return;
     }
 
-    const prefix = !selection.applicationServer
-      ? "sdk-support"
-      : "no-sdk-support";
-    const backend = selection.applicationServer || selection.backend;
-    const frameworkSuffix = selection.backendFramework
-      ? `-${selection.backendFramework}`
-      : "";
-    const url = `/docs/guides/${prefix}/${frontendChoice}-${backend}${frameworkSuffix}?authMethod=${selection.selectedAuthMethod}`;
+    const prefix = !applicationServer
+      ? "with-example-app"
+      : "without-example-app";
+    const backend = applicationServer || backendChoice;
+    const frameworkSuffix = backendFramework ? `-${backendFramework}` : "";
+    const url = `/docs/guides/${prefix}/${frontendChoice}-${backend}${frameworkSuffix}?authMethod=${selectedAuthMethod}`;
     history.push(url);
   };
 
@@ -120,8 +119,6 @@ export function StackAndAuthMethodSelectorHelper() {
     setBackendChoice(selection.backend);
     setBackendFramework(selection.backendFramework);
     setApplicationServer(selection.applicationServer);
-
-    goToGuidePageIfReady(selection);
   };
 
   return (
@@ -359,270 +356,15 @@ export function StackAndAuthMethodSelectorHelper() {
           </li>
         </ul>
       </div>
+      <div className="submit-button-container">
+        <button
+          className="submit-button"
+          onClick={goToGuidePage}
+          disabled={!frontendChoice || !backendChoice || !selectedAuthMethod}
+        >
+          Open Guide
+        </button>
+      </div>
     </div>
   );
 }
-
-function StartGuide(props: Selection) {
-  return (
-    <button
-      onClick={() => {
-        let queryValue = encodeURIComponent(JSON.stringify(props));
-        const url = `/docs/guides/selection-tutorial?selection=${queryValue}`;
-        window.open(url, "_blank");
-      }}
-      style={{
-        backgroundColor: "#FF9800",
-        color: "white",
-        padding: "0.8rem 1.5rem",
-        border: "none",
-        borderRadius: "5px",
-        cursor: "pointer",
-        fontSize: "1rem",
-        fontWeight: "bold",
-        textTransform: "uppercase",
-        letterSpacing: "1px",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        transition: "background-color 0.3s ease",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = "#F57C00";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = "#FF9800";
-      }}
-    >
-      Start Guide
-    </button>
-  );
-}
-
-// function AddNewTenantUI(props: {
-//     addNewTenant: (tenantId: string, firstFactors: FirstFactors, secondFactors: SecondFactors) => void
-// }) {
-//     const [isAddingTenant, setIsAddingTenant] = React.useState<boolean>(false);
-//     const [tenantId, setTenantId] = React.useState<string>("");
-
-//     if (!isAddingTenant) {
-//         return (
-//             <button
-//                 onClick={() => setIsAddingTenant(true)}
-//                 style={{
-//                     backgroundColor: '#FF9800',
-//                     color: 'white',
-//                     padding: '0.8rem 1.5rem',
-//                     border: 'none',
-//                     borderRadius: '5px',
-//                     cursor: 'pointer',
-//                     fontSize: '1rem',
-//                     fontWeight: 'bold',
-//                     textTransform: 'uppercase',
-//                     letterSpacing: '1px',
-//                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-//                     transition: 'background-color 0.3s ease',
-//                 }}
-//                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F57C00'}
-//                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF9800'}
-//             >
-//                 Add New Tenant / Org
-//             </button>
-//         );
-//     } else {
-//         return (
-//             <div style={{ border: '2px solid #FF9800', padding: '1.5rem', borderRadius: '10px', marginTop: '1.5rem' }}>
-//                 <div style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>Tenant / Org name:</div>
-//                 <input
-//                     type="text"
-//                     value={tenantId}
-//                     onChange={(e) => setTenantId(e.target.value)}
-//                     style={{
-//                         backgroundColor: '#424242',
-//                         color: 'white',
-//                         padding: '0.8rem',
-//                         border: 'none',
-//                         borderRadius: '5px',
-//                         outline: 'none',
-//                         width: '100%',
-//                         fontSize: '1rem',
-//                         marginTop: '0.5rem',
-//                     }}
-//                 />
-
-//                 <FirstAndSecondFactorChoice
-//                     setFactors={(f, s) => {
-//                         props.addNewTenant(tenantId, f, s);
-//                         setIsAddingTenant(false);
-//                         setTenantId("");
-//                     }}
-//                 />
-//             </div>
-//         )
-//     }
-// }
-
-// function FirstAndSecondFactorChoice(props: {
-//     setFactors: (firstFactors: FirstFactors, secondFactors: SecondFactors) => void,
-// }) {
-//     const [firstFactors, setFirstFactors] = React.useState<FirstFactors>([]);
-//     const [firstFactorSelectionCompleted, setFirstFactorSelectionCompleted] = React.useState<boolean>(false);
-//     const [secondFactors, setSecondFactors] = React.useState<SecondFactors>([]);
-//     const [secondFactorSelectionCompleted, setSecondFactorSelectionCompleted] = React.useState<boolean>(false);
-
-//     const handleFirstFactorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-//         const value = event.target.value as FirstFactors[number];
-//         setFirstFactors(prev =>
-//             event.target.checked
-//                 ? [...prev, value]
-//                 : prev.filter(method => method !== value)
-//         );
-//     };
-
-//     const handleSecondFactorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-//         const value = event.target.value as SecondFactors[number];
-//         setSecondFactors(prev =>
-//             event.target.checked
-//                 ? [...prev, value]
-//                 : prev.filter(method => method !== value)
-//         );
-//     };
-
-//     if (!firstFactorSelectionCompleted) {
-//         return (
-//             <div style={{ border: '2px solid #FF9800', padding: '1.5rem', borderRadius: '10px', marginTop: '1.5rem' }}>
-//                 <label style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>Please select your first factor auth methods:</label>
-//                 <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1rem' }}>
-//                     <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', fontSize: '1rem', color: 'white' }}>
-//                         <input
-//                             type="checkbox"
-//                             value="emailpassword"
-//                             checked={firstFactors.includes("emailpassword")}
-//                             onChange={handleFirstFactorChange}
-//                             style={{ marginRight: '0.8rem' }}
-//                         />
-//                         Email & Password
-//                     </label>
-//                     <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', fontSize: '1rem', color: 'white' }}>
-//                         <input
-//                             type="checkbox"
-//                             value="passwordless"
-//                             checked={firstFactors.includes("passwordless")}
-//                             onChange={handleFirstFactorChange}
-//                             style={{ marginRight: '0.8rem' }}
-//                         />
-//                         Passwordless
-//                     </label>
-//                     <label style={{ display: 'flex', alignItems: 'center', fontSize: '1rem', color: 'white' }}>
-//                         <input
-//                             type="checkbox"
-//                             value="thirdparty"
-//                             checked={firstFactors.includes("thirdparty")}
-//                             onChange={handleFirstFactorChange}
-//                             style={{ marginRight: '0.8rem' }}
-//                         />
-//                         Third-party
-//                     </label>
-//                 </div>
-//                 <button
-//                     disabled={firstFactors.length === 0}
-//                     onClick={() => {
-//                         setFirstFactorSelectionCompleted(true)
-//                     }}
-//                     style={{
-//                         backgroundColor: firstFactors.length === 0 ? '#9E9E9E' : '#FF9800',
-//                         color: 'white',
-//                         padding: '0.8rem 1.5rem',
-//                         border: 'none',
-//                         borderRadius: '5px',
-//                         cursor: firstFactors.length === 0 ? 'not-allowed' : 'pointer',
-//                         fontSize: '1rem',
-//                         fontWeight: 'bold',
-//                         textTransform: 'uppercase',
-//                         letterSpacing: '1px',
-//                         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-//                         transition: 'background-color 0.3s ease',
-//                         marginTop: '1.5rem',
-//                     }}
-//                     onMouseEnter={(e) => {
-//                         if (firstFactors.length > 0) {
-//                             e.currentTarget.style.backgroundColor = '#F57C00';
-//                         }
-//                     }}
-//                     onMouseLeave={(e) => {
-//                         if (firstFactors.length > 0) {
-//                             e.currentTarget.style.backgroundColor = '#FF9800';
-//                         }
-//                     }}
-//                 >
-//                     Next
-//                 </button>
-//             </div>
-//         );
-//     }
-
-//     if (!secondFactorSelectionCompleted) {
-//         return (
-//             <div style={{ border: '2px solid #FF9800', padding: '1.5rem', borderRadius: '10px', marginTop: '1.5rem' }}>
-//                 <label style={{ color: '#FF9800', fontWeight: 'bold', fontSize: '1.2rem' }}>Please select your second factor auth methods:</label>
-//                 <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1rem' }}>
-//                     <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', fontSize: '1rem', color: 'white' }}>
-//                         <input
-//                             type="checkbox"
-//                             value="totp"
-//                             checked={secondFactors.includes("totp")}
-//                             onChange={handleSecondFactorChange}
-//                             style={{ marginRight: '0.8rem' }}
-//                         />
-//                         TOTP
-//                     </label>
-//                     <label style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem', fontSize: '1rem', color: 'white' }}>
-//                         <input
-//                             type="checkbox"
-//                             value="otp-phone"
-//                             checked={secondFactors.includes("otp-phone")}
-//                             onChange={handleSecondFactorChange}
-//                             style={{ marginRight: '0.8rem' }}
-//                         />
-//                         SMS OTP
-//                     </label>
-//                     <label style={{ display: 'flex', alignItems: 'center', fontSize: '1rem', color: 'white' }}>
-//                         <input
-//                             type="checkbox"
-//                             value="otp-email"
-//                             checked={secondFactors.includes("otp-email")}
-//                             onChange={handleSecondFactorChange}
-//                             style={{ marginRight: '0.8rem' }}
-//                         />
-//                         Email OTP
-//                     </label>
-//                 </div>
-//                 <button
-//                     onClick={() => {
-//                         setSecondFactorSelectionCompleted(true)
-//                         props.setFactors(firstFactors, secondFactors);
-//                     }}
-//                     style={{
-//                         backgroundColor: '#FF9800',
-//                         color: 'white',
-//                         padding: '0.8rem 1.5rem',
-//                         border: 'none',
-//                         borderRadius: '5px',
-//                         cursor: 'pointer',
-//                         fontSize: '1rem',
-//                         fontWeight: 'bold',
-//                         textTransform: 'uppercase',
-//                         letterSpacing: '1px',
-//                         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-//                         transition: 'background-color 0.3s ease',
-//                         marginTop: '1.5rem',
-//                     }}
-//                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F57C00'}
-//                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF9800'}
-//                 >
-//                     {secondFactors.length === 0 ? "Skip" : "Next"}
-//                 </button>
-//             </div>
-//         );
-//     }
-
-//     return null;
-// }
