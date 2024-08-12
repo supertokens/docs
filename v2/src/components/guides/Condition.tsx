@@ -40,19 +40,27 @@ export const Condition = (
           "emailpassword",
           "thirdpartyemailpassword",
           "all-auth",
+          "mfa",
+          "multi-tenant",
         ].includes(selection.selectedAuthMethod),
         mta: selection.selectedAuthMethod === "multi-tenant",
-        mfa: selection.selectedAuthMethod === "mfa",
+        mfa:
+          selection.selectedAuthMethod === "mfa" ||
+          selection.selectedAuthMethod === "multi-tenant",
         passwordless: [
           "passwordless",
           "thirdpartypasswordless",
           "all-auth",
+          "mfa",
+          "multi-tenant",
         ].includes(selection.selectedAuthMethod),
         thirdparty: [
           "thirdparty",
           "thirdpartyemailpassword",
           "thirdpartypasswordless",
           "all-auth",
+          "mfa",
+          "multi-tenant",
         ].includes(selection.selectedAuthMethod),
       },
     };

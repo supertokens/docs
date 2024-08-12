@@ -20,12 +20,12 @@ export const GuidePageContextProvider = ({
 
   const selection = React.useMemo<Selection | null>(() => {
     const splitPathname = location.pathname.split("/");
-    const withExampleAppString = splitPathname[3];
+    const sdkSupportString = splitPathname[3];
     const techStackString = splitPathname[4];
 
-    if (!techStackString || !withExampleAppString) return null;
+    if (!techStackString || !sdkSupportString) return null;
 
-    const hasExampleApp = withExampleAppString === "with-example-app";
+    const hasSdkSupport = sdkSupportString === "sdk-support";
     const [frontend, backend, backendFramework] = techStackString.split("-");
     const searchParam = new URLSearchParams(location.search);
 

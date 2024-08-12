@@ -33,10 +33,12 @@ export default function StackAndAuthMethodSelector() {
 // TODO:
 // - Fix edge cases. Right now the input works from top to bottom
 // if people first select the auth method it will break
-// - Improve the look an feel of the UI
 // - Add a status indicator of the selection state
+// - Add a "View Guide" button on the sidebar
+// - Remove combined auth methods and allow users to select multiple auth methods
 // - Add icons for each list item
-// - Remove the right sidebar to make sure that each list item does not overflow
+// - Remove bottom "next" button
+// - Remove the left sidebar
 export function StackAndAuthMethodSelectorHelper() {
   const history = useHistory();
   const [frontendChoice, setFrontendChoice] =
@@ -78,8 +80,8 @@ export function StackAndAuthMethodSelectorHelper() {
     }
 
     const prefix = !selection.applicationServer
-      ? "with-example-app"
-      : "without-example-app";
+      ? "sdk-support"
+      : "no-sdk-support";
     const backend = selection.applicationServer || selection.backend;
     const frameworkSuffix = selection.backendFramework
       ? `-${selection.backendFramework}`
@@ -234,7 +236,7 @@ export function StackAndAuthMethodSelectorHelper() {
             onClick={() => handleBackendChange("nextjs")}
             data-selected={backendChoice === "nextjs"}
           >
-            Next.js API
+            Next.js
           </li>
           <li
             className="toggle-grid-list__item"
