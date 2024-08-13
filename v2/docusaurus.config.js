@@ -208,7 +208,7 @@ module.exports = {
         id: "guides",
         path: "guides",
         routeBasePath: "docs/guides",
-        sidebarPath: require.resolve("./guides/sidebars.js"),
+        sidebarPath: false,
         editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,

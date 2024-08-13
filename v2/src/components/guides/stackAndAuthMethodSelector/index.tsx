@@ -30,16 +30,10 @@ export default function StackAndAuthMethodSelector() {
   );
 }
 
-// Outline
-// Renamed wit-sdk to with-example-app
-// We will not create tons of files. dynamic build time page creation
-// How the no example app docs should work? we need code snippets
-// We need a global context that holds context specific info (name of the sessionVerification method)
 // TODO:
 // - Fix edge cases. Right now the input works from top to bottom
 // if people first select the auth method it will break
 // - Add a status indicator of the selection state
-// - Add a "View Guide" button on the sidebar
 // - Remove combined auth methods and allow users to select multiple auth methods
 // - Add icons for each list item
 // - Remove bottom "next" button
@@ -362,7 +356,7 @@ export function StackAndAuthMethodSelectorHelper() {
           onClick={goToGuidePage}
           disabled={!frontendChoice || !backendChoice || !selectedAuthMethod}
         >
-          Open Guide
+          View Guide
         </button>
       </div>
     </div>
