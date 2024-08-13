@@ -14,5 +14,6 @@ npm run execute ./tenant-management/create-provider/new-google.yaml
 npm run execute ./tenant-management/create-provider/new-linkedin.yaml
 npm run execute ./tenant-management/create-provider/new-okta.yaml
 npm run execute ./tenant-management/create-provider/new-twitter.yaml
+npm run execute ./tenant-management/create-provider/new-saml.yaml
 
 npm run execute ./user-roles/create-role.yaml
