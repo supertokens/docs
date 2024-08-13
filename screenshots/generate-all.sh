@@ -1,5 +1,7 @@
 #!/bin/bash
 
+npm run execute ./tenant-management/dashboard/overview.yaml
+
 npm run execute ./tenant-management/create-provider/new-active-directory.yaml
 npm run execute ./tenant-management/create-provider/new-apple.yaml
 npm run execute ./tenant-management/create-provider/new-bitbucket.yaml
