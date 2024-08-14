@@ -7,6 +7,10 @@ import { childContainsTabItemWithValue } from "./utils";
 export default function BackendSDKTabs(props: any) {
     const values = [];
 
+    if (props.enableDashboard) {
+        values.push({ label: 'Dashboard', value: 'dashboard' })
+    }
+
     if (!props.disableNodeJS) {
         values.push({ label: 'NodeJS', value: 'nodejs' });
     }
@@ -24,9 +28,6 @@ export default function BackendSDKTabs(props: any) {
     }
     if (!props.disableOtherFrameworks && !props.enableCurl) {
         values.push({ label: 'Other Frameworks', value: 'otherFrameworks' });
-    }
-    if (props.enableDashboard) {
-        values.push({ label: 'Dashboard', value: 'dashboard' })
     }
 
     return (
