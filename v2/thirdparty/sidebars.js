@@ -725,7 +725,7 @@ module.exports = {
         "migration/mfa-migration"
       ],
     },
-    "upgrading-supertokens",
+    "updating-supertokens",
     {
       type: "category",
       label: "References",

@@ -320,7 +320,7 @@ module.exports = {
         "migration/session-migration",
       ],
     },
-    "upgrading-supertokens",
+    "updating-supertokens",
     {
       type: "category",
       label: "References",
