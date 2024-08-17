@@ -160,9 +160,9 @@ export default function CompatibilityMatrix() {
                         <div>
                             <span className="compatibility_matrix_text_one">Backend SDK</span>
                             {supportedBackendSdks !== undefined ? (
-                                <Select setOption={setSelectedBackendnSdk} options={supportedBackendSdks} />
+                                <Select setOption={setSelectedBackendnSdk} options={supportedBackendSdks} selectedOption={selectedBackendSdk}/>
                             ) : isFailedFetchSupportedSdks === true ? (
-                                <Select disabled setOption={setSelectedBackendnSdk} options={[]} />
+                                <Select disabled setOption={setSelectedBackendnSdk} options={[]} selectedOption={selectedBackendSdk}/>
                             ) : (
                                 <div className="shimmer"></div>
                             )}
@@ -170,9 +170,9 @@ export default function CompatibilityMatrix() {
                         <div>
                             <span className="compatibility_matrix_text_one">Frontend SDK</span>
                             {supportedFrontendSdks !== undefined ? (
-                                <Select setOption={setSelectedFrontendSdk} options={supportedFrontendSdks} />
+                                <Select setOption={setSelectedFrontendSdk} options={supportedFrontendSdks} selectedOption={selectedFrontendSdk}/>
                             ) : isFailedFetchSupportedSdks === true ? (
-                                <Select disabled setOption={setSelectedFrontendSdk} options={[]} />
+                                <Select disabled setOption={setSelectedFrontendSdk} options={[]} selectedOption={selectedFrontendSdk}/>
                             ) : (
                                 <div className="shimmer"></div>
                             )}
@@ -192,7 +192,7 @@ export default function CompatibilityMatrix() {
                         </div>
                         <div className="compatibility_matrix_box_body sdk_version_select_container">
                             {compatibilityMatrix !== undefined ? (
-                                <Select setOption={setSelectedCoreVersion} options={selectableCoreVersions} />
+                                <Select setOption={setSelectedCoreVersion} options={selectableCoreVersions} selectedOption={selectedCoreVersion}/>
                             ) : (
                                 <div className="shimmer"></div>
                             )}
@@ -224,6 +224,7 @@ export default function CompatibilityMatrix() {
                                 <Select
                                     setOption={setSelectedBackendSdkVersion}
                                     options={selectableBackendSdkVersions}
+                                    selectedOption={selectedBackendSdkVersion}
                                 />
                             ) : (
                                 <div className="shimmer"></div>
