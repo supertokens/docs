@@ -1,4 +1,3 @@
-
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
 
 /**
@@ -13,24 +12,20 @@ let remarkPlugins = [
 /**
  * These are remark plugins that run specifically before the default ones docusaurus adds
  */
-let beforeDefaultRemarkPlugins = [
-  require("./src/plugins/tocHeaderProcessor"),
-];
+let beforeDefaultRemarkPlugins = [require("./src/plugins/tocHeaderProcessor")];
 
-let rehypePlugins = [
-  require('./src/plugins/addNofollowToExternalLinks')
-];
+let rehypePlugins = [require("./src/plugins/addNofollowToExternalLinks")];
 
 module.exports = {
-  title: 'SuperTokens Docs',
-  url: 'https://supertokens.com',
-  baseUrl: '/',
-  onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'throw',
-  favicon: 'img/favicon.ico',
+  title: "SuperTokens Docs",
+  url: "https://supertokens.com",
+  baseUrl: "/",
+  onBrokenLinks: "throw",
+  onBrokenMarkdownLinks: "throw",
+  favicon: "img/favicon.ico",
   trailingSlash: false,
   stylesheets: [
-    "https://fonts.googleapis.com/css?family=Rubik|Roboto:300,400,500,700&amp;display=swap"
+    "https://fonts.googleapis.com/css?family=Rubik|Roboto:300,400,500,700&amp;display=swap",
   ],
   themeConfig: {
     colorMode: {
@@ -39,107 +34,107 @@ module.exports = {
     },
     navbar: {
       logo: {
-        src: 'img/logoWithNameLight.svg',
+        src: "img/logoWithNameLight.svg",
         href: "/",
-        target: "_blank"
+        target: "_blank",
       },
       items: [
         {
-          type: 'docsVersionDropdown',
+          type: "docsVersionDropdown",
           //// Optional
-          position: 'left',
+          position: "left",
           // Add additional dropdown items at the beginning/end of the dropdown.
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
-          docsPluginId: 'default',
+          docsPluginId: "default",
         },
         {
-          type: 'docsVersionDropdown',
+          type: "docsVersionDropdown",
           //// Optional
-          position: 'left',
+          position: "left",
           // Add additional dropdown items at the beginning/end of the dropdown.
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
-          docsPluginId: 'nodejs',
+          docsPluginId: "nodejs",
         },
         {
-          type: 'docsVersionDropdown',
+          type: "docsVersionDropdown",
           //// Optional
-          position: 'left',
+          position: "left",
           // Add additional dropdown items at the beginning/end of the dropdown.
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
-          docsPluginId: 'auth-react',
+          docsPluginId: "auth-react",
         },
         {
-          type: 'docsVersionDropdown',
+          type: "docsVersionDropdown",
           //// Optional
-          position: 'left',
+          position: "left",
           // Add additional dropdown items at the beginning/end of the dropdown.
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
-          docsPluginId: 'website',
+          docsPluginId: "website",
         },
         {
-          type: 'docsVersionDropdown',
+          type: "docsVersionDropdown",
           //// Optional
-          position: 'left',
+          position: "left",
           // Add additional dropdown items at the beginning/end of the dropdown.
           dropdownItemsBefore: [],
           // Do not add the link active class when browsing docs.
           dropdownActiveClassDisabled: true,
-          docsPluginId: 'change_me',
+          docsPluginId: "change_me",
         },
         {
-          href: '/blog',
-          label: 'Blog',
-          position: 'right',
-          target: "_blank"
+          href: "/blog",
+          label: "Blog",
+          position: "right",
+          target: "_blank",
         },
         {
-          href: 'https://supertokens.com/discord',
-          label: 'Ask Questions',
-          position: 'right',
-          className: "navbar__item_discord"
+          href: "https://supertokens.com/discord",
+          label: "Ask Questions",
+          position: "right",
+          className: "navbar__item_discord",
         },
         {
-          href: 'https://github.com/supertokens/supertokens-to_replace',
-          label: 'GitHub',
-          position: 'right',
+          href: "https://github.com/supertokens/supertokens-to_replace",
+          label: "GitHub",
+          position: "right",
         },
       ],
     },
     prism: {
-      theme: require('prism-react-renderer/themes/vsDark'),
+      theme: require("prism-react-renderer/themes/vsDark"),
       additionalLanguages: ["kotlin", "java", "swift", "dart"],
     },
     algolia: {
-      apiKey: 'ce04a158637d345fc094ebbfa9a5156a',
-      indexName: 'supertokens',
-      appId: "SBR5UR2Z16"
+      apiKey: "ce04a158637d345fc094ebbfa9a5156a",
+      indexName: "supertokens",
+      appId: "SBR5UR2Z16",
     },
   },
   presets: [
     [
-      '@docusaurus/preset-classic',
+      "@docusaurus/preset-classic",
       {
         docs: {
-          path: 'community',
-          routeBasePath: 'docs/community',
-          sidebarPath: require.resolve('./community/sidebars.js'),
+          path: "community",
+          routeBasePath: "docs/community",
+          sidebarPath: require.resolve("./community/sidebars.js"),
           showLastUpdateTime: true,
-          editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+          editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
           remarkPlugins: remarkPlugins,
           rehypePlugins: rehypePlugins,
           beforeDefaultRemarkPlugins,
         },
         theme: {
           // this is applied to all docs.. not just the community one.
-          customCss: require.resolve('./src/css/custom.css'),
+          customCss: require.resolve("./src/css/custom.css"),
         },
       },
     ],
@@ -150,14 +145,14 @@ module.exports = {
       "./src/plugins/reactBundle",
       {
         id: "react-bundle",
-      }
+      },
     ],
     [
-       "./src/plugins/transformOpenSearchLink",
-       //used to transform the opensearch.xml location in the metatags.
+      "./src/plugins/transformOpenSearchLink",
+      //used to transform the opensearch.xml location in the metatags.
       {
-        id: "transform-opensearch-link"
-      }
+        id: "transform-opensearch-link",
+      },
     ],
     [
       "./src/plugins/copyDocsAndCodeTypeChecking",
@@ -165,14 +160,14 @@ module.exports = {
         // used for copying docs content via the <-COPY DOCS-> directive
         // used for do code type checking as well AFTER running cop docs
         id: "copy-docs-and-code-type-checking",
-      }
+      },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'search',
-        path: 'search',
-        routeBasePath: 'docs/search',
+        id: "search",
+        path: "search",
+        routeBasePath: "docs/search",
         sidebarPath: false,
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
@@ -180,256 +175,270 @@ module.exports = {
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'emailpassword',
-        path: 'emailpassword',
-        routeBasePath: 'docs/emailpassword',
-        sidebarPath: require.resolve('./emailpassword/sidebars.js'),
+        id: "emailpassword",
+        path: "emailpassword",
+        routeBasePath: "docs/emailpassword",
+        sidebarPath: require.resolve("./emailpassword/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'passwordless',
-        path: 'passwordless',
-        routeBasePath: 'docs/passwordless',
-        sidebarPath: require.resolve('./passwordless/sidebars.js'),
+        id: "passwordless",
+        path: "passwordless",
+        routeBasePath: "docs/passwordless",
+        sidebarPath: require.resolve("./passwordless/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'guides',
-        path: 'guides',
-        routeBasePath: 'docs/guides',
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        id: "guides",
+        path: "guides",
+        routeBasePath: "docs/guides",
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'thirdparty',
-        path: 'thirdparty',
-        routeBasePath: 'docs/thirdparty',
-        sidebarPath: require.resolve('./thirdparty/sidebars.js'),
+        id: "thirdparty",
+        path: "thirdparty",
+        routeBasePath: "docs/thirdparty",
+        sidebarPath: require.resolve("./thirdparty/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'thirdpartyemailpassword',
-        path: 'thirdpartyemailpassword',
-        routeBasePath: 'docs/thirdpartyemailpassword',
-        sidebarPath: require.resolve('./thirdpartyemailpassword/sidebars.js'),
+        id: "thirdpartyemailpassword",
+        path: "thirdpartyemailpassword",
+        routeBasePath: "docs/thirdpartyemailpassword",
+        sidebarPath: require.resolve("./thirdpartyemailpassword/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'thirdpartypasswordless',
-        path: 'thirdpartypasswordless',
-        routeBasePath: 'docs/thirdpartypasswordless',
-        sidebarPath: require.resolve('./thirdpartypasswordless/sidebars.js'),
+        id: "thirdpartypasswordless",
+        path: "thirdpartypasswordless",
+        routeBasePath: "docs/thirdpartypasswordless",
+        sidebarPath: require.resolve("./thirdpartypasswordless/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'session',
-        path: 'session',
-        routeBasePath: 'docs/session',
-        sidebarPath: require.resolve('./session/sidebars.js'),
+        id: "anomalydetection",
+        path: "anomalydetection",
+        routeBasePath: "docs/anomalydetection",
+        sidebarPath: require.resolve("./anomalydetection/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'nodejs',
-        path: 'nodejs',
-        routeBasePath: 'docs/nodejs',
-        sidebarPath: require.resolve('./nodejs/sidebars.js'),
+        id: "session",
+        path: "session",
+        routeBasePath: "docs/session",
+        sidebarPath: require.resolve("./session/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'auth-react',
-        path: 'auth-react',
-        routeBasePath: 'docs/auth-react',
-        sidebarPath: require.resolve('./auth-react/sidebars.js'),
+        id: "nodejs",
+        path: "nodejs",
+        routeBasePath: "docs/nodejs",
+        sidebarPath: require.resolve("./nodejs/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'website',
-        path: 'website',
-        routeBasePath: 'docs/website',
-        sidebarPath: require.resolve('./website/sidebars.js'),
+        id: "auth-react",
+        path: "auth-react",
+        routeBasePath: "docs/auth-react",
+        sidebarPath: require.resolve("./auth-react/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'contribute',
-        path: 'contribute',
-        routeBasePath: 'docs/contribute',
-        sidebarPath: require.resolve('./contribute/sidebars.js'),
+        id: "website",
+        path: "website",
+        routeBasePath: "docs/website",
+        sidebarPath: require.resolve("./website/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'phonepassword',
-        path: 'phonepassword',
-        routeBasePath: 'docs/phonepassword',
-        sidebarPath: require.resolve('./phonepassword/sidebars.js'),
+        id: "contribute",
+        path: "contribute",
+        routeBasePath: "docs/contribute",
+        sidebarPath: require.resolve("./contribute/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'mfa',
-        path: 'mfa',
-        routeBasePath: 'docs/mfa',
-        sidebarPath: require.resolve('./mfa/sidebars.js'),
+        id: "phonepassword",
+        path: "phonepassword",
+        routeBasePath: "docs/phonepassword",
+        sidebarPath: require.resolve("./phonepassword/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins,
-        beforeDefaultRemarkPlugins,
-      }
-    ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'userroles',
-        path: 'userroles',
-        routeBasePath: 'docs/userroles',
-        sidebarPath: require.resolve('./userroles/sidebars.js'),
-        showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'microservice_auth',
-        path: 'microservice_auth',
-        routeBasePath: 'docs/microservice_auth',
-        sidebarPath: require.resolve('./microservice_auth/sidebars.js'),
+        id: "mfa",
+        path: "mfa",
+        routeBasePath: "docs/mfa",
+        sidebarPath: require.resolve("./mfa/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
-      },
-    ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'userdashboard',
-        path: 'userdashboard',
-        routeBasePath: 'docs/userdashboard',
-        sidebarPath: require.resolve('./userdashboard/sidebars.js'),
-        showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins
-      },
-    ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'multitenancy',
-        path: 'multitenancy',
-        routeBasePath: 'docs/multitenancy',
-        sidebarPath: require.resolve('./multitenancy/sidebars.js'),
-        showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
     ],
     [
-      '@docusaurus/plugin-content-docs',
+      "@docusaurus/plugin-content-docs",
       {
-        id: 'change_me',
-        path: 'change_me',
-        routeBasePath: 'docs/change_me',
-        sidebarPath: require.resolve('./change_me/sidebars.js'),
+        id: "userroles",
+        path: "userroles",
+        routeBasePath: "docs/userroles",
+        sidebarPath: require.resolve("./userroles/sidebars.js"),
         showLastUpdateTime: true,
-        editUrl: 'https://github.com/supertokens/docs/tree/master/v2/',
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
       },
-    ]
+    ],
+    [
+      "@docusaurus/plugin-content-docs",
+      {
+        id: "microservice_auth",
+        path: "microservice_auth",
+        routeBasePath: "docs/microservice_auth",
+        sidebarPath: require.resolve("./microservice_auth/sidebars.js"),
+        showLastUpdateTime: true,
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+      },
+    ],
+    [
+      "@docusaurus/plugin-content-docs",
+      {
+        id: "userdashboard",
+        path: "userdashboard",
+        routeBasePath: "docs/userdashboard",
+        sidebarPath: require.resolve("./userdashboard/sidebars.js"),
+        showLastUpdateTime: true,
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+      },
+    ],
+    [
+      "@docusaurus/plugin-content-docs",
+      {
+        id: "multitenancy",
+        path: "multitenancy",
+        routeBasePath: "docs/multitenancy",
+        sidebarPath: require.resolve("./multitenancy/sidebars.js"),
+        showLastUpdateTime: true,
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
+    ],
+    [
+      "@docusaurus/plugin-content-docs",
+      {
+        id: "change_me",
+        path: "change_me",
+        routeBasePath: "docs/change_me",
+        sidebarPath: require.resolve("./change_me/sidebars.js"),
+        showLastUpdateTime: true,
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
+    ],
   ],
-  clientModules:[
+  clientModules: [
     //used to intercept client side navigation and fire analytics events.
-    require.resolve("./src/plugins/locationInterceptor")
-  ]
+    require.resolve("./src/plugins/locationInterceptor"),
+  ],
 };
