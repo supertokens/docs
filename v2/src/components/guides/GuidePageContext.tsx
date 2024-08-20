@@ -119,6 +119,12 @@ export const FrontendChoiceWithOnlyCustomUI: GuideFrontendChoice[] = [
   "android",
   "flutter",
 ];
+export const MobileFrontendChoices: GuideFrontendChoice[] = [
+  "react-native",
+  "ios",
+  "android",
+  "flutter",
+];
 const BackendChoicesWithExampleApp: GuideBackendChoice[] = [
   "nodejs",
   "golang",

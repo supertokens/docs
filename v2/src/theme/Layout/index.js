@@ -16,6 +16,7 @@ import useKeyboardNavigation from "@theme/hooks/useKeyboardNavigation";
 import { ThemeClassNames } from "@docusaurus/theme-common";
 import Head from "@docusaurus/Head";
 import { useLocation } from "@docusaurus/router";
+import { GuidePageContextProvider } from "../../components/guides/GuidePageContext";
 import "./styles.css";
 import supertokens from "supertokens-website";
 import {
@@ -60,9 +61,27 @@ if (typeof window !== "undefined") {
 }
 
 function OriginalLayout(props) {
-  const { children, noFooter, wrapperClassName, pageClassName } = props;
+  const {
+    children,
+    noFooter,
+    wrapperClassName: _wrapperClassName,
+    pageClassName,
+  } = props;
+  const location = useLocation();
 
-  console.log("rendering");
+  // TODO: Remove this once we upgrade Docusaurus https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-pages#wrapperClassName
+  let wrapperClassName = _wrapperClassName;
+  if (
+    location.pathname !== "/docs/guides" &&
+    location.pathname.startsWith("/docs/guides")
+  ) {
+    wrapperClassName = `${wrapperClassName} guide-page-wrapper`;
+  }
+  const isGuidePage =
+    location.pathname.startsWith("/docs/guides") &&
+    location.pathname !== "/docs/guides/build" &&
+    location.pathname !== "/docs/guides";
+
   useKeyboardNavigation();
   return (
     <LayoutProviders>
@@ -83,7 +102,11 @@ function OriginalLayout(props) {
           pageClassName,
         )}
       >
-        {children}
+        {isGuidePage ? (
+          <GuidePageContextProvider>{children}</GuidePageContextProvider>
+        ) : (
+          children
+        )}
       </div>
 
       {!noFooter && <Footer />}
@@ -595,4 +618,3 @@ const PATH_TO_META_TAGS = {
     );
   },
 };
-

@@ -16,7 +16,6 @@ import {
 import "./GuideForm.css";
 
 // TODO:
-// - Remove bottom "next" button
 // - Update sidebar items
 export function GuideForm() {
   const history = useHistory();
