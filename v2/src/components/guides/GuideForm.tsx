@@ -77,13 +77,16 @@ export function GuideForm() {
         withCustomUI,
       };
 
-      const prefix = !checkIfGuideHasExampleApp(guide)
+      const hasExampleApp = checkIfGuideHasExampleApp(guide);
+      const prefix = !hasExampleApp
         ? WithoutExampleAppPathString
         : WithExampleAppPathString;
       const frameworkSuffix = backendFrameworkChoice
         ? `-${backendFrameworkChoice}`
         : "";
       const url = `/docs/guides/${prefix}/${frontendChoice}-${backendChoice}${frameworkSuffix}?authMethod=${authMethodChoice}`;
+      // TODO: Remove this once we add guides for stacks that do not have example apps
+      if (!hasExampleApp) return;
       history.push(url);
     },
     [frontendChoice, backendChoice, backendFrameworkChoice, authMethodChoice],
