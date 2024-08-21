@@ -749,7 +749,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Migration',
+      label: 'Migrating to Supertokens',
       items: [
         "migration/about",
         {
@@ -766,6 +766,7 @@ module.exports = {
         "migration/mfa-migration"
       ],
     },
+    "updating-supertokens",
     {
       type: "category",
       label: "References",
