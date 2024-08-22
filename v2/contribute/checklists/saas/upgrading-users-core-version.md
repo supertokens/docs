@@ -1057,3 +1057,6 @@ ALTER TABLE totp_user_devices ALTER COLUMN created_at DROP DEFAULT;
 
 ### 9.0 to 9.1
 When transferring data from older / source master db to newer one, we have to modify the insert query to set `is_first_factors_null` to true when inserting into the `tenant_configs` (in the target master db).
+
+### 9.1 to 9.2
+No changes required.
