@@ -79,14 +79,19 @@ export const GuidePageContextProvider: React.FC = ({ children }) => {
       backend = "nextjs";
     }
 
-    // TODO: Validate the split strings
-    if (!frontend || !backend) return null;
+    if (
+      !frontend ||
+      !backend ||
+      !isGuideFrontendChoice(frontend) ||
+      !isBackendChoice(backend)
+    )
+      return null;
 
     const searchParam = new URLSearchParams(location.search);
 
     let authMethod = searchParam.get("authMethod") as GuideAuthMethodChoice;
-    // TODO: Validate the authMethod query string
-    if (!authMethod) authMethod = "emailpassword";
+    if (!authMethod || !isAuthMethodChoice(authMethod))
+      authMethod = "emailpassword";
 
     return {
       frontend,
@@ -111,6 +116,55 @@ export const GuidePageContextProvider: React.FC = ({ children }) => {
     </GuidePageContext.Provider>
   );
 };
+
+export function isGuideFrontendChoice(
+  value: string,
+): value is GuideFrontendChoice {
+  const validChoices: GuideFrontendChoice[] = [
+    "react",
+    "angular",
+    "vue",
+    "nextjs",
+    "vanillajs",
+    "react-native",
+    "ios",
+    "android",
+    "flutter",
+  ];
+
+  return validChoices.includes(value as GuideFrontendChoice);
+}
+
+export function isBackendChoice(value: string): value is GuideBackendChoice {
+  const validChoices: GuideBackendChoice[] = [
+    "nodejs",
+    "golang",
+    "python",
+    "nextjs",
+    "php",
+    "csharp",
+    "java",
+  ];
+
+  return validChoices.includes(value as GuideBackendChoice);
+}
+
+export function isAuthMethodChoice(
+  value: string,
+): value is GuideAuthMethodChoice {
+  const validChoices: GuideAuthMethodChoice[] = [
+    "emailpassword",
+    "thirdparty",
+    "passwordless",
+    "thirdpartypasswordless",
+    "thirdpartyemailpassword",
+    "all-auth",
+    "mfa",
+    "multi-tenant",
+  ];
+
+  return validChoices.includes(value as GuideAuthMethodChoice);
+}
 
 const FrontedChoicesWithExampleApp: GuideFrontendChoice[] = [
   "react",

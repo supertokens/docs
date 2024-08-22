@@ -1,5 +1,6 @@
 module.exports = {
   sidebar: [
+    "intro",
     "build-a-guide",
     {
       type: "category",

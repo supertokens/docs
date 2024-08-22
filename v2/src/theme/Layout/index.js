@@ -71,10 +71,7 @@ function OriginalLayout(props) {
 
   // TODO: Remove this once we upgrade Docusaurus https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-pages#wrapperClassName
   let wrapperClassName = _wrapperClassName;
-  if (
-    location.pathname !== "/docs/guides" &&
-    location.pathname.startsWith("/docs/guides")
-  ) {
+  if (location.pathname.startsWith("/docs/guides")) {
     wrapperClassName = `${wrapperClassName} guide-page-wrapper`;
   }
   const isGuidePage =

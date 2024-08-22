@@ -15,8 +15,6 @@ import {
 
 import "./GuideForm.css";
 
-// TODO:
-// - Update sidebar items
 export function GuideForm() {
   const history = useHistory();
 

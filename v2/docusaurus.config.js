@@ -209,7 +209,129 @@ module.exports = {
         path: "guides",
         routeBasePath: "docs/guides",
         editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
-        sidebarPath: require.resolve("./guides/sidebars.js"),
+        // We use a custom sidebarItemsGenerator because if a doc page id is not present in the sidebar items
+        // the sidebar will not be rendered in that page. So we have to dynamically include all the guides in this sidebar.
+        // The annoying stuff is not finished yet.
+        // Given how our flow works it's quite redundant to show all the other guides in the sidebar while navigating a
+        // specific guide, for your tech stack.
+        // Well, good luck hiding sidebar items. There's no inbuilt api for that and the hacky way (using a custom class name and hiding the element)
+        // does not work. Maybe it's an issue with our docusaurus version.
+        // So we end up using an even hackier way to hide it. We wrap the page in a custom css class name and target the
+        // last item in the sidebar list.
+        sidebarItemsGenerator: async ({ docs }) => {
+          const guidesItems = docs
+            .filter((doc) => doc.id.startsWith("with-example-app"))
+            .map((doc) => ({
+              id: doc.id,
+              className: "hide-sidebar-item",
+              type: "doc",
+            }));
+
+          return [
+            { type: "doc", id: "intro" },
+            { type: "doc", id: "build-a-guide" },
+            {
+              type: "category",
+              label: "Authentication Methods",
+              collapsed: false,
+              items: [
+                {
+                  type: "link",
+                  label: "Email/Password Login",
+                  href: "/docs/emailpassword/introduction",
+                },
+                {
+                  type: "link",
+                  label: "Passwordless",
+                  href: "/docs/passwordless/introduction",
+                },
+                {
+                  type: "link",
+                  label: "Social/Enterprise Login",
+                  href: "/docs/thirdparty/introduction",
+                },
+                {
+                  type: "link",
+                  label: "Social/Enterprise Login with Email/Password",
+                  href: "/docs/thirdpartyemailpassword/introduction",
+                },
+                {
+                  type: "link",
+                  label: "Social/Enterprise Login with Passwordless",
+                  href: "/docs/thirdpartypasswordless/introduction",
+                },
+                {
+                  type: "link",
+                  label: "Phone Password Login",
+                  href: "/docs/phonepassword/introduction",
+                },
+              ],
+            },
+            {
+              type: "category",
+              label: "Add-ons",
+              collapsed: true,
+              items: [
+                {
+                  type: "link",
+                  label: "User Roles",
+                  href: "/docs/userroles/introduction",
+                },
+                {
+                  type: "link",
+                  label: "Multi Factor Authentication",
+                  href: "/docs/mfa/introduction",
+                },
+                {
+                  type: "link",
+                  label: "Microserviecs Authentication",
+                  href: "/docs/microservice_auth/introduction",
+                },
+                {
+                  type: "link",
+                  label: "Session Management",
+                  href: "/docs/session/introduction",
+                },
+                {
+                  type: "link",
+                  label: "User Management Dashboard",
+                  href: "/docs/userdashboard/about",
+                },
+                {
+                  type: "link",
+                  label: "Multi Tenancy/Organizations",
+                  href: "/docs/multitenancy/introduction",
+                },
+              ],
+            },
+            {
+              type: "category",
+              label: "Reference Docs",
+              collapsed: true,
+              items: [
+                {
+                  type: "link",
+                  label: "HTTP API Reference",
+                  href: "/docs/community/apis",
+                },
+                {
+                  type: "link",
+                  label: "SDK Reference",
+                  href: "/docs/community/sdks",
+                },
+              ],
+            },
+            {
+              type: "category",
+              label: "Guides",
+              collapsed: true,
+              className: "hide-sidebar-item",
+              items: guidesItems,
+            },
+          ];
+        },
+        // This doesn't work althought that's the way to exclude paths based on the docs
+        // exclude: ["**/blocks/**"],
         remarkPlugins: remarkPlugins,
         rehypePlugins: rehypePlugins,
         beforeDefaultRemarkPlugins,
