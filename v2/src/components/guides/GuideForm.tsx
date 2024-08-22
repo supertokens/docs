@@ -81,10 +81,14 @@ export function GuideForm() {
       const prefix = !hasExampleApp
         ? WithoutExampleAppPathString
         : WithExampleAppPathString;
-      const frameworkSuffix = backendFrameworkChoice
-        ? `-${backendFrameworkChoice}`
-        : "";
-      const url = `/docs/guides/${prefix}/${frontendChoice}-${backendChoice}${frameworkSuffix}?authMethod=${authMethodChoice}`;
+      let techStackString = `${frontendChoice}-${backendChoice}`;
+      if (frontendChoice === "nextjs" && backendChoice === "nextjs") {
+        techStackString = "nextjs";
+      }
+      if (backendFrameworkChoice) {
+        techStackString = `${techStackString}-${backendFrameworkChoice}`;
+      }
+      const url = `/docs/guides/${prefix}/${techStackString}?authMethod=${authMethodChoice}`;
       // TODO: Remove this once we add guides for stacks that do not have example apps
       if (!hasExampleApp) return;
       history.push(url);
@@ -425,6 +429,33 @@ export function GuideForm() {
           </li>
         </ul>
       </div>
+      {/* <div> */}
+      {/*   <h3>Add-ons</h3> */}
+      {/*   <ul className="toggle-grid-list"> */}
+      {/*     <li */}
+      {/*       className="toggle-grid-list__item" */}
+      {/*       onClick={onClickAuthMethodOption} */}
+      {/*       data-auth-method-choice="mfa" */}
+      {/*       data-selected={authMethodChoice === "mfa"} */}
+      {/*     > */}
+      {/*       <img src="/img/guides/MFA.svg" alt="MFA logo" width="30px" /> */}
+      {/*       Multi-Factor Authentication */}
+      {/*     </li> */}
+      {/*     <li */}
+      {/*       className="toggle-grid-list__item" */}
+      {/*       onClick={onClickAuthMethodOption} */}
+      {/*       data-auth-method-choice="multi-tenant" */}
+      {/*       data-selected={authMethodChoice === "multi-tenant"} */}
+      {/*     > */}
+      {/*       <img */}
+      {/*         src="/img/guides/multitenancy.svg" */}
+      {/*         alt="Multitenancy logo" */}
+      {/*         width="30px" */}
+      {/*       /> */}
+      {/*       Multi-Tenant Authentication */}
+      {/*     </li> */}
+      {/*   </ul> */}
+      {/* </div> */}
       <div className="submit-button-container">
         <button
           className="submit-button"

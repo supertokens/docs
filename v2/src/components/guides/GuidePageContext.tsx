@@ -68,11 +68,16 @@ export const GuidePageContextProvider: React.FC = ({ children }) => {
     if (!techStackString || !withExampleAppString) return null;
     if (withExampleAppString !== WithExampleAppPathString) return null;
 
-    const [frontend, backend, backendFramework]: [
+    let [frontend, backend, backendFramework]: [
       GuideFrontendChoice,
       GuideBackendChoice,
       GuideBackendFrameworkChoice,
     ] = techStackString.split("-");
+
+    if (techStackString === "nextjs") {
+      frontend = "nextjs";
+      backend = "nextjs";
+    }
 
     // TODO: Validate the split strings
     if (!frontend || !backend) return null;
@@ -111,6 +116,7 @@ const FrontedChoicesWithExampleApp: GuideFrontendChoice[] = [
   "react",
   "angular",
   "vue",
+  "nextjs",
 ];
 export const FrontendChoiceWithOnlyCustomUI: GuideFrontendChoice[] = [
   "vanillajs",
@@ -129,6 +135,7 @@ const BackendChoicesWithExampleApp: GuideBackendChoice[] = [
   "nodejs",
   "golang",
   "python",
+  "nextjs",
 ];
 const BackendFrameworkChoicesWithExampleApp: GuideBackendFrameworkChoice[] = [
   "express",
