@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useLocation } from "@docusaurus/router";
+import { useLocation, Redirect } from "@docusaurus/router";
 
 export type GuideFrontendChoice =
   | "react"
@@ -65,6 +65,7 @@ export const GuidePageContextProvider: React.FC = ({ children }) => {
     const withExampleAppString = splitPathname[3];
     const techStackString = splitPathname[4];
 
+    if (location.pathname.startsWith("/docs/guides/blocks")) return null;
     if (!techStackString || !withExampleAppString) return null;
     if (withExampleAppString !== WithExampleAppPathString) return null;
 
@@ -107,7 +108,8 @@ export const GuidePageContextProvider: React.FC = ({ children }) => {
   }, [guide]);
 
   if (!guide) {
-    throw new Error("Invalid guide path");
+    // throw new Error("Invalid guide path");
+    return <Redirect to="/404" />;
   }
 
   return (
