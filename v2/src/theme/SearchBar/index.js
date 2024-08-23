@@ -22,6 +22,7 @@ import {
   useActiveDocContext,
 } from '@theme/hooks/useDocs';
 
+
 let DocSearchModal = null;
 
 function Hit({ hit, children }) {

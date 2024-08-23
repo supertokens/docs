@@ -54,7 +54,16 @@ module.exports = {
                   items: [
                     "pre-built-ui/setup/user-management-dashboard/setup",
                     "pre-built-ui/setup/user-management-dashboard/users-listing-and-details",
-                    "pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions"
+                    "pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions",
+                    {
+                      type: 'category',
+                      label: 'Tenant Management',
+                      collapsed: true,
+                      items: [
+                        "pre-built-ui/setup/user-management-dashboard/tenant-management/overview",
+                        "pre-built-ui/setup/user-management-dashboard/tenant-management/details",
+                      ]
+                    }
                   ]
                 },
               ]
@@ -120,7 +129,16 @@ module.exports = {
                   items: [
                     "custom-ui/init/user-management-dashboard/setup",
                     "custom-ui/init/user-management-dashboard/users-listing-and-details",
-                    "custom-ui/init/user-management-dashboard/managing-user-roles-and-permissions"
+                    "custom-ui/init/user-management-dashboard/managing-user-roles-and-permissions",
+                    {
+                      type: 'category',
+                      label: 'Tenant Management',
+                      collapsed: true,
+                      items: [
+                        "custom-ui/init/user-management-dashboard/tenant-management/overview",
+                        "custom-ui/init/user-management-dashboard/tenant-management/details",
+                      ]
+                    }
                   ]
                 },
               ]
@@ -678,7 +696,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Migration',
+      label: 'Migrating to Supertokens',
       items: [
         "migration/about",
         {
@@ -695,6 +713,7 @@ module.exports = {
         "migration/mfa-migration"
       ],
     },
+    "updating-supertokens",
     {
       type: "category",
       label: "References",

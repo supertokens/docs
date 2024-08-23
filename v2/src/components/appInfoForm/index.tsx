@@ -578,7 +578,9 @@ export default class AppInfoForm extends React.PureComponent<PropsWithChildren<P
                                     marginRight: "10px"
                                 }}
                             />
-                            <span>
+                            <span style={{
+                                color: 'white !important'
+                            }}>
                                 I am using NextJS' <a target="_blank" rel="nofollow noopener noreferrer" href="https://nextjs.org/docs/api-routes/introduction">API route</a>
                             </span>
                         </label>

@@ -177,6 +177,21 @@ Content for Custom UI
 </PreBuiltOrCustomUISwitcher>
 ```
 
+## Generating screenshots / gifs
+
+`screenshots` folder has scripts to generate screenshots and gifs. To generate them, do the following steps:
+
+- Setup supertokens demo app using `npx create-supertokens-app@latest`
+- Update `config.ts` to point to `localhost:3567` instead of `try.supertokens.com`
+- Run Supertokens core locally using [docker](https://supertokens.com/docs/thirdpartypasswordless/pre-built-ui/setup/core/with-docker)
+- Create a [dashboard user](https://supertokens.com/docs/thirdpartypasswordless/pre-built-ui/setup/user-management-dashboard/setup#creating-dashboard-credentials) with email `demo@example.com` and password `demopass123`.
+- Run:
+  - `cd screenshots`
+  - `npm i`
+  - `bash generate-all.sh`
+
+Once all the commands run successfully, the screenshots will be placed appropriately in the `static` directory.
+
 ## Building for deployment
 - This only works if have access to the `supertokens-backend-website` and `main-website` repo.
 - Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
