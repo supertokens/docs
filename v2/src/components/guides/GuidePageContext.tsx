@@ -88,9 +88,12 @@ export const GuidePageContextProvider: React.FC = ({ children }) => {
     )
       return null;
 
-    const searchParam = new URLSearchParams(location.search);
+    let authMethod;
+    if (URLSearchParams) {
+      const searchParam = new URLSearchParams(location.search);
+      authMethod = searchParam.get("authMethod") as GuideAuthMethodChoice;
+    }
 
-    let authMethod = searchParam.get("authMethod") as GuideAuthMethodChoice;
     if (!authMethod || !isAuthMethodChoice(authMethod))
       authMethod = "emailpassword";
 
