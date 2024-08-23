@@ -270,7 +270,7 @@ module.exports = {
             {
               type: "category",
               label: "Add-ons",
-              collapsed: true,
+              collapsed: false,
               items: [
                 {
                   type: "link",

@@ -105,7 +105,11 @@ export function GuideForm() {
             data-frontend-choice="react"
             data-selected={frontendChoice === "react"}
           >
-            <img src="/img/logos/react.svg" alt="React logo" width="30px" />
+            <img
+              src="/img/logos/react.svg"
+              alt="React logo"
+              className="toggle-grid-list__item-logo"
+            />
             React
           </li>
           <li
@@ -114,7 +118,11 @@ export function GuideForm() {
             data-frontend-choice="angular"
             data-selected={frontendChoice === "angular"}
           >
-            <img src="/img/logos/angular.svg" alt="Angular logo" width="30px" />
+            <img
+              src="/img/logos/angular.svg"
+              alt="Angular logo"
+              className="toggle-grid-list__item-logo"
+            />
             Angular
           </li>
           <li
@@ -123,7 +131,11 @@ export function GuideForm() {
             data-frontend-choice="vue"
             data-selected={frontendChoice === "vue"}
           >
-            <img src="/img/logos/vue.svg" alt="Vue logo" width="30px" />
+            <img
+              src="/img/logos/vue.svg"
+              alt="Vue logo"
+              className="toggle-grid-list__item-logo"
+            />
             Vue
           </li>
           {/* <li */}
@@ -135,7 +147,7 @@ export function GuideForm() {
           {/*   <img */}
           {/*     src="/img/logos/vanillajs.svg" */}
           {/*     alt="Vanilla JS logo" */}
-          {/*     width="30px" */}
+          {/*     className="toggle-grid-list__item-logo" */}
           {/*   /> */}
           {/*   Vanilla JS */}
           {/* </li> */}
@@ -148,7 +160,7 @@ export function GuideForm() {
             <img
               src="/img/logos/next-logo.png"
               alt="Next.js logo"
-              width="30px"
+              className="toggle-grid-list__item-logo"
             />
             Next.js
           </li>
@@ -161,7 +173,7 @@ export function GuideForm() {
           {/*   <img */}
           {/*     src="/img/logos/react-native.svg" */}
           {/*     alt="React Native logo" */}
-          {/*     width="30px" */}
+          {/*     className="toggle-grid-list__item-logo" */}
           {/*   /> */}
           {/*   React Native */}
           {/* </li> */}
@@ -171,7 +183,7 @@ export function GuideForm() {
           {/*   data-frontend-choice="ios" */}
           {/*   data-selected={frontendChoice === "ios"} */}
           {/* > */}
-          {/*   <img src="/img/logos/ios.svg" alt="iOS logo" width="30px" /> */}
+          {/*   <img src="/img/logos/ios.svg" alt="iOS logo" className="toggle-grid-list__item-logo" /> */}
           {/*   iOS */}
           {/* </li> */}
           {/* <li */}
@@ -180,7 +192,7 @@ export function GuideForm() {
           {/*   data-frontend-choice="android" */}
           {/*   data-selected={frontendChoice === "android"} */}
           {/* > */}
-          {/*   <img src="/img/logos/android.svg" alt="Android logo" width="30px" /> */}
+          {/*   <img src="/img/logos/android.svg" alt="Android logo" className="toggle-grid-list__item-logo" /> */}
           {/*   Android */}
           {/* </li> */}
           {/* <li */}
@@ -189,7 +201,7 @@ export function GuideForm() {
           {/*   data-frontend-choice="flutter" */}
           {/*   data-selected={frontendChoice === "flutter"} */}
           {/* > */}
-          {/*   <img src="/img/logos/flutter.svg" alt="Flutter logo" width="30px" /> */}
+          {/*   <img src="/img/logos/flutter.svg" alt="Flutter logo" className="toggle-grid-list__item-logo" /> */}
           {/*   Flutter */}
           {/* </li> */}
         </ul>
@@ -207,7 +219,11 @@ export function GuideForm() {
               backendChoice === "nodejs" && backendFrameworkChoice === "express"
             }
           >
-            <img src="/img/logos/node.svg" alt="Nodejs logo" width="30px" />
+            <img
+              src="/img/logos/node.svg"
+              alt="Nodejs logo"
+              className="toggle-grid-list__item-logo"
+            />
             Node.js with Express
           </li>
           <li
@@ -222,7 +238,7 @@ export function GuideForm() {
             <img
               src="/img/logos/nest-logo.svg"
               alt="Nestjs logo"
-              width="30px"
+              className="toggle-grid-list__item-logo"
             />
             Node.js with NestJS
           </li>
@@ -236,7 +252,7 @@ export function GuideForm() {
           {/*     backendFrameworkChoice === "nodejs-other" */}
           {/*   } */}
           {/* > */}
-          {/*   <img src="/img/logos/node.svg" alt="Nodejs logo" width="30px" /> */}
+          {/*   <img src="/img/logos/node.svg" alt="Nodejs logo" className="toggle-grid-list__item-logo" /> */}
           {/*   Node.js with Other Frameworks */}
           {/* </li> */}
           <li
@@ -248,7 +264,7 @@ export function GuideForm() {
             <img
               src="/img/logos/next-logo.png"
               alt="Nextjs logo"
-              width="30px"
+              className="toggle-grid-list__item-logo"
             />
             Next.js
           </li>
@@ -261,7 +277,11 @@ export function GuideForm() {
               backendChoice === "golang" && backendFrameworkChoice === "http"
             }
           >
-            <img src="/img/logos/go.svg" alt="Golang logo" width="30px" />
+            <img
+              src="/img/logos/go.svg"
+              alt="Golang logo"
+              className="toggle-grid-list__item-logo"
+            />
             Go
           </li>
           <li
@@ -273,7 +293,11 @@ export function GuideForm() {
               backendChoice === "python" && backendFrameworkChoice === "flask"
             }
           >
-            <img src="/img/logos/python.svg" alt="Flask logo" width="30px" />
+            <img
+              src="/img/logos/python.svg"
+              alt="Flask logo"
+              className="toggle-grid-list__item-logo"
+            />
             Python with Flask
           </li>
           <li
@@ -285,7 +309,11 @@ export function GuideForm() {
               backendChoice === "python" && backendFrameworkChoice === "fastapi"
             }
           >
-            <img src="/img/logos/python.svg" alt="Python logo" width="30px" />
+            <img
+              src="/img/logos/python.svg"
+              alt="Python logo"
+              className="toggle-grid-list__item-logo"
+            />
             Python with FastAPI
           </li>
           <li
@@ -297,7 +325,11 @@ export function GuideForm() {
               backendChoice === "python" && backendFrameworkChoice === "django"
             }
           >
-            <img src="/img/logos/python.svg" alt="Django logo" width="30px" />
+            <img
+              src="/img/logos/python.svg"
+              alt="Django logo"
+              className="toggle-grid-list__item-logo"
+            />
             Python with Django
           </li>
           {/* <li */}
@@ -306,7 +338,7 @@ export function GuideForm() {
           {/*   data-backend-choice="php" */}
           {/*   data-selected={backendChoice === "php"} */}
           {/* > */}
-          {/*   <img src="/img/logos/php.svg" alt="PHP logo" width="30px" /> */}
+          {/*   <img src="/img/logos/php.svg" alt="PHP logo" className="toggle-grid-list__item-logo" /> */}
           {/*   PHP */}
           {/* </li> */}
           {/* <li */}
@@ -315,7 +347,7 @@ export function GuideForm() {
           {/*   data-backend-choice="c#" */}
           {/*   data-selected={backendChoice === "csharp"} */}
           {/* > */}
-          {/*   <img src="/img/logos/csharp.svg" alt="C# logo" width="30px" /> */}
+          {/*   <img src="/img/logos/csharp.svg" alt="C# logo" className="toggle-grid-list__item-logo" /> */}
           {/*   C# */}
           {/* </li> */}
           {/* <li */}
@@ -324,7 +356,7 @@ export function GuideForm() {
           {/*   data-backend-choice="java" */}
           {/*   data-selected={backendChoice === "java"} */}
           {/* > */}
-          {/*   <img src="/img/logos/java.svg" alt="Java logo" width="30px" /> */}
+          {/*   <img src="/img/logos/java.svg" alt="Java logo" className="toggle-grid-list__item-logo" /> */}
           {/*   Java */}
           {/* </li> */}
         </ul>
@@ -342,7 +374,7 @@ export function GuideForm() {
             <img
               src="/img/guides/emailPass.svg"
               alt="Recipe logo"
-              width="30px"
+              className="toggle-grid-list__item-logo"
             />
             Email/Password
           </li>
@@ -352,7 +384,11 @@ export function GuideForm() {
             data-auth-method-choice="thirdparty"
             data-selected={authMethodChoice === "thirdparty"}
           >
-            <img src="/img/guides/social.svg" alt="Recipe logo" width="30px" />
+            <img
+              src="/img/guides/social.svg"
+              alt="Recipe logo"
+              className="toggle-grid-list__item-logo"
+            />
             Social/Enterprise
           </li>
           <li
@@ -364,7 +400,7 @@ export function GuideForm() {
             <img
               src="/img/guides/passwordless.svg"
               alt="Passwordless logo"
-              width="30px"
+              className="toggle-grid-list__item-logo"
             />
             Passwordless (OTP/Magic link)
           </li>
@@ -377,7 +413,7 @@ export function GuideForm() {
             <img
               src="/img/guides/emailPassPlusSocial.svg"
               alt="EmailPassPlusSocial logo"
-              width="30px"
+              className="toggle-grid-list__item-logo"
             />
             Email/Password and Social/Enterprise
           </li>
@@ -390,7 +426,7 @@ export function GuideForm() {
             <img
               src="/img/guides/passLessSocial.svg"
               alt="Recipe logo"
-              width="30px"
+              className="toggle-grid-list__item-logo"
             />
             Social/Enterpise and Passwordless
           </li>
@@ -400,7 +436,7 @@ export function GuideForm() {
             data-auth-method-choice="all-auth"
             data-selected={authMethodChoice === "all-auth"}
           >
-            {/* <img src="/img/guides/node.svg" alt="Nodejs logo" width="30px" /> */}
+            {/* <img src="/img/guides/node.svg" alt="Nodejs logo" className="toggle-grid-list__item-logo" /> */}
             Email/Password, Social/Enterpise and Passwordless
           </li>
           <li
@@ -409,7 +445,11 @@ export function GuideForm() {
             data-auth-method-choice="mfa"
             data-selected={authMethodChoice === "mfa"}
           >
-            <img src="/img/guides/MFA.svg" alt="MFA logo" width="30px" />
+            <img
+              src="/img/guides/MFA.svg"
+              alt="MFA logo"
+              className="toggle-grid-list__item-logo"
+            />
             Multi-Factor Authentication
           </li>
           <li
@@ -421,7 +461,7 @@ export function GuideForm() {
             <img
               src="/img/guides/multitenancy.svg"
               alt="Multitenancy logo"
-              width="30px"
+              className="toggle-grid-list__item-logo"
             />
             Multi-Tenant Authentication
           </li>
@@ -436,7 +476,7 @@ export function GuideForm() {
       {/*       data-auth-method-choice="mfa" */}
       {/*       data-selected={authMethodChoice === "mfa"} */}
       {/*     > */}
-      {/*       <img src="/img/guides/MFA.svg" alt="MFA logo" width="30px" /> */}
+      {/*       <img src="/img/guides/MFA.svg" alt="MFA logo" className="toggle-grid-list__item-logo" /> */}
       {/*       Multi-Factor Authentication */}
       {/*     </li> */}
       {/*     <li */}
@@ -448,7 +488,7 @@ export function GuideForm() {
       {/*       <img */}
       {/*         src="/img/guides/multitenancy.svg" */}
       {/*         alt="Multitenancy logo" */}
-      {/*         width="30px" */}
+      {/*         className="toggle-grid-list__item-logo" */}
       {/*       /> */}
       {/*       Multi-Tenant Authentication */}
       {/*     </li> */}
