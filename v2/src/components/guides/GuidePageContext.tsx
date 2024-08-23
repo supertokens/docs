@@ -88,11 +88,10 @@ export const GuidePageContextProvider: React.FC = ({ children }) => {
     )
       return null;
 
-    let authMethod;
-    if (URLSearchParams) {
-      const searchParam = new URLSearchParams(location.search);
-      authMethod = searchParam.get("authMethod") as GuideAuthMethodChoice;
-    }
+    let authMethod = getSearchParam(
+      location.search,
+      "authMethod",
+    ) as GuideAuthMethodChoice;
 
     if (!authMethod || !isAuthMethodChoice(authMethod))
       authMethod = "emailpassword";
@@ -102,7 +101,7 @@ export const GuidePageContextProvider: React.FC = ({ children }) => {
       backend,
       backendFramework: backendFramework || null,
       authMethod,
-      withCustomUI: searchParam.get("customUI") === "true",
+      withCustomUI: false,
     };
   }, [location]);
   const hasExampleApp = useMemo(() => {
@@ -225,4 +224,25 @@ export function checkIfGuideHasExampleApp(guide: Guide) {
   return !(
     isMtaOrMfa && BackendChoiceWithoutSupportForMtaOrMfa.includes(guide.backend)
   );
+}
+
+// Docusuarus SSR build complains about URLSearchParams being undefined
+// Event though we check if it's defined before using it
+// So we do our own implementation here
+function getSearchParam(search: string, param: string) {
+  const queryString = search.split("?")[1];
+
+  if (!queryString) {
+    return null;
+  }
+
+  const pairs = queryString.split("&");
+  for (let pair of pairs) {
+    const [key, value] = pair.split("=");
+    if (key === param) {
+      return value;
+    }
+  }
+
+  return null;
 }
