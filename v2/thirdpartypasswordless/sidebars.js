@@ -33,7 +33,6 @@ module.exports = {
                       items: [
                         "pre-built-ui/setup/core/with-docker",
                         "pre-built-ui/setup/core/without-docker",
-                        "pre-built-ui/setup/core/self-hosted-with-aws",
                         {
                           type: 'category',
                           label: 'Database Setup',
@@ -110,7 +109,6 @@ module.exports = {
                       items: [
                         "custom-ui/init/core/with-docker",
                         "custom-ui/init/core/without-docker",
-                        "custom-ui/init/core/self-hosted-with-aws",
                         {
                           type: 'category',
                           label: 'Database Setup',
