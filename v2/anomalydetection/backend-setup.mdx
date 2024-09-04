@@ -6,17 +6,28 @@ hide_title: true
 
 # Setting up the Backend
 
-In order to use the anomaly detection service, a request to the following enpoint needs to be made:
+In order to use the anomaly detection service, a request to the following enpoint (based on the region) needs to be made:
 
+**US Region:**
 ```typescript
 POST https://security-us-east-1.aws.supertokens.io/v1/security
+```
+
+**EU Region (Ireland):**
+```typescript
+POST https://security-eu-west-1.aws.supertokens.io/v1/security
+```
+
+**APAC Region (Singapore):**
+```typescript
+POST https://security-ap-southeast-1.aws.supertokens.io/v1/security
 ```
 
 You can view the HTTP API reference for this endpoint [here](#somelinkhere).
 
 ### Retrieving the Request ID
 
-The reuqest ID that has been passed from the frontend is available in the `requestId` property of the input body from each API override.
+The request ID that has been passed from the frontend is available in the `requestId` property of the input body from each API override.
 
 Below is an example of how to retrieve the request ID from the input body:
 
@@ -28,25 +39,109 @@ const generatePasswordResetTokenPOST = async function (input) {
 }
 ```
 
+:::important
+The `requestId` is required when the trying to reset password, sign in or sign up. If the `requestId` is not present, a 400 error will be thrown.
+:::
+
 ### Making the Request to the Anomaly Detection endpoint
 
 The request body is a JSON object that contains the following properties (all fields are optional):
 
-- `securityServiceRequestId`: The request ID that has been generated on the frontend.
+- `securityServiceRequestId`: The request ID that has been generated on the frontend. If this is omitted, the bot detection, impossible travel detection, new device detection, device count detection and request ID info will be skipped.
 - `bruteForce`: An array of brute force checks that have been configured on the frontend.
 ```typescript
 type BruteForceCheck = {
-    keyStr: string;
+    keyStr: string; // the key against which the the brute force check is being performed. This should be unique for each user (i.e. email, phone number, ip, etc. )
     maxRequests: {
-                limit: number;
-                perTimeIntervalMS: number;
-        }[];
-    }
-}
+        limit: number; // the maximum number of requests allowed within the time interval
+        perTimeIntervalMS: number; // the time interval in milliseconds within which the maximum number of requests is allowed
+    }[];
+}[]
 ```
-- `passwordHash`: The SHA-1 hash of the password that needs to be checked against the breach database.
-- `email`: The email address that is being used for the authentication event.
-- `phoneNumber`: The phone number that is being used for the authentication event.
+
+Here you can see some examples of different types of brute force checks that can be performed:
+
+```typescript
+// Useful for limiting a user's attempt from the same network
+// This is the most common use case
+// ---
+// This does two check:
+// 1. 1 request per second - fast rate of requests
+// 2. 100 requests per 60 minutes - slow brute force - some attackers might try sidestepping the regular brute force detection by using a slower rate of requests
+const checkUserInSameNetwork = [{
+    keyStr: `${userIp}-${userEmail}`;
+    maxRequests: [
+        {
+            limit: 1;
+            perTimeIntervalMS: 1000; 
+        },
+        {
+            limit: 100;
+            perTimeIntervalMS: 60 * 1000 * 60; 
+        }
+    ];
+}]
+```
+
+
+```typescript
+// Useful for limiting requests from the same network
+// This should usually have a higher number of requests/time interval allowed
+const checkNetwork = [{
+    keyStr: `${userIp}`;
+    maxRequests: [
+        {
+            limit: 100;
+            perTimeIntervalMS: 1000; 
+        },
+    ];
+}]
+```
+
+```typescript
+// Useful for limiting requests for the user only
+const checkUserOnly = [{
+    keyStr: `${userEmail}`;
+    maxRequests: [
+        {
+            limit: 1;
+            perTimeIntervalMS: 1000; 
+        },
+    ];
+}]
+```
+
+```typescript
+// Checking by multiple keys at once
+const checkUserOnly = [
+    {
+        keyStr: `${userIp}-${userEmail}`;
+        maxRequests: [
+            {
+                limit: 1;
+                perTimeIntervalMS: 1000; 
+            },
+            {
+                limit: 100;
+                perTimeIntervalMS: 60 * 1000 * 60; 
+            }
+        ];
+    },
+    {
+        keyStr: `${userIp}`;
+        maxRequests: [
+            {
+                limit: 100;
+                perTimeIntervalMS: 1000; 
+            },
+        ];
+    }
+]
+```
+
+- `passwordHash`: The SHA-1 hash of the password that needs to be checked against the breach database. If this is not provided, the password breach check will be skipped.
+- `email`: The email address that is being used for the authentication event. If this is not provided (or `phoneNumber'), the impossible travel detection, new device detection and device count detection will be skipped.
+- `phoneNumber`: The phone number that is being used for the authentication event. If this is not provided (or `email'), the impossible travel detection, new device detection and device count detection will be skipped.
 - `actionType`: The type of action that is being performed. The possible values are:
       - `emailpassword-sign-in`
       - `emailpassword-sign-up`
