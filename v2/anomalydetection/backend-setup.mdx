@@ -4,11 +4,17 @@ title: Backend Setup
 hide_title: true
 ---
 
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+
+
 # Setting up the Backend
 
 In order to use the anomaly detection service, a request to the following enpoint (based on the region) needs to be made:
 
-**US Region:**
+**US Region (N. Virginia):**
 ```typescript
 POST https://security-us-east-1.aws.supertokens.io/v1/security
 ```
@@ -23,7 +29,64 @@ POST https://security-eu-west-1.aws.supertokens.io/v1/security
 POST https://security-ap-southeast-1.aws.supertokens.io/v1/security
 ```
 
-You can view the HTTP API reference for this endpoint [here](#somelinkhere).
+You can view the HTTP API reference for this endpoint below:
+
+<details>
+    <summary>Headers</summary>
+
+```typescript
+{
+    "Content-Type": "application/json",
+    "Authorization": "Bearer <api-key>"
+}
+```
+</details>
+
+<details>
+    <summary>Payload</summary>
+
+```typescript
+{
+    "email": "user@email.com",
+    "phoneNumber": "+1234567890",
+    "passwordHash": "9cf95dacd226dcf43da376cdb6cbba7035218920",
+    "requestId": "some-request-id",
+    "actionType": "emailpassword-sign-in",
+    "bruteForce": [
+        {
+            "key": "some-key",
+            "maxRequests": [
+                {
+                    "limit": 1,
+                    "perTimeIntervalMS": 1000
+                }
+            ]
+        }
+    ]
+}
+```
+</details>
+
+<details>
+    <summary>Response</summary>
+
+```typescript
+{
+	"id": "0191bc35-d527-7bbd-88df-1e7669e82cc0",
+	"bruteForce": {
+		"detected": true,
+		"key": "some-key"
+	},
+	"emailRisk": null,
+	"phoneNumberRisk": null,
+	"isBreachedPassword": false,
+	"isNewDevice": false,
+	"isImpossibleTravel": false,
+	"numberOfUniqueDevicesForUser": 1,
+	"requestIdInfo": null
+}
+```
+</details>
 
 ### Retrieving the Request ID
 
@@ -47,7 +110,7 @@ The `requestId` should be required when the trying to reset password, sign in or
 
 The request body is a JSON object that contains the following properties (all fields are optional):
 
-- `securityServiceRequestId`: The request ID that has been generated on the frontend. If this is omitted, the bot detection, impossible travel detection, new device detection, device count detection and request ID info will be skipped.
+- `requestId`: The request ID that has been generated on the frontend. If this is omitted, the bot detection, impossible travel detection, new device detection, device count detection and request ID info will be skipped.
 - `bruteForce`: An array of brute force checks that have been configured on the frontend.
 ```typescript
 type BruteForceCheck = {
@@ -140,18 +203,18 @@ const checkUserOnly = [
 ```
 
 - `passwordHash`: The SHA-1 hash of the password that needs to be checked against the breach database. If this is not provided, the password breach check will be skipped.
-- `email`: The email address that is being used for the authentication event. If this is not provided (or `phoneNumber'), the impossible travel detection, new device detection and device count detection will be skipped.
-- `phoneNumber`: The phone number that is being used for the authentication event. If this is not provided (or `email'), the impossible travel detection, new device detection and device count detection will be skipped.
+- `email`: The email address that is being used for the authentication event. If this is not provided (or `phoneNumber`), the impossible travel detection, new device detection and device count detection will be skipped.
+- `phoneNumber`: The phone number that is being used for the authentication event. If this is not provided (or `email`), the impossible travel detection, new device detection and device count detection will be skipped.
 - `actionType`: The type of action that is being performed. The possible values are:
-      - `emailpassword-sign-in`
-      - `emailpassword-sign-up`
-      - `send-password-reset-email`
-      - `passwordless-send-email`
-      - `passwordless-send-sms`
-      - `totp-verify-device`
-      - `totp-verify-totp`
-      - `thirdparty-login`
-      - `emailverification-send-email`
+      - "emailpassword-sign-in"
+      - "emailpassword-sign-up"
+      - "send-password-reset-email"
+      - "passwordless-send-email"
+      - "passwordless-send-sms"
+      - "totp-verify-device"
+      - "totp-verify-totp"
+      - "thirdparty-login"
+      - "emailverification-send-email"
 
 
 Below is an example of how to make the request to the anomaly detection endpoint:
@@ -165,7 +228,7 @@ async function doSecurityChecks(input: {
     email?: string,
     phoneNumber?: string,
     password?: string,
-    securityServiceRequestId?: string,
+    requestId?: string,
     bruteForceChecks?: {
         keyStr: string,
         maxRequests: {
@@ -181,7 +244,7 @@ async function doSecurityChecks(input: {
         email?: string;
         phoneNumber?: string;
         actionType?: string;
-        securityServiceRequestId?: string;
+        requestId?: string;
         passwordHash?: string;
         bruteForce?: {
             keyStr: string;
@@ -192,8 +255,8 @@ async function doSecurityChecks(input: {
         }[];
     } = {}
 
-    if (input.securityServiceRequestId !== undefined) {
-        requestBody.securityServiceRequestId = input.securityServiceRequestId;
+    if (input.requestId !== undefined) {
+        requestBody.requestId = input.requestId;
     }
 
     if (input.password !== undefined) {
@@ -227,3 +290,377 @@ async function doSecurityChecks(input: {
     return undefined;
 }
 ```
+
+### Overrides
+Here are a few examples of full implementations of the anomaly detection:
+
+#### Email and password
+<BackendSDKTabs>
+
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+import { createHash } from 'crypto';
+
+const API_KEY = "<api-key>"; // Your secret API key that you received from the SuperTokens team
+const ANOMALY_DETECTION_API_URL = "https://security-us-east-1.aws.supertokens.io/v1/security";
+
+async function handleSecurityChecks(input: {
+    actionType?: string,
+    email?: string,
+    phoneNumber?: string,
+    password?: string,
+    requestId?: string,
+    bruteForceChecks?: {
+        keyStr: string,
+        maxRequests: {
+            limit: number,
+            perTimeIntervalMS: number
+        }[]
+    }[]
+}): Promise<{
+    status: "GENERAL_ERROR",
+    message: string
+} | undefined> {
+    let requestBody: {
+        email?: string;
+        phoneNumber?: string;
+        actionType?: string;
+        requestId?: string;
+        passwordHash?: string;
+        bruteForce?: {
+            keyStr: string;
+            maxRequests: {
+                limit: number;
+                perTimeIntervalMS: number;
+            }[];
+        }[];
+    } = {}
+
+    if (input.requestId !== undefined) {
+        requestBody.requestId = input.requestId;
+    }
+
+    if (input.password !== undefined) {
+        let shasum = createHash('sha1');
+        shasum.update(input.password);
+        const passwordHash = shasum.digest('hex');
+        requestBody.passwordHash = passwordHash;
+    }
+    requestBody.bruteForce = input.bruteForce;
+    requestBody.email = input.email;
+    requestBody.phoneNumber = input.phoneNumber;
+    requestBody.actionType = input.actionType;
+
+    let response = await axios.post(ANOMALY_DETECTION_API_URL, requestBody);
+    let responseData = response.data;
+
+    if (!responseData.bruteForce.result) {
+        throw new Error("Too many requests. Please try again later.");
+    }
+
+    if (responseData.isBreachedPassword) {
+        // ... your code here ...
+    }
+
+    if(responseData.isNewDevice) {
+        // ... your code here ...
+    }
+
+    if(responseData.isImpossibleTravel) {
+        // ... your code here ...
+    }
+
+    if(responseData.numberOfUniqueDevicesForUser) {
+        // ... your code here ...
+    }
+    
+    if(responseData.requestIdInfo) {
+        // handle stuff like bot detection, vpn detection, tor detection, etc
+        // ... your code here ...
+    }
+
+    return responseData;
+}
+
+const getBruteForce = (email: string) => [{
+    keyStr: `${email}`;
+    maxRequests: [
+        {
+            limit: 1;
+            perTimeIntervalMS: 1000; 
+        },
+        {
+            limit: 100;
+            perTimeIntervalMS: 60 * 1000 * 60; 
+        }
+    ];
+}];
+
+// backend
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signUpPOST: async function (input) {
+                            // There is no need to generate a request ID when signing up
+
+                            const bruteForceChecks = getBruteForce(input.email);
+                            // we check the anomaly detection service before calling the original implementation of signUp
+                            let securityCheckResponse = await handleSecurityChecks({ ...input, bruteForceChecks });
+                            // ... security check code here ...
+
+                            // First we call the original implementation of signUp.
+                            let response = await originalImplementation.signUpPOST(input);
+                            if (response.status === "OK") {
+                                // TODO: post password reset logic
+                            }
+
+                            return response;
+                        },
+                        signInPOST: async function (input) {
+                            // We need to generate a request ID when signing in order to detect possible bots, suspicious IP addresses, etc.
+                            const requestId = (await input.options.req.getJSONBody()).requestId;
+                            if(!requestId) {
+                                // make sure to throw an error or correctly handle this error case
+                                throw new Error("requestId is required");
+                            }
+
+                            const bruteForceChecks = getBruteForce(input.email);
+                            // we check the anomaly detection service before calling the original implementation of signUp
+                            let securityCheckResponse = await handleSecurityChecks({ ...input, requestId, bruteForceChecks });
+                            // ... security check code here ...
+
+                            // First we call the original implementation of signIn.
+                            let response = await originalImplementation.signInPOST(input);
+                            if (response.status === "OK") {
+                                // TODO: post password reset logic
+                            }
+
+                            return response;
+                        },
+                        passwordResetPOST: async function (input) {
+                            // There is no need to generate a request ID when resetting the password
+
+                            const bruteForceChecks = getBruteForce(input.email);
+                            // we check the anomaly detection service before calling the original implementation of signUp
+                            let securityCheckResponse = await handleSecurityChecks({ ...input, bruteForceChecks });
+                            // ... security check code here ...
+
+                            // First we call the original implementation of passwordReset.
+                            let response = await originalImplementation.passwordResetPOST(input);
+                            if (response.status === "OK") {
+                                // TODO: post password reset logic
+                            }
+
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+    ]
+});
+```
+</TabItem>
+
+<TabItem value="go">
+go
+</TabItem>
+
+<TabItem value="python">
+python
+</TabItem>
+
+<TabItem value="otherFrameworks">
+other frameworks
+</TabItem>
+</BackendSDKTabs>
+
+
+#### Passwordless
+<BackendSDKTabs>
+
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import { createHash } from 'crypto';
+
+const API_KEY = "<api-key>"; // Your secret API key that you received from the SuperTokens team
+const ANOMALY_DETECTION_API_URL = "https://security-us-east-1.aws.supertokens.io/v1/security";
+
+async function handleSecurityChecks(input: {
+    actionType?: string,
+    email?: string,
+    phoneNumber?: string,
+    password?: string,
+    requestId?: string,
+    bruteForceChecks?: {
+        keyStr: string,
+        maxRequests: {
+            limit: number,
+            perTimeIntervalMS: number
+        }[]
+    }[]
+}): Promise<{
+    status: "GENERAL_ERROR",
+    message: string
+} | undefined> {
+    let requestBody: {
+        email?: string;
+        phoneNumber?: string;
+        actionType?: string;
+        requestId?: string;
+        passwordHash?: string;
+        bruteForce?: {
+            keyStr: string;
+            maxRequests: {
+                limit: number;
+                perTimeIntervalMS: number;
+            }[];
+        }[];
+    } = {}
+
+    if (input.requestId !== undefined) {
+        requestBody.requestId = input.requestId;
+    }
+
+    if (input.password !== undefined) {
+        let shasum = createHash('sha1');
+        shasum.update(input.password);
+        const passwordHash = shasum.digest('hex');
+        requestBody.passwordHash = passwordHash;
+    }
+    requestBody.bruteForce = input.bruteForce;
+    requestBody.email = input.email;
+    requestBody.phoneNumber = input.phoneNumber;
+    requestBody.actionType = input.actionType;
+
+    let response = await axios.post(ANOMALY_DETECTION_API_URL, requestBody);
+    let responseData = response.data;
+
+    if (!responseData.bruteForce.result) {
+        throw new Error("Too many requests. Please try again later.");
+    }
+
+    if (responseData.isBreachedPassword) {
+        // ... your code here ...
+    }
+
+    if(responseData.isNewDevice) {
+        // ... your code here ...
+    }
+
+    if(responseData.isImpossibleTravel) {
+        // ... your code here ...
+    }
+
+    if(responseData.numberOfUniqueDevicesForUser) {
+        // ... your code here ...
+    }
+    
+    if(responseData.requestIdInfo) {
+        // handle stuff like bot detection, vpn detection, tor detection, etc
+        // ... your code here ...
+    }
+
+    return responseData;
+}
+
+
+
+SuperTokens.init({
+    // @ts-ignore
+    framework: "...",
+    // @ts-ignore
+    appInfo: { /*...*/ },
+    recipeList: [
+        Passwordless.init({
+            // ... other customisations ...
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        createCodePOST: async function (input) {
+                            // We need to have a request ID when creating a code in order to detect possible bots, suspicious IP addresses, etc.
+                            const requestId = (await input.options.req.getJSONBody()).requestId;
+                            if(!requestId) {
+                                // make sure to throw an error or correctly handle this error case
+                                throw new Error("requestId is required");
+                            }
+
+                            // ... your code here ...
+                            let session = await Session.getSession(input.options.req, input.options.res, {
+                                overrideGlobalClaimValidators: () => [],
+                            });
+                            let phoneNumber: string = session.getAccessTokenPayload().phoneNumber;
+
+                            // we check the anomaly detection service before calling the original implementation of signUp
+                            let securityCheckResponse = await handleSecurityChecks({ ...input, requestId, phoneNumber });
+                            // ... security check code here ...
+
+                            return originalImplementation.createCodePOST(input);
+                        },
+                        resendCodePOST: async function (input) {
+                            // We need to have a request ID when resending the code in order to detect possible bots, suspicious IP addresses, etc.
+                            const requestId = (await input.options.req.getJSONBody()).requestId;
+                            if(!requestId) {
+                                // make sure to throw an error or correctly handle this error case
+                                throw new Error("requestId is required");
+                            }
+
+                            // ... your code here ...
+                            let session = await Session.getSession(input.options.req, input.options.res, {
+                                overrideGlobalClaimValidators: () => [],
+                            });
+                            let phoneNumber: string = session.getAccessTokenPayload().phoneNumber;
+
+                            // we check the anomaly detection service before calling the original implementation of signUp
+                            let securityCheckResponse = await handleSecurityChecks({ ...input, requestId, phoneNumber });
+                            // ... security check code here ...
+
+                            return originalImplementation.resendCodePOST(input);
+                        },
+                    };
+                },
+            },
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+})
+```
+</TabItem>
+
+<TabItem value="go">
+go
+</TabItem>
+
+<TabItem value="python">
+python
+</TabItem>
+
+<TabItem value="otherFrameworks">
+other frameworks
+</TabItem>
+</BackendSDKTabs>
