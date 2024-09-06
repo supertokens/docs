@@ -1,3 +1,3 @@
 module.exports = {
-  sidebar: ["introduction", "frontend-setup", "backend-setup"],
+  sidebar: ["introduction", "enabling", "frontend-setup", "backend-setup"],
 };

@@ -16,14 +16,19 @@ This frontend setup is required only for bot detection and anomaly IP based dete
 
 In order to generate a request ID, you need to import and initialise the SDK using your public API key. This SDK is used to generate a unique request ID for each authentication event attempt.
 
+:::important
+When calling the `get` function of the SDK, you need to pass the `environmentId` as a tag. This is used to identify the environment in which the request ID is being generated.
+:::
+
 Below is an example of how to implement request ID generation on your frontend:
 
 
 ```tsx
 const API_KEY = "<api-key>"; // Your public API key that you received from the SuperTokens team
 const SDK_URL = "https://supertokens.io/JfNbWqtXUiGYuTqb/PYmK3PIPqdvHw6iz";
+const ENVIRONMENT_ID = "<environment-id>"; // Your environment ID that you received from the SuperTokens team
 
-const supertokensDeviceIdPromise = import(SDK_URL + "?apiKey=" + API_KEY).then((RequestId: any) => RequestId.load({
+const supertokensAnomalyDetectionSdkPromise = import(SDK_URL + "?apiKey=" + API_KEY).then((RequestId: any) => RequestId.load({
     endpoint: [
         SDK_URL,
         RequestId.defaultEndpoint
@@ -31,8 +36,12 @@ const supertokensDeviceIdPromise = import(SDK_URL + "?apiKey=" + API_KEY).then((
 }));
 
 async function getRequestId() {
-    const deviceId = await supertokensDeviceIdPromise;
-    const result = await deviceId.get();
+    const sdk = await supertokensAnomalyDetectionSdkPromise;
+    const result = await sdk.get({
+        tag: {
+            environmentId: ENVIRONMENT_ID,
+        }
+    });
     return result.requestId;
 }
 ```
@@ -51,8 +60,9 @@ import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 
 const API_KEY = "<api-key>"; // Your public API key that you received from the SuperTokens team
 const SDK_URL = "https://supertokens.io/JfNbWqtXUiGYuTqb/PYmK3PIPqdvHw6iz";
+const ENVIRONMENT_ID = "<environment-id>"; // Your environment ID that you received from the SuperTokens team
 
-const supertokensDeviceIdPromise = import(SDK_URL + "?apiKey=" + API_KEY).then((RequestId: any) => RequestId.load({
+const supertokensRequestIdPromise = import(SDK_URL + "?apiKey=" + API_KEY).then((RequestId: any) => RequestId.load({
     endpoint: [
         SDK_URL,
         RequestId.defaultEndpoint
@@ -61,39 +71,43 @@ const supertokensDeviceIdPromise = import(SDK_URL + "?apiKey=" + API_KEY).then((
 
 async function getRequestId() {
     const requestId = await supertokensRequestIdPromise;
-    const result = await requestId.get();
+    const result = await requestId.get({
+        tag: {
+            environmentId: ENVIRONMENT_ID,
+        }
+    });
     return result.requestId;
 }
 
 export const SuperTokensConfig = {
     // ... other config options
     appInfo: {
-        appName: "SuperTokens Demo App",
-        apiDomain: 'your-api-domain.com',
-        websiteDomain: 'your-website-domain.com',
+        appName: "...",
+        apiDomain: '...',
+        websiteDomain: '...',
     },
     // recipeList contains all the modules that you want to
     // use from SuperTokens. See the full list here: https://supertokens.com/docs/guides
     recipeList: [
         EmailPassword.init({
             // highlight-start
-            override: {
-                functions: (originalImplementation: RecipeInterface): RecipeInterface => {
-                    return {
-                        ...originalImplementation,
-                        
-                        // we will only be overriding what happens when a user
-                        // clicks the sign in button.
-                        signIn: async function (input: any) {
-                            // TODO: some custom logic
-                            let requestId = await getRequestId();
-                            // or call the default behaviour as show below
-                            return originalImplementation.signIn({ ...input, requestId });
-                        },
-                        // ...
-                        // TODO: override more functions
+            preAPIHook: async (context) => {
+                let url = context.url;
+                let requestInit = context.requestInit;
+
+                let action = context.action;
+                if (action === "EMAIL_PASSWORD_SIGN_IN" || action === "EMAIL_PASSWORD_SIGN_UP" || action === "SEND_RESET_PASSWORD_EMAIL") {
+                    let requestId = await getRequestId();
+                    let body = context.requestInit.body;
+                    if (body !== undefined) {
+                        let bodyJson = JSON.parse(body as string);
+                        bodyJson.requestId = requestId;
+                        requestInit.body = JSON.stringify(bodyJson);
                     }
                 }
+                return {
+                    requestInit, url
+                };
             }
             // highlight-end
         }),
