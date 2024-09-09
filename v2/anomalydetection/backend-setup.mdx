@@ -218,7 +218,41 @@ Below is an example of how to retrieve the request ID from the input body:
 </TabItem>
 
 <TabItem value="go">
-go
+
+```go
+import (
+	"encoding/json"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+type ReqBody struct {
+	RequestID string `json:"requestId"`
+}
+
+func signInPOST(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignInPOSTResponse, error) {
+    // ... your code here ...
+    var reqBody ReqBody
+    err := json.NewDecoder(options.Req.Body).Decode(&reqBody)
+    if err != nil {
+        return epmodels.SignInPOSTResponse{}, err
+    }
+
+    requestId := reqBody.RequestID
+    if requestId == "" {
+        return epmodels.SignInPOSTResponse{
+            GeneralError: &supertokens.GeneralErrorResponse{
+                Message: "The request ID is required",
+            },
+        }, nil
+    }
+    // ... your code here ...
+
+    return epmodels.SignInPOSTResponse{}, nil
+}
+```
+
 </TabItem>
 
 <TabItem value="python">
@@ -588,12 +622,368 @@ SuperTokens.init({
 <TabItem value="go">
 
 ```go
-package main
+import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
+	"net/http"
 
-const (
-	API_KEY                   = "<api-key>" // Your secret API key that you received from the SuperTokens team
-	ANOMALY_DETECTION_API_URL = "https://security-<region>.aws.supertokens.io/v1/security"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
 )
+
+const API_KEY = "<api-key>" // Your secret API key that you received from the SuperTokens team
+// The full URL with the correct region will be provided by the SuperTokens team
+const ANOMALY_DETECTION_API_URL = "https://security-<region>.aws.supertokens.io/v1/security"
+
+type SecurityCheckInput struct {
+	ActionType       string             `json:"actionType,omitempty"`
+	Email            string             `json:"email,omitempty"`
+	PhoneNumber      string             `json:"phoneNumber,omitempty"`
+	Password         string             `json:"password,omitempty"`
+	RequestID        string             `json:"requestId,omitempty"`
+	BruteForceConfig []BruteForceConfig `json:"bruteForceConfig,omitempty"`
+}
+
+type BruteForceConfig struct {
+	Key         string        `json:"key"`
+	MaxRequests []MaxRequests `json:"maxRequests"`
+}
+
+type MaxRequests struct {
+	Limit             int `json:"limit"`
+	PerTimeIntervalMS int `json:"perTimeIntervalMS"`
+}
+
+type ReqBody struct {
+	RequestID string `json:"requestId"`
+}
+
+func getIpFromRequest(req *http.Request) string {
+	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		return forwardedFor
+	}
+	return "127.0.0.1"
+}
+
+func getBruteForceConfig(userIdentifier string, ip string, prefix string) []BruteForceConfig {
+	var key string
+	if prefix != "" {
+		key = prefix + "-"
+	}
+
+	return []BruteForceConfig{
+		{
+			Key: key + userIdentifier,
+			MaxRequests: []MaxRequests{
+				{Limit: 5, PerTimeIntervalMS: 60 * 1000},
+				{Limit: 15, PerTimeIntervalMS: 60 * 60 * 1000},
+			},
+		},
+		{
+			Key: key + ip,
+			MaxRequests: []MaxRequests{
+				{Limit: 5, PerTimeIntervalMS: 60 * 1000},
+				{Limit: 15, PerTimeIntervalMS: 60 * 60 * 1000},
+			},
+		},
+	}
+}
+
+func handleSecurityChecks(input SecurityCheckInput) (*supertokens.GeneralErrorResponse, error) {
+	requestBody := make(map[string]interface{})
+
+	if input.RequestID != "" {
+		requestBody["requestId"] = input.RequestID
+	}
+
+	if input.Password != "" {
+		hash := sha1.New()
+		hash.Write([]byte(input.Password))
+		passwordHash := hex.EncodeToString(hash.Sum(nil))
+		requestBody["passwordHash"] = passwordHash
+	}
+
+	requestBody["bruteForce"] = input.BruteForceConfig
+	requestBody["email"] = input.Email
+	requestBody["phoneNumber"] = input.PhoneNumber
+	requestBody["actionType"] = input.ActionType
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", ANOMALY_DETECTION_API_URL, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("api-key", API_KEY)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var responseData map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&responseData)
+	if err != nil {
+		return nil, err
+	}
+
+	if bruteForce, ok := responseData["bruteForce"].(map[string]interface{}); ok {
+		if detected, ok := bruteForce["detected"].(bool); ok && detected {
+			return &supertokens.GeneralErrorResponse{
+				Message: "Too many requests. Please try again later.",
+			}, nil
+		}
+	}
+
+	if requestIdInfo, ok := responseData["requestIdInfo"].(map[string]interface{}); ok {
+		if isUsingTor, ok := requestIdInfo["isUsingTor"].(bool); ok && isUsingTor {
+			return &supertokens.GeneralErrorResponse{
+				Message: "Tor activity detected. Please use a regular browser.",
+			}, nil
+		}
+
+		if vpn, ok := requestIdInfo["vpn"].(map[string]interface{}); ok {
+			if result, ok := vpn["result"].(bool); ok && result {
+				return &supertokens.GeneralErrorResponse{
+					Message: "VPN activity detected. Please use a regular network.",
+				}, nil
+			}
+		}
+
+		if botDetected, ok := requestIdInfo["botDetected"].(bool); ok && botDetected {
+			return &supertokens.GeneralErrorResponse{
+				Message: "Bot activity detected.",
+			}, nil
+		}
+	}
+
+	if isPasswordBreached, ok := responseData["isPasswordBreached"].(bool); ok && isPasswordBreached {
+		return &supertokens.GeneralErrorResponse{
+			Message: "This password has been detected in a breach. Please set a different password.",
+		}, nil
+	}
+
+	return nil, nil
+}
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			emailpassword.Init(&epmodels.TypeInput{
+				Override: &epmodels.OverrideStruct{
+					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+						// rewrite the original implementation of SignUpPOST
+						originalSignUpPOST := *originalImplementation.SignUpPOST
+						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
+							// Generate request ID for bot and suspicious IP detection
+							var reqBody ReqBody
+							err := json.NewDecoder(options.Req.Body).Decode(&reqBody)
+							if err != nil {
+								return epmodels.SignUpPOSTResponse{}, err
+							}
+
+							requestId := reqBody.RequestID
+							if requestId == "" {
+								return epmodels.SignUpPOSTResponse{
+									GeneralError: &supertokens.GeneralErrorResponse{
+										Message: "The request ID is required",
+									},
+								}, nil
+							}
+
+							ip := getIpFromRequest(options.Req)
+							email := ""
+							password := ""
+							for _, field := range formFields {
+								if field.ID == "email" {
+									email = field.Value
+									break
+								}
+								if field.ID == "password" {
+									password = field.Value
+									break
+								}
+							}
+							bruteForceConfig := getBruteForceConfig(email, ip, "signUp")
+							actionType := "emailpassword-sign-up"
+
+							// Check anomaly detection service before proceeding
+							checkErr, err := handleSecurityChecks(
+								SecurityCheckInput{
+									ActionType:       actionType,
+									Email:            email,
+									RequestID:        requestId,
+									BruteForceConfig: bruteForceConfig,
+									Password:         password,
+								},
+							)
+							if err != nil {
+								return epmodels.SignUpPOSTResponse{}, err
+							}
+
+							if checkErr != nil {
+								return epmodels.SignUpPOSTResponse{
+									GeneralError: checkErr,
+								}, nil
+							}
+
+							// pre API logic...
+							resp, err := originalSignUpPOST(formFields, tenantId, options, userContext)
+							if err != nil {
+								return epmodels.SignUpPOSTResponse{}, err
+							}
+
+							return resp, nil
+						}
+
+						// rewrite the original implementation of SignInPOST
+						originalSignInPOST := *originalImplementation.SignInPOST
+						(*originalImplementation.SignInPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignInPOSTResponse, error) {
+							// Generate request ID for bot and suspicious IP detection
+							var reqBody ReqBody
+							err := json.NewDecoder(options.Req.Body).Decode(&reqBody)
+							if err != nil {
+								return epmodels.SignInPOSTResponse{}, err
+							}
+
+							requestId := reqBody.RequestID
+							if requestId == "" {
+								return epmodels.SignInPOSTResponse{
+									GeneralError: &supertokens.GeneralErrorResponse{
+										Message: "The request ID is required",
+									},
+								}, nil
+							}
+
+							ip := getIpFromRequest(options.Req)
+							email := ""
+							password := ""
+							for _, field := range formFields {
+								if field.ID == "email" {
+									email = field.Value
+									break
+								}
+								if field.ID == "password" {
+									password = field.Value
+									break
+								}
+							}
+							bruteForceConfig := getBruteForceConfig(email, ip, "signIn")
+							actionType := "emailpassword-sign-in"
+
+							// Check anomaly detection service before proceeding
+							checkErr, err := handleSecurityChecks(
+								SecurityCheckInput{
+									ActionType:       actionType,
+									Email:            email,
+									RequestID:        requestId,
+									BruteForceConfig: bruteForceConfig,
+									Password:         password,
+								},
+							)
+							if err != nil {
+								return epmodels.SignInPOSTResponse{}, err
+							}
+
+							if checkErr != nil {
+								return epmodels.SignInPOSTResponse{
+									GeneralError: checkErr,
+								}, nil
+							}
+
+							// pre API logic...
+							resp, err := originalSignInPOST(formFields, tenantId, options, userContext)
+							if err != nil {
+								return epmodels.SignInPOSTResponse{}, err
+							}
+
+							return resp, nil
+						}
+
+						// rewrite the original implementation of SignInPOST
+						originalGeneratePasswordResetTokenPOST := *originalImplementation.GeneratePasswordResetTokenPOST
+						(*originalImplementation.GeneratePasswordResetTokenPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.GeneratePasswordResetTokenPOSTResponse, error) {
+							// Generate request ID for bot and suspicious IP detection
+							var reqBody ReqBody
+							err := json.NewDecoder(options.Req.Body).Decode(&reqBody)
+							if err != nil {
+								return epmodels.GeneratePasswordResetTokenPOSTResponse{}, err
+							}
+
+							requestId := reqBody.RequestID
+							if requestId == "" {
+								return epmodels.GeneratePasswordResetTokenPOSTResponse{
+									GeneralError: &supertokens.GeneralErrorResponse{
+										Message: "The request ID is required",
+									},
+								}, nil
+							}
+
+							ip := getIpFromRequest(options.Req)
+							email := ""
+							password := ""
+							for _, field := range formFields {
+								if field.ID == "email" {
+									email = field.Value
+									break
+								}
+								if field.ID == "password" {
+									password = field.Value
+									break
+								}
+							}
+							bruteForceConfig := getBruteForceConfig(email, ip, "signIn")
+							actionType := "send-password-reset-email"
+
+							// Check anomaly detection service before proceeding
+							checkErr, err := handleSecurityChecks(
+								SecurityCheckInput{
+									ActionType:       actionType,
+									Email:            email,
+									RequestID:        requestId,
+									BruteForceConfig: bruteForceConfig,
+									Password:         password,
+								},
+							)
+							if err != nil {
+								return epmodels.GeneratePasswordResetTokenPOSTResponse{}, err
+							}
+
+							if checkErr != nil {
+								return epmodels.GeneratePasswordResetTokenPOSTResponse{
+									GeneralError: checkErr,
+								}, nil
+							}
+
+							// pre API logic...
+							resp, err := originalGeneratePasswordResetTokenPOST(formFields, tenantId, options, userContext)
+							if err != nil {
+								return epmodels.GeneratePasswordResetTokenPOSTResponse{}, err
+							}
+
+							return resp, nil
+						}
+
+						return originalImplementation
+					},
+					Functions: func(originalImplementation epmodels.RecipeInterface) epmodels.RecipeInterface {
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
 ```
 
 </TabItem>
@@ -814,7 +1204,294 @@ SuperTokens.init({
 </TabItem>
 
 <TabItem value="go">
-go
+
+```go
+import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+const API_KEY = "<api-key>" // Your secret API key that you received from the SuperTokens team
+// The full URL with the correct region will be provided by the SuperTokens team
+const ANOMALY_DETECTION_API_URL = "https://security-<region>.aws.supertokens.io/v1/security"
+
+type SecurityCheckInput struct {
+	ActionType       string             `json:"actionType,omitempty"`
+	Email            string             `json:"email,omitempty"`
+	PhoneNumber      string             `json:"phoneNumber,omitempty"`
+	Password         string             `json:"password,omitempty"`
+	RequestID        string             `json:"requestId,omitempty"`
+	BruteForceConfig []BruteForceConfig `json:"bruteForceConfig,omitempty"`
+}
+
+type BruteForceConfig struct {
+	Key         string        `json:"key"`
+	MaxRequests []MaxRequests `json:"maxRequests"`
+}
+
+type MaxRequests struct {
+	Limit             int `json:"limit"`
+	PerTimeIntervalMS int `json:"perTimeIntervalMS"`
+}
+
+type ReqBody struct {
+	RequestID string `json:"requestId"`
+}
+
+func getIpFromRequest(req *http.Request) string {
+	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		return forwardedFor
+	}
+	return "127.0.0.1"
+}
+
+func getBruteForceConfig(userIdentifier string, ip string, prefix string) []BruteForceConfig {
+	var key string
+	if prefix != "" {
+		key = prefix + "-"
+	}
+
+	return []BruteForceConfig{
+		{
+			Key: key + userIdentifier,
+			MaxRequests: []MaxRequests{
+				{Limit: 5, PerTimeIntervalMS: 60 * 1000},
+				{Limit: 15, PerTimeIntervalMS: 60 * 60 * 1000},
+			},
+		},
+		{
+			Key: key + ip,
+			MaxRequests: []MaxRequests{
+				{Limit: 5, PerTimeIntervalMS: 60 * 1000},
+				{Limit: 15, PerTimeIntervalMS: 60 * 60 * 1000},
+			},
+		},
+	}
+}
+
+func handleSecurityChecks(input SecurityCheckInput) (*supertokens.GeneralErrorResponse, error) {
+	requestBody := make(map[string]interface{})
+
+	if input.RequestID != "" {
+		requestBody["requestId"] = input.RequestID
+	}
+
+	if input.Password != "" {
+		hash := sha1.New()
+		hash.Write([]byte(input.Password))
+		passwordHash := hex.EncodeToString(hash.Sum(nil))
+		requestBody["passwordHash"] = passwordHash
+	}
+
+	requestBody["bruteForce"] = input.BruteForceConfig
+	requestBody["email"] = input.Email
+	requestBody["phoneNumber"] = input.PhoneNumber
+	requestBody["actionType"] = input.ActionType
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", ANOMALY_DETECTION_API_URL, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("api-key", API_KEY)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var responseData map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&responseData)
+	if err != nil {
+		return nil, err
+	}
+
+	if bruteForce, ok := responseData["bruteForce"].(map[string]interface{}); ok {
+		if detected, ok := bruteForce["detected"].(bool); ok && detected {
+			return &supertokens.GeneralErrorResponse{
+				Message: "Too many requests. Please try again later.",
+			}, nil
+		}
+	}
+
+	if requestIdInfo, ok := responseData["requestIdInfo"].(map[string]interface{}); ok {
+		if isUsingTor, ok := requestIdInfo["isUsingTor"].(bool); ok && isUsingTor {
+			return &supertokens.GeneralErrorResponse{
+				Message: "Tor activity detected. Please use a regular browser.",
+			}, nil
+		}
+
+		if vpn, ok := requestIdInfo["vpn"].(map[string]interface{}); ok {
+			if result, ok := vpn["result"].(bool); ok && result {
+				return &supertokens.GeneralErrorResponse{
+					Message: "VPN activity detected. Please use a regular network.",
+				}, nil
+			}
+		}
+
+		if botDetected, ok := requestIdInfo["botDetected"].(bool); ok && botDetected {
+			return &supertokens.GeneralErrorResponse{
+				Message: "Bot activity detected.",
+			}, nil
+		}
+	}
+
+	if isPasswordBreached, ok := responseData["isPasswordBreached"].(bool); ok && isPasswordBreached {
+		return &supertokens.GeneralErrorResponse{
+			Message: "This password has been detected in a breach. Please set a different password.",
+		}, nil
+	}
+
+	return nil, nil
+}
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			passwordless.Init(plessmodels.TypeInput{
+				FlowType: "USER_INPUT_CODE",
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{
+					Enabled: true,
+				},
+				Override: &plessmodels.OverrideStruct{
+					APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
+						originalCreateCodePOST := *originalImplementation.CreateCodePOST
+						(*originalImplementation.CreateCodePOST) = func(email *string, phoneNumber *string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+							var reqBody ReqBody
+							err := json.NewDecoder(options.Req.Body).Decode(&reqBody)
+							if err != nil {
+								return plessmodels.CreateCodePOSTResponse{}, err
+							}
+
+							requestId := reqBody.RequestID
+							if requestId == "" {
+								return plessmodels.CreateCodePOSTResponse{
+									GeneralError: &supertokens.GeneralErrorResponse{
+										Message: "The request ID is required",
+									},
+								}, nil
+							}
+							ip := getIpFromRequest(options.Req)
+							var key string
+							if email != nil {
+								key = *email
+							} else {
+								key = *phoneNumber
+							}
+							bruteForceConfig := getBruteForceConfig(key, ip, "createCode")
+							actionType := "passwordless-send-sms"
+
+							// Check anomaly detection service before proceeding
+							checkErr, err := handleSecurityChecks(
+								SecurityCheckInput{
+									ActionType:       actionType,
+									Email:            *email,
+									PhoneNumber:      *phoneNumber,
+									RequestID:        requestId,
+									BruteForceConfig: bruteForceConfig,
+								},
+							)
+							if err != nil {
+								return plessmodels.CreateCodePOSTResponse{}, err
+							}
+
+							if checkErr != nil {
+								return plessmodels.CreateCodePOSTResponse{
+									GeneralError: checkErr,
+								}, nil
+							}
+
+							return originalCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
+						}
+
+						originalResendCodePOST := *originalImplementation.ResendCodePOST
+						(*originalImplementation.ResendCodePOST) = func(deviceID string, preAuthSessionID string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.ResendCodePOSTResponse, error) {
+							var reqBody ReqBody
+							err := json.NewDecoder(options.Req.Body).Decode(&reqBody)
+							if err != nil {
+								return plessmodels.ResendCodePOSTResponse{}, err
+							}
+
+							requestId := reqBody.RequestID
+							if requestId == "" {
+								return plessmodels.ResendCodePOSTResponse{
+									GeneralError: &supertokens.GeneralErrorResponse{
+										Message: "The request ID is required",
+									},
+								}, nil
+							}
+
+							// retreive user details
+							codesInfo, err := passwordless.ListCodesByDeviceID(tenantId, deviceID, userContext)
+							if err != nil {
+								return plessmodels.ResendCodePOSTResponse{}, err
+							}
+							var email *string
+							var phoneNumber *string
+							if codesInfo.Email != nil {
+								email = codesInfo.Email
+							}
+							if codesInfo.PhoneNumber != nil {
+								phoneNumber = codesInfo.PhoneNumber
+							}
+
+							ip := getIpFromRequest(options.Req)
+							key := ""
+							if email != nil {
+								key = *email
+							} else {
+								key = *phoneNumber
+							}
+							bruteForceConfig := getBruteForceConfig(key, ip, "createCode")
+							actionType := "passwordless-send-sms"
+
+							// Check anomaly detection service before proceeding
+							checkErr, err := handleSecurityChecks(
+								SecurityCheckInput{
+									ActionType:       actionType,
+									Email:            *email,
+									PhoneNumber:      *phoneNumber,
+									RequestID:        requestId,
+									BruteForceConfig: bruteForceConfig,
+								},
+							)
+							if err != nil {
+								return plessmodels.ResendCodePOSTResponse{}, err
+							}
+
+							if checkErr != nil {
+								return plessmodels.ResendCodePOSTResponse{
+									GeneralError: checkErr,
+								}, nil
+							}
+
+							return originalResendCodePOST(deviceID, preAuthSessionID, tenantId, options, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+
 </TabItem>
 
 <TabItem value="python">
