@@ -256,7 +256,20 @@ func signInPOST(formFields []epmodels.TypeFormField, tenantId string, options ep
 </TabItem>
 
 <TabItem value="python">
-python
+
+```python
+from supertokens_python.recipe.emailpassword.interfaces import APIOptions
+from supertokens_python.types import GeneralErrorResponse
+
+async def sign_in_post(api_options: APIOptions):
+    request_body = await api_options.request.json()
+    if not request_body:
+        return GeneralErrorResponse(message="The request body is required")
+
+    request_id = request_body.get("requestId")
+    return request_id
+```
+
 </TabItem>
 
 <TabItem value="otherFrameworks">
@@ -550,10 +563,10 @@ SuperTokens.init({
                                 }
                             }
 
+                            const actionType = 'emailpassword-sign-up';
                             const ip = getIpFromRequest(input.options.req.original);
                             let email = input.formFields.filter((f) => f.id === "email")[0].value;
-                            const bruteForceConfig = getBruteForceConfig(email, ip, 'signUp');
-                            const actionType = 'emailpassword-sign-up';
+                            const bruteForceConfig = getBruteForceConfig(email, ip, actionType);
 
                             // we check the anomaly detection service before calling the original implementation of signUp
                             let securityCheckResponse = await handleSecurityChecks({ ...input, requestId, email, bruteForceConfig, actionType });
@@ -573,10 +586,10 @@ SuperTokens.init({
                                 }
                             }
 
+                            const actionType = 'emailpassword-sign-in';
                             const ip = getIpFromRequest(input.options.req.original);
                             let email = input.formFields.filter((f) => f.id === "email")[0].value;
-                            const bruteForceConfig = getBruteForceConfig(email, ip, 'signIn');
-                            const actionType = 'emailpassword-sign-in';
+                            const bruteForceConfig = getBruteForceConfig(email, ip, actionType);
 
                             // we check the anomaly detection service before calling the original implementation of signIn
                             let securityCheckResponse = await handleSecurityChecks({ ...input, requestId, email, bruteForceConfig, actionType });
@@ -596,9 +609,10 @@ SuperTokens.init({
                                 }
                             }
 
+                            const actionType = 'send-password-reset-email';
                             const ip = getIpFromRequest(input.options.req.original);
                             let email = input.formFields.filter((f) => f.id === "email")[0].value;
-                            const bruteForceConfig = getBruteForceConfig(email, ip, 'passwordReset');
+                            const bruteForceConfig = getBruteForceConfig(email, ip, actionType);
                             const actionType = 'send-password-reset-email';
 
                             // we check the anomaly detection service before calling the original implementation of generatePasswordResetToken
@@ -801,6 +815,7 @@ func main() {
 								}, nil
 							}
 
+							actionType := "emailpassword-sign-up"
 							ip := getIpFromRequest(options.Req)
 							email := ""
 							password := ""
@@ -814,8 +829,7 @@ func main() {
 									break
 								}
 							}
-							bruteForceConfig := getBruteForceConfig(email, ip, "signUp")
-							actionType := "emailpassword-sign-up"
+							bruteForceConfig := getBruteForceConfig(email, ip, actionType)
 
 							// Check anomaly detection service before proceeding
 							checkErr, err := handleSecurityChecks(
@@ -865,6 +879,7 @@ func main() {
 								}, nil
 							}
 
+							actionType := "emailpassword-sign-in"
 							ip := getIpFromRequest(options.Req)
 							email := ""
 							password := ""
@@ -878,8 +893,7 @@ func main() {
 									break
 								}
 							}
-							bruteForceConfig := getBruteForceConfig(email, ip, "signIn")
-							actionType := "emailpassword-sign-in"
+							bruteForceConfig := getBruteForceConfig(email, ip, actionType)
 
 							// Check anomaly detection service before proceeding
 							checkErr, err := handleSecurityChecks(
@@ -929,21 +943,16 @@ func main() {
 								}, nil
 							}
 
+							actionType := "send-password-reset-email"
 							ip := getIpFromRequest(options.Req)
 							email := ""
-							password := ""
 							for _, field := range formFields {
 								if field.ID == "email" {
 									email = field.Value
 									break
 								}
-								if field.ID == "password" {
-									password = field.Value
-									break
-								}
 							}
-							bruteForceConfig := getBruteForceConfig(email, ip, "signIn")
-							actionType := "send-password-reset-email"
+							bruteForceConfig := getBruteForceConfig(email, ip, actionType)
 
 							// Check anomaly detection service before proceeding
 							checkErr, err := handleSecurityChecks(
@@ -952,7 +961,6 @@ func main() {
 									Email:            email,
 									RequestID:        requestId,
 									BruteForceConfig: bruteForceConfig,
-									Password:         password,
 								},
 							)
 							if err != nil {
@@ -989,7 +997,213 @@ func main() {
 </TabItem>
 
 <TabItem value="python">
-python
+
+```python
+import requests
+from hashlib import sha1
+from typing import Dict, Any, Union, List
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions
+from supertokens_python.recipe.emailpassword.types import FormField
+from supertokens_python.framework import BaseRequest
+from supertokens_python.types import GeneralErrorResponse
+
+API_KEY = "<api-key>" # Your secret API key that you received from the SuperTokens team
+# The full URL with the correct region will be provided by the SuperTokens team
+ANOMALY_DETECTION_API_URL = "https://security-<region>.aws.supertokens.io/v1/security"
+
+async def handle_security_checks(request_id: Union[str, None], password: Union[str, None], brute_force_config: List[Dict[str, Any]], email: Union[str, None], phone_number: Union[str, None], action_type: str):
+    request_body = {}
+
+    if request_id is not None:
+        request_body['requestId'] = request_id
+
+    if password is not None:
+        password_hash = sha1(password.encode()).hexdigest()
+        request_body['passwordHash'] = password_hash
+
+    request_body['bruteForce'] = brute_force_config
+    request_body['email'] = email
+    request_body['phoneNumber'] = phone_number
+    request_body['actionType'] = action_type
+
+    response = requests.post(ANOMALY_DETECTION_API_URL, json=request_body)
+    response_data = response.json()
+
+    if response_data.get('bruteForce', {}).get('detected'):
+        return GeneralErrorResponse(message="Too many requests. Please try again later.")
+
+    if response_data.get('requestIdInfo', {}).get('isUsingTor'):
+        return GeneralErrorResponse(message="Tor activity detected. Please use a regular browser.")
+
+    if response_data.get('requestIdInfo', {}).get('vpn', {}).get('result'):
+        return GeneralErrorResponse(message="VPN activity detected. Please use a regular network.")
+
+    if response_data.get('requestIdInfo', {}).get('botDetected'):
+        return GeneralErrorResponse(message="Bot activity detected.")
+
+    if response_data.get('isPasswordBreached'):
+        return GeneralErrorResponse(message="This password has been detected in a breach. Please set a different password.")
+
+    return None
+
+
+def get_ip_from_request(req: BaseRequest) -> str:
+    forwarded_for = req.get_header('x-forwarded-for')
+    if forwarded_for:
+        return forwarded_for
+    return '127.0.0.1'
+
+def get_brute_force_config(user_identifier: Union[str, None], ip: str, prefix: Union[str, None] = None) -> List[Dict[str, Any]]:
+    return [
+        {
+            "key": f"{prefix}-{user_identifier}" if prefix else user_identifier,
+            "maxRequests": [
+                {"limit": 5, "perTimeIntervalMS": 60 * 1000},
+                {"limit": 15, "perTimeIntervalMS": 60 * 60 * 1000}
+            ]
+        },
+        {
+            "key": f"{prefix}-{ip}" if prefix else ip,
+            "maxRequests": [
+                {"limit": 5, "perTimeIntervalMS": 60 * 1000},
+                {"limit": 15, "perTimeIntervalMS": 60 * 60 * 1000}
+            ]
+        }
+    ]
+
+# highlight-start
+def override_email_password_apis(original_implementation: APIInterface):
+    original_sign_up_post = original_implementation.sign_up_post
+    async def sign_up_post(form_fields: List[FormField], tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any]):
+        request_body = await api_options.request.json()
+        if not request_body:
+            return GeneralErrorResponse(message="The request body is required")
+
+        request_id = request_body.get("requestId")
+        if not request_id:
+            return GeneralErrorResponse(message="The request ID is required")
+
+        action_type = 'emailpassword-sign-in'
+        ip = get_ip_from_request(api_options.request)
+        email = None
+        password = None
+        for field in form_fields:
+            if field.id == "email":
+                email = field.value
+            if field.id == "password":
+                password = field.value
+        brute_force_config = get_brute_force_config(email, ip, action_type)
+
+        # we check the anomaly detection service before calling the original implementation of signUp
+        security_check_response = await handle_security_checks(
+            request_id=request_id,
+            password=password,
+            brute_force_config=brute_force_config,
+            email=email,
+            phone_number=None,
+            action_type=action_type
+        )
+        if security_check_response is not None:
+            return security_check_response
+
+        # We need to call the original implementation of sign_up_post.
+        response = await original_sign_up_post(form_fields, tenant_id, api_options, user_context)
+
+        return response
+    original_implementation.sign_up_post = sign_up_post
+
+    original_sign_in_post = original_implementation.sign_in_post
+    async def sign_in_post(form_fields: List[FormField], tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any]):
+        request_body = await api_options.request.json()
+        if not request_body:
+            return GeneralErrorResponse(message="The request body is required")
+
+        request_id = request_body.get("requestId")
+        if not request_id:
+            return GeneralErrorResponse(message="The request ID is required")
+
+        action_type = 'emailpassword-sign-in'
+        ip = get_ip_from_request(api_options.request)
+        email = None
+        for field in form_fields:
+            if field.id == "email":
+                email = field.value
+        brute_force_config = get_brute_force_config(email, ip, action_type)
+
+        # we check the anomaly detection service before calling the original implementation of signUp
+        security_check_response = await handle_security_checks(
+            request_id=request_id,
+            password=None,
+            brute_force_config=brute_force_config,
+            email=email,
+            phone_number=None,
+            action_type=action_type
+        )
+        if security_check_response is not None:
+            return security_check_response
+
+        # We need to call the original implementation of sign_up_post.
+        response = await original_sign_in_post(form_fields, tenant_id, api_options, user_context)
+
+        return response
+    original_implementation.sign_in_post = sign_in_post
+
+    original_generate_password_reset_token_post = original_implementation.generate_password_reset_token_post
+    async def generate_password_reset_token_post(form_fields: List[FormField], tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any]):
+        request_body = await api_options.request.json()
+        if not request_body:
+            return GeneralErrorResponse(message="The request body is required")
+
+        request_id = request_body.get("requestId")
+        if not request_id:
+            return GeneralErrorResponse(message="The request ID is required")
+
+        action_type = 'send-password-reset-email'
+        ip = get_ip_from_request(api_options.request)
+        email = None
+        for field in form_fields:
+            if field.id == "email":
+                email = field.value
+        brute_force_config = get_brute_force_config(email, ip, action_type)
+
+        # we check the anomaly detection service before calling the original implementation of signUp
+        security_check_response = await handle_security_checks(
+            request_id=request_id,
+            password=None,
+            brute_force_config=brute_force_config,
+            email=email,
+            phone_number=None,
+            action_type=action_type
+        )
+        if security_check_response is not None:
+            return security_check_response
+
+        # We need to call the original implementation of sign_up_post.
+        response = await original_generate_password_reset_token_post(form_fields, tenant_id, api_options, user_context)
+
+        return response
+    original_implementation.generate_password_reset_token_post = generate_password_reset_token_post
+
+    return original_implementation
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        emailpassword.init(
+            # highlight-start
+            override=emailpassword.InputOverrideConfig(
+                apis=override_email_password_apis
+            )
+            # highlight-end
+        )
+    ]
+)
+```
+
 </TabItem>
 
 <TabItem value="otherFrameworks">
@@ -1150,10 +1364,10 @@ SuperTokens.init({
                                 }
                             }
 
+                            const actionType = 'passwordless-send-sms';
                             const ip = getIpFromRequest(input.options.req.original);
                             const emailOrPhoneNumber = "email" in input ? input.email : input.phoneNumber;
-                            const bruteForceConfig = getBruteForceConfig(emailOrPhoneNumber, ip, 'createCode');
-                            const actionType = 'passwordless-send-sms';
+                            const bruteForceConfig = getBruteForceConfig(emailOrPhoneNumber, ip, actionType);
 
                             // we check the anomaly detection service before calling the original implementation of signUp
                             let securityCheckResponse = await handleSecurityChecks({ ...input, requestId, bruteForceConfig, actionType });
@@ -1173,6 +1387,7 @@ SuperTokens.init({
                                 }
                             }
 
+                            const actionType = 'passwordless-send-sms';
                             const ip = getIpFromRequest(input.options.req.original);
                             let codesInfo = await Passwordless.listCodesByPreAuthSessionId({
                                 tenantId: input.tenantId,
@@ -1182,8 +1397,7 @@ SuperTokens.init({
                             const email = codesInfo && "email" in codesInfo ? codesInfo.email : undefined;
                             const userIdentifier = email || phoneNumber || input.deviceId;
                         
-                            const bruteForceConfig = getBruteForceConfig(userIdentifier, ip, 'resendCode');
-                            const actionType = 'passwordless-send-sms';
+                            const bruteForceConfig = getBruteForceConfig(userIdentifier, ip, actionType);
 
                             // we check the anomaly detection service before calling the original implementation of signUp
                             let securityCheckResponse = await handleSecurityChecks({ ...input, requestId, phoneNumber, email, bruteForceConfig, actionType });
@@ -1386,6 +1600,8 @@ func main() {
 									},
 								}, nil
 							}
+							
+                            actionType := "passwordless-send-sms"
 							ip := getIpFromRequest(options.Req)
 							var key string
 							if email != nil {
@@ -1393,8 +1609,7 @@ func main() {
 							} else {
 								key = *phoneNumber
 							}
-							bruteForceConfig := getBruteForceConfig(key, ip, "createCode")
-							actionType := "passwordless-send-sms"
+							bruteForceConfig := getBruteForceConfig(key, ip, actionType)
 
 							// Check anomaly detection service before proceeding
 							checkErr, err := handleSecurityChecks(
@@ -1450,6 +1665,7 @@ func main() {
 								phoneNumber = codesInfo.PhoneNumber
 							}
 
+							actionType := "passwordless-send-sms"
 							ip := getIpFromRequest(options.Req)
 							key := ""
 							if email != nil {
@@ -1457,8 +1673,7 @@ func main() {
 							} else {
 								key = *phoneNumber
 							}
-							bruteForceConfig := getBruteForceConfig(key, ip, "createCode")
-							actionType := "passwordless-send-sms"
+							bruteForceConfig := getBruteForceConfig(key, ip, actionType)
 
 							// Check anomaly detection service before proceeding
 							checkErr, err := handleSecurityChecks(
@@ -1495,7 +1710,174 @@ func main() {
 </TabItem>
 
 <TabItem value="python">
-python
+
+```python
+import requests
+from hashlib import sha1
+from typing import Dict, Any, Union, List
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions
+from supertokens_python.framework import BaseRequest
+from supertokens_python.types import GeneralErrorResponse
+
+API_KEY = "<api-key>" # Your secret API key that you received from the SuperTokens team
+# The full URL with the correct region will be provided by the SuperTokens team
+ANOMALY_DETECTION_API_URL = "https://security-<region>.aws.supertokens.io/v1/security"
+
+async def handle_security_checks(request_id: Union[str, None], password: Union[str, None], brute_force_config: List[Dict[str, Any]], email: Union[str, None], phone_number: Union[str, None], action_type: str):
+    request_body = {}
+
+    if request_id is not None:
+        request_body['requestId'] = request_id
+
+    if password is not None:
+        password_hash = sha1(password.encode()).hexdigest()
+        request_body['passwordHash'] = password_hash
+
+    request_body['bruteForce'] = brute_force_config
+    request_body['email'] = email
+    request_body['phoneNumber'] = phone_number
+    request_body['actionType'] = action_type
+
+    response = requests.post(ANOMALY_DETECTION_API_URL, json=request_body)
+    response_data = response.json()
+
+    if response_data.get('bruteForce', {}).get('detected'):
+        return GeneralErrorResponse(message="Too many requests. Please try again later.")
+
+    if response_data.get('requestIdInfo', {}).get('isUsingTor'):
+        return GeneralErrorResponse(message="Tor activity detected. Please use a regular browser.")
+
+    if response_data.get('requestIdInfo', {}).get('vpn', {}).get('result'):
+        return GeneralErrorResponse(message="VPN activity detected. Please use a regular network.")
+
+    if response_data.get('requestIdInfo', {}).get('botDetected'):
+        return GeneralErrorResponse(message="Bot activity detected.")
+
+    if response_data.get('isPasswordBreached'):
+        return GeneralErrorResponse(message="This password has been detected in a breach. Please set a different password.")
+
+    return None
+
+
+def get_ip_from_request(req: BaseRequest) -> str:
+    forwarded_for = req.get_header('x-forwarded-for')
+    if forwarded_for:
+        return forwarded_for
+    return '127.0.0.1'
+
+def get_brute_force_config(user_identifier: Union[str, None], ip: str, prefix: Union[str, None] = None) -> List[Dict[str, Any]]:
+    return [
+        {
+            "key": f"{prefix}-{user_identifier}" if prefix else user_identifier,
+            "maxRequests": [
+                {"limit": 5, "perTimeIntervalMS": 60 * 1000},
+                {"limit": 15, "perTimeIntervalMS": 60 * 60 * 1000}
+            ]
+        },
+        {
+            "key": f"{prefix}-{ip}" if prefix else ip,
+            "maxRequests": [
+                {"limit": 5, "perTimeIntervalMS": 60 * 1000},
+                {"limit": 15, "perTimeIntervalMS": 60 * 60 * 1000}
+            ]
+        }
+    ]
+
+# highlight-start
+def override_passwordless_apis(original_implementation: APIInterface):
+    original_create_code_post = original_implementation.create_code_post
+    async def create_code_post(email: str | None, phone_number: str | None, tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any]):
+        request_body = await api_options.request.json()
+        if not request_body:
+            return GeneralErrorResponse(message="The request body is required")
+
+        request_id = request_body.get("requestId")
+        if not request_id:
+            return GeneralErrorResponse(message="The request ID is required")
+
+        action_type = 'passwordless-send-sms'
+        ip = get_ip_from_request(api_options.request)
+        identifier = None
+        if email is not None:
+            identifier = email
+        elif phone_number is not None:
+            identifier = phone_number
+        brute_force_config = get_brute_force_config(identifier, ip, action_type)
+
+        # we check the anomaly detection service before calling the original implementation of signUp
+        security_check_response = await handle_security_checks(
+            request_id=request_id,
+            password=None,
+            brute_force_config=brute_force_config,
+            email=email,
+            phone_number=phone_number,
+            action_type=action_type
+        )
+        if security_check_response is not None:
+            return security_check_response
+
+        # We need to call the original implementation of sign_up_post.
+        response = await original_create_code_post(email, phone_number, tenant_id, api_options, user_context)
+
+        return response
+    original_implementation.create_code_post = create_code_post
+
+    original_resend_code_post = original_implementation.resend_code_post
+    async def resend_code_post(device_id: str, pre_auth_session_id: str, tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any]):
+        request_body = await api_options.request.json()
+        if not request_body:
+            return GeneralErrorResponse(message="The request body is required")
+
+        request_id = request_body.get("requestId")
+        if not request_id:
+            return GeneralErrorResponse(message="The request ID is required")
+
+        action_type = 'passwordless-send-sms'
+        ip = get_ip_from_request(api_options.request)
+        email = None
+        brute_force_config = get_brute_force_config(email, ip, action_type)
+        
+        # we check the anomaly detection service before calling the original implementation of signUp
+        security_check_response = await handle_security_checks(
+            request_id=request_id,
+            password=None,
+            brute_force_config=brute_force_config,
+            email=email,
+            phone_number=None,
+            action_type=action_type
+        )
+        if security_check_response is not None:
+            return security_check_response
+
+        # We need to call the original implementation of sign_up_post.
+        response = await original_resend_code_post(device_id, pre_auth_session_id, tenant_id, api_options, user_context)
+
+        return response
+    original_implementation.resend_code_post = resend_code_post
+
+    return original_implementation
+# highlight-end
+
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        passwordless.init(
+            # highlight-start
+            flow_type="USER_INPUT_CODE_AND_MAGIC_LINK",
+            contact_config=passwordless.ContactEmailOrPhoneConfig(),
+            override=passwordless.InputOverrideConfig(
+                apis=override_passwordless_apis
+            )
+            # highlight-end
+        )
+    ]
+)
+```
+
 </TabItem>
 
 <TabItem value="otherFrameworks">
