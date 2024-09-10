@@ -1718,6 +1718,7 @@ from typing import Dict, Any, Union, List
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import passwordless
 from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions
+from supertokens_python.recipe.passwordless.asyncio import list_codes_by_device_id
 from supertokens_python.framework import BaseRequest
 from supertokens_python.types import GeneralErrorResponse
 
@@ -1837,7 +1838,17 @@ def override_passwordless_apis(original_implementation: APIInterface):
         action_type = 'passwordless-send-sms'
         ip = get_ip_from_request(api_options.request)
         email = None
-        brute_force_config = get_brute_force_config(email, ip, action_type)
+        phone_number = None
+        codes = await list_codes_by_device_id(tenant_id=tenant_id, device_id=device_id, user_context=user_context)
+        if codes is not None:
+            email = codes.email
+            phone_number = codes.phone_number
+        identifier = None
+        if email is not None:
+            identifier = email
+        elif phone_number is not None:
+            identifier = phone_number
+        brute_force_config = get_brute_force_config(identifier, ip, action_type)
         
         # we check the anomaly detection service before calling the original implementation of signUp
         security_check_response = await handle_security_checks(
@@ -1845,7 +1856,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
             password=None,
             brute_force_config=brute_force_config,
             email=email,
-            phone_number=None,
+            phone_number=phone_number,
             action_type=action_type
         )
         if security_check_response is not None:
