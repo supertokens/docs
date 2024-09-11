@@ -194,104 +194,7 @@ const response = {
 
 We pass a `requestId` during the email password sign in, sign up and reset password APIs from the frontend (see [frontend setup section](frontend-setup#generating-a-request-id-on-the-frontend)). You can retrieve this ID by overriding these APIs in the emailpassword recipe on the backend.
 
-Below is an example of how to retrieve the request ID from the input body:
-
-<BackendSDKTabs>
-<TabItem value="nodejs">
-
-```tsx
-    const signInPOST = async function (input: {
-        options: {
-            req: {
-                getJSONBody: () => Promise<{
-                    requestId: string;
-                }>;
-            };
-        };
-    }) {
-        // ... your code here ...
-        const requestId = (await input.options.req.getJSONBody()).requestId;
-        if(!requestId) {
-            return {
-                status: "GENERAL_ERROR",
-                message: "The request ID is required"
-            }
-        }
-        // ... your code here ...
-    }
-```
-
-</TabItem>
-
-<TabItem value="go">
-
-```go
-import (
-	"encoding/json"
-
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
-	"github.com/supertokens/supertokens-golang/supertokens"
-)
-
-type ReqBody struct {
-	RequestID *string `json:"requestId"`
-}
-
-func signInPOST(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignInPOSTResponse, error) {
-    // ... your code here ...
-    var reqBody ReqBody
-    err := json.NewDecoder(options.Req.Body).Decode(&reqBody)
-    if err != nil {
-        return epmodels.SignInPOSTResponse{}, err
-    }
-
-    if reqBody.RequestID == nil {
-        return epmodels.SignInPOSTResponse{
-            GeneralError: &supertokens.GeneralErrorResponse{
-                Message: "The request ID is required",
-            },
-        }, nil
-    }
-    requestId := *reqBody.RequestID
-    _ = requestId
-    // ... your code here ...
-
-    return epmodels.SignInPOSTResponse{}, nil
-}
-```
-
-</TabItem>
-
-<TabItem value="python">
-
-```python
-from supertokens_python.recipe.emailpassword.interfaces import APIOptions
-from supertokens_python.types import GeneralErrorResponse
-
-async def sign_in_post(api_options: APIOptions):
-    # ... your code here ...
-    request_body = await api_options.request.json()
-    if not request_body:
-        return GeneralErrorResponse(message="The request body is required")
-
-    request_id = request_body.get("requestId")
-    if not request_id:
-        return GeneralErrorResponse(message="The request ID is required")
-    # ... your code here ...
-```
-
-</TabItem>
-
-<TabItem value="otherFrameworks">
-
-:::note
-For using with other frameworks, you can follow the same steps as for the other languages and you can also refer to the [API documenation](#setting-up).
-:::
-
-</TabItem>
-
-</BackendSDKTabs>
-
+A more complete example of how to retrieve the request ID from the input body can be found in the [examples section](#examples).
 
 :::important
 The `requestId` should be required when the trying to reset password, sign in or sign up. If the `requestId` is not present, an error should be returned. You can see more in the [examples section](#examples).
@@ -484,12 +387,19 @@ async function handleSecurityChecks(input: {
     requestBody.phoneNumber = input.phoneNumber;
     requestBody.actionType = input.actionType;
 
-    let response = await axios.post(ANOMALY_DETECTION_API_URL, requestBody, {
+    let response;
+    try {
+        response = await axios.post(ANOMALY_DETECTION_API_URL, requestBody, {
         headers: {
             "Authorization": `Bearer ${SECRET_API_KEY}`,
             "Content-Type": "application/json"
-        }
-    });
+            }
+        });
+    } catch (err) {
+        // silently fail in order to not break the auth flow
+        return;
+    }
+
     let responseData = response.data;
 
     if (responseData.bruteForce.detected) {
@@ -633,7 +543,6 @@ SuperTokens.init({
                             const ip = getIpFromRequest(input.options.req.original);
                             let email = input.formFields.filter((f) => f.id === "email")[0].value;
                             const bruteForceConfig = getBruteForceConfig(email, ip, actionType);
-                            const actionType = 'send-password-reset-email';
 
                             // we check the anomaly detection service before calling the original implementation of generatePasswordResetToken
                             let securityCheckResponse = await handleSecurityChecks({ ...input, requestId, email, bruteForceConfig, actionType });
@@ -766,7 +675,8 @@ func handleSecurityChecks(input SecurityCheckInput) (*supertokens.GeneralErrorRe
 
 	req, err := http.NewRequest("POST", ANOMALY_DETECTION_API_URL, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return nil, err
+        // silently fail in order to not break the auth flow
+		return nil
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -1075,11 +985,15 @@ async def handle_security_checks(request_id: Union[str, None], password: Union[s
     request_body['phoneNumber'] = phone_number
     request_body['actionType'] = action_type
 
-    response = requests.post(ANOMALY_DETECTION_API_URL, json=request_body, headers={
-        "Authorization": f"Bearer {SECRET_API_KEY}",
-        "Content-Type": "application/json"
-    })
-    response_data = response.json()
+    try:
+        response = requests.post(ANOMALY_DETECTION_API_URL, json=request_body, headers={
+            "Authorization": f"Bearer {SECRET_API_KEY}",
+            "Content-Type": "application/json"
+        })
+        response_data = response.json()
+    except Exception as e:
+        # silently fail in order to not break the auth flow
+        return None
 
     if response_data.get('bruteForce', {}).get('detected'):
         return GeneralErrorResponse(message="Too many requests. Please try again later.")
@@ -1325,12 +1239,18 @@ async function handleSecurityChecks(input: {
     requestBody.phoneNumber = input.phoneNumber;
     requestBody.actionType = input.actionType;
 
-    let response = await axios.post(ANOMALY_DETECTION_API_URL, requestBody, {
+    let response;
+    try {
+        response = await axios.post(ANOMALY_DETECTION_API_URL, requestBody, {
         headers: {
             "Authorization": `Bearer ${SECRET_API_KEY}`,
             "Content-Type": "application/json"
-        }
-    });
+            }
+        });
+    } catch (err) {
+        // silently fail in order to not break the auth flow
+        return;
+    }
     let responseData = response.data;
 
     if (responseData.bruteForce.detected) {
@@ -1521,7 +1441,8 @@ func handleSecurityChecks(input SecurityCheckInput) (*supertokens.GeneralErrorRe
 
 	req, err := http.NewRequest("POST", ANOMALY_DETECTION_API_URL, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return nil, err
+		// silently fail in order to not break the auth flow
+		return nil
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -1691,11 +1612,15 @@ async def handle_security_checks(request_id: Union[str, None], password: Union[s
     request_body['phoneNumber'] = phone_number
     request_body['actionType'] = action_type
 
-    response = requests.post(ANOMALY_DETECTION_API_URL, json=request_body, headers={
-        "Authorization": f"Bearer {SECRET_API_KEY}",
-        "Content-Type": "application/json"
-    })
-    response_data = response.json()
+    try:
+        response = requests.post(ANOMALY_DETECTION_API_URL, json=request_body, headers={
+            "Authorization": f"Bearer {SECRET_API_KEY}",
+            "Content-Type": "application/json"
+        })
+        response_data = response.json()
+    except Exception as e:
+        # silently fail in order to not break the auth flow
+        return None
 
     if response_data.get('bruteForce', {}).get('detected'):
         return GeneralErrorResponse(message="Too many requests. Please try again later.")
