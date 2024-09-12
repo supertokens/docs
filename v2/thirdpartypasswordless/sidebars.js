@@ -33,7 +33,6 @@ module.exports = {
                       items: [
                         "pre-built-ui/setup/core/with-docker",
                         "pre-built-ui/setup/core/without-docker",
-                        "pre-built-ui/setup/core/aws-setup-with-stacksnap",
                         {
                           type: "category",
                           label: "Database Setup",
@@ -110,7 +109,6 @@ module.exports = {
                       items: [
                         "custom-ui/init/core/with-docker",
                         "custom-ui/init/core/without-docker",
-                        "custom-ui/init/core/aws-setup-with-stacksnap",
                         {
                           type: "category",
                           label: "Database Setup",
@@ -738,8 +736,8 @@ module.exports = {
       ],
     },
     {
-      type: "category",
-      label: "Migration",
+      type: 'category',
+      label: 'Migrating to Supertokens',
       items: [
         "migration/about",
         {
@@ -756,6 +754,7 @@ module.exports = {
         "migration/mfa-migration",
       ],
     },
+    "updating-supertokens",
     {
       type: "category",
       label: "References",
