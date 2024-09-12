@@ -183,6 +183,15 @@ export default function RecipeSelector(props) {
                 Multi tenancy / organizations
               </a>
             </li>
+            <li
+              className={clsx("recipe_selector__menu__add_ons_items", {
+                active: activeSelector("anomaly_detection"),
+              })}
+            >
+              <a href="/docs/botandspamdetection/introduction">
+                Bot / Spam Detection
+              </a>
+            </li>
           </ul>
         </div>
       </div>
