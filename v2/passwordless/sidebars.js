@@ -670,7 +670,7 @@ module.exports = {
         },
         "mfa",
         "multi-tenant",
-        "anomaly-detection",
+        "bot-and-spam-detection",
       ],
     },
     "scalability",

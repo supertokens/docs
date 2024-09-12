@@ -259,10 +259,10 @@ module.exports = {
     [
       "@docusaurus/plugin-content-docs",
       {
-        id: "anomalydetection",
-        path: "anomalydetection",
-        routeBasePath: "docs/anomalydetection",
-        sidebarPath: require.resolve("./anomalydetection/sidebars.js"),
+        id: "botandspamdetection",
+        path: "botandspamdetection",
+        routeBasePath: "docs/botandspamdetection",
+        sidebarPath: require.resolve("./botandspamdetection/sidebars.js"),
         showLastUpdateTime: true,
         editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
