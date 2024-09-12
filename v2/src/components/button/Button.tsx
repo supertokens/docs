@@ -31,6 +31,7 @@ const Button = React.forwardRef<
     className,
     disabled = false,
     as = "button",
+    ...rest
   } = props;
 
   const buttonClassName = `st-button st-button--${type} ${className || ""}`;
@@ -55,8 +56,7 @@ const Button = React.forwardRef<
       className={buttonClassName}
       ref={typedRef}
       disabled={disabled}
-      // @ts-expect-error
-      onClick={props.onClick}
+      {...rest}
     >
       {children}
     </button>

@@ -85,7 +85,7 @@ function OldDocsDisclaimer() {
 
 function TOC({ toc, showUISwitcher }) {
   let [selectedUIMode, setSelectedUIMode] = useState(getUIModeFromStorage());
-
+  const location = useLocation();
   useTOCHighlight(LINK_CLASS_NAME, ACTIVE_LINK_CLASS_NAME, TOP_OFFSET);
 
   const isCustomSelected = selectedUIMode === "custom";
@@ -152,7 +152,7 @@ function TOC({ toc, showUISwitcher }) {
   const unselectedColorString = "var(--ui-selector-inactive)";
   const unselectedBorderColorString = "var(--ui-selector-inactive-border)";
 
-  if (pathname === "/docs/guides") return null;
+  if (location.pathname === "/docs/guides") return null;
   return (
     <div className={clsx(styles.tableOfContents, "thin-scrollbar")}>
       <OldDocsDisclaimer />

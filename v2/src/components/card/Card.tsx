@@ -1,9 +1,17 @@
 import React, { useState } from "react";
 import "./Card.css";
 
-function Card({ children, path }: { children: React.ReactNode; path: string }) {
+function CardRoot({
+  children,
+  path,
+  style = {},
+}: {
+  children: React.ReactNode;
+  path: string;
+  style?: React.CSSProperties;
+}) {
   return (
-    <a href={path} className="st-card">
+    <a href={path} className="st-card" style={style}>
       {children}
     </a>
   );
@@ -26,7 +34,7 @@ function CardTitle({ children }: { children: React.ReactNode }) {
   return <div className="st-card__title">{children}</div>;
 }
 
-Object.assign(Card, {
+const Card = Object.assign(CardRoot, {
   List: CardList,
   Icon: CardIcon,
   Title: CardTitle,
