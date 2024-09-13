@@ -80,7 +80,10 @@ const response = {
 	},
 	emailRisk: null,
 	phoneNumberRisk: null,
-	isBreachedPassword: false, // can be null if the password hash is not provided
+	passwordBreaches: {
+        'c1d808e04732adf679965ccc34ca7ae3441': '120', // the suffix of the password hash and the number of times it has been breached
+        '7acba4f54f55aafc33bb06bbbf6ca803e9a': '399', // the suffix of the password hash and the number of times it has been breached
+    }, // can be null if the password hash is not provided
 	isNewDevice: false, // can be null if the email or phone number is not provided
 	isImpossibleTravel: false, // can be null if the email or phone number is not provided
 	numberOfUniqueDevicesForUser: 1, // can be null if the email or phone number is not provided
@@ -306,7 +309,7 @@ const checkUserOnly = [
 ]
 ```
 
-- `passwordHash`: The SHA-1 hash of the password that needs to be checked against the breach database. If this is not provided, the password breach check will be skipped.
+- `passwordHashPrefix`: The first 5 characters of the SHA-1 hash of the password that needs to be checked against the breach database. If this is not provided, the password breach check will be skipped.
 - `email`: The email address that is being used for the authentication event. If this is not provided (or `phoneNumber`), the impossible travel detection, new device detection and device count detection will be skipped.
 - `phoneNumber`: The phone number that is being used for the authentication event. If this is not provided (or `email`), the impossible travel detection, new device detection and device count detection will be skipped.
 - `actionType`: The type of action that is being performed. The possible values are:
@@ -362,7 +365,7 @@ async function handleSecurityChecks(input: {
         phoneNumber?: string;
         actionType?: string;
         requestId?: string;
-        passwordHash?: string;
+        passwordHashPrefix?: string;
         bruteForce?: {
             key: string;
             maxRequests: {
@@ -376,11 +379,12 @@ async function handleSecurityChecks(input: {
         requestBody.requestId = input.requestId;
     }
 
+    let passwordHash: string | undefined;
     if (input.password !== undefined) {
         let shasum = createHash('sha1');
         shasum.update(input.password);
-        const passwordHash = shasum.digest('hex');
-        requestBody.passwordHash = passwordHash;
+        passwordHash = shasum.digest('hex');
+        requestBody.passwordHashPrefix = passwordHash.slice(0, 5);
     }
     requestBody.bruteForce = input.bruteForceConfig;
     requestBody.email = input.email;
@@ -430,10 +434,15 @@ async function handleSecurityChecks(input: {
         }
     }
 
-    if (responseData?.isPasswordBreached) {
-        return {
-            status: "GENERAL_ERROR",
-            message: "This password has been detected in a breach. Please set a different password."
+    if (responseData?.passwordBreaches && passwordHash) {
+        const suffix = passwordHash.slice(5).toUpperCase();
+        const foundPasswordHash = responseData?.passwordBreaches[suffix];
+
+        if (foundPasswordHash) {
+            return {
+                status: "GENERAL_ERROR",
+                message: "This password has been detected in a breach. Please set a different password."
+            }
         }
     }
 
@@ -656,11 +665,12 @@ func handleSecurityChecks(input SecurityCheckInput) (*supertokens.GeneralErrorRe
 		requestBody["requestId"] = input.RequestID
 	}
 
+    var passwordHash string
 	if input.Password != "" {
 		hash := sha1.New()
 		hash.Write([]byte(input.Password))
-		passwordHash := hex.EncodeToString(hash.Sum(nil))
-		requestBody["passwordHash"] = passwordHash
+		passwordHash = hex.EncodeToString(hash.Sum(nil))
+		requestBody["passwordHashPrefix"] = passwordHash[:5]
 	}
 
 	requestBody["bruteForce"] = input.BruteForceConfig
@@ -725,10 +735,13 @@ func handleSecurityChecks(input SecurityCheckInput) (*supertokens.GeneralErrorRe
 		}
 	}
 
-	if isPasswordBreached, ok := responseData["isPasswordBreached"].(bool); ok && isPasswordBreached {
-		return &supertokens.GeneralErrorResponse{
-			Message: "This password has been detected in a breach. Please set a different password.",
-		}, nil
+	if passwordBreaches, ok := responseData["passwordBreaches"].(map[string]interface{}); ok {
+        passwordHashSuffix := passwordHash[5:]
+		if _, ok := passwordBreaches[passwordHashSuffix]; ok {
+			return &supertokens.GeneralErrorResponse{
+				Message: "This password has been detected in a breach. Please set a different password.",
+			}, nil
+		}
 	}
 
 	return nil, nil
@@ -976,9 +989,10 @@ async def handle_security_checks(request_id: Union[str, None], password: Union[s
     if request_id is not None:
         request_body['requestId'] = request_id
 
+    password_hash = None
     if password is not None:
         password_hash = sha1(password.encode()).hexdigest()
-        request_body['passwordHash'] = password_hash
+        request_body['passwordHashPrefix'] = password_hash[:5]
 
     request_body['bruteForce'] = brute_force_config
     request_body['email'] = email
@@ -1008,8 +1022,10 @@ async def handle_security_checks(request_id: Union[str, None], password: Union[s
     if response_data.get('requestIdInfo', {}).get('botDetected'):
         return GeneralErrorResponse(message="Bot activity detected.")
 
-    if response_data.get('isPasswordBreached'):
-        return GeneralErrorResponse(message="This password has been detected in a breach. Please set a different password.")
+    if response_data.get('passwordBreaches') and password_hash is not None:
+        password_hash_suffix = password_hash[5:]
+        if password_hash_suffix in response_data['passwordBreaches']:
+            return GeneralErrorResponse(message="This password has been detected in a breach. Please set a different password.")
 
     return None
 
