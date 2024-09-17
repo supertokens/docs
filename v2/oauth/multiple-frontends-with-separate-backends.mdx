@@ -1,0 +1,150 @@
+---
+title: Multiple frontend domains with separate backends
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+
+
+# Multiple frontend domains with separate backends
+
+You can use the following guide if you have a single **`authentication service`** that is used by multiple **`frontend applications`** which in turn have separate **`backends`**.
+
+## 1. Set Up Your Authentication Service 
+
+:::note
+TODO: Add actual code snippets here
+:::
+
+First, initialize and setup **SuperTokens** in your `authentication service`.
+
+## 2. Initialize the OAuth2Provider
+
+In addition to the authentication recipes you’ve set up, initialize the `OAuth2Provider` recipe in your `authentication service`.
+
+```typescript
+import supertokens from "supertokens-node";
+import OAuth2Provider from"supertokens-node/recipe/oauth2provider";
+
+supertokens.init({
+    framework: "express",
+    supertokens: {
+        connectionURI: "<YOUR_CONNECTION_URI>",
+        apiKey: "<YOUR_API_KEY>",
+    },
+    appInfo: {
+        appName: "",
+        apiDomain: "<YOUR_API_DOMAIN>",
+        websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+        apiBasePath: "/auth",
+        websiteBasePath: "/auth"
+    },
+    recipeList: [
+        // This is where you initialize the OAuth2 recipe
+        OAuth2Provider.init(),
+    ]
+});
+```
+
+## 3. Add a Way to Create OAuth2 Clients 
+
+We have to create OAuth2 clients in order to allow them to authenticate through our flow.
+
+First we need to add a method to do this.
+Our recommendation is to use the `createOAuth2Client` function that is exposed by our SDK.
+Alternatively, you can also directly call the **SuperTokens** core API.
+
+### Using the `createOAuth2Client` function
+
+:::note 
+TODO: Add details about what each parameter means
+:::
+
+```typescript
+import { createOAuth2Client } from "supertokens-node/recipe/oauth2provider";
+
+createClient({
+  // This value will be shown in the auth page when the app requests the user to authenticate
+  clientName: 'My Application',
+  // TODO: Add info about this
+  responseTypes: ['code', 'id_token'],
+  // TODO: Add info about this
+  grantTypes: ['authorization_code', 'refresh_token'],
+  // TODO: Add info about this
+  redirectUri: 'https://example.com/oauth/callback',
+});
+ 
+```
+
+### Using the Core API 
+
+```bash
+curl -X POST https://<CORE_SERVICE_DOMAIN>/recipe/oauth2/admin/clients \
+-H "Content-Type: application/json" \
+-d '{
+  "client_name": "My Application",
+  "response_types": ["code", "id_token"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "redirect_uri": ["https://different.com/oauth/callback"]
+}'
+```
+
+## 4. Create Separate Clients for Each Application
+
+Using the method that we defined in the previous step create separate clients for each of your applications.
+
+Repeat the process for each domain, adjusting the `clientName` and `redirectUri` as necessary.
+
+## 5. Set Up Session Handling in Each Application
+
+You will have to setup custom session handling logic in each `application backend`.
+
+You can use a generic OpenID Connect (OIDC) or OAuth2 library. 
+For `NodeJS` we recommend using either [passport-oauth2](https://www.passportjs.org/packages/passport-oauth2/) or [passport-openidconnect](https://www.passportjs.org/packages/passport-openidconnect/).
+
+#### Example using `passport-oauth2`:
+
+```typescript
+// TODO: This is a dummy example. It will have to be adjusted
+const passport = require('passport');
+const OAuth2Strategy = require('passport-oauth2');
+
+passport.use(new OAuth2Strategy({
+  authorizationURL: 'https://auth.example.com/oauth2/authorize',
+  tokenURL: 'https://api.auth.example.com/oauth2/token',
+  clientID: 'YOUR_CLIENT_ID',
+  clientSecret: 'YOUR_CLIENT_SECRET',
+  callbackURL: 'https://different.com/oauth/callback'
+}, (accessToken, refreshToken, profile, cb) => {
+  User.findOrCreate({ oauthId: profile.id }, (err, user) => {
+    return cb(err, user);
+  });
+}));
+
+app.get('/auth/provider',
+  passport.authenticate('oauth2'));
+
+app.get('/auth/provider/callback',
+  passport.authenticate('oauth2', { failureRedirect: '/login' }),
+  (req, res) => {
+    res.redirect('/');
+  });
+```
+
+## 6. Add the Login UI in your frontend applications
+
+In your `frontend applications` you will have to add a login action that will redirect the user to the authentication page.
+Here's a basic example using a link:
+``` html
+<a href="<API_DOMAIN>/auth/oauth/auth?client_id=<YOUR_CLIENT_ID>&redirect_uri=<YOUR_REDIRECT_URI>">
+  Login with OAuth2
+</a>
+```
+
+The authentication URL needs to adhere to the following format:
+- `<API_DOMAIN>` - The domain of the authentication backend. The example assumes that you didn't overwrite the default `apiBasePath`.
+If that's the case you will have to replace `/auth` with you custom base path.
+- `<YOUR_CLIENT_ID>` - The client ID of the client you created in the previous step
+- `<YOUR_REDIRECT_URI>` - The redirect URI of the client you created in the previous step
+
+

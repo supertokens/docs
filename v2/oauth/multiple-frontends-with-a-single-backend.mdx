@@ -1,0 +1,177 @@
+---
+title: Multiple frontend domains with a common backend 
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+
+
+# Multiple Frontend Domains Using a Single Backend
+
+You can use the following guide if you have multiple **`frontend applications`** on different domains, that use the same **`backend service`**.
+
+## 1. Set Up Your Authentication Service 
+
+:::note
+TODO: Add actual code snippets here
+:::
+
+First, initialize and setup **SuperTokens** in your `authentication service`.
+
+## 2. Initialize the OAuth2Provider
+
+In addition to the authentication recipes you’ve set up, initialize the `OAuth2Provider` recipe in your `backend service`.
+
+```typescript
+import supertokens from "supertokens-node";
+import OAuth2Provider from"supertokens-node/recipe/oauth2provider";
+
+supertokens.init({
+    framework: "express",
+    supertokens: {
+        connectionURI: "<YOUR_CONNECTION_URI>",
+        apiKey: "<YOUR_API_KEY>",
+    },
+    appInfo: {
+        appName: "",
+        apiDomain: "<YOUR_API_DOMAIN>",
+        websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+        apiBasePath: "/auth",
+        websiteBasePath: "/auth"
+    },
+    recipeList: [
+        // This is where you initialize the OAuth2 recipe
+        OAuth2Provider.init(),
+    ]
+});
+```
+
+## 3. Add a Way to Create OAuth2 Clients 
+
+We have to create OAuth2 clients in order to allow them to authenticate through our flow.
+
+First we need to add a method to do this.
+Our recommendation is to use the `createOAuth2Client` function that is exposed by our SDK.
+Alternatively, you can also directly call the **SuperTokens** core API.
+
+### Using the `createOAuth2Client` function
+
+:::note 
+TODO: Add details about what each parameter means
+:::
+
+```typescript
+import { createOAuth2Client } from "supertokens-node/recipe/oauth2provider";
+
+createClient({
+  // This value will be shown in the auth page when the app requests the user to authenticate
+  clientName: 'My Application',
+  // TODO: Add info about this
+  responseTypes: ['code', 'id_token'],
+  // TODO: Add info about this
+  grantTypes: ['authorization_code', 'refresh_token'],
+  // TODO: Add info about this
+  redirectUri: 'https://example.com/oauth/callback',
+});
+ 
+```
+
+### Using the Core API 
+
+```bash
+curl -X POST https://<CORE_SERVICE_DOMAIN>/recipe/oauth2/admin/clients \
+-H "Content-Type: application/json" \
+-d '{
+  "client_name": "My Application",
+  "response_types": ["code", "id_token"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "redirect_uri": ["https://different.com/oauth/callback"]
+}'
+```
+
+## 4. Create Separate Clients for Each Frontend Application
+
+Using the method that we defined in the previous step create separate clients for each of your `frontend applications`.
+
+Repeat the process for each domain, adjusting the `clientName` and `redirectUri` as necessary.
+
+## 5. Configure OAuth2Client recipe in the Backend
+
+Update the backend configuration to also initialize the `OAuth2Client` recipe and include the previously created clients.
+
+:::note
+Not sure on how the init call should look like here
+:::
+
+```typescript
+import supertokens from "supertokens-node";
+import OAuth2Client  from"supertokens-node/recipe/oauth2client";
+
+supertokens.init({
+    framework: "express",
+    supertokens: {
+        connectionURI: "<YOUR_CONNECTION_URI>",
+        apiKey: "<YOUR_API_KEY>",
+    },
+    appInfo: {
+        appName: "",
+        apiDomain: "<YOUR_API_DOMAIN>",
+        websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+        apiBasePath: "/auth",
+        websiteBasePath: "/auth"
+    },
+    recipeList: [
+        OAuth2Provider.init(),
+        // This is where you initialize the OAuth2Client recipe
+        OAuth2Client.init([
+          {clientId: 'CLIENT_ID_A'},
+          {clientId: 'CLIENT_ID_B'}
+        ]),
+    ]
+});
+```
+
+## 6. Initialize the recipe on the Frontend Applications
+
+:::note
+Not sure about this step. I assumed that the web js is used here.
+:::
+
+Initialize the `OAuth2Provider` recipe on the frontend of each of your applications, ensuring you set the `authMode` to `header`.
+
+```typescript
+import OAuth2Provider from "supertokens-web-js/recipe/oauth2provider";
+
+SuperTokens.init({
+    appInfo: {
+        appName: "<YOUR_APP_NAME>",
+        apiDomain: "<YOUR_API_DOMAIN>",
+        websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+        apiBasePath: "/auth",
+        websiteBasePath: "/auth"
+    },
+    recipeList: [
+        OAuth2Provider.init({
+          authMode: "header"
+        })
+    ]
+});
+```
+
+## 7. Add the Login UI in each frontend application
+
+In your frontend applications you will have to add a login action that will open the authentication page.
+Here's a basic example using a link:
+``` html
+<a href="<API_DOMAIN>/auth/oauth/auth?client_id=<YOUR_CLIENT_ID>&redirect_uri=<YOUR_REDIRECT_URI>">
+  Login with OAuth2
+</a>
+```
+
+The authentication URL needs to adhere to the following format:
+- `<API_DOMAIN>` - The domain of the authentication backend. The example assumes that you didn't overwrite the default `apiBasePath`.
+If that's the case you will have to replace `/auth` with you custom base path.
+- `<YOUR_CLIENT_ID>` - The client ID of the client you created in the previous step
+- `<YOUR_REDIRECT_URI>` - The redirect URI of the client you created in the previous step
+
+

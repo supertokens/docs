@@ -259,6 +259,20 @@ module.exports = {
     [
       "@docusaurus/plugin-content-docs",
       {
+        id: "oauth",
+        path: "oauth",
+        routeBasePath: "docs/oauth",
+        sidebarPath: require.resolve("./oauth/sidebars.js"),
+        showLastUpdateTime: true,
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
+    ],
+    [
+      "@docusaurus/plugin-content-docs",
+      {
         id: "botandspamdetection",
         path: "botandspamdetection",
         routeBasePath: "docs/botandspamdetection",

@@ -38,6 +38,10 @@ export default function RecipeSelector(props) {
         return "User Management Dashboard";
       case "multitenancy":
         return "Multi Tenancy";
+      case "anomaly_detection":
+        return "Bot/Spam Detection";
+      case "oauth":
+        return "OAuth";
       default:
         return "Select Recipe";
     }
@@ -191,6 +195,13 @@ export default function RecipeSelector(props) {
               <a href="/docs/botandspamdetection/introduction">
                 Bot / Spam Detection
               </a>
+            </li>
+            <li
+              className={clsx("recipe_selector__menu__add_ons_items", {
+                active: activeSelector("oauth"),
+              })}
+            >
+              <a href="/docs/oauth/introduction">OAuth</a>
             </li>
           </ul>
         </div>
