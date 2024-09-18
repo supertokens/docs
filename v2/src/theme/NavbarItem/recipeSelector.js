@@ -188,8 +188,8 @@ export default function RecipeSelector(props) {
                 active: activeSelector("anomaly_detection"),
               })}
             >
-              <a href="/docs/botandspamdetection/introduction">
-                Bot / Spam Detection
+              <a href="/docs/attackprotectionsuite/introduction">
+                Attack Protection Suite
               </a>
             </li>
           </ul>

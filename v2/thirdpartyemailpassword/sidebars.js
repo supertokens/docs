@@ -729,7 +729,7 @@ module.exports = {
         },
         "mfa",
         "multi-tenant",
-        "bot-and-spam-detection",
+        "attack-protection-suite",
       ],
     },
     "scalability",
@@ -744,8 +744,8 @@ module.exports = {
       ],
     },
     {
-      type: 'category',
-      label: 'Migrating to Supertokens',
+      type: "category",
+      label: "Migrating to Supertokens",
       items: [
         "migration/about",
         {
