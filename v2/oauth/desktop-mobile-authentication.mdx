@@ -1,0 +1,152 @@
+---
+title: Reuse website login for desktop and mobile apps
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import CoreInjector from "/src/components/coreInjector"
+
+# Multiple frontend domains with separate backends
+
+You can use the following guide if you have a single [**Authentication Service**](/docs/oauth/introduction#authentication-service) that is used by multiple applications.
+In turn, each app has separate **`frontend `** and **`backend`** instances that are served from different domains.
+
+Using the actual **OAuth 2.0** terminology, we can say that each **`frontend`** can be considered a [**Client**](/docs/oauth/introduction#client) and each **`backend`** is a [**Resource Server**](/docs/oauth/introduction#resource-server).
+
+:::info
+This guide assumes that you already have setup and configured your **SuperTokens** in your [**Authentication Service**](/docs/oauth/introduction#authentication-service). 
+
+For more information on how to do that please check our [quickstart guide](/docs/thirdparty/introduction).
+:::
+
+## 1. Create the OAuth2 Clients
+
+For each of your **`frontend`** applications you will have to create a separate [**OAuth2 client**](/docs/oauth/introduction#client).
+This can be done by directly calling the **SuperTokens Core** API.
+
+<CoreInjector defaultValue="https://example.com">
+
+```bash
+curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
+  -H "Content-Type: application/json" \
+  -H "api-key: ^{coreInjector_api_key_without_quotes}" \
+  -d '{
+      "client_name": "<YOUR_CLIENT_NAME>",
+      "response_types": ["code", "id_token"],
+      "grant_types": ["authorization_code", "refresh_token"],
+      "redirect_uri": ["https://<YOUR_DOMAIN>.com/oauth/callback"]
+    }'
+```
+
+</CoreInjector>
+
+
+- `client_name` - A human-readable name of the client that will be presented to the [**end-user**](/docs/oauth/introduction#authorization) during authorization.
+- `response_types` - Specifies the types of responses your client expects from the Authorization Server.
+    - `code`: Indicates that the [**Client**](/#authorization) will receive an [**Authorization Code**](/#authorization) that will be exchanged for an [**Access Token**](/#authorization).
+    - `id_token`: Indicates that the [**Client**](/#authorization) expects an [**ID Token**](/#authorization)
+- `grant_types` - The grant types that the [**Client**](/#authorization) will use. 
+    - `authorization_code`: Allows exchanging the [**Authorization Code**](/#authorization) for an [**Access Token**](/#authorization).
+    - `refresh_token`: Allows exchanging the [**Refresh Token**](/#authorization) for a new [**Access Token**](/#authorization).
+- `redirect_uri` - A list of URIs to which the [**Authorization Server**](/#authorization) will send the user-agent (browser) after completing the authorization step
+
+If the creation was successful, the response will return a `201` status code.
+The response body will contain a **`client_id`** field which you will need to use in the next steps.
+
+## 2. Initialize the provider recipe 
+
+In your [**Authentication Service**](/docs/oauth/introduction#authentication-service) you will need to initialize the **OAuth2Provider** recipe.
+The recipe will expose the endpoints needed for enabling the [**OAuth 2.0**](/docs/oauth/introduction#oauth-20) flow.
+
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```typescript
+import supertokens from "supertokens-node";
+import OAuth2Provider from"supertokens-node/recipe/oauth2provider";
+
+supertokens.init({
+    framework: "express",
+    supertokens: {
+        connectionURI: "<YOUR_CONNECTION_URI>",
+        apiKey: "<YOUR_API_KEY>",
+    },
+    appInfo: {
+        appName: "",
+        apiDomain: "<YOUR_API_DOMAIN>",
+        websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+        apiBasePath: "/auth",
+        websiteBasePath: "/auth"
+    },
+    recipeList: [
+        // This is where you initialize the OAuth2 recipe
+        OAuth2Provider.init(),
+    ]
+});
+```
+
+</TabItem>
+
+<TabItem value="go">
+
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Go SDK.
+
+:::
+
+</TabItem>
+
+<TabItem value="python">
+
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Python SDK.
+
+:::
+
+</TabItem>
+
+</BackendSDKTabs>
+
+## 3. Set Up Session Handling in Each Application
+
+You will have to setup custom session handling logic in each of your `backend applications`.
+
+<BackendSDKTabs>
+
+<TabItem value="nodejs">
+
+You can use a generic OIDC or OAuth2 library. 
+For `NodeJS` we recommend using either [passport-oauth2](https://www.passportjs.org/packages/passport-oauth2/) or [passport-openidconnect](https://www.passportjs.org/packages/passport-openidconnect/).
+
+#### Example using `passport-oauth2`:
+
+```typescript
+// TODO: Add a sample code snippet here
+```
+
+</TabItem>
+
+</BackendSDKTabs>
+
+
+## 4. Update the login flow in your frontend applications
+
+In your `frontend applications` you will have to add a login action that will direct the user to the authentication page.
+You can just use a link for that. The link should be structured like this:
+
+```
+<AUTHENTICATION_SERIVICE_DOMAIN>/auth/oauth/auth?client_id=<CLIENT_ID>&redirect_uri=<REDIRECT_URI>
+```
+- `<AUTHENTICATION_SERIVICE_DOMAIN>` - The domain of your [**Authentication Service**](/docs/oauth/introduction#authentication-service).
+The example assumes that you didn't overwrite the default `apiBasePath`.
+If that's the case you will have to replace `/auth` with you custom base path.
+- `<CLIENT_ID>` - The corresponding client ID based on what you have created in the first step.
+- `<REDIRECT_URI>` - The corresponding redirect URI based on what you have created in the first step.
+
+## 5. Test the new authentication flow
+
+With everything set up, you can now test your login flow.
+Just use the link that you have created in the previous step and try to access a protected resource.

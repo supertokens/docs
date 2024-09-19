@@ -3,25 +3,61 @@ title: Machine to Machine Authentication
 hide_title: true
 ---
 
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+import CoreInjector from "/src/components/coreInjector"
+
 # Machine to Machine Authentication
 
 You can use the following guide if you want to implement a custom authentication flow between your microservices.
 
-## 1. Set Up Your Authentication Service 
+:::info
+This guide assumes that you already have setup and configured **SuperTokens** in your [**Authentication Service**](/docs/oauth/introduction#authentication-service). 
 
-:::note
-TODO: Add actual code snippets here
+For more information on how to do that please check our [quickstart guide](/docs/thirdparty/introduction).
 :::
 
-First, initialize and setup **SuperTokens** in your `authentication service`.
 
-## 2. Initialize the OAuth2Provider
+## 1. Create the OAuth2 Clients
 
-In addition to the authentication recipes you’ve set up, initialize the `OAuth2Provider` recipe in your `authentication backend`.
+For each of your **`microservices`** you will have to create a separate [**OAuth2 client**](/docs/oauth/introduction#client).
+This can be done by directly calling the **SuperTokens Core** API.
+
+<CoreInjector defaultValue="https://example.com">
+
+```bash
+curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
+  -H "Content-Type: application/json" \
+  -H "api-key: ^{coreInjector_api_key_without_quotes}" \
+  -d '{
+      "client_name": "<YOUR_CLIENT_NAME>",
+      "grant_types": ["client_credentials"],
+    }'
+```
+
+</CoreInjector>
+
+
+- `client_name` - Then name of the client that will be used later for identification.
+- `grant_types` - The grant types that the [**Client**](/#authorization) will use. 
+    - `client_credentials`: Allows the client to directly request an Access Token by authenticating itself with the Authorization Server using its own client credentials.
+
+If the creation was successful, the response will return a `201` status code.
+The response body will contain a **`client_id`** field which you will need to use in the next steps.
+
+## 2. Initialize the OAuth2Provider recipe 
+
+
+In your **`authentication server`** you will need to initialize the **OAuth2Provider** recipe .
+The recipe will expose the endpoints needed for enabling the [**OAuth 2.0**](/docs/oauth/introduction#oauth-20) flow.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
 
 ```typescript
 import supertokens from "supertokens-node";
 import OAuth2Provider from"supertokens-node/recipe/oauth2provider";
+import OAuth2Client from"supertokens-node/recipe/oauth2client";
 
 supertokens.init({
     framework: "express",
@@ -37,74 +73,51 @@ supertokens.init({
         websiteBasePath: "/auth"
     },
     recipeList: [
-        // This is where you initialize the OAuth2 recipe
         OAuth2Provider.init(),
     ]
 });
 ```
 
-## 3. Add a Way to Create OAuth2 Clients 
+</TabItem>
 
-We have to create OAuth2 clients in order to allow them to authenticate through our flow.
+<TabItem value="go">
 
-First we need to add a method to do this.
-Our recommendation is to use the `createOAuth2Client` function that is exposed by our SDK.
-Alternatively, you can also directly call the **SuperTokens** core API.
+:::caution
 
-### Using the `createOAuth2Client` function
+At the moment we do not have support creating OAuth2 providers in the Go SDK.
 
-:::note 
-TODO: Add details about what each parameter means
 :::
 
-```typescript
-import { createOAuth2Client } from "supertokens-node/recipe/oauth2provider";
+</TabItem>
 
-createClient({
-  clientName: 'My Application',
-  grantTypes: ["client_credentials"],
-});
- 
-```
+<TabItem value="python">
 
-### Using the Core API 
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Python SDK.
+
+:::
+
+</TabItem>
+
+</BackendSDKTabs>
+
+
+## 3. Generate Access Tokens
+
+Now you can directly call the [**Authorization Server**](/docs/oauth/introduction#authorization-server) to generate Access Tokens.
+Check the following code snippet to see how you can do that:
 
 ```bash
-curl -X POST https://<CORE_SERVICE_DOMAIN>/recipe/oauth2/admin/clients \
+
+curl -X POST <AUTHENTICATION_SERVICE_DOMAIN>/auth/oauth/token \
 -H "Content-Type: application/json" \
 -d '{
-  "client_name": "My Application",
-  "grant_types": ["client_credentials"]
+  "client_id": "<YOUR_CLIENT_ID>",
+  "client_secret": "<YOUR_CLIENT_SECRET>",
+  "grant_type": "client_credentials",
+  "scope": ["<YOUR_REQUIRED_SCOPE>"]
 }'
+
 ```
-
-## 4. Create Separate Clients for Each Application
-
-Using the method that we defined in the previous step create separate clients for each of your `backend services`.
-
-Repeat the process for each domain, adjusting the `clientName` as necessary.
-
-## 5. Create Tokens
-
-To generate tokens for your microservices using the `client_credentials` grant type, use the following code snippet:
-
-:::note
-Not sure on how scope should look like
-:::
-
-```typescript
-fetch('https://api.auth.example.com/auth/oauth/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      client_id: "<YOUR_CLIENT_ID>",
-      client_secret: "<YOUR_CLIENT_SECRET>",
-      grant_type: 'client_credentials',
-      scope: ["<YOUR_REQUIRED_SCOPE>"],
-    }),
-});
-```
-
 

@@ -41,7 +41,7 @@ export default function RecipeSelector(props) {
       case "anomaly_detection":
         return "Bot/Spam Detection";
       case "oauth":
-        return "OAuth";
+        return "OAuth 2.0";
       default:
         return "Select Recipe";
     }
@@ -201,7 +201,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("oauth"),
               })}
             >
-              <a href="/docs/oauth/introduction">OAuth</a>
+              <a href="/docs/oauth/introduction">OAuth 2.0</a>
             </li>
           </ul>
         </div>
