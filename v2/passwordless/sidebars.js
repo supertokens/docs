@@ -680,6 +680,7 @@ module.exports = {
         "testing/testing-with-postman",
         "troubleshooting/how-to-troubleshoot",
         "troubleshooting/cors-issues",
+        "troubleshooting/checklist",
       ],
     },
     {
