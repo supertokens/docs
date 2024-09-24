@@ -10,21 +10,35 @@ import CoreInjector from "/src/components/coreInjector"
 
 You can use the following guide if you have a single [**Authentication Service**](/docs/oauth/introduction#authentication-service) that is used by multiple applications.
 In turn, each app has separate **`frontend `** and **`backend`** instances that are served from different domains.
+Using the actual **OAuth 2.0** terminology, that each application can be considered a [**Client**](/docs/oauth/introduction#client) while the **`backends`** are also [**Resource Servers**](/docs/oauth/introduction#resource-server).
 
-Using the actual **OAuth 2.0** terminology, we can say that each **`frontend`** can be considered a [**Client**](/docs/oauth/introduction#client) and each **`backend`** is a [**Resource Server**](/docs/oauth/introduction#resource-server).
+Note that if the *frontends* and *backends* are in different *sub domains*, you don't need to use *OAuth* and can instead use [session sharing across sub domains](/docs/session/common-customizations/sessions/share-sessions-across-sub-domains).
+
+<img src="/img/botandspamdetection/sequence-diagram.png" alt="Client Credentials Grant"/>
 
 :::info
 This guide assumes that you already have setup and configured **SuperTokens** in your [**Authentication Service**](/docs/oauth/introduction#authentication-service). 
 
-For more information on how to do that please check our [quickstart guide](/docs/thirdparty/introduction).
+For more information on how to do that please check our [quickstart guides](/docs/guides).
 :::
 
-## 1. Create the OAuth2 Clients
+## 1. Enable the OAuth2 features from the Dashboard
+
+You will first have to enable the **OAuth2** features from the **SuperTokens Dashboard**.
+1. Open the **SuperTokens Dashboard** on the main page
+2. Click on the **Enabled Paid Features** button
+3. Click on **Managed Service**
+4. Check the **OAuth 2.0** option
+5. Click *Save* 
+
+Now you should be able to use the OAuth2 recipes in your applications.
+
+## 2. Create the OAuth2 Clients
 
 For each of your **`frontend`** applications you will have to create a separate [**OAuth2 client**](/docs/oauth/introduction#client).
 This can be done by directly calling the **SuperTokens Core** API.
 
-<CoreInjector defaultValue="https://example.com">
+<CoreInjector defaultValue="https://<your-core-identifier>.aws.supertokens.io" showTenantId={false}>
 
 ```bash
 curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
@@ -34,7 +48,7 @@ curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
       "client_name": "<YOUR_CLIENT_NAME>",
       "response_types": ["code", "id_token"],
       "grant_types": ["authorization_code", "refresh_token"],
-      "redirect_uri": ["https://<YOUR_DOMAIN>.com/oauth/callback"]
+      "redirect_uri": ["https://<YOUR_DOMAIN>/oauth/callback"]
     }'
 ```
 
@@ -42,18 +56,18 @@ curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
 
 
 - `client_name` - A human-readable name of the client that will be presented to the [**end-user**](/docs/oauth/introduction#authorization) during authorization.
-- `response_types` - Specifies the types of responses your client expects from the Authorization Server.
+- `response_types` - Specifies the types of responses your client expects from the Authorization Server. Most of the time, you would need the following two to be present:
     - `code`: Indicates that the [**Client**](/#authorization) will receive an [**Authorization Code**](/#authorization) that will be exchanged for an [**Access Token**](/#authorization).
     - `id_token`: Indicates that the [**Client**](/#authorization) expects an [**ID Token**](/#authorization)
 - `grant_types` - The grant types that the [**Client**](/#authorization) will use. 
     - `authorization_code`: Allows exchanging the [**Authorization Code**](/#authorization) for an [**Access Token**](/#authorization).
     - `refresh_token`: Allows exchanging the [**Refresh Token**](/#authorization) for a new [**Access Token**](/#authorization).
-- `redirect_uri` - A list of URIs to which the [**Authorization Server**](/#authorization) will send the user-agent (browser) after completing the authorization step
+- `redirect_uri` - A list of URIs to which the [**Authorization Server**](/#authorization) will send the user-agent (browser) after completing the authorization step. These can be deep links to mobile or desktop apps as well, but they must be exact URLs, without wildcards.
 
 If the creation was successful, the response will return a `201` status code.
-The response body will contain the **`client_id`** and the `client_secret` fields. Safe them for each request because we will need to use them in the next steps.
+The response body will contain the **`client_id`** and the `client_secret` fields. Save them for each request because we will need to use them in the next steps.
 
-## 2. Initialize the provider recipe 
+## 3. Initialize the OAuth2 Provider Recipe 
 
 In your [**Authentication Service**](/docs/oauth/introduction#authentication-service) you will need to initialize the **OAuth2Provider** recipe.
 The recipe will expose the endpoints needed for enabling the [**OAuth 2.0**](/docs/oauth/introduction#oauth-20) flow.
@@ -76,8 +90,6 @@ supertokens.init({
         appName: "",
         apiDomain: "<YOUR_API_DOMAIN>",
         websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
-        apiBasePath: "/auth",
-        websiteBasePath: "/auth"
     },
     recipeList: [
         // This is where you initialize the OAuth2 recipe
@@ -110,296 +122,69 @@ At the moment we do not have support creating OAuth2 providers in the Python SDK
 
 </BackendSDKTabs>
 
-## 3. Set Up Session Handling in Each Application
 
-You will have to setup custom session handling logic in each of your `backend applications`.
+###  Configure the Authorization Service Frontend 
+
+:::info
+
+The `OAuth2Provider` recipe is available, at the moment, only when using the `supertokens-auth-react` package.
+
+:::
+
+Initialize the `OAuth2Provider` recipe on the frontend of your **Authorization Service**, ensuring you set the `authMode` to `header`.
+
+```tsx
+import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
+import Session from "supertokens-auth-react/recipe/session";
+
+
+export const SuperTokensConfig = {
+    appInfo: {
+        appName: "App Name",
+        apiDomain: "<AUTHENTICATION_SERVICE_DOMAIN>",
+        websiteDomain: "<FRONTEND_APPLICATION_DOMAIN>",
+    },
+    recipeList: [
+        OAuth2Provider.init({ authMode: "header" }),
+        Session.init(),
+    ],
+};
+
+```
+
+## 4. Set Up Session Handling in Each Application
+
+In each of your `backend applications` you will have to setup up logic for handling the **OAuth 2.0** authentication flow.
+
+This will involve the following steps:
+
+:::note
+What are the actual steps?
+:::
+
+The following steps are only required if you are using the **Session** recipe. If you are not using the **Session** recipe, you can skip this step.
+1. Exposing an endpoint that can take the authorization code and exchange it for an access token
+2. Verifying the access token on each request 
+
+You can use a generic OIDC or OAuth2 library to achieve these steps.
 
 <BackendSDKTabs>
 
 <TabItem value="nodejs">
 
-You can use a generic OIDC or OAuth2 library. 
-For `NodeJS` we recommend using either [passport-oauth2](https://www.passportjs.org/packages/passport-oauth2/) or [passport-openidconnect](https://www.passportjs.org/packages/passport-openidconnect/).
+We recommend using either [passport-oauth2](https://www.passportjs.org/packages/passport-oauth2/) or [passport-openidconnect](https://www.passportjs.org/packages/passport-openidconnect/).
 
 #### Example using `passport-oauth2`:
 
-```typescript
-import express, { Request, Response } from 'express';
-import passport from 'passport';
-import { Strategy as OAuth2Strategy } from 'passport-oauth2';
-import session from 'express-session';
-
-const AUTHORIZATION_SERVER_URL = 'https://auth.example.com';
-// The client ID returned from the first step
-const CLIENT_ID = 'your-client-id';
-// The client secret returned from the first step
-const CLIENT_SECRET = 'your-client-secret';
-// On of the callback URLs specified in the create client payload 
-const CALLBACK_URL = 'https://your-app.com/auth/callback';
-
-const app = express();
-
-app.use(session({
-  secret: 'your-session-secret',
-  resave: false,
-  saveUninitialized: false
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-
-passport.deserializeUser((obj, done) => {
-  done(null, obj);
-});
-
-passport.use(new OAuth2Strategy({
-  authorizationURL: `${AUTHORIZATION_SERVER_URL}/authorize`,
-  tokenURL: `${AUTHORIZATION_SERVER_URL}/token`,
-  clientID: CLIENT_ID,
-  clientSecret: CLIENT_SECRET,
-  callbackURL: CALLBACK_URL
-}, (accessToken, refreshToken, profile, done) => {
-  // Verify if the user exists
-  // And then store the user's profile during this step
-  done(null, profile);
-}));
-
-app.get('/auth', passport.authenticate('oauth2'));
-app.get('/auth/callback', passport.authenticate('oauth2', {
-  failureRedirect: '/login'
-}), (req: Request, res: Response) => {
-  // Successful authentication
-  res.redirect('/');
-});
-
-// Example of a secure endpoint
-app.get('/', (req: Request, res: Response) => {
-  if (!req.isAuthenticated()) {
-    return res.redirect('/login');
-  }
-  res.send(`Hello, ${(req.user as any).name}`); 
-});
-
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-```
 
 </TabItem>
 
 <TabItem value="go">
 
-```go
-package main
-
-import (
-    "encoding/gob"
-    "fmt"
-    "log"
-    "net/http"
-    "os"
-
-    "github.com/gorilla/mux"
-    "github.com/gorilla/sessions"
-    "golang.org/x/oauth2"
-)
-
-var (
-    authorizationServerURL = "https://auth.example.com"
-    // The client ID returned from the first step
-    clientID               = "<YOUR_CLIENT_ID>"
-    // The client secret returned from the first step
-    clientSecret           = "<YOUR_CLIENT_SECRET>"
-    // On of the callback URLs specified in the create client payload 
-    callbackURL            = "https://your-app.com/auth/callback" 
-
-    store = sessions.NewCookieStore([]byte("your-session-secret"))
-
-    // OAuth2 configuration
-    config = &oauth2.Config{
-        ClientID:     clientID,
-        ClientSecret: clientSecret,
-        RedirectURL:  callbackURL,
-        Endpoint: oauth2.Endpoint{
-            AuthURL:  authorizationServerURL + "/authorize",
-            TokenURL: authorizationServerURL + "/token",
-        },
-        Scopes: []string{"openid", "profile", "email"},
-    }
-)
-
-type User struct {
-    Name  string
-    Email string
-}
-
-func init() {
-    gob.Register(User{})
-}
-
-func main() {
-    r := mux.NewRouter()
-
-    r.HandleFunc("/", homeHandler)
-    r.HandleFunc("/login", loginHandler)
-    r.HandleFunc("/auth/callback", authCallbackHandler)
-    r.HandleFunc("/logout", logoutHandler)
-
-    http.Handle("/", r)
-    log.Println("Server started at http://localhost:8080")
-    log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-    session, _ := store.Get(r, "session")
-    user, ok := session.Values["user"].(User)
-
-    if !ok {
-        http.Redirect(w, r, "/login", http.StatusFound)
-        return
-    }
-
-    fmt.Fprintf(w, "Hello, %s", user.Name)
-}
-
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-    url := config.AuthCodeURL("state", oauth2.AccessTypeOffline)
-    http.Redirect(w, r, url, http.StatusFound)
-}
-
-func authCallbackHandler(w http.ResponseWriter, r *http.Request) {
-    session, _ := store.Get(r, "session")
-
-    state := r.FormValue("state")
-    if state != "state" {
-        http.Error(w, "Invalid state", http.StatusBadRequest)
-        return
-    }
-
-    code := r.FormValue("code")
-    token, err := config.Exchange(oauth2.NoContext, code)
-    if err != nil {
-        http.Error(w, "Failed to exchange token", http.StatusInternalServerError)
-        return
-    }
-
-    client := config.Client(oauth2.NoContext, token)
-    response, err := client.Get(authorizationServerURL + "/userinfo")
-    if err != nil {
-        http.Error(w, "Failed to get user info", http.StatusInternalServerError)
-        return
-    }
-    defer response.Body.Close()
-
-    var user User
-    if err := json.NewDecoder(response.Body).Decode(&user); err != nil {
-        http.Error(w, "Failed to decode user info", http.StatusInternalServerError)
-        return
-    }
-
-    session.Values["user"] = user
-    session.Save(r, w)
-
-    http.Redirect(w, r, "/", http.StatusFound)
-}
-
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-    session, _ := store.Get(r, "session")
-    delete(session.Values, "user")
-    session.Save(r, w)
-
-    http.Redirect(w, r, "/login", http.StatusFound)
-}
-```
-
-
 </TabItem>
 
 
 <TabItem value="python"> 
-
-```python
-from flask import Flask, redirect, url_for, session, request
-from authlib.integrations.flask_client import OAuth
-from flask_session import Session
-
-# Configuration
-AUTHORIZATION_SERVER_URL = 'https://auth.example.com'
-# The client ID returned from the first step
-CLIENT_ID = 'your-client-id'
-# The client secret returned from the first step
-CLIENT_SECRET = 'your-client-secret'
-# One of the callback URLs specified in the create client payload 
-CALLBACK_URL = 'https://your-app.com/auth/callback' 
-
-app = Flask(__name__)
-app.secret_key = 'your-session-secret'
-
-# Configure server-side session management
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_PERMANENT'] = False
-Session(app)
-
-oauth = OAuth(app)
-oauth.register(
-    name='auth_provider',
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
-    authorize_url=f'{AUTHORIZATION_SERVER_URL}/authorize',
-    authorize_params=None,
-    access_token_url=f'{AUTHORIZATION_SERVER_URL}/token',
-    access_token_params=None,
-    refresh_token_url=None,
-    redirect_uri=CALLBACK_URL,
-    client_kwargs={'scope': 'openid profile email'},
-)
-
-@app.route('/')
-def index():
-    user = session.get('user')
-    if user:
-        return f'Hello, {user["name"]}'
-    return 'You are not logged in'
-
-@app.route('/login')
-def login():
-    redirect_uri = url_for('auth_callback', _external=True)
-    return oauth.auth_provider.authorize_redirect(redirect_uri)
-
-@app.route('/auth/callback')
-def auth_callback():
-    token = oauth.auth_provider.authorize_access_token()
-    user = oauth.auth_provider.parse_id_token(token)
-    session['user'] = user
-    return redirect('/')
-
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-    return redirect('/')
-
-@app.errorhandler(401)
-def unauthorized(e):
-    return 'Unauthorized'
-
-@app.errorhandler(403)
-def forbidden(e):
-    return 'Forbidden'
-
-@app.errorhandler(404)
-def page_not_found(e):
-    return 'Page not found'
-
-# Start the server
-if __name__ == '__main__':
-    app.run(debug=True)
-```
 
 </TabItem>
 
@@ -407,21 +192,25 @@ if __name__ == '__main__':
 </BackendSDKTabs>
 
 
-## 4. Update the login flow in your frontend applications
+## 5. Update the login flow in your frontend applications
 
 In your `frontend applications` you will have to add a login action that will direct the user to the authentication page.
-You can just use a link for that. The link should be structured like this:
+You can just use a link for that.
+
+The link should be structured like this:
 
 ```
-<AUTHENTICATION_SERIVICE_DOMAIN>/auth/oauth/auth?client_id=<CLIENT_ID>&redirect_uri=<REDIRECT_URI>
+<AUTHENTICATION_SERIVICE_DOMAIN>/auth/oauth/auth?client_id=<CLIENT_ID>&redirect_uri=<REDIRECT_URI>&scope=<SCOPES>&state=<STATE>
 ```
 - `<AUTHENTICATION_SERIVICE_DOMAIN>` - The domain of your [**Authentication Service**](/docs/oauth/introduction#authentication-service).
 The example assumes that you didn't overwrite the default `apiBasePath`.
 If that's the case you will have to replace `/auth` with you custom base path.
 - `<CLIENT_ID>` - The corresponding client ID based on what you have created in the first step.
 - `<REDIRECT_URI>` - The corresponding redirect URI based on what you have created in the first step.
+- `<SCOPES>` - The scopes that you want to request. This is optional and can be left empty.
+- `<STATE>` - A random string that will be used to prevent CSRF attacks. This is optional and can be left empty.
 
-## 5. Test the new authentication flow
+## 6. Test the new authentication flow
 
 With everything set up, you can now test your login flow.
 Just use the link that you have created in the previous step and try to access a protected resource.

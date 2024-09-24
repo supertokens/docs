@@ -20,12 +20,23 @@ This guide assumes that you already have setup and configured **SuperTokens** in
 For more information on how to do that please check our [quickstart guide](/docs/thirdparty/introduction).
 :::
 
-## 1. Create the OAuth2 Clients
+## 1. Enable the OAuth2 features from the Dashboard
+
+You will first have to enable the **OAuth2** features from the **SuperTokens Dashboard**.
+1. Open the **SuperTokens Dashboard** on the main page
+2. Click on the **Enabled Paid Features** button
+3. Click on **Managed Service**
+4. Check the **OAuth 2.0** option
+5. Click *Save* 
+
+Now you should be able to use the OAuth2 recipes in your applications.
+
+## 2. Create the OAuth2 Clients
 
 For each of your **`frontend`** applications you will have to create a separate [**OAuth2 client**](/docs/oauth/introduction#client).
 This can be done by directly calling the **SuperTokens Core** API.
 
-<CoreInjector defaultValue="https://example.com">
+<CoreInjector defaultValue="https://<your-core-identifier>.aws.supertokens.io" showTenantId={false}>
 
 ```bash
 curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
@@ -35,7 +46,7 @@ curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
       "client_name": "<YOUR_CLIENT_NAME>",
       "response_types": ["code", "id_token"],
       "grant_types": ["authorization_code", "refresh_token"],
-      "redirect_uri": ["https://<YOUR_DOMAIN>.com/oauth/callback"]
+      "redirect_uri": ["https://<YOUR_DOMAIN>/oauth/callback"]
     }'
 ```
 
@@ -43,18 +54,18 @@ curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
 
 
 - `client_name` - A human-readable name of the client that will be presented to the [**end-user**](/docs/oauth/introduction#authorization) during authorization.
-- `response_types` - Specifies the types of responses your client expects from the Authorization Server.
+- `response_types` - Specifies the types of responses your client expects from the Authorization Server. Most of the time, you would need the following two to be present:
     - `code`: Indicates that the [**Client**](/#authorization) will receive an [**Authorization Code**](/#authorization) that will be exchanged for an [**Access Token**](/#authorization).
     - `id_token`: Indicates that the [**Client**](/#authorization) expects an [**ID Token**](/#authorization)
 - `grant_types` - The grant types that the [**Client**](/#authorization) will use. 
     - `authorization_code`: Allows exchanging the [**Authorization Code**](/#authorization) for an [**Access Token**](/#authorization).
     - `refresh_token`: Allows exchanging the [**Refresh Token**](/#authorization) for a new [**Access Token**](/#authorization).
-- `redirect_uri` - A list of URIs to which the [**Authorization Server**](/#authorization) will send the user-agent (browser) after completing the authorization step
+- `redirect_uri` - A list of URIs to which the [**Authorization Server**](/#authorization) will send the user-agent (browser) after completing the authorization step. These can be deep links to mobile or desktop apps as well, but they must be exact URLs, without wildcards.
 
 If the creation was successful, the response will return a `201` status code.
-The response body will contain a **`client_id`** field which you will need to use in the next steps.
+The response body will contain the **`client_id`** and the `client_secret` fields. Save them for each request because we will need to use them in the next steps.
 
-## 2. Initialize the OAuth2 recipes on the backend
+## 3. Initialize the OAuth2 recipes on the backend
 
 
 In your **`backend`** application you will need to initialize both the **OAuth2Provider** and the **OAuth2Client** recipes.
@@ -86,7 +97,7 @@ supertokens.init({
         // for each of your previously created clients 
         OAuth2Client.init({
           clientId: '<CLIENT_ID>',
-          oidcDiscoveryEndpoint: 'https://<AUTHENTICATION_SERVICE_DOMAIN>/.well-known/openid-configuration'
+          oidcDiscoveryEndpoint: 'https://<AUTHENTICATION_SERVICE_DOMAIN>/auth/.well-known/openid-configuration'
         }),
     ]
 });
@@ -116,7 +127,7 @@ At the moment we do not have support creating OAuth2 providers in the Python SDK
 
 </BackendSDKTabs>
 
-## 3. Initialize the recipe on the Frontend Applications
+###  Configure the Authorization Service Frontend 
 
 :::info
 
@@ -124,7 +135,7 @@ The `OAuth2Provider` recipe is available, at the moment, only when using the `su
 
 :::
 
-Initialize the `OAuth2Provider` recipe on the frontend of each of your applications, ensuring you set the `authMode` to `header`.
+Initialize the `OAuth2Provider` recipe on the frontend of your **Authorization Service**, ensuring you set the `authMode` to `header`.
 
 ```tsx
 import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
@@ -147,16 +158,20 @@ export const SuperTokensConfig = {
 ## 4. Update the login flow in your frontend applications
 
 In your `frontend applications` you will have to add a login action that will direct the user to the authentication page.
-You can just use a link for that. The link should be structured like this:
+You can just use a link for that.
+
+The link should be structured like this:
 
 ```
-<AUTHENTICATION_SERIVICE_DOMAIN>/auth/oauth/auth?client_id=<CLIENT_ID>&redirect_uri=<REDIRECT_URI>
+<AUTHENTICATION_SERIVICE_DOMAIN>/auth/oauth/auth?client_id=<CLIENT_ID>&redirect_uri=<REDIRECT_URI>&scope=<SCOPES>&state=<STATE>
 ```
 - `<AUTHENTICATION_SERIVICE_DOMAIN>` - The domain of your [**Authentication Service**](/docs/oauth/introduction#authentication-service).
 The example assumes that you didn't overwrite the default `apiBasePath`.
 If that's the case you will have to replace `/auth` with you custom base path.
 - `<CLIENT_ID>` - The corresponding client ID based on what you have created in the first step.
 - `<REDIRECT_URI>` - The corresponding redirect URI based on what you have created in the first step.
+- `<SCOPES>` - The scopes that you want to request. This is optional and can be left empty.
+- `<STATE>` - A random string that will be used to prevent CSRF attacks. This is optional and can be left empty.
 
 ## 5. Test the new authentication flow
 

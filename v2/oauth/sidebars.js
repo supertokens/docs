@@ -13,6 +13,15 @@ module.exports = {
         "machine-to-machine-authentication",
       ],
     },
-    "common-actions",
+    {
+      type: "category",
+      label: "Customizations",
+      collapsed: false,
+      items: [
+        "customizations/working-with-scopes",
+        "customizations/add-custom-claims-in-tokens",
+        "customizations/verify-tokens",
+      ],
+    },
   ],
 };
