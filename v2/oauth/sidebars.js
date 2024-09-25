@@ -8,7 +8,6 @@ module.exports = {
       items: [
         "multiple-frontends-with-separate-backends",
         "multiple-frontends-with-a-single-backend",
-        "clients-without-dedicated-backend",
         "reuse-website-login",
         "machine-to-machine-authentication",
       ],
@@ -21,6 +20,7 @@ module.exports = {
         "customizations/working-with-scopes",
         "customizations/add-custom-claims-in-tokens",
         "customizations/verify-tokens",
+        "customizations/custom-ui",
       ],
     },
   ],

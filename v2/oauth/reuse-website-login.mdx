@@ -4,14 +4,270 @@ hide_title: true
 ---
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import OAuthFrontendTabs from "/src/components/tabs/OAuthFrontendTabs"
+import OAuthBackendTabs from "/src/components/tabs/OAuthBackendTabs"
+import OAuthMobileTabs from "/src/components/tabs/OAuthMobileTabs"
+import CoreInjector from "/src/components/coreInjector"
+import AppInfoForm from "/src/components/appInfoForm"
+import TabItem from '@theme/TabItem';
 
 
 # Reuse website login for desktop and mobile apps
 
-This pattern is useful if you want to make use of the same web authentication experience that you for your desktop and mobile apps.
-The flow will allow you to save develpoment time but you will have to keep in mind that it will not provide involve a native login experience.
+This pattern is useful if you want to make use of the same web authentication experience for your desktop and mobile apps.
+The flow will allow you to save develpoment time but you will have to keep in mind that it will not involve a native login experience.
 Users will be directed to a separate browser page where they will complete the authentication flow.
 
-In order to do this you will have to follow one of the previous guides based on your use case:
-- If your applications use separate backend services check out [this guide](./multiple-frontends-with-separate-backends)
-- If your appllications use a single backend service check out [this guide](./multiple-frontends-with-a-single-backend)
+<img src="/img/botandspamdetection/sequence-diagram.png" alt="Client Credentials Grant"/>
+
+The authentication flow will work in the following way:
+
+1. User accesses the native application
+2. The user gets redirected to [**Authorization Service**](/docs/oauth/introduction#authorization-service) authentication url.
+3. The [Authorization Service](/docs/oauth/introduction#authorization-service) redirects the user to the login UI
+4. User completes the login attempt 
+5. The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the `callback URL`
+6. The application uses the callback URL information to request a **OAuth2 Access Token** from the [**Authorization Service**](/docs/oauth/introduction#authorization-service).
+7. The returned token is saved by the application.
+
+:::info
+This guide assumes that you already have setup and configured **SuperTokens** in your [**Authentication Service**](/docs/oauth/introduction#authentication-service). 
+
+For more information on how to do that please check our [quickstart guides](/docs/guides).
+:::
+
+## 1. Enable the OAuth2 features from the Dashboard
+
+You will first have to enable the **OAuth2** features from the **SuperTokens Dashboard**.
+1. Open the **SuperTokens Dashboard** on the main page
+2. Click on the **Enabled Paid Features** button
+3. Click on **Managed Service**
+4. Check the **OAuth 2.0** option
+5. Click *Save* 
+
+Now you should be able to use the OAuth2 recipes in your applications.
+
+
+## 2. Create the OAuth2 Clients
+
+<CoreInjector defaultValue="https://<your-core-identifier>.aws.supertokens.io" showTenantId={false}>
+
+<AppInfoForm
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+>
+
+For each of your **`applications`** you will have to create a separate [**OAuth2 Client**](/docs/oauth/introduction#client).
+This can be done by directly calling the **SuperTokens Core** API.
+
+
+```bash
+# You will have to run this for each one of your applications
+# Adjust the client_name and redirect_uri based on that
+curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
+  -H "Content-Type: application/json" \
+  -d '{
+      "tokenEndpointAuthMethod": "none",
+      "client_name": "<YOUR_CLIENT_NAME>",
+      "response_types": ["code", "id_token"],
+      "grant_types": ["authorization_code", "refresh_token"],
+      "redirect_uri": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
+    }'
+```
+
+- `client_name` - A human-readable name of the client that will be used for identification.
+- `response_types` - Specifies the types of responses your client expects from the [**Authorization Server**](/docs/oauth/introduction#authorization-server). Most of the time, you would need the following two to be present:
+    - `code`: Indicates that the [**Client**](/docs/oauth/introduction#client) will receive an **Authorization Code** that will be exchanged for an [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token).
+    - `id_token`: Indicates that the [**Client**](/docs/oauth/introduction#client) expects an [**ID Token**](/docs/oauth/introduction#id-token)
+- `grant_types` - The grant types that the [**Client**](/docs/oauth/introduction#client) will use. 
+    - `authorization_code`: Allows exchanging the **Authorization Code** for an [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token).
+    - `refresh_token`: Allows exchanging the [**OAuth2 Refresh Token**](/docs/oauth/introduction#oauth2-refresh-token) for a new [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token).
+- `redirect_uri` - A list of URIs to which the [**Authorization Server**](/docs/oauth/introduction#authorization-server) will send the user-agent (browser) after completing the authorization step. These can be deep links to mobile or desktop apps as well, but they must be exact URLs, without wildcards.
+
+If the creation was successful, the API will return a response that looks like this:
+
+```json
+
+{
+    "client_name": "<YOUR_CLIENT_NAME>",
+    "client_id": "<CLIENT_ID>",
+    "callback_urls": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+    "authorize_url": "^{form_apiDomain}/^{form_apiBasePath}/oauth/authorize",
+    "token_fetch_url": "^{form_apiDomain}/^{form_apiBasePath}/oauth/token"
+}
+
+```
+
+:::caution
+
+You will have to save this response because we do not persist it interaly for security reasons.
+In the next steps we will use the values to complete several configurations.
+
+:::
+
+## 3. Set Up your Authorization Service 
+
+### Configure the Authorization Service Backend
+
+In your [**Authorization Service**](/docs/oauth/introduction#authorization-service) you will need to initialize the **OAuth2Provider** recipe.
+The recipe will expose the endpoints needed for enabling the [**OAuth 2.0**](/docs/oauth/introduction#oauth-20) flow.
+
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+Update the `supertokens.init` call to include the `OAuth2Provider` recipe.
+
+1. Add the import statement for the recipe.
+
+```typescript 
+import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
+```
+
+2. Update the list of recipes with the new initialization step.
+
+```tsx
+OAuth2Provider.init()
+```
+
+</TabItem>
+
+<TabItem value="go">
+
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Go SDK.
+
+:::
+
+</TabItem>
+
+<TabItem value="python">
+
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Python SDK.
+
+:::
+
+</TabItem>
+
+</BackendSDKTabs>
+
+
+###  Configure the Authorization Service Frontend 
+
+
+Initialize the `OAuth2Provider` recipe on the frontend of your **Authorization Service**. 
+
+:::info
+
+If you want to use your own custom UI check our [separate guide](/docs/oauth/customizations/custom-ui) that explains
+all the steps that you have to take into account.
+
+:::
+
+<OAuthFrontendTabs>
+
+
+<TabItem value="react">
+
+Update the `SuperTokensConfig` variable to include the `OAuth2Provider` recipe.
+
+1. Add the import statement for the recipe.
+
+```typescript 
+import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
+```
+
+2. Update the list of recipes to also include the new initialization.
+
+```tsx
+OAuth2Provider.init()
+```
+    
+</TabItem>
+
+
+<TabItem value="angular">
+
+Update the `AuthComponent` so that it also includes the `OAuth2Provider` recipe.
+You will have to add a new item in the `recipeList` array, inside the `supertokensUIInit` call.
+
+```typescript
+
+supertokensUIOAuth2Provider.init(),
+
+```
+
+</TabItem>
+
+<TabItem value="vue">
+
+Update the `AuthView` component so that it also includes the `OAuth2Provider` recipe.
+You will have to add a new item in the `recipeList` array, inside the `supertokensUIInit` call.
+
+```typescript
+
+supertokensUIOAuth2Provider.init(),
+
+```
+    
+</TabItem>
+    
+</OAuthFrontendTabs>
+
+
+
+## 4. Set Up Session Handling in Each Application
+
+In each of your individual `applications` you will have to setup up logic for handling the **OAuth 2.0** authentication flow.
+We recommend using a generic **OICD** or **OAuth** library in order to do this.
+
+<OAuthMobileTabs>
+
+<TabItem value="react-native">
+
+You can use the [react-native-app-auth](https://commerce.nearform.com/open-source/react-native-app-auth/) library. 
+Just follow [the instructions](https://commerce.nearform.com/open-source/react-native-app-auth/docs/usage/config) setup your application. 
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+- `issuer` corresponds to the endpoint of the **Authorization Service** `^{form_apiDomain}`
+- `clientID` corresponds to `client_id`
+- `redirectUrl` corresponds a value from `callback_urls`
+- `scopes` corresponds to `scopes` 
+- `serviceConfiguration.registrationEndpoint` corresponds to `authorize_url`
+- `serviceConfiguration.tokenEndpoint` corresponds to `token_fetch_url`
+
+</TabItem>
+
+<TabItem value="swift">
+
+
+</TabItem>
+
+
+<TabItem value="kotlin"> 
+
+
+</TabItem>
+
+
+</OAuthMobileTabs>
+
+
+## 5. Update the login flow in your frontend applications
+
+In your applications you will have to add a login action that will direct the user to the authentication page.
+
+## 6. Test the new authentication flow
+
+With everything set up, you can now test your login flow.
+Just use the flow that you have created in the previous step check if the authentication flow completes wihtout any issues.
+
+
+
+</AppInfoForm>
+
+</CoreInjector>

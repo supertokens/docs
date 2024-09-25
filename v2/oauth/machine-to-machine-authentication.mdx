@@ -4,79 +4,112 @@ hide_title: true
 ---
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
-import TabItem from '@theme/TabItem';
-import AppInfoForm from "/src/components/appInfoForm"
+import OAuthFrontendTabs from "/src/components/tabs/OAuthFrontendTabs"
+import OAuthBackendTabs from "/src/components/tabs/OAuthBackendTabs"
 import CoreInjector from "/src/components/coreInjector"
+import AppInfoForm from "/src/components/appInfoForm"
+import TabItem from '@theme/TabItem';
 
 # Machine to Machine Authentication
 
 You can use the following guide if you want to implement a custom authentication flow between your microservices.
 
+<img src="/img/oauth/machine-to-machine.png" alt="Machine to Machine Authentication"/>
+
+The authentication flow will work in the following way:
+
+1. `Service A` uses credentials to get an **OAuth2 Access Token**
+2. [**Authorization Service**](/docs/oauth/introduction#authorization-service) returns the **OAuth2 Access Token**
+3. `Service A` uses the **OAuth2 Access Token** to communicate with `Service B`
+4. `Service B` validates the **OAuth2 Access Token**
+5. If the token is valid `Service B` returns the requested resource
+
 :::info
-This guide assumes that you already have setup and configured **SuperTokens** in your [**Authentication Service**](/docs/oauth/introduction#authentication-service). 
+This guide assumes that you already have setup and configured **SuperTokens** in your [**Authorization Service**](/docs/oauth/introduction#authorization-service). 
 
 For more information on how to do that please check our [quickstart guide](/docs/thirdparty/introduction).
 :::
 
+## 1. Enable the OAuth2 features from the Dashboard
 
-## 1. Create the OAuth2 Clients
+You will first have to enable the **OAuth2** features from the **SuperTokens Dashboard**.
+1. Open the **SuperTokens Dashboard** on the main page
+2. Click on the **Enabled Paid Features** button
+3. Click on **Managed Service**
+4. Check the **OAuth 2.0** option
+5. Click *Save* 
 
+Now you should be able to use the OAuth2 recipes in your applications.
+
+## 2. Create the OAuth2 Clients
+
+
+<CoreInjector defaultValue="https://<your-core-identifier>.aws.supertokens.io" showTenantId={false}>
+
+<AppInfoForm
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+>
+ 
 For each of your **`microservices`** you will have to create a separate [**OAuth2 client**](/docs/oauth/introduction#client).
 This can be done by directly calling the **SuperTokens Core** API.
 
-<CoreInjector defaultValue="https://example.com">
 
 ```bash
+# You will have to run this for each one of your applications
+# Adjust the client_name based on that
 curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
   -H "Content-Type: application/json" \
-  -H "api-key: ^{coreInjector_api_key_without_quotes}" \
   -d '{
+      "tokenEndpointAuthMethod": "none",
       "client_name": "<YOUR_CLIENT_NAME>",
       "grant_types": ["client_credentials"],
     }'
 ```
 
-</CoreInjector>
 
 
 - `client_name` - Then name of the client that will be used later for identification.
 - `grant_types` - The grant types that the [**Client**](/#authorization) will use. 
     - `client_credentials`: Allows the client to directly request an Access Token by authenticating itself with the Authorization Server using its own client credentials.
 
-If the creation was successful, the response will return a `201` status code.
-The response body will contain a **`client_id`** field which you will need to use in the next steps.
+If the creation was successful, the API will return a response that looks like this:
 
-## 2. Initialize the OAuth2Provider recipe 
+```json
+{
+    "client_name": "<YOUR_CLIENT_NAME>",
+    "client_id": "<CLIENT_ID>",
+    "client_secret": "<CLIENT_SECRET>",
+    "callback_urls": [],
+    "authorize_url": "^{form_apiDomain}/^{form_apiBasePath}/oauth/authorize",
+}
 
+```
+## 3. Set Up your Authorization Service 
 
-In your **`authentication server`** you will need to initialize the **OAuth2Provider** recipe.
-The recipe will expose the endpoints needed for enabling the [**OAuth 2.0**](/docs/oauth/introduction#oauth-20) flow.
+In your [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend you will need to initialize the **OAuth2Provider** recipe.
 
-<BackendSDKTabs>
+<BackendSDKTabs  disableOtherFrameworks>
+
 <TabItem value="nodejs">
 
-```typescript
-import supertokens from "supertokens-node";
-import OAuth2Provider from"supertokens-node/recipe/oauth2provider";
-import OAuth2Client from"supertokens-node/recipe/oauth2client";
+Update the `supertokens.init` call to include the new recipe.
 
-supertokens.init({
-    framework: "express",
-    supertokens: {
-        connectionURI: "<YOUR_CONNECTION_URI>",
-        apiKey: "<YOUR_API_KEY>",
-    },
-    appInfo: {
-        appName: "",
-        apiDomain: "<YOUR_API_DOMAIN>",
-        websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
-        apiBasePath: "/auth",
-        websiteBasePath: "/auth"
-    },
-    recipeList: [
-        OAuth2Provider.init(),
-    ]
-});
+1. Add the new import statement
+
+```typescript 
+
+import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
+
+```
+
+2. Update the list of recipes with the new initialization step.
+
+```tsx
+
+OAuth2Provider.init(),
+
 ```
 
 </TabItem>
@@ -104,16 +137,11 @@ At the moment we do not have support creating OAuth2 providers in the Python SDK
 </BackendSDKTabs>
 
 
-## 3. Generate Access Tokens
+## 4. Generate Access Tokens
 
 Now you can directly call the [**Authorization Server**](/docs/oauth/introduction#authorization-server) to generate Access Tokens.
 Check the following code snippet to see how you can do that:
 
-<AppInfoForm
-    askForAppName={false}
-    askForAPIDomain
-    askForWebsiteDomain={false}
->
 
 ```bash
 
@@ -128,7 +156,6 @@ curl -X POST ^{form_apiDomain}^{form_apiBasePath}/oauth/token \
 
 ```
 
-</AppInfoForm>
 
 The **Authorization Server** will return a response that will look like this:
 
@@ -142,10 +169,14 @@ The **Authorization Server** will return a response that will look like this:
 You will have to save the `access_token` in memory so that you can use it in the next step.
 The `expires_in` field will tell you how long the token is valid for.
 
-## 4. Use the Generated Access Token 
+## 5. Use the Generated Access Token 
 
-Now that you have an **Access Token** you can use it when communicating with the other services.
+Now that you have an **OAuth2 Access Token** you can use it when communicating with the other services.
 Just keep in mind to generate a new one when it expires.
 
-The service that will receive the request which includes the **Access Token** will have to verify it.
+The service that will receive the request which includes the **OAuth2 Access Token** will have to verify it.
 To see a detailed example of how to do this please check our [separate guide](/docs/oauth/customizations/verfiy-tokens).
+
+</AppInfoForm>
+
+</CoreInjector>
