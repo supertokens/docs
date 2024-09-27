@@ -4,13 +4,14 @@ hide_title: true
 ---
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import {Question, Answer}from "/src/components/question"
 import OAuthFrontendTabs from "/src/components/tabs/OAuthFrontendTabs"
 import OAuthBackendTabs from "/src/components/tabs/OAuthBackendTabs"
 import CoreInjector from "/src/components/coreInjector"
 import AppInfoForm from "/src/components/appInfoForm"
 import TabItem from '@theme/TabItem';
 
-# Multiple Frontend Domains Using a Single Backend
+# Multiple Frontend Domains with a Common Backend
 
 You can use the following guide if you have multiple **`frontend applications`** on different domains, that use the same **`backend service`**.
 
@@ -21,14 +22,14 @@ Using the actual **OAuth 2.0** terminology, we can say that each **`frontend`** 
 
 The authentication flow will work in the following way:
 
-1. User accesses the `frontend` app
-2. The application `frontend` redirects the user to the `backend` authentication endpoint.
-3. The `backend` redirects the user the [**Authorization Service**](/docs/oauth/introduction#authorization-service) login UI.
-4. User completes the login attempt 
-5. The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the backend `callback URL`.
-6. The `backend` uses the callback URL information to request a **SuperTokens Session Access Token** from the [**Authorization Service**](/docs/oauth/introduction#authorization-service).
-7. The `backend` sends the authentication cookie back to the `frontend`.
-8. The `frontend` uses the new cookie to access protected resources from the `backend`.
+1. The User accesses the `frontend` app
+   - The application `frontend` redirects the user to [**Authorization Service**](/docs/oauth/introduction#authorization-service) login UI.
+   - The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the login UI
+2. The User completes the login attempt 
+   - The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the `callback URL`.
+3. The User accesse the callback URL
+   - The `frontend` uses the callback URL information to obtain a **OAuth2 Access Token** from the [**Authorization Service**](/docs/oauth/introduction#authorization-service).
+   - The `frontend` exchanges the **OAuth2 Access Token** for a **SuperTokens Session Access Token**.
 
 :::info
 This guide assumes that you already have setup and configured **SuperTokens** in your [**Authorization Service**](/docs/oauth/introduction#authorization-service). 
@@ -36,16 +37,22 @@ This guide assumes that you already have setup and configured **SuperTokens** in
 For more information on how to do that please check our [quickstart guide](/docs/thirdparty/introduction).
 :::
 
+<!-- COPY SECTION -->
+<!-- ./oauth/multiple-frontends-with-separate-backends.mdx -->
+<!-- 1 -->
+
 ## 1. Enable the OAuth2 features from the Dashboard
 
 You will first have to enable the **OAuth2** features from the **SuperTokens Dashboard**.
-1. Open the **SuperTokens Dashboard** on the main page
+1. Open the **SuperTokens Dashboard**
 2. Click on the **Enabled Paid Features** button
 3. Click on **Managed Service**
 4. Check the **OAuth 2.0** option
 5. Click *Save* 
 
 Now you should be able to use the OAuth2 recipes in your applications.
+
+<!-- END COPY SECTION -->
 
 ## 2. Create the OAuth2 Clients
 
@@ -66,16 +73,15 @@ This can be done by directly calling the **SuperTokens Core** API.
 # Adjust the client_name and redirect_uri based on that
 curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
   -H "Content-Type: application/json" \
+  -H "api-key: ^{coreInjector_api_key_without_quotes}" \
   -d '{
-      "tokenEndpointAuthMethod": "none",
       "client_name": "<YOUR_CLIENT_NAME>",
       "response_types": ["code", "id_token"],
       "grant_types": ["authorization_code", "refresh_token"],
+      "tokenEndpointAuthMethod": "none",
       "redirect_uri": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
     }'
 ```
-
-
 
 - `client_name` - A human-readable name of the client that will be used for identification.
 - `response_types` - Specifies the types of responses your client expects from the [**Authorization Server**](/docs/oauth/introduction#authorization-server). Most of the time, you would need the following two to be present:
@@ -95,8 +101,8 @@ If the creation was successful, the API will return a response that looks like t
     "client_id": "<CLIENT_ID>",
     "client_secret": "<CLIENT_SECRET>",
     "callback_urls": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
-    "authorize_url": "^{form_apiDomain}/^{form_apiBasePath}/oauth/authorize",
-    "token_fetch_url": "^{form_apiDomain}/^{form_apiBasePath}/oauth/token"
+    "authorize_url": "^{form_apiDomain}^{form_apiBasePath}oauth/authorize",
+    "token_fetch_url": "^{form_apiDomain}^{form_apiBasePath}oauth/token"
 }
 
 ```
@@ -134,6 +140,7 @@ import OAuth2Client from "supertokens-node/recipe/oauth2client";
 OAuth2Provider.init(),
 OAuth2Client.init({
   // Use the values returned from the previous client creation step
+  // Include all the clients that you have created in the previous step
   providerConfigs: [{
     "clientId": "<YOUR_CLIENT_ID>",
     "clientSecret": "<YOUR_CLIENT_SECRET>",
@@ -180,25 +187,56 @@ all the steps that you have to take into account.
 
 <TabItem value="react">
 
-Update the `SuperTokensConfig` variable to adjust to the new flow. 
+1. Update the `SuperTokensConfig` variable to include the `OAuth2Provider` recipe.
 
-1. Add the import statement for the recipe.
+- Add the import statement for the new recipe.
 
 ```typescript 
 import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
 ```
 
-2. Update the list of recipes to also include the new initialization.
+- Update the list of recipes to also include the new initialization.
 
 ```tsx
 OAuth2Provider.init()
 ```
 
-3. Update the **Session** recipe initialization to use `header` authentication.
+
+2. Update the **Session** recipe initialization to use `header` authentication.
 
 ```tsx
 Session.init({ authMode: "header" })
 ```
+
+3. Include the pre built UI in the rendering tree.
+
+<Question question="Do you use react-router-dom?">
+
+<Answer title="Yes">
+
+- Add the import statement for the pre built UI component.
+
+```typescript 
+import OAuth2ProviderPreBuiltUI from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+```
+
+- Update the `getSuperTokensRoutesForReactRouterDom` function call to include the `OAuth2ProviderPreBuiltUI` component.
+
+</Answer>
+
+<Answer title="No">
+
+- Add the import statement for the pre built UI component.
+
+```typescript 
+import OAuth2ProviderPreBuiltUI from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+```
+
+- Update the `getRoutingComponent` function call to include the `OAuth2ProviderPreBuiltUI` component.
+
+</Answer>
+
+</Question>
     
 </TabItem>
 
@@ -270,17 +308,114 @@ Session.init({ authMode: "header" })
 
 ## 4. Update the login flow in your frontend applications
 
-In your `frontend` applications you will have to add a login action that will direct the user to the authentication page.
+In your each of your `frontend` applications you will have setup the authentication flow.
 
-The user should first be redirected to the `backend` login endpoint.
-There the `backend` will redirect the user to the actual [**Authorization Service**](/docs/oauth/introduction#authorization-service) login UI.
-After the user has logged in they will be redirected to the `backend` callback URL.
-Then the authentication session will be created and the `backend` will send it to the user agent as a cookie.
+### 1. Setup SuperTokens Session Management
+
+First, you will have to configure the **SuperTokens Session Management** recipe.
+There's a thorough guide on how to do this [here](/docs/session/quick-setup/frontend).
+Just follow the steps described there and then return to this page.
+
+
+### 2. Configure header based authentication
+
+We need to update the `Session.init` call to use header based authentication.
+This has to be done because each of your `frontend` applications will act as a third party domain to the `backend`.
+So we can't rely on `cookie` based authentication since some browsers do not allow third party cookies.
+
+```typescript
+Session.init({
+    // ...
+    authMode: "header"
+})
+```
+
+### 3. Use a generic OAuth2 library to initiate the login flow
+
+<OAuthFrontendTabs>
+
+<TabItem value="react"> 
+
+We recommend using the [react-oauth2-pkce](https://github.com/joegasewicz/react-oauth2-pkce) library.
+Just follow the instructions from the library's page.
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+- `authorizationEndpoint` corresponds to `authorize_url`
+- `tokenEndpoint` corresponds to `token_fetch_url`
+- `clientID` corresponds to `client_id`
+- `redirectUri` corresponds to a value from `callback_urls`
+- `scope` corresponds to `scope` 
+
+</TabItem>
+
+<TabItem value="angular">
+
+We recommend using the [angular-oauth2-oidc](https://github.com/manfredsteyer/angular-oauth2-oidc) library.
+Just follow the instructions escribed [here](https://github.com/manfredsteyer/angular-oauth2-oidc?tab=readme-ov-file#logging-in).
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+- `issuer` corresponds to the endpoint of the **Authorization Service** `^{form_apiDomain}^{form_apiBasePath}`
+- `clientID` corresponds to `client_id`
+- `redirectUri` corresponds to a value from `callback_urls`
+- `scope` corresponds to `scope` 
+
+</TabItem>
+
+<TabItem value="vue">
+
+We recommend using the [oidc-client-ts](https://github.com/authts/oidc-client-ts?tab=readme-ov-file) library.
+Just follow the instructions described [here](https://github.com/authts/oidc-client-ts/blob/main/docs/protocols/authorization-code-grant-with-pkce.md).
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+</TabItem>
+    
+</OAuthFrontendTabs>
+
+### 4. Complete the final token exchange
+
+After you have obtained the **OAuth2 Access Token** you will have to exchange it for a **SuperTokens Session Access Token**.
+
+To do this you will have to call the **Authorization Service** backend API in the following way.
+
+```typescript
+
+// This should be called after the Authorization Server has redirected the user to a Redirect URI
+// If the function is successful (returns true), you should redirect the user to a protected route
+async function exchangeTokens(oauth2ClientId: string, oauth2RedirectURI: string) {
+   const params = new URLSearchParams(window.location.search);
+   if (params.get("code") === null || params.get("state") === null) return false;
+
+   const state = params.get("state");
+   const savedInfo = localStorage.getItem(`oidc.${state}`);
+   if (!savedInfo) return false; 
+   const { id, code_verifier } = JSON.parse(savedInfo);
+   if (id !== state) return false; 
+   
+   const res = await fetch(`^{form_apiDomain}^{form_apiBasePath}oauth/client/signin`, {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+          clientId: oauth2ClientId,
+          redirectURIInfo: {
+              redirectURI: oauth2RedirectURI,
+              redirectURIQueryParams: Object.fromEntries(params.entries()),
+              pkceCodeVerifier: code_verifier,
+          },
+      }),
+   });
+
+   if(!res.ok) return false;
+   const data = await res.json();
+   return data.status === "OK";
+}
+```
 
 ## 5. Test the new authentication flow
 
 With everything set up, you can now test your login flow.
-Just use the flow that you have created in the previous step check if the authentication flow completes wihtout any issues.
+Just use the setup that you have created in the previous step check if the authentication flow completes wihtout any issues.
 
 
 </AppInfoForm>

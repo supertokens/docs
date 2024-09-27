@@ -4,6 +4,7 @@ hide_title: true
 ---
 
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import {Question, Answer}from "/src/components/question"
 import OAuthFrontendTabs from "/src/components/tabs/OAuthFrontendTabs"
 import OAuthBackendTabs from "/src/components/tabs/OAuthBackendTabs"
 import CoreInjector from "/src/components/coreInjector"
@@ -22,16 +23,18 @@ Note that if the *frontends* and *backends* are in different *sub domains*, you 
 
 The authentication flow will work in the following way:
 
-1. User accesses the `frontend` app
-2. The application `frontend` calls a login endpoint on the `backend` application.
-3. The `backend` application generates an `authorization` URL to the [**Authorization Service**](/docs/oauth/introduction#authorization-service) and redirects the user to it.
-4. The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the login UI
-5. User completes the login attempt 
-6. The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to a `callback URL` that includes the **Authorization Code**.
-7. The **Authentication Code** gets sent to the application `backend` when the user agent accesses the callback URL
-8. The `backend` exchanges the **Authentication Code** for an [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token)
-9. The `backend` saves the received token in a server session and sends it back to the `frontend` as a cookie.
-10. The `frontend` uses the new cookie to access protected resources from the `backend`.
+1. The User accesses the `frontend` app
+   - The application `frontend` calls a login endpoint on the `backend` application.
+   - The `backend` application generates an `authorization` URL to the [**Authorization Service**](/docs/oauth/introduction#authorization-service) and redirects the user to it.
+   - The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the login UI
+2. The User completes the login attempt 
+   - The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to a `callback URL` that includes the **Authorization Code**.
+3. The User accesse the callback URL
+   - The **Authentication Code** gets sent to the application `backend` 
+   - The `backend` exchanges the **Authentication Code** for an [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token)
+   - The `backend` saves the received token in a server session and sends it back to the `frontend` as a cookie.
+
+The `frontend` can now use the new cookie to access protected resources from the `backend`.
 
 :::info
 This guide assumes that you already have setup and configured **SuperTokens** in your [**Authorization Service**](/docs/oauth/introduction#authorization-service). 
@@ -39,16 +42,22 @@ This guide assumes that you already have setup and configured **SuperTokens** in
 For more information on how to do that please check our [quickstart guides](/docs/guides).
 :::
 
+<!-- COPY SECTION -->
+<!-- ./oauth/multiple-frontends-with-separate-backends.mdx -->
+<!-- 1 -->
+
 ## 1. Enable the OAuth2 features from the Dashboard
 
 You will first have to enable the **OAuth2** features from the **SuperTokens Dashboard**.
-1. Open the **SuperTokens Dashboard** on the main page
+1. Open the **SuperTokens Dashboard**
 2. Click on the **Enabled Paid Features** button
 3. Click on **Managed Service**
 4. Check the **OAuth 2.0** option
 5. Click *Save* 
 
 Now you should be able to use the OAuth2 recipes in your applications.
+
+<!-- END COPY SECTION -->
 
 ## 2. Create the OAuth2 Clients
 
@@ -68,14 +77,20 @@ This can be done by directly calling the **SuperTokens Core** API.
 # Adjust the client_name and redirect_uri based on that
 curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
   -H "Content-Type: application/json" \
+  -H "api-key: ^{coreInjector_api_key_without_quotes}" \
   -d '{
-      "tokenEndpointAuthMethod": "none",
       "client_name": "<YOUR_CLIENT_NAME>",
       "response_types": ["code", "id_token"],
       "grant_types": ["authorization_code", "refresh_token"],
       "redirect_uri": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
     }'
 ```
+
+:::info
+
+If you want to use an authentication flow that relies on the [**PKCE**](/docs/oauth/introduction#pkce) you will have to set the following parameter in the request body `"tokenEndpointAuthMethod": "none"`.
+
+:::
 
 
 
@@ -97,8 +112,8 @@ If the creation was successful, the API will return a response that looks like t
     "client_id": "<CLIENT_ID>",
     "client_secret": "<CLIENT_SECRET>",
     "callback_urls": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
-    "authorize_url": "^{form_apiDomain}/^{form_apiBasePath}/oauth/auth",
-    "token_fetch_url": "^{form_apiDomain}/^{form_apiBasePath}/oauth/token"
+    "authorize_url": "^{form_apiDomain}^{form_apiBasePath}oauth/auth",
+    "token_fetch_url": "^{form_apiDomain}^{form_apiBasePath}oauth/token"
 }
 
 ```
@@ -179,19 +194,49 @@ all the steps that you have to take into account.
 
 <TabItem value="react">
 
-Update the `SuperTokensConfig` variable to include the `OAuth2Provider` recipe.
+1. Update the `SuperTokensConfig` variable to include the `OAuth2Provider` recipe.
 
-1. Add the import statement for the recipe.
+- Add the import statement for the new recipe.
 
 ```typescript 
 import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
 ```
 
-2. Update the list of recipes to also include the new initialization.
+- Update the list of recipes to also include the new initialization.
 
 ```tsx
 OAuth2Provider.init()
 ```
+
+2. Include the pre built UI in the rendering tree.
+
+<Question question="Do you use react-router-dom?">
+
+<Answer title="Yes">
+
+- Add the import statement for the pre built UI component.
+
+```typescript 
+import OAuth2ProviderPreBuiltUI from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+```
+
+- Update the `getSuperTokensRoutesForReactRouterDom` function call to include the `OAuth2ProviderPreBuiltUI` component.
+
+</Answer>
+
+<Answer title="No">
+
+- Add the import statement for the pre built UI component.
+
+```typescript 
+import OAuth2ProviderPreBuiltUI from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+```
+
+- Update the `getRoutingComponent` function call to include the `OAuth2ProviderPreBuiltUI` component.
+
+</Answer>
+
+</Question>
     
 </TabItem>
 
@@ -246,12 +291,26 @@ The configuration parameters can be determined based on the response that we rec
 - `callbackURL` corresponds to a value from `callback_urls`
 - `scope` corresponds to `scope` 
 
+
+Make sure that you expose an endpoint that will call `passport.authenticate('oauth2')`.
+This way the user will end up accessing the actual login page served by the **Authorization Service**.
+
 </TabItem>
 
 <TabItem value="go">
 
 You can use the [OAuth2](https://pkg.go.dev/golang.org/x/oauth2) library.
 Just follow these [instructions](https://golang.org/pkg/golang.org/x/oauth2/#example-Config-RequestToken) and implement it in your `backend`.
+
+The configuration parameters can be determined based on the response that we received on **step 2**.
+- `ClientID` corresponds to `client_id`
+- `ClientSecret` corresponds to `client_secret`
+- `Scopes` corresponds to `scope`
+- `Endpoint.AuthURL` corresponds to `authorize_url`
+- `Endpoint.TokenURL` corresponds to `token_fetch_url`
+
+Make sure that you expose an endpoint that will redirect to the authentication URL obtained from calling `AuthCodeURL`.
+This way the user will end up accessing the actual login page served by the **Authorization Service**.
 
 </TabItem>
 
@@ -261,8 +320,64 @@ Just follow these [instructions](https://golang.org/pkg/golang.org/x/oauth2/#exa
 You can use the [AuthLib](https://docs.authlib.org/) library.
 Just follow these [instructions](https://docs.authlib.org/en/latest/client/oauth2.html) and implement it in your `backend`.
 
+The configuration parameters can be determined based on the response that we received on **step 2**.
+- `client_id` corresponds to `client_id`
+- `client_secret` corresponds to `client_secret`
+- `scope` corresponds to `scope` 
+- `authorization_endpoint` corresponds to `authorize_url`
+- `token_endpoint` corresponds to `token_fetch_url`
+
+Make sure that you expose an endpoint that will redirect to the authentication URL obtained from calling `create_authorization_url`.
+This way the user will end up accessing the actual login page served by the **Authorization Service**.
+
+
 </TabItem>
 
+<TabItem value="php"> 
+
+You can use the [League OAuth2 Client](https://github.com/thephpleague/oauth2-client) library.
+Just follow these [instructions](https://oauth2-client.thephpleague.com/usage/) and implement it in your `backend`.
+
+The configuration parameters can be determined based on the response that we received on **step 2**.
+- `clientId` corresponds to `client_id`
+- `clientSecret` corresponds to `client_secret`
+- `redirectUri` corresponds to a value from `callback_urls` 
+- `urlAuthorize` corresponds to `authorize_url`
+- `urlAccessToken` corresponds to `token_fetch_url`
+
+Make sure that you expose an endpoint that will redirect to the authentication URL obtained from calling `getAuthorizationUrl`.
+This way the user will end up accessing the actual login page served by the **Authorization Service**.
+
+</TabItem>
+
+<TabItem value="java">
+
+You can use the [Spring Security](https://github.com/spring-projects/spring-security) library.
+Just follow these [instructions](https://docs.spring.io/spring-security/reference/servlet/oauth2/index.html#oauth2-client-log-users-in) and implement it in your `backend`.
+
+The configuration parameters can be determined based on the response that we received on **step 2**.
+
+- `client-id` corresponds to `client_id`
+- `client-secret` corresponds to `client_secret`
+- `scope` corresponds to `scope` 
+- `issuer-uri` corresponds to `^{form_apiDomain}^{form_apiBasePath}` 
+
+</TabItem>
+
+
+<TabItem value="c#">
+
+You can use the [IdentityModel](https://github.com/IdentityModel/IdentityModel) library.
+Just follow these [instructions](https://identitymodel.readthedocs.io/en/latest/client/token.html#requesting-a-token-using-the-authorization-code-grant-type) and implement it in your `backend`.
+
+The configuration parameters can be determined based on the response that we received on **step 2**.
+
+- `Address` corresponds to `^{form_apiDomain}^{form_apiBasePath}` 
+- `ClientId` corresponds to `client_id`
+- `ClientSecret` corresponds to `client_secret`
+- `RedirectUri` corresponds to a value from `callback_urls` 
+
+</TabItem>
 
 </OAuthBackendTabs>
 
@@ -279,7 +394,7 @@ Then the authentication session will be created and the `backend` will send it t
 ## 6. Test the new authentication flow
 
 With everything set up, you can now test your login flow.
-Just use the flow that you have created in the previous step check if the authentication flow completes wihtout any issues.
+Just use the setup that you have created in the previous step check if the authentication flow completes wihtout any issues.
 
 </AppInfoForm>
 

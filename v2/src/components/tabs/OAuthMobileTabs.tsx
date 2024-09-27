@@ -9,8 +9,9 @@ export default function OAuthMobileTabs(props: any) {
       defaultValue="react-native"
       values={[
         { label: "React Native", value: "react-native" },
-        { label: "Swift", value: "swift" },
-        { label: "Kotlin", value: "kotlin" },
+        { label: "Android", value: "android" },
+        { label: "iOS", value: "ios" },
+        { label: "Flutter", value: "flutter" },
       ]}
     >
       {props.children}

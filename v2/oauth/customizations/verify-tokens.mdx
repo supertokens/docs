@@ -3,7 +3,319 @@ title: Verify Tokens
 hide_title: true
 ---
 
+import OAuthBackendTabs from "/src/components/tabs/OAuthBackendTabs"
+import CoreInjector from "/src/components/coreInjector"
+import AppInfoForm from "/src/components/appInfoForm"
+import TabItem from '@theme/TabItem';
+
 # Verify Tokens
 
+In order to check the validity of a token you we recommend using a generic *JSON Object Signing and Encryption* library.
+
+<CoreInjector defaultValue="https://<your-core-identifier>.aws.supertokens.io" showTenantId={false}>
+
+<AppInfoForm
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+>
+
+<OAuthBackendTabs>
+
+<TabItem value="nodejs">
+
+For NodeJS you can use [jose](https://github.com/panva/jose) to verify the token.
+Here is an example of how you can do that:
+
+```typescript
+import jose from "jose";
+
+async function verifyToken(jwt: string) {
+  const requiredScope = "<YOUR_REQUIRED_SCOPE>";
+  const JWKS = jose.createRemoteJWKSet(new URL('^{form_apiDomain}^{form_apiBasePath}jwt/jwks.json'))
+
+  const { payload } = await jose.jwtVerify(jwt, JWKS, {
+    issuer: '^{form_apiDomain}^{form_apiBasePath}',
+    audience: '<OAUTH2_CLIENT_ID>',
+    requiredClaims: ['stt']
+  });
+
+  if(payload.stt !== 1) return false;
+  
+  return payload.scp.includes(requiredScope);
+}
+
+```
+
+</TabItem>
+
+<TabItem value="go">
 
 
+You can use the [jwx](https://github.com/lestrrat-go/jwx) library to verify the token.
+Here is an example of how you can do that:
+
+```go
+import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/jwk"
+)
+
+func ValidateToken(token string) bool {
+    apiDomain := "^{form_apiDomain}"
+    apiBasePath := "^{form_apiBasePath}"
+    clientID := "<YOUR_CLIENT_ID>"
+
+    jwksURL := fmt.Sprintf("%s%sjwt/jwks.json", apiDomain, apiBasePath)
+    jwks, err := jwk.Fetch(context.Background(), jwksURL)
+    if err != nil {
+      return false
+    }
+
+    token, err := jwt.Parse([]byte(jwtString), jwt.WithKeySet(jwks))
+    if err != nil {
+      return false
+    }
+
+    sst, ok := token.Get("sst")
+    if !ok || sst != 1 {
+      return false
+    }
+
+    scp, ok := token.Get("scp")
+    if !ok {
+      return false
+    }
+
+    scopes, ok := scp.([]interface{})
+    if !ok {
+      return false
+    }
+
+    for _, scope := range scopes {
+      if scope, ok := scope.(string); ok && scope == requiredScope {
+        return true
+      }
+    }
+
+    return false;
+}
+```
+
+</TabItem>
+
+<TabItem value="python">
+
+You can use the [PyJWT](https://github.com/jpadilla/pyjwt) library to verify the token.
+Here is an example of how you can do that:
+
+```python      
+import requests
+import jwt
+from jwt import PyJWKClient
+
+def validate_token(token):
+  api_domain = "^{form_apiDomain}"
+  api_base_path = "^{form_apiBasePath}"
+  client_id = "<YOUR_CLIENT_ID>"
+  required_scope = "<YOUR_REQUIRED_SCOPE>"
+
+  jwks_url = f"{api_domain}{api_base_path}jwt/jwks.json"
+  jwks_client = PyJWKClient(jwks_url)
+
+  try:
+      jwks = jwks_client.get_signing_keys()
+      decoded = jwt.decode(jwt_str, jwks[0].key, algorithms=['RS256'], audience=client_id, issuer=f"{api_domain}{api_base_path}")
+
+      sst = decoded.get('sst', None)
+      if stt != 1:
+          return False
+
+
+      scopes = decoded.get('scp', [])
+      if required_scope not in scopes:
+          return False
+
+      return True
+  except Exception as e:
+      return False
+
+```
+
+</TabItem>
+
+<TabItem value="php">
+
+You can use the [Firebase JWT](https://github.com/firebase/php-jwt) library to verify the token.
+Here is an example of how you can do that:
+
+```PHP
+
+require 'vendor/autoload.php';
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+function validateToken($jwt) {
+    $apiDomain = "^{form_apiDomain}";
+    $apiBasePath = "^{form_apiBasePath}";
+    $clientID = "<YOUR_CLIENT_ID>";
+    $requiredScope = "<YOUR_REQUIRED_SCOPE>";
+
+    $jwks = json_decode(file_get_contents($jwksUrl), true);
+    $keys = array_reduce($jwks['keys'], function ($result, $key) {
+        $result[$key['kid']] = $key;
+        return $result;
+    }, []);
+
+    try {
+        $decoded = JWT::decode($token, new Key($keys[0]['x5c'][0], 'RS256'));
+        if ($decoded->iss !== $issuer || $decoded->aud !== $audience) {
+            return false;
+        }
+        return $decoded->sst === 1;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+```
+
+</TabItem>
+
+<TabItem value="java">
+
+You can use the [Auth0 JWT](https://github.com/auth0/java-jwt) library to verify the token.
+Here is an example of how you can do that:
+
+```java
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.interfaces.JWTVerifier;
+import com.auth0.jwt.JWTVerifier.Base;
+import com.auth0.jwt.algorithms.Algorithm;
+
+import java.net.URL;
+import java.util.Map;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
+
+public class Main {
+
+    private static final String JWKS_URL = "^{form_apiDomain}^{form_apiBasePath}jwt/jwks.json";
+    private static final String ISSUER = "^{form_apiDomain}^{form_apiBasePath}";
+    private static final String AUDIENCE = "<YOUR_CLIENT_ID>";
+
+    private static Map<String, Object> fetchJWKS() throws Exception {
+        URL url = new URL(JWKS_URL);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        
+        InputStream responseStream = connection.getInputStream();
+        Scanner scanner = new Scanner(responseStream, StandardCharsets.UTF_8.name());
+        String responseBody = scanner.useDelimiter("\\A").next();
+        scanner.close();
+        
+        return JWT.decode(responseBody).getHeader();
+    }
+
+    public static boolean validateToken(String token) {
+        try {
+            Map<String, Object> jwks = fetchJWKS();
+            
+            Algorithm algorithm = Algorithm.RSA256(jwks.get("x5c"), null);
+            JWTVerifier verifier = JWT.require(algorithm)
+                    .withIssuer(ISSUER)
+                    .withAudience(AUDIENCE)
+                    .build();
+            
+            DecodedJWT jwt = verifier.verify(token);
+            return jwt.getClaim("sst").asInt() == 1;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
+```
+
+</TabItem>
+
+<TabItem value="c#">
+
+You can use the [IdentityModel](https://github.com/IdentityModel/IdentityModel) library to verify the token.
+Here is an example of how you can do that:
+
+```c#
+
+using System;
+using System.Linq;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+
+class Program
+{
+    static async bool ValidateToken(string jwtStr)
+    {
+        string apiDomain = "^{form_apiDomain}";
+        string apiBasePath = "^{form_apiBasePath}";
+        string clientId = "<YOUR_CLIENT_ID>";
+        string requiredScope = "<YOUR_REQUIRED_SCOPE>";
+
+        HttpClient client = new HttpClient();
+        var response = await client.GetStringAsync($"{apiDomain}{apiBasePath}jwt/jwks.json");
+        var jwks = new JsonWebKeySet(response);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = $"{apiDomain}{apiBasePath}",
+            ValidAudience = clientId,
+            IssuerSigningKeys = jwks.Keys
+        };
+
+        try
+        {
+            SecurityToken validatedToken;
+            var principal = tokenHandler.ValidateToken(jwtStr, validationParameters, out validatedToken);
+            var claims = principal.Claims.ToDictionary(c => c.Type, c => c.Value);
+
+            if (!claims.ContainsKey("stt") || claims["stt"] != 1)
+            {
+                return false;
+            }
+
+            var scopes = claims["scp"].Split(" ");
+            if (!scopes.Contains(requiredScope))
+            {
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+}
+
+```
+
+</TabItem>
+
+</OAuthBackendTabs>
+
+
+</AppInfoForm>
+
+</CoreInjector>

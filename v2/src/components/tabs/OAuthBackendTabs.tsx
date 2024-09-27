@@ -13,7 +13,7 @@ export default function OAuthBackendTabs(props: any) {
         { label: "Python", value: "python" },
         { label: "Java", value: "java" },
         { label: "PHP", value: "php" },
-        { label: "C#", value: "csharp" },
+        { label: "C#", value: "c#" },
       ]}
     >
       {props.children}
