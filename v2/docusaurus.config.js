@@ -177,6 +177,20 @@ module.exports = {
     [
       "@docusaurus/plugin-content-docs",
       {
+        id: "new-docs",
+        path: "new-docs",
+        routeBasePath: "docs/new-docs",
+        sidebarPath: require.resolve("./new-docs/sidebars.js"),
+        showLastUpdateTime: true,
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
+    ],
+    [
+      "@docusaurus/plugin-content-docs",
+      {
         id: "emailpassword",
         path: "emailpassword",
         routeBasePath: "docs/emailpassword",
