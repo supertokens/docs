@@ -32,8 +32,8 @@ export default function RecipeSelector(props) {
         return "User Roles Recipe";
       case "mfa":
         return "Multi factor auth";
-      case "microservice_auth":
-        return "Microservice Auth";
+      case "private-access-token-authentication":
+        return "Private Access Token Authentication";
       case "userdashboard":
         return "User Management Dashboard";
       case "multitenancy":
@@ -171,11 +171,11 @@ export default function RecipeSelector(props) {
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
-                active: activeSelector("microservice_auth"),
+                active: activeSelector("private-access-token-authentication"),
               })}
             >
-              <a href="/docs/microservice_auth/introduction">
-                Microservice Authentication
+              <a href="/docs/private-access-token-authentication/introduction">
+                Private Access Token Authentication
               </a>
             </li>
             <li
