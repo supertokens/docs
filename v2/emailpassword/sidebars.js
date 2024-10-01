@@ -690,7 +690,7 @@ module.exports = {
         },
         "mfa",
         "multi-tenant",
-        "bot-and-spam-detection",
+        "attack-protection-suite",
       ],
     },
     "scalability",
@@ -702,11 +702,12 @@ module.exports = {
         "testing/testing-with-postman",
         "troubleshooting/how-to-troubleshoot",
         "troubleshooting/cors-issues",
+        "troubleshooting/checklist",
       ],
     },
     {
-      type: 'category',
-      label: 'Migrating to Supertokens',
+      type: "category",
+      label: "Migrating to Supertokens",
       items: [
         "migration/about",
         {

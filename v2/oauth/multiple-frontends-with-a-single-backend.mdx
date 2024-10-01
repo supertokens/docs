@@ -13,9 +13,15 @@ import TabItem from '@theme/TabItem';
 
 # Multiple Frontend Domains with a Common Backend
 
-You can use the following guide if you have multiple **`frontend applications`** on different domains, that use the same **`backend service`**.
+You can use the following guide if you have multiple **`frontend applications`** that use the same **`backend service`**.
 
 Using the actual **OAuth 2.0** terminology, we can say that each **`frontend`** can be considered a [**Client**](/docs/oauth/introduction#client) and the **`backend`** will act as both an [**Authorization Server**](/docs/oauth/introduction#authorization) and a [**Resource Server**](/docs/oauth/introduction#resource-server).
+
+:::info
+
+This flow will only work if your frontend applications and your backend are under the same domain.
+
+:::
 
 <img src="/img/oauth/multiple-frontend-domains-with-a-single-backend.png" alt="Multiple Frontend Domains with a Single Backend"/>
 
@@ -27,7 +33,7 @@ The authentication flow will work in the following way:
    - The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the login UI
 2. The User completes the login attempt 
    - The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the `callback URL`.
-3. The User accesse the callback URL
+3. The User accesses the callback URL
    - The `frontend` uses the callback URL information to obtain a **OAuth2 Access Token** from the [**Authorization Service**](/docs/oauth/introduction#authorization-service).
    - The `frontend` exchanges the **OAuth2 Access Token** for a **SuperTokens Session Access Token**.
 
@@ -76,7 +82,7 @@ curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
   -H "api-key: ^{coreInjector_api_key_without_quotes}" \
   -d '{
       "client_name": "<YOUR_CLIENT_NAME>",
-      "response_types": ["code", "id_token"],
+      "response_types": ["code"],
       "grant_types": ["authorization_code", "refresh_token"],
       "tokenEndpointAuthMethod": "none",
       "redirect_uri": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
@@ -101,15 +107,18 @@ If the creation was successful, the API will return a response that looks like t
     "client_id": "<CLIENT_ID>",
     "client_secret": "<CLIENT_SECRET>",
     "callback_urls": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
-    "authorize_url": "^{form_apiDomain}^{form_apiBasePath}oauth/authorize",
-    "token_fetch_url": "^{form_apiDomain}^{form_apiBasePath}oauth/token"
 }
+
 
 ```
 
+Based on the client creation process we can also infer two additional values that we will need later on:
+- `authorize_url` corresponds to `^{form_apiDomain}^{form_apiBasePath}oauth/auth`
+- `token_fetch_url` corresponds to `^{form_apiDomain}^{form_apiBasePath}oauth/token`
+
 :::caution
 
-You will have to save this response because we do not persist it interaly for security reasons.
+You will have to save this response because we do not persist it internally for security reasons.
 In the next steps we will use the values to complete several configurations.
 
 :::
@@ -202,13 +211,7 @@ OAuth2Provider.init()
 ```
 
 
-2. Update the **Session** recipe initialization to use `header` authentication.
-
-```tsx
-Session.init({ authMode: "header" })
-```
-
-3. Include the pre built UI in the rendering tree.
+2. Include the pre built UI in the rendering tree.
 
 <Question question="Do you use react-router-dom?">
 
@@ -252,22 +255,6 @@ supertokensUIOAuth2Provider.init(),
 
 ```
 
-2. Update the `supertokensUISession` init step to use `header` authentication.
-        
-```typescript
-supertokensUISession.init({
-    authMode: "header"
-})
-
-```
-
-3. Update the `Supertokens.init` call so that the `Session` recipe uses `header` authentication.
-
-```typescript 
-
-Session.init({ authMode: "header" })
-
-```
 
 </TabItem>
 
@@ -282,23 +269,6 @@ supertokensUIOAuth2Provider.init(),
 
 ```
 
-
-2. Update the `supertokensUISession` init step to use `header` authentication.
-        
-```typescript
-supertokensUISession.init({
-    authMode: "header"
-})
-
-```
-
-3. Update the `Supertokens.init` call so that the `Session` recipe uses `header` authentication.
-
-```typescript 
-
-Session.init({ authMode: "header" })
-
-```
 
     
 </TabItem>
@@ -326,7 +296,7 @@ So we can't rely on `cookie` based authentication since some browsers do not all
 ```typescript
 Session.init({
     // ...
-    authMode: "header"
+    tokenTransferMethod: "header"
 })
 ```
 
@@ -336,15 +306,10 @@ Session.init({
 
 <TabItem value="react"> 
 
-We recommend using the [react-oauth2-pkce](https://github.com/joegasewicz/react-oauth2-pkce) library.
+We recommend using the [react-oidc-context](https://github.com/authts/react-oidc-context) library.
 Just follow the instructions from the library's page.
-The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
 
-- `authorizationEndpoint` corresponds to `authorize_url`
-- `tokenEndpoint` corresponds to `token_fetch_url`
-- `clientID` corresponds to `client_id`
-- `redirectUri` corresponds to a value from `callback_urls`
-- `scope` corresponds to `scope` 
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
 
 </TabItem>
 
@@ -379,30 +344,14 @@ To do this you will have to call the **Authorization Service** backend API in th
 
 ```typescript
 
-// This should be called after the Authorization Server has redirected the user to a Redirect URI
-// If the function is successful (returns true), you should redirect the user to a protected route
-async function exchangeTokens(oauth2ClientId: string, oauth2RedirectURI: string) {
-   const params = new URLSearchParams(window.location.search);
-   if (params.get("code") === null || params.get("state") === null) return false;
-
-   const state = params.get("state");
-   const savedInfo = localStorage.getItem(`oidc.${state}`);
-   if (!savedInfo) return false; 
-   const { id, code_verifier } = JSON.parse(savedInfo);
-   if (id !== state) return false; 
-   
+async function exchangeTokens(accessToken: string) {
    const res = await fetch(`^{form_apiDomain}^{form_apiBasePath}oauth/client/signin`, {
       method: "POST",
       headers: {
           "Content-Type": "application/json",
       },
       body: JSON.stringify({
-          clientId: oauth2ClientId,
-          redirectURIInfo: {
-              redirectURI: oauth2RedirectURI,
-              redirectURIQueryParams: Object.fromEntries(params.entries()),
-              pkceCodeVerifier: code_verifier,
-          },
+        oAuthTokens: { access_token: accessToken },
       }),
    });
 

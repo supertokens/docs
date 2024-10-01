@@ -39,7 +39,9 @@ export default function RecipeSelector(props) {
       case "multitenancy":
         return "Multi Tenancy";
       case "anomaly_detection":
-        return "Bot/Spam Detection";
+        return "Attack Protection Suite";
+      case "attackprotectionsuite":
+        return "Attack Protection Suite";
       case "oauth":
         return "OAuth 2.0";
       default:
@@ -192,8 +194,8 @@ export default function RecipeSelector(props) {
                 active: activeSelector("anomaly_detection"),
               })}
             >
-              <a href="/docs/botandspamdetection/introduction">
-                Bot / Spam Detection
+              <a href="/docs/attackprotectionsuite/introduction">
+                Attack Protection Suite
               </a>
             </li>
             <li
