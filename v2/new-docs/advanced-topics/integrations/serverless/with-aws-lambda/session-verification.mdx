@@ -1,0 +1,181 @@
+---
+id: session-verification
+title: Using session verification
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/serverless/with-aws-lambda/session-verification.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+
+# 3. Session verification / Building your APIs
+
+When building your own APIs, you may need to verify the session of the user before proceeding further. SuperTokens SDK exposes a `verifySession` function that can be utilized for this. In this guide, we will be creating a `/user` `GET` route that will return the current session information.
+
+## 1) Add `/user` `GET` route in your API Gateway
+
+Create a `/user` resource and then `GET` method in your API Gateway. Configure the lambda integration and CORS just like we did [for the auth routes](./setup-api-gateway#3-attach-lambda-to-the-any-method-of-the-proxy-resource).
+
+## 2) Create a file in your lambda to handle the `/user` route.
+
+<BackendSDKTabs disableGolang>
+<TabItem value="nodejs">
+
+An example of this is [here](https://github.com/supertokens/supertokens-node/blob/master/examples/aws/with-emailpassword/backend/user.mjs).
+
+```tsx title="user.mjs"
+import supertokens from "supertokens-node";
+// @ts-ignore
+import { getBackendConfig } from "./config.mjs";
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+__OMIT_START__
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+__OMIT_END__
+
+supertokens.init(getBackendConfig());
+
+const lambdaHandler = async (event__OMIT_START__: SessionEvent__OMIT_END__) => {
+    return {
+        body: JSON.stringify({
+            sessionHandle: event.session?.getHandle(),
+            userId: event.session?.getUserId(),
+            accessTokenPayload: event.session?.getAccessTokenPayload(),
+        }),
+        statusCode: 200,
+    };
+};
+
+export const handler = middy(verifySession(lambdaHandler))
+    .use(
+        cors({
+            origin: getBackendConfig().appInfo.websiteDomain,
+            credentials: true,
+            headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+            methods: "OPTIONS,POST,GET,PUT,DELETE",
+        })
+    )
+    .onError((request) => {
+        throw request.error;
+    });
+```
+
+Now, import this function in your `index.mjs` handler file as shown below:
+
+
+```tsx title="index.mjs"
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/awsLambda";
+// @ts-ignore
+import { getBackendConfig } from "./config.mjs";
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+// highlight-start
+// @ts-ignore
+import { handler as userHandler } from "./user.mjs";
+// highlight-end
+
+supertokens.init(getBackendConfig());
+
+export const handler = middy(
+    middleware((event) => {
+
+        // highlight-start
+        if (event.path === "/user") {
+            return userHandler(event);
+        // highlight-end
+        }
+      
+        return {
+            body: JSON.stringify({
+                msg: "Hello!",
+            }),
+            statusCode: 200,
+        };
+    })
+)
+    .use(
+        cors({
+            origin: getBackendConfig().appInfo.websiteDomain,
+            credentials: true,
+            headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+            methods: "OPTIONS,POST,GET,PUT,DELETE",
+        })
+    )
+    .onError((request) => {
+        throw request.error;
+    });
+```
+
+:::note
+The `verifySession` middleware automatically returns a 401 Unauthorised error if the session is not valid. You can alter the default behaviour by passing `{ sessionRequired: false }` as the second argument to the `verifySession` middleware.
+
+If each API route has its own lambda function, you can skip using the SuperTokens auth middleware. Instead, ensure to call `supertokens.init` and include the `Session` recipe in the `recipeList` for each respective lambda function.
+:::
+
+</TabItem>
+<TabItem value="python">
+
+```python title="handler.py"
+import nest_asyncio # type: ignore
+nest_asyncio.apply() # type: ignore
+
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from mangum import Mangum
+
+from supertokens_python import init, get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
+
+import config # type: ignore
+
+init(
+    supertokens_config=config.supertokens_config, # type: ignore
+    app_info=config.app_info, # type: ignore
+    framework=config.framework, # type: ignore
+    recipe_list=config.recipe_list, # type: ignore
+    mode="asgi",
+)
+
+app = FastAPI(title="SuperTokens Example")
+
+# highlight-start
+from fastapi import Depends
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+
+@app.get("/user")
+def user(s: SessionContainer = Depends(verify_session())):
+    return {
+        "sessionHandle": s.get_handle(),
+        "userId": s.get_user_id(),
+        "accessTokenPayload": s.get_access_token_payload()
+    }
+# highlight-end
+
+app.add_middleware(get_middleware())
+
+app = CORSMiddleware(
+    app=app,
+    allow_origins=[
+        config.app_info.website_domain  # type: ignore
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+handler = Mangum(app)
+```
+:::note
+The `verify_session` middleware automatically returns a 401 Unauthorised error if the session is not valid. You can alter the default behaviour by passing `session_required=False` the `verify_session` middleware.
+
+If each API route has its own lambda function, you can skip using the SuperTokens auth middleware. Instead, ensure to call `init` function and include the `session` recipe in the `recipe_list` for each respective lambda function.
+:::
+
+</TabItem>
+
+</BackendSDKTabs>

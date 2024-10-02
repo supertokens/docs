@@ -1,0 +1,622 @@
+---
+sidebar_position: 1
+title: Managing roles and users
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./userroles/managing-roles-and-users.mdx -->
+
+import PythonSyncAsyncSubTabs from "/src/components/tabs/PythonSyncAsyncSubTabs";
+import CoreInjector from "/src/components/coreInjector"
+import CustomAdmonition from "/src/components/customAdmonition"
+
+# Managing roles and users
+
+With the UserRoles recipe you can:
+- Assign roles to users and their sessions
+- Remove roles from users and their sessions
+- Get a list of all roles assigned to a specific user
+- Get a list of all users that are assigned a specific role
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+
+## Assign roles to a user and their session
+
+You can assign roles to users before hand or immediately [after they sign up](#which-api-to-override-for-adding-roles-post-sign-up) (see end of this page). *The [role must be created](./creating-role) before you can assign it.*
+
+<BackendSDKTabs enableCurl>
+
+<TabItem value="nodejs">
+
+```tsx
+import UserRoles from "supertokens-node/recipe/userroles";
+
+async function addRoleToUser(userId: string) {
+    // highlight-start
+    const response = await UserRoles.addRoleToUser("public", userId, "user");
+
+    if (response.status === "UNKNOWN_ROLE_ERROR") {
+        // No such role exists
+        return;
+    }
+
+    if (response.didUserAlreadyHaveRole === true) {
+        // The user already had the role
+    }
+    // highlight-end
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/userroles"
+)
+
+func addRoleToUser(userId string) {
+	// highlight-start
+	response, err := userroles.AddRoleToUser("public", userId, "user", nil)
+	if err != nil {
+		// TODO: Handle error
+		return
+	}
+
+	if response.UnknownRoleError != nil {
+		// No such role exists
+		return
+	}
+
+	if response.OK.DidUserAlreadyHaveRole {
+		// The user already had the role
+	}
+	// highlight-end
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.userroles.asyncio import add_role_to_user
+from supertokens_python.recipe.userroles.interfaces import UnknownRoleError
+
+
+async def add_role_to_user_func(user_id: str, role: str):
+	# highlight-start
+	role = "user"
+	res = await add_role_to_user("public", user_id, role)
+	if isinstance(res, UnknownRoleError):
+		# No such role exists
+		return
+
+	if res.did_user_already_have_role:
+		# User already had this role
+		pass
+	# highlight-end
+```
+</TabItem>
+
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.userroles.syncio import add_role_to_user
+from supertokens_python.recipe.userroles.interfaces import UnknownRoleError
+
+
+def add_role_to_user_func(user_id: str, role: str):
+	# highlight-start
+	role = "user"
+	res = add_role_to_user("public", user_id, role)
+	if isinstance(res, UnknownRoleError):
+		# No such role exists
+		return
+
+	if res.did_user_already_have_role:
+		# User already had this role
+		pass
+	# highlight-end
+
+```
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+
+<TabItem value="curl">
+
+<CoreInjector defaultValue="http://localhost:3567">
+
+```bash
+curl --location --request PUT '^{coreInjector_uri_without_quotes}/recipe/user/role' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+  "userId": "fa7a0841-b533-4478-95533-0fde890c3483",
+  "role": "user"
+}'
+```
+
+</CoreInjector>
+
+</TabItem>
+
+</BackendSDKTabs>
+
+Normally, you would do the above in the [sign up function override](#which-api-to-override-for-adding-roles-post-sign-up) (see end of this page). This way, SuperTokens would automatically add the roles & permissions of the user to their session.
+
+However, in case you associate the roles to a user after the session has already been created, then you can also manually add the roles and permissions to a session using in the following way:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import {UserRoleClaim, PermissionClaim} from "supertokens-node/recipe/userroles";
+import {SessionContainer} from "supertokens-node/recipe/session"
+
+async function addRolesAndPermissionsToSession(session: SessionContainer) {
+    // we add the user's roles to the user's session
+	await session.fetchAndSetClaim(UserRoleClaim)
+
+	// we add the permissions of a user to the user's session
+	await session.fetchAndSetClaim(PermissionClaim)
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+)
+
+func addRolesAndPermissionsToSession(session sessmodels.SessionContainer) error {
+	// we add the user's roles to the user's session
+	err := session.FetchAndSetClaim(userrolesclaims.UserRoleClaim)
+	if err != nil {
+		return err
+	}
+
+	// we add the user's permissions to the user's session
+	err = session.FetchAndSetClaim(userrolesclaims.PermissionClaim)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.userroles import UserRoleClaim, PermissionClaim
+
+
+async def add_roles_and_permissions_to_session(session: SessionContainer):
+    # we add the user's roles to the user's session
+    await session.fetch_and_set_claim(UserRoleClaim)
+
+    # we add the user's permissions to the user's session
+    await session.fetch_and_set_claim(PermissionClaim)
+```
+</TabItem>
+
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.userroles import UserRoleClaim, PermissionClaim
+
+
+def add_roles_and_permissions_to_session(session: SessionContainer):
+    # we add the user's roles to the user's session
+	session.sync_fetch_and_set_claim(UserRoleClaim)
+    
+    # we add the user's permissions to the user's session
+	session.sync_fetch_and_set_claim(PermissionClaim)
+```
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+:::important
+The `session` variable in the code snippet above refers to the session object that's the result of calling the `verifySession` or `getSession` function.
+:::
+
+<CustomAdmonition type="multi-tenancy">
+
+Whilst roles and permissions are shared across apps, the association of roles to users is on a per tenant level. If using our SDK functions to add a role to a user, you can also pass in a tenantId to the function which will tell SuperTokens to add the role for that user for that tenant.
+
+In the code examples above, we pass in the `"public"` tenantId, which is the default tenantId for users. You can fetch the user's tenantId from their current session, or from their user object (which you can fetch using their userId).
+
+Note that if you associate a role to a user ID for a teannt, and that user ID doesn't actually belong to that tenant, then the operation will still succeed.
+
+</CustomAdmonition>
+
+
+## Remove role from a user and their sessions
+
+You can remove roles from a user, the role you provide will be removed only if the user was assigned that role.
+
+<BackendSDKTabs enableCurl>
+<TabItem value="nodejs">
+
+```tsx
+import UserRoles from "supertokens-node/recipe/userroles";
+import { SessionContainer } from "supertokens-node/recipe/session"
+
+async function removeRoleFromUserAndTheirSession(session: SessionContainer) {
+    const response = await UserRoles.removeUserRole(session.getTenantId(), session.getUserId(), "user");
+
+    if (response.status === "UNKNOWN_ROLE_ERROR") {
+        // No such role exists
+        return;
+    }
+
+    if (response.didUserHaveRole === false) {
+        // The user was never assigned the role
+    } else {
+        // We also want to update the session of this user to reflect this change.
+        await session.fetchAndSetClaim(UserRoles.UserRoleClaim);
+        await session.fetchAndSetClaim(UserRoles.PermissionClaim);
+    }
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+)
+
+func removeRoleFromUserAndTheirSession(session sessmodels.SessionContainer) {
+	response, err := userroles.RemoveUserRole(session.GetTenantId(), session.GetUserID(), "user", nil)
+	if err != nil {
+		// TODO: Handle error
+		return
+	}
+
+	if response.UnknownRoleError != nil {
+		// No such role exists
+		return
+	}
+
+	if response.OK.DidUserHaveRole == false {
+		// The user was never assigned the role
+	} else {
+		// We also want to update the session of this user to reflect this change.
+		session.FetchAndSetClaim(userrolesclaims.UserRoleClaim)
+		session.FetchAndSetClaim(userrolesclaims.PermissionClaim)
+	}
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.userroles.asyncio import remove_user_role
+from supertokens_python.recipe.userroles.interfaces import UnknownRoleError
+from supertokens_python.recipe.userroles import UserRoleClaim, PermissionClaim
+from supertokens_python.recipe.session import SessionContainer
+
+async def remove_role_from_user_and_their_session(session: SessionContainer):
+    res = await remove_user_role(session.get_tenant_id(), session.get_user_id(), "user")
+    if isinstance(res, UnknownRoleError):
+        # No such role exists
+        return
+
+    if res.did_user_have_role == False:
+        # The user was never assigned the role
+        pass
+    else:
+        # We also want to update the session of this user to reflect this change.
+        await session.fetch_and_set_claim(UserRoleClaim)
+        await session.fetch_and_set_claim(PermissionClaim)
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.userroles.syncio import remove_user_role
+from supertokens_python.recipe.userroles.interfaces import UnknownRoleError
+from supertokens_python.recipe.userroles import UserRoleClaim, PermissionClaim
+from supertokens_python.recipe.session import SessionContainer
+
+def remove_role_from_user_and_their_session(session: SessionContainer):
+    res = remove_user_role(session.get_tenant_id(), session.get_user_id(), "user")
+    if isinstance(res, UnknownRoleError):
+        # No such role exists
+        return
+
+    if res.did_user_have_role == False:
+        # The user was never assigned the role
+        pass
+    else:
+        # We also want to update the session of this user to reflect this change.
+        session.sync_fetch_and_set_claim(UserRoleClaim)
+        session.sync_fetch_and_set_claim(PermissionClaim)
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+
+<TabItem value="curl">
+
+<CoreInjector defaultValue="http://localhost:3567">
+
+```bash
+curl --location --request POST '^{coreInjector_uri_without_quotes}/recipe/user/role/remove' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+  "userId": "fa7a0841-b533-4478-95533-0fde890c3483",
+  "role": "user"
+}'
+```
+
+</CoreInjector>
+
+</TabItem>
+
+</BackendSDKTabs>
+
+<CustomAdmonition type="multi-tenancy">
+
+If you are using our multi tenancy feature, it is important to note that in the code snippets above, we only remove the user's role for the tenant that they used to login into (which is what's stored in the session).
+
+You can pass in another tenant ID if you like, or call the function above for all the tenants that the user belongs to (which you can fetch from the user object associated with the `userId`).
+
+</CustomAdmonition>
+
+## Get all roles for a user
+
+You can get a list of all roles that were assigned to a specific user.
+
+
+:::tip
+You can also view all the roles that are assigned to a user from the user management dashboard on the user details page for that particular user. To know more about how to manage your user roles and permissions from user management dashboard see [this page](/docs/userdashboard/managing-user-roles-and-permissions)
+:::
+
+
+<BackendSDKTabs enableCurl>
+<TabItem value="nodejs">
+
+```tsx
+import UserRoles from "supertokens-node/recipe/userroles";
+
+async function getRolesForUser(userId: string) {
+    // highlight-start
+    const response = await UserRoles.getRolesForUser("public", userId);
+    const roles: string[] = response.roles;
+    // highlight-end
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/userroles"
+)
+
+func getRolesForUser(userId string) {
+	// highlight-start
+	response, err := userroles.GetRolesForUser("public", userId, nil)
+	if err != nil {
+		// TODO: Handle error
+		return
+	}
+	_ = response.OK.Roles
+	// highlight-end
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.userroles.asyncio import get_roles_for_user
+
+async def get_roles_for_user_func(user_id: str):
+	# highlight-next-line
+	_ = (await get_roles_for_user("public", user_id)).roles
+```
+
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.userroles.syncio import get_roles_for_user
+
+def get_roles_for_user_func(user_id: str):
+	# highlight-next-line
+	_ = get_roles_for_user("public", user_id).roles
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+
+<TabItem value="curl">
+
+<CoreInjector defaultValue="http://localhost:3567">
+
+```bash
+curl --location --request GET '^{coreInjector_uri_without_quotes}/recipe/user/roles?userId=fa7a0841-b533-4478-95533-0fde890c3483' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}'
+```
+
+</CoreInjector>
+
+</TabItem>
+
+</BackendSDKTabs>
+
+<CustomAdmonition type="multi-tenancy">
+
+In the code examples above, we pass in the `"public"` tenantId, which is the default tenantId for users. You can fetch the user's tenantId from their current session, or from their user object (which you can fetch using their userId).
+
+</CustomAdmonition>
+
+## Get all users that have a role
+
+You can get a list of all users that were assigned a specific role, the `getRolesForUser` returns a list of user ids.
+
+<BackendSDKTabs enableCurl>
+<TabItem value="nodejs">
+
+```tsx
+import UserRoles from "supertokens-node/recipe/userroles";
+
+async function getUsersThatHaveRole(role: string) {
+    // highlight-start
+    const response = await UserRoles.getUsersThatHaveRole("public", role);
+
+    if (response.status === "UNKNOWN_ROLE_ERROR") {
+        // No such role exists
+        return;
+    }
+
+    const users: string[] = response.users;
+    // highlight-end
+}
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/userroles"
+)
+
+func getUsersThatHaveRole(role string) {
+	// highlight-start
+	response, err := userroles.GetUsersThatHaveRole("public", role, nil)
+	if err != nil {
+		// TODO: Handle error
+		return
+	}
+
+	if response.UnknownRoleError != nil {
+		// No such role exists
+		return
+	}
+
+	_ = response.OK.Users
+	// highlight-end
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.userroles.asyncio import get_users_that_have_role
+from supertokens_python.recipe.userroles.interfaces import UnknownRoleError
+
+async def get_users_that_have_role_func(role: str):
+	# highlight-start
+	res = await get_users_that_have_role("public", role)
+	if isinstance(res, UnknownRoleError):
+		# No such role exists
+		return
+
+	_ = res.users
+	# highlight-end
+
+```
+
+</TabItem>
+
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.userroles.syncio import get_users_that_have_role
+from supertokens_python.recipe.userroles.interfaces import UnknownRoleError
+
+def get_users_that_have_role_func(role: str):
+	# highlight-start
+	res = get_users_that_have_role("public", role)
+	if isinstance(res, UnknownRoleError):
+		# No such role exists
+		return
+
+	_ = res.users
+	# highlight-end
+
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
+
+</TabItem>
+
+<TabItem value="curl">
+
+<CoreInjector defaultValue="http://localhost:3567">
+
+```bash
+curl --location --request GET '^{coreInjector_uri_without_quotes}/recipe/role/users?role=user' \
+--header 'api-key: ^{coreInjector_api_key_without_quotes}'
+```
+
+</CoreInjector>
+
+</TabItem>
+
+</BackendSDKTabs>
+
+<CustomAdmonition type="multi-tenancy">
+
+In the code examples above, we pass in the `"public"` tenantId, which is the default tenantId for users. This will return the list of users that have that role in the `"public"` tenant.
+
+You can also pass in a different tenant ID, or call the function in a loop with all the tenants that exist in your app.
+
+</CustomAdmonition>
+
+## Which API to override for adding roles post sign up?
+
+Follow the links below to see documentation on post sign up action for the recipe you use:
+- [EmailPassword](https://supertokens.com/docs/emailpassword/common-customizations/handling-signup-success)
+- [Passwordless](https://supertokens.com/docs/passwordless/common-customizations/handling-signinup-success)
+- [ThrdPartyEmailPassword](https://supertokens.com/docs/thirdpartyemailpassword/common-customizations/handling-signinup-success)
+- [ThirdParty](https://supertokens.com/docs/thirdparty/common-customizations/handling-signinup-success)
+- [ThirdPartyPasswordless](https://supertokens.com/docs/thirdpartypasswordless/common-customizations/handling-signinup-success)

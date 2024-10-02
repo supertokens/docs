@@ -94,7 +94,6 @@ function Navbar() {
               imageClassName="navbar__logo"
               titleClassName="navbar__title"
             />
-            <NavbarItem type="recipeDropDown" position="left" />
           </div>
           {leftItems.map((item, i) => (
             <NavbarItem {...item} key={i} />

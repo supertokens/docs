@@ -1,0 +1,161 @@
+---
+id: handling-email-verification-success
+title: Post email verification
+hide_title: true
+---
+
+<!-- COPY DOCS -->
+<!-- ./thirdpartyemailpassword/common-customizations/email-verification/handling-email-verification-success.mdx -->
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import TabItem from '@theme/TabItem';
+
+# Doing operations post email verification
+
+To perform any task post email verification like analytics, sending a user a welcome email or notifying an internal dashboard, you'll need to override the `verifyEmailPOST` API.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from 'supertokens-node';
+import EmailVerification from "supertokens-node/recipe/emailverification";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        EmailVerification.init({
+            mode: "REQUIRED",
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        verifyEmailPOST: async function (input) {
+
+                            if (originalImplementation.verifyEmailPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+
+                            // First we call the original implementation
+                            let response = await originalImplementation.verifyEmailPOST(input);
+
+                            // Then we check if it was successfully completed
+                            if (response.status === "OK") {
+                                let { recipeUserId, email } = response.user;
+                                // TODO: post email verification logic
+                            }
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			emailverification.Init(evmodels.TypeInput{
+				Mode: evmodels.ModeRequired,
+				// highlight-start
+				Override: &evmodels.OverrideStruct{
+					APIs: func(originalImplementation evmodels.APIInterface) evmodels.APIInterface {
+						ogVerifyEmailPOST := *originalImplementation.VerifyEmailPOST
+						(*originalImplementation.VerifyEmailPOST) = func(token string, sessionContainer sessmodels.SessionContainer, tenantId string, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
+							resp, err := ogVerifyEmailPOST(token, sessionContainer, tenantId, options, userContext)
+							if err != nil {
+								return evmodels.VerifyEmailPOSTResponse{}, err
+							}
+
+							if resp.OK != nil {
+								id := resp.OK.User.ID
+								email := resp.OK.User.Email
+								fmt.Println(id)
+								fmt.Println(email)
+								// TODO: post email verification logic
+							}
+
+							return resp, nil
+						}
+						return originalImplementation
+					},
+				},
+				// highlight-end
+			}),
+		},
+	})
+}
+```
+</TabItem>
+<TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import emailverification
+from supertokens_python.recipe.emailverification.interfaces import APIInterface, APIOptions, EmailVerifyPostOkResult
+from typing import Dict, Any, Optional
+from supertokens_python.recipe.session.interfaces import SessionContainer
+
+# highlight-start
+def override_email_verification_apis(original_implementation_email_verification: APIInterface):
+    original_email_verify_post = original_implementation_email_verification.email_verify_post
+
+    async def email_verify_post(token: str,
+                                session: Optional[SessionContainer],
+                                tenant_id: str,
+                                api_options: APIOptions,
+                                user_context: Dict[str, Any],):
+
+        response = await original_email_verify_post(token, session, tenant_id, api_options, user_context)
+
+        # Then we check if it was successfully completed
+        if isinstance(response, EmailVerifyPostOkResult):
+            _ = response.user
+            # TODO: post email verification logic
+        return response
+
+    original_implementation_email_verification.email_verify_post = email_verify_post
+    return original_implementation_email_verification
+# highlight-end
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',  # type: ignore
+    recipe_list=[
+        emailverification.init(
+            mode="REQUIRED",
+            # highlight-start
+            override=emailverification.InputOverrideConfig(
+                apis=override_email_verification_apis
+            )
+            # highlight-end
+        )
+    ]
+)
+```
+
+</TabItem>
+</BackendSDKTabs>

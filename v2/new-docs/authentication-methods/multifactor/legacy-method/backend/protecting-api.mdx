@@ -1,0 +1,651 @@
+---
+id: protecting-api
+title: "Protecting API routes"
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs";
+import TabItem from '@theme/TabItem';
+import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs";
+import GoFrameworkSubTabs from "/src/components/tabs/GoFrameworkSubTabs"
+import PythonFrameworkSubTabs from "/src/components/tabs/PythonFrameworkSubTabs"
+
+:::caution
+This is the legacy method of implementing MFA. It has several [disadvantages](../legacy-vs-new) compared to using our MFA recipe.
+:::
+
+# Protecting API routes
+
+
+In the previous steps, we saw the a session is created after the first factor, with `SecondFactorClaim` set to false, and then after the second factor is completed, we update that value to true.
+
+## Protecting all APIs
+
+We want to protect all the application APIs such that they are accessible only when `SecondFactorClaim` is `true` - indicating that the user has completed 2FA. We can do this by by overriding the `getGlobalClaimValidators` function in the Session recipe.
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+Session.init({
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                getGlobalClaimValidators: (input) => [
+                    ...input.claimValidatorsAddedByOtherRecipes,
+                    SecondFactorClaim.validators.hasValue(true),
+                ],
+            };
+        },
+    }
+})
+
+```
+
+</TabItem>
+<TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+
+	// highlight-start
+	_, SecondFactorClaimValidator := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
+
+	session.Init(&sessmodels.TypeInput{
+		Override: &sessmodels.OverrideStruct{
+			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+                
+				// highlight-start
+				(*originalImplementation.GetGlobalClaimValidators) = func(userId string, claimValidatorsAddedByOtherRecipes []claims.SessionClaimValidator, tenantId string, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+					claimValidatorsAddedByOtherRecipes = append(claimValidatorsAddedByOtherRecipes,
+						SecondFactorClaimValidator.HasValue(true, nil, nil))
+					return claimValidatorsAddedByOtherRecipes, nil
+				}
+				// highlight-end
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
+</TabItem>
+<TabItem value="python">
+
+```python
+from typing import List, Dict, Any
+from supertokens_python.recipe.session.claims import BooleanClaim
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface, SessionClaimValidator
+
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+
+def override_session_functions(original_implementation: RecipeInterface):
+
+    # highlight-start
+    async def get_global_claim_validators(
+        tenant_id: str,
+        user_id: str,
+        claim_validators_added_by_other_recipes: List[SessionClaimValidator],
+        user_context: Dict[str, Any],
+    ):
+        return claim_validators_added_by_other_recipes + [SecondFactorClaim.validators.has_value(True)]
+    # highlight-end
+
+    original_implementation.get_global_claim_validators = get_global_claim_validators
+    return original_implementation
+
+session.init(override=session.InputOverrideConfig(override_session_functions))
+```
+
+</TabItem>
+</BackendSDKTabs>
+
+## Protecting specific API routes
+
+If instead, you want to enforce 2FA just on certain API routes, you can add the validator only when calling the `verifySession` function:
+
+<BackendSDKTabs>
+<TabItem value="nodejs">
+<NodeJSFrameworkSubTabs>
+<TabItem value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+let app = express();
+
+app.post("/like-comment", verifySession({
+    // highlight-start
+    overrideGlobalClaimValidators: (globalValidators) => [
+        ...globalValidators, 
+        SecondFactorClaim.validators.hasValue(true),
+    ]
+    // highlight-end
+}), (req: SessionRequest, res) => {
+    //....
+});
+```
+
+</TabItem>
+<TabItem value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import { SessionRequest } from "supertokens-node/framework/hapi";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/like-comment",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    // highlight-start
+                    overrideGlobalClaimValidators: (globalValidators) => [
+                        ...globalValidators, 
+                        SecondFactorClaim.validators.hasValue(true),
+                    ]
+                    // highlight-end
+                })
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        //...
+    }
+})
+```
+</TabItem>
+<TabItem value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+let fastify = Fastify();
+
+//highlight-start
+fastify.post("/like-comment", {
+    preHandler: verifySession({
+        // highlight-start
+        overrideGlobalClaimValidators: (globalValidators) => [
+            ...globalValidators, 
+            SecondFactorClaim.validators.hasValue(true),
+        ]
+        // highlight-end
+    }),
+}, (req: SessionRequest, res) => {
+    //....
+});
+```
+
+</TabItem>
+<TabItem value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEventV2 } from "supertokens-node/framework/awsLambda";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+async function likeComment(awsEvent: SessionEventV2) {
+    //....
+};
+
+exports.handler = verifySession(likeComment, {
+    // highlight-start
+    overrideGlobalClaimValidators: (globalValidators) => [
+        ...globalValidators, 
+        SecondFactorClaim.validators.hasValue(true),
+    ]
+    // highlight-end
+});
+```
+
+</TabItem>
+<TabItem value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+let router = new KoaRouter();
+
+//highlight-start
+router.post("/like-comment", verifySession({
+    // highlight-start
+    overrideGlobalClaimValidators: (globalValidators) => [
+        ...globalValidators, 
+        SecondFactorClaim.validators.hasValue(true),
+    ]
+    // highlight-end
+}), (ctx: SessionContext, next) => {
+    //....
+});
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import { SessionContext } from "supertokens-node/framework/loopback";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+class LikeComment {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/like-comment")
+    @intercept(verifySession({
+        // highlight-start
+        overrideGlobalClaimValidators: (globalValidators) => [
+            ...globalValidators, 
+            SecondFactorClaim.validators.hasValue(true),
+        ]
+        // highlight-end
+    }))
+    @response(200)
+    handler() {
+        //....
+    }
+}
+```
+
+</TabItem>
+<TabItem value="nextjs">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+export default async function likeComment(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                // highlight-start
+                overrideGlobalClaimValidators: (globalValidators) => [
+                    ...globalValidators, 
+                    SecondFactorClaim.validators.hasValue(true),
+                ]
+                // highlight-end
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+    //....
+}
+```
+
+</TabItem>
+<TabItem value="nextjs-app">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withSession(request, async (err, session) => {
+        if (err) {
+            return NextResponse.json(err, { status: 500 });
+        }
+        //....
+        return NextResponse.json({});
+    },
+    {
+        // highlight-start
+        overrideGlobalClaimValidators: async function (globalClaimValidators) {
+            return [
+                ...globalClaimValidators,
+                SecondFactorClaim.validators.hasValue(true),
+            ]
+        }
+        // highlight-end
+    });
+}
+```
+
+</TabItem>
+<TabItem value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Session } from "@nestjs/common";
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import { VerifySessionOptions } from "supertokens-node/recipe/session"; // typecheck-only, removed from output
+declare class AuthGuard { constructor(verifyOpts: VerifySessionOptions); canActivate: any } // typecheck-only, removed from output
+import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // typecheck-only, removed from output
+declare const SecondFactorClaim: BooleanClaim; // typecheck-only, removed from output
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  // For more information about this guard please read our NestJS guide.
+  @UseGuards(new AuthGuard({
+      // highlight-start
+      overrideGlobalClaimValidators: (globalValidators) => [
+        ...globalValidators,
+        SecondFactorClaim.validators.hasValue(true),
+      ]
+    // highlight-end
+  })) 
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    return true;
+  }
+}
+```
+</TabItem>
+</NodeJSFrameworkSubTabs>
+</TabItem>
+<TabItem value="go">
+<GoFrameworkSubTabs>
+<TabItem value="http">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	// highlight-start
+	_, SecondFactorClaimValidator := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
+
+	http.ListenAndServe("SERVER ADDRESS", corsMiddleware(
+		supertokens.Middleware(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			// Handle your APIs..
+			if r.URL.Path == "/like-comment" {
+
+				session.VerifySession(&sessmodels.VerifySessionOptions{
+					// highlight-start
+					OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+						globalClaimValidators = append(globalClaimValidators,
+							SecondFactorClaimValidator.HasValue(true, nil, nil))
+						return globalClaimValidators, nil
+					},
+					// highlight-end
+				}, likeCommentAPI).ServeHTTP(rw, r)
+				return
+			}
+		}))))
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(response http.ResponseWriter, r *http.Request) {
+		//...
+	})
+}
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	// If it comes here, the user has completed 2fa.
+}
+```
+</TabItem>
+<TabItem value="gin">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	// highlight-start
+	_, SecondFactorClaimValidator := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
+
+	router := gin.New()
+
+	router.GET("/like-comment", verifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators,
+				SecondFactorClaimValidator.HasValue(true, nil, nil))
+			return globalClaimValidators, nil
+		},
+		// highlight-end
+	}), likeComment)
+}
+
+// Wrap session.VerifySession to work with Gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func likeComment(c *gin.Context) {
+	// If it comes here, the user has completed 2fa.
+}
+```
+
+</TabItem>
+<TabItem value="chi">
+
+```go
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	// highlight-start
+	_, SecondFactorClaimValidator := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
+
+	r := chi.NewRouter()
+
+	r.Get("/like-comment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators,
+				SecondFactorClaimValidator.HasValue(true, nil, nil))
+			return globalClaimValidators, nil
+		},
+		// highlight-end
+	}, likeComment))
+}
+
+func likeComment(w http.ResponseWriter, r *http.Request) {
+	// If it comes here, the user has completed 2fa.
+}
+```
+
+</TabItem>
+<TabItem value="mux">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	// highlight-start
+	_, SecondFactorClaimValidator := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
+		return false, nil
+	}, nil)
+	// highlight-end
+	router := mux.NewRouter()
+
+	router.HandleFunc("/like-comment",
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			// highlight-start
+			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+				globalClaimValidators = append(globalClaimValidators,
+					SecondFactorClaimValidator.HasValue(true, nil, nil))
+				return globalClaimValidators, nil
+			},
+			// highlight-end
+		}, likeComment)).Methods(http.MethodGet)
+}
+
+func likeComment(w http.ResponseWriter, r *http.Request) {
+	// If it comes here, the user has completed 2fa.
+}
+```
+
+</TabItem>
+</GoFrameworkSubTabs>
+</TabItem>
+<TabItem value="python">
+
+
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+from supertokens_python.recipe.session.claims import BooleanClaim
+
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+
+@app.post('/like_comment')  # type: ignore
+async def like_comment(session: SessionContainer = Depends(
+        verify_session(
+            # highlight-start
+            # We add the SecondFactorClaim's has_value(True) validator
+            override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+            [SecondFactorClaim.validators.has_value(True)]
+            # highlight-end
+        )
+)):
+    # All validator checks have passed and the user has completed 2FA
+    pass
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session.claims import BooleanClaim
+
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+
+@app.route('/update-jwt', methods=['POST'])  # type: ignore
+@verify_session(
+    # highlight-start
+    # We add the SecondFactorClaim's has_value(True) validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [SecondFactorClaim.validators.has_value(True)]
+    # highlight-end
+)
+def like_comment():
+    # All validator checks have passed and the user has completed 2FA
+    pass
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.session.claims import BooleanClaim
+
+SecondFactorClaim = BooleanClaim(
+    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+
+@verify_session(
+    # highlight-start
+    # We add the SecondFactorClaim's has_value(True) validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [SecondFactorClaim.validators.has_value(True)]
+    # highlight-end
+)
+async def like_comment(request: HttpRequest):
+    # All validator checks have passed and the user has completed 2FA
+    pass
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
+
+</TabItem>
+</BackendSDKTabs>
+
+:::important
+If the `SecondFactorClaim` claim validator fails, then the SDK will send a `403` response.
+:::
