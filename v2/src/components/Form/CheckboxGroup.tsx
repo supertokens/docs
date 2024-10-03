@@ -47,7 +47,7 @@ function CheckboxGroupItem({
   const { checkedValues, onClickItem } = useContext(CheckboxGroupContext);
   return (
     <div
-      className="checkbox-group__item"
+      className={`checkbox-group__item ${checkedValues[value] ? "checkbox-group__item--checked" : ""}`}
       data-checked={checkedValues[value]}
       onClick={() => onClickItem(value)}
     >

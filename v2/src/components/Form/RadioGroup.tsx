@@ -39,7 +39,7 @@ function RadioGroupItem({
   const { checkedValue, onClickItem } = useContext(RadioGroupContext);
   return (
     <div
-      className="radio-group__item"
+      className={`radio-group__item ${checkedValue === value ? "radio-group__item--checked" : ""}`}
       data-checked={checkedValue === value}
       onClick={() => onClickItem(value)}
     >

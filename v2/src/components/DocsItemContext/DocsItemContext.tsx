@@ -128,21 +128,7 @@ export function DocsItemContextProvider({
 }) {
   const [state, dispatch] = useReducer<
     React.Reducer<DocsItemState, DocsItemStateAction>
-  >(docsStateReducer, DefaultState, () => {
-    if (!localStorage) return DefaultState;
-    const storedState = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!storedState) return DefaultState;
-    try {
-      return JSON.parse(storedState) as DocsItemState;
-    } catch (err) {
-      return DefaultState;
-    }
-  });
-
-  useEffect(() => {
-    if (!localStorage) return;
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+  >(docsStateReducer, DefaultState);
 
   const onChangeFrontendType = useCallback(
     (type: DocsItemState["frontend"]["type"]) => {

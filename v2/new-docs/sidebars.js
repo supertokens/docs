@@ -16,6 +16,7 @@ module.exports = {
           type: "category",
           label: "Next Steps",
           items: [
+            "quickstart/next-steps/core-setup",
             "quickstart/next-steps/handling-session-tokens",
             "quickstart/next-steps/securing-routes",
             "quickstart/next-steps/sign-out",
