@@ -188,34 +188,7 @@ module.exports = {
         beforeDefaultRemarkPlugins,
       },
     ],
-    [
-      "@docusaurus/plugin-content-docs",
-      {
-        id: "emailpassword",
-        path: "emailpassword",
-        routeBasePath: "docs/emailpassword",
-        sidebarPath: require.resolve("./emailpassword/sidebars.js"),
-        showLastUpdateTime: true,
-        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins,
-        beforeDefaultRemarkPlugins,
-      },
-    ],
-    [
-      "@docusaurus/plugin-content-docs",
-      {
-        id: "passwordless",
-        path: "passwordless",
-        routeBasePath: "docs/passwordless",
-        sidebarPath: require.resolve("./passwordless/sidebars.js"),
-        showLastUpdateTime: true,
-        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins,
-        beforeDefaultRemarkPlugins,
-      },
-    ],
+
     [
       "@docusaurus/plugin-content-docs",
       {
@@ -229,62 +202,7 @@ module.exports = {
         beforeDefaultRemarkPlugins,
       },
     ],
-    [
-      "@docusaurus/plugin-content-docs",
-      {
-        id: "thirdparty",
-        path: "thirdparty",
-        routeBasePath: "docs/thirdparty",
-        sidebarPath: require.resolve("./thirdparty/sidebars.js"),
-        showLastUpdateTime: true,
-        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins,
-        beforeDefaultRemarkPlugins,
-      },
-    ],
-    [
-      "@docusaurus/plugin-content-docs",
-      {
-        id: "thirdpartyemailpassword",
-        path: "thirdpartyemailpassword",
-        routeBasePath: "docs/thirdpartyemailpassword",
-        sidebarPath: require.resolve("./thirdpartyemailpassword/sidebars.js"),
-        showLastUpdateTime: true,
-        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins,
-        beforeDefaultRemarkPlugins,
-      },
-    ],
-    [
-      "@docusaurus/plugin-content-docs",
-      {
-        id: "thirdpartypasswordless",
-        path: "thirdpartypasswordless",
-        routeBasePath: "docs/thirdpartypasswordless",
-        sidebarPath: require.resolve("./thirdpartypasswordless/sidebars.js"),
-        showLastUpdateTime: true,
-        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins,
-        beforeDefaultRemarkPlugins,
-      },
-    ],
-    [
-      "@docusaurus/plugin-content-docs",
-      {
-        id: "session",
-        path: "session",
-        routeBasePath: "docs/session",
-        sidebarPath: require.resolve("./session/sidebars.js"),
-        showLastUpdateTime: true,
-        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
-        remarkPlugins: remarkPlugins,
-        rehypePlugins: rehypePlugins,
-        beforeDefaultRemarkPlugins,
-      },
-    ],
+
     [
       "@docusaurus/plugin-content-docs",
       {
