@@ -370,7 +370,7 @@ export function ContextValueReplacer({ children }) {
     matches.forEach((match) => {
       const fullMatch = match[0];
       const variableName = match[1];
-
+      if (variableName.startsWith("coreInjector")) return replacedContent;
       const value = getObjectWithDotNotationKey(state, variableName);
       replacedContent = replacedContent.replace(fullMatch, value);
     });
@@ -426,6 +426,8 @@ function getObjectWithDotNotationKey(
   key: string,
   log = false,
 ): unknown {
+  if (!key) return "";
+  if (!obj) return "";
   const keys = key.split(".");
   let current = obj;
 
