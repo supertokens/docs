@@ -65,6 +65,7 @@ function HoverCardInfoIcon() {
       alt="Information"
       className="hover-card__info-icon"
       src="/img/form-question.png"
+      style={{ height: "16px" }}
     />
   );
 }

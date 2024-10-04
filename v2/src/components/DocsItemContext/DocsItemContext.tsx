@@ -386,6 +386,8 @@ export function ContextValueReplacer({ children }) {
     const matches = [...content.matchAll(regex)];
     if (matches.length === 0) return content;
     let replacedContent = content;
+
+    console.log(content);
     console.log(matches);
     console.log(state);
     matches.forEach((match) => {
