@@ -378,26 +378,47 @@ export function ContextValue({ property }: { property: string }) {
   return <>{getObjectWithDotNotationKey(state, property)}</>;
 }
 
+const variableNames = [
+  "^{appInfo.appName}",
+  "^{appInfo.apiDomain}",
+  "^{appInfo.websiteDomain}",
+  "^{appInfo.apiBasePath}",
+  "^{appInfo.websiteBasePath}",
+  "^{authenticationRecipes.emailpassword.enabled}",
+  "^{authenticationRecipes.passwordless.enabled}",
+  "^{authenticationRecipes.thirdparty.enabled}",
+  "^{authenticationRecipes.passwordless.settings.contactMethod}",
+  "^{authenticationRecipes.passwordless.settings.flowType}",
+];
+
 export function ContextValueReplacer({ children }) {
   const state = useContext(DocsItemContext);
 
   const replaceVariables = (content) => {
     const regex = /\^\{([^\}]*)\}/g;
-    const matches = [...content.matchAll(regex)];
-    if (matches.length === 0) return content;
+    // const matches = [...content.matchAll(regex)];
+    // if (matches.length === 0) return content;
     let replacedContent = content;
 
-    console.log(content);
-    console.log(matches);
-    console.log(state);
-    matches.forEach((match) => {
-      const fullMatch = match[0];
-      const variableName = match[1];
-      if (!variableName) return replacedContent;
-      if (variableName.startsWith("coreInjector")) return replacedContent;
+    variableNames.forEach((templateVariable) => {
+      const variableName = templateVariable
+        .replaceAll("^{", "")
+        .replaceAll("}", "");
       const value = getObjectWithDotNotationKey(state, variableName);
-      replacedContent = replacedContent.replace(fullMatch, value);
+      replacedContent = replacedContent.replaceAll(templateVariable, value);
     });
+
+    // console.log(content);
+    // console.log(matches);
+    // console.log(state);
+    // matches.forEach((match) => {
+    //   const fullMatch = match[0];
+    //   const variableName = match[1];
+    //   if (!variableName) return replacedContent;
+    //   if (variableName.startsWith("coreInjector")) return replacedContent;
+    //   const value = getObjectWithDotNotationKey(state, variableName);
+    //   replacedContent = replacedContent.replace(fullMatch, value);
+    // });
 
     const commentRegex =
       /<!--\s*start-condition\s+([\w.]+)\s*-->([\s\S]*?)<!--\s*end-condition\s*-->/g;
