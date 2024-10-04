@@ -22,6 +22,7 @@ module.exports = {
             "quickstart/next-steps/sign-out",
             "quickstart/next-steps/auth-redirection",
             "quickstart/next-steps/customize-ui",
+            "quickstart/next-steps/explore-topics",
           ],
         },
       ],
