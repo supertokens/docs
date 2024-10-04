@@ -15,10 +15,6 @@ import LayoutHead from "@theme/LayoutHead";
 import useKeyboardNavigation from "@theme/hooks/useKeyboardNavigation";
 import { ThemeClassNames } from "@docusaurus/theme-common";
 import Head from "@docusaurus/Head";
-import {
-  DocsItemContextProvider,
-  ContextValueReplacer,
-} from "/src/components/DocsItemContext/DocsItemContext";
 import { useLocation } from "@docusaurus/router";
 import "./styles.css";
 import supertokens from "supertokens-website";
@@ -68,29 +64,27 @@ function OriginalLayout(props) {
   useKeyboardNavigation();
   return (
     <LayoutProviders>
-      <DocsItemContextProvider>
-        <LayoutHead {...props} />
+      <LayoutHead {...props} />
 
-        <SkipToContent />
+      <SkipToContent />
 
-        <AnnouncementBar />
+      <AnnouncementBar />
 
-        <CombinationRecipeDocsNotif />
+      <CombinationRecipeDocsNotif />
 
-        <Navbar />
+      <Navbar />
 
-        <div
-          className={clsx(
-            ThemeClassNames.wrapper.main,
-            wrapperClassName,
-            pageClassName,
-          )}
-        >
-          {children}
-        </div>
+      <div
+        className={clsx(
+          ThemeClassNames.wrapper.main,
+          wrapperClassName,
+          pageClassName,
+        )}
+      >
+        {children}
+      </div>
 
-        {!noFooter && <Footer />}
-      </DocsItemContextProvider>
+      {!noFooter && <Footer />}
     </LayoutProviders>
   );
 }

@@ -128,8 +128,24 @@ export function DocsItemContextProvider({
 }) {
   const [state, dispatch] = useReducer<
     React.Reducer<DocsItemState, DocsItemStateAction>
-  >(docsStateReducer, DefaultState);
+  >(docsStateReducer, DefaultState, () => {
+    if (typeof window !== "undefined") {
+      const localStorageState = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      try {
+        const initialState = JSON.parse(localStorageState);
+        return initialState;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return DefaultState;
+  });
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+    }
+  }, [state]);
   const onChangeFrontendType = useCallback(
     (type: DocsItemState["frontend"]["type"]) => {
       dispatch({

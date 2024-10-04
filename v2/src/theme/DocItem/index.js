@@ -304,7 +304,9 @@ function DocItem(props) {
                  */}
                 {shouldAddTitle && <MainHeading>{title}</MainHeading>}
 
-                <DocContent />
+                <DocsItemContextProvider>
+                  <DocContent />
+                </DocsItemContextProvider>
               </div>
 
               {(editUrl || lastUpdatedAt || lastUpdatedBy) && (
@@ -345,4 +347,3 @@ function DocItem(props) {
 }
 
 export default DocItem;
-
