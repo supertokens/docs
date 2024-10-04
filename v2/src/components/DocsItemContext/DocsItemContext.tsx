@@ -131,9 +131,10 @@ export function DocsItemContextProvider({
   >(docsStateReducer, DefaultState, () => {
     if (typeof window !== "undefined") {
       const localStorageState = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (!localStorageState) return DefaultState;
       try {
         const initialState = JSON.parse(localStorageState);
-        return initialState;
+        if (!!initialState) return initialState;
       } catch (e) {
         console.error(e);
       }
@@ -141,11 +142,13 @@ export function DocsItemContextProvider({
     return DefaultState;
   });
 
+  console.log(state);
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && state) {
       window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
     }
   }, [state]);
+
   const onChangeFrontendType = useCallback(
     (type: DocsItemState["frontend"]["type"]) => {
       dispatch({
@@ -383,6 +386,8 @@ export function ContextValueReplacer({ children }) {
     const matches = [...content.matchAll(regex)];
     if (matches.length === 0) return content;
     let replacedContent = content;
+    console.log(matches);
+    console.log(state);
     matches.forEach((match) => {
       const fullMatch = match[0];
       const variableName = match[1];
