@@ -3,24 +3,26 @@ import { recursiveMap } from "../utils";
 import getURI from "../api/webJs";
 import { MOCK_ENABLED } from "../constants";
 
-type Uri = {
-  dateprovider: string;
-  emailpassword: string;
-  emailverification: string;
-  multifactorauth: string;
-  multitenancy: string;
-  passwordless: string;
-  session: string;
-  supertokens: string;
-  thirdparty: string;
-  totp: string;
-  userroles: string;
-  website: string;
-};
+type Uri = Record<string, string>;
 
 type State = {
   uri: Uri | undefined;
 };
+
+function matchAll(pattern: RegExp, haystack: string) {
+  const regex = new RegExp(pattern, "g");
+  const matches: any[] = [];
+
+  const match_result = haystack.match(regex);
+
+  for (const index in match_result) {
+    const item = match_result[index as unknown as number];
+    matches[index as unknown as number] = item.match(new RegExp(pattern));
+  }
+
+  return matches;
+}
+
 export default class WebJsInjector extends React.PureComponent<
   PropsWithChildren<{}>,
   State
@@ -40,14 +42,22 @@ export default class WebJsInjector extends React.PureComponent<
       return value.replace(/\^\{jsdeliver_webjs_[^}]+\}/g, "");
     }
 
-    const uri = this.state.uri;
-    return Object.keys(uri).reduce((acc, key) => {
-      acc = acc.replace(
+    // get all the keys from the mentions
+    const keys = matchAll(/\^\{jsdeliver_webjs_([^}]+)\}/, value).map(
+      (match) => {
+        return match[1];
+      }
+    );
+
+    // replace all the mentions with the corresponding uri
+    keys.forEach((key) => {
+      value = value.replace(
         new RegExp(`\\^\\{jsdeliver_webjs_${key}\\}`, "g"),
-        uri[key as keyof State["uri"]]
+        this.state.uri?.[key] || ""
       );
-      return acc;
-    }, value);
+    });
+
+    return value;
   }
 
   render() {
@@ -63,38 +73,26 @@ export default class WebJsInjector extends React.PureComponent<
 
   async componentDidMount() {
     if (typeof window != "undefined") {
-      if (MOCK_ENABLED) {
+      if (MOCK_ENABLED || window.location.hostname === "test.supertokens.com") {
         if (this.isUnmounting) {
           return;
         }
+
+        const proxy = new Proxy(
+          {},
+          {
+            get(target, name, receiver) {
+              return `https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/${String(
+                name
+              )}.test.js`;
+            },
+          }
+        );
+
         this.setState((oldState) => {
           return {
             ...oldState,
-            uri: {
-              dateprovider:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/dateprovider.test.js",
-              emailpassword:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/emailpassword.test.js",
-              emailverification:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/emailverification.test.js",
-              multifactorauth:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/multifactorauth.test.js",
-              multitenancy:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/multitenancy.test.js",
-              passwordless:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/passwordless.test.js",
-              session:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/session.test.js",
-              supertokens:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/supertokens.test.js",
-              thirdparty:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/thirdparty.test.js",
-              totp: "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/totp.test.js",
-              userroles:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/userroles.test.js",
-              website:
-                "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/website.test.js",
-            },
+            uri: proxy,
           };
         });
       } else {

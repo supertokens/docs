@@ -5,20 +5,7 @@ const URL = API_URL + "/frontend/web-js";
 const VERSION = 0;
 
 export default async function getURI(): Promise<{
-  uri: {
-    dateprovider: string;
-    emailpassword: string;
-    emailverification: string;
-    multifactorauth: string;
-    multitenancy: string;
-    passwordless: string;
-    session: string;
-    supertokens: string;
-    thirdparty: string;
-    totp: string;
-    userroles: string;
-    website: string;
-  };
+  uri: Record<string, string>;
 }> {
   let options: httpNetworking.GETRequestConfig = {
     timeout: 50000,
