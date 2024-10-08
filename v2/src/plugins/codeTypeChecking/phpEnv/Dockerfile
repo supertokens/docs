@@ -1,0 +1,18 @@
+FROM php:7.4-apache
+
+RUN apt-get update && apt-get install -y \
+  libzip-dev \
+  unzip \
+  && docker-php-ext-install zip
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+WORKDIR /app
+
+COPY validate-php.sh .
+COPY snippets/ ./snippets
+COPY composer.json ./snippets/composer.json
+
+RUN chmod +x validate-php.sh
+
+ENTRYPOINT ["./validate-php.sh"]

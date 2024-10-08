@@ -110,6 +110,21 @@ async function addCodeSnippetToEnv(mdFile, isSwiftEnabled) {
             ) {
               currentCodeLanguage = "kotlin";
             } else if (
+              currLineTrimmed === "```php" ||
+              currLineTrimmed.startsWith("```php ")
+            ) {
+              currentCodeLanguage = "php";
+            } else if (
+              currLineTrimmed === "```java" ||
+              currLineTrimmed.startsWith("```java ")
+            ) {
+              currentCodeLanguage = "java";
+            } else if (
+              currLineTrimmed === "```csharp" ||
+              currLineTrimmed.startsWith("```csharp ")
+            ) {
+              currentCodeLanguage = "csharp";
+            } else if (
               currLineTrimmed === "```swift" ||
               currLineTrimmed.startsWith("```swift ")
             ) {
@@ -122,9 +137,6 @@ async function addCodeSnippetToEnv(mdFile, isSwiftEnabled) {
               currLineTrimmed.includes("batch") ||
               currLineTrimmed.includes("text") ||
               currLineTrimmed.includes("json") ||
-              currLineTrimmed.includes("php") ||
-              currLineTrimmed.includes("java") ||
-              currLineTrimmed.includes("c#") ||
               currLineTrimmed.includes("html")
             ) {
               currentCodeLanguage = "ignore";
@@ -393,6 +405,84 @@ async function checkCodeSnippets(language) {
         },
       );
     });
+  } else if (language === "php") {
+    await new Promise((res, rej) => {
+      const buildCommand = `docker build -t supertokens/php-env-type-checking .`;
+      const runCommand = `docker run supertokens/php-env-type-checking`;
+      exec(
+        `cd src/plugins/codeTypeChecking/phpEnv/ && ${buildCommand} && ${runCommand}`,
+        async function (err, stdout, stderr) {
+          if (err) {
+            console.log("\x1b[31m%s\x1b[0m", stdout);
+            console.log("\x1b[31m%s\x1b[0m", err);
+            console.log("=======SETUP INSTRS========\n");
+            console.log(
+              "\x1b[36m%s\x1b[0m",
+              `Make sure that you have docker installed`,
+            );
+            console.log(
+              "\x1b[36m%s\x1b[0m",
+              `Run ${buildCommand} and ${runCommand} inside phpEnv`,
+            );
+            console.log("==========================\n");
+            return rej(err);
+          }
+          res();
+        },
+      );
+    });
+  } else if (language === "java") {
+    await new Promise((res, rej) => {
+      const buildCommand = `docker build -t supertokens/java-env-type-checking .`;
+      const runCommand = `docker run supertokens/java-env-type-checking`;
+      exec(
+        `cd src/plugins/codeTypeChecking/javaEnv/ && ${buildCommand} && ${runCommand}`,
+        async function (err, stdout, stderr) {
+          if (err) {
+            console.log("\x1b[31m%s\x1b[0m", stdout);
+            console.log("\x1b[31m%s\x1b[0m", err);
+            console.log("=======SETUP INSTRS========\n");
+            console.log(
+              "\x1b[36m%s\x1b[0m",
+              `Make sure that you have docker installed`,
+            );
+            console.log(
+              "\x1b[36m%s\x1b[0m",
+              `Run ${buildCommand} and ${runCommand} inside javaEnv`,
+            );
+            console.log("==========================\n");
+            return rej(err);
+          }
+          res();
+        },
+      );
+    });
+  } else if (language === "") {
+    await new Promise((res, rej) => {
+      const buildCommand = `docker build -t supertokens/csharp-env-type-checking .`;
+      const runCommand = `docker run supertokens/csharp-env-type-checking`;
+      exec(
+        `cd src/plugins/codeTypeChecking/csharpEnv/ && ${buildCommand} && ${runCommand}`,
+        async function (err, stdout, stderr) {
+          if (err) {
+            console.log("\x1b[31m%s\x1b[0m", stdout);
+            console.log("\x1b[31m%s\x1b[0m", err);
+            console.log("=======SETUP INSTRS========\n");
+            console.log(
+              "\x1b[36m%s\x1b[0m",
+              `Make sure that you have docker installed`,
+            );
+            console.log(
+              "\x1b[36m%s\x1b[0m",
+              `Run ${buildCommand} and ${runCommand} inside phpEnv`,
+            );
+            console.log("==========================\n");
+            return rej(err);
+          }
+          res();
+        },
+      );
+    });
   } else {
     throw new Error("Unsupported language in checkCodeSnippets");
   }
@@ -634,6 +724,108 @@ Enabled: true,
               "src/plugins/codeTypeChecking/pythonEnv/snippets/" +
                 folderName +
                 "/main.py",
+              codeSnippet,
+              function (err) {
+                if (err) {
+                  rej(err);
+                } else {
+                  res();
+                }
+              },
+            );
+          }
+        },
+      );
+    });
+  } else if (language === "php") {
+    codeSnippet = `// ${mdFile}\n${codeSnippet}`;
+    let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+    await new Promise(async (res, rej) => {
+      fs.mkdir(
+        "src/plugins/codeTypeChecking/phpEnv/snippets/" + folderName,
+        { recursive: true },
+        async (err) => {
+          if (err) {
+            rej(err);
+          } else {
+            await assertThatUserIsNotRemovedDocsVariableByMistake(
+              "src/plugins/codeTypeChecking/phpEnv/snippets/" +
+                folderName +
+                "/index.php",
+              codeSnippet,
+            );
+            fs.writeFile(
+              "src/plugins/codeTypeChecking/phpEnv/snippets/" +
+                folderName +
+                "/index.php",
+              codeSnippet,
+              function (err) {
+                if (err) {
+                  rej(err);
+                } else {
+                  res();
+                }
+              },
+            );
+          }
+        },
+      );
+    });
+  } else if (language === "java") {
+    codeSnippet = `// ${mdFile}\n${codeSnippet}`;
+    let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+    await new Promise(async (res, rej) => {
+      fs.mkdir(
+        "src/plugins/codeTypeChecking/javaEnv/snippets/" + folderName,
+        { recursive: true },
+        async (err) => {
+          if (err) {
+            rej(err);
+          } else {
+            await assertThatUserIsNotRemovedDocsVariableByMistake(
+              "src/plugins/codeTypeChecking/javaEnv/snippets/" +
+                folderName +
+                "/sample.java",
+              codeSnippet,
+            );
+            fs.writeFile(
+              "src/plugins/codeTypeChecking/javaEnv/snippets/" +
+                folderName +
+                "/sample.java",
+              codeSnippet,
+              function (err) {
+                if (err) {
+                  rej(err);
+                } else {
+                  res();
+                }
+              },
+            );
+          }
+        },
+      );
+    });
+  } else if (language === "csharp") {
+    codeSnippet = `// ${mdFile}\n${codeSnippet}`;
+    let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
+    await new Promise(async (res, rej) => {
+      fs.mkdir(
+        "src/plugins/codeTypeChecking/csharpEnv/snippets/" + folderName,
+        { recursive: true },
+        async (err) => {
+          if (err) {
+            rej(err);
+          } else {
+            await assertThatUserIsNotRemovedDocsVariableByMistake(
+              "src/plugins/codeTypeChecking/csharpEnv/snippets/" +
+                folderName +
+                "/sample.cs",
+              codeSnippet,
+            );
+            fs.writeFile(
+              "src/plugins/codeTypeChecking/csharpEnv/snippets/" +
+                folderName +
+                "/sample.cs",
               codeSnippet,
               function (err) {
                 if (err) {
