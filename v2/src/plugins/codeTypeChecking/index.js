@@ -457,7 +457,7 @@ async function checkCodeSnippets(language) {
         },
       );
     });
-  } else if (language === "") {
+  } else if (language === "csharp") {
     await new Promise((res, rej) => {
       const buildCommand = `docker build -t supertokens/csharp-env-type-checking .`;
       const runCommand = `docker run supertokens/csharp-env-type-checking`;
@@ -1178,4 +1178,3 @@ module.exports = {
   checkCodeSnippets,
   replaceCustomPlaceholdersInLine,
 };
-

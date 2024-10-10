@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0
 
 WORKDIR /app
 
-COPY validate-file.sh .
+COPY validate-csharp.sh .
 COPY snippets ./snippets
 COPY snippets.csproj ./snippets/snippets.csproj
 
