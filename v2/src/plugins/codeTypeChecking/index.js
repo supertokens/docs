@@ -409,6 +409,7 @@ async function checkCodeSnippets(language) {
     await new Promise((res, rej) => {
       const buildCommand = `docker build -t supertokens/php-env-type-checking .`;
       const runCommand = `docker run supertokens/php-env-type-checking`;
+
       exec(
         `cd src/plugins/codeTypeChecking/phpEnv/ && ${buildCommand} && ${runCommand}`,
         async function (err, stdout, stderr) {
@@ -433,55 +434,45 @@ async function checkCodeSnippets(language) {
     });
   } else if (language === "java") {
     await new Promise((res, rej) => {
-      const buildCommand = `docker build -t supertokens/java-env-type-checking .`;
-      const runCommand = `docker run supertokens/java-env-type-checking`;
-      exec(
-        `cd src/plugins/codeTypeChecking/javaEnv/ && ${buildCommand} && ${runCommand}`,
-        async function (err, stdout, stderr) {
-          if (err) {
-            console.log("\x1b[31m%s\x1b[0m", stdout);
-            console.log("\x1b[31m%s\x1b[0m", err);
-            console.log("=======SETUP INSTRS========\n");
-            console.log(
-              "\x1b[36m%s\x1b[0m",
-              `Make sure that you have docker installed`,
-            );
-            console.log(
-              "\x1b[36m%s\x1b[0m",
-              `Run ${buildCommand} and ${runCommand} inside javaEnv`,
-            );
-            console.log("==========================\n");
-            return rej(err);
-          }
-          res();
-        },
-      );
+      // const buildCommand = `docker build -t supertokens/java-env-type-checking .`;
+      // const runCommand = `docker run supertokens/java-env-type-checking`;
+      const validateCommand = `cd src/plugins/codeTypeChecking/javaEnv/ && chmod +x ./validate-java.sh && ./validate-java.sh`;
+      exec(`${validateCommand}`, async function (err, stdout, stderr) {
+        if (err) {
+          console.log("\x1b[31m%s\x1b[0m", stdout);
+          console.log("\x1b[31m%s\x1b[0m", err);
+          console.log("=======SETUP INSTRS========\n");
+          console.log(
+            "\x1b[36m%s\x1b[0m",
+            `Make sure that you have docker installed`,
+          );
+          console.log("\x1b[36m%s\x1b[0m", `Run ${validateCommand}`);
+          console.log("==========================\n");
+          return rej(err);
+        }
+        res();
+      });
     });
   } else if (language === "csharp") {
     await new Promise((res, rej) => {
-      const buildCommand = `docker build -t supertokens/csharp-env-type-checking .`;
-      const runCommand = `docker run supertokens/csharp-env-type-checking`;
-      exec(
-        `cd src/plugins/codeTypeChecking/csharpEnv/ && ${buildCommand} && ${runCommand}`,
-        async function (err, stdout, stderr) {
-          if (err) {
-            console.log("\x1b[31m%s\x1b[0m", stdout);
-            console.log("\x1b[31m%s\x1b[0m", err);
-            console.log("=======SETUP INSTRS========\n");
-            console.log(
-              "\x1b[36m%s\x1b[0m",
-              `Make sure that you have docker installed`,
-            );
-            console.log(
-              "\x1b[36m%s\x1b[0m",
-              `Run ${buildCommand} and ${runCommand} inside phpEnv`,
-            );
-            console.log("==========================\n");
-            return rej(err);
-          }
-          res();
-        },
-      );
+      // const buildCommand = `docker build -t supertokens/csharp-env-type-checking .`;
+      // const runCommand = `docker run supertokens/csharp-env-type-checking`;
+      const validateCommand = `cd src/plugins/codeTypeChecking/csharpEnv/ && chmod +x ./validate-csharp.sh && ./validate-csharp.sh`;
+      exec(`${validateCommand}`, async function (err, stdout, stderr) {
+        if (err) {
+          console.log("\x1b[31m%s\x1b[0m", stdout);
+          console.log("\x1b[31m%s\x1b[0m", err);
+          console.log("=======SETUP INSTRS========\n");
+          console.log(
+            "\x1b[36m%s\x1b[0m",
+            `Make sure that you have docker installed`,
+          );
+          console.log("\x1b[36m%s\x1b[0m", `Run ${validateCommand}`);
+          console.log("==========================\n");
+          return rej(err);
+        }
+        res();
+      });
     });
   } else {
     throw new Error("Unsupported language in checkCodeSnippets");

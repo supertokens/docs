@@ -4,7 +4,6 @@ WORKDIR /app
 
 COPY validate-csharp.sh .
 COPY snippets ./snippets
-COPY snippets.csproj ./snippets/snippets.csproj
 
 RUN chmod +x validate-csharp.sh
 

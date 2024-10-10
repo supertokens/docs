@@ -207,18 +207,18 @@ module.exports = function (context, opts) {
           ) {
             await checkCodeSnippets("dart");
           }
-          // if (
-          //   splittedCheck.filter((i) => i === "all").length >= 1 ||
-          //   splittedCheck.filter((i) => i === "java").length >= 1
-          // ) {
-          //   await checkCodeSnippets("java");
-          // }
-          // if (
-          //   splittedCheck.filter((i) => i === "all").length >= 1 ||
-          //   splittedCheck.filter((i) => i === "csharp").length >= 1
-          // ) {
-          //   await checkCodeSnippets("csharp");
-          // }
+          if (
+            splittedCheck.filter((i) => i === "all").length >= 1 ||
+            splittedCheck.filter((i) => i === "java").length >= 1
+          ) {
+            await checkCodeSnippets("java");
+          }
+          if (
+            splittedCheck.filter((i) => i === "all").length >= 1 ||
+            splittedCheck.filter((i) => i === "csharp").length >= 1
+          ) {
+            await checkCodeSnippets("csharp");
+          }
           // if (
           //   splittedCheck.filter((i) => i === "all").length >= 1 ||
           //   splittedCheck.filter((i) => i === "php").length >= 1

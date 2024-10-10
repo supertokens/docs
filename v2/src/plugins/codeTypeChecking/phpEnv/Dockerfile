@@ -1,4 +1,4 @@
-FROM php:7.4-apache
+FROM php:8.2-apache
 
 RUN apt-get update && apt-get install -y \
   libzip-dev \
@@ -11,7 +11,6 @@ WORKDIR /app
 
 COPY validate-php.sh .
 COPY snippets/ ./snippets
-COPY composer.json ./snippets/composer.json
 
 RUN chmod +x validate-php.sh
 
