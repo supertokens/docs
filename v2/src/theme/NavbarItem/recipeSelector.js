@@ -32,12 +32,18 @@ export default function RecipeSelector(props) {
         return "User Roles Recipe";
       case "mfa":
         return "Multi factor auth";
-      case "microservice_auth":
-        return "Microservice Auth";
+      case "private-access-token-authentication":
+        return "Private Access Token Authentication";
       case "userdashboard":
         return "User Management Dashboard";
       case "multitenancy":
         return "Multi Tenancy";
+      case "anomaly_detection":
+        return "Attack Protection Suite";
+      case "attackprotectionsuite":
+        return "Attack Protection Suite";
+      case "oauth":
+        return "OAuth 2.0";
       default:
         return "Select Recipe";
     }
@@ -167,11 +173,11 @@ export default function RecipeSelector(props) {
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
-                active: activeSelector("microservice_auth"),
+                active: activeSelector("private-access-token-authentication"),
               })}
             >
-              <a href="/docs/microservice_auth/introduction">
-                Microservice Authentication
+              <a href="/docs/private-access-token-authentication/introduction">
+                Private Access Token Authentication
               </a>
             </li>
             <li
@@ -191,6 +197,13 @@ export default function RecipeSelector(props) {
               <a href="/docs/attackprotectionsuite/introduction">
                 Attack Protection Suite
               </a>
+            </li>
+            <li
+              className={clsx("recipe_selector__menu__add_ons_items", {
+                active: activeSelector("oauth"),
+              })}
+            >
+              <a href="/docs/oauth/introduction">OAuth 2.0</a>
             </li>
           </ul>
         </div>

@@ -110,7 +110,7 @@ module.exports = {
     },
     prism: {
       theme: require("prism-react-renderer/themes/vsDark"),
-      additionalLanguages: ["kotlin", "java", "swift", "dart"],
+      additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php"],
     },
     algolia: {
       apiKey: "ce04a158637d345fc094ebbfa9a5156a",
@@ -259,6 +259,20 @@ module.exports = {
     [
       "@docusaurus/plugin-content-docs",
       {
+        id: "oauth",
+        path: "oauth",
+        routeBasePath: "docs/oauth",
+        sidebarPath: require.resolve("./oauth/sidebars.js"),
+        showLastUpdateTime: true,
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
+    ],
+    [
+      "@docusaurus/plugin-content-docs",
+      {
         id: "attackprotectionsuite",
         path: "attackprotectionsuite",
         routeBasePath: "docs/attackprotectionsuite",
@@ -385,10 +399,12 @@ module.exports = {
     [
       "@docusaurus/plugin-content-docs",
       {
-        id: "microservice_auth",
-        path: "microservice_auth",
-        routeBasePath: "docs/microservice_auth",
-        sidebarPath: require.resolve("./microservice_auth/sidebars.js"),
+        id: "private-access-token-authentication",
+        path: "private-access-token-authentication",
+        routeBasePath: "docs/private-access-token-authentication",
+        sidebarPath: require.resolve(
+          "./private-access-token-authentication/sidebars.js",
+        ),
         showLastUpdateTime: true,
         editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
