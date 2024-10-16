@@ -120,16 +120,22 @@ from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
 from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions
 from supertokens_python.recipe.emailpassword.types import FormField
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
+from supertokens_python.recipe.session import SessionContainer
+
 
 # highlight-start
-
-
 def override_emailpassword_apis(original_implementation: APIInterface):
     original_sign_up_post = original_implementation.sign_up_post
 
-    async def sign_up_post(form_fields: List[FormField], tenant_id: str,
-                           api_options: APIOptions, user_context: Dict[str, Any]):
+    async def sign_up_post(
+        form_fields: List[FormField],
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
 
         # by default, the userContext Dict is {},
         # we change it to {isSignUp: true}, since this is the
@@ -137,7 +143,14 @@ def override_emailpassword_apis(original_implementation: APIInterface):
         # (being called inside original_sign_up_post)
         # to not create a new session in case userContext["isSignUp"] is True
         user_context["isSignUp"] = True
-        return await original_sign_up_post(form_fields, tenant_id, api_options, user_context)
+        return await original_sign_up_post(
+            form_fields,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            api_options,
+            user_context,
+        )
 
     original_implementation.sign_up_post = sign_up_post
     return original_implementation
@@ -145,16 +158,13 @@ def override_emailpassword_apis(original_implementation: APIInterface):
 
 
 init(
-    app_info=InputAppInfo(
-        api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
     recipe_list=[
         emailpassword.init(
-            override=emailpassword.InputOverrideConfig(
-                apis=override_emailpassword_apis
-            )
+            override=emailpassword.InputOverrideConfig(apis=override_emailpassword_apis)
         )
-    ]
+    ],
 )
 ```
 </TabItem>
@@ -326,24 +336,34 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.framework import BaseRequest
 from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.session.interfaces import GetSessionTokensDangerouslyDict, RecipeInterface, SessionClaimValidator, SessionClaim
+from supertokens_python.recipe.session.interfaces import (
+    GetSessionTokensDangerouslyDict,
+    RecipeInterface,
+    SessionClaimValidator,
+    SessionClaim,
+)
 from supertokens_python.recipe.session.recipe_implementation import RecipeImplementation
 from typing import Dict, Any, Union, List, TypeVar, Optional
 from supertokens_python.recipe import session
 from supertokens_python.recipe.session.utils import TokenTransferMethod
+from supertokens_python.types import RecipeUserId
 
 _T = TypeVar("_T")
+
 
 # highlight-start
 def override_session_functions(original_implementation: RecipeInterface):
     original_create_new_session = original_implementation.create_new_session
 
-    async def create_new_session(user_id: str,
-                                 access_token_payload: Optional[Dict[str, Any]],
-                                 session_data_in_database: Optional[Dict[str, Any]],
-                                 disable_anti_csrf: Optional[bool],
-                                 tenant_id: str,
-                                 user_context: Dict[str, Any]):
+    async def create_new_session(
+        user_id: str,
+        recipe_user_id: RecipeUserId,
+        access_token_payload: Optional[Dict[str, Any]],
+        session_data_in_database: Optional[Dict[str, Any]],
+        disable_anti_csrf: Optional[bool],
+        tenant_id: str,
+        user_context: Dict[str, Any],
+    ):
         if user_context["isSignUp"] is True:
             # The execution will come here only in case
             # a sign up API is calling this function. This is because
@@ -351,49 +371,82 @@ def override_session_functions(original_implementation: RecipeInterface):
             # (see above code).
             return EmptySession(original_implementation)
 
-        return await original_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context)
+        return await original_create_new_session(
+            user_id,
+            recipe_user_id,
+            access_token_payload,
+            session_data_in_database,
+            disable_anti_csrf,
+            tenant_id,
+            user_context,
+        )
+
     original_implementation.create_new_session = create_new_session
     return original_implementation
+
+
 # highlight-end
 
 
 init(
-    app_info=InputAppInfo(
-        api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
     recipe_list=[
         emailpassword.init(
             # see previous step...
         ),
         session.init(
-            override=session.InputOverrideConfig(
-                functions=override_session_functions
-            )
-        )
-    ]
+            override=session.InputOverrideConfig(functions=override_session_functions)
+        ),
+    ],
 )
 
 
 class EmptySession(session.SessionContainer):
     def __init__(self, recipe_implementation: RecipeInterface):
         assert isinstance(recipe_implementation, RecipeImplementation)
-        super().__init__(recipe_implementation,
-                         recipe_implementation.config, "", "", None, "", "", "", {}, None, False, "")
+        super().__init__(
+            recipe_implementation,
+            recipe_implementation.config,
+            "",
+            "",
+            None,
+            "",
+            "",
+            "",
+            RecipeUserId(""),
+            {},
+            None,
+            False,
+            "",
+        )
 
     async def revoke_session(self, user_context: Union[Any, None] = None) -> None:
         pass
 
-    async def get_session_data_from_database(self, user_context: Union[Dict[str, Any], None] = None) -> Dict[str, Any]:
+    async def get_session_data_from_database(
+        self, user_context: Union[Dict[str, Any], None] = None
+    ) -> Dict[str, Any]:
         return {}
 
-    async def update_session_data_in_database(self, new_session_data: Dict[str, Any], user_context: Union[Dict[str, Any], None] = None) -> None:
+    async def update_session_data_in_database(
+        self,
+        new_session_data: Dict[str, Any],
+        user_context: Union[Dict[str, Any], None] = None,
+    ) -> None:
         pass
 
     def get_user_id(self, user_context: Union[Dict[str, Any], None] = None) -> str:
         return ""
 
+    def get_recipe_user_id(
+        self, user_context: Optional[Dict[str, Any]] = None
+    ) -> RecipeUserId:
+        return RecipeUserId("")
+
     def get_access_token_payload(
-            self, user_context: Union[Dict[str, Any], None] = None) -> Dict[str, Any]:
+        self, user_context: Union[Dict[str, Any], None] = None
+    ) -> Dict[str, Any]:
         return {}
 
     def get_handle(self, user_context: Union[Dict[str, Any], None] = None) -> str:
@@ -402,13 +455,20 @@ class EmptySession(session.SessionContainer):
     def get_access_token(self, user_context: Union[Dict[str, Any], None] = None) -> str:
         return ""
 
-    async def get_time_created(self, user_context: Union[Dict[str, Any], None] = None) -> int:
+    async def get_time_created(
+        self, user_context: Union[Dict[str, Any], None] = None
+    ) -> int:
         return -1
 
     async def get_expiry(self, user_context: Union[Dict[str, Any], None] = None) -> int:
         return -1
 
-    async def attach_to_request_response(self, request: BaseRequest, transfer_method: TokenTransferMethod, user_context: Union[Dict[str, Any], None] = None):
+    async def attach_to_request_response(
+        self,
+        request: BaseRequest,
+        transfer_method: TokenTransferMethod,
+        user_context: Union[Dict[str, Any], None] = None,
+    ):
         pass
 
     async def assert_claims(
@@ -444,7 +504,9 @@ class EmptySession(session.SessionContainer):
         pass
 
     async def merge_into_access_token_payload(
-        self, access_token_payload_update: Dict[str, Any], user_context: Union[Dict[str, Any], None] = None
+        self,
+        access_token_payload_update: Dict[str, Any],
+        user_context: Union[Dict[str, Any], None] = None,
     ) -> None:
         pass
 
@@ -454,9 +516,9 @@ class EmptySession(session.SessionContainer):
             "accessToken": "",
             "antiCsrfToken": None,
             "frontToken": "",
-            "refreshToken": None
+            "refreshToken": None,
         }
-    
+
     def get_tenant_id(self, user_context: Union[Dict[str, Any], None] = None) -> str:
         return ""
 ```
