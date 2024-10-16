@@ -118,41 +118,48 @@ func main() {
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions
-from supertokens_python.recipe.emailpassword.types import FormField
-from typing import List, Dict, Any, Union
+from supertokens_python.recipe.emailpassword.interfaces import (
+    RecipeInterface,
+    SignUpOkResult,
+)
+from typing import Dict, Any, Union
 from supertokens_python.recipe.session import SessionContainer
 
 
 # highlight-start
-def override_emailpassword_apis(original_implementation: APIInterface):
-    original_sign_up_post = original_implementation.sign_up_post
+def override_emailpassword_functions(original_implementation: RecipeInterface):
+    original_sign_up = original_implementation.sign_up
 
-    async def sign_up_post(
-        form_fields: List[FormField],
+    async def sign_up(
+        email: str,
+        password: str,
         tenant_id: str,
         session: Union[SessionContainer, None],
         should_try_linking_with_session_user: Union[bool, None],
-        api_options: APIOptions,
         user_context: Dict[str, Any],
     ):
-
-        # by default, the userContext Dict is {},
-        # we change it to {isSignUp: true}, since this is the
-        # sign up API, and this will tell the create_new_session function
-        # (being called inside original_sign_up_post)
-        # to not create a new session in case userContext["isSignUp"] is True
         user_context["isSignUp"] = True
-        return await original_sign_up_post(
-            form_fields,
+        resp = await original_sign_up(
+            email,
+            password,
             tenant_id,
             session,
             should_try_linking_with_session_user,
-            api_options,
             user_context,
         )
 
-    original_implementation.sign_up_post = sign_up_post
+        if isinstance(resp, SignUpOkResult) and len(resp.user.login_methods) == 1:
+            # This is called during the sign up API for email password login,
+            # but before calling the createNewSession function.
+            # We override the recipe function as shown here,
+            # and then set the relevant context only if it's a new user.
+            # The user_context["isSignUp"] = True is set earlier in the function,
+            # so we don't need to set it again here.
+            user_context["isSignUp"] = True
+
+        return resp
+
+    original_implementation.sign_up = sign_up
     return original_implementation
 # highlight-end
 
@@ -162,7 +169,9 @@ init(
     framework="...",  # type: ignore
     recipe_list=[
         emailpassword.init(
-            override=emailpassword.InputOverrideConfig(apis=override_emailpassword_apis)
+            override=emailpassword.InputOverrideConfig(
+                functions=override_emailpassword_functions
+            )
         )
     ],
 )
