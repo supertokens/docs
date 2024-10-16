@@ -240,49 +240,67 @@ func main() {
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import session, emailpassword
-from supertokens_python.recipe.emailpassword.interfaces import RecipeInterface, SignUpOkResult
-from typing import Dict, Any
+from supertokens_python.recipe.emailpassword.interfaces import (
+    RecipeInterface,
+    SignUpOkResult,
+)
+from typing import Dict, Any, Union
+from supertokens_python.recipe.session.interfaces import SessionContainer
+
 
 # highlight-start
-def override_emailpassword_functions(original_implementation: RecipeInterface) -> RecipeInterface:
+def override_emailpassword_functions(
+    original_implementation: RecipeInterface,
+) -> RecipeInterface:
     original_sign_up = original_implementation.sign_up
-    
+
     async def sign_up(
         email: str,
         password: str,
         tenant_id: str,
-        user_context: Dict[str, Any]
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        user_context: Dict[str, Any],
     ):
-        result = await original_sign_up(email, password, tenant_id, user_context)
+        result = await original_sign_up(
+            email,
+            password,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            user_context,
+        )
 
-        if isinstance(result, SignUpOkResult):
-            id = result.user.user_id
-            email = result.user.email
+        if isinstance(result, SignUpOkResult) and len(result.user.login_methods) == 1:
+            id = result.user.id
+            emails = result.user.emails
             print(id)
-            print(email)
-            
-            # TODO: post sign in logic
-        
+            print(emails)
+
+            # TODO: post sign up logic
+
         return result
-                
+
     original_implementation.sign_up = sign_up
 
     return original_implementation
+
+
 # highlight-end
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    framework='...', # type: ignore
+    framework="...",  # type: ignore
     recipe_list=[
         emailpassword.init(
-			# highlight-start
+            # highlight-start
             override=emailpassword.InputOverrideConfig(
                 functions=override_emailpassword_functions
             ),
-			# highlight-end
+            # highlight-end
         ),
         session.init(),
-    ]
+    ],
 )
 ```
 
@@ -452,40 +470,67 @@ func main() {
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.emailpassword.interfaces import APIInterface, APIOptions, SignUpPostOkResult
+from supertokens_python.recipe.emailpassword.interfaces import (
+    APIInterface,
+    APIOptions,
+    SignUpPostOkResult,
+)
 from supertokens_python.recipe.emailpassword.types import FormField
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
+from supertokens_python.recipe.session.interfaces import SessionContainer
+
 
 # highlight-start
 def override_email_password_apis(original_implementation: APIInterface):
     original_sign_up_post = original_implementation.sign_up_post
 
-    async def sign_up_post(form_fields: List[FormField], tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any]):
+    async def sign_up_post(
+        form_fields: List[FormField],
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
         # First we call the original implementation of sign_up_post.
-        response = await original_sign_up_post(form_fields, tenant_id, api_options, user_context)
+        response = await original_sign_up_post(
+            form_fields,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            api_options,
+            user_context,
+        )
 
         # Post sign up response, we check if it was successful
-        if isinstance(response, SignUpPostOkResult):
-            _ = response.user.user_id
-            __ = response.user.email
-            
+        if (
+            isinstance(response, SignUpPostOkResult)
+            and len(response.user.login_methods) == 1
+        ):
+            _id = response.user.id
+            emails = response.user.emails
+            print(_id)
+            print(emails)
+
             name = ""
 
             for field in form_fields:
                 if field.id == "name":
                     name = field.value
-            
+
             print(name)
 
         return response
 
     original_implementation.sign_up_post = sign_up_post
     return original_implementation
+
+
 # highlight-end
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    framework='...', # type: ignore
+    framework="...",  # type: ignore
     recipe_list=[
         emailpassword.init(
             # highlight-start
@@ -494,7 +539,7 @@ init(
             )
             # highlight-end
         )
-    ]
+    ],
 )
 ```
 </TabItem>
