@@ -120,10 +120,17 @@ func emailNotAllowed(email string) bool {
 
 ```python
 from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.emailpassword.interfaces import APIInterface, SignUpPostOkResult, SignUpPostEmailAlreadyExistsError, APIOptions
+from supertokens_python.recipe.emailpassword.interfaces import (
+    APIInterface,
+    SignUpPostOkResult,
+    EmailAlreadyExistsError,
+    SignUpPostNotAllowedResponse,
+    APIOptions,
+)
 from supertokens_python.recipe.emailpassword.types import FormField
 from typing import Any, Dict, Union, List
 from supertokens_python.types import GeneralErrorResponse
+from supertokens_python.recipe.session import SessionContainer
 
 
 def override_apis(original_implementation: APIInterface):
@@ -131,19 +138,39 @@ def override_apis(original_implementation: APIInterface):
     # first we copy the original implementation
     original_sign_up = original_implementation.sign_up_post
 
-    async def sign_up(form_fields: List[FormField], tenant_id: str,
-                      api_options: APIOptions, user_context: Dict[str, Any]) -> Union[SignUpPostOkResult, SignUpPostEmailAlreadyExistsError, GeneralErrorResponse]:
+    async def sign_up(
+        form_fields: List[FormField],
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ) -> Union[
+        SignUpPostOkResult,
+        EmailAlreadyExistsError,
+        SignUpPostNotAllowedResponse,
+        GeneralErrorResponse,
+    ]:
         email = ""
         for i in range(len(form_fields)):
             if form_fields[i].id == "email":
                 email = form_fields[i].value
 
-        if (is_not_allowed(email)):
+        if is_not_allowed(email):
             # highlight-start
-            return GeneralErrorResponse(message="You are not allowed to sign up. Please contact the app's admin to get permission")
+            return GeneralErrorResponse(
+                message="You are not allowed to sign up. Please contact the app's admin to get permission"
+            )
             # highlight-end
 
-        return await original_sign_up(form_fields, tenant_id, api_options, user_context)
+        return await original_sign_up(
+            form_fields,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            api_options,
+            user_context,
+        )
 
     original_implementation.sign_up_post = sign_up
 
@@ -155,11 +182,7 @@ def is_not_allowed(email: str):
     return True
 
 
-emailpassword.init(
-    override=emailpassword.InputOverrideConfig(
-        apis=override_apis
-    )
-)
+emailpassword.init(override=emailpassword.InputOverrideConfig(apis=override_apis))
 ```
 
 </TabItem>

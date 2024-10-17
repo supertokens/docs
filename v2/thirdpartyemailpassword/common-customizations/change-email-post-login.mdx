@@ -245,13 +245,18 @@ func isValidEmail(email string) bool {
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.emailpassword.syncio import update_email_or_password
-from supertokens_python.recipe.emailpassword.interfaces import UpdateEmailOrPasswordOkResult, UpdateEmailOrPasswordEmailAlreadyExistsError
+from supertokens_python.recipe.emailpassword.interfaces import (
+    UpdateEmailOrPasswordOkResult,
+    UpdateEmailOrPasswordEmailChangeNotAllowedError,
+    EmailAlreadyExistsError,
+)
 from flask import g, request, Flask
 from re import fullmatch
 
 app = Flask(__name__)
 
-@app.route('/change-email', methods=['POST']) # type: ignore
+
+@app.route("/change-email", methods=["POST"])  # type: ignore
 @verify_session()
 def change_email():
     # highlight-start
@@ -259,7 +264,7 @@ def change_email():
 
     request_body = request.get_json()
 
-    email = str(request_body["email"]) # type: ignore
+    email = str(request_body["email"])  # type: ignore
     if request_body is None:
         # handle invalid request body error
         return
@@ -270,22 +275,30 @@ def change_email():
         return
 
     # update the users email
-    user_id = session.get_user_id()
-    update_response = update_email_or_password(user_id, email=email)
+    update_response = update_email_or_password(
+        session.get_recipe_user_id(), email=email
+    )
 
     if isinstance(update_response, UpdateEmailOrPasswordOkResult):
         # TODO send successful email update response
         return
 
-    if isinstance(update_response, UpdateEmailOrPasswordEmailAlreadyExistsError):
+    if isinstance(update_response, EmailAlreadyExistsError):
         # TODO handle error, email already exists
+        return
+
+    if isinstance(update_response, UpdateEmailOrPasswordEmailChangeNotAllowedError):
+        # This is possible if you have enabled account linking.
+        # See our docs for account linking to know more about this.
+        # TODO: tell the user to contact support.
         return
 
     raise Exception("Should never reach here")
 
     # highlight-end
 
-async def is_valid_email(value: str) -> bool:
+
+def is_valid_email(value: str) -> bool:
     return (
         fullmatch(
             r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,'
@@ -294,7 +307,6 @@ async def is_valid_email(value: str) -> bool:
         )
         is not None
     )
-
 ```
 
 </TabItem>
@@ -615,31 +627,32 @@ func isValidEmail(email string) bool {
 ```python
 from supertokens_python.recipe.session.framework.flask import verify_session
 from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.emailpassword.syncio import ( 
+from supertokens_python.recipe.emailpassword.syncio import (
     update_email_or_password,
-    get_user_by_id,
-    get_user_by_email,
 )
 from supertokens_python.recipe.emailpassword.interfaces import (
     UpdateEmailOrPasswordOkResult,
-    UpdateEmailOrPasswordEmailAlreadyExistsError,
+    EmailAlreadyExistsError,
 )
-
+from supertokens_python.syncio import get_user, list_users_by_account_info
+from supertokens_python.types import AccountInfo
 from supertokens_python.recipe.emailverification.syncio import (
     is_email_verified,
-    send_email_verification_email,   
+    send_email_verification_email,
 )
 
 from flask import g, request, Flask
 from re import fullmatch
+from supertokens_python.recipe.accountlinking.syncio import is_email_change_allowed
 
 app = Flask(__name__)
 
-@app.route('/change-email', methods=['POST']) # type: ignore
+
+@app.route("/change-email", methods=["POST"])  # type: ignore
 @verify_session()
 def change_email():
     # highlight-start
-    session: SessionContainer = g.supertokens # type: ignore
+    session: SessionContainer = g.supertokens  # type: ignore
 
     request_body = request.get_json()
 
@@ -657,35 +670,51 @@ def change_email():
     # Then, we check if the email is verified for this user ID or not.
     # It is important to understand that SuperTokens stores email verification
     # status based on the user ID AND the email, and not just the email.
-    is_verified = is_email_verified(user_id, request_body["email"])
-    
+    is_verified = is_email_verified(session.get_recipe_user_id(), request_body["email"])
+
     if not is_verified:
+        if not is_email_change_allowed(
+            session.get_recipe_user_id(), request_body["email"], False
+        ):
+            # Email change is not allowed, send a 400 error
+            return {"error": "Email change not allowed"}, 400
         # Before sending a verification email, we check if the email is already
         # being used by another user. If it is, we throw an error.
-        user = get_user_by_id(user_id)
+        user = get_user(user_id)
 
         if user is not None:
             for tenant_id in user.tenant_ids:
-                user_with_email = get_user_by_email(tenant_id, request_body["email"])
-
-                if user_with_email is not None and user_with_email.user_id != user_id:
-                    # TODO handle error, email already exists with another user.
-                    return
+                users_with_same_email = list_users_by_account_info(
+                    tenant_id, AccountInfo(email=request_body["email"])
+                )
+                for curr_user in users_with_same_email:
+                    # Since one user can be shared across many tenants, we need to check if
+                    # the email already exists in any of the tenants that belongs to this user.
+                    if curr_user.id != user_id:
+                        # TODO handle error, email already exists with another user.
+                        return
 
         # Create and send the email verification link to the user for the new email.
-        send_email_verification_email(session.get_tenant_id(), user_id, request_body["email"])
-            
+        send_email_verification_email(
+            session.get_tenant_id(),
+            user_id,
+            session.get_recipe_user_id(),
+            request_body["email"],
+        )
+
         # TODO send successful email verification response
         return
-    
+
     # update the users email
-    update_response = update_email_or_password(user_id, email=request_body["email"])
+    update_response = update_email_or_password(
+        session.get_recipe_user_id(), email=request_body["email"]
+    )
 
     if isinstance(update_response, UpdateEmailOrPasswordOkResult):
         # TODO send successful email update response
         return
 
-    if isinstance(update_response, UpdateEmailOrPasswordEmailAlreadyExistsError):
+    if isinstance(update_response, EmailAlreadyExistsError):
         # TODO handle error, email already exists
         return
 
@@ -694,7 +723,7 @@ def change_email():
     raise Exception("Should never reach here")
 
 
-async def is_valid_email(value: str) -> bool:
+def is_valid_email(value: str) -> bool:
     return (
         fullmatch(
             r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,'
@@ -834,25 +863,20 @@ func test() {
 <TabItem value="python">
 
 ```python
-
 from supertokens_python import init, InputAppInfo, SupertokensConfig
 from supertokens_python.recipe import emailpassword, emailverification
 from supertokens_python.recipe.emailverification.interfaces import (
     APIInterface,
-    APIOptions
+    APIOptions,
 )
 
-from supertokens_python.recipe.emailpassword.asyncio import (
-    update_email_or_password
-)
+from supertokens_python.recipe.emailpassword.asyncio import update_email_or_password
 
 from supertokens_python.recipe.emailverification.interfaces import (
-    EmailVerifyPostOkResult
+    EmailVerifyPostOkResult,
 )
 
-from supertokens_python.recipe.session.interfaces import (
-    SessionContainer
-)
+from supertokens_python.recipe.session.interfaces import SessionContainer
 from supertokens_python import (
     InputAppInfo,
     SupertokensConfig,
@@ -862,41 +886,51 @@ from typing import Optional, Dict, Any
 
 
 def override_email_verification_apis(original_implementation: APIInterface):
-    original_email_verification_verify_email_post = original_implementation.email_verify_post
-    
-    async def email_verify_post(token: str, session: Optional[SessionContainer], tenant_id: str, api_options: APIOptions, user_context: Dict[str, Any] ):
+    original_email_verification_verify_email_post = (
+        original_implementation.email_verify_post
+    )
+
+    async def email_verify_post(
+        token: str,
+        session: Optional[SessionContainer],
+        tenant_id: str,
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
         # highlight-start
-        verification_response = await original_email_verification_verify_email_post(token, session, tenant_id, api_options, user_context)
-        
+        verification_response = await original_email_verification_verify_email_post(
+            token, session, tenant_id, api_options, user_context
+        )
+
         if isinstance(verification_response, EmailVerifyPostOkResult):
-            await update_email_or_password(verification_response.user.user_id, verification_response.user.email)
-        
+            await update_email_or_password(
+                verification_response.user.recipe_user_id,
+                verification_response.user.email,
+            )
+
         return verification_response
         # highlight-end
-    
+
     original_implementation.email_verify_post = email_verify_post
     return original_implementation
 
 
 init(
-    supertokens_config=SupertokensConfig(
-        connection_uri="..."
-    ),
+    supertokens_config=SupertokensConfig(connection_uri="..."),
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
     framework="flask",
     recipe_list=[
         emailpassword.init(),
         emailverification.init(
-        "REQUIRED",
-        override=emailverification.InputOverrideConfig(
-            # highlight-start
-            apis=override_email_verification_apis
-            # highlight-end
+            "REQUIRED",
+            override=emailverification.InputOverrideConfig(
+                # highlight-start
+                apis=override_email_verification_apis
+                # highlight-end
+            ),
         ),
-    ),
     ],
 )
-
 ```
 
 </TabItem>
