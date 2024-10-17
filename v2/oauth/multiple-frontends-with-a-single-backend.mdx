@@ -3,6 +3,12 @@ title: Multiple frontend domains with a common backend
 hide_title: true
 ---
 
+
+import NodeJSFrameworkSubTabsServerless from "/src/components/tabs/NodeJSFrameworkSubTabsServerless"
+import FrontendPreBuiltUITabs from "/src/components/tabs/FrontendPreBuiltUITabs"
+import FrontendCustomUITabs from "/src/components/tabs/FrontendCustomUITabs"
+import NpmOrScriptTabs from "/src/components/tabs/NpmOrScriptTabs"
+import FrontendMobileSubTabs from "/src/components/tabs/FrontendMobileSubTabs"
 import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
 import {Question, Answer}from "/src/components/question"
 import OAuthFrontendTabs from "/src/components/tabs/OAuthFrontendTabs"
@@ -19,7 +25,7 @@ Using the actual **OAuth 2.0** terminology, we can say that each **`frontend`** 
 
 :::info
 
-This flow will only work if your frontend applications and your backend are under the same domain.
+If your frontend applications are on the same **domain**, but on different **sub-domains**, you can use [Session Sharing Across Subdomains](/docs/session/common-customizations/sessions/share-sessions-across-sub-domains)
 
 :::
 
@@ -29,13 +35,12 @@ This flow will only work if your frontend applications and your backend are unde
 The authentication flow will work in the following way:
 
 1. The User accesses the `frontend` app
-   - The application `frontend` redirects the user to [**Authorization Service**](/docs/oauth/introduction#authorization-service) login UI.
+   - The application `frontend` redirects the user to [**Authorization Service**](/docs/oauth/introduction#authorization-service) authorize URL.
    - The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the login UI
 2. The User completes the login attempt 
    - The [**Authorization Service**](/docs/oauth/introduction#authorization-service) backend redirects the user to the `callback URL`.
 3. The User accesses the callback URL
    - The `frontend` uses the callback URL information to obtain a **OAuth2 Access Token** from the [**Authorization Service**](/docs/oauth/introduction#authorization-service).
-   - The `frontend` exchanges the **OAuth2 Access Token** for a **SuperTokens Session Access Token**.
 
 :::info
 This guide assumes that you already have setup and configured **SuperTokens** in your [**Authorization Service**](/docs/oauth/introduction#authorization-service). 
@@ -49,8 +54,8 @@ For more information on how to do that please check our [quickstart guide](/docs
 
 ## 1. Enable the OAuth2 features from the Dashboard
 
-You will first have to enable the **OAuth2** features from the **SuperTokens Dashboard**.
-1. Open the **SuperTokens Dashboard**
+You will first have to enable the **OAuth2** features from the **SuperTokens.com Dashboard**.
+1. Open the **SuperTokens.com Dashboard**
 2. Click on the **Enabled Paid Features** button
 3. Click on **Managed Service**
 4. Check the **OAuth 2.0** option
@@ -76,27 +81,28 @@ This can be done by directly calling the **SuperTokens Core** API.
 
 ```bash
 # You will have to run this for each one of your applications
-# Adjust the client_name and redirect_uri based on that
-curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
+# Adjust the clientName and redirectUri based on that
+curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth/clients \
   -H "Content-Type: application/json" \
   -H "api-key: ^{coreInjector_api_key_without_quotes}" \
   -d '{
-      "client_name": "<YOUR_CLIENT_NAME>",
-      "response_types": ["code"],
-      "grant_types": ["authorization_code", "refresh_token"],
+      "clientName": "<YOUR_CLIENT_NAME>",
+      "responseTypes": ["code"],
+      "grantTypes": ["authorization_code", "refresh_token"],
       "tokenEndpointAuthMethod": "none",
       "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-      "redirect_uri": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+      "redirectUri": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
     }'
 ```
 
-- `client_name` - A human-readable name of the client that will be used for identification.
-- `response_types` - Specifies the types of responses your client expects from the [**Authorization Server**](/docs/oauth/introduction#authorization-server). Most of the time, you would need the following two to be present:
+- `clientName` - A human-readable name of the client that will be used for identification.
+- `responseTypes` - Specifies the types of responses your client expects from the [**Authorization Server**](/docs/oauth/introduction#authorization-server). 
     - `code`: Indicates that the [**Client**](/docs/oauth/introduction#client) will receive an **Authorization Code** that will be exchanged for an [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token).
-- `grant_types` - The grant types that the [**Client**](/docs/oauth/introduction#client) will use. 
+- `grantTypes` - The grant types that the [**Client**](/docs/oauth/introduction#client) will use. 
     - `authorization_code`: Allows exchanging the **Authorization Code** for an [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token).
     - `refresh_token`: Allows exchanging the [**OAuth2 Refresh Token**](/docs/oauth/introduction#oauth2-refresh-token) for a new [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token).
-- `redirect_uri` - A list of URIs to which the [**Authorization Server**](/docs/oauth/introduction#authorization-server) will send the user-agent (browser) after completing the authorization step. These can be deep links to mobile or desktop apps as well, but they must be exact URLs, without wildcards.
+- `tokenEndpointAuthMethod` - Indicates that the process of obtaining an **OAuth2 Access Token** will not make use of the client secret 
+- `redirectUri` - A list of URIs to which the [**Authorization Server**](/docs/oauth/introduction#authorization-server) will send the user-agent (browser) after completing the authorization step. These can be deep links to mobile or desktop apps as well, but they must be exact URLs, without wildcards.
 - `scope` -  A space separated string of scopes that the [**Client**](/docs/oauth/introduction#client) will request access to.
     - `offline_access`: You need to include this scope if you want to use the [**OAuth2 Refresh Token**](/docs/oauth/introduction#oauth2-refresh-token) to get a new [**OAuth2 Access Token**](/docs/oauth/introduction#oauth2-access-token).
 
@@ -106,16 +112,11 @@ If the creation was successful, the API will return a response that looks like t
 ```json
 
 {
-    "client_name": "<YOUR_CLIENT_NAME>",
-    "client_id": "<CLIENT_ID>",
-    "client_secret": "<CLIENT_SECRET>",
-    "callback_urls": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+    "clientName": "<YOUR_CLIENT_NAME>",
+    "clientId": "<CLIENT_ID>",
+    "callbackUrls": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
 }
 ```
-
-Based on the client creation process we can also infer two additional values that we will need later on:
-- `authorize_url` corresponds to `^{form_apiDomain}^{form_apiBasePath}oauth/auth`
-- `token_fetch_url` corresponds to `^{form_apiDomain}^{form_apiBasePath}oauth/token`
 
 :::caution
 
@@ -123,6 +124,10 @@ You will have to save this response because we do not persist it internally for 
 In the next steps we will use the values to complete several configurations.
 
 :::
+
+<!-- COPY SECTION -->
+<!-- ./oauth/multiple-frontends-with-separate-backends.mdx -->
+<!-- token-lifespan -->
 
 ### Change the default token lifespan
 
@@ -133,41 +138,48 @@ By default, the tokens used in the authorization flow will have the following li
 
 If you want to change the default values you need to specify additional properties in the [**Client**](/docs/oauth/introduction#client) creation request body.
 Use string values that signify time duration in milliecoseconds, seconds, minutes or hours (e.g. `"2000ms"`, `"60s"`, `"30m"`, `"1h"`).
+There are no limits on the duration of each token.
 
-- **OAuth2 Access Token** - Set the `authorization_code_grant_access_token_lifespan` property.
-- **OAuth2 ID Token** - Set the `authorization_code_grant_id_token_lifespan` property.
-- **OAuth2 Refresh Token** - Set both the `authorization_code_grant_refresh_token_lifespan` and the `refresh_token_grant_refresh_token_lifespan` properties to the same value.
+- **OAuth2 Access Token** - Set the `authorizationCodeGrantAccessTokenLifespan` property.
+- **OAuth2 ID Token** - Set the `authorizationCodeGrantIdTokenLifespan` property.
+- **OAuth2 Refresh Token** - Set both the `authorizationCodeGrantRefreshTokenLifespan` and the `refreshTokenGrantRefreshTokenLifespan` properties to the same value.
 
-### Usage Without Refresh Tokens
+<!-- END COPY SECTION -->
 
-If your use case involves a long lasting session that cannot accomodate the process of changing the [**OAuth2 Refresh Token**](/docs/oauth/introduction#oauth2-refresh-token) when it expires, you can adjust the [**Client**](/docs/oauth/introduction#client) that you are creating. 
-In order to do this you need to:
-  - Omit the `offline_access` scope from the **Client** creation request body. This way we are making sure that we avoid the use of **OAuth2 Refresh Tokens** in our authorization flow.
-  - Set the `authorization_code_grant_access_token_lifespan` property to a high value. You will be allowed to use the token without reauthenticating for a really long time. 
+<!-- COPY SECTION -->
+<!-- ./oauth/multiple-frontends-with-separate-backends.mdx -->
+<!-- token-expiry -->
 
-## 3. Set Up your Authorization Service 
+### Disable Refresh Token Expiry
+
+By default, the **OAuth2 Refresh Token** wil expire after 30 days.
+If your use case cannot accomodate the process of changing the [**OAuth2 Refresh Token**](/docs/oauth/introduction#oauth2-refresh-token) for a new one, you can make it so that it does not expire.
+  
+In order to achieve this behavior just set the `enableRefreshTokenRotation` property to `false` in the [**Client**](/docs/oauth/introduction#client) creation request body.
+
+<!-- END COPY SECTION -->
+
+## 3. Set Up your Authorization Service Backend
 
 
-### Configure the Authorization Service Backend
+### Initialize the OAuth2 Recipes
 
-In your [**Authorization Service**](/docs/oauth/introduction#authorization-service) you will need to initialize the **OAuth2Provider** and the **OAuth2Client** recipes.
+In your [**Authorization Service**](/docs/oauth/introduction#authorization-service) you will need to initialize the **OAuth2Provider** recipe.
 
 <BackendSDKTabs  disableOtherFrameworks>
 <TabItem value="nodejs">
 
-Update the `supertokens.init` call to include the new recipes.
-
-Add the new import statements and update the list of recipes with the new initialization steps.
+Update the `supertokens.init` call to include the new recipe.
 
 ```tsx
 
 import supertokens from "supertokens-node";
 import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
-import OAuth2Client from "supertokens-node/recipe/oauth2client";
 
 supertokens.init({
     supertokens: {
-        connectionURI: "https://try.supertokens.com",
+        connectionURI: "...",
+        apiKey: "...",
     },
     appInfo: {
         appName: "...",
@@ -176,14 +188,6 @@ supertokens.init({
     },
     recipeList: [
       OAuth2Provider.init(),
-      OAuth2Client.init({
-        // Use the values returned from the previous client creation step
-        // Include all the clients that you have created in the previous step
-        providerConfigs: [{
-          "clientId": "<YOUR_CLIENT_ID>",
-          "clientSecret": "<YOUR_CLIENT_SECRET>",
-        }]
-      })
     ]
 });
 ```
@@ -212,7 +216,204 @@ At the moment we do not have support creating OAuth2 providers in the Python SDK
 
 </BackendSDKTabs>
 
-###  Configure the Authorization Service Frontend 
+### Update the CORS configuration
+
+You need to setup the Backend API so that it allows requests from all the frontend domains. 
+
+<BackendSDKTabs  disableOtherFrameworks>
+
+<TabItem value="nodejs">
+
+<NodeJSFrameworkSubTabsServerless>
+<TabItem value="express">
+
+```tsx
+import express from "express";
+import cors from "cors";
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/express";
+
+const app = express();
+ 
+// Add your actual frontend domains here
+const allowedOrigins = ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"];
+
+app.use(cors({
+    // highlight-start
+    origin: function (origin, callback) {
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true)
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
+    allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+    // highlight-end
+}));
+
+```
+
+</TabItem>
+<TabItem value="hapi">
+
+
+```tsx
+import Hapi from "@hapi/hapi";
+import supertokens from "supertokens-node";
+import { plugin } from "supertokens-node/framework/hapi";
+
+let server = Hapi.server({
+    port: 8000,
+    routes: {
+        // highlight-start
+        cors: {
+            // Add your actual frontend domains here
+            origin: ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"],
+            additionalHeaders: [...supertokens.getAllCORSHeaders()],
+            credentials: true,
+        }
+        // highlight-end
+    }
+});
+
+(async () => {
+    // highlight-next-line
+    await server.register(plugin);
+
+    await server.start();
+})();
+
+```
+</TabItem>
+<TabItem value="fastify">
+
+
+```tsx
+import cors from "@fastify/cors";
+import supertokens from "supertokens-node";
+import { plugin } from "supertokens-node/framework/fastify";
+import formDataPlugin from "@fastify/formbody";
+
+import fastifyImport from "fastify";
+
+let fastify = fastifyImport();
+
+// highlight-start
+fastify.register(cors, {
+    // Add your actual frontend domains here
+    origin: ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"],
+    allowedHeaders: ['Content-Type', ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+});
+// highlight-end
+
+(async () => {
+    // highlight-next-line
+    await fastify.register(formDataPlugin);
+    // highlight-next-line
+    await fastify.register(plugin);
+
+    await fastify.listen(8000);
+})();
+
+```
+</TabItem>
+<TabItem value="koa">
+
+
+```tsx
+import Koa from "koa";
+import cors from '@koa/cors';
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/koa";
+
+let app = new Koa();
+
+// Add your actual frontend domains here
+const allowedOrigins = ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"];
+
+app.use(cors({
+    // highlight-start
+    origin: (ctx) => {
+      const origin = ctx.get("Origin");
+      if (allowedDomains.includes(origin)) {
+        return origin;
+      }
+      return '';
+    },
+    allowHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+    // highlight-end
+}));
+
+// highlight-next-line
+app.use(middleware());
+
+```
+
+</TabItem>
+<TabItem value="loopback">
+
+```tsx
+import { RestApplication } from "@loopback/rest";
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/loopback";
+
+// Add your actual frontend domains here
+const allowedOrigins = ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"];
+
+const app = new RestApplication({
+    rest: {
+        cors: {
+            // highlight-start
+            origin: function (origin, callback) {
+              if (allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true)
+              } else {
+                callback(new Error('Not allowed by CORS'))
+              }
+            },
+            allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+            credentials: true
+            // highlight-end
+        }
+    }
+});
+
+// highlight-next-line
+app.middleware(middleware);
+
+```
+
+</TabItem>
+</NodeJSFrameworkSubTabsServerless>
+
+</TabItem>
+
+<TabItem value="go">
+
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Go SDK.
+
+:::
+
+</TabItem>
+
+<TabItem value="python">
+
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Python SDK.
+
+:::
+
+</TabItem>
+
+</BackendSDKTabs>
+
+## 4. Configure the Authorization Service Frontend
 
 Initialize the `OAuth2Provider` recipe on the frontend of your **Authorization Service**. 
 
@@ -223,12 +424,13 @@ all the steps that you have to take into account.
 
 :::
 
+### Initialize the Recipe 
+
 <OAuthFrontendTabs>
 
 
 <TabItem value="react">
 
-1. Update the `SuperTokensConfig` variable to include the `OAuth2Provider` recipe.
 
 Add the import statement for the new recipe and update the list of recipe to also include the new initialization.
 
@@ -249,31 +451,68 @@ SuperTokens.init({
 ```
 
 
-2. Include the pre built UI in the rendering tree.
+#### Include the pre built UI in the rendering tree.
 
 <Question question="Do you use react-router-dom?">
 
 <Answer title="Yes">
 
-- Add the import statement for the pre built UI component.
+```tsx
+import React from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Link
+} from "react-router-dom";
 
-```tsx 
+import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
+import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import OAuth2ProviderPreBuiltUI from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
-```
+import * as reactRouterDom from "react-router-dom";
 
-- Update the `getSuperTokensRoutesForReactRouterDom` function call to include the `OAuth2ProviderPreBuiltUI` component.
+class App extends React.Component {
+    render() {
+        return (
+            <SuperTokensWrapper>
+                <BrowserRouter>
+                    <Routes>
+                        {/*This renders the login UI on the /auth route*/}
+                        {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [OAuth2ProviderPreBuiltUI])}
+                        {/*Your app routes*/}
+                    </Routes>
+                </BrowserRouter>
+            </SuperTokensWrapper>
+        );
+    }
+}
+
+```
 
 </Answer>
 
 <Answer title="No">
 
-- Add the import statement for the pre built UI component.
-
-```tsx 
+```tsx
+import React from 'react';
 import OAuth2ProviderPreBuiltUI from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
-```
+import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
+import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
 
-- Update the `getRoutingComponent` function call to include the `OAuth2ProviderPreBuiltUI` component.
+class App extends React.Component {
+    render() {
+        if (canHandleRoute([OAuth2ProviderPreBuiltUI])) {
+            // This renders the login UI on the /auth route
+            return getRoutingComponent([OAuth2ProviderPreBuiltUI])
+        }
+
+        return (
+            <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>
+        );
+    }
+
+}
+```
 
 </Answer>
 
@@ -284,29 +523,141 @@ import OAuth2ProviderPreBuiltUI from "supertokens-auth-react/recipe/oauth2provid
 
 <TabItem value="angular">
 
-1. Update the `AuthComponent` so that it also includes the `OAuth2Provider` recipe.
-You will have to add a new item in the `recipeList` array, inside the `supertokensUIInit` call.
+Update the `AuthComponent` so that it also includes the `OAuth2Provider` recipe.
+You will have to add a new item in the `recipeList` array.
 
-```tsx
+<AppInfoForm 
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain>
 
-(window as any).supertokensUIOAuth2Provider.init()
+<PreBuiltUIInjector>
 
+```tsx title="/app/auth/auth.component.ts"
+  import {init as supertokensUIInit} from "supertokens-auth-react-script";
+  import supertokensUIOAuth2Provider from "supertokens-auth-react-script/recipe/oauth2provider";
+  import { Component, OnDestroy, AfterViewInit, Renderer2, Inject } from "@angular/core";
+  import { DOCUMENT } from "@angular/common";
+
+  @Component({
+      selector: "app-auth",
+      template: '<div id="supertokensui"></div>',
+  })
+  export class AuthComponent implements OnDestroy, AfterViewInit {
+
+      constructor(
+          private renderer: Renderer2,
+          @Inject(DOCUMENT) private document: Document
+      ) { }
+
+      ngAfterViewInit() {
+          this.loadScript('^{jsdeliver_prebuiltui}');
+      }
+
+      ngOnDestroy() {
+          // Remove the script when the component is destroyed
+          const script = this.document.getElementById('supertokens-script');
+          if (script) {
+              script.remove();
+          }
+      }
+
+      private loadScript(src: string) {
+          const script = this.renderer.createElement('script');
+          script.type = 'text/javascript';
+          script.src = src;
+          script.id = 'supertokens-script';
+          script.onload = () => {
+              supertokensUIInit({
+                  appInfo: {
+                      appName: "^{form_appName}",
+                      apiDomain: "^{form_apiDomain}",
+                      websiteDomain: "^{form_websiteDomain}",
+                      apiBasePath: "^{form_apiBasePath}",
+                      websiteBasePath: "^{form_websiteBasePath}"
+                  },
+                  recipeList: [
+                    // Don't forget to also include the other recipes that you are already using
+                    supertokensUIOAuth2Provider.init()
+                  ],
+              });
+          }
+          this.renderer.appendChild(this.document.body, script);
+      }
+  }
 ```
+
+</PreBuiltUIInjector>
+
+</AppInfoForm>
 
 
 </TabItem>
 
 <TabItem value="vue">
 
-1. Update the `AuthView` component so that it also includes the `OAuth2Provider` recipe.
+<AppInfoForm 
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain>
+
+<PreBuiltUIInjector>
+
+Update the `AuthView` component so that it also includes the `OAuth2Provider` recipe.
 You will have to add a new item in the `recipeList` array, inside the `supertokensUIInit` call.
 
 ```tsx
+    import {init as supertokensUIInit} from "supertokens-auth-react-script";
+    import supertokensUIOAuth2Provider from "supertokens-auth-react-script/recipe/oauth2provider";
+    <script lang="ts">
+        import { defineComponent, onMounted, onUnmounted } from 'vue';
+        export default defineComponent({
+            setup() {
+                const loadScript = (src: string) => {
+                    const script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.src = src;
+                    script.id = 'supertokens-script';
+                    script.onload = () => {
+                        supertokensUIInit({
+                            appInfo: {
+                                appName: "^{form_appName}",
+                                apiDomain: "^{form_apiDomain}",
+                                websiteDomain: "^{form_websiteDomain}",
+                                apiBasePath: "^{form_apiBasePath}",
+                                websiteBasePath: "^{form_websiteBasePath}"
+                            },
+                            recipeList: [
+                              // Don't forget to also include the other recipes that you are already using
+                              supertokensUIOAuth2Provider.init()
+                            ],
+                        });
+                    };
+                    document.body.appendChild(script);
+                };
 
-(window as any).supertokensUIOAuth2Provider.init()
+                onMounted(() => {
+                    loadScript('^{jsdeliver_prebuiltui}');
+                });
 
+                onUnmounted(() => {
+                    const script = document.getElementById('supertokens-script');
+                    if (script) {
+                        script.remove();
+                    }
+                });
+            },
+        });
+    </script>
+
+    <template>
+        <div id="supertokensui" />
+    </template>
 ```
 
+</PreBuiltUIInjector>
+
+</AppInfoForm>
 
     
 </TabItem>
@@ -314,33 +665,179 @@ You will have to add a new item in the `recipeList` array, inside the `supertoke
 </OAuthFrontendTabs>
 
 
-## 4. Update the login flow in your frontend applications
+### Disable Network Interceptors
 
-In your each of your `frontend` applications you will have setup the authentication flow.
+The **Authorization Service Frontend** that you are configuring makes use of two types of access tokens:
+- **SuperTokens Session Access Token**: Used only during the login flow in order to keep track of the authentication state.
+- **OAuth2 Access Token**: Returned after a successfull login attempt. It can be used afterwards to access protected resources.
 
-### 1. Setup SuperTokens Session Management
+By default, the **SuperTokens** frontend SDK will intercept all the network requests that you send to your Backend API and adjust them, based on the **SuperTokens Session Tokens**.
+This allows us to perform operations, such as automatic token refreshing or adding authorization headers, without you having to configure anything else.
 
-First, you will have to configure the **SuperTokens Session Management** recipe.
-There's a thorough guide on how to do this [here](/docs/session/quick-setup/frontend).
-Just follow the steps described there and then return to this page.
+Given that in the scenario that you are implementing the **OAuth2 Access Tokens** are used for authorization. The automatic request interception will end up causing conflicts.
+In order to prevent this you will have to override the `shouldDoInterceptionBasedOnUrl` function in the `Session.init` call.
 
+:::caution
 
-### 2. Configure header based authentication
+The code samples assume that you are using `^{form_apiBasePath}` as the `apiBasePath` for the backend authentication routes.
+If that is different please adjust them based on your use case.
 
-We need to update the `Session.init` call to use header based authentication.
-This has to be done because each of your `frontend` applications will act as a third party domain to the `backend`.
-So we can't rely on `cookie` based authentication since some browsers do not allow third party cookies.
+:::
+
+<OAuthFrontendTabs>
+
+<TabItem value="react">
 
 ```tsx
 import Session from "supertokens-auth-react/recipe/session";
 
 Session.init({
-    // ...
-    tokenTransferMethod: "header"
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
+                    try {
+                        let urlObj = new URL(url);
+                        if (!urlObj.pathname.startsWith("^{form_apiBasePath}")) {
+                            return false;
+                        }
+                    } catch (ignored) { }
+                    return oI.shouldDoInterceptionBasedOnUrl(url, apiDomain, sessionTokenBackendDomain);
+                }
+            }
+        }
+    }
 })
 ```
 
-### 3. Use a generic OAuth2 library to initiate the login flow
+</TabItem>
+
+<TabItem value="angular">
+
+You will have to make changes to the auth route config, as well as to the `supertokens-web-js` SDK config at the root of your application:
+
+This change is in your auth route config.
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
+import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+
+supertokensUISession.init({
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
+                    try {
+                        let urlObj = new URL(url);
+                        if (!urlObj.pathname.startsWith("^{form_apiBasePath}")) {
+                            return false;
+                        }
+                    } catch (ignored) { }
+                    return oI.shouldDoInterceptionBasedOnUrl(url, apiDomain, sessionTokenBackendDomain);
+                }
+            }
+        }
+    }
+})
+```
+
+This change goes in the `supertokens-web-js` SDK config at the root of your application:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+
+Session.init({
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
+                    try {
+                        let urlObj = new URL(url);
+                        if (!urlObj.pathname.startsWith("^{form_apiBasePath}")) {
+                            return false;
+                        }
+                    } catch (ignored) { }
+                    return oI.shouldDoInterceptionBasedOnUrl(url, apiDomain, sessionTokenBackendDomain);
+                }
+            }
+        }
+    }
+})
+```
+
+</TabItem>
+
+<TabItem value="vue">
+
+
+You will have to make changes to the auth route config, as well as to the `supertokens-web-js` SDK config at the root of your application:
+
+This change is in your auth route config.
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
+import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+
+supertokensUISession.init({
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
+                    try {
+                        let urlObj = new URL(url);
+                        if (!urlObj.pathname.startsWith("^{form_apiBasePath}")) {
+                            return false;
+                        }
+                    } catch (ignored) { }
+                    return oI.shouldDoInterceptionBasedOnUrl(url, apiDomain, sessionTokenBackendDomain);
+                }
+            }
+        }
+    }
+})
+```
+
+This change goes in the `supertokens-web-js` SDK config at the root of your application:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+
+Session.init({
+    override: {
+        functions: (oI) => {
+            return {
+                ...oI,
+                shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
+                    try {
+                        let urlObj = new URL(url);
+                        if (!urlObj.pathname.startsWith("^{form_apiBasePath}")) {
+                            return false;
+                        }
+                    } catch (ignored) { }
+                    return oI.shouldDoInterceptionBasedOnUrl(url, apiDomain, sessionTokenBackendDomain);
+                }
+            }
+        }
+    }
+})
+```
+
+</TabItem>
+
+</OAuthFrontendTabs>
+
+The code snippet only allows interception for API endpoints that start with `^{form_apiBasePath}`. 
+This will ensure that calls made from our Frontend SDKs will continue to use the **SuperTokens Session Tokens**. As a result, the authentication flow ends up working properly. 
+
+For the other routes, you have full control on how you want to attach the **OAuth2 Access Tokens** to the API calls.
+
+## 5. Update the login flow in your frontend applications
+
+Use a generic OAuth2 library to handle the login flow
 
 <OAuthFrontendTabs>
 
@@ -351,6 +848,11 @@ Just follow the instructions from the library's page.
 
 The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
 
+- `authority` corresponds to the endpoint of the **Authorization Service** `^{form_apiDomain}^{form_apiBasePath}`
+- `clientID` corresponds to `clientId`
+- `redirectUri` corresponds to a value from `callbackUrls`
+- `scope` corresponds to `scope` 
+    
 </TabItem>
 
 <TabItem value="angular">
@@ -360,8 +862,8 @@ Just follow the instructions escribed [here](https://github.com/manfredsteyer/an
 The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
 
 - `issuer` corresponds to the endpoint of the **Authorization Service** `^{form_apiDomain}^{form_apiBasePath}`
-- `clientID` corresponds to `client_id`
-- `redirectUri` corresponds to a value from `callback_urls`
+- `client_id` corresponds to `clientId`
+- `redirect_uri` corresponds to a value from `callbackUrls`
 - `scope` corresponds to `scope` 
 
 </TabItem>
@@ -371,6 +873,12 @@ The configuration parameters can be determined based on the response that we rec
 We recommend using the [oidc-client-ts](https://github.com/authts/oidc-client-ts?tab=readme-ov-file) library.
 Just follow the instructions described [here](https://github.com/authts/oidc-client-ts/blob/main/docs/protocols/authorization-code-grant-with-pkce.md).
 The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+
+- `issuer` corresponds to the endpoint of the **Authorization Service** `^{form_apiDomain}^{form_apiBasePath}`
+- `client_id` corresponds to `clientId`
+- `redirect_uri` corresponds to a value from `callbackUrls`
+- `scope` corresponds to `scope` 
 
 </TabItem>
     
@@ -382,33 +890,7 @@ If you want to use the [**OAuth2 Refresh Tokens**](/docs/oauth/introduction#oaut
 
 :::
 
-
-### 4. Complete the final token exchange
-
-After you have obtained the **OAuth2 Access Token** you will have to exchange it for a **SuperTokens Session Access Token**.
-
-To do this you will have to call the **Authorization Service** backend API in the following way.
-
-```tsx
-
-async function exchangeTokens(accessToken: string) {
-   const res = await fetch(`^{form_apiDomain}^{form_apiBasePath}oauth/client/signin`, {
-      method: "POST",
-      headers: {
-          "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        oAuthTokens: { access_token: accessToken },
-      }),
-   });
-
-   if(!res.ok) return false;
-   const data = await res.json();
-   return data.status === "OK";
-}
-```
-
-## 5. Test the new authentication flow
+## 6. Test the new authentication flow
 
 With everything set up, you can now test your login flow.
 Just use the setup that you have created in the previous step to check if the authentication flow completes without any issues.

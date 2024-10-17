@@ -67,6 +67,8 @@ async function checkFrontendSDKRelatedDocs(mdPath) {
           `import supertokensUISession from "supertokens-auth-react-script/recipe/session"`,
           `import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword";`,
           `import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword"`,
+          `import supertokensUIOAuth2Provider from "supertokens-auth-react-script/recipe/oauth2provider";`,
+          `import supertokensUIOAuth2Provider from "supertokens-auth-react-script/recipe/oauth2provider"`,
           `import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty";`,
           `import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty"`,
           `import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless";`,
