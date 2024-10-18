@@ -256,13 +256,14 @@ module.exports = {
         beforeDefaultRemarkPlugins,
       },
     ],
+
     [
       "@docusaurus/plugin-content-docs",
       {
-        id: "oauth",
-        path: "oauth",
-        routeBasePath: "docs/oauth",
-        sidebarPath: require.resolve("./oauth/sidebars.js"),
+        id: "unified-login",
+        path: "unified-login",
+        routeBasePath: "docs/unified-login",
+        sidebarPath: require.resolve("./unified-login/sidebars.js"),
         showLastUpdateTime: true,
         editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,

@@ -42,8 +42,8 @@ export default function RecipeSelector(props) {
         return "Attack Protection Suite";
       case "attackprotectionsuite":
         return "Attack Protection Suite";
-      case "oauth":
-        return "OAuth 2.0";
+      case "unified-login":
+        return "Unified Login";
       default:
         return "Select Recipe";
     }
@@ -200,10 +200,10 @@ export default function RecipeSelector(props) {
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
-                active: activeSelector("oauth"),
+                active: activeSelector("unified-login"),
               })}
             >
-              <a href="/docs/oauth/introduction">OAuth 2.0</a>
+              <a href="/docs/unified-login/introduction">Unified Login</a>
             </li>
           </ul>
         </div>
