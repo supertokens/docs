@@ -503,12 +503,14 @@ from supertokens_python.recipe import session
 from supertokens_python.recipe.session.claims import BooleanClaim
 from supertokens_python.recipe.session.interfaces import RecipeInterface
 from typing import Any, Dict, Optional
+from supertokens_python.types import RecipeUserId
 
 # This will be used to modify the session's access token payload
 # to add {"2fa-completed": false} into it.
 # highlight-start
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___, ____, _____: False
+)
 # highlight-end
 
 
@@ -517,6 +519,7 @@ def override_session_functions(original_implementation: RecipeInterface):
 
     async def create_new_session(
         user_id: str,
+        recipe_user_id: RecipeUserId,
         access_token_payload: Optional[Dict[str, Any]],
         session_data_in_database: Optional[Dict[str, Any]],
         disable_anti_csrf: Optional[bool],
@@ -529,9 +532,26 @@ def override_session_functions(original_implementation: RecipeInterface):
             access_token_payload = {}
 
         # highlight-next-line
-        access_token_payload = {**access_token_payload, **(await SecondFactorClaim.build(user_id, tenant_id, user_context))}
+        access_token_payload = {
+            **access_token_payload,
+            **(
+                await SecondFactorClaim.build(
+                    user_id,
+                    recipe_user_id,
+                    tenant_id,
+                    access_token_payload,
+                    user_context,
+                )
+            ),
+        }
         return await original_create_new_session(
-            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context
+            user_id,
+            recipe_user_id,
+            access_token_payload,
+            session_data_in_database,
+            disable_anti_csrf,
+            tenant_id,
+            user_context,
         )
 
     original_implementation.create_new_session = create_new_session
