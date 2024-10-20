@@ -138,11 +138,16 @@ func emailNotAllowed(email string) bool {
 
 ```python
 from supertokens_python.recipe import thirdparty
-from supertokens_python.recipe.thirdparty.interfaces import APIInterface, RecipeInterface, APIOptions, SignInUpPostOkResult, SignInUpPostNoEmailGivenByProviderResponse, SignInUpOkResult
+from supertokens_python.recipe.thirdparty.interfaces import (
+    APIInterface,
+    RecipeInterface,
+    APIOptions,
+)
 from supertokens_python.recipe.thirdparty.provider import Provider, RedirectUriInfo
 from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, Optional
 from supertokens_python.types import GeneralErrorResponse
+from supertokens_python.recipe.session.interfaces import SessionContainer
 
 
 def override_functions(original_implementation: RecipeInterface):
@@ -152,15 +157,30 @@ def override_functions(original_implementation: RecipeInterface):
         third_party_id: str,
         third_party_user_id: str,
         email: str,
+        is_verified: bool,
         oauth_tokens: Dict[str, Any],
         raw_user_info_from_provider: RawUserInfoFromProvider,
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
-        user_context: Dict[str, Any]
-    ) -> SignInUpOkResult:
-        if (is_not_allowed(email)):
+        user_context: Dict[str, Any],
+    ):
+        if is_not_allowed(email):
             # this error will signal to the API to send a GENERAL_ERROR message
             raise Exception("Email not allowed")
-        return await original_sign_in_up(third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
+        return await original_sign_in_up(
+            third_party_id,
+            third_party_user_id,
+            email,
+            is_verified,
+            oauth_tokens,
+            raw_user_info_from_provider,
+            session,
+            should_try_linking_with_session_user,
+            tenant_id,
+            user_context,
+        )
+
     original_implementation.sign_in_up = sign_in_up
     return original_implementation
 
@@ -171,18 +191,31 @@ def override_apis(original_implementation: APIInterface):
 
     async def sign_in_up_post(
         provider: Provider,
-        redirect_uri_info: Union[RedirectUriInfo, None],
-        oauth_tokens: Union[Dict[str, Any], None],
+        redirect_uri_info: Optional[RedirectUriInfo],
+        oauth_tokens: Optional[Dict[str, Any]],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
         api_options: APIOptions,
-        user_context: Dict[str, Any]
-    ) -> Union[SignInUpPostOkResult, SignInUpPostNoEmailGivenByProviderResponse, GeneralErrorResponse]:
+        user_context: Dict[str, Any],
+    ):
         try:
-            return await original_sign_in_up_post(provider, redirect_uri_info, oauth_tokens, tenant_id, api_options, user_context)
+            return await original_sign_in_up_post(
+                provider,
+                redirect_uri_info,
+                oauth_tokens,
+                session,
+                should_try_linking_with_session_user,
+                tenant_id,
+                api_options,
+                user_context,
+            )
         except Exception as e:
-            if(str(e) == "Email not allowed"):
+            if str(e) == "Email not allowed":
                 # highlight-start
-                return GeneralErrorResponse(message="You are not allowed to sign up. Please contact the app's admin to get permission")
+                return GeneralErrorResponse(
+                    message="You are not allowed to sign up. Please contact the app's admin to get permission"
+                )
                 # highlight-end
             raise e
 
@@ -199,9 +232,8 @@ def is_not_allowed(email: str):
 thirdparty.init(
     sign_in_and_up_feature=thirdparty.SignInAndUpFeature([]),
     override=thirdparty.InputOverrideConfig(
-        apis=override_apis,
-        functions=override_functions
-    )
+        apis=override_apis, functions=override_functions
+    ),
 )
 ```
 
