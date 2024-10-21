@@ -224,9 +224,6 @@ You need to setup the Backend API so that it allows requests from all the fronte
 
 <TabItem value="nodejs">
 
-<NodeJSFrameworkSubTabsServerless>
-<TabItem value="express">
-
 ```tsx
 import express from "express";
 import cors from "cors";
@@ -255,139 +252,118 @@ app.use(cors({
 ```
 
 </TabItem>
-<TabItem value="hapi">
 
+<TabItem value="go">
+
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Go SDK.
+
+:::
+
+</TabItem>
+
+<TabItem value="python">
+
+:::caution
+
+At the moment we do not have support creating OAuth2 providers in the Python SDK.
+
+:::
+
+</TabItem>
+
+</BackendSDKTabs>
+
+### Implement a Custom Session Verification Function
+
+Given that the backend that represents the **Authorization Service** will also act as a **Resource Server** we will have to account for this in the way we verify the sessions.
+
+This is needed because we are using two types of tokens:
+- **SuperTokens Session Access Token**: Used during the login/logout flows. 
+- **OAuth2 Access Token**: Used to access protected resources and perform actions that need authorization.
+
+Hence we need a way to distinguish between these two and prevent errors.
+
+<BackendSDKTabs  disableOtherFrameworks>
+
+<TabItem value="nodejs">
+
+Here is an example of how to implement this in the context of an Express API:
 
 ```tsx
-import Hapi from "@hapi/hapi";
 import supertokens from "supertokens-node";
-import { plugin } from "supertokens-node/framework/hapi";
+import Session from "supertokens-node/recipe/session";
+import jose from "jose";
 
-let server = Hapi.server({
-    port: 8000,
-    routes: {
-        // highlight-start
-        cors: {
-            // Add your actual frontend domains here
-            origin: ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"],
-            additionalHeaders: [...supertokens.getAllCORSHeaders()],
-            credentials: true,
-        }
-        // highlight-end
+
+async function verifySession(req, res, next) {
+  let session = undefined;
+  try {
+    session = await Session.getSession(req, res, { sessionRequired: false });
+  } catch (err) {
+    if (
+      !supertokens.isErrorFromSuperTokens(err) ||
+      err.type !== supertokens.ErrorType.TRY_REFRESH_ERROR
+    ) {
+      next(err);
     }
+  }
+
+  // In this case we are dealing with a SuperTokens Session
+  if (session !== undefined) {
+    const userId = session.getUserId();
+    req.userId = userId;
+    next();
+  }
+
+  // The OAuth2 Access Token needs to be manually extracted and validated
+  let jwt: string | undefined = undefined;
+  if (req.headers["authorization"]) {
+    jwt = req.headers["authorization"].split("Bearer ")[1];
+  }
+  if (jwt === undefined) {
+    next(new Error("No JWT found in the request"));
+  }
+
+  try {
+    const tokenPayload = await validateToken(jwt);
+    const userId = tokenPayload.sub;
+    req.userId = userId;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+const JWKS = jose.createRemoteJWKSet(
+  new URL("^{form_apiDomain}^{form_apiBasePath}jwt/jwks.json"),
+);
+
+// This is a basic example on how to validate an OAuth2 Token
+// We have a separate page that talks more in depth about the process
+async function validateToken(jwt: string, requiredScope: string) {
+  const { payload } = await jose.jwtVerify(jwt, JWKS, {
+    requiredClaims: ["stt", "scp", "sub"],
+  });
+
+  if (payload.stt !== 1) throw new Error("Invalid token");
+  const scopes = payload.scp as string[];
+  if (!scopes.includes(requiredScope)) throw new Error("Invalid token");
+
+  return payload;
+}
+
+
+// You can then use the function as a middleware for a protected route
+const app = express();
+app.get("/protected", verifySession, async (req, res) => {
+    // Custom logic 
 });
 
-(async () => {
-    // highlight-next-line
-    await server.register(plugin);
-
-    await server.start();
-})();
-
-```
-</TabItem>
-<TabItem value="fastify">
-
-
-```tsx
-import cors from "@fastify/cors";
-import supertokens from "supertokens-node";
-import { plugin } from "supertokens-node/framework/fastify";
-import formDataPlugin from "@fastify/formbody";
-
-import fastifyImport from "fastify";
-
-let fastify = fastifyImport();
-
-// highlight-start
-fastify.register(cors, {
-    // Add your actual frontend domains here
-    origin: ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"],
-    allowedHeaders: ['Content-Type', ...supertokens.getAllCORSHeaders()],
-    credentials: true,
-});
-// highlight-end
-
-(async () => {
-    // highlight-next-line
-    await fastify.register(formDataPlugin);
-    // highlight-next-line
-    await fastify.register(plugin);
-
-    await fastify.listen(8000);
-})();
-
-```
-</TabItem>
-<TabItem value="koa">
-
-
-```tsx
-import Koa from "koa";
-import cors from '@koa/cors';
-import supertokens from "supertokens-node";
-import { middleware } from "supertokens-node/framework/koa";
-
-let app = new Koa();
-
-// Add your actual frontend domains here
-const allowedOrigins = ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"];
-
-app.use(cors({
-    // highlight-start
-    origin: (ctx) => {
-      const origin = ctx.get("Origin");
-      if (allowedDomains.includes(origin)) {
-        return origin;
-      }
-      return '';
-    },
-    allowHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
-    credentials: true,
-    // highlight-end
-}));
-
-// highlight-next-line
-app.use(middleware());
-
 ```
 
-</TabItem>
-<TabItem value="loopback">
-
-```tsx
-import { RestApplication } from "@loopback/rest";
-import supertokens from "supertokens-node";
-import { middleware } from "supertokens-node/framework/loopback";
-
-// Add your actual frontend domains here
-const allowedOrigins = ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>"];
-
-const app = new RestApplication({
-    rest: {
-        cors: {
-            // highlight-start
-            origin: function (origin, callback) {
-              if (allowedOrigins.indexOf(origin) !== -1) {
-                callback(null, true)
-              } else {
-                callback(new Error('Not allowed by CORS'))
-              }
-            },
-            allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
-            credentials: true
-            // highlight-end
-        }
-    }
-});
-
-// highlight-next-line
-app.middleware(middleware);
-
-```
-
-</TabItem>
-</NodeJSFrameworkSubTabsServerless>
+For more information on how to verify the **OAuth2 Access Tokens** please check our [separate guide](/docs/unified-login/customizations/verify-tokens).
 
 </TabItem>
 
@@ -412,6 +388,7 @@ At the moment we do not have support creating OAuth2 providers in the Python SDK
 </TabItem>
 
 </BackendSDKTabs>
+
 
 ## 4. Configure the Authorization Service Frontend
 
