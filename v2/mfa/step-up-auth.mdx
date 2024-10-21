@@ -400,9 +400,133 @@ Coming soon.
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon.
-:::
+<PythonFrameworkSubTabs>
+<TabItem value="fastapi">
+
+```python
+from fastapi import Depends
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session.exceptions import (
+    raise_invalid_claims_exception,
+    ClaimValidationError,
+)
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.multifactorauth.multi_factor_auth_claim import (
+    MultiFactorAuthClaim,
+)
+import time
+
+
+@app.post("/update-blog")  # type: ignore
+async def update_blog_api(session: SessionContainer = Depends(verify_session())):
+    # highlight-start
+    mfa_claim_value = await session.get_claim_value(MultiFactorAuthClaim)
+    assert mfa_claim_value is not None
+    totp_completed_time = mfa_claim_value.c.get("totp")
+
+    if totp_completed_time is None or totp_completed_time < (round(time.time() * 1000) - 1000*60*5):
+        # TOTP hasn't been completed or was completed more than 5 minutes ago
+        raise_invalid_claims_exception(
+            "TOTP validation required",
+            [
+                ClaimValidationError(
+                    MultiFactorAuthClaim.key,
+                    {
+                        "message": "TOTP validation required or has expired",
+                        "factorId": "totp",
+                    },
+                )
+            ],
+        )
+    # If we reach here, it means the user has completed TOTP
+    # highlight-end
+```
+
+</TabItem>
+<TabItem value="flask">
+
+```python
+from flask import Flask, g
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.exceptions import raise_invalid_claims_exception, ClaimValidationError
+from supertokens_python.recipe.multifactorauth.multi_factor_auth_claim import MultiFactorAuthClaim
+import time
+
+app = Flask(__name__)
+
+@app.route('/update-blog', methods=['POST'])  # type: ignore
+@verify_session()
+def check_mfa_api():
+    session: SessionContainer = g.supertokens  # type: ignore
+    # highlight-start
+    mfa_claim_value = session.sync_get_claim_value(MultiFactorAuthClaim)
+    assert mfa_claim_value is not None
+    totp_completed_time = mfa_claim_value.c.get("totp")
+
+    if totp_completed_time is None or totp_completed_time < (round(time.time() * 1000) - 1000*60*5):
+        # TOTP hasn't been completed or was completed more than 5 minutes ago
+        raise_invalid_claims_exception(
+            "TOTP validation required",
+            [
+                ClaimValidationError(
+                    MultiFactorAuthClaim.key,
+                    {
+                        "message": "TOTP validation required or has expired",
+                        "factorId": "totp",
+                    },
+                )
+            ],
+        )
+    # If we reach here, it means the user has completed TOTP
+    # highlight-end
+```
+
+</TabItem>
+<TabItem value="django">
+
+```python
+from django.http import HttpRequest
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.exceptions import (
+    raise_invalid_claims_exception,
+    ClaimValidationError,
+)
+from supertokens_python.recipe.multifactorauth.multi_factor_auth_claim import (
+    MultiFactorAuthClaim,
+)
+import time
+
+
+@verify_session()
+async def get_user_info_api(request: HttpRequest):
+    session: SessionContainer = request.supertokens  # type: ignore
+    # highlight-start
+    mfa_claim_value = await session.get_claim_value(MultiFactorAuthClaim)
+    assert mfa_claim_value is not None
+    totp_completed_time = mfa_claim_value.c.get("totp")
+
+    if totp_completed_time is None or totp_completed_time < (round(time.time() * 1000) - 1000*60*5):
+        # TOTP hasn't been completed or was completed more than 5 minutes ago
+        raise_invalid_claims_exception(
+            "TOTP validation required",
+            [
+                ClaimValidationError(
+                    MultiFactorAuthClaim.key,
+                    {
+                        "message": "TOTP validation required or has expired",
+                        "factorId": "totp",
+                    },
+                )
+            ],
+        )
+    # If we reach here, it means the user has completed TOTP
+    # highlight-end
+```
+
+</TabItem>
+</PythonFrameworkSubTabs>
 
 </TabItem>
 </BackendSDKTabs>
@@ -495,9 +619,95 @@ Coming soon.
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon.
-:::
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth
+from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig
+from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
+from typing import Dict, Any, Callable, Awaitable, List
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.multifactorauth.types import MFARequirementList
+from supertokens_python.recipe.multifactorauth.multi_factor_auth_claim import (
+    MultiFactorAuthClaim,
+)
+import time
+from supertokens_python.recipe.session.exceptions import (
+    raise_invalid_claims_exception,
+    ClaimValidationError,
+)
+
+
+def override_functions(original_implementation: RecipeInterface):
+    original_assert_allowed_to_setup_factor_else_throw_invalid_claim_error = (
+        original_implementation.assert_allowed_to_setup_factor_else_throw_invalid_claim_error
+    )
+
+    async def assert_allowed_to_setup_factor_else_throw_invalid_claim_error(
+        session: SessionContainer,
+        factor_id: str,
+        mfa_requirements_for_auth: Callable[[], Awaitable[MFARequirementList]],
+        factors_set_up_for_user: Callable[[], Awaitable[List[str]]],
+        user_context: Dict[str, Any],
+    ) -> None:
+        await original_assert_allowed_to_setup_factor_else_throw_invalid_claim_error(
+            session=session,
+            factor_id=factor_id,
+            mfa_requirements_for_auth=mfa_requirements_for_auth,
+            factors_set_up_for_user=factors_set_up_for_user,
+            user_context=user_context,
+        )
+
+        claim_value = await session.get_claim_value(MultiFactorAuthClaim)
+        if claim_value is None or not claim_value.v:
+            return
+
+        # Check specifically for the step up auth case
+        if (
+            factor_id == FactorIds.TOTP
+            and FactorIds.TOTP in await factors_set_up_for_user()
+        ):
+            totp_completed_time = claim_value.c.get(FactorIds.TOTP)
+            if totp_completed_time is None or totp_completed_time < (
+                int(time.time() * 1000) - 1000 * 60 * 5
+            ):
+                # User completed TOTP challenge more than 5 minutes ago
+                raise_invalid_claims_exception(
+                    "User has not finished TOTP",
+                    [
+                        ClaimValidationError(
+                            MultiFactorAuthClaim.key,
+                            {
+                                "message": "Factor validation failed: totp not completed",
+                                "factorId": "totp",
+                            },
+                        )
+                    ],
+                )
+
+    original_implementation.assert_allowed_to_setup_factor_else_throw_invalid_claim_error = (
+        assert_allowed_to_setup_factor_else_throw_invalid_claim_error
+    )
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            override=OverrideConfig(functions=override_functions),
+        ),
+    ],
+)
+```
 
 </TabItem>
 </BackendSDKTabs>

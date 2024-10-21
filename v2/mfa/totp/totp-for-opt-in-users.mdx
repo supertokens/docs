@@ -114,9 +114,66 @@ Coming soon.
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. 
-:::
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth, totp
+from supertokens_python.recipe.multifactorauth.types import (
+    FactorIds,
+    OverrideConfig,
+    MFARequirementList,
+)
+from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
+from supertokens_python.types import User
+from typing import Dict, Any, Callable, Awaitable, List
+from supertokens_python.recipe.userroles.asyncio import get_roles_for_user
+
+
+def override_functions(original_implementation: RecipeInterface):
+    async def get_mfa_requirements_for_auth(
+        tenant_id: str,
+        access_token_payload: Dict[str, Any],
+        completed_factors: Dict[str, int],
+        user: Callable[[], Awaitable[User]],
+        factors_set_up_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
+        user_context: Dict[str, Any],
+    ) -> MFARequirementList:
+        # Get roles for the user
+        roles = await get_roles_for_user(tenant_id, (await user()).id)
+
+        if "admin" in roles.roles:
+            # We only want OTP_EMAIL for admins
+            return [FactorIds.TOTP]
+        else:
+            # No MFA for non-admin users
+            return []
+
+    original_implementation.get_mfa_requirements_for_auth = (
+        get_mfa_requirements_for_auth
+    )
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        totp.init(),
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            override=OverrideConfig(functions=override_functions),
+        ),
+    ],
+)
+```
 
 </TabItem>
 </BackendSDKTabs>
@@ -200,9 +257,67 @@ Coming soon.
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. 
-:::
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth, totp
+from supertokens_python.recipe.multifactorauth.types import (
+    FactorIds,
+    OverrideConfig,
+)
+from typing import Dict, Any
+from supertokens_python.recipe.totp.types import (
+    TOTPConfig,
+    OverrideConfig,
+    VerifyDeviceOkResult,
+)
+from supertokens_python.recipe.totp.interfaces import APIInterface, APIOptions
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.recipe.multifactorauth.asyncio import (
+    add_to_required_secondary_factors_for_user,
+)
+
+
+def totp_override(original_implementation: APIInterface):
+    original_verify_device_post = original_implementation.verify_device_post
+
+    async def verify_device_post(
+        device_name: str,
+        totp: str,
+        options: APIOptions,
+        session: SessionContainer,
+        user_context: Dict[str, Any],
+    ):
+        response = await original_verify_device_post(
+            device_name, totp, options, session, user_context
+        )
+        if isinstance(response, VerifyDeviceOkResult):
+            await add_to_required_secondary_factors_for_user(
+                session.get_user_id(), FactorIds.TOTP
+            )
+        return response
+
+    original_implementation.verify_device_post = verify_device_post
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        totp.init(TOTPConfig(override=OverrideConfig(apis=totp_override))),
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY]
+        ),
+    ],
+)
+```
 
 </TabItem>
 </BackendSDKTabs>
@@ -281,9 +396,32 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
-:::
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.multifactorauth.asyncio import get_required_secondary_factors_for_user
+from supertokens_python.recipe.multifactorauth.types import FactorIds
+
+async def is_totp_factor_enabled_for_user(user_id: str) -> bool:
+    factors = await get_required_secondary_factors_for_user(user_id, {})
+    return FactorIds.TOTP in factors
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.multifactorauth.syncio import get_required_secondary_factors_for_user
+from supertokens_python.recipe.multifactorauth.types import FactorIds
+
+def is_totp_factor_enabled_for_user(user_id: str) -> bool:
+    factors = get_required_secondary_factors_for_user(user_id, {})
+    return FactorIds.TOTP in factors
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
 
 </TabItem>
 </BackendSDKTabs>
@@ -315,9 +453,44 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
-:::
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.multifactorauth.asyncio import (
+    add_to_required_secondary_factors_for_user,
+    remove_from_required_secondary_factors_for_user,
+)
+from supertokens_python.recipe.multifactorauth.types import FactorIds
+
+async def enable_mfa_for_user(user_id: str) -> None:
+    await add_to_required_secondary_factors_for_user(user_id, FactorIds.TOTP)
+
+
+async def disable_mfa_for_user(user_id: str) -> None:
+    await remove_from_required_secondary_factors_for_user(user_id, FactorIds.TOTP)
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.multifactorauth.syncio import (
+    add_to_required_secondary_factors_for_user,
+    remove_from_required_secondary_factors_for_user,
+)
+from supertokens_python.recipe.multifactorauth.types import FactorIds
+
+def enable_mfa_for_user(user_id: str) -> None:
+    add_to_required_secondary_factors_for_user(user_id, FactorIds.OTP_EMAIL)
+
+
+def disable_mfa_for_user(user_id: str) -> None:
+    remove_from_required_secondary_factors_for_user(user_id, FactorIds.OTP_EMAIL)
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
 
 </TabItem>
 </BackendSDKTabs>
@@ -665,9 +838,69 @@ Coming soon.
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. 
-:::
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth, totp
+from supertokens_python.recipe.multifactorauth.types import (
+    FactorIds,
+    OverrideConfig,
+    MFARequirementList,
+)
+from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
+from supertokens_python.types import User
+from typing import Dict, Any, Callable, Awaitable, List
+from supertokens_python.recipe.userroles.asyncio import get_roles_for_user
+
+
+def override_functions(original_implementation: RecipeInterface):
+    async def get_mfa_requirements_for_auth(
+        tenant_id: str,
+        access_token_payload: Dict[str, Any],
+        completed_factors: Dict[str, int],
+        user: Callable[[], Awaitable[User]],
+        factors_set_up_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
+        user_context: Dict[str, Any],
+    ) -> MFARequirementList:
+        # Get roles for the user
+        roles = await get_roles_for_user(tenant_id, (await user()).id)
+
+        if (
+            "admin" in roles.roles
+            and FactorIds.TOTP in await required_secondary_factors_for_tenant()
+        ):
+            # We only want OTP_EMAIL for admins
+            return [FactorIds.TOTP]
+        else:
+            # No MFA for non-admin users
+            return []
+
+    original_implementation.get_mfa_requirements_for_auth = (
+        get_mfa_requirements_for_auth
+    )
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            override=OverrideConfig(functions=override_functions),
+        ),
+        totp.init(),
+    ],
+)
+```
 
 </TabItem>
 </BackendSDKTabs>
@@ -765,9 +998,94 @@ Coming soon.
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. 
-:::
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth, totp
+from supertokens_python.recipe.multifactorauth.types import (
+    FactorIds,
+    OverrideConfig as MFAOverrideConfig,
+    MFARequirementList,
+)
+from supertokens_python.recipe.multifactorauth.asyncio import (
+    add_to_required_secondary_factors_for_user,
+)
+from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.types import User
+from typing import Dict, Any, Callable, Awaitable, List
+from supertokens_python.recipe.totp.interfaces import APIInterface, APIOptions
+from supertokens_python.recipe.totp.types import (
+    TOTPConfig,
+    OverrideConfig,
+    VerifyDeviceOkResult,
+)
+
+
+def override_functions(original_implementation: RecipeInterface):
+    async def get_mfa_requirements_for_auth(
+        tenant_id: str,
+        access_token_payload: Dict[str, Any],
+        completed_factors: Dict[str, int],
+        user: Callable[[], Awaitable[User]],
+        factors_set_up_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
+        user_context: Dict[str, Any],
+    ) -> MFARequirementList:
+        if FactorIds.TOTP in await required_secondary_factors_for_user():
+            if FactorIds.TOTP in await required_secondary_factors_for_tenant():
+                return [FactorIds.TOTP]
+        # no otp-email required for input.user, with the input.tenant.
+        return []
+
+    original_implementation.get_mfa_requirements_for_auth = (
+        get_mfa_requirements_for_auth
+    )
+    return original_implementation
+
+
+def totp_override(original_implementation: APIInterface):
+    original_verify_device_post = original_implementation.verify_device_post
+
+    async def verify_device_post(
+        device_name: str,
+        totp: str,
+        options: APIOptions,
+        session: SessionContainer,
+        user_context: Dict[str, Any],
+    ):
+        response = await original_verify_device_post(
+            device_name, totp, options, session, user_context
+        )
+        if isinstance(response, VerifyDeviceOkResult):
+            await add_to_required_secondary_factors_for_user(
+                session.get_user_id(), FactorIds.TOTP
+            )
+        return response
+
+    original_implementation.verify_device_post = verify_device_post
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        totp.init(TOTPConfig(override=OverrideConfig(apis=totp_override))),
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            override=MFAOverrideConfig(functions=override_functions),
+        ),
+    ],
+)
+```
 
 </TabItem>
 </BackendSDKTabs>

@@ -118,10 +118,13 @@ func emailNotAllowed(email string) bool {
 
 ```python
 from supertokens_python.recipe import passwordless
-from supertokens_python.recipe.passwordless.interfaces import APIOptions, ConsumeCodePostOkResult, ConsumeCodePostRestartFlowError, ConsumeCodePostIncorrectUserInputCodeError, ConsumeCodePostExpiredUserInputCodeError
-from typing import Dict, Any, Union
+from supertokens_python.recipe.passwordless.interfaces import APIOptions
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from typing import Dict, Any, Union, Optional
 from supertokens_python.recipe.passwordless.interfaces import APIInterface
-from supertokens_python.recipe.passwordless.asyncio import list_codes_by_pre_auth_session_id
+from supertokens_python.recipe.passwordless.asyncio import (
+    list_codes_by_pre_auth_session_id,
+)
 from supertokens_python.types import GeneralErrorResponse
 
 # typecheck-only, removed from output
@@ -131,19 +134,42 @@ def override_passwordless_apis(original_implementation: APIInterface):
 
     original_consume_code_post = original_implementation.consume_code_post
 
-    async def consume_code_post(pre_auth_session_id: str, user_input_code: Union[str, None], device_id: Union[str, None], link_code: Union[str, None], tenant_id: str, api_options: APIOptions,
-                                user_context: Dict[str, Any]) -> Union[ConsumeCodePostOkResult, ConsumeCodePostRestartFlowError, GeneralErrorResponse, ConsumeCodePostIncorrectUserInputCodeError, ConsumeCodePostExpiredUserInputCodeError]:
-        code_info = await list_codes_by_pre_auth_session_id(tenant_id, pre_auth_session_id)
+    async def consume_code_post(
+        pre_auth_session_id: str,
+        user_input_code: Union[str, None],
+        device_id: Union[str, None],
+        link_code: Union[str, None],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
+        tenant_id: str,
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        code_info = await list_codes_by_pre_auth_session_id(
+            tenant_id, pre_auth_session_id
+        )
         if code_info is None:
             raise Exception("Should never come here")
         email = code_info.email
         if email is None:
             # this example is focused on login via email
             raise Exception("Should never come here")
-        if (is_not_allowed(email)):
+        if is_not_allowed(email):
             # highlight-next-line
-            return GeneralErrorResponse("You are not allowed to sign up. Please contact the app's admin to get permission")
-        return await original_consume_code_post(pre_auth_session_id, user_input_code, device_id, link_code, tenant_id, api_options, user_context)
+            return GeneralErrorResponse(
+                "You are not allowed to sign up. Please contact the app's admin to get permission"
+            )
+        return await original_consume_code_post(
+            pre_auth_session_id,
+            user_input_code,
+            device_id,
+            link_code,
+            session,
+            should_try_linking_with_session_user,
+            tenant_id,
+            api_options,
+            user_context,
+        )
 
     original_implementation.consume_code_post = consume_code_post
     return original_implementation
@@ -155,10 +181,9 @@ def is_not_allowed(email: str):
 
 
 passwordless.init(
-    ^{pythonRecipeInitDefault} # typecheck-only, removed from output
-    override=passwordless.InputOverrideConfig(
-        apis=override_passwordless_apis
-    )
+    contact_config="",  # type: ignore # typecheck-only, removed from output
+    flow_type="USER_INPUT_CODE",  # typecheck-only, removed from output
+    override=passwordless.InputOverrideConfig(apis=override_passwordless_apis),
 )
 ```
 
