@@ -9,7 +9,6 @@ module.exports = {
         "multiple-frontends-with-separate-backends",
         "multiple-frontends-with-a-single-backend",
         "reuse-website-login",
-        "machine-to-machine-authentication",
       ],
     },
     {

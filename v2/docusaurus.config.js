@@ -400,12 +400,10 @@ module.exports = {
     [
       "@docusaurus/plugin-content-docs",
       {
-        id: "private-access-token-authentication",
-        path: "private-access-token-authentication",
-        routeBasePath: "docs/private-access-token-authentication",
-        sidebarPath: require.resolve(
-          "./private-access-token-authentication/sidebars.js",
-        ),
+        id: "microservice_auth",
+        path: "microservice_auth",
+        routeBasePath: "docs/microservice_auth",
+        sidebarPath: require.resolve("./microservice_auth/sidebars.js"),
         showLastUpdateTime: true,
         editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,
