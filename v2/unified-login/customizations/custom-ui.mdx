@@ -15,12 +15,45 @@ This guide will show you how to implement the **Unified Login** functionalities 
 
 :::info
 
-The following instructions assume that you have already have a custom UI setup in your current project.
+The following instructions assume that you already have a custom UI setup in your current project.
 
-If you have skipped this step, please check custom UI our [guides](/docs/guides) based on the authentication methods that you want to use.
+If you have skipped this step, please check our [guides](/docs/guides) based on the authentication methods that you want to use.
 
 :::
 
+Before going into the actual instructions we should first recap how the **OAuth2** login flow will work. 
+This way we will have an easier time understanding what we are doing.
+
+#### 1. A user accesses your application and tries to login.
+
+It's up to you how you want to handle this. 
+They can click a button to login or you can directly start the login flow.
+
+#### 2. They get redirected to the **Authorization Service Backend** 
+
+This action can be done by a **OAuth2/OIDC** library.
+Check the previous guides for information on what you could use.
+
+#### 3. The **Authorization Service Backend** redirects them to the **Authorization Service Frontend** login page.
+
+The page URL will contain a `loginChallenge` parameter that will keep track of the login attempt.
+Besides that, the URL can also include a `forceFreshAuth` parameter.
+As the name suggests, this should force the login UI to be visible even though the user has an existing valid session.
+We will show you how to handle this in the actual guide.
+
+#### 4. The **Authorization Service Frontend** renders the login UI and the user performs the login action.
+
+The login UI should render based on instructions that are specific to each authentication method which you are using.
+The additional thing that you have to do here is to take into account the `forceFreshAuth` parameter. 
+
+#### 5. The **Authorization Service Frontend** redirects the user back to the **Authorization Service Backend** 
+
+After the user submits the login form you will have to redirect them to a specific route that will send them to the original application.
+From here the authentication flow can be considered finalized.
+
+Now let's see how we can actually implement this UI.
+
+## 1. Configure the Redirection URLs
 
 <CoreInjector defaultValue="https://<your-core-identifier>.aws.supertokens.io" showTenantId={false}>
 
@@ -30,15 +63,19 @@ If you have skipped this step, please check custom UI our [guides](/docs/guides)
     askForWebsiteDomain
 >
 
-## 1. Configure the authentication routes
+As we have hinted in the previous section, the **Authorization Service Backend** sends the user to different pages from the **Authorization Service Frontend**, based on the action that needs to be made.
 
-By default, the **Backend SDK** redirects to the following frontend routes based on the specific authentication action:
+The default values for these routes are:
 
-- The inital login action is mapped to `^{form_websiteDomain}^{form_websiteBasePath}` (this is also the place where a user ends up after logout)
-- The token refresh action is mapped to `^{form_websiteDomain}^{form_websiteBasePath}/try-refresh`
-- The logout action is mapped to `^{form_websiteDomain}^{form_websiteBasePath}/logout`
+- The login page is mapped to `^{form_websiteDomain}^{form_websiteBasePath}` (this is also the place where a user ends up after logout)
+- The token refresh page is mapped to `^{form_websiteDomain}^{form_websiteBasePath}/try-refresh`
+- The logout page is mapped to `^{form_websiteDomain}^{form_websiteBasePath}/logout`
 
 If you want to change these routes you will have to add a custom override.
+
+:::info
+This override needs to be added to the **Authorization Service Backend**.
+:::
 
 <BackendSDKTabs>
 
@@ -63,8 +100,6 @@ OAuth2Provider.init({
                         queryParams.set("hint", input.hint);
                     }
                     if (input.forceFreshAuth) {
-                        // This will force the reauthentication even though
-                        // there is an existing session for the user.
                         queryParams.set("forceFreshAuth", "true");
                     }
 
@@ -107,12 +142,41 @@ At the moment we do not have support creating OAuth2 providers in the Python SDK
 
 </BackendSDKTabs>
 
-## 2. Handle the Login Flow 
+## 2. Handle the forceFreshAuth parameter
 
-Now that you know which route gets used for each action you can proceed to the actual frontend implementation.
+In some cases, even though there is an existing valid session in the **Authorization Service Frontend**, the requesting **Client** might force a new login attempt.
+This is signaled by the `forceFreshAuth` parameter.
+
+When the login page is rendered you will also have to check for this parameter. You are doing this to know if you need to show the login UI.
+
+Here is an example of how you can evaluate this case.
+
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+
+async function shouldLogin() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const forceFreshAuth = urlParams.get('forceFreshAuth');
+  if(forceFreshAuth === "true") return true;
+
+  return Session.doesSessionExist();
+}
+
+```
+
+:::info Multi Tenancy
+
+If you are using multi tenancy, you will also have to keep track of the `tenantId` query parameter and pass it between the **Authorization Service Frontend** pages.
+
+:::
+
+## 3. Complete the Login Attempt
   
+
+
 After the user will submit the login form you will have to redirect them to a specific route in order to complete the **OAuth 2** flow.
-In order to determine the correct redirection you can use the below code sample.
+
+The following code sample shows you how to determine which URL to use.
 
 
 <FrontendCustomUITabs>
@@ -132,11 +196,6 @@ async function getInitialRedirectionURL() {
 }
 
 ```
-:::info
-
-If you want to render additional information in the initial login screen you can make use of the `OAuth2Provider.getLoginChallengeInfo` function.
-
-:::
 
 
 </TabItem>
@@ -155,18 +214,23 @@ For mobile apps you will have to reuse the web authentication flow. Check this [
 
 
 
-## 3. Handle Token Refreshing
+## 4. Add the Token Refresh Page
 
-On the token refresh route you will have to use the `Session` recipe to perform the refresh action.
-Then you can redirect the user to a new page.
+In order to have support for token refreshing you will need to add a new page to your application.
+The path should correspond to the one that was outlined during the first step.
+
+When the user ends up on this page, you will have to use the `Session` recipe to perform the refresh action.
+Then they need to be redirected to a page from your application.
+
+Here's a code sample that shows you how to do this.
 
 <FrontendCustomUITabs>
 
 <TabItem value="web">
 
 ```tsx
-
 import OAuth2Provider from "supertokens-web-js/recipe/oauth2provider";
+import Session from 'supertokens-web-js/recipe/session';
 
 async function refreshToken() {
   await Session.attemptRefreshingSession();
@@ -194,9 +258,12 @@ For mobile apps you will have to reuse the web authentication flow. Check this [
 
 </FrontendCustomUITabs>
 
-## 4. Add the Logout Action
+## 4. Add the Logout Page 
 
-In order to perform the logout action you should first ask the user for confirmation.
+You will need to add a logout page that will be accessed when a user wants to end their session. 
+The path should correspond to the one that was outlined during the first step.
+
+The logout action should first ask the user for confirmation.
 If the confirmation is passed then you can call the recipe function.
 Based on the final response you can redirect the user to the provided redirection URL.
 
@@ -205,7 +272,6 @@ Based on the final response you can redirect the user to the provided redirectio
 <TabItem value="web">
 
 ```tsx
-
 import OAuth2Provider from "supertokens-web-js/recipe/oauth2provider";
 
 async function logout() {
@@ -217,7 +283,6 @@ async function logout() {
   const redirectResponse = await OAuth2Provider.logout({ logoutChallenge });
   window.location.href = redirectResponse.frontendRedirectTo;
 }
-
 ```
 
 </TabItem>
