@@ -10,16 +10,34 @@ import TabItem from '@theme/TabItem';
 
 # Verify Tokens
 
-In order to check the validity of a token we recommend using a generic **JWT** verification library.
+There are two ways with which you can verify an **OAuth2 Access Token**:
+- By using a standard **JWT**, JSON Web Token, verification library
+- By calling the special introspection endpoint that we expose through the core service
 
-Besides the standard **OAuth2** token claims our implementation includes an additional one called `stt`.
+We will explain when you should use each method in the sections below.
+
+One thing to note is that, besides the standard **OAuth2** token claims, our implementation includes an additional one called `stt`.
 This stands for `SuperTokens Token Type`.
-It is used to make sure that the validation is performed for the correct token type: `0` represents a **SuperTokens Session Access Token**, `1` represents an **OAuth2 Access Token** and `2` represents an **OAuth2 ID Token**.
+It is used to make sure that the validation is performed for the correct token type:
+- `0` represents a **SuperTokens Session Access Token** 
+- `1` represents an **OAuth2 Access Token**
+- `2` represents an **OAuth2 ID Token**.
 
-## OAuth2 Access Tokens
 
-We provide a series of code samples that show you how to check tokens based on the requirements of each authentication flow.
+## Validation Method 
 
+### Using a generic JWT verification library
+
+This is the standard validation method and should be used for most of the operations that need to be protected.
+It will tell you that the token is valid from a cryptographic standpoint and that it has not expired.
+
+The code samples show you a basic validation scenario where we check if the token has the required scope in order for an action to be performed.
+
+:::info
+
+If your scenario involves a common backend with multiple frontend clients you can drop the `client_id` check. 
+
+:::
 
 <CoreInjector defaultValue="https://<your-core-identifier>.aws.supertokens.io" showTenantId={false}>
 
@@ -28,18 +46,6 @@ We provide a series of code samples that show you how to check tokens based on t
     askForAPIDomain
     askForWebsiteDomain
 >
-
-
-### Authorization Code Flow Token Validation
-
-Follow this example if you are verifying tokens in the context of authenticating users in a web application.
-You will have to check if the `client_id` and `scopes` of the provided token match the ones you expect.
-
-:::info
-
-If your scenario involves a common backend for multiple frontend clients you can drop the `cleint_id` check. 
-
-:::
 
 <OAuthBackendTabs>
 
@@ -356,7 +362,54 @@ class AuthorizationCodeTokenValidator
 
 </OAuthBackendTabs>
 
+#### Email Verification
+
+If you are using email and password based authentication, and you want to validate if the user has verified their email, you will have to check if the `email_verified` claim is true.
+
+### Calling the Token Introspection API
+
+When a user logs out, their token will be removed from the **SuperTokens Core** database. 
+That change will not reflect in token validation process that uses a JWT verification library.
+The token will stil be valid until its expiration time.
+
+In order to completely make sure that the token has not been removed you can directly call the **SuperTokens Core** service.
+We recommend that you perform this process for high security operations, in order to avoid the risk of a token being used by a malicious agent.
+
+Here is an example of how you can use this validation method:
+
+#### By Directly Calling the Introspection Endpoint
+
+```bash
+# The response status should be 200
+# and the body should have an "active" property set to true
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -d '{"token": "<YOUR_TOKEN>"}' \
+     "^{form_apiDomain}^{form_apiBasePath}/oauth/introspect"
+```
+
+#### By Using the SDK Method
+
+If you are using a **NodeJS** backend you can directly call the SDK.
+
+```tsx
+import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
+
+async function validateToken(token: string) {
+  const { status } = await OAuth2Provider.validateOAuth2AccessToken(
+    token,
+    {
+      clientId: "<CLIENT_ID>",
+      scopes: ["<REQUIRED_SCOPE>"],
+    },
+    true
+  );
+
+  return status === "OK";
+}
+```
 
 </AppInfoForm>
 
 </CoreInjector>
+
