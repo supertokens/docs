@@ -55,4 +55,37 @@ function OAuthEmailVerificationDisclaimer() {
   );
 }
 
-export { OAuthVerifyTokensDisclaimer, OAuthEmailVerificationDisclaimer };
+function OAuthFrontendVerificationDisclaimer() {
+  return (
+    <div className="admonition admonition-caution alert alert--warning">
+      <div className="admonition-heading">
+        <h5>CAUTION</h5>
+      </div>
+      <div className="admonition-content">
+        <p>
+          This information only applies to scenarios in which you are using{" "}
+          <strong>SuperTokens Session Access Tokens</strong>.
+        </p>
+        <p>
+          If you are implementing{" "}
+          <a href="/docs/unified-login/introduction">
+            <strong>Unified Login</strong>
+          </a>{" "}
+          you will have to manually check authentication state based the{" "}
+          <strong>OAuth2/OIDC</strong> library that you are using. Please
+          explore the{" "}
+          <a href="/docs/unified-login/unified-login/introduction">
+            dedicated documentation
+          </a>{" "}
+          to find out more.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export {
+  OAuthVerifyTokensDisclaimer,
+  OAuthEmailVerificationDisclaimer,
+  OAuthFrontendVerificationDisclaimer,
+};
