@@ -205,44 +205,79 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.asyncio import create_user_id_mapping
 from supertokens_python.recipe import thirdparty, emailpassword, session
-from supertokens_python.recipe.thirdparty.interfaces import RecipeInterface as ThirdPartyRecipeInterface
-from supertokens_python.recipe.emailpassword.interfaces import RecipeInterface as EmailPasswordRecipeInterface, SignUpOkResult
+from supertokens_python.recipe.thirdparty.interfaces import (
+    RecipeInterface as ThirdPartyRecipeInterface,
+    SignInUpOkResult,
+)
+from supertokens_python.recipe.emailpassword.interfaces import (
+    RecipeInterface as EmailPasswordRecipeInterface,
+    SignUpOkResult,
+)
 from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Union
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.types import RecipeUserId
 
 
-def override_thirdparty_functions(original_implementation: ThirdPartyRecipeInterface) -> ThirdPartyRecipeInterface:
+def override_thirdparty_functions(
+    original_implementation: ThirdPartyRecipeInterface,
+) -> ThirdPartyRecipeInterface:
     original_thirdparty_sign_in_up = original_implementation.sign_in_up
 
     async def thirdparty_sign_in_up(
         third_party_id: str,
         third_party_user_id: str,
         email: str,
+        is_verified: bool,
         oauth_tokens: Dict[str, Any],
         raw_user_info_from_provider: RawUserInfoFromProvider,
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
-        user_context: Dict[str, Any]
+        user_context: Dict[str, Any],
     ):
-        result = await original_thirdparty_sign_in_up(third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
+        result = await original_thirdparty_sign_in_up(
+            third_party_id,
+            third_party_user_id,
+            email,
+            is_verified,
+            oauth_tokens,
+            raw_user_info_from_provider,
+            session,
+            should_try_linking_with_session_user,
+            tenant_id,
+            user_context,
+        )
 
-        # user object contains the ID and email of the user
-        user = result.user
-        print(user)
+        if isinstance(result, SignInUpOkResult):
+            # user object contains the ID and email of the user
+            user = result.user
+            print(user)
 
-        # This is the response from the OAuth 2 provider that contains their tokens or user info.
-        provider_access_token = result.oauth_tokens["access_token"]
-        print(provider_access_token)
+            # This is the response from the OAuth 2 provider that contains their tokens or user info.
+            provider_access_token = result.oauth_tokens["access_token"]
+            print(provider_access_token)
 
-        if result.raw_user_info_from_provider.from_user_info_api is not None:
-            first_name = result.raw_user_info_from_provider.from_user_info_api["first_name"]
-            print(first_name)
+            if result.raw_user_info_from_provider.from_user_info_api is not None:
+                first_name = result.raw_user_info_from_provider.from_user_info_api[
+                    "first_name"
+                ]
+                print(first_name)
 
-        if result.created_new_user:
-            # highlight-start
-            external_user_id = "<CUSTOM USER ID>"
-            await create_user_id_mapping(result.user.user_id, external_user_id)
-            result.user.user_id = external_user_id
-            # highlight-end
+            if (
+                result.created_new_recipe_user
+                and len(result.user.login_methods) == 1
+                and session is None
+            ):
+                # highlight-start
+                external_user_id = "<CUSTOM USER ID>"
+                await create_user_id_mapping(result.user.id, external_user_id)
+                result.user.id = external_user_id
+                result.user.login_methods[0].recipe_user_id = RecipeUserId(
+                    external_user_id
+                )
+                result.recipe_user_id = RecipeUserId(external_user_id)
+                # highlight-end
 
         return result
 
@@ -250,22 +285,40 @@ def override_thirdparty_functions(original_implementation: ThirdPartyRecipeInter
 
     return original_implementation
 
-def override_emailpassword_functions(original_implementation: EmailPasswordRecipeInterface) -> EmailPasswordRecipeInterface:
+
+def override_emailpassword_functions(
+    original_implementation: EmailPasswordRecipeInterface,
+) -> EmailPasswordRecipeInterface:
     original_emailpassword_sign_up = original_implementation.sign_up
 
     async def emailpassword_sign_up(
         email: str,
         password: str,
         tenant_id: str,
-        user_context: Dict[str, Any]
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        user_context: Dict[str, Any],
     ):
-        result = await original_emailpassword_sign_up(email, password, tenant_id, user_context)
+        result = await original_emailpassword_sign_up(
+            email,
+            password,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            user_context,
+        )
 
-        if isinstance(result, SignUpOkResult):
+        if (
+            isinstance(result, SignUpOkResult)
+            and len(result.user.login_methods) == 1
+            and session is None
+        ):
             # highlight-start
             external_user_id = "<CUSTOM USER ID>"
-            await create_user_id_mapping(result.user.user_id, external_user_id)
-            result.user.user_id = external_user_id
+            await create_user_id_mapping(result.user.id, external_user_id)
+            result.user.id = external_user_id
+            result.user.login_methods[0].recipe_user_id = RecipeUserId(external_user_id)
+            result.recipe_user_id = RecipeUserId(external_user_id)
             # highlight-end
 
         return result
@@ -276,9 +329,8 @@ def override_emailpassword_functions(original_implementation: EmailPasswordRecip
 
 
 init(
-    app_info=InputAppInfo(
-        api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
     recipe_list=[
         thirdparty.init(
             # highlight-start
@@ -295,7 +347,7 @@ init(
             # highlight-end
         ),
         session.init(),
-    ]
+    ],
 )
 ```
 </TabItem>

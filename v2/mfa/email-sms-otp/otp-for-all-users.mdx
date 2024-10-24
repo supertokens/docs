@@ -127,9 +127,82 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
-:::
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth, accountlinking
+from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig, MFARequirementList
+from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.recipe.accountlinking.types import (
+    AccountInfoWithRecipeIdAndUserId,
+    ShouldNotAutomaticallyLink,
+    ShouldAutomaticallyLink,
+)
+from supertokens_python.types import User
+from typing import Dict, Any, Callable, Awaitable, List, Optional, Union
+
+
+async def should_do_automatic_account_linking(
+    new_account_info: AccountInfoWithRecipeIdAndUserId,
+    user: Optional[User],
+    session: Optional[SessionContainer],
+    tenant_id: str,
+    user_context: Dict[str, Any]
+) -> Union[ShouldNotAutomaticallyLink, ShouldAutomaticallyLink]:
+    if session is None:
+        # We do not want to do first factor account linking by default.
+        # To enable that, please see the automatic account linking docs
+        # in the recipe docs for your first factor.
+        return ShouldNotAutomaticallyLink()
+    
+    if user is None or session.get_user_id() == user.id:
+        # If it comes here, it means that a session exists, and we are trying to link the 
+        # new_account_info to the session user, which means it's an MFA flow, so we enable 
+        # linking here.
+        return ShouldAutomaticallyLink(should_require_verification=False)
+    
+    return ShouldNotAutomaticallyLink()
+
+
+def override_functions(original_implementation: RecipeInterface):
+    async def get_mfa_requirements_for_auth(
+        tenant_id: str,
+        access_token_payload: Dict[str, Any],
+        completed_factors: Dict[str, int],
+        user: Callable[[], Awaitable[User]],
+        factors_set_up_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
+        user_context: Dict[str, Any],
+    ) -> MFARequirementList:
+        # highlight-next-line
+        return [FactorIds.OTP_EMAIL]
+
+    original_implementation.get_mfa_requirements_for_auth = (
+        get_mfa_requirements_for_auth
+    )
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            override=OverrideConfig(functions=override_functions),
+        ),
+        accountlinking.init(should_do_automatic_account_linking=should_do_automatic_account_linking)
+    ],
+)
+```
 
 </TabItem>
 </BackendSDKTabs>
@@ -579,9 +652,57 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
-:::
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth, accountlinking
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.recipe.accountlinking.types import (
+    AccountInfoWithRecipeIdAndUserId,
+    ShouldNotAutomaticallyLink,
+    ShouldAutomaticallyLink,
+)
+from supertokens_python.types import User
+from typing import Dict, Any, Optional, Union
+
+
+async def should_do_automatic_account_linking(
+    new_account_info: AccountInfoWithRecipeIdAndUserId,
+    user: Optional[User],
+    session: Optional[SessionContainer],
+    tenant_id: str,
+    user_context: Dict[str, Any]
+) -> Union[ShouldNotAutomaticallyLink, ShouldAutomaticallyLink]:
+    if session is None:
+        # We do not want to do first factor account linking by default.
+        # To enable that, please see the automatic account linking docs
+        # in the recipe docs for your first factor.
+        return ShouldNotAutomaticallyLink()
+    
+    if user is None or session.get_user_id() == user.id:
+        # If it comes here, it means that a session exists, and we are trying to link the 
+        # new_account_info to the session user, which means it's an MFA flow, so we enable 
+        # linking here.
+        return ShouldAutomaticallyLink(should_require_verification=False)
+    
+    return ShouldNotAutomaticallyLink()
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        multifactorauth.init(),
+        accountlinking.init(should_do_automatic_account_linking=should_do_automatic_account_linking)
+    ],
+)
+```
 
 </TabItem>
 </BackendSDKTabs>
@@ -628,9 +749,61 @@ Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. In the meantime, checkout the [legacy method](../legacy-method/how-it-works) for adding MFA to your app.
-:::
+<PythonSyncAsyncSubTabs>
+<TabItem value="asyncio">
+
+```python
+from supertokens_python.recipe.multitenancy.asyncio import create_or_update_tenant
+from supertokens_python.recipe.multitenancy.interfaces import TenantConfigCreateOrUpdate
+from supertokens_python.recipe.multifactorauth.types import FactorIds
+
+
+async def create_new_tenant():
+    resp = await create_or_update_tenant(
+        "customer1",
+        TenantConfigCreateOrUpdate(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            required_secondary_factors=[FactorIds.OTP_EMAIL],
+        ),
+    )
+
+    if resp.created_new:
+        # Tenant created successfully
+        pass
+    else:
+        # Existing tenant's config was modified
+        pass
+```
+
+</TabItem>
+<TabItem value="syncio">
+
+```python
+from supertokens_python.recipe.multitenancy.syncio import create_or_update_tenant
+from supertokens_python.recipe.multitenancy.interfaces import TenantConfigCreateOrUpdate
+from supertokens_python.recipe.multifactorauth.types import FactorIds
+
+
+def create_new_tenant():
+    resp = create_or_update_tenant(
+        "customer1",
+        TenantConfigCreateOrUpdate(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            required_secondary_factors=[FactorIds.OTP_EMAIL],
+        ),
+    )
+    
+
+    if resp.created_new:
+        # Tenant created successfully
+        pass
+    else:
+        # Existing tenant's config was modified
+        pass
+```
+
+</TabItem>
+</PythonSyncAsyncSubTabs>
 
 </TabItem>
 
