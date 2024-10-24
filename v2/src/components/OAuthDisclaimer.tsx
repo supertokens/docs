@@ -8,7 +8,7 @@ function OAuthVerifyTokensDisclaimer() {
       </div>
       <div className="admonition-content">
         <p>
-          This guide only applies to scenarios in which involve{" "}
+          This guide only applies to scenarios which involve{" "}
           <strong>SuperTokens Session Access Tokens</strong>.
         </p>
         <p>
