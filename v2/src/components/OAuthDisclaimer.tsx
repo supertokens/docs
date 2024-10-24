@@ -8,15 +8,20 @@ function OAuthVerifyTokensDisclaimer() {
       </div>
       <div className="admonition-content">
         <p>
-          This guide only applies to scenarios in which you are using{" "}
+          This guide only applies to scenarios in which involve{" "}
           <strong>SuperTokens Session Access Tokens</strong>.
         </p>
         <p>
-          If you are implementing{" "}
+          If you are implementing either,{" "}
           <a href="/docs/unified-login/introduction">
             <strong>Unified Login</strong>
           </a>{" "}
-          with <strong>OAuth2 Access Tokens</strong>, please check the{" "}
+          or{" "}
+          <a href="/docs/microservice_auth/introduction">
+            <strong>Microservice Authentication</strong>
+          </a>
+          , features that make use of <strong>OAuth2 Access Tokens</strong>,
+          please check the{" "}
           <a href="/docs/unified-login/customizations/verify-tokens">
             separate page
           </a>{" "}
