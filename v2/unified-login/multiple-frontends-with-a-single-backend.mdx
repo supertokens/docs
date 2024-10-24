@@ -237,13 +237,7 @@ const allowedOrigins = ["^{form_websiteDomain}", "<CLIENT_DOMAIN_1>", "<CLIENT_D
 
 app.use(cors({
     // highlight-start
-    origin: function (origin, callback) {
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true)
-      } else {
-        callback(new Error('Not allowed by CORS'))
-      }
-    },
+    origin: allowedOrigins,
     allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
     credentials: true,
     // highlight-end
@@ -294,19 +288,23 @@ Here is an example of how to implement this in the context of an Express API:
 ```tsx
 import supertokens from "supertokens-node";
 import Session from "supertokens-node/recipe/session";
+import express, { Request, Response, NextFunction } from 'express';
 import jose from "jose";
 
+interface RequestWithUserId extends Request {
+  userId?: string;
+}
 
-async function verifySession(req, res, next) {
+async function verifySession(req: RequestWithUserId, res: Response, next: NextFunction) {
   let session = undefined;
   try {
     session = await Session.getSession(req, res, { sessionRequired: false });
   } catch (err) {
     if (
       !Session.Error.isErrorFromSuperTokens(err) ||
-      err.type !== Session.Error.TRY_REFRESH_ERROR
+      err.type !== Session.Error.TRY_REFRESH_TOKEN
     ) {
-      next(err);
+      return next(err);
     }
   }
 
@@ -314,7 +312,7 @@ async function verifySession(req, res, next) {
   if (session !== undefined) {
     const userId = session.getUserId();
     req.userId = userId;
-    next();
+    return next();
   }
 
   // The OAuth2 Access Token needs to be manually extracted and validated
@@ -323,16 +321,16 @@ async function verifySession(req, res, next) {
     jwt = req.headers["authorization"].split("Bearer ")[1];
   }
   if (jwt === undefined) {
-    next(new Error("No JWT found in the request"));
+    return next(new Error("No JWT found in the request"));
   }
 
   try {
-    const tokenPayload = await validateToken(jwt);
+    const tokenPayload = await validateToken(jwt, '<CUSTOM_SCOPE>');
     const userId = tokenPayload.sub;
     req.userId = userId;
-    next();
+    return next();
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -511,8 +509,8 @@ You will have to add a new item in the `recipeList` array.
 <PreBuiltUIInjector>
 
 ```tsx title="/app/auth/auth.component.ts"
-  import {init as supertokensUIInit} from "supertokens-auth-react-script";
-  import supertokensUIOAuth2Provider from "supertokens-auth-react-script/recipe/oauth2provider";
+  import {init as supertokensUIInit} from "supertokens-auth-react";
+  import supertokensUIOAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
   import { Component, OnDestroy, AfterViewInit, Renderer2, Inject } from "@angular/core";
   import { DOCUMENT } from "@angular/common";
 
@@ -584,8 +582,8 @@ Update the `AuthView` component so that it also includes the `OAuth2Provider` re
 You will have to add a new item in the `recipeList` array, inside the `supertokensUIInit` call.
 
 ```tsx
-    import {init as supertokensUIInit} from "supertokens-auth-react-script";
-    import supertokensUIOAuth2Provider from "supertokens-auth-react-script/recipe/oauth2provider";
+    import {init as supertokensUIInit} from "supertokens-auth-react";
+    import supertokensUIOAuth2Provider from "supertokens-auth/recipe/oauth2provider";
     <script lang="ts">
         import { defineComponent, onMounted, onUnmounted } from 'vue';
         export default defineComponent({
@@ -698,7 +696,7 @@ This change is in your auth route config.
 
 ```tsx
 // this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
-import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+import supertokensUISession from "supertokens-auth-react/recipe/session";
 
 supertokensUISession.init({
     override: {
@@ -756,7 +754,7 @@ This change is in your auth route config.
 
 ```tsx
 // this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
-import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+import supertokensUISession from "supertokens-auth-react/recipe/session";
 
 supertokensUISession.init({
     override: {
