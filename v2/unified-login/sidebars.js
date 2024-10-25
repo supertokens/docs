@@ -20,6 +20,7 @@ module.exports = {
         "customizations/add-custom-claims-in-tokens",
         "customizations/verify-tokens",
         "customizations/custom-ui",
+        "customizations/multi-tenancy",
       ],
     },
   ],
