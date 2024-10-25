@@ -996,7 +996,7 @@ async function assertThatUserIsNotRemovedDocsVariableByMistake(
             "DID YOU FORGET TO USE DOCS VARIABLES IN A RECENT CODE CHANGE? PLEASE CHECK" +
             "\n\nIf you think this error is unrelated to your changes, try deleting the `snippets` folder for all languages and run again.\n\nThe file path is: " +
             path;
-          // return rej(new Error(message));
+          return rej(new Error(message));
         }
       }
       res();
