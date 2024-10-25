@@ -600,7 +600,11 @@ Enabled: true,
 
   if (language === "typescript") {
     if (codeSnippet.includes("require(")) {
-      throw new Error("Do not use 'require' in TS code. Error in " + mdFile);
+      // except for the attack protection suite , where we need to allow require for compatibility reasons,
+      // as the SDK URL is dynamic and import might break some builds
+      if (!codeSnippet.includes('require("https://deviceid.supertokens.io')) {
+        throw new Error("Do not use 'require' in TS code. Error in " + mdFile);
+      }
     }
     codeSnippet = `export { }\n// Original: ${mdFile}\n${codeSnippet}`; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
 
@@ -662,40 +666,6 @@ Enabled: true,
 
     // adding package on top of go file
     codeSnippet = `package ${lastDir}\n/*\n${mdFile}\n*/\n${codeSnippet}`;
-
-    if (language === "typescript") {
-      if (codeSnippet.includes("require(")) {
-        // except for the attack protection suite, where we need to allow require for compatibility reasons,
-        // as the SDK URL is dynamic and import might break some builds
-        if (!codeSnippet.includes('require("https://deviceid.supertokens.io')) {
-          throw new Error(
-            "Do not use 'require' in TS code. Error in " + mdFile,
-          );
-        }
-      }
-      codeSnippet = `export { }\n// Original: ${mdFile}\n${codeSnippet}`; // see https://www.aritsltd.com/blog/frontend-development/cannot-redeclare-block-scoped-variable-the-reason-behind-the-error-and-the-way-to-resolve-it/
-
-      // vue requires use of <script> in the TS snippet, which is valid, but causes compilation errors. So we remove them in case vue is in the snippet:
-      if (codeSnippet.includes('"vue"') || codeSnippet.includes("'vue'")) {
-        codeSnippet = codeSnippet.replaceAll('<script lang="ts">', "");
-        codeSnippet = codeSnippet.replaceAll("</script>", "");
-      }
-
-      let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
-      await new Promise(async (res, rej) => {
-        fs.mkdir(
-          "src/plugins/codeTypeChecking/jsEnv/snippets/" + folderName,
-          { recursive: true },
-          async (err) => {
-            if (err) {
-              rej(err);
-            } else {
-              res();
-            }
-          },
-        );
-      });
-    }
   } else if (language === "python") {
     codeSnippet = `# ${mdFile}\n${codeSnippet}`;
     let folderName = mdFile.replaceAll("~", "") + codeBlockCountInFile;
