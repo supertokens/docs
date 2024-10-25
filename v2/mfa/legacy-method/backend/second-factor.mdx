@@ -586,10 +586,11 @@ func main() {
 
 ```python
 from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions, ConsumeCodePostOkResult
-from typing import Union, Dict, Any
+from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.session.interfaces import SessionContainer
 
 def override_passwordless_apis(original_implementation: APIInterface):
     original_consume_code_post = original_implementation.consume_code_post
@@ -599,6 +600,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
         user_input_code: Union[str, None],
         device_id: Union[str, None],
         link_code: Union[str, None],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
@@ -615,6 +618,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
             user_input_code,
             device_id,
             link_code,
+            session,
+            should_try_linking_with_session_user,
             tenant_id,
             api_options,
             user_context,
@@ -626,7 +631,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
             # user ID, so that later on, we can fetch the phone number.
             await update_user_metadata(
                 _session.get_user_id(),  # this is the userId of the first factor login
-                {"passwordlessUserId": res.user.user_id}
+                {"passwordlessUserId": res.user.id}
             )
 
         return res
@@ -859,15 +864,24 @@ func main() {
 <TabItem value="python">
 
 ```python
-from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions, ConsumeCodePostOkResult
+from supertokens_python.recipe.passwordless.interfaces import (
+    APIInterface,
+    APIOptions,
+    ConsumeCodePostOkResult,
+)
 from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import update_user_metadata
-from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+from supertokens_python.recipe.session.interfaces import (
+    SessionContainer,
+    RecipeInterface,
+)
 from supertokens_python.recipe.session.claims import BooleanClaim
+from supertokens_python.types import RecipeUserId
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___, ____, _____: False
+)
 
 
 def override_passwordless_apis(original_implementation: APIInterface):
@@ -878,6 +892,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
         user_input_code: Union[str, None],
         device_id: Union[str, None],
         link_code: Union[str, None],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
@@ -887,7 +903,9 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # A session should already exist since this should be called after the first factor is completed.
         # We set the claims to check to be [] here, since this needs to be callable
         # without the second factor completed
-        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
+        _session = await get_session(
+            api_options.request, override_global_claim_validators=lambda _, __, ___: []
+        )
         assert _session is not None
 
         # we should add the existing session to the user_context
@@ -901,6 +919,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
             user_input_code,
             device_id,
             link_code,
+            session,
+            should_try_linking_with_session_user,
             tenant_id,
             api_options,
             user_context,
@@ -919,7 +939,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
             # user ID, so that later on, we can fetch the phone number.
             await update_user_metadata(
                 _session.get_user_id(),  # userId of the first factor login
-                {"passwordlessUserId": res.user.user_id}
+                {"passwordlessUserId": res.user.id},
             )
 
         return res
@@ -933,6 +953,7 @@ def override_session_functions(original_implementation: RecipeInterface):
 
     async def create_new_session(
         user_id: str,
+        recipe_user_id: RecipeUserId,
         access_token_payload: Optional[Dict[str, Any]],
         session_data_in_database: Optional[Dict[str, Any]],
         disable_anti_csrf: Optional[bool],
@@ -953,9 +974,26 @@ def override_session_functions(original_implementation: RecipeInterface):
         if access_token_payload is None:
             access_token_payload = {}
 
-        access_token_payload = {**access_token_payload, **(await SecondFactorClaim.build(user_id, tenant_id, user_context))}
+        access_token_payload = {
+            **access_token_payload,
+            **(
+                await SecondFactorClaim.build(
+                    user_id,
+                    recipe_user_id,
+                    tenant_id,
+                    access_token_payload,
+                    user_context,
+                )
+            ),
+        }
         return await original_create_new_session(
-            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context
+            user_id,
+            recipe_user_id,
+            access_token_payload,
+            session_data_in_database,
+            disable_anti_csrf,
+            tenant_id,
+            user_context,
         )
 
     original_implementation.create_new_session = create_new_session
@@ -1141,7 +1179,9 @@ from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIO
 from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.session.asyncio import get_session
 from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
-from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.asyncio import get_user
+
 
 def override_passwordless_apis(original_implementation: APIInterface):
     original_consume_code_post = original_implementation.consume_code_post
@@ -1151,6 +1191,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
     async def create_code_post(
         email: Union[str, None],
         phone_number: Union[str, None],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
@@ -1163,7 +1205,9 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # A session should already exist since this should be called after the first factor is completed.
         # We set the claims to check to be [] here, since this needs to be callable
         # without the second factor completed
-        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
+        _session = await get_session(
+            api_options.request, override_global_claim_validators=lambda _, __, ___: []
+        )
         assert _session is not None
 
         # We try to get the phone number associated with this user. It will be
@@ -1174,11 +1218,11 @@ def override_passwordless_apis(original_implementation: APIInterface):
         if user_metadata.metadata.get("passwordlessUserId"):
             # the flow will come here during a login attempt, since we
             # associate the passwordless userId to the user on sign up
-            passwordless_user_info = await get_user_by_id(
+            passwordless_user_info = await get_user(
                 user_metadata.metadata["passwordlessUserId"], user_context
             )
             if passwordless_user_info is not None:
-                user_metadata_phone_number = passwordless_user_info.phone_number
+                user_metadata_phone_number = passwordless_user_info.phone_numbers[0]
 
         if user_metadata_phone_number is not None:
             # this means we found a phone number associated to this user
@@ -1189,8 +1233,15 @@ def override_passwordless_apis(original_implementation: APIInterface):
                 )
 
         return await original_create_code_post(
-            email, phone_number, tenant_id, api_options, user_context
+            email,
+            phone_number,
+            session,
+            should_try_linking_with_session_user,
+            tenant_id,
+            api_options,
+            user_context,
         )
+
     # highlight-end
 
     async def consume_code_post(
@@ -1198,6 +1249,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
         user_input_code: Union[str, None],
         device_id: Union[str, None],
         link_code: Union[str, None],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
@@ -1208,6 +1261,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
             user_input_code,
             device_id,
             link_code,
+            session,
+            should_try_linking_with_session_user,
             tenant_id,
             api_options,
             user_context,
@@ -1218,7 +1273,6 @@ def override_passwordless_apis(original_implementation: APIInterface):
     original_implementation.create_code_post = create_code_post
     original_implementation.consume_code_post = consume_code_post
     return original_implementation
-
 ```
 
 </TabItem>
@@ -1362,12 +1416,17 @@ func main() {
 ```python
 from typing import Dict, Any, Optional
 from supertokens_python.recipe.usermetadata.asyncio import get_user_metadata
-from supertokens_python.recipe.passwordless.asyncio import get_user_by_id
-from supertokens_python.recipe.session.interfaces import SessionContainer, RecipeInterface
+from supertokens_python.asyncio import get_user
+from supertokens_python.recipe.session.interfaces import (
+    SessionContainer,
+    RecipeInterface,
+)
 from supertokens_python.recipe.session.claims import BooleanClaim
+from supertokens_python.types import RecipeUserId
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___, ____, _____: False
+)
 
 
 def override_session_functions(original_implementation: RecipeInterface):
@@ -1375,6 +1434,7 @@ def override_session_functions(original_implementation: RecipeInterface):
 
     async def create_new_session(
         user_id: str,
+        recipe_user_id: RecipeUserId,
         access_token_payload: Optional[Dict[str, Any]],
         session_data_in_database: Optional[Dict[str, Any]],
         disable_anti_csrf: Optional[bool],
@@ -1400,22 +1460,36 @@ def override_session_functions(original_implementation: RecipeInterface):
         phone_number: Optional[str] = None
         if user_metadata.metadata.get("passwordlessUserId") is not None:
             # We get the phone number associated with the passwordless userId
-            passwordless_user_info = await get_user_by_id(
+            passwordless_user_info = await get_user(
                 user_metadata.metadata["passwordlessUserId"], user_context
             )
             if passwordless_user_info is not None:
-                phone_number = passwordless_user_info.phone_number
+                phone_number = passwordless_user_info.phone_numbers[0]
         # highlight-end
 
         # Insert "is2faComplete" and "phoneNumber" in the access token payload
         access_token_payload = {
             **access_token_payload,
-            **(await SecondFactorClaim.build(user_id, tenant_id, user_context)),
+            **(
+                await SecondFactorClaim.build(
+                    user_id,
+                    recipe_user_id,
+                    tenant_id,
+                    access_token_payload,
+                    user_context,
+                )
+            ),
             # highlight-next-line
             "phoneNumber": phone_number,
         }
         return await original_create_new_session(
-            user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context
+            user_id,
+            recipe_user_id,
+            access_token_payload,
+            session_data_in_database,
+            disable_anti_csrf,
+            tenant_id,
+            user_context,
         )
 
     original_implementation.create_new_session = create_new_session
@@ -1563,8 +1637,10 @@ func main() {
 
 ```python
 from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions
-from typing import Union, Dict, Any
+from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.session.asyncio import get_session
+from supertokens_python.recipe.session.interfaces import SessionContainer
+
 
 def override_passwordless_apis(original_implementation: APIInterface):
     original_create_code_post = original_implementation.create_code_post
@@ -1572,6 +1648,8 @@ def override_passwordless_apis(original_implementation: APIInterface):
     async def create_code_post(
         email: Union[str, None],
         phone_number: Union[str, None],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
         api_options: APIOptions,
         user_context: Dict[str, Any],
@@ -1584,7 +1662,9 @@ def override_passwordless_apis(original_implementation: APIInterface):
         # A session should already exist since this should be called after the first factor is completed.
         # We set the claims to check to be [] here, since this needs to be callable
         # without the second factor completed
-        _session = await get_session(api_options.request, override_global_claim_validators=lambda _, __, ___: [])
+        _session = await get_session(
+            api_options.request, override_global_claim_validators=lambda _, __, ___: []
+        )
         assert _session is not None
 
         # highlight-next-line
@@ -1599,11 +1679,16 @@ def override_passwordless_apis(original_implementation: APIInterface):
                 )
 
         return await original_create_code_post(
-            email, phone_number, tenant_id, api_options, user_context
+            email,
+            phone_number,
+            session,
+            should_try_linking_with_session_user,
+            tenant_id,
+            api_options,
+            user_context,
         )
-    
-    original_implementation.create_code_post = create_code_post
 
+    original_implementation.create_code_post = create_code_post
 ```
 
 </TabItem>
