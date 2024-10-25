@@ -110,7 +110,7 @@ module.exports = {
     },
     prism: {
       theme: require("prism-react-renderer/themes/vsDark"),
-      additionalLanguages: ["kotlin", "java", "swift", "dart"],
+      additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php"],
     },
     algolia: {
       apiKey: "ce04a158637d345fc094ebbfa9a5156a",
@@ -249,6 +249,21 @@ module.exports = {
         path: "thirdpartypasswordless",
         routeBasePath: "docs/thirdpartypasswordless",
         sidebarPath: require.resolve("./thirdpartypasswordless/sidebars.js"),
+        showLastUpdateTime: true,
+        editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
+        remarkPlugins: remarkPlugins,
+        rehypePlugins: rehypePlugins,
+        beforeDefaultRemarkPlugins,
+      },
+    ],
+
+    [
+      "@docusaurus/plugin-content-docs",
+      {
+        id: "unified-login",
+        path: "unified-login",
+        routeBasePath: "docs/unified-login",
+        sidebarPath: require.resolve("./unified-login/sidebars.js"),
         showLastUpdateTime: true,
         editUrl: "https://github.com/supertokens/docs/tree/master/v2/",
         remarkPlugins: remarkPlugins,

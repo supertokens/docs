@@ -1,21 +1,12 @@
 module.exports = {
   sidebar: [
     "introduction",
+    "client-credentials",
     {
       type: "category",
-      label: "Implementation",
+      label: "Legacy Flow",
       collapsed: false,
-      items: [
-        "jwt-creation",
-        {
-          type: "category",
-          label: "JWT Verification",
-          items: [
-            "jwt-verification/index"
-          ]
-        },
-      ]
+      items: ["legacy/implementation-guide", "legacy/security-analysis"],
     },
-    "security-analysis"
-  ]
+  ],
 };

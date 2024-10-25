@@ -33,11 +33,17 @@ export default function RecipeSelector(props) {
       case "mfa":
         return "Multi factor auth";
       case "microservice_auth":
-        return "Microservice Auth";
+        return "Microservice Authentication";
       case "userdashboard":
         return "User Management Dashboard";
       case "multitenancy":
         return "Multi Tenancy";
+      case "anomaly_detection":
+        return "Attack Protection Suite";
+      case "attackprotectionsuite":
+        return "Attack Protection Suite";
+      case "unified-login":
+        return "Unified Login";
       default:
         return "Select Recipe";
     }
@@ -191,6 +197,13 @@ export default function RecipeSelector(props) {
               <a href="/docs/attackprotectionsuite/introduction">
                 Attack Protection Suite
               </a>
+            </li>
+            <li
+              className={clsx("recipe_selector__menu__add_ons_items", {
+                active: activeSelector("unified-login"),
+              })}
+            >
+              <a href="/docs/unified-login/introduction">Unified Login</a>
             </li>
           </ul>
         </div>

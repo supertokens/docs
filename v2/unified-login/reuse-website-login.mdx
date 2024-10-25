@@ -1,0 +1,254 @@
+---
+title: Reuse website login for desktop and mobile apps
+hide_title: true
+---
+
+import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"
+import {Question, Answer}from "/src/components/question"
+import OAuthFrontendTabs from "/src/components/tabs/OAuthFrontendTabs"
+import OAuthBackendTabs from "/src/components/tabs/OAuthBackendTabs"
+import OAuthMobileTabs from "/src/components/tabs/OAuthMobileTabs"
+import CoreInjector from "/src/components/coreInjector"
+import AppInfoForm from "/src/components/appInfoForm"
+import TabItem from '@theme/TabItem';
+import OAuthPaidBanner from '../community/reusableMD/oauth-paid-banner.mdx'
+
+
+<OAuthPaidBanner />
+
+# Reuse website login for desktop and mobile apps
+
+This pattern is useful if you want to have the same web authentication experience for your desktop and mobile apps.
+The flow will allow you to save develpoment time but you will have to keep in mind that it will not involve a native authentication interface.
+Users will be directed to a separate browser page where they will complete the authentication flow.
+
+<img src="/img/oauth/reuse-web-ui-for-mobile.png" alt="Reuse website login for desktop and mobile apps"/>
+
+The authentication flow will work in the following way:
+
+1. User accesses the native application
+2. The user gets redirected to [**Authorization Service**](/docs/unified-login/introduction#authorization-service) authentication url.
+3. The [**Authorization Service**](/docs/unified-login/introduction#authorization-service) redirects the user to the login UI
+4. User completes the login attempt 
+5. The [**Authorization Service**](/docs/unified-login/introduction#authorization-service) backend redirects the user to the `callback URL`.
+This URL should be a deep link that can be opened by your actual application.
+6. The application uses the callback URL information to request a **OAuth2 Access Token** from the [**Authorization Service**](/docs/unified-login/introduction#authorization-service).
+7. The returned token is saved by the application.
+
+:::info
+This guide assumes that you already have setup and configured **SuperTokens** in your [**Authentication Service**](/docs/unified-login/introduction#authentication-service). 
+
+For more information on how to do that please check our [quickstart guides](/docs/guides).
+:::
+
+<!-- COPY SECTION -->
+<!-- ./unified-login/multiple-frontends-with-separate-backends.mdx -->
+<!-- 1 -->
+
+## 1. Enable the OAuth2 features from the Dashboard
+
+You will first have to enable the **OAuth2** features from the **SuperTokens.com Dashboard**.
+1. Open the **SuperTokens.com Dashboard**
+2. Click on the **Enabled Paid Features** button
+3. Click on **Managed Service**
+4. Check the **OAuth 2.0** option
+5. Click *Save* 
+
+Now you should be able to use the OAuth2 recipes in your applications.
+
+<!-- END COPY SECTION -->
+
+
+## 2. Create the OAuth2 Clients
+
+<CoreInjector defaultValue="https://<your-core-identifier>.aws.supertokens.io" showTenantId={false}>
+
+<AppInfoForm
+    askForAppName
+    askForAPIDomain
+    askForWebsiteDomain
+>
+
+For each of your **`applications`** you will have to create a separate [**OAuth2 Client**](/docs/unified-login/introduction#client).
+This can be done by directly calling the **SuperTokens Core** API.
+
+
+```bash
+# You will have to run this for each one of your applications
+# Adjust the client_name and redirect_uri based on that
+curl -X POST ^{coreInjector_uri_without_quotes}/recipe/oauth2/admin/clients \
+  -H "Content-Type: application/json" \
+  -H "api-key: ^{coreInjector_api_key_without_quotes}" \
+  -d '{
+      "clientName": "<YOUR_CLIENT_NAME>",
+      "responseTypes": ["code", "id_token"],
+      "grantTypes": ["authorization_code", "refresh_token"],
+      "tokenEndpointAuthMethod": "none",
+      "scope": "offline_access <custom_scope_1> <custom_scope_2>",
+      "redirectUri": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
+    }'
+```
+
+- `clientName` - A human-readable name of the client that will be used for identification.
+- `responseTypes` - Specifies the types of responses your client expects from the [**Authorization Server**](/docs/unified-login/introduction#authorization-server). Most of the time, you would need the following two to be present:
+    - `code`: Indicates that the [**Client**](/docs/unified-login/introduction#client) will receive an **Authorization Code** that will be exchanged for an [**OAuth2 Access Token**](/docs/unified-login/introduction#oauth2-access-token).
+    - `id_token`: Indicates that the [**Client**](/docs/unified-login/introduction#client) expects an [**ID Token**](/docs/unified-login/introduction#id-token)
+- `grantTypes` - The grant types that the [**Client**](/docs/unified-login/introduction#client) will use. 
+    - `authorization_code`: Allows exchanging the **Authorization Code** for an [**OAuth2 Access Token**](/docs/unified-login/introduction#oauth2-access-token).
+    - `refresh_token`: Allows exchanging the [**OAuth2 Refresh Token**](/docs/unified-login/introduction#oauth2-refresh-token) for a new [**OAuth2 Access Token**](/docs/unified-login/introduction#oauth2-access-token).
+- `tokenEndpointAuthMethod` - Indicates that the process of obtaining an **OAuth2 Access Token** will not make use of the client secret 
+- `redirectUri` - A list of URIs to which the [**Authorization Server**](/docs/unified-login/introduction#authorization-server) will send the user-agent (browser) after completing the authorization step. These can be deep links to mobile or desktop apps as well, but they must be exact URLs, without wildcards.
+- `scope` -  A space separated string of scopes that the [**Client**](/docs/unified-login/introduction#client) will request access to.
+    - `offline_access`: You need to include this scope if you want to use the [**OAuth2 Refresh Token**](/docs/unified-login/introduction#oauth2-refresh-token) to get a new [**OAuth2 Access Token**](/docs/unified-login/introduction#oauth2-access-token).
+
+If the creation was successful, the API will return a response that looks like this:
+
+```json
+
+{
+    "clientName": "<YOUR_CLIENT_NAME>",
+    "clientId": "<CLIENT_ID>",
+    "callbackUrls": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+}
+
+```
+
+Based on the client creation process we can also infer two additional values that we will need later on:
+- `authorizeUrl` corresponds to `^{form_apiDomain}^{form_apiBasePath}/oauth/auth`
+- `tokenFetchUrl` corresponds to `^{form_apiDomain}^{form_apiBasePath}/oauth/token`
+
+:::caution
+
+You will have to save this response because we do not persist it internally for security reasons.
+In the next steps we will use the values to complete several configurations.
+
+:::
+
+<!-- COPY SECTION -->
+<!-- ./unified-login/multiple-frontends-with-separate-backends.mdx -->
+<!-- token-lifespan -->
+
+### Change the default token lifespan
+
+By default, the tokens used in the authorization flow will have the following lifespans:
+  - [OAuth2 Access Token](/docs/unified-login/introduction#oauth2-access-token): 1 hour
+  - [OAuth2 ID Token](/docs/unified-login/introduction#oauth2-id-token): 1 hour
+  - [OAuth2 Refresh Token](/docs/unified-login/introduction#oauth2-refresh-token): 30 days
+
+If you want to change the default values you need to specify additional properties in the [**Client**](/docs/unified-login/introduction#client) creation request body.
+Use string values that signify time duration in milliecoseconds, seconds, minutes or hours (e.g. `"2000ms"`, `"60s"`, `"30m"`, `"1h"`).
+There are no limits on the duration of each token.
+
+- **OAuth2 Access Token** - Set the `authorizationCodeGrantAccessTokenLifespan` property.
+- **OAuth2 ID Token** - Set the `authorizationCodeGrantIdTokenLifespan` property.
+- **OAuth2 Refresh Token** - Set both the `authorizationCodeGrantRefreshTokenLifespan` and the `refreshTokenGrantRefreshTokenLifespan` properties to the same value.
+
+<!-- END COPY SECTION -->
+
+## 3. Make sure that you have properly configured the Authorization Service
+
+If you have not set up the [**Authorization Service**](/docs/unified-login/introduction#authorization-service) yet, please check one of the previous guides based whether you use multiple backend service:
+- [Single Backend Setup](/docs/unified-login/multiple-frontends-with-a-single-backend#3-set-up-your-authorization-service-backend)
+- [Multiple Backends Setup](/docs/unified-login/multiple-frontends-with-separate-backends#3-set-up-your-authorization-service)
+
+
+## 4. Update the login flow in your applications
+
+In each of your individual `applications` you will have to setup up logic for handling the **OAuth 2.0** authentication flow.
+We recommend using a generic **OICD** or **OAuth** library in order to do this.
+
+<OAuthMobileTabs>
+
+<TabItem value="react-native">
+
+You can use the [react-native-app-auth](https://commerce.nearform.com/open-source/react-native-app-auth/) library. 
+Just follow [the instructions](https://commerce.nearform.com/open-source/react-native-app-auth/docs/usage/config) to setup your application. 
+
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+- `issuer` corresponds to the endpoint of the **Authorization Service** `^{form_apiDomain}^{form_apiBasePath}`
+- `clientID` corresponds to `clientId`
+- `redirectUrl` corresponds a value from `callbackUrls`
+- `scopes` corresponds to `scopes` 
+
+You will also need to set the `additionalParameters` property with the following values:
+- `max_age: 0` This will force a new authentication flow once the user ends up on the **Authorization Service** frontend.
+- `tenant_id: <TENANT_ID>` Optional, in case you are using a multi tenant setup. Set this to the actual tenant ID.
+
+</TabItem>
+
+<TabItem value="android">
+
+
+You can use the [AppAuth-Android](https://github.com/openid/AppAuth-Android) library. 
+Just follow [the instructions](https://github.com/openid/AppAuth-Android?tab=readme-ov-file#authorization-service-configuration) to setup your application. 
+
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+For the `AuthorizationServiceConfiguration` the parameters that you will have to provide are: `authorizeUrl` and `tokenFetchUrl`.
+When calling the `AuthorizationRequest.Builder` function you can use `clientId` and a value from `callbackUrls` to replace the example values.
+
+You will need to set additional query parameters by calling the `setAdditionalParameters` function on the `AuthorizationRequest.Builder` object:
+- `max_age: 0` This will force a new authentication flow once the user ends up on the **Authorization Service** frontend.
+- `tenant_id: <TENANT_ID>` Optional, in case you are using a multi tenant setup. Set this to the actual tenant ID.
+
+</TabItem>
+
+
+<TabItem value="ios">
+
+You can use the [AppAuth-iOS](https://github.com/openid/AppAuth-Android) library. 
+Just follow [the instructions](https://github.com/openid/AppAuth-iOS?tab=readme-ov-file#auth-flow) to setup your application. 
+
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+- `clientID` corresponds to `clientId`
+- `redirectUrl` corresponds a value from `callbackUrls`
+- `scopes` corresponds to `scopes` 
+- `authorizationEndpoint` corresponds to `authorizeUrl`
+- `tokenEndpoint` corresponds to `tokenFetchUrl`
+
+You will also need to set extra query parameters, when instantiating the `OIDAuthorizationRequest` object, with the following values:
+- `max_age: 0` This will force a new authentication flow once the user ends up on the **Authorization Service** frontend.
+- `tenant_id: <TENANT_ID>` Optional, in case you are using a multi tenant setup. Set this to the actual tenant ID.
+
+</TabItem>
+
+<TabItem value="flutter"> 
+
+You can use the [AppAuth](https://github.com/MaikuB/flutter_appauth) library. 
+Just follow [the instructions](https://github.com/MaikuB/flutter_appauth/tree/master/flutter_appauth) to setup your application. 
+
+The configuration parameters can be determined based on the response that we received on **step 2**, when we created the **OAuth2 Client**.
+
+- `<client_id>` corresponds to `clientId`
+- `<issuer>` corresponds to the endpoint of the **Authorization Service** `^{form_apiDomain}^{form_apiBasePath}`
+- `<redirect_url>` corresponds a value from `callbackUrls`
+- `scopes` corresponds to `scopes` 
+
+You will also need to set the `additionalParameters` property with the following values:
+- `max_age: 0` This will force a new authentication flow once the user ends up on the **Authorization Service** frontend.
+- `tenant_id: <TENANT_ID>` Optional, in case you are using a multi tenant setup. Set this to the actual tenant ID.
+
+</TabItem>
+
+
+</OAuthMobileTabs>
+
+:::info
+
+If you want to use the [**OAuth2 Refresh Tokens**](/docs/unified-login/introduction#oauth2-refresh-token) make sure to include the `offline_access` scope during the initialization step.
+
+:::
+
+
+## 5. Test the new authentication flow
+
+With everything set up, you can now test your login flow.
+Just use the setup that you have created in the previous step to check if the authentication flow completes without any issues.
+
+
+
+</AppInfoForm>
+
+</CoreInjector>
