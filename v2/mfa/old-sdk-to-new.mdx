@@ -106,9 +106,86 @@ Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-i
 </TabItem>
 <TabItem value="python">
 
-:::note
-Coming soon. In the meantime, checkout the [legacy method](./legacy-method/how-it-works) for adding MFA to your app.
-:::
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.utils import InputOverrideConfig
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from supertokens_python.recipe.session.interfaces import (
+    SessionClaimValidator,
+    ClaimValidationResult,
+)
+from typing import Dict, Any, List
+from supertokens_python.types import RecipeUserId
+from supertokens_python.recipe.multifactorauth.multi_factor_auth_claim import (
+    MultiFactorAuthClaim,
+)
+from supertokens_python import get_request_from_user_context
+
+
+def override_functions(
+    original_implementation: RecipeInterface,
+) -> RecipeInterface:
+
+    def get_global_claim_validators(
+        tenant_id: str,
+        user_id: str,
+        recipe_user_id: RecipeUserId,
+        claim_validators_added_by_other_recipes: List[SessionClaimValidator],
+        user_context: Dict[str, Any],
+    ):
+        # Remove the existing default MFA validator
+        new_validators = [
+            v
+            for v in claim_validators_added_by_other_recipes
+            if v.id != MultiFactorAuthClaim.key
+        ]
+
+        # Create an instance of the default validator
+        original_validator = (
+            MultiFactorAuthClaim.validators.has_completed_mfa_requirements_for_auth()
+        )
+        original_validator_validate_func = original_validator.validate
+
+        # Create a custom validator based on the default validator
+        async def custom_validate(
+            payload: Any, user_context: Dict[str, Any]
+        ) -> ClaimValidationResult:
+            # Check if the client is an older one based on the header
+            request = get_request_from_user_context(user_context)
+            if request is not None:
+                is_older_client = request.get_header("client-version") != "2.0"
+                if is_older_client:
+                    # Return true early for older clients
+                    return ClaimValidationResult(is_valid=True)
+
+            # For newer clients, call the original validate function
+            return await original_validator_validate_func(payload, user_context)
+
+        original_validator.validate = custom_validate
+
+        return [original_validator, *new_validators]
+
+    original_implementation.get_global_claim_validators = get_global_claim_validators
+
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        session.init(override=InputOverrideConfig(functions=override_functions))
+    ],
+)
+```
 
 </TabItem>
 </BackendSDKTabs>

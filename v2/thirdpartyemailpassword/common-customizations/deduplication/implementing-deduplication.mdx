@@ -221,71 +221,123 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.types import GeneralErrorResponse
 from supertokens_python.recipe import thirdparty, emailpassword
-from supertokens_python.recipe.thirdparty.asyncio import get_users_by_email as get_thirdparty_users_by_email
-from supertokens_python.recipe.emailpassword.asyncio import get_user_by_email as get_emailpassword_user_by_email
-from supertokens_python.recipe.thirdparty.interfaces import APIInterface, RecipeInterface as ThirdPartyrecipeInterface, SignInUpOkResult, APIOptions, SignInUpPostOkResult, SignInUpPostNoEmailGivenByProviderResponse
-from supertokens_python.recipe.emailpassword.interfaces import RecipeInterface as EmailPasswordRecipeInterface, SignUpOkResult, SignUpEmailAlreadyExistsError
+from supertokens_python.asyncio import list_users_by_account_info
+from supertokens_python.types import AccountInfo
+from supertokens_python.recipe.thirdparty.interfaces import (
+    APIInterface,
+    APIOptions,
+    RecipeInterface as ThirdPartyRecipeInterface,
+)
+from supertokens_python.recipe.emailpassword.interfaces import (
+    RecipeInterface as EmailPasswordRecipeInterface,
+    EmailAlreadyExistsError,
+)
+from supertokens_python.recipe.thirdparty.types import ThirdPartyInfo
 from typing import Union, Dict, Any, Optional
 from supertokens_python.recipe.thirdparty.provider import Provider, RedirectUriInfo
 from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
+from supertokens_python.recipe.session.interfaces import SessionContainer
 
 
-def override_emailpassword_functions(original_implementation: EmailPasswordRecipeInterface):
+def override_emailpassword_functions(
+    original_implementation: EmailPasswordRecipeInterface,
+):
     original_email_password_sign_up = original_implementation.sign_up
 
     async def emailpassword_sign_up(
-        email: str, password: str, tenant_id: str, user_context: Dict[str, Any]
-    ) -> Union[SignUpOkResult, SignUpEmailAlreadyExistsError]:
-        existing_user = await get_emailpassword_user_by_email(tenant_id, email, user_context)
+        email: str,
+        password: str,
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        user_context: Dict[str, Any],
+    ):
+        existing_users = await list_users_by_account_info(
+            tenant_id, AccountInfo(email=email)
+        )
 
-        third_party_existing_users = await get_thirdparty_users_by_email(tenant_id, email, user_context)
-
-        if (existing_user is None and len(third_party_existing_users) == 0):
+        if len(existing_users) == 0:
             # this means this email is new so we allow sign up
-            return await original_email_password_sign_up(email, password, tenant_id, user_context)
+            return await original_email_password_sign_up(
+                email,
+                password,
+                tenant_id,
+                session,
+                should_try_linking_with_session_user,
+                user_context,
+            )
 
-        return SignUpEmailAlreadyExistsError()
+        return EmailAlreadyExistsError()
 
     original_implementation.sign_up = emailpassword_sign_up
 
     return original_implementation
 
-def override_thirdparty_functions(original_implementation: ThirdPartyrecipeInterface):
+
+def override_thirdparty_functions(original_implementation: ThirdPartyRecipeInterface):
     original_thirdparty_sign_in_up = original_implementation.sign_in_up
 
-    async def thirdparty_sign_in_up(
+    async def sign_in_up(
         third_party_id: str,
         third_party_user_id: str,
         email: str,
+        is_verified: bool,
         oauth_tokens: Dict[str, Any],
         raw_user_info_from_provider: RawUserInfoFromProvider,
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
-        user_context: Dict[str, Any]
-    ) -> SignInUpOkResult:
-        existing_users = await get_thirdparty_users_by_email(tenant_id, email, user_context)
-        email_password_user = await get_emailpassword_user_by_email(tenant_id, email, user_context)
-
-        if email_password_user is not None:
-            raise Exception("Cannot sign up as email already exists")
-
-        if (len(existing_users) == 0):
+        user_context: Dict[str, Any],
+    ):
+        existing_users = await list_users_by_account_info(
+            tenant_id, AccountInfo(email=email)
+        )
+        if len(existing_users) == 0:
             # this means this email is new so we allow sign up
-            return await original_thirdparty_sign_in_up(third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
-        
-        is_sign_in = False
-        for user in existing_users:
-            if user.third_party_info.id == third_party_id and user.third_party_info.user_id == third_party_user_id:
-                is_sign_in = True
-                break
-        
-        if is_sign_in:
-            return await original_thirdparty_sign_in_up(third_party_id, third_party_user_id, email, oauth_tokens, raw_user_info_from_provider, tenant_id, user_context)
+            return await original_thirdparty_sign_in_up(
+                third_party_id,
+                third_party_user_id,
+                email,
+                is_verified,
+                oauth_tokens,
+                raw_user_info_from_provider,
+                session,
+                should_try_linking_with_session_user,
+                tenant_id,
+                user_context,
+            )
 
-        # this means that the email already exists with another social or email password login method.
+        if any(
+            any(
+                lm.recipe_id == "thirdparty"
+                and lm.has_same_third_party_info_as(
+                    ThirdPartyInfo(third_party_user_id, third_party_id)
+                )
+                for lm in user.login_methods
+            )
+            for user in existing_users
+        ):
+            # this means we are trying to sign in with the same social login. So we allow it
+            return await original_thirdparty_sign_in_up(
+                third_party_id,
+                third_party_user_id,
+                email,
+                is_verified,
+                oauth_tokens,
+                raw_user_info_from_provider,
+                session,
+                should_try_linking_with_session_user,
+                tenant_id,
+                user_context,
+            )
+
+        # this means that the email already exists with another social login method.
         # so we throw an error.
         raise Exception("Cannot sign up as email already exists")
 
-    original_implementation.sign_in_up = thirdparty_sign_in_up
+    original_implementation.sign_in_up = sign_in_up
+
+    return original_implementation
 
     return original_implementation
 
@@ -297,19 +349,28 @@ def override_thirdparty_apis(original_implementation: APIInterface):
         provider: Provider,
         redirect_uri_info: Optional[RedirectUriInfo],
         oauth_tokens: Optional[Dict[str, Any]],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
         tenant_id: str,
         api_options: APIOptions,
-        user_context: Dict[str, Any]
-    ) -> Union[
-        SignInUpPostOkResult, 
-        SignInUpPostNoEmailGivenByProviderResponse, 
-        GeneralErrorResponse,
-    ]:
+        user_context: Dict[str, Any],
+    ):
         try:
-            return await original_sign_in_up_post(provider, redirect_uri_info, oauth_tokens, tenant_id, api_options, user_context)
+            return await original_sign_in_up_post(
+                provider,
+                redirect_uri_info,
+                oauth_tokens,
+                session,
+                should_try_linking_with_session_user,
+                tenant_id,
+                api_options,
+                user_context,
+            )
         except Exception as e:
             if str(e) == "Cannot sign up as email already exists":
-                return GeneralErrorResponse("Seems like you already have an account with another method. Please use that instead.")
+                return GeneralErrorResponse(
+                    "Seems like you already have an account with another social login provider. Please use that instead."
+                )
             raise e
 
     original_implementation.sign_in_up_post = sign_in_up_post
@@ -317,22 +378,20 @@ def override_thirdparty_apis(original_implementation: APIInterface):
 
 
 init(
-    app_info=InputAppInfo(
-        api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
     recipe_list=[
         thirdparty.init(
             override=thirdparty.InputOverrideConfig(
-                apis=override_thirdparty_apis,
-                functions=override_thirdparty_functions
+                apis=override_thirdparty_apis, functions=override_thirdparty_functions
             ),
         ),
         emailpassword.init(
             override=emailpassword.InputOverrideConfig(
                 functions=override_emailpassword_functions
             ),
-        )
-    ]
+        ),
+    ],
 )
 ```
 

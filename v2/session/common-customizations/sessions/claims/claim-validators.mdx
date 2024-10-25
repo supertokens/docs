@@ -455,24 +455,38 @@ from supertokens_python.recipe import session
 from supertokens_python.recipe.session.interfaces import RecipeInterface
 from supertokens_python.recipe.userroles import UserRoleClaim
 from typing import Any, Dict, Optional
+from supertokens_python.types import RecipeUserId
 
 
 def override_functions(original_implementation: RecipeInterface):
-    original_implementation_create_new_session = original_implementation.create_new_session
+    original_implementation_create_new_session = (
+        original_implementation.create_new_session
+    )
 
-    async def create_new_session(user_id: str,
-                                 access_token_payload: Optional[Dict[str, Any]],
-                                 session_data_in_database: Optional[Dict[str, Any]],
-                                 disable_anti_csrf: Optional[bool],
-                                 tenant_id: str,
-                                 user_context: Dict[str, Any]):
+    async def create_new_session(
+        user_id: str,
+        recipe_user_id: RecipeUserId,
+        access_token_payload: Optional[Dict[str, Any]],
+        session_data_in_database: Optional[Dict[str, Any]],
+        disable_anti_csrf: Optional[bool],
+        tenant_id: str,
+        user_context: Dict[str, Any],
+    ):
         if access_token_payload is None:
             access_token_payload = {}
 
         access_token_payload = {
             **access_token_payload,
             # highlight-next-line
-            **(await UserRoleClaim.build(user_id, tenant_id, user_context))
+            **(
+                await UserRoleClaim.build(
+                    user_id,
+                    recipe_user_id,
+                    tenant_id,
+                    access_token_payload,
+                    user_context,
+                )
+            ),
         }
 
         # At this step, the access token paylaod looks like this:
@@ -483,24 +497,26 @@ def override_functions(original_implementation: RecipeInterface):
         #    }
         # }
 
-        return await original_implementation_create_new_session(user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context)
+        return await original_implementation_create_new_session(
+            user_id,
+            recipe_user_id,
+            access_token_payload,
+            session_data_in_database,
+            disable_anti_csrf,
+            tenant_id,
+            user_context,
+        )
 
     original_implementation.create_new_session = create_new_session
     return original_implementation
 
 
 init(
-    app_info=InputAppInfo(
-        api_domain="...", app_name="...", website_domain="..."),
-
-    framework='...',  # type: ignore
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
     recipe_list=[
-        session.init(
-            override=session.InputOverrideConfig(
-                functions=override_functions
-            )
-        )
-    ]
+        session.init(override=session.InputOverrideConfig(functions=override_functions))
+    ],
 )
 ```
 </TabItem>
@@ -637,7 +653,7 @@ from supertokens_python.recipe.session.interfaces import SessionContainer
 from supertokens_python.recipe.session.claims import BooleanClaim
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___, _____, ______: False)
 
 async def set_2fa_claim_as_completed(session: SessionContainer):
     await session.set_claim_value(SecondFactorClaim, True)
@@ -651,7 +667,7 @@ from supertokens_python.recipe.session.interfaces import SessionContainer
 from supertokens_python.recipe.session.claims import BooleanClaim
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___, _____, ______: False)
 
 def set_2fa_claim_as_completed(session: SessionContainer):
     session.sync_set_claim_value(SecondFactorClaim, True)
@@ -759,9 +775,10 @@ from supertokens_python.recipe import session
 from supertokens_python.recipe.session.interfaces import RecipeInterface, SessionClaimValidator
 from typing import Any, Dict, List
 from supertokens_python.recipe.session.claims import BooleanClaim
+from supertokens_python.types import RecipeUserId
 
 SecondFactorClaim = BooleanClaim(
-    key="2fa-completed", fetch_value=lambda _, __, ___: False)
+    key="2fa-completed", fetch_value=lambda _, __, ___, _____, ______: False)
 
 
 def override_functions(original_implementation: RecipeInterface):
@@ -769,6 +786,7 @@ def override_functions(original_implementation: RecipeInterface):
     def get_global_claim_validators(
         tenant_id: str,
         user_id: str,
+        recipe_user_id: RecipeUserId,
         claim_validators_added_by_other_recipes: List[SessionClaimValidator],
         user_context: Dict[str, Any],
     ):
