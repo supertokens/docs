@@ -33,7 +33,7 @@ export default function RecipeSelector(props) {
       case "mfa":
         return "Multi factor auth";
       case "microservice_auth":
-        return "Microservice Authentication";
+        return "M2M Auth";
       case "userdashboard":
         return "User Management Dashboard";
       case "multitenancy":
@@ -176,9 +176,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("microservice_auth"),
               })}
             >
-              <a href="/docs/microservice_auth/introduction">
-                Microservice Authentication
-              </a>
+              <a href="/docs/microservice_auth/introduction">M2M Auth</a>
             </li>
             <li
               className={clsx("recipe_selector__menu__add_ons_items", {
