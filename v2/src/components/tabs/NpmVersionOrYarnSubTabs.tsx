@@ -11,6 +11,7 @@ export default function NpmVersionOrYarnSubTabs(props: any) {
                 { label: 'Via NPM>=7', value: 'npm7+' },
                 { label: 'Via NPM6', value: 'npm6' },
                 { label: 'Via Yarn', value: 'yarn' },
+                { label: 'Via Pnpm', value: 'pnpm' },
             ]}>
             {props.children}
         </Tabs>
