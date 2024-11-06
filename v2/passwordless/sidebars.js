@@ -8,6 +8,7 @@ module.exports = {
         highlightGroup: true,
       },
       items: [
+        "quickstart",
         "introduction",
         {
           type: "category",

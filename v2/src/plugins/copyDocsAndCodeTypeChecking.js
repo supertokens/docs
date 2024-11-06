@@ -28,7 +28,11 @@ async function checkFrontendSDKRelatedDocs(mdPath) {
         (data.match(new RegExp("<TabItem value='reactjs'>", "g")) || []).length;
       if (count > 0) {
         // make sure that show_ui_switcher: true is also in the file
-        if (!mdPath.includes("pre-built-ui")) {
+        if (
+          !mdPath.includes("pre-built-ui") &&
+          !mdPath.includes("introduction") &&
+          !mdPath.includes("quickstart")
+        ) {
           // we do this cause the pre built UI section in the docs only talks about pre built Ui, so no custom switcher is needed for those pages.
           if (data.indexOf("show_ui_switcher: true") === -1) {
             rej(

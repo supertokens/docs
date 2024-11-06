@@ -8,6 +8,7 @@ module.exports = {
       },
       collapsed: false,
       items: [
+        "quickstart",
         "introduction",
         {
           type: "category",
