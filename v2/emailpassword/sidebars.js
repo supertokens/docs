@@ -1,8 +1,35 @@
 module.exports = {
   sidebar: [
-    { id: "introduction", type: "doc", label: "Introduction" },
-    { id: "quickstart", type: "doc", label: "Quickstart" },
-    "user-object",
+    {
+      label: "quickstart",
+      type: "category",
+      customProps: {
+        highlightGroup: true,
+      },
+      collapsed: false,
+      items: [
+        {
+          id: "quickstart-setup/introduction",
+          type: "doc",
+          label: "Introduction",
+        },
+        {
+          id: "quickstart-setup/frontend-setup",
+          type: "doc",
+          label: "Frontend Setup",
+        },
+        {
+          id: "quickstart-setup/backend-setup",
+          type: "doc",
+          label: "Backend Setup",
+        },
+        {
+          id: "quickstart-setup/next-steps",
+          type: "doc",
+          label: "Next Steps",
+        },
+      ],
+    },
     {
       type: "category",
       label: "Integrations",
@@ -414,16 +441,11 @@ module.exports = {
         "common-customizations/translations",
         {
           type: "category",
-          label: "Implement your own Custom UI",
+          label: "Custom UI",
           customProps: {
             categoryIcon: "pencil",
           },
           items: [
-            {
-              type: "doc",
-              label: "Add the Authentication UI",
-              id: "custom-ui/init/frontend",
-            },
             {
               type: "doc",
               label: "Add a Forgot Password Flow",
@@ -650,6 +672,7 @@ module.exports = {
       label: "References",
       items: [
         "architecture",
+        "user-object",
         "other-frameworks",
         "appinfo",
         "sdks",
