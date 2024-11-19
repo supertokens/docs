@@ -4,10 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React, { useState, cloneElement, Children } from 'react';
-import useUserPreferencesContext from '@theme/hooks/useUserPreferencesContext';
-import clsx from 'clsx';
-import styles from './styles.module.css';
+import React, { useState, cloneElement, Children } from "react";
+import useUserPreferencesContext from "@theme/hooks/useUserPreferencesContext";
+import clsx from "clsx";
+import styles from "./styles.module.css";
 
 function isInViewport(element) {
   const { top, left, bottom, right } = element.getBoundingClientRect();
@@ -48,8 +48,8 @@ function Tabs(props) {
 
     if (groupId != null) {
       setTabGroupChoices(groupId, selectedTabValue);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('docs-tab-change'));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("docs-tab-change"));
       }
       setTimeout(() => {
         if (isInViewport(selectedTab)) {
@@ -57,8 +57,8 @@ function Tabs(props) {
         }
 
         selectedTab.scrollIntoView({
-          block: 'center',
-          behavior: 'smooth',
+          block: "center",
+          behavior: "smooth",
         });
         selectedTab.classList.add(styles.tabItemActive);
         setTimeout(
@@ -94,12 +94,9 @@ function Tabs(props) {
 
   return (
     <div
-      className={clsx(
-        'docs-tabs-container',
-        {
-          'sub-tab': isSubTab
-        }
-      )}
+      className={clsx("docs-tabs-container", {
+        "sub-tab": isSubTab,
+      })}
     >
       <ul
         style={{
@@ -109,30 +106,36 @@ function Tabs(props) {
         role="tablist"
         aria-orientation="horizontal"
         className={clsx(
-          'tabs',
+          "tabs",
           {
-            'tabs--block': block,
+            "tabs--block": block,
           },
           className,
-        )}>
+        )}
+      >
         {values.map(({ value, label }) => (
           <li
-            style={isSubTab ? {
-              padding: "10px",
-              borderWidth: "0px",
-              fontWeight: "normal"
-            } : {}}
+            style={
+              isSubTab
+                ? {
+                    padding: "10px",
+                    borderWidth: "0px",
+                    fontWeight: "normal",
+                  }
+                : {}
+            }
             role="tab"
             tabIndex={selectedValue === value ? 0 : -1}
             aria-selected={selectedValue === value}
-            className={clsx('tabs__item', styles.tabItem, {
-              'tabs__item--active': selectedValue === value,
+            className={clsx("tabs__item", styles.tabItem, {
+              "tabs__item--active": selectedValue === value,
             })}
             key={value}
             ref={(tabControl) => tabRefs.push(tabControl)}
             onKeyDown={handleKeydown}
             onFocus={handleTabChange}
-            onClick={handleTabChange}>
+            onClick={handleTabChange}
+          >
             {label}
           </li>
         ))}
@@ -144,7 +147,7 @@ function Tabs(props) {
             (tabItem) => tabItem.props.value === selectedValue,
           )[0],
           {
-            className: 'margin-vert--md',
+            className: "margin-vert--md",
           },
         )
       ) : (
