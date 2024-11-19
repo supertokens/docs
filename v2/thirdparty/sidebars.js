@@ -30,7 +30,6 @@ module.exports = {
         },
       ],
     },
-    "user-object",
     {
       type: "category",
       label: "Integrations",
@@ -650,6 +649,7 @@ module.exports = {
       label: "References",
       items: [
         "architecture",
+        "user-object",
         "other-frameworks",
         "appinfo",
         "sdks",

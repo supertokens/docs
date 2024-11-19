@@ -30,7 +30,6 @@ module.exports = {
         },
       ],
     },
-    "user-object",
     {
       type: "category",
       label: "Integrations",
@@ -638,6 +637,7 @@ module.exports = {
       items: [
         "architecture",
         "other-frameworks",
+        "user-object",
         "flow_diagram",
         "appinfo",
         "sdks",
