@@ -9,22 +9,22 @@ module.exports = {
       collapsed: false,
       items: [
         {
-          id: "quickstart-setup/introduction",
+          id: "quickstart/introduction",
           type: "doc",
           label: "Introduction",
         },
         {
-          id: "quickstart-setup/frontend-setup",
+          id: "quickstart/frontend-setup",
           type: "doc",
           label: "Frontend Setup",
         },
         {
-          id: "quickstart-setup/backend-setup",
+          id: "quickstart/backend-setup",
           type: "doc",
           label: "Backend Setup",
         },
         {
-          id: "quickstart-setup/next-steps",
+          id: "quickstart/next-steps",
           type: "doc",
           label: "Next Steps",
         },
@@ -680,7 +680,7 @@ module.exports = {
         "compatibility-table",
         {
           type: "category",
-          label: "UI Components",
+          label: "Prebuilt UI Components",
           items: [
             "pre-built-ui/further-reading/email-password-login",
             "pre-built-ui/further-reading/password-reset",

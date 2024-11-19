@@ -91,7 +91,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("thirdpartyemailpassword"),
               })}
             >
-              <a href="/docs/thirdpartyemailpassword/quickstart-setup/introduction">
+              <a href="/docs/thirdpartyemailpassword/quickstart/introduction">
                 Email password + Social / Enterprise Login
               </a>
             </li>
@@ -100,7 +100,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("passwordless"),
               })}
             >
-              <a href="/docs/passwordless/quickstart-setup/introduction">
+              <a href="/docs/passwordless/quickstart/introduction">
                 Passwordless
               </a>
             </li>
@@ -109,7 +109,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("emailpassword"),
               })}
             >
-              <a href="/docs/emailpassword/quickstart-setup/introduction">
+              <a href="/docs/emailpassword/quickstart/introduction">
                 Email password Login
               </a>
             </li>
@@ -118,7 +118,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("thirdpartypasswordless"),
               })}
             >
-              <a href="/docs/thirdpartypasswordless/quickstart-setup/introduction">
+              <a href="/docs/thirdpartypasswordless/quickstart/introduction">
                 Social / Enterprise Login + Passwordless
               </a>
             </li>
@@ -127,7 +127,7 @@ export default function RecipeSelector(props) {
                 active: activeSelector("thirdparty"),
               })}
             >
-              <a href="/docs/thirdparty/quickstart-setup/introduction">
+              <a href="/docs/thirdparty/quickstart/introduction">
                 Social / Enterprise Login
               </a>
             </li>

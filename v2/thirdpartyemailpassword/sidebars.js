@@ -9,22 +9,22 @@ module.exports = {
       collapsed: false,
       items: [
         {
-          id: "quickstart-setup/introduction",
+          id: "quickstart/introduction",
           type: "doc",
           label: "Introduction",
         },
         {
-          id: "quickstart-setup/frontend-setup",
+          id: "quickstart/frontend-setup",
           type: "doc",
           label: "Frontend Setup",
         },
         {
-          id: "quickstart-setup/backend-setup",
+          id: "quickstart/backend-setup",
           type: "doc",
           label: "Backend Setup",
         },
         {
-          id: "quickstart-setup/next-steps",
+          id: "quickstart/next-steps",
           type: "doc",
           label: "Next Steps",
         },
@@ -252,12 +252,23 @@ module.exports = {
         "common-customizations/sessions/with-jwt/read-jwt",
         "common-customizations/sessions/ssr",
         {
+          id: "pre-built-ui/handling-session-tokens",
+          type: "doc",
+          label: "Access Session Tokens",
+        },
+        {
           type: "category",
           label: "Reading / modifying session claims",
           items: [
             "common-customizations/sessions/claims/access-token-payload",
             "common-customizations/sessions/claims/claim-validators",
           ],
+        },
+        { id: "pre-built-ui/sign-out", type: "doc", label: "Add Sign Out" },
+        {
+          id: "pre-built-ui/auth-redirection",
+          type: "doc",
+          label: "Add Redirect Actions",
         },
         "common-customizations/sessions/revoke-session",
         "common-customizations/sessions/anonymous-session",
@@ -474,6 +485,28 @@ module.exports = {
         "common-customizations/multiple-clients",
         "common-customizations/userid-format",
         {
+          id: "pre-built-ui/setup/core/saas-setup",
+          label: "Connecting to the SuperTokens Core Managed Service",
+          type: "doc",
+        },
+        {
+          type: "category",
+          label: "Self Hosting SuperTokens Core",
+          items: [
+            "pre-built-ui/setup/core/with-docker",
+            "pre-built-ui/setup/core/without-docker",
+            {
+              type: "category",
+              label: "Database Setup",
+              items: [
+                "pre-built-ui/setup/database-setup/mysql",
+                "pre-built-ui/setup/database-setup/postgresql",
+                "pre-built-ui/setup/database-setup/rename-database-tables",
+              ],
+            },
+          ],
+        },
+        {
           type: "category",
           label:
             "Backend and frontend overrides (actions, hooks and UI customisation)",
@@ -603,6 +636,24 @@ module.exports = {
         "mfa",
         "multi-tenant",
         "attack-protection-suite",
+        {
+          type: "category",
+          label: "User Management dashboard",
+          items: [
+            "pre-built-ui/setup/user-management-dashboard/setup",
+            "pre-built-ui/setup/user-management-dashboard/users-listing-and-details",
+            "pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions",
+            {
+              type: "category",
+              label: "Tenant Management",
+              collapsed: true,
+              items: [
+                "pre-built-ui/setup/user-management-dashboard/tenant-management/overview",
+                "pre-built-ui/setup/user-management-dashboard/tenant-management/details",
+              ],
+            },
+          ],
+        },
       ],
     },
     "scalability",
@@ -648,6 +699,16 @@ module.exports = {
         "sdks",
         "apis",
         "compatibility-table",
+        {
+          type: "category",
+          label: "Prebuilt UI Components",
+          items: [
+            "pre-built-ui/further-reading/thirdparty-login",
+            "pre-built-ui/further-reading/email-password-login",
+            "pre-built-ui/further-reading/password-reset",
+            "pre-built-ui/further-reading/email-verification",
+          ],
+        },
       ],
     },
   ],
