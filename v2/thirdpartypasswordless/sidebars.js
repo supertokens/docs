@@ -375,6 +375,7 @@ module.exports = {
           ],
         },
         "common-customizations/generating-magic-link-manually",
+        "add-multiple-clients-for-the-same-provider",
         "common-customizations/get-user-info",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",

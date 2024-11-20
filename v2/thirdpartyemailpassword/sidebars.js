@@ -382,6 +382,7 @@ module.exports = {
             "common-customizations/password-managers",
           ],
         },
+        "add-multiple-clients-for-the-same-provider",
         "common-customizations/get-user-info",
         "common-customizations/user-pagination",
         "common-customizations/delete-user",
