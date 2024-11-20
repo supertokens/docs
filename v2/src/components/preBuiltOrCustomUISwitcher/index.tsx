@@ -35,6 +35,22 @@ export function updateUIMode(
   window.dispatchEvent(new Event("uiModeChanged"));
 }
 
+export function PrebuiltUILink({ children }: React.PropsWithChildren<{}>) {
+  return (
+    <a style={{ cursor: "pointer" }} onClick={() => updateUIMode("prebuilt")}>
+      {children}
+    </a>
+  );
+}
+
+export function CustomUILink({ children }: React.PropsWithChildren<{}>) {
+  return (
+    <a style={{ cursor: "pointer" }} onClick={() => updateUIMode("custom")}>
+      {children}
+    </a>
+  );
+}
+
 export function PreBuiltOrCustomUISwitcher(props: any) {
   let [uiMode, setUIMode] = useState(getUIModeFromStorage());
 
