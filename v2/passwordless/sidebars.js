@@ -1,158 +1,35 @@
 module.exports = {
   sidebar: [
     {
+      label: "quickstart",
       type: "category",
-      label: "Start Here",
-      collapsed: false,
       customProps: {
         highlightGroup: true,
       },
+      collapsed: false,
       items: [
-        "introduction",
         {
-          type: "category",
-          label: "Quick setup with Pre built UI",
-          customProps: {
-            categoryIcon: "lightning",
-          },
-          items: [
-            {
-              type: "category",
-              label: "Setup",
-              collapsed: false,
-              items: [
-                "pre-built-ui/setup/frontend",
-                "pre-built-ui/setup/backend",
-                {
-                  type: "category",
-                  label: "Step 3: Core",
-                  items: [
-                    {
-                      type: "category",
-                      label: "Self hosted",
-                      items: [
-                        "pre-built-ui/setup/core/with-docker",
-                        "pre-built-ui/setup/core/without-docker",
-                        {
-                          type: "category",
-                          label: "Database Setup",
-                          items: [
-                            "pre-built-ui/setup/database-setup/mysql",
-                            "pre-built-ui/setup/database-setup/postgresql",
-                            "pre-built-ui/setup/database-setup/rename-database-tables",
-                          ],
-                        },
-                      ],
-                    },
-                    "pre-built-ui/setup/core/saas-setup",
-                  ],
-                },
-                {
-                  type: "category",
-                  label: "Step 4: User management dashboard",
-                  items: [
-                    "pre-built-ui/setup/user-management-dashboard/setup",
-                    "pre-built-ui/setup/user-management-dashboard/users-listing-and-details",
-                    "pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions",
-                    {
-                      type: "category",
-                      label: "Tenant Management",
-                      collapsed: true,
-                      items: [
-                        "pre-built-ui/setup/user-management-dashboard/tenant-management/overview",
-                        "pre-built-ui/setup/user-management-dashboard/tenant-management/details",
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-            "pre-built-ui/handling-session-tokens",
-            "pre-built-ui/securing-routes",
-            "pre-built-ui/sign-out",
-            "pre-built-ui/auth-redirection",
-            "pre-built-ui/enable-email-verification",
-            "pre-built-ui/multitenant-login",
-            {
-              type: "category",
-              label: "Further Reading",
-              items: [
-                "pre-built-ui/further-reading/passwordless-login",
-                "pre-built-ui/further-reading/email-verification",
-              ],
-            },
-          ],
+          id: "quickstart/introduction",
+          type: "doc",
+          label: "Introduction",
         },
         {
-          type: "category",
-          label: "Using your own UI / Custom UI",
-          customProps: {
-            categoryIcon: "pencil",
-          },
-          items: [
-            {
-              type: "category",
-              label: "Initialisation",
-              collapsed: false,
-              items: [
-                "custom-ui/init/frontend",
-                "custom-ui/init/backend",
-                {
-                  type: "category",
-                  label: "Step 3: Core",
-                  items: [
-                    {
-                      type: "category",
-                      label: "Self hosted",
-                      items: [
-                        "custom-ui/init/core/with-docker",
-                        "custom-ui/init/core/without-docker",
-                        {
-                          type: "category",
-                          label: "Database Setup",
-                          items: [
-                            "custom-ui/init/database-setup/mysql",
-                            "custom-ui/init/database-setup/postgresql",
-                            "custom-ui/init/database-setup/rename-database-tables",
-                          ],
-                        },
-                      ],
-                    },
-                    "custom-ui/init/core/saas-setup",
-                  ],
-                },
-                {
-                  type: "category",
-                  label: "Step 4: User management dashboard",
-                  items: [
-                    "custom-ui/init/user-management-dashboard/setup",
-                    "custom-ui/init/user-management-dashboard/users-listing-and-details",
-                    "custom-ui/init/user-management-dashboard/managing-user-roles-and-permissions",
-                    {
-                      type: "category",
-                      label: "Tenant Management",
-                      collapsed: true,
-                      items: [
-                        "custom-ui/init/user-management-dashboard/tenant-management/overview",
-                        "custom-ui/init/user-management-dashboard/tenant-management/details",
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-            "custom-ui/login-magic-link",
-            "custom-ui/login-otp",
-            "custom-ui/handling-session-tokens",
-            "custom-ui/securing-routes",
-            "custom-ui/sign-out",
-            "custom-ui/enable-email-verification",
-            "custom-ui/multitenant-login",
-          ],
+          id: "quickstart/frontend-setup",
+          type: "doc",
+          label: "Frontend Setup",
+        },
+        {
+          id: "quickstart/backend-setup",
+          type: "doc",
+          label: "Backend Setup",
+        },
+        {
+          id: "quickstart/next-steps",
+          type: "doc",
+          label: "Next Steps",
         },
       ],
     },
-    "user-object",
     {
       type: "category",
       label: "Integrations",
@@ -373,6 +250,17 @@ module.exports = {
         "common-customizations/sessions/with-jwt/read-jwt",
         "common-customizations/sessions/ssr",
         {
+          id: "pre-built-ui/handling-session-tokens",
+          type: "doc",
+          label: "Access Session Tokens",
+        },
+        { id: "pre-built-ui/sign-out", type: "doc", label: "Add Sign Out" },
+        {
+          id: "pre-built-ui/auth-redirection",
+          type: "doc",
+          label: "Add Redirect Actions",
+        },
+        {
           type: "category",
           label: "Reading / modifying session claims",
           items: [
@@ -548,6 +436,28 @@ module.exports = {
         "common-customizations/multiple-clients",
         "common-customizations/userid-format",
         {
+          id: "pre-built-ui/setup/core/saas-setup",
+          label: "Connecting to the SuperTokens Core Managed Service",
+          type: "doc",
+        },
+        {
+          type: "category",
+          label: "Self Hosting SuperTokens Core",
+          items: [
+            "pre-built-ui/setup/core/with-docker",
+            "pre-built-ui/setup/core/without-docker",
+            {
+              type: "category",
+              label: "Database Setup",
+              items: [
+                "pre-built-ui/setup/database-setup/mysql",
+                "pre-built-ui/setup/database-setup/postgresql",
+                "pre-built-ui/setup/database-setup/rename-database-tables",
+              ],
+            },
+          ],
+        },
+        {
           type: "category",
           label:
             "Backend and frontend overrides (actions, hooks and UI customisation)",
@@ -669,6 +579,24 @@ module.exports = {
         "mfa",
         "multi-tenant",
         "attack-protection-suite",
+        {
+          type: "category",
+          label: "User Management dashboard",
+          items: [
+            "pre-built-ui/setup/user-management-dashboard/setup",
+            "pre-built-ui/setup/user-management-dashboard/users-listing-and-details",
+            "pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions",
+            {
+              type: "category",
+              label: "Tenant Management",
+              collapsed: true,
+              items: [
+                "pre-built-ui/setup/user-management-dashboard/tenant-management/overview",
+                "pre-built-ui/setup/user-management-dashboard/tenant-management/details",
+              ],
+            },
+          ],
+        },
       ],
     },
     "scalability",
@@ -709,11 +637,20 @@ module.exports = {
       items: [
         "architecture",
         "other-frameworks",
+        "user-object",
         "flow_diagram",
         "appinfo",
         "sdks",
         "apis",
         "compatibility-table",
+        {
+          type: "category",
+          label: "Prebuilt UI Components",
+          items: [
+            "pre-built-ui/further-reading/passwordless-login",
+            "pre-built-ui/further-reading/email-verification",
+          ],
+        },
       ],
     },
   ],

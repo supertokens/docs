@@ -1,126 +1,96 @@
-import React, { Children, PropsWithChildren, useState } from "react";
+import React, {
+  createContext,
+  Children,
+  PropsWithChildren,
+  useState,
+  useContext,
+  useCallback,
+  useEffect,
+} from "react";
 
 import "./question.css";
 
-export function Question(props: PropsWithChildren<{
-    question: string | (() => JSX.Element),
-    persistentId?: string
-}>) {
-    const [selectedAnsTitle, setSelectedAnsTitle] = useState<string | undefined>(undefined);
+type QuestionContextType = {
+  answer?: string;
+  setAnswer: (answer: string) => void;
+};
 
-    let onQuestionAnswered = React.useCallback((answer: string) => {
-        setSelectedAnsTitle(answer);
+const QuestionContext = createContext<QuestionContextType>(
+  {} as QuestionContextType,
+);
 
-        if (props.persistentId !== undefined) {
-            localStorage.setItem("question-comp-" + props.persistentId, answer);
-            window.dispatchEvent(new Event("question-comp-" + props.persistentId));
-        }
-    }, [setSelectedAnsTitle, props.persistentId])
+const LOCAL_STORAGE_KEY_PREFIX = "supertokens-question-answer:";
 
-    React.useEffect(() => {
-        const onEventReceived = () => {
-            if(props.persistentId !== undefined){
-                let answer = window.localStorage.getItem("question-comp-" + props.persistentId);
+export function Question(
+  props: PropsWithChildren<{
+    question: string;
+    defaultAnswer?: string;
+  }>,
+) {
+  const { defaultAnswer, question, children } = props;
+  const [selectedAnswer, setSelectedAnswer] = useState<string | undefined>(
+    defaultAnswer,
+  );
 
-                if(answer !== null){
-                    setSelectedAnsTitle(answer)
-                }
-            }
-        }
+  const onSelectAnswer = useCallback((answer: string) => {
+    setSelectedAnswer(answer);
+    localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}:${question}`, answer);
+  }, []);
 
-        if(props.persistentId !== undefined){
-            window.addEventListener("question-comp-" + props.persistentId, onEventReceived)
-            onEventReceived() // for initial loading
-        }
-
-        return () => {
-            if (props.persistentId !== undefined) {
-                window.removeEventListener("question-comp-" + props.persistentId, onEventReceived)
-            }
-        }
-    }, [props.persistentId, setSelectedAnsTitle])
-
-    let resubmitInfoClicked = (event: any) => {
-        event.preventDefault();
-        setSelectedAnsTitle(undefined);
-    };
-
-    if (selectedAnsTitle === undefined) {
-        return (
-            <div className="question-box">
-                <div className="question-box-text">
-                    {typeof props.question === "string" ? props.question : props.question()}
-                </div>
-                <div className="question-box-answers">
-                    {Children.map(props.children, (child: any, index: number) => {
-                        return React.cloneElement(child, {
-                            ...child.props,
-                            onClick: () => onQuestionAnswered(child.props.title)
-                        });
-                    })}
-                </div>
-            </div>
-        );
-    } else {
-        let childrenComponent = null;
-        Children.forEach(props.children, (child: any) => {
-            if (child.props.title === selectedAnsTitle) {
-                childrenComponent = child.props.children;
-            }
-        });
-        return (
-            <>
-                <div className="question-box-submitted-container">
-                    <div
-                        style={{
-                            width: "17px",
-                            marginRight: "10px"
-                        }}>
-                        <img
-                            alt="Answer submitted"
-                            style={{
-                                width: "17px",
-                            }}
-                            src="/img/form-submitted-tick.png" />
-                    </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            flex: 1,
-                            marginTop: "-2px"
-                        }}>
-                        <div
-                            style={{
-                                fontSize: "16px",
-                            }}>
-                            The content below is shown based on your answer. <a href="" onClick={resubmitInfoClicked}>Resubmit answer?</a>
-                        </div>
-                    </div>
-                </div>
-                {childrenComponent}
-            </>
-        );
+  useEffect(() => {
+    const storedAnswer = localStorage.getItem(
+      `${LOCAL_STORAGE_KEY_PREFIX}:${question}`,
+    );
+    if (storedAnswer !== null) {
+      setSelectedAnswer(storedAnswer);
     }
+  }, []);
+
+  const selectedAnswerChildren = Children.map(props.children, (child) => {
+    if (!React.isValidElement(child)) return child;
+    const childTitle = child.props.title;
+    const childChildren = child.props.children;
+    if (childTitle === selectedAnswer) {
+      return childChildren;
+    }
+  });
+
+  return (
+    <QuestionContext.Provider
+      value={{ answer: selectedAnswer, setAnswer: onSelectAnswer }}
+    >
+      <div className="question-box">
+        <div className="question-box-text">{question}</div>
+        <div className="question-box-answers">{children}</div>
+      </div>
+      {selectedAnswerChildren}
+    </QuestionContext.Provider>
+  );
 }
 
 type AnswerProps = {
-    title: string,
-    onClick?: () => void
+  title: string;
+  onClick?: () => void;
 };
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
+  const { onClick: _onClick } = props;
+  const { answer, setAnswer } = useContext(QuestionContext);
+  const onClick = useCallback(() => {
+    if (_onClick !== undefined) {
+      _onClick();
+    }
+    setAnswer(props.title);
+  }, []);
 
-    const [isMouseHover, setMouseHover] = useState(false);
-
-    return (
-        <span
-            className="question-box-answer"
-            onClick={props.onClick}
-            onMouseEnter={() => setMouseHover(true)}
-            onMouseLeave={() => setMouseHover(false)}
-        >
-            {props.title}
-        </span>
-    );
+  return (
+    <span
+      className="question-box-answer"
+      data-is-selected={answer === props.title}
+      onClick={onClick}
+    >
+      {props.title}
+    </span>
+  );
 }
+
