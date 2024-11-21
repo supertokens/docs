@@ -29,7 +29,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/docs",
           sidebarPath: "./sidebars.ts",
-          // exclude: ["**/*"]
+          exclude: ["**/_*", "**/_*/**"],
           breadcrumbs: false,
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
