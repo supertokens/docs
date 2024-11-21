@@ -120,9 +120,9 @@ export default function DocSidebarItemCategory({
   } = useThemeConfig();
   const hrefWithSSRFallback = useCategoryHrefWithSSRFallback(item);
 
+  const isMainCategory = customProps?.isMainCategory || false;
   const isActive = isActiveSidebarItem(item, activePath);
   const isCurrentPage = isSamePath(href, activePath);
-  const isMainCategory = customProps?.isMainCategory || false;
 
   const { collapsed, setCollapsed } = useCollapsible({
     // Active categories are always initialized as expanded. The default
@@ -209,7 +209,6 @@ export default function DocSidebarItemCategory({
         },
         className,
       )}
-      data-is-main-category={isMainCategory}
     >
       <div
         className={clsx("menu__list-item-collapsible", {

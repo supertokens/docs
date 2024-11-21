@@ -1,12 +1,13 @@
 import type { SidebarsConfig } from "@docusaurus/plugin-content-docs";
 
+// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 const sidebars: SidebarsConfig = {
-  quickstart: [
+  docs: [
+    { type: "doc", id: "index" },
     {
       type: "category",
-      label: "Tutorial",
+      label: "Quickstart",
       customProps: { isMainCategory: true },
-      collapsed: false,
       items: [
         { id: "quickstart/introduction", label: "Introduction", type: "doc" },
         {
@@ -20,66 +21,79 @@ const sidebars: SidebarsConfig = {
           label: "Additional Configuraton",
           type: "doc",
         },
+        {
+          type: "category",
+          label: "Example Applications",
+          customProps: { isMainCategory: true },
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "quickstart/example-apps/generate-example-app",
+              label: "Generate an Example App",
+            },
+            {
+              type: "doc",
+              id: "quickstart/example-apps/explore-available-examples",
+              label: "Explore Example Repositories",
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Integrations",
+          collapsed: true,
+          customProps: { isMainCategory: true },
+          items: [
+            {
+              type: "doc",
+              id: "quickstart/integrations/aws-lambda",
+              label: "AWS Lambda",
+            },
+            {
+              type: "doc",
+              id: "quickstart/integrations/graphql",
+              label: "Graphql",
+            },
+            {
+              type: "doc",
+              id: "quickstart/integrations/hasura",
+              label: "Hasura",
+            },
+            {
+              type: "doc",
+              id: "quickstart/integrations/nestjs",
+              label: "NestJS",
+            },
+            {
+              type: "doc",
+              id: "quickstart/integrations/netlify",
+              label: "Netlify",
+            },
+            {
+              type: "doc",
+              id: "quickstart/integrations/nextjs",
+              label: "NextJS",
+            },
+            {
+              type: "doc",
+              id: "quickstart/integrations/supabase",
+              label: "Supabase",
+            },
+            {
+              type: "doc",
+              id: "quickstart/integrations/vercel",
+              label: "Vercel",
+            },
+          ],
+        },
       ],
     },
     {
       type: "category",
-      label: "Example Applications",
+      label: "Authentication",
       customProps: { isMainCategory: true },
-      collapsed: false,
-      items: [
-        {
-          type: "doc",
-          id: "quickstart/example-apps/generate-example-app",
-          label: "Generate an Example App",
-        },
-        {
-          type: "doc",
-          id: "quickstart/example-apps/explore-available-examples",
-          label: "Explore Example Repositories",
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Integrations",
-      collapsed: false,
-      customProps: { isMainCategory: true },
-      items: [
-        {
-          type: "doc",
-          id: "quickstart/integrations/aws-lambda",
-          label: "AWS Lambda",
-        },
-        {
-          type: "doc",
-          id: "quickstart/integrations/graphql",
-          label: "Graphql",
-        },
-        { type: "doc", id: "quickstart/integrations/hasura", label: "Hasura" },
-        { type: "doc", id: "quickstart/integrations/nestjs", label: "NestJS" },
-        {
-          type: "doc",
-          id: "quickstart/integrations/netlify",
-          label: "Netlify",
-        },
-        { type: "doc", id: "quickstart/integrations/nextjs", label: "NextJS" },
-        {
-          type: "doc",
-          id: "quickstart/integrations/supabase",
-          label: "Supabase",
-        },
-        { type: "doc", id: "quickstart/integrations/vercel", label: "Vercel" },
-      ],
-    },
-  ],
-  guides: [
-    "guides/introduction",
-    {
-      type: "category",
-      label: "Authentication Methods",
-      customProps: { isMainCategory: true },
-      collapsed: false,
+      collapsed: true,
       items: [
         {
           type: "category",
@@ -87,12 +101,12 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/authentication-methods/email-password/setup",
+              id: "authentication/email-password/setup",
               label: "Setup",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/email-password/post-sign-in-up-callbacks",
+              id: "authentication/email-password/post-sign-in-up-callbacks",
               label: "Post Sign In Up Callbacks",
             },
             {
@@ -101,24 +115,24 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/password-hashing/about",
+                  id: "authentication/email-password/password-hashing/about",
                   label: "About",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/password-hashing/bcrypt-hashing",
+                  id: "authentication/email-password/password-hashing/bcrypt-hashing",
                   label: "Bcrypt Hashing",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/password-hashing/argon2-hashing",
+                  id: "authentication/email-password/password-hashing/argon2-hashing",
                   label: "Argon2 Hashing",
                 },
               ],
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/email-password/allow-users-to-change-their-passwords",
+              id: "authentication/email-password/allow-users-to-change-their-passwords",
               label: "Allow Users To Change Their Passwords",
             },
             {
@@ -127,12 +141,12 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/sign-in-form/customize-form-fields",
+                  id: "authentication/email-password/sign-in-form/customize-form-fields",
                   label: "Customize Form Fields",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/sign-in-form/field-validators",
+                  id: "authentication/email-password/sign-in-form/field-validators",
                   label: "Field Validators",
                 },
               ],
@@ -143,32 +157,32 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/reset-password/change-reset-link-lifetime",
+                  id: "authentication/email-password/reset-password/change-reset-link-lifetime",
                   label: "Change Reset Link Lifetime",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/reset-password/about",
+                  id: "authentication/email-password/reset-password/about",
                   label: "About",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/reset-password/manual-link-generation",
+                  id: "authentication/email-password/reset-password/manual-link-generation",
                   label: "Manual Link Generation",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/reset-password/embed-in-a-page",
+                  id: "authentication/email-password/reset-password/embed-in-a-page",
                   label: "Embed In A Page",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/reset-password/post-password-reset",
+                  id: "authentication/email-password/reset-password/post-password-reset",
                   label: "Post Password Reset",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/reset-password/email-design",
+                  id: "authentication/email-password/reset-password/email-design",
                   label: "Email Design",
                 },
               ],
@@ -179,24 +193,24 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/sign-up-form/customize-form-fields",
+                  id: "authentication/email-password/sign-up-form/customize-form-fields",
                   label: "Customize Form Fields",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/sign-up-form/field-validators",
+                  id: "authentication/email-password/sign-up-form/field-validators",
                   label: "Field Validators",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/email-password/sign-up-form/add-extra-fields",
+                  id: "authentication/email-password/sign-up-form/add-extra-fields",
                   label: "Add Extra Fields",
                 },
               ],
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/email-password/password-managers",
+              id: "authentication/email-password/password-managers",
               label: "Password Managers",
             },
           ],
@@ -207,47 +221,47 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/setup",
+              id: "authentication/passwordless/setup",
               label: "Setup",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/change-email-sms-resend-time",
+              id: "authentication/passwordless/change-email-sms-resend-time",
               label: "Change Email Sms Resend Time",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/post-sign-in-up-callbacks",
+              id: "authentication/passwordless/post-sign-in-up-callbacks",
               label: "Post Sign In Up Callbacks",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/change-magic-link-url",
+              id: "authentication/passwordless/change-magic-link-url",
               label: "Change Magic Link Url",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/set-default-country-for-phone-inputs",
+              id: "authentication/passwordless/set-default-country-for-phone-inputs",
               label: "Set Default Country For Phone Inputs",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/change-otp-format",
+              id: "authentication/passwordless/change-otp-format",
               label: "Change Otp Format",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/generate-magic-links-manually",
+              id: "authentication/passwordless/generate-magic-links-manually",
               label: "Generate Magic Links Manually",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/otp-and-magic-link-expiration",
+              id: "authentication/passwordless/otp-and-magic-link-expiration",
               label: "Otp And Magic Link Expiration",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/passwordless/limit-otp-retries",
+              id: "authentication/passwordless/limit-otp-retries",
               label: "Limit Otp Retries",
             },
           ],
@@ -258,7 +272,7 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/authentication-methods/social/setup",
+              id: "authentication/social/setup",
               label: "Setup",
             },
             {
@@ -267,186 +281,25 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/social/providers/built-in-providers",
+                  id: "authentication/social/providers/built-in-providers",
                   label: "Built In Providers",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/social/providers/custom-providers",
+                  id: "authentication/social/providers/custom-providers",
                   label: "Custom Providers",
                 },
               ],
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/social/post-sign-in-up-callbacks",
+              id: "authentication/social/post-sign-in-up-callbacks",
               label: "Post Sign In/Up Callbacks",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/social/built-in-provider-config",
+              id: "authentication/social/built-in-provider-config",
               label: "Built In Provider Config",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "MFA",
-          items: [
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/introduction",
-              label: "Introduction",
-            },
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/backend-setup",
-              label: "Backend Setup",
-            },
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/use-mfa-with-email-verification",
-              label: "Use Mfa With Email Verification",
-            },
-            {
-              type: "category",
-              label: "Email Sms Otp",
-              items: [
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/email-sms-otp/embed-our-prebuilt-ui-component",
-                  label: "Embed Our Prebuilt Ui Component",
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/email-sms-otp/otp-for-specific-users",
-                  label: "Otp For Specific Users",
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/email-sms-otp/otp-required-for-all-users",
-                  label: "Otp Required For All Users",
-                },
-              ],
-            },
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/implement-backup-recovery-codes",
-              label: "Implement Backup Recovery Codes",
-            },
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/security-considerations",
-              label: "Security Considerations",
-            },
-            {
-              type: "category",
-              label: "Legacy Method",
-              items: [
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/legacy-method/using-the-prebuilt-ui",
-                  label: "Using The Prebuilt Ui",
-                },
-                {
-                  type: "category",
-                  label: "Backend Setup",
-                  items: [
-                    {
-                      type: "doc",
-                      id: "guides/authentication-methods/mfa/legacy-method/backend-setup/protect-api-routes",
-                      label: "Protect Api Routes",
-                    },
-                    {
-                      type: "doc",
-                      id: "guides/authentication-methods/mfa/legacy-method/backend-setup/setup-second-factor",
-                      label: "Setup Second Factor",
-                    },
-                    {
-                      type: "doc",
-                      id: "guides/authentication-methods/mfa/legacy-method/backend-setup/setup-first-factor",
-                      label: "Setup First Factor",
-                    },
-                  ],
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/legacy-method/legacy-vs-new-method",
-                  label: "Legacy Vs New Method",
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/legacy-method/using-a-custom-ui",
-                  label: "Using A Custom Ui",
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/legacy-method/how-it-works",
-                  label: "How It Works",
-                },
-              ],
-            },
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/protect-frontend-and-backend-routes",
-              label: "Protect Frontend And Backend Routes",
-            },
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/frontend-setup",
-              label: "Frontend Setup",
-            },
-            {
-              type: "category",
-              label: "Totp",
-              items: [
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/totp/embed-our-prebuilt-ui-component",
-                  label: "Embed Our Prebuilt Ui Component",
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/totp/totp-for-specific-users",
-                  label: "Totp For Specific Users",
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/totp/totp-required-for-all-users",
-                  label: "Totp Required For All Users",
-                },
-              ],
-            },
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/important-concepts",
-              label: "Important Concepts",
-            },
-            {
-              type: "category",
-              label: "Migration",
-              items: [
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/migration/migration-from-another-solution",
-                  label: "Migration From Another Solution",
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/migration/migrating-from-an-older-sdk-version",
-                  label: "Migrating From An Older Sdk Version",
-                },
-                {
-                  type: "doc",
-                  id: "guides/authentication-methods/mfa/migration/migrating-from-legacy-mfa",
-                  label: "Migrating From Legacy Mfa",
-                },
-              ],
-            },
-            {
-              type: "doc",
-              id: "guides/authentication-methods/mfa/step-up-auth",
-              label: "Step Up Auth",
             },
           ],
         },
@@ -456,37 +309,37 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/authentication-methods/enterprise/setup",
+              id: "authentication/enterprise/setup",
               label: "Setup",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/enterprise/overview",
+              id: "authentication/enterprise/overview",
               label: "Overview",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/enterprise/create-and-configure-tenant",
+              id: "authentication/enterprise/create-and-configure-tenant",
               label: "Create And Configure Tenant",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/enterprise/add-custom-third-party-provider",
+              id: "authentication/enterprise/add-custom-third-party-provider",
               label: "Add Custom Third Party Provider",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/enterprise/subdomain-login",
+              id: "authentication/enterprise/subdomain-login",
               label: "Subdomain Login",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/enterprise/run-multiple-apps-with-the-same-supertokens-core",
+              id: "authentication/enterprise/run-multiple-apps-with-the-same-supertokens-core",
               label: "Run Multiple Apps With The Same Supertokens Core",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/enterprise/common-login-domain",
+              id: "authentication/enterprise/common-login-domain",
               label: "Common Login Domain",
             },
             {
@@ -495,17 +348,17 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/enterprise/saml/what-is-saml",
+                  id: "authentication/enterprise/saml/what-is-saml",
                   label: "What Is Saml",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/enterprise/saml/add-saml-login",
+                  id: "authentication/enterprise/saml/add-saml-login",
                   label: "Add Saml Login",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/enterprise/saml/with-boxyhq",
+                  id: "authentication/enterprise/saml/with-boxyhq",
                   label: "With Boxyhq",
                 },
               ],
@@ -518,7 +371,7 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/authentication-methods/unified-login/introduction",
+              id: "authentication/unified-login/introduction",
               label: "introduction",
             },
             {
@@ -527,17 +380,17 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/unified-login/use-cases/multiple-frontends-common-backend",
+                  id: "authentication/unified-login/use-cases/multiple-frontends-common-backend",
                   label: "Multiple Frontends with Common Backend",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/unified-login/use-cases/multiple-frontends-single-backend",
+                  id: "authentication/unified-login/use-cases/multiple-frontends-single-backend",
                   label: "Multiple Frontends with Single Backend",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/unified-login/use-cases/reuse-website-login",
+                  id: "authentication/unified-login/use-cases/reuse-website-login",
                   label: "Reuse Website Login",
                 },
               ],
@@ -548,7 +401,7 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/unified-login/customizations/validate-tokens",
+                  id: "authentication/unified-login/customizations/validate-tokens",
                   label: "Validate Tokens",
                 },
               ],
@@ -561,12 +414,12 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/authentication-methods/m2m/introduction",
+              id: "authentication/m2m/introduction",
               label: "Introduction",
             },
             {
               type: "doc",
-              id: "guides/authentication-methods/m2m/client-credentials-flow",
+              id: "authentication/m2m/client-credentials-flow",
               label: "Client Credentials Flow",
             },
             {
@@ -575,29 +428,239 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/m2m/legacy-flow/implementation-guide",
+                  id: "authentication/m2m/legacy-flow/implementation-guide",
                   label: "Implementation Guide",
                 },
                 {
                   type: "doc",
-                  id: "guides/authentication-methods/m2m/legacy-flow/security-analysis",
+                  id: "authentication/m2m/legacy-flow/security-analysis",
                   label: "Security Analysis",
                 },
               ],
             },
           ],
         },
+        {
+          type: "category",
+          label: "Authentication UI",
+          items: [
+            {
+              type: "category",
+              label: "Styling",
+              items: [
+                {
+                  type: "doc",
+                  id: "authentication/authentication-ui/styling/changing-colors",
+                  label: "changing-colors",
+                },
+                {
+                  type: "doc",
+                  id: "authentication/authentication-ui/styling/changing-styles",
+                  label: "changing-styles",
+                },
+                {
+                  type: "doc",
+                  id: "authentication/authentication-ui/styling/disable-use-of-shadow-dom",
+                  label: "disable-use-of-shadow-dom",
+                },
+              ],
+            },
+            {
+              type: "category",
+              label: "Create Your Own UI",
+              items: [
+                {
+                  type: "doc",
+                  id: "authentication/authentication-ui/custom-ui/overview",
+                  label: "Overview",
+                },
+              ],
+            },
+            {
+              type: "doc",
+              id: "authentication/authentication-ui/translations",
+              label: "Translations",
+            },
+            {
+              type: "doc",
+              id: "authentication/authentication-ui/terms-of-service-and-privacy-policy",
+              label: "Terms of Service and Privacy Policy",
+            },
+            {
+              type: "doc",
+              id: "authentication/authentication-ui/embed-sign-in-up-form-in-a-page",
+              label: "Embed Sign In/Up Form in a Page",
+            },
+          ],
+        },
       ],
     },
+
     {
       type: "category",
-      label: "Sessions",
+      label: "Additional Verification",
       customProps: { isMainCategory: true },
       items: [
         {
-          type: "doc",
-          id: "guides/sessions/how-it-works",
-          label: "How It Works",
+          type: "category",
+          label: "MFA",
+          items: [
+            {
+              type: "doc",
+              id: "additional-verification/mfa/introduction",
+              label: "Introduction",
+            },
+            {
+              type: "doc",
+              id: "additional-verification/mfa/backend-setup",
+              label: "Backend Setup",
+            },
+            {
+              type: "doc",
+              id: "additional-verification/mfa/use-mfa-with-email-verification",
+              label: "Use Mfa With Email Verification",
+            },
+            {
+              type: "category",
+              label: "Email Sms Otp",
+              items: [
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/email-sms-otp/embed-our-prebuilt-ui-component",
+                  label: "Embed Our Prebuilt Ui Component",
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/email-sms-otp/otp-for-specific-users",
+                  label: "Otp For Specific Users",
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/email-sms-otp/otp-required-for-all-users",
+                  label: "Otp Required For All Users",
+                },
+              ],
+            },
+            {
+              type: "doc",
+              id: "additional-verification/mfa/implement-backup-recovery-codes",
+              label: "Implement Backup Recovery Codes",
+            },
+            {
+              type: "doc",
+              id: "additional-verification/mfa/security-considerations",
+              label: "Security Considerations",
+            },
+            {
+              type: "category",
+              label: "Legacy Method",
+              items: [
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/legacy-method/using-the-prebuilt-ui",
+                  label: "Using The Prebuilt Ui",
+                },
+                {
+                  type: "category",
+                  label: "Backend Setup",
+                  items: [
+                    {
+                      type: "doc",
+                      id: "additional-verification/mfa/legacy-method/backend-setup/protect-api-routes",
+                      label: "Protect Api Routes",
+                    },
+                    {
+                      type: "doc",
+                      id: "additional-verification/mfa/legacy-method/backend-setup/setup-second-factor",
+                      label: "Setup Second Factor",
+                    },
+                    {
+                      type: "doc",
+                      id: "additional-verification/mfa/legacy-method/backend-setup/setup-first-factor",
+                      label: "Setup First Factor",
+                    },
+                  ],
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/legacy-method/legacy-vs-new-method",
+                  label: "Legacy Vs New Method",
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/legacy-method/using-a-custom-ui",
+                  label: "Using A Custom Ui",
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/legacy-method/how-it-works",
+                  label: "How It Works",
+                },
+              ],
+            },
+            {
+              type: "doc",
+              id: "additional-verification/mfa/protect-frontend-and-backend-routes",
+              label: "Protect Frontend And Backend Routes",
+            },
+            {
+              type: "doc",
+              id: "additional-verification/mfa/frontend-setup",
+              label: "Frontend Setup",
+            },
+            {
+              type: "category",
+              label: "Totp",
+              items: [
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/totp/embed-our-prebuilt-ui-component",
+                  label: "Embed Our Prebuilt Ui Component",
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/totp/totp-for-specific-users",
+                  label: "Totp For Specific Users",
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/totp/totp-required-for-all-users",
+                  label: "Totp Required For All Users",
+                },
+              ],
+            },
+            {
+              type: "doc",
+              id: "additional-verification/mfa/important-concepts",
+              label: "Important Concepts",
+            },
+            {
+              type: "category",
+              label: "Migration",
+              items: [
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/migration/migration-from-another-solution",
+                  label: "Migration From Another Solution",
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/migration/migrating-from-an-older-sdk-version",
+                  label: "Migrating From An Older Sdk Version",
+                },
+                {
+                  type: "doc",
+                  id: "additional-verification/mfa/migration/migrating-from-legacy-mfa",
+                  label: "Migrating From Legacy Mfa",
+                },
+              ],
+            },
+            {
+              type: "doc",
+              id: "additional-verification/mfa/step-up-auth",
+              label: "Step Up Auth",
+            },
+          ],
         },
         {
           type: "category",
@@ -609,257 +672,40 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: "doc",
-                  id: "guides/sessions/session-verification/protect-api-routes/overview",
+                  id: "additional-verification/session-verification/protect-api-routes/overview",
                   label: "overview",
                 },
                 {
                   type: "doc",
-                  id: "guides/sessions/session-verification/protect-api-routes/using-verify-sessions",
+                  id: "additional-verification/session-verification/protect-api-routes/using-verify-sessions",
                   label: "using-verify-sessions",
                 },
                 {
                   type: "doc",
-                  id: "guides/sessions/session-verification/protect-api-routes/using-get-session",
+                  id: "additional-verification/session-verification/protect-api-routes/using-get-session",
                   label: "using-get-session",
                 },
                 {
                   type: "doc",
-                  id: "guides/sessions/session-verification/protect-api-routes/manual-jwt-verification",
+                  id: "additional-verification/session-verification/protect-api-routes/manual-jwt-verification",
                   label: "manual-jwt-verification",
                 },
               ],
             },
             {
               type: "doc",
-              id: "guides/sessions/session-verification/protect-frontend-routes",
+              id: "additional-verification/session-verification/protect-frontend-routes",
               label: "protect-frontend-routes",
             },
             {
               type: "doc",
-              id: "guides/sessions/session-verification/verification-during-ssr",
+              id: "additional-verification/session-verification/verification-during-ssr",
               label: "verification-during-ssr",
             },
             {
               type: "doc",
-              id: "guides/sessions/session-verification/websockets",
+              id: "additional-verification/session-verification/websockets",
               label: "websockets",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Session Management",
-          items: [
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/create-a-new-session",
-              label: "Create a new session",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/anonymous-sessions",
-              label: "Anonymous/Guest Sessions",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/handling-session-expiry",
-              label: "Handling Session Expiry",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/revoke-a-session",
-              label: "Revoke a session",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/impersonate-users",
-              label: "Impersonate Users",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/get-tenant-id",
-              label: "Get Tenant ID",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/session-claims",
-              label: "Session Claims",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/fetch-access-token-string",
-              label: "Fetch Access Token String",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/customizing-error-handling",
-              label: "Customizing Error Handling",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/disabling-frontend-network-interceptors",
-              label: "Disabling Frontend Network Interceptors",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/fetching-session-for-a-user",
-              label: "Fetching Session for a User",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/share-sessions-across-subdomains",
-              label: "Share Sessions Across Subdomains",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/switch-between-cookie-and-header-based-sessions",
-              label: "Switch Between Cookie and Header Based Sessions",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/setup-multiple-frontends-for-one-backend",
-              label: "Setup Multiple Frontends for One Backend",
-            },
-
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/using-an-iframe",
-              label: "Using an Iframe",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/session-management/working-with-multiple-apis",
-              label: "Working with Multiple APIs",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Session Security",
-          items: [
-            {
-              type: "doc",
-              id: "guides/sessions/security/access-token-blacklist",
-              label: "Access Token Blacklist",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/security/access-token-single-key-rotation",
-              label: "Access Token Single Key Rotation",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/security/anti-csrf",
-              label: "Anti CSRF",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/security/change-session-timeout",
-              label: "Change Session Timeout",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/security/cookie-consent",
-              label: "Cookie Consent",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/security/cookies-and-https",
-              label: "Cookies and HTTPS",
-            },
-            {
-              type: "doc",
-              id: "guides/sessions/security/same-site-cookies",
-              label: "Same Site Cookies",
-            },
-          ],
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Users",
-      customProps: { isMainCategory: true },
-      items: [
-        {
-          type: "doc",
-          id: "guides/users/overview",
-          label: "Overview",
-        },
-        {
-          type: "category",
-          label: "User Management",
-          items: [
-            {
-              type: "doc",
-              id: "guides/users/user-management/get-user-info",
-              label: "Get user info",
-            },
-            {
-              type: "doc",
-              id: "guides/users/user-management/delete-user",
-              label: "Delete user",
-            },
-            {
-              type: "doc",
-              id: "guides/users/user-management/user-pagination",
-              label: "User pagination",
-            },
-            {
-              type: "doc",
-              id: "guides/users/user-management/account-deduplication",
-              label: "Account Deduplication",
-            },
-            {
-              type: "doc",
-              id: "guides/users/user-management/allow-users-to-change-their-email",
-              label: "Allow users to change their email",
-            },
-            {
-              type: "doc",
-              id: "guides/users/user-management/allow-users-to-change-their-password",
-              label: "Allow users to change their password",
-            },
-            {
-              type: "doc",
-              id: "guides/users/user-management/assign-custom-user-ids",
-              label: "Assign custom user ids",
-            },
-            {
-              type: "doc",
-              id: "guides/users/user-management/implement-invite-flow",
-              label: "Implement an Invite Flow",
-            },
-            {
-              type: "category",
-              label: "User Metadata",
-              items: [
-                {
-                  type: "doc",
-                  id: "guides/users/user-management/user-metadata/about",
-                  label: "About",
-                },
-                {
-                  type: "doc",
-                  id: "guides/users/user-management/user-metadata/feature-setup",
-                  label: "Feature setup",
-                },
-                {
-                  type: "doc",
-                  id: "guides/users/user-management/user-metadata/store-data",
-                  label: "Store data",
-                },
-                {
-                  type: "doc",
-                  id: "guides/users/user-management/user-metadata/get-stored-data",
-                  label: "Get stored data",
-                },
-                {
-                  type: "doc",
-                  id: "guides/users/user-management/user-metadata/delete-stored-data",
-                  label: "Delete stored data",
-                },
-              ],
             },
           ],
         },
@@ -869,81 +715,45 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/users/user-roles/introduction",
+              id: "additional-verification/user-roles/introduction",
               label: "Introduction",
             },
             {
               type: "doc",
-              id: "guides/users/user-roles/initialisation",
+              id: "additional-verification/user-roles/initialisation",
               label: "Initialisation",
             },
             {
               type: "doc",
-              id: "guides/users/user-roles/manage-roles-and-users",
+              id: "additional-verification/user-roles/manage-roles-and-users",
               label: "Manage roles and users",
             },
             {
               type: "doc",
-              id: "guides/users/user-roles/protect-api-and-frontend-routes",
+              id: "additional-verification/user-roles/protect-api-and-frontend-routes",
               label: "Protect API and frontend routes",
             },
             {
               type: "doc",
-              id: "guides/users/user-roles/create-a-new-role",
+              id: "additional-verification/user-roles/create-a-new-role",
               label: "Create a new role",
             },
             {
               type: "doc",
-              id: "guides/users/user-roles/delete-roles",
+              id: "additional-verification/user-roles/delete-roles",
               label: "Delete roles",
             },
             {
               type: "doc",
-              id: "guides/users/user-roles/list-all-roles",
+              id: "additional-verification/user-roles/list-all-roles",
               label: "List all roles",
             },
             {
               type: "doc",
-              id: "guides/users/user-roles/manage-roles-and-permisions",
+              id: "additional-verification/user-roles/manage-roles-and-permisions",
               label: "Manage roles and permisions",
             },
             ,
-          ],
-        },
-        {
-          type: "category",
-          label: "Account Linking",
-          items: [
-            {
-              type: "doc",
-              id: "guides/users/account-linking/about",
-              label: "About",
-            },
-            {
-              type: "doc",
-              id: "guides/users/account-linking/automatic-account-linking",
-              label: "Automatic Account Linking",
-            },
-            {
-              type: "doc",
-              id: "guides/users/account-linking/manual-account-linking",
-              label: "Manual Account Linking",
-            },
-            {
-              type: "doc",
-              id: "guides/users/account-linking/security-considerations",
-              label: "Security Considerations",
-            },
-            {
-              type: "doc",
-              id: "guides/users/account-linking/link-social-accounts",
-              label: "Link Social Accounts",
-            },
-            {
-              type: "doc",
-              id: "guides/users/account-linking/add-password-to-existing-account",
-              label: "Add Password to Existing Account",
-            },
           ],
         },
         {
@@ -952,48 +762,74 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/users/email-verification/enable-email-verification",
+              id: "additional-verification/email-verification/enable-email-verification",
               label: "Enable Email Verification",
             },
             {
               type: "doc",
-              id: "guides/users/email-verification/protect-api-and-website-routes",
+              id: "additional-verification/email-verification/protect-api-and-website-routes",
               label: "Protect API and Website Routes",
             },
             {
               type: "doc",
-              id: "guides/users/email-verification/email-design",
+              id: "additional-verification/email-verification/email-design",
               label: "Email Design",
             },
             {
               type: "doc",
-              id: "guides/users/email-verification/embed-in-a-page",
+              id: "additional-verification/email-verification/embed-in-a-page",
               label: "Embed in a Page",
             },
             {
               type: "doc",
-              id: "guides/users/email-verification/post-email-verification",
+              id: "additional-verification/email-verification/post-email-verification",
               label: "Post Email Verification",
             },
             {
               type: "doc",
-              id: "guides/users/email-verification/change-verification-link-lifetime",
+              id: "additional-verification/email-verification/change-verification-link-lifetime",
               label: "Change Verification Link Lifetime",
             },
             {
               type: "doc",
-              id: "guides/users/email-verification/change-styles-via-css",
+              id: "additional-verification/email-verification/change-styles-via-css",
               label: "Change Styles via CSS",
             },
             {
               type: "doc",
-              id: "guides/users/email-verification/manual-change-verification-status",
+              id: "additional-verification/email-verification/manual-change-verification-status",
               label: "Manually Change Verification Status",
             },
             {
               type: "doc",
-              id: "guides/users/email-verification/manual-generate-link",
+              id: "additional-verification/email-verification/manual-generate-link",
               label: "Manually Generate Link",
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Attack Protection Suite",
+          items: [
+            {
+              type: "doc",
+              id: "additional-verification/attack-protection-suite/introduction",
+              label: "Introduction",
+            },
+            {
+              type: "doc",
+              id: "additional-verification/attack-protection-suite/enabling-the-feature",
+              label: "Enabling the Feature",
+            },
+            {
+              type: "doc",
+              id: "additional-verification/attack-protection-suite/backend-setup",
+              label: "Backend Setup",
+            },
+            {
+              type: "doc",
+              id: "additional-verification/attack-protection-suite/frontend-setup",
+              label: "Frontend Setup",
             },
           ],
         },
@@ -1001,55 +837,257 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: "category",
-      label: "Authentication UI",
+      label: "Post Authentication",
       customProps: { isMainCategory: true },
       items: [
         {
           type: "category",
-          label: "Styling",
+          label: "Account Linking",
           items: [
             {
               type: "doc",
-              id: "guides/ui-customization/styling/changing-colors",
-              label: "changing-colors",
+              id: "post-authentication/account-linking/about",
+              label: "About",
             },
             {
               type: "doc",
-              id: "guides/ui-customization/styling/changing-styles",
-              label: "changing-styles",
+              id: "post-authentication/account-linking/automatic-account-linking",
+              label: "Automatic Account Linking",
             },
             {
               type: "doc",
-              id: "guides/ui-customization/styling/disable-use-of-shadow-dom",
-              label: "disable-use-of-shadow-dom",
+              id: "post-authentication/account-linking/manual-account-linking",
+              label: "Manual Account Linking",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/account-linking/security-considerations",
+              label: "Security Considerations",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/account-linking/link-social-accounts",
+              label: "Link Social Accounts",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/account-linking/add-password-to-existing-account",
+              label: "Add Password to Existing Account",
             },
           ],
         },
         {
           type: "category",
-          label: "Create Your Own UI",
+          label: "User Management",
           items: [
             {
               type: "doc",
-              id: "guides/ui-customization/custom-ui/overview",
-              label: "Overview",
+              id: "post-authentication/user-management/get-user-info",
+              label: "Get user info",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/user-management/delete-user",
+              label: "Delete user",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/user-management/user-pagination",
+              label: "User pagination",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/user-management/account-deduplication",
+              label: "Account Deduplication",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/user-management/allow-users-to-change-their-email",
+              label: "Allow users to change their email",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/user-management/allow-users-to-change-their-password",
+              label: "Allow users to change their password",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/user-management/assign-custom-user-ids",
+              label: "Assign custom user ids",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/user-management/implement-invite-flow",
+              label: "Implement an Invite Flow",
+            },
+            {
+              type: "category",
+              label: "User Metadata",
+              items: [
+                {
+                  type: "doc",
+                  id: "post-authentication/user-management/user-metadata/about",
+                  label: "About",
+                },
+                {
+                  type: "doc",
+                  id: "post-authentication/user-management/user-metadata/feature-setup",
+                  label: "Feature setup",
+                },
+                {
+                  type: "doc",
+                  id: "post-authentication/user-management/user-metadata/store-data",
+                  label: "Store data",
+                },
+                {
+                  type: "doc",
+                  id: "post-authentication/user-management/user-metadata/get-stored-data",
+                  label: "Get stored data",
+                },
+                {
+                  type: "doc",
+                  id: "post-authentication/user-management/user-metadata/delete-stored-data",
+                  label: "Delete stored data",
+                },
+              ],
             },
           ],
         },
         {
-          type: "doc",
-          id: "guides/ui-customization/translations",
-          label: "Translations",
+          type: "category",
+          label: "Session Management",
+          items: [
+            {
+              type: "doc",
+              id: "post-authentication/session-management/create-a-new-session",
+              label: "Create a new session",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/anonymous-sessions",
+              label: "Anonymous/Guest Sessions",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/handling-session-expiry",
+              label: "Handling Session Expiry",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/revoke-a-session",
+              label: "Revoke a session",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/impersonate-users",
+              label: "Impersonate Users",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/get-tenant-id",
+              label: "Get Tenant ID",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/session-claims",
+              label: "Session Claims",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/fetch-access-token-string",
+              label: "Fetch Access Token String",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/customizing-error-handling",
+              label: "Customizing Error Handling",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/disabling-frontend-network-interceptors",
+              label: "Disabling Frontend Network Interceptors",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/fetching-session-for-a-user",
+              label: "Fetching Session for a User",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/share-sessions-across-subdomains",
+              label: "Share Sessions Across Subdomains",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/switch-between-cookie-and-header-based-sessions",
+              label: "Switch Between Cookie and Header Based Sessions",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/setup-multiple-frontends-for-one-backend",
+              label: "Setup Multiple Frontends for One Backend",
+            },
+
+            {
+              type: "doc",
+              id: "post-authentication/session-management/using-an-iframe",
+              label: "Using an Iframe",
+            },
+            {
+              type: "doc",
+              id: "post-authentication/session-management/working-with-multiple-apis",
+              label: "Working with Multiple APIs",
+            },
+          ],
         },
         {
-          type: "doc",
-          id: "guides/ui-customization/terms-of-service-and-privacy-policy",
-          label: "Terms of Service and Privacy Policy",
-        },
-        {
-          type: "doc",
-          id: "guides/ui-customization/embed-sign-in-up-form-in-a-page",
-          label: "Embed Sign In/Up Form in a Page",
+          type: "category",
+          label: "Dashboard",
+          customProps: { isMainCategory: true },
+          items: [
+            {
+              type: "doc",
+              id: "post-authentication/dashboard/overview",
+              label: "Overview",
+            },
+            {
+              type: "category",
+              label: "Tenants",
+              items: [
+                {
+                  type: "doc",
+                  id: "post-authentication/dashboard/tenants/overview",
+                  label: "Overview",
+                },
+                {
+                  type: "doc",
+                  id: "post-authentication/dashboard/tenants/manage-third-party-providers",
+                  label: "Manage Third Party Providers",
+                },
+                {
+                  type: "doc",
+                  id: "post-authentication/dashboard/tenants/view-tenant-details",
+                  label: "View Tenant Details",
+                },
+              ],
+            },
+            {
+              type: "category",
+              label: "Users",
+              items: [
+                {
+                  type: "doc",
+                  id: "post-authentication/dashboard/users/manage-roles-and-permissions",
+                  label: "Manage Roles And Permissions",
+                },
+                {
+                  type: "doc",
+                  id: "post-authentication/dashboard/users/view-users",
+                  label: "View Users",
+                },
+              ],
+            },
+          ],
         },
       ],
     },
@@ -1060,99 +1098,66 @@ const sidebars: SidebarsConfig = {
       items: [
         {
           type: "doc",
-          id: "guides/multi-tenancy/intro",
+          id: "multi-tenancy/intro",
           label: "Introduction",
         },
         {
           type: "doc",
-          id: "guides/multi-tenancy/architecture",
+          id: "multi-tenancy/architecture",
           label: "Architecture",
         },
         {
           type: "doc",
-          id: "guides/multi-tenancy/creating-a-new-app",
+          id: "multi-tenancy/creating-a-new-app",
           label: "Creating a new app",
         },
         {
           type: "doc",
-          id: "guides/multi-tenancy/creating-a-new-tenant",
+          id: "multi-tenancy/creating-a-new-tenant",
           label: "Creating a new tenant",
         },
         {
           type: "doc",
-          id: "guides/multi-tenancy/listing-all-tenants-and-apps",
+          id: "multi-tenancy/listing-all-tenants-and-apps",
           label: "Listing all tenants and apps",
         },
         {
           type: "doc",
-          id: "guides/multi-tenancy/setting-up-login-for-tenants",
+          id: "multi-tenancy/setting-up-login-for-tenants",
           label: "Setting up login for tenants",
         },
         {
           type: "doc",
-          id: "guides/multi-tenancy/users-and-tenants",
+          id: "multi-tenancy/users-and-tenants",
           label: "Users and tenants",
         },
       ],
     },
     {
       type: "category",
-      label: "Migrations",
+      label: "Migration",
       customProps: { isMainCategory: true },
       items: [
-        { type: "doc", id: "guides/migrations/overview", label: "Overview" },
+        { type: "doc", id: "migration/overview", label: "Overview" },
         {
           type: "doc",
-          id: "guides/migrations/account-creation",
+          id: "migration/account-creation",
           label: "Account Creation",
         },
         {
           type: "doc",
-          id: "guides/migrations/user-data-migration",
+          id: "migration/user-data-migration",
           label: "User Data Migration",
         },
         {
           type: "doc",
-          id: "guides/migrations/session-migration",
+          id: "migration/session-migration",
           label: "Session Migration",
         },
         {
           type: "doc",
-          id: "guides/migrations/mfa-migration",
+          id: "migration/mfa-migration",
           label: "MFA Migration",
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Security",
-      customProps: { isMainCategory: true },
-      items: [
-        {
-          type: "category",
-          label: "Attack Protection Suite",
-          items: [
-            {
-              type: "doc",
-              id: "guides/security/attack-protection-suite/introduction",
-              label: "Introduction",
-            },
-            {
-              type: "doc",
-              id: "guides/security/attack-protection-suite/enabling-the-feature",
-              label: "Enabling the Feature",
-            },
-            {
-              type: "doc",
-              id: "guides/security/attack-protection-suite/backend-setup",
-              label: "Backend Setup",
-            },
-            {
-              type: "doc",
-              id: "guides/security/attack-protection-suite/frontend-setup",
-              label: "Frontend Setup",
-            },
-          ],
         },
       ],
     },
@@ -1167,37 +1172,37 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/architecture/supertokens-core/add-api-keys",
+              id: "platform-configuration/supertokens-core/add-api-keys",
               label: "Add API Keys",
             },
             {
               type: "doc",
-              id: "guides/architecture/supertokens-core/logging",
+              id: "platform-configuration/supertokens-core/logging",
               label: "Logging",
             },
             {
               type: "doc",
-              id: "guides/architecture/supertokens-core/performance-tuning",
+              id: "platform-configuration/supertokens-core/performance-tuning",
               label: "Performance Tuning",
             },
             {
               type: "doc",
-              id: "guides/architecture/supertokens-core/allow-deny-requests",
+              id: "platform-configuration/supertokens-core/allow-deny-requests",
               label: "Allow/Deny Requests",
             },
             {
               type: "doc",
-              id: "guides/architecture/supertokens-core/add-ssl-via-nginx",
+              id: "platform-configuration/supertokens-core/add-ssl-via-nginx",
               label: "Add SSL via Nginx",
             },
             {
               type: "doc",
-              id: "guides/architecture/supertokens-core/add-a-base-path",
+              id: "platform-configuration/supertokens-core/add-a-base-path",
               label: "Add a Base Path",
             },
             {
               type: "doc",
-              id: "guides/architecture/supertokens-core/cli",
+              id: "platform-configuration/supertokens-core/cli",
               label: "CLI",
             },
           ],
@@ -1208,27 +1213,27 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/architecture/email-delivery/email-delivery-services",
+              id: "platform-configuration/email-delivery/email-delivery-services",
               label: "Email Delivery Services",
             },
             {
               type: "doc",
-              id: "guides/architecture/email-delivery/default-service",
+              id: "platform-configuration/email-delivery/default-service",
               label: "Default Service",
             },
             {
               type: "doc",
-              id: "guides/architecture/email-delivery/custom-method",
+              id: "platform-configuration/email-delivery/custom-method",
               label: "Custom Method",
             },
             {
               type: "doc",
-              id: "guides/architecture/email-delivery/smtp-service",
+              id: "platform-configuration/email-delivery/smtp-service",
               label: "SMTP Service",
             },
             {
               type: "doc",
-              id: "guides/architecture/email-delivery/hooks-and-overrides",
+              id: "platform-configuration/email-delivery/hooks-and-overrides",
               label: "Hooks and Overrides",
             },
           ],
@@ -1239,32 +1244,32 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/architecture/sms-delivery/sms-delivery-services",
+              id: "platform-configuration/sms-delivery/sms-delivery-services",
               label: "SMS Delivery Services",
             },
             {
               type: "doc",
-              id: "guides/architecture/sms-delivery/default-service",
+              id: "platform-configuration/sms-delivery/default-service",
               label: "Default Service",
             },
             {
               type: "doc",
-              id: "guides/architecture/sms-delivery/twilio-service",
+              id: "platform-configuration/sms-delivery/twilio-service",
               label: "Twilio Service",
             },
             {
               type: "doc",
-              id: "guides/architecture/sms-delivery/supertokens-sms-service",
+              id: "platform-configuration/sms-delivery/supertokens-sms-service",
               label: "Supertokens SMS Service",
             },
             {
               type: "doc",
-              id: "guides/architecture/sms-delivery/custom-method",
+              id: "platform-configuration/sms-delivery/custom-method",
               label: "Custom Method",
             },
             {
               type: "doc",
-              id: "guides/architecture/sms-delivery/hooks-and-overrides",
+              id: "platform-configuration/sms-delivery/hooks-and-overrides",
               label: "Hooks and Overrides",
             },
           ],
@@ -1282,7 +1287,7 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/architecture/self-hosting/overview",
+              id: "deployment/self-hosting/overview",
               label: "Overview",
             },
           ],
@@ -1293,93 +1298,45 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
-              id: "guides/architecture/testing-and-debugging/testing-with-postman",
+              id: "deployment/testing-and-debugging/testing-with-postman",
               label: "Testing With Postman",
             },
             {
               type: "doc",
-              id: "guides/architecture/testing-and-debugging/cors-issues",
+              id: "deployment/testing-and-debugging/cors-issues",
               label: "CORS Issues",
             },
             {
               type: "doc",
-              id: "guides/architecture/testing-and-debugging/how-to-enable-debug-logs",
+              id: "deployment/testing-and-debugging/how-to-enable-debug-logs",
               label: "How to Enable Debug Logs",
             },
             {
               type: "doc",
-              id: "guides/architecture/testing-and-debugging/troubleshooting-checklist",
+              id: "deployment/testing-and-debugging/troubleshooting-checklist",
               label: "Troubleshooting Checklist",
             },
           ],
         },
         {
           type: "doc",
-          id: "guides/architecture/scalability",
+          id: "deployment/scalability",
           label: "Scalability",
         },
         {
           type: "doc",
-          id: "guides/architecture/rate-limit",
+          id: "deployment/rate-limit",
           label: "Rate Limiting",
         },
         {
           type: "doc",
-          id: "guides/architecture/update-sdks-and-core",
+          id: "deployment/update-sdks-and-core",
           label: "Update Guide",
         },
       ],
     },
-    {
-      type: "category",
-      label: "Dashboard",
-      customProps: { isMainCategory: true },
-      items: [
-        {
-          type: "doc",
-          id: "guides/dashboard/overview",
-          label: "Overview",
-        },
-        {
-          type: "category",
-          label: "Tenants",
-          items: [
-            {
-              type: "doc",
-              id: "guides/dashboard/tenants/overview",
-              label: "Overview",
-            },
-            {
-              type: "doc",
-              id: "guides/dashboard/tenants/manage-third-party-providers",
-              label: "Manage Third Party Providers",
-            },
-            {
-              type: "doc",
-              id: "guides/dashboard/tenants/view-tenant-details",
-              label: "View Tenant Details",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Users",
-          items: [
-            {
-              type: "doc",
-              id: "guides/dashboard/users/manage-roles-and-permissions",
-              label: "Manage Roles And Permissions",
-            },
-            {
-              type: "doc",
-              id: "guides/dashboard/users/view-users",
-              label: "View Users",
-            },
-          ],
-        },
-      ],
-    },
   ],
+
   references: [
     {
       type: "doc",

@@ -7,7 +7,7 @@ import isInternalUrl from "@docusaurus/isInternalUrl";
 import IconExternalLink from "@theme/Icon/ExternalLink";
 import type { Props } from "@theme/DocSidebarItem/Link";
 
-import "./styles.scss";
+import styles from "./styles.module.scss";
 
 export default function DocSidebarItemLink({
   item,
@@ -31,10 +31,15 @@ export default function DocSidebarItemLink({
       key={label}
     >
       <Link
-        className={clsx("menu__link", {
-          "menu__link--active": isActive,
-        })}
-        data-attribute-external-link={!isInternalLink}
+        className={clsx(
+          "menu__link",
+          styles.menuLinkCustom,
+          !isInternalLink && styles.menuExternalLink,
+          isActive && styles.menuLinkActive,
+          {
+            "menu__link--active": isActive,
+          },
+        )}
         autoAddBaseUrl={autoAddBaseUrl}
         aria-current={isActive ? "page" : undefined}
         to={href}

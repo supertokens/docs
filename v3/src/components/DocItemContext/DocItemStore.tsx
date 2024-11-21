@@ -82,6 +82,10 @@ const subscribe = (callback: () => void) => {
 const getSnapshot = () => {
   if (isInitialized) return DocsItemState;
   const localStorageState = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (!localStorageState) {
+    isInitialized = true;
+    return DefaultState;
+  }
   try {
     const initialState = JSON.parse(localStorageState);
     if (!!initialState) return initialState;

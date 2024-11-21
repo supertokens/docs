@@ -8,9 +8,9 @@ import {
 import { translate } from "@docusaurus/Translate";
 import NavbarMobileSidebar from "@theme/Navbar/MobileSidebar";
 import type { Props } from "@theme/Navbar/Layout";
-import { useLocation } from "@docusaurus/router";
 
-import "./styles.scss";
+import styles from "./styles.module.scss";
+import { useLocation } from "@docusaurus/router";
 
 function NavbarBackdrop(props: ComponentProps<"div">) {
   return (
@@ -36,11 +36,14 @@ export default function NavbarLayout({ children }: Props): JSX.Element {
         message: "Main",
         description: "The ARIA label for the main navigation",
       })}
-      data-attribute-hidden={!isNavbarVisible}
       className={clsx(
         "navbar",
+        styles.navbarCustom,
         "navbar--fixed-top",
-        hideOnScroll && ["navbarHideable", !isNavbarVisible && "navbarHidden"],
+        hideOnScroll && [
+          styles.navbarHideable,
+          !isNavbarVisible && styles.navbarHidden,
+        ],
         {
           "navbar--dark": style === "dark",
           "navbar--primary": style === "primary",
@@ -60,21 +63,15 @@ function NavbarTabs() {
   const { pathname } = useLocation();
 
   return (
-    <ul className="navbar__tabs">
+    <ul className={styles.navbarTabs}>
       <li
-        className="navbar__tab"
-        data-is-active={pathname.startsWith("/docs/quickstart")}
+        className={styles.navbarTab}
+        data-is-active={!pathname.startsWith("/docs/references")}
       >
-        <a href="/docs/quickstart/introduction">QuickStart</a>
+        <a href="/docs">Documentation</a>
       </li>
       <li
-        className="navbar__tab"
-        data-is-active={pathname.startsWith("/docs/guides")}
-      >
-        <a href="/docs/guides/introduction">Guides</a>
-      </li>
-      <li
-        className="navbar__tab"
+        className={styles.navbarTab}
         data-is-active={pathname.startsWith("/docs/references")}
       >
         <a href="/docs/references/introduction">References</a>

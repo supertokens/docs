@@ -29,6 +29,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/docs",
           sidebarPath: "./sidebars.ts",
+          // exclude: ["**/*"]
           breadcrumbs: false,
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -95,7 +96,8 @@ const config: Config = {
       },
     ],
     "docusaurus-plugin-sass",
-  ],
+    process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
+  ].filter(Boolean),
 };
 
 export default config;
