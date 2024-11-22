@@ -1,100 +1,72 @@
-import React, { PropsWithChildren, useCallback, useEffect, useState } from "react";
+import React, {
+  PropsWithChildren,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import "../question/question.css";
 
 type Option = {
-    title: string;
-    activeText?: string;
-    value: string;
+  title: string;
+  activeText?: string;
+  value: string;
 };
 
-export function Question(props: PropsWithChildren<{
+export function Question(
+  props: PropsWithChildren<{
     question: string | (() => JSX.Element);
     options: Option[];
     value?: string;
     onChange?: (title: string) => void;
-}>) {
-    const [unselected, setUnselected] = useState(false);
-
-    let resubmitInfoClicked = (event: any) => {
-        event.preventDefault();
-        setUnselected(true);
-    };
-
-    if (unselected || props.value === undefined) {
-        return (
-            <div className="question-box">
-                <div className="question-box-text">
-                    {typeof props.question === "string" ? props.question : props.question()}
-                </div>
-                <div className="question-box-answers">
-                    {props.options.map(opt => (<Answer key={opt.value} title={opt.title} onClick={() => {
-                        setUnselected(false);
-                        if (props.onChange !== undefined) {
-                            props.onChange(opt.value);
-                        }
-                    }} />))}
-                </div>
-            </div>
-        );
-    } else {
-        // we always expect find to return a value, the object declaration is just to fix typescript
-        const selectedOption = props.options.find(opt => opt.value === props.value) || {
-            activeText: undefined,
-            title: ""
-        };
-        return (
-            <>
-                <div className="question-box-submitted-container">
-                    <div
-                        style={{
-                            width: "17px",
-                            marginRight: "10px"
-                        }}>
-                        <img
-                            alt="Answer submitted"
-                            style={{
-                                width: "17px",
-                            }}
-                            src="/img/form-submitted-tick.png" />
-                    </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            flex: 1,
-                            marginTop: "-2px"
-                        }}>
-                        <div
-                            style={{
-                                fontSize: "16px",
-                            }}>
-                            {selectedOption.activeText !== undefined ? selectedOption.activeText : `You choose ${selectedOption.title}.`}{" "}
-                            <a href="" onClick={resubmitInfoClicked}>Resubmit answer?</a>
-                        </div>
-                    </div>
-                </div>
-            </>
-        );
-    }
+  }>,
+) {
+  return (
+    <>
+      <div className="question-box">
+        <div className="question-box-text">
+          {typeof props.question === "string"
+            ? props.question
+            : props.question()}
+        </div>
+        <div className="question-box-answers">
+          {props.options.map((opt) => (
+            <Answer
+              key={opt.value}
+              title={opt.title}
+              isSelected={opt.value === props.value}
+              onClick={() => {
+                if (props.onChange !== undefined) {
+                  props.onChange(opt.value);
+                }
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </>
+  );
 }
 
 type AnswerProps = {
-    title: string,
-    onClick?: () => void
+  title: string;
+  isSelected: boolean;
+  onClick?: () => void;
 };
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
-    const [isMouseHover, setMouseHover] = useState(false);
+  const [isMouseHover, setMouseHover] = useState(false);
 
-    return (
-        <span
-            className="question-box-answer"
-            onClick={props.onClick}
-            onMouseEnter={() => setMouseHover(true)}
-            onMouseLeave={() => setMouseHover(false)}
-        >
-            {props.title}
-        </span>
-    );
+  return (
+    <span
+      className="question-box-answer"
+      onClick={props.onClick}
+      data-is-selected={props.isSelected}
+      onMouseEnter={() => setMouseHover(true)}
+      onMouseLeave={() => setMouseHover(false)}
+    >
+      {props.title}
+    </span>
+  );
 }
+
