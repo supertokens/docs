@@ -3,6 +3,7 @@ import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
 import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues";
+import rehypeHeadingVisibility from "./src/plugins/rehypeHeadingVisibility";
 
 const config: Config = {
   title: "SuperTokens Docs",
@@ -35,6 +36,7 @@ const config: Config = {
           editUrl:
             "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
           beforeDefaultRemarkPlugins: [remarkDocItemContextValues],
+          beforeDefaultRehypePlugins: [rehypeHeadingVisibility],
         },
         blog: false,
         pages: false,

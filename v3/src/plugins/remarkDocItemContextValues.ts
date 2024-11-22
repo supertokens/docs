@@ -1,25 +1,30 @@
 // remarkVariableNames.js
 import { visit } from "unist-util-visit";
 
+/**
+ * Replaces {props.propName} value
+ * with <DocItemContextValue propertyPath="propName" />
+ * This way we can render dyanmic values that are set in DocItemContext
+ */
 export default function remarkDocItemContextValues() {
   return (tree) => {
     // console.log(tree);
-    visit(tree, "mdxJsxFlowElement", (node) => {
-      console.log(node);
+    // visit(tree, "mdxJsxFlowElement", (node) => {
+    //   console.log(node);
+    // });
+    visit(tree, "heading", (node) => {
+      // console.log(node);
     });
     visit(tree, "mdxFlowExpression", (node) => {
       // regex to match {^property.path} pattern
-      console.log(node);
       node.type = "mdxJsxFlowElement";
       node.name = "DocItemContextValue";
       const [, propertyPath] = node.value.split("props.");
-      console.log(propertyPath);
       node.attributes = [
         { type: "mdxJsxAttribute", name: "propertyPath", value: propertyPath },
       ];
       node.data = { _mdxExplicitJsx: true };
       node.children = [];
-      console.log(node);
       // const variableRegex = /\{\^([^}]+)\}/g;
       // const parts = [];
       // let lastIndex = 0;

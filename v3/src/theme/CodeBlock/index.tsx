@@ -37,11 +37,12 @@ export default function CodeBlock({
   const CodeBlockComp =
     typeof children === "string" ? StringContent : ElementContent;
   const context = useContext(DocItemContext);
-  const dynamicValuesRegex = /\{\^([^}]+)\}/g;
+  const dynamicValuesRegex = /\^\{([^}]+)\}/g;
 
+  // console.log(children);
   let parsedChildren = children;
   if (typeof children === "string") {
-    parsedChildren = children.replace(dynamicValuesRegex, (match, key) => {
+    parsedChildren = children.replaceAll(dynamicValuesRegex, (match, key) => {
       const value = getContextValue(context, key);
       return value as string;
     });
