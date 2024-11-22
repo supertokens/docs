@@ -13,7 +13,6 @@ export type DocsItemStateType = {
     thirdparty: {};
   };
   uiType: "prebuilt" | "custom";
-  appSetup: "single-tenant" | "multi-tenant";
   frontend: {
     type: "web" | "mobile";
     framework:
@@ -36,6 +35,11 @@ export type DocsItemStateType = {
     websiteDomain: string;
     websiteBasePath: string;
   };
+  coreInfo: {
+    hasSupertokensSession: boolean;
+    uri: string | null;
+    key: string | null;
+  };
 };
 
 const DefaultState: DocsItemStateType = {
@@ -48,7 +52,6 @@ const DefaultState: DocsItemStateType = {
     thirdparty: {},
   },
   uiType: "prebuilt",
-  appSetup: "single-tenant",
   frontend: {
     type: "web",
     framework: "reactjs",
@@ -64,6 +67,11 @@ const DefaultState: DocsItemStateType = {
     apiBasePath: "/",
     websiteDomain: "https://try.supertokens.com",
     websiteBasePath: "/",
+  },
+  coreInfo: {
+    hasSupertokensSession: false,
+    uri: null,
+    key: null,
   },
 };
 
