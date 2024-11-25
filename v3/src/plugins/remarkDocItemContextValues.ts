@@ -12,9 +12,6 @@ export default function remarkDocItemContextValues() {
     // visit(tree, "mdxJsxFlowElement", (node) => {
     //   console.log(node);
     // });
-    visit(tree, "heading", (node) => {
-      // console.log(node);
-    });
     visit(tree, "mdxFlowExpression", (node) => {
       // regex to match {^property.path} pattern
       node.type = "mdxJsxFlowElement";

@@ -28,18 +28,31 @@ function UITypeSwitch({}) {
   );
 }
 
+function HeadingFilter({
+  children,
+  name,
+}: React.PropsWithChildren<{ name: string }>) {
+  return <div data-heading-filter={name}>{children}</div>;
+}
+
 function PrebuiltUIContent({ children }: React.PropsWithChildren<{}>) {
   const state = useContext(DocItemContext);
 
-  if (state.uiType !== "prebuilt") return null;
-  return children;
+  return (
+    <HeadingFilter name="prebuilt">
+      {state.uiType === "prebuilt" ? children : null}
+    </HeadingFilter>
+  );
 }
 
 function CustomUIContent({ children }: React.PropsWithChildren<{}>) {
   const state = useContext(DocItemContext);
 
-  if (state.uiType !== "custom") return null;
-  return children;
+  return (
+    <HeadingFilter name="custom">
+      {state.uiType === "custom" ? children : null}
+    </HeadingFilter>
+  );
 }
 
 export const UIType = {
