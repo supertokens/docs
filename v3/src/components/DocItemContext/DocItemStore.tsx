@@ -27,6 +27,7 @@ export type DocsItemStateType = {
   backend: {
     language: "node" | "go" | "python";
     framework?: "express" | "fastify" | "hapi" | "koa" | "loopback";
+    settings: Record<string, unknown>;
   };
   appInfo: {
     appName: string;
@@ -60,6 +61,7 @@ const DefaultState: DocsItemStateType = {
   backend: {
     language: "node",
     framework: "express",
+    settings: { packageManager: "npm7+" },
   },
   appInfo: {
     appName: "",
@@ -92,14 +94,19 @@ const getSnapshot = () => {
   const localStorageState = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (!localStorageState) {
     isInitialized = true;
-    return DefaultState;
+    DocsItemState = DefaultState;
+    return DocsItemState;
   }
   try {
     const initialState = JSON.parse(localStorageState);
-    if (!!initialState) return initialState;
+    if (!!initialState) {
+      DocsItemState = initialState;
+      return DocsItemState;
+    }
   } catch (e) {
     console.error(e);
-    return DefaultState;
+    DocsItemState = DefaultState;
+    return DocsItemState;
   } finally {
     isInitialized = true;
   }
@@ -109,7 +116,10 @@ const notifySubscribers = () => {
   subscribers.forEach((callback) => callback());
 };
 
-export function useDocsItemStore() {
+export function useDocsItemStore(): [
+  DocsItemStateType,
+  (state: DocsItemStateType) => void,
+] {
   const set = (value: DocsItemStateType) => {
     DocsItemState = value;
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(value));
@@ -122,5 +132,5 @@ export function useDocsItemStore() {
     () => DefaultState,
   );
 
-  return [store, set];
+  return [store as DocsItemStateType, set];
 }

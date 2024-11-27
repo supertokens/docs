@@ -1,16 +1,6 @@
 import { createContext, PropsWithChildren, useContext, useState } from "react";
 import { DocItemContext } from "./DocItemContext";
 
-// export function IncrementButton() {
-//   const { changingValue, setChangingValue } = useContext(DocItemContext);
-//
-//   return (
-//     <button onClick={() => setChangingValue(changingValue + 1)}>
-//       increment {changingValue}
-//     </button>
-//   );
-// }
-
 export function DocItemContextValue({
   propertyPath,
 }: {

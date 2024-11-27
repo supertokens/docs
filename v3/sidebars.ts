@@ -17,8 +17,8 @@ const sidebars: SidebarsConfig = {
         },
         { id: "quickstart/backend-setup", label: "Backend Setup", type: "doc" },
         {
-          id: "quickstart/backend-setup",
-          label: "Additional Configuraton",
+          id: "quickstart/next-steps",
+          label: "Next Steps",
           type: "doc",
         },
         {

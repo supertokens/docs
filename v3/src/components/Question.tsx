@@ -7,8 +7,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
-
-import "./styles.scss";
+import { Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
 
 type QuestionContextType = {
   answer?: string;
@@ -59,10 +58,22 @@ export function Question(
     <QuestionContext.Provider
       value={{ answer: selectedAnswer, setAnswer: onSelectAnswer }}
     >
-      <div className="question-box">
-        <div className="question-box-text">{question}</div>
-        <div className="question-box-answers">{children}</div>
-      </div>
+      <Flex gap="2" direction="column" mb="4" py="5" px="4" asChild>
+        <Card>
+          <Heading as="h3" size="5">
+            {question}
+          </Heading>
+
+          <Flex direction="row" gap="2" align="start">
+            <RadioCards.Root
+              defaultValue={defaultAnswer}
+              columns={{ initial: "1", sm: "2" }}
+            >
+              {children}
+            </RadioCards.Root>
+          </Flex>
+        </Card>
+      </Flex>
       {selectedAnswerChildren}
     </QuestionContext.Provider>
   );
@@ -84,12 +95,10 @@ export function Answer(props: PropsWithChildren<AnswerProps>) {
   }, []);
 
   return (
-    <span
-      className="question-box-answer"
-      data-is-selected={answer === props.title}
-      onClick={onClick}
-    >
-      {props.title}
-    </span>
+    <RadioCards.Item value={props.title} onClick={onClick}>
+      <Flex direction="column" width="100%" height="100%" align="start">
+        <Text weight="bold">{props.title}</Text>
+      </Flex>
+    </RadioCards.Item>
   );
 }

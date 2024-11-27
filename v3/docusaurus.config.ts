@@ -2,6 +2,7 @@ import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
+import tailwindPlugin from "./src/plugins/tailwindConfig";
 import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues";
 
 const config: Config = {
@@ -39,7 +40,7 @@ const config: Config = {
         blog: false,
         pages: false,
         theme: {
-          customCss: "./src/css/custom.scss",
+          customCss: ["./src/css/custom.scss", "./src/css/radix.css"],
         },
       } satisfies Preset.Options,
     ],
@@ -83,8 +84,8 @@ const config: Config = {
       appId: "SBR5UR2Z16",
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      theme: prismThemes.dracula,
+      additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php"],
     },
   } satisfies Preset.ThemeConfig,
   plugins: [
@@ -95,6 +96,7 @@ const config: Config = {
       },
     ],
     "docusaurus-plugin-sass",
+    // tailwindPlugin,
     process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
   ].filter(Boolean),
 };
