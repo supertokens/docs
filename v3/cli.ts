@@ -74,11 +74,21 @@ const migrateMdx = async (markdownContent: string) => {
 - Remove all comment blocks
 - Replace all headers that use a bracket numbering format with dot notation. Example "# 1) Step" becomes "# 1. Step"
 - Replace JSX elements based on the following mapping:
-  - BackendSDKTabs -> BackendTabs (Replace the usage of TabItem inside the BackendSDKTabs with BackendTab.Tab)
-  - AppInfoForm -> AppInfoForm (Keep only the first usage and write it as a self closing component. Remove the other occurences.) 
-  - PreBuiltOrCustomUISwitcher -> UIType.Switch (Use it as a self closing component)
+  - BackendSDKTabs -> BackendTabs
+     - Replace the usage of TabItem inside the BackendSDKTabs with BackendTab.Tab
+  - AppInfoForm -> AppInfoForm 
+     - Keep only the first usage and write it as a self closing component
+     - Remove the other occurences
+  - PreBuiltOrCustomUISwitcher -> UIType.Switch
+     - Use it as a self closing component
   - PreBuiltUIContent -> UIType.PrebuiltUIContent
   - CustomUIContent -> UIType.CustomUIContent
+  - NpmOrScriptTabs -> NpmOrScriptsCard
+     - Replace the usage of TabItem inside the NpmOrScriptTab with NpmOrScriptsCard.Content
+  - FrontendMobileSubTabs -> MobileFrameworksCard
+     - Replace the usage of TabItem inside the FrontendMobileSubTabs with MobileFrameworksCard.Content
+  - FrontendCustomUITabs -> FrontendTabs
+     - Replace the usage of TabItem inside the FrontendCustomUITabs with FrontendTabs.Tab
 - Remove the usage of the following components:
   - CoreInjector
   - OAuthVerifyTokensDisclaimer
@@ -96,7 +106,7 @@ import {
   ReactRouterVersionTabs,
 } from "/src/components/Tabs";
 import { AppInfoForm } from "/src/components/AppInfoForm";
-import { NodePackageManagerCard, NpmOrScriptsCard, MobileFrameworksCard } from "/src/components/Cards";
+import { NodePackageManagerCard, NpmOrScriptsCard, MobileFrameworksCard,  } from "/src/components/Cards";
 import { Question, Answer } from "/src/components/Question";
 Extract only the components that are used in the file. 
         `,
@@ -109,9 +119,11 @@ Extract only the components that are used in the file.
 		stream: true,
 	});
 	console.log(`Parsing gpt completion`);
+	let chunkIndex = 0;
 	for await (const chunk of completionChunks) {
+		chunkIndex++;
 		const stringChunk = chunk.choices[0]?.delta?.content || "";
-		printStatus(`Received: ${stringChunk}`);
+		printStatus(`Received chunk ${chunkIndex}`);
 		output += stringChunk;
 	}
 	return output;
