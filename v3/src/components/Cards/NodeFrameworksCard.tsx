@@ -1,73 +1,23 @@
-import { Flex, Card, Separator, Select } from "@radix-ui/themes";
-import { useCallback, useContext, useMemo } from "react";
-import { DocItemContext } from "../DocItemContext";
+import {
+	NodeFrameworksSelect,
+	useNodeFrameworksSelection,
+} from "../Select/NodeFrameworksSelect";
 
-const NodeJSFrameworkSubTabItems = [
-	{ label: "Express", value: "express" },
-	{ label: "Hapi", value: "hapi" },
-	{ label: "Fastify", value: "fastify" },
-	{ label: "Koa", value: "koa" },
-	{ label: "Loopback", value: "loopback" },
-	{ label: "AWS Lambda / Netlify", value: "awsLambda" },
-	{ label: "Next.js", value: "nextjs" },
-	{ label: "NestJS", value: "nestjs" },
-];
+import { CodeSampleCard } from "./CodeSampleCard";
 
-const DefaultNodeFramework = "express";
+import "./styles.scss";
 
-function NodeFrameworksCardRoot({
-	children,
-	exclude,
-}: React.PropsWithChildren<{ exclude?: string[] }>) {
-	const { backend, onChangeBackendFramework } = useContext(DocItemContext);
-
-	const packageManager = (backend.framework || DefaultNodeFramework) as string;
-	const onChange = useCallback(
-		(value: string) => {
-			// @ts-expect-error
-			onChangeBackendFramework(value);
-		},
-		[backend],
-	);
-
-	const selectOptions = useMemo(() => {
-		if (exclude)
-			return NodeJSFrameworkSubTabItems.filter(
-				(tabItem) => !exclude.includes(tabItem.value),
-			);
-		return NodeJSFrameworkSubTabItems;
-	}, [exclude]);
-
+function NodeFrameworksCardRoot({ children }: React.PropsWithChildren<{}>) {
 	return (
-		<Card className="content-card" mb="4">
-			<Flex gap="2" direction="row" pt="3" pb="3" px="3">
-				<Select.Root value={packageManager} onValueChange={onChange}>
-					<Select.Trigger />
-					<Select.Content>
-						{selectOptions.map((tabItem) => (
-							<Select.Item value={tabItem.value}>{tabItem.label}</Select.Item>
-						))}
-					</Select.Content>
-				</Select.Root>
-			</Flex>
-			<Separator size="4" />
+		<CodeSampleCard>
+			<CodeSampleCard.Header>
+				<NodeFrameworksSelect />
+			</CodeSampleCard.Header>
 			{children}
-		</Card>
+		</CodeSampleCard>
 	);
-}
-
-function NodeFrameworksCardContent({
-	value,
-	children,
-}: React.PropsWithChildren<{ value: string }>) {
-	const { backend } = useContext(DocItemContext);
-
-	const framework = backend.framework || DefaultNodeFramework;
-	if (framework !== value) return null;
-
-	return children;
 }
 
 export const NodeFrameworksCard = Object.assign(NodeFrameworksCardRoot, {
-	Content: NodeFrameworksCardContent,
+	Content: CodeSampleCard.Content(useNodeFrameworksSelection),
 });

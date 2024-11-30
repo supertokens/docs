@@ -8,6 +8,7 @@ type DocItemContextType = DocsItemStateType & {
 		type: DocsItemStateType["frontend"]["framework"],
 	) => void;
 	onChangeUIType: (type: DocsItemStateType["uiType"]) => void;
+	onChangeTenantType: (type: DocsItemStateType["tenantType"]) => void;
 	onChangeRecipeSettings: (
 		recipeName: keyof DocsItemStateType["authenticationRecipes"],
 		propertyName: string,
@@ -74,6 +75,16 @@ export function DocItemContextProvider({
 			setState({
 				...state,
 				uiType: type,
+			});
+		},
+		[state],
+	);
+
+	const onChangeTenantType = useCallback(
+		(type: DocsItemStateType["tenantType"]) => {
+			setState({
+				...state,
+				tenantType: type,
 			});
 		},
 		[state],
@@ -193,6 +204,7 @@ export function DocItemContextProvider({
 				...state,
 				onChangeFrontendType,
 				onChangeUIType,
+				onChangeTenantType,
 				onChangeRecipeSettings,
 				onChangeAppInfoField,
 				onChangeFrontendFramework,

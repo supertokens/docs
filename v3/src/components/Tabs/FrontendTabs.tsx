@@ -21,6 +21,7 @@ const FrontendTabsGroupIdPrefix = "frontend-tabs";
 
 type FrontendTabsProps = Omit<TabsProps, "values" | "groupId"> & {
 	exclude?: string[];
+	uiType?: string;
 };
 
 type FrontendTabsContextType = {
@@ -30,8 +31,9 @@ type FrontendTabsContextType = {
 const FrontendTabsContext = createContext({} as FrontendTabsContextType);
 
 function FrontendTabsRoot(props: FrontendTabsProps) {
-	const { children, exclude, ...rest } = props;
-	const { uiType, frontend } = useContext(DocItemContext);
+	const { children, exclude, uiType: propsUiType, ...rest } = props;
+	const { uiType: contextUiType } = useContext(DocItemContext);
+	const uiType = propsUiType || contextUiType;
 	const groupId = useMemo(() => {
 		return `${FrontendTabsGroupIdPrefix}-${uiType}`;
 	}, [uiType]);

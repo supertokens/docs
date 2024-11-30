@@ -120,8 +120,15 @@ function TabsComponent(
 		[onChange],
 	);
 	return (
-		<RadixTabs.Root value={selectedValue} onValueChange={onValueChange}>
-			<RadixTabs.List size="2">
+		<RadixTabs.Root mb="6" value={selectedValue} onValueChange={onValueChange}>
+			<RadixTabs.List
+				style={{
+					fontSize: "var(--font-size-4)",
+					lineHeight: "var(--line-height-4)",
+					letterSpacing: "var(--letter-spacing-4)",
+				}}
+				className={styles.tabList}
+			>
 				{tabValues.map(({ value, label, attributes }) => (
 					<RadixTabs.Trigger value={value} key={value} {...attributes}>
 						{label}
