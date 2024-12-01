@@ -5,3 +5,4 @@ export * from "./PythonFrameworksCard";
 export * from "./GoFrameworksCard";
 export * from "./MobileFrameworksCard";
 export * from "./NpmOrScriptsCard";
+export * from "./JavascriptHttpLibraryCard";

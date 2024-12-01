@@ -24,9 +24,23 @@ export function Question(
 	props: PropsWithChildren<{
 		question: string | (() => JSX.Element);
 		defaultAnswer?: string;
+		cardVariant?: React.ComponentProps<typeof Card>["variant"];
+		questionSize?: React.ComponentProps<typeof Heading>["size"];
+		px?: React.ComponentProps<typeof Flex>["px"];
+		py?: React.ComponentProps<typeof Flex>["py"];
+		mb?: React.ComponentProps<typeof Flex>["mb"];
 	}>,
 ) {
-	const { defaultAnswer, question, children } = props;
+	const {
+		defaultAnswer,
+		question,
+		children,
+		cardVariant: variant,
+		questionSize = "5",
+		px = "4",
+		py = "5",
+		mb = "4",
+	} = props;
 	const [selectedAnswer, setSelectedAnswer] = useState<string | undefined>(
 		defaultAnswer,
 	);
@@ -58,9 +72,9 @@ export function Question(
 		<QuestionContext.Provider
 			value={{ answer: selectedAnswer, setAnswer: onSelectAnswer }}
 		>
-			<Flex gap="2" direction="column" mb="4" py="5" px="4" asChild>
-				<Card>
-					<Heading as="h3" size="5">
+			<Flex gap="2" direction="column" mb={mb} py={py} px={px} asChild>
+				<Card variant={variant}>
+					<Heading as="h3" size={questionSize}>
 						{typeof question === "string" ? question : question()}
 					</Heading>
 
@@ -86,7 +100,7 @@ type AnswerProps = {
 
 export function Answer(props: PropsWithChildren<AnswerProps>) {
 	const { onClick: _onClick } = props;
-	const { answer, setAnswer } = useContext(QuestionContext);
+	const { setAnswer } = useContext(QuestionContext);
 	const onClick = useCallback(() => {
 		if (_onClick !== undefined) {
 			_onClick();
