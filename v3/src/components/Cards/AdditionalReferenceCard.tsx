@@ -1,4 +1,4 @@
-import { Card, Text } from "@radix-ui/themes";
+import { Card, Flex, Avatar, Text } from "@radix-ui/themes";
 
 export function AdditionalReferenceCard({
 	title,
@@ -12,7 +12,7 @@ export function AdditionalReferenceCard({
 	return (
 		<Card asChild>
 			<a href={href}>
-				<Text as="div" size="4" weight="bold">
+				<Text as="div" size="4" weight="bold" mb="3">
 					{title}
 				</Text>
 				<Text as="div" color="gray" size="2" style={{ marginBottom: 0 }}>
