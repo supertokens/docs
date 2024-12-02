@@ -93,7 +93,8 @@ const migrateMdx = async (markdownContent: string) => {
   - CoreInjector
   - OAuthVerifyTokensDisclaimer
 - Do not change the markdown content that exists inside a jsx element
-- Do not change the frontmatter data. Keep it as it is.
+- Remove the show_ui_switcher property from the frontmatter data (if preset) 
+- Add a new property to the frontmatter data called "sidebar_position" and set it to 1
 - Don't add or remove links. Do not change any URL.
 - Always preserve the original line breaks. Do not add or remove blank lines.
 - Based on the jsx elements used add import statements at the top of the file based on the following import example:

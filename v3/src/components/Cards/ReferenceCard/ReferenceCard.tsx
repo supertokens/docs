@@ -1,4 +1,5 @@
-import { Card, Flex, Avatar, Text } from "@radix-ui/themes";
+import React from "react";
+import { Card, Flex, Avatar, Grid, Text } from "@radix-ui/themes";
 
 import "./styles.scss";
 
@@ -6,10 +7,29 @@ function ReferenceCardRoot({
 	children,
 	href,
 }: React.PropsWithChildren<{ href: string }>) {
+	const hasAvatarInChildren = React.Children.toArray(children).some((child) => {
+		if (React.isValidElement(child)) {
+			return child.type === ReferenceCardAvatar;
+		}
+		return false;
+	});
+
+	if (hasAvatarInChildren) {
+		return (
+			<Card className="reference-card">
+				<a href={href}>
+					<Flex gap="3" align="center">
+						{children}
+					</Flex>
+				</a>
+			</Card>
+		);
+	}
+
 	return (
 		<Card className="reference-card">
 			<a href={href}>
-				<Flex gap="3" align="center">
+				<Flex gap="3" direction="column">
 					{children}
 				</Flex>
 			</a>
@@ -46,8 +66,17 @@ function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
 	);
 }
 
+function ReferenceCardGrid({ children }: React.PropsWithChildren<{}>) {
+	return (
+		<Grid columns="repeat(3, 1fr)" gap="4">
+			{children}
+		</Grid>
+	);
+}
+
 export const ReferenceCard = Object.assign(ReferenceCardRoot, {
 	Avatar: ReferenceCardAvatar,
 	Title: ReferenceCardTitle,
 	Description: ReferenceCardDescription,
+	Grid: ReferenceCardGrid,
 });
