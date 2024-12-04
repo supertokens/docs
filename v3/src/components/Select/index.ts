@@ -5,3 +5,4 @@ export * from "./NodeFrameworksSelect";
 export * from "./GoFrameworksSelect";
 export * from "./PythonFrameworksSelect";
 export * from "./JavascriptHttpLibrarySelect";
+export * from "./PythonSyncAsyncSelect";

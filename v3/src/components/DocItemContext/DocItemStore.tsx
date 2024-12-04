@@ -1,7 +1,7 @@
 import React, { useSyncExternalStore } from "react";
 
 export type DocsItemStateType = {
-	authenticationRecipes: {
+	recipes: {
 		emailpassword: {};
 		passwordless: {
 			contactMethod: "EMAIL" | "PHONE" | "EMAIL_OR_PHONE";
@@ -13,22 +13,6 @@ export type DocsItemStateType = {
 		thirdparty: {};
 	};
 	uiType: "prebuilt" | "custom";
-	frontend: {
-		type: "web" | "mobile";
-		framework:
-			| "reactjs"
-			| "nextjs"
-			| "angular"
-			| "vue"
-			| "vanillajs"
-			| "mobile";
-		settings: Record<string, unknown>;
-	};
-	backend: {
-		language: "node" | "go" | "python";
-		framework?: "express" | "fastify" | "hapi" | "koa" | "loopback";
-		settings: Record<string, unknown>;
-	};
 	appInfo: {
 		appName: string;
 		apiDomain: string;
@@ -45,26 +29,16 @@ export type DocsItemStateType = {
 };
 
 const DefaultState: DocsItemStateType = {
-	authenticationRecipes: {
+	recipes: {
 		emailpassword: {},
 		passwordless: {
-			contactMethod: "EMAIL",
+			contactMethod: "PHONE",
 			flowType: "MAGIC_LINK",
 		},
 		thirdparty: {},
 	},
 	uiType: "prebuilt",
 	tenantType: "single",
-	frontend: {
-		type: "web",
-		framework: "reactjs",
-		settings: { usesReactRouter: true, reactRouterVersion: ">=v6" },
-	},
-	backend: {
-		language: "node",
-		framework: "express",
-		settings: { packageManager: "npm7+" },
-	},
 	appInfo: {
 		appName: "",
 		apiDomain: "https://try.supertokens.com",

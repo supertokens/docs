@@ -29,6 +29,9 @@ const migrateFile = async (sourcePath: string, destinationPath: string) => {
 		.arguments("<source>")
 		.arguments("<destination>")
 		.action(async (sourcePath: string, destinationPath: string) => {
+			if (!fs.existsSync(destinationPath)) {
+				fs.mkdirSync(destinationPath);
+			}
 			if (!fs.statSync(destinationPath).isDirectory()) {
 				throw new Error("Destination path must be a directory");
 			}
@@ -87,11 +90,23 @@ const migrateMdx = async (markdownContent: string) => {
      - Replace the usage of TabItem inside the NpmOrScriptTab with NpmOrScriptsCard.Content
   - FrontendMobileSubTabs -> MobileFrameworksCard
      - Replace the usage of TabItem inside the FrontendMobileSubTabs with MobileFrameworksCard.Content
+  - FrontendPreBuiltUITabs -> FrontendTabs
+     - Replace the usage of TabItem inside the FrontendCustomUITabs with FrontendTabs.Tab
+     - Do not skip over TabItem usage inside the FrontendPreBuiltUITabs
   - FrontendCustomUITabs -> FrontendTabs
      - Replace the usage of TabItem inside the FrontendCustomUITabs with FrontendTabs.Tab
+  - PasswordlessFrontendForm -> PasswordlessForm
+  - ConditionalSection -> ContextCondition (rename the conditions prop to condition)
+  - PythonSyncAsyncSubTabs -> PythonSyncAsyncCard
+     - Replace the usage of TabItem inside the PythonSyncAsyncSubTabs with PythonSyncAsyncCard.Content
 - Remove the usage of the following components:
   - CoreInjector
   - OAuthVerifyTokensDisclaimer
+- If you encounter a CustomAdmonition component replace it with a normal mdx admonition: 
+:::info <type-property>
+<children>
+:::
+The <type-property> should be formatted in a human readable way.
 - Do not change the markdown content that exists inside a jsx element
 - Remove the show_ui_switcher property from the frontmatter data (if preset) 
 - Add a new property to the frontmatter data called "sidebar_position" and set it to 1
@@ -100,6 +115,7 @@ const migrateMdx = async (markdownContent: string) => {
 - Based on the jsx elements used add import statements at the top of the file based on the following import example:
 - DO NOT include the generated result in an mdx code block. Just return the actual content.
 - Only return the MDX content. Don not add any other comments and do not wrap the content in and MDX code block.
+- Only return the generated content without wrapping it in backticks.
 import { UIType } from "/src/components/UITypeSwitch";
 import {
   FrontendTabs,
@@ -107,8 +123,10 @@ import {
   ReactRouterVersionTabs,
 } from "/src/components/Tabs";
 import { AppInfoForm } from "/src/components/AppInfoForm";
+import { PasswordlessForm } from "/src/components/Forms";
 import { NodePackageManagerCard, NpmOrScriptsCard, MobileFrameworksCard,  } from "/src/components/Cards";
 import { Question, Answer } from "/src/components/Question";
+import { ContextCondition } from "/src/components/DocItemContext";
 Extract only the components that are used in the file. 
         `,
 			},

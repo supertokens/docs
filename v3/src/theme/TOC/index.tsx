@@ -20,42 +20,50 @@ const LINK_ACTIVE_CLASS_NAME = "table-of-contents__link--active";
  * to allow dynamic headings based on tab selection.
  */
 export default function TOC({ className, toc, ...props }: Props): JSX.Element {
-  const { uiType } = useContext(DocItemContext);
+	const { uiType } = useContext(DocItemContext);
 
-  const [parsedTocItems, setParsedTocItems] = useState<Props["toc"]>(toc);
+	const [parsedTocItems, setParsedTocItems] = useState<Props["toc"]>(toc);
 
-  useLayoutEffect(() => {
-    const visibleUiTypeContainer = document.querySelector(
-      `[data-heading-filter="${uiType}"]`,
-    );
-    if (!visibleUiTypeContainer) return;
-    const pageHeadings = visibleUiTypeContainer?.querySelectorAll("h1, h2, h3");
-    const visibleHeadingsIds = Array.from(pageHeadings).map((heading) => {
-      return heading.id;
-    });
+	useLayoutEffect(() => {
+		const mainContentElement = document.querySelector(`main`);
+		const hiddenUiType = uiType === "custom" ? "prebuilt" : "custom";
+		const hiddenUiTypeContainer = document.querySelector(
+			`[data-heading-filter="${hiddenUiType}"]`,
+		);
 
-    const visibleHeadings: Record<string, boolean> = {};
-    setParsedTocItems(
-      toc.filter((tocItem) => {
-        // Already marked as visible
-        if (visibleHeadings[tocItem.id]) return false;
-        if (visibleHeadingsIds.find((headingId) => headingId === tocItem.id)) {
-          visibleHeadings[tocItem.id] = true;
-          return true;
-        }
-        return false;
-      }),
-    );
-  }, [toc, uiType]);
+		if (!mainContentElement || !hiddenUiTypeContainer) return;
 
-  return (
-    <div className={clsx(styles.tableOfContents, "thin-scrollbar", className)}>
-      <TOCItems
-        {...props}
-        toc={parsedTocItems}
-        linkClassName={LINK_CLASS_NAME}
-        linkActiveClassName={LINK_ACTIVE_CLASS_NAME}
-      />
-    </div>
-  );
+		const allPageHeadings = document.querySelectorAll(`h2, h3`);
+		const visibleHeadingsIds = Array.from(allPageHeadings)
+			.filter((heading) => {
+				return !hiddenUiTypeContainer.contains(heading);
+			})
+			.map((heading) => {
+				return heading.id;
+			});
+
+		const visibleHeadings: Record<string, boolean> = {};
+		setParsedTocItems(
+			toc.filter((tocItem) => {
+				// Already marked as visible
+				if (visibleHeadings[tocItem.id]) return false;
+				if (visibleHeadingsIds.find((headingId) => headingId === tocItem.id)) {
+					visibleHeadings[tocItem.id] = true;
+					return true;
+				}
+				return false;
+			}),
+		);
+	}, [toc, uiType]);
+
+	return (
+		<div className={clsx(styles.tableOfContents, "thin-scrollbar", className)}>
+			<TOCItems
+				{...props}
+				toc={parsedTocItems}
+				linkClassName={LINK_CLASS_NAME}
+				linkActiveClassName={LINK_ACTIVE_CLASS_NAME}
+			/>
+		</div>
+	);
 }

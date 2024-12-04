@@ -10,8 +10,6 @@ import {
 	TextField,
 	VisuallyHidden,
 	Separator,
-	Select,
-	Tooltip,
 } from "@radix-ui/themes";
 import "./styles.scss";
 

@@ -6,3 +6,4 @@ export * from "./MobileFrameworksCard";
 export * from "./NpmOrScriptsCard";
 export * from "./JavascriptHttpLibraryCard";
 export * from "./ReferenceCard/ReferenceCard";
+export * from "./PythonSyncAsyncCard";
