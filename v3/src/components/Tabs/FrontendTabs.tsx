@@ -62,7 +62,7 @@ function FrontendTab({ children, value, ...rest }: TabItemProps) {
 	const { values } = useContext(FrontendTabsContext);
 
 	if (!values.find((v) => v.value === value)) {
-		throw new Error("Invalid tab value");
+		throw new Error(`Invalid tab value ${value}`);
 	}
 
 	return (

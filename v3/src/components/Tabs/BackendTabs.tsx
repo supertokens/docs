@@ -7,7 +7,7 @@ const BackendLanguagesTabOptions = [
 	{ label: "NodeJS", value: "nodejs" },
 	{ label: "GoLang", value: "go" },
 	{ label: "Python", value: "python" },
-	{ label: "Other Frameworks", value: "otherFrameworks" },
+	// { label: "Other Frameworks", value: "otherFrameworks" },
 ];
 
 const BackendTabsGroupId = "frontend-tabs";

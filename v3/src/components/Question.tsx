@@ -33,7 +33,7 @@ export function Question(
 ) {
 	const {
 		defaultAnswer,
-		question,
+		question: _question,
 		children,
 		cardVariant: variant,
 		questionSize = "5",
@@ -44,6 +44,7 @@ export function Question(
 	const [selectedAnswer, setSelectedAnswer] = useState<string | undefined>(
 		defaultAnswer,
 	);
+	const question = typeof _question === "string" ? _question : _question();
 
 	const onSelectAnswer = useCallback((answer: string) => {
 		setSelectedAnswer(answer);
@@ -75,7 +76,7 @@ export function Question(
 			<Flex gap="2" direction="column" mb={mb} py={py} px={px} asChild>
 				<Card variant={variant}>
 					<Heading as="h3" size={questionSize}>
-						{typeof question === "string" ? question : question()}
+						{question}
 					</Heading>
 
 					<Flex direction="row" gap="2" align="start">
