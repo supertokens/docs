@@ -20,23 +20,33 @@ const LINK_ACTIVE_CLASS_NAME = "table-of-contents__link--active";
  * to allow dynamic headings based on tab selection.
  */
 export default function TOC({ className, toc, ...props }: Props): JSX.Element {
-	const { uiType } = useContext(DocItemContext);
+	const { uiType, tenantType } = useContext(DocItemContext);
 
 	const [parsedTocItems, setParsedTocItems] = useState<Props["toc"]>(toc);
 
 	useLayoutEffect(() => {
 		const mainContentElement = document.querySelector(`main`);
+		const hiddenElements: Element[] = [];
 		const hiddenUiType = uiType === "custom" ? "prebuilt" : "custom";
 		const hiddenUiTypeContainer = document.querySelector(
 			`[data-heading-filter="${hiddenUiType}"]`,
 		);
+		if (hiddenUiTypeContainer) hiddenElements.push(hiddenUiTypeContainer);
+		const hiddenTenantType = tenantType === "single" ? "multi" : "single";
+		const hiddenTenantTypeContainer = document.querySelector(
+			`[data-heading-filter="${hiddenTenantType}"]`,
+		);
+		if (hiddenTenantTypeContainer)
+			hiddenElements.push(hiddenTenantTypeContainer);
 
-		if (!mainContentElement || !hiddenUiTypeContainer) return;
+		if (!mainContentElement || !hiddenElements.length) return;
 
 		const allPageHeadings = document.querySelectorAll(`h2, h3`);
 		const visibleHeadingsIds = Array.from(allPageHeadings)
 			.filter((heading) => {
-				return !hiddenUiTypeContainer.contains(heading);
+				return hiddenElements.every((hiddenElement) => {
+					return !hiddenElement.contains(heading);
+				});
 			})
 			.map((heading) => {
 				return heading.id;
@@ -54,7 +64,7 @@ export default function TOC({ className, toc, ...props }: Props): JSX.Element {
 				return false;
 			}),
 		);
-	}, [toc, uiType]);
+	}, [toc, uiType, tenantType]);
 
 	return (
 		<div className={clsx(styles.tableOfContents, "thin-scrollbar", className)}>
