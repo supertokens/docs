@@ -1,0 +1,1119 @@
+---
+id: frontend-setup
+title: Frontend setup
+hide_title: true
+sidebar_position: 4
+---
+
+import { UIType } from "/src/components/UITypeSwitch";
+import {
+  FrontendTabs,
+} from "/src/components/Tabs";
+import { NpmOrScriptsCard, MobileFrameworksCard } from "/src/components/Cards";
+import { AppInfoForm } from "/src/components/AppInfoForm";
+import { Question, Answer } from "/src/components/Question";
+
+
+# Frontend setup
+
+<UIType.Switch>
+
+<UIType.PrebuiltUIContent>
+
+## Single tenant setup
+
+The pre built UI provides support for the following MFA methods:
+- TOTP
+- Email / phone OTP
+
+If you want other types of MFA (like magic links, or password), please consider checking out the custom UI second.
+
+We start by initialising the MFA recipe on the frontend and providing the list of first factors as shown below:
+
+<FrontendTabs uiType="prebuilt">
+
+<FrontendTabs.Tab value="reactjs">
+
+```tsx
+import supertokens from "supertokens-auth-react"
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword"
+import Passwordless from "supertokens-auth-react/recipe/passwordless"
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
+
+supertokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        EmailPassword.init( /* ... */),
+        Passwordless.init({
+             contactMethod: "EMAIL_OR_PHONE",
+        }),
+        // highlight-start
+        MultiFactorAuth.init({
+            firstFactors: [
+                MultiFactorAuth.FactorIds.EMAILPASSWORD,
+                MultiFactorAuth.FactorIds.THIRDPARTY
+            ]
+        })
+        // highlight-end
+    ]
+})
+```
+
+</FrontendTabs.Tab>
+
+<FrontendTabs.Tab value="angular">
+
+You will have to make changes to the auth route config, as well as to the `supertokens-web-js` SDK config at the root of your application:
+
+This change is in your auth route config.
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword"
+import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless"
+import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
+
+supertokensUIInit({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        supertokensUIEmailPassword.init( /* ... */),
+        supertokensUIPasswordless.init({
+             contactMethod: "EMAIL_OR_PHONE",
+        }),
+        // highlight-start
+        supertokensUIMultiFactorAuth.init({
+            firstFactors: [
+                supertokensUIMultiFactorAuth.FactorIds.EMAILPASSWORD,
+                supertokensUIMultiFactorAuth.FactorIds.THIRDPARTY
+            ]
+        })
+        // highlight-end
+    ]
+})
+```
+
+This change goes in the `supertokens-web-js` SDK config at the root of your application:
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import Session from 'supertokens-web-js/recipe/session'
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        Session.init(),
+        MultiFactorAuth.init()
+    ],
+});
+```
+
+</FrontendTabs.Tab>
+
+</FrontendTabs>
+
+In the above snippet, we have configured thirdparty and email password as first factors. The second factor is configured [on the backend](./backend-setup), and is determined based on the boolean value of  [`v` in the MFA claim in the session](./important-concepts#how-are-auth-factors-marked-as-completed). If the `v` is `false` in the session, it means that there are still factors pending before the user has completed login. In this case, the frontend SDK calls the MFAInfo endpoint (see more about this later) on the backend which returns the list of factors (`string[]`) that the user must complete next. For example: 
+- If the next array is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
+- If the `n` array has multiple items, we will show the user a [factor chooser screen](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
+- If the `next` is empty, it means that:
+    - There is a misconfig on the backend. This would show an access denied screen to the user. OR;
+    - There is another claim that needs to be finished first (like email verification), before the next MFA challenge can be shown. This can happen if you configure the backend's `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email is verified.
+
+If you notice, in the above code snippet, we have added `Passwordless.init` as well, and this handles cases where the second factor is `otp-email` or `otp-sms`. For TOTP, we have a different recipe as shown later in this guide.
+
+## Multi tenant setup
+For a multi factor setup, the first factors is decided based on [the configuration of the tenant](./backend-setup#multi-tenant-setup). Each tenant has a `firstFactors` array configuration which will determine the login options shown for that tenant. For MFA, the login options will be determined by the [`requiredSecondaryFactors` config on the tenant](./backend-setup#multi-tenant-setup-1), or based on the customisations for `getMFARequirementsForAuth` on the backend.
+
+To tell the frontend to dynamically load the factors based on the tenant, we need to give it four things:
+- The current tenantId
+- Enable dynamic login methods
+- Add `MultiFactorAuth.init` to the recipe list without any configured `firstFactors`
+- Init all the recipes that can be possibly used by any tenant as the first or second factor.
+
+<FrontendTabs uiType="prebuilt">
+
+<FrontendTabs.Tab value="reactjs">
+
+```tsx
+import supertokens from "supertokens-auth-react"
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword"
+import Passwordless from "supertokens-auth-react/recipe/passwordless"
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
+import Multitenancy from "supertokens-auth-react/recipe/multitenancy"
+
+supertokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    // highlight-next-line
+    usesDynamicLoginMethods: true,
+    recipeList: [
+        Multitenancy.init({
+            override: {
+                functions: (oI) => {
+                    return {
+                        ...oI,
+                        // highlight-start
+                        getTenantId: (input) => {
+                            // Implement the following based on the UX flow you want for
+                            // tenant discovery
+                            return "TODO.."
+                        }
+                        // highlight-end
+                    }
+                }
+            }
+        }),
+        EmailPassword.init( /* ... */),
+        Passwordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+        }),
+        // highlight-start
+        MultiFactorAuth.init()
+        // highlight-end
+    ]
+})
+```
+
+</FrontendTabs.Tab>
+
+<FrontendTabs.Tab value="angular">
+
+You will have to make changes to the auth route config, as well as to the `supertokens-web-js` SDK config at the root of your application:
+
+This change is in your auth route config.
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword"
+import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless"
+import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
+import supertokensUIMultitenancy from "supertokens-auth-react-script/recipe/multitenancy"
+
+supertokensUIInit({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    // highlight-next-line
+    usesDynamicLoginMethods: true,
+    recipeList: [
+        supertokensUIMultitenancy.init({
+            override: {
+                functions: (oI) => {
+                    return {
+                        ...oI,
+                        // highlight-start
+                        getTenantId: (input) => {
+                            // Implement the following based on the UX flow you want for
+                            // tenant discovery
+                            return "TODO.."
+                        }
+                        // highlight-end
+                    }
+                }
+            }
+        }),
+        supertokensUIEmailPassword.init( /* ... */),
+        supertokensUIPasswordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+        }),
+        // highlight-start
+        supertokensUIMultiFactorAuth.init()
+        // highlight-end
+    ]
+})
+```
+
+This change goes in the `supertokens-web-js` SDK config at the root of your application:
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import Session from 'supertokens-web-js/recipe/session'
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        Session.init(),
+        MultiFactorAuth.init()
+    ],
+});
+```
+
+</FrontendTabs.Tab>
+
+</FrontendTabs>
+
+- In the above code snippet, we have added `ThirdPartyEmailPassword` and  `Passwordless` as the auth methods. This works for a variety of use cases like:
+    - The first factor for any tenant can be third party or email password login, and the second factor can be passwordless login (`otp-email` or `otp-sms`).
+    - The first factor for any tenant can be email password, with, or without a second factor (like `otp-email`)..
+    - The first factor for any tenant can be third party, with, or without a second factor (like `otp-email`)..
+    - The first factor for any tenant can be passwordless login (with magic link), with or without a second factor (like `otp-email`).
+    - You can even change `passwordles.init` to using `thirdpartypasswordless.init` if you want to have the first factor for any tenant to be thirdparty or passwordless login, with or without a second factor (like `otp-email`).
+- We have initialised `MultiFactorAuth` without any configured `firstFactors` because we want the frontend to dynamically load the first factors based on the tenant. Therefore, we have also set `usesDynamicLoginMethods: true` in the `supertokens.init` call.
+- We have initialised `Multitenancy` as well, and provided a skeleton for `getTenantId`. You need to implement this function based on the UX flow you want for tenant discovery. For examlpe, [here is a common UX flow in which we decide the tenant ID based on the current sub domain](/docs/thirdpartyemailpassword/common-customizations/multi-tenancy/sub-domain-login).
+
+:::important
+- If you do initialise the `firstFactors` array for `MultiFactorAuth.init()` on the frontend, it will be ignored when `usesDynamicLoginMethods: true` is set.
+- If the tenant doesn't have the `firstFactors` array set, then the list of first factors that are rendered would be based on the [login methods that are enabled in that tenant's config](/docs/multitenancy/new-tenant#basic-tenant-creation).
+:::
+
+The second factor for a tenant is determined based on the [`secondaryFactors` config for the tenant](./backend-setup#multi-tenant-setup-1), or based on any custom implementation for the `getMFARequirementsForAuth` function. If the current user has specific MFA methods enabled for them, those will also be shown as options as well. Overall, the list of secondary factors will be used to build the `next` array returned from the MFAInfo endpoint (see more about this later). For example: 
+- If the next array is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
+- If the `n` array has multiple items, we will show the user a [factor chooser screen](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
+- If the `next` is empty, it means that:
+    - There is a misconfig on the backend. This would show an access denied screen to the user. OR;
+    - There is another claim that needs to be finished first (like email verification), before the next MFA challenge can be shown. This can happen if you configure the backend's `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email is verified.
+
+In the subsequent sections, we will walk through specific MFA setup examples for your reference.
+
+## Handling misconfigurations
+
+There can be situations of misconfigurations. For example you may have enabled `otp-email` for a user as a secondary factor, but did not add `Passwordless` (or `ThirdPartyPasswordless`) in the `recipeList` on the frontend. In such (and similar) situations, the pre built UI on the frontend will throw an error which will be propagated to the error boundry of your app. The way to solve these errors is to recheck the `recipeList` on the frontend, and make sure that it has all the recipes initialised that are needed for any factor configured on the backend.
+
+## The access denied screen
+
+Sometimes, users may end up seeing [an access denied screen](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/totp-mfa--device-setup-access-denied-reload) during the login flow. This is shown if there is a 500 (backend sends a 500 status code) error during the MFA flow for API calls that are initiated automatically (without user action). For example:
+- When the user wants to setup a new TOTP device, the pre bult UI calls the `createDevice` function from the totp recipe on page load, and if that fails, users will see the access denied screen asking them to retry.
+- When the user needs to complete an OTP email factor, and if the API call to send an email (which is called on page load) fails, then users will see the access denied screen asking them to retry.
+
+You can override this component in the following way:
+
+<FrontendTabs uiType="prebuilt">
+
+<FrontendTabs.Tab value="reactjs">
+
+<Question
+    question="Do you use react-router-dom?">
+<Answer title="Yes">
+
+```tsx
+import React from "react";
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import { SessionComponentsOverrideProvider } from "supertokens-auth-react/recipe/session";
+
+function App() {
+    return (
+        <SuperTokensWrapper>
+            <SessionComponentsOverrideProvider
+                components={{
+                    SessionAccessDenied_Override: ({ DefaultComponent, ...props }) => {
+                        return (
+                            <div>
+                                Access denied!
+                                {props.error === undefined ? null : props.error}
+                            </div>
+                        );
+                    },
+                }}>
+                {/* Rest of the JSX */}
+            </SessionComponentsOverrideProvider>
+        </SuperTokensWrapper>
+    );
+}
+export default App;
+```
+
+</Answer>
+
+<Answer title="No">
+
+```tsx
+import React from "react";
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import { getRoutingComponent, canHandleRoute } from "supertokens-auth-react/ui";
+import { SessionComponentsOverrideProvider } from "supertokens-auth-react/recipe/session";
+
+function App() {
+    if(canHandleRoute([/*...*/])){
+        return (
+            <SessionComponentsOverrideProvider
+                components={{
+                    SessionAccessDenied_Override: ({ DefaultComponent, ...props }) => {
+                        return (
+                            <div>
+                                Access denied!
+                                {props.error === undefined ? null : props.error}
+                            </div>
+                        );
+                    },
+                }}>
+                {getRoutingComponent([/*...*/])}
+            </SessionComponentsOverrideProvider>
+        )
+    }
+    return (
+        <SuperTokensWrapper>
+            {/* Rest of the JSX */}
+        </SuperTokensWrapper>
+    );
+}
+export default App;
+```
+
+</Answer>
+
+</Question>
+
+</FrontendTabs.Tab>
+
+<FrontendTabs.Tab value="angular">
+
+:::caution
+You cannot override the pre built UI in non react apps as of yet.
+:::
+
+</FrontendTabs.Tab>
+
+</FrontendTabs>
+
+
+</UIType.PrebuiltUIContent>
+
+<UIType.CustomUIContent>
+
+After the first factor sign in is over, to know the next auth challenge, the frontend should rely on the session's access token payload MFA claim's `n` array. For example, the access token payload may have the following content:
+
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+        },
+        "v": false
+    }
+}
+```
+
+This means that the user has completed the email password login, and that there are still MFA login challenge(s) remaining (`v` is `false`).
+
+## Initialise the MFA recipe on the frontend
+
+<FrontendTabs uiType="custom">
+
+<FrontendTabs.Tab value="web">
+
+<NpmOrScriptsCard>
+
+<NpmOrScriptsCard.Content value="npm">
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        // highlight-next-line
+        MultiFactorAuth.init()
+    ],
+});
+```
+
+</NpmOrScriptsCard.Content>
+
+<NpmOrScriptsCard.Content value="script">
+
+```tsx
+import supertokens from "supertokens-web-js-script";
+import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
+supertokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        // highlight-next-line
+        supertokensMultiFactorAuth.init()
+    ],
+});
+```
+
+</NpmOrScriptsCard.Content>
+
+
+</NpmOrScriptsCard>
+
+</FrontendTabs.Tab>
+
+<FrontendTabs.Tab value="mobile">
+
+:::success
+This step is not applicable for mobile apps. Please continue reading.
+:::
+
+</FrontendTabs.Tab>
+
+</FrontendTabs>
+
+## Factor lifecycle overview
+
+The overall lifecycle of a factor post sign in is as follows:
+
+### 1. Step: Asking for the first factor
+This is the same as setting up a recipe as per the other recipe guides. So please follow those.
+
+### 2. Step: Checking the `v` boolean value in the MFA claim
+After the first factor has been completed, the frontend needs to check if there are any pending MFA challenges. This can be done by reading the `v` claim from the session as shown below:
+
+<FrontendTabs uiType="custom">
+
+<FrontendTabs.Tab value="web">
+
+<NpmOrScriptsCard>
+
+<NpmOrScriptsCard.Content value="npm">
+
+```tsx
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import Session from "supertokens-web-js/recipe/session";
+
+async function isAllMFACompleted() {
+    if (await Session.doesSessionExist()) {
+        let mfaClaim = await Session.getClaimValue({
+            claim: MultiFactorAuth.MultiFactorAuthClaim
+        });
+        if (mfaClaim === undefined) {
+            // this can happen during migration where the session is an older one
+            // that was created before MFA was introduced on the backend
+            return true;
+        } else {
+            return mfaClaim.v
+        }
+    } else {
+        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+    }
+}
+```
+
+</NpmOrScriptsCard.Content>
+
+<NpmOrScriptsCard.Content value="script">
+
+```tsx
+import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+async function isAllMFACompleted() {
+    if (await supertokensSession.doesSessionExist()) {
+        let mfaClaim = await supertokensSession.getClaimValue({
+            claim: supertokensMultiFactorAuth.MultiFactorAuthClaim
+        });
+        if (mfaClaim === undefined) {
+            // this can happen during migration where the session is an older one
+            // that was created before MFA was introduced on the backend
+            return true;
+        } else {
+            return mfaClaim.v
+        }
+    } else {
+        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+    }
+}
+```
+
+</NpmOrScriptsCard.Content>
+
+
+</NpmOrScriptsCard>
+
+</FrontendTabs.Tab>
+
+<FrontendTabs.Tab value="mobile">
+
+<MobileFrameworksCard>
+
+<MobileFrameworksCard.Content value="reactnative">
+
+```tsx
+import SuperTokens from 'supertokens-react-native';
+
+async function isAllMFACompleted() {
+    if (await SuperTokens.doesSessionExist()) {
+
+        // highlight-start
+        let isMFACompleted: boolean = (await SuperTokens.getAccessTokenPayloadSecurely())["st-mfa"].v;
+        return isMFACompleted
+        // highlight-end
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="android">
+
+```kotlin
+import android.app.Application
+import com.supertokens.session.SuperTokens
+import org.json.JSONObject
+
+class MainApplication: Application() {
+    fun isAllMFACompleted(): Boolean {
+        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
+        val isMFACompleted: Boolean = (accessTokenPayload.get("st-mfa") as JSONObject).get("v") as Boolean;
+        return isMFACompleted;
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="ios">
+
+```swift
+import UIKit
+import SuperTokensIOS
+
+fileprivate class ViewController: UIViewController {
+    func isAllMFACompleted() -> Bool {
+        // Attempt to retrieve the access token payload securely
+        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(),
+            // Extract the mfaObject from the accessTokenPayload
+            let mfaObject: [String: Any] = accessTokenPayload["st-mfa"] as? [String: Any],
+            // Determine if MFA has been completed
+            let isMFACompleted: Bool = mfaObject["v"] as? Bool {
+            // Return the MFA completion status
+            return isMFACompleted
+        }
+        // Return false if any of the unwrapping fails, indicating MFA completion status cannot be confirmed
+        return false
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="flutter">
+
+```dart
+import 'package:supertokens_flutter/supertokens.dart';
+
+Future<bool> isAllMFACompleted() async {
+  var accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
+
+  if (accessTokenPayload.containsKey("st-mfa")) {
+    Map<String, dynamic> mfaObject = accessTokenPayload["st-mfa"];
+
+    if (mfaObject.containsKey("v")) {
+      bool isMFACompleted = mfaObject["v"];
+
+      return isMFACompleted;
+    }
+  }
+  return false; // Return false if "st-mfa" is not present or "v" is not found
+}
+```
+
+</MobileFrameworksCard.Content>
+
+</MobileFrameworksCard>
+
+</FrontendTabs.Tab>
+
+</FrontendTabs>
+
+
+### 3. Step: Checking the `next` array
+Once we determine that MFA is still pending, we need to get the list of factors the user must do next. We can do this by calling the [MFA Info endpoint](#mfa-info-endpoint) which returns a list of next (`string[]`) factors:
+- If there are multiple values in this array, then the frontend needs to show these options to the user and ask them to pick one of them.
+- If there is only one item, then the UI can directly ask the user to complete that factor.
+- If this array is empty, then:
+    - There is a misconfig on the backend. This would show an access denied screen to the user. OR;
+    - There is another claim that needs to be finished first (like email verification), before the next MFA challenge can be shown. This can happen if you configure the backend's `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email is verified.
+
+### 4. Step: Checking for factor setup
+Once the user has picked a specific factor (or if `next` contains just one item), you need to check if that factor has already been setup for that user. A factor is setup already if:
+- For `totp`: The user has already added a totp device and verified it.
+- For `otp-email`: The user has a passwordless loginMethod that has an email associated with it.
+- For `link-email`: The user has a passwordless loginMethod that has an email associated with it. Note that this is not a valid secondary factor, but is a valid first factor.
+- For `otp-sms`: The user has a passwordless loginMethod that has a phone number associated with it.
+- For `link-phone`: The user has a passwordless loginMethod that has a phone number associated with it. Note that this is not a valid secondary factor, but is a valie first factor.
+- For `emailpassword`: The user has an email password loginMethod.
+- For `thirdparty`: The user has a third party loginMethod.
+
+If the user has the factor already setup, you can skip the setup step and directly ask them for the challenge:
+- For `totp`: Ask them to enter the OTP.
+- For `otp-email`: Send them an email with the OTP, and ask them to enter the OTP.
+- For `otp-sms`: Send them an SMS with the OTP, and ask them to enter the OTP.
+- For `emailpassword`: Ask them to enter their password.
+- For `thirdparty`: Ask them to login using the third party provider.
+
+In case the user does not have the factor setup, you need to ask them to set it up first:
+- For `totp`: Ask them to scan the QR code and enter the TOTP to verify the device.
+- For `otp-email`: Ask them to enter their email and send them an email with the OTP. Once they enter the OTP, a passwordless user will be created and associated with their user object. Note that if you already have the user's email from another login method (see later), you do not need to ask them to enter their email again. In that way, it would be similar to as if the factor is already setup, but technically, it is not.
+- For `otp-sms`: Ask them to enter their phone number and send them an SMS with the OTP. Once they enter the OTP, a passwordless user will be created and associated with their user object. Note that if you already have the user's phone number from another login method (see later), you do not need to ask them to enter their phone number again. In that way, it would be similar to as if the factor is already setup, but technically, it is not.
+- For `emailpassword`: Ask them to enter their email and password. Once they enter the password, an email password user will be created and associated with their user object. Note that if you already have the user's email from another login method (see later), you do not need to ask them to enter their email again. In that way, it would be similar to as if the factor is already setup, but technically, it is not. Here you would be calling the sign up API, vs in the other case (where the factor is already setup), you would be calling the sign in API.
+- For `thirdparty`: Ask them to login using the third party provider. Once they login, a third party user will be created and associated with their user object.
+
+In the later guides of this recipe, we will walk through each of these use cases in detail. For now though, if you want to know the status of any factor, you can get that by calling the [MFA Info endpoint](#mfa-info-endpoint).
+
+</UIType.CustomUIContent>
+
+</UIType.Switch>
+
+## Reference section
+
+### MFA Info endpoint
+
+This is an important endpoint which can be used to:
+- Know which factors are pending for the user (referred to as the the `next` array in our docs).
+- Update the `v` and `c` values in the MFA claim.
+- Get a list of all factors that are already setup for the session user.
+- For each factor, get a list of emails / phone numbers that can be used for that factor.
+
+Our pre built UI uses this API automatically, but you can also always call this API manually if you are building a custom UI:
+
+<FrontendTabs uiType="custom">
+
+<FrontendTabs.Tab value="web">
+
+<NpmOrScriptsCard>
+
+<NpmOrScriptsCard.Content value="npm">
+
+```tsx
+import MultifactorAuth from "supertokens-web-js/recipe/multifactorauth"
+import Session from "supertokens-web-js/recipe/session"
+
+async function fetchMFAInfo() {
+    if (await Session.doesSessionExist()) {
+        try {
+            let mfaInfo = await MultifactorAuth.resyncSessionAndFetchMFAInfo()
+            let factorEmails = mfaInfo.emails;
+            let factorPhoneNumbers = mfaInfo.phoneNumbers;
+
+            let emailsForOTPEmail = factorEmails["otp-email"];
+            let phoneNumbersForOTPSms = factorEmails["otp-sms"];
+            let isTotpSetup = mfaInfo.factors.alreadySetup.includes("totp");
+            let isOTPEmailSetup = mfaInfo.factors.alreadySetup.includes("otp-email");
+            let isOTPSmsSetup = mfaInfo.factors.alreadySetup.includes("otp-sms");
+            let next = mfaInfo.factors.next;
+
+            let factorsAllowedToBeSetup = mfaInfo.factors.allowedToSetup;
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+    }
+}
+```
+
+</NpmOrScriptsCard.Content>
+
+<NpmOrScriptsCard.Content value="script">
+
+```tsx
+import supertokensMultiFactorAuth from "supertokens-web-js-script/recipe/multifactorauth"
+import supertokensSession from "supertokens-web-js-script/recipe/session"
+async function fetchMFAInfo() {
+    if (await supertokensSession.doesSessionExist()) {
+        try {
+            let mfaInfo = await supertokensMultiFactorAuth.resyncSessionAndFetchMFAInfo()
+            let factorEmails = mfaInfo.emails;
+            let factorPhoneNumbers = mfaInfo.phoneNumbers;
+
+            let emailsForOTPEmail = factorEmails["otp-email"];
+            let phoneNumbersForOTPSms = factorEmails["otp-sms"];
+            let isTotpSetup = mfaInfo.factors.alreadySetup.includes("totp");
+            let isOTPEmailSetup = mfaInfo.factors.alreadySetup.includes("otp-email");
+            let isOTPSmsSetup = mfaInfo.factors.alreadySetup.includes("otp-sms");
+            let next = mfaInfo.factors.next;
+
+            let factorsAllowedToBeSetup = mfaInfo.factors.allowedToSetup;
+        } catch (err: any) {
+            if (err.isSuperTokensGeneralError === true) {
+                // this may be a custom error message sent from the API by you.
+                window.alert(err.message);
+            } else {
+                window.alert("Oops! Something went wrong.");
+            }
+        }
+    } else {
+        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+    }
+}
+```
+
+</NpmOrScriptsCard.Content>
+
+</NpmOrScriptsCard>
+
+- In the above code snippet, we fetch the list of factors which the user must complete next (in the `next` array) and also all the relevant information to know what state each factor is in so that we can decide if we should ask the user to setup the factor (for example create a new TOTP device), or just ask them to solve the auth challenge instead (for example, showing the enter TOTP screen).
+- The function is called `resyncSessionAndFetchMFAInfo` because it does two things:
+    - fetches the MFA info that you can consume to know the `next` array and what state each factor is in.
+    - resyncs the value of the `v` and `c` in the session's MFA claim.
+
+
+</FrontendTabs.Tab>
+
+<FrontendTabs.Tab value="mobile">
+
+<AppInfoForm askForAPIDomain />
+
+Call the following API when you want to know the status of any factor. Notice that the API call requires the session's access token as an input (this should be added by our frontend SDK automatically):
+
+```bash
+curl --location --request PUT '^{form_apiDomain}^{form_apiBasePath}/mfa/info' \
+--header 'Authorization: Bearer ...'
+```
+
+</FrontendTabs.Tab>
+
+</FrontendTabs>
+
+- The struture of the raw JSON response is as follows:
+    ```json
+    {
+        "status": "OK",
+        "factors": {
+            "alreadySetup": ["totp", "otp-email", "..."],
+            "allowedToSetup": ["otp-sms", "otp-email", "..."],
+            "next": ["otp-sms", "..."]
+        },
+        "emails": {
+            "otp-email": ["user1@example.com", "user2@example.com"],
+            "link-email": ["user1@example.com", "user2@example.com"],
+        },
+        "phoneNumbers": {
+            "otp-sms": ["+1234567890", "+1098765432"],
+            "link-phone": ["+1234567890", "+1098765432"],
+        },
+    }
+    ```
+
+    - `factors.alreadySetup` is an array that contains all factors that have been setup by the user. If the current factor is a part of this array, it means that you can directly take the user to the factor challenge screen. If your factor depends on an email or phone number (like in the case of `otp-sms` or `otp-email`), then you can find the email to send the code to in the `emails` or `phoneNumbers` object in the response with the key as the current factor ID.
+    - `factors.allowedToSetup` is an array that contains all factors that the user is allowed to setup at this point in time. This is not that useful during the sign in process, but may be useful post sign in if you want to know what are the factors that the user can setup at any point in time. 
+    - `emails` is an object in which the key are all the factor IDs support by SuperTokens (and any custom factor ID added by you). The values against each of the keys is a list of emails that can be used to complete the factor. The first email (inddex 0) in the list is the preferred email to use for the factor. We calculate the order based on the first factor chosen by the user, and if the factor was already setup or not.
+
+    If the array is empty, it means that there is no email associated with the user for that factor. This can happen only if the factor was not already setup. In this case, you should take the user to a screen to ask them to first enter an email, and then to the challenge screen.
+
+    We will further go into this flow in our common flows guide later on.
+    - `phoneNumbers` is similar to the `emails` object, except that it contains phone numbers for factors that are based on phone numbers.
+    - The `factors.next` array determines the list of factors which the user must completed next. For example:
+        - If the next array is `["otp-email"]`, then we will show the user the enter OTP screen for the email associated with the first factor login.
+        - If the `n` array has multiple items:
+            - For the pre built UI, we will show the user a [factor chooser screen](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
+            - For custom UI, you would need to make this screen on your own.
+        - If the `next` is empty, it means that:
+            - There is a misconfig on the backend. This would show an access denied screen to the user. OR;
+            - There is another claim that needs to be finished first (like email verification), before the next MFA challenge can be shown. This can happen if you configure the backend's `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email is verified.
+
+<UIType.Switch>
+
+<UIType.PrebuiltUIContent>
+
+### Frontend event hooks
+The pre built UI emits a few events that you can listen to on the frontend. As an example, you can use these for analytics:
+
+<FrontendTabs uiType="prebuilt">
+
+<FrontendTabs.Tab value="reactjs">
+
+```tsx
+import SuperTokens from "supertokens-auth-react"
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
+import TOTP from "supertokens-auth-react/recipe/totp";
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+
+SuperTokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        Passwordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+            onHandleEvent: (context) => {
+                if (context.action === "PASSWORDLESS_CODE_SENT") {
+                    // this event is fired when the user has successfully sent out an OTP email / SMS
+                } else if (context.action === "PASSWORDLESS_RESTART_FLOW") {
+                    // This event is fired when the user's OTP has expired, or
+                    // they have reached the max limit of number of failed OTP attempts.
+                } else if (context.action === "SUCCESS" && !context.createdNewSession) {
+                    // this event is fired when successfully completing the OTP email / SMS challenge
+                    // and if it's not used in first factor (cause we do !context.createdNewSession)
+                }
+            }
+        }),
+        TOTP.init({
+            onHandleEvent: (context) => {
+                if (context.action === "TOTP_DEVICE_CREATED") {
+                    // this event is fired during factor setup, when the user has successfully created the TOTP device. They still have to verify it by entering the TOTP.
+                } else if (context.action === "TOTP_DEVICE_VERIFIED") {
+                    // this event is fired during factor setup, when the user has successfully verified the TOTP device
+                } else if (context.action === "TOTP_CODE_VERIFIED") {
+                    // this event is fired when the user has successfully verified the TOTP code
+                    // marking the TOTP factor as completed
+                }
+            }
+        }),
+        MultiFactorAuth.init({
+            firstFactors: [/*...*/],
+            onHandleEvent: (context) => {
+                if (context.action === "FACTOR_CHOOSEN") {
+                    let chosenFactorId = context.factorId;
+                    // this event is fired when the user is shown the screen for 
+                    // picking one factor out of a choice of multiple factors
+                }
+            }
+        })
+    ]
+})
+```
+
+</FrontendTabs.Tab>
+
+<FrontendTabs.Tab value="angular">
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
+import supertokensUITOTP from "supertokens-auth-react-script/recipe/totp";
+import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless";
+
+supertokensUIInit({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        supertokensUIPasswordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+            onHandleEvent: (context) => {
+                if (context.action === "PASSWORDLESS_CODE_SENT") {
+                    // this event is fired when the user has successfully sent out an OTP email / SMS
+                } else if (context.action === "PASSWORDLESS_RESTART_FLOW") {
+                    // This event is fired when the user's OTP has expired, or
+                    // they have reached the max limit of number of failed OTP attempts.
+                } else if (context.action === "SUCCESS" && !context.createdNewSession) {
+                    // this event is fired when successfully completing the OTP email / SMS challenge
+                    // and if it's not used in first factor (cause we do !context.createdNewSession)
+                }
+            }
+        }),
+        supertokensUITOTP.init({
+            onHandleEvent: (context) => {
+                if (context.action === "TOTP_DEVICE_CREATED") {
+                    // this event is fired during factor setup, when the user has successfully created the TOTP device. They still have to verify it by entering the TOTP.
+                } else if (context.action === "TOTP_DEVICE_VERIFIED") {
+                    // this event is fired during factor setup, when the user has successfully verified the TOTP device
+                } else if (context.action === "TOTP_CODE_VERIFIED") {
+                    // this event is fired when the user has successfully verified the TOTP code
+                    // marking the TOTP factor as completed
+                }
+            }
+        }),
+        supertokensUIMultiFactorAuth.init({
+            firstFactors: [/*...*/],
+            onHandleEvent: (context) => {
+                if (context.action === "FACTOR_CHOOSEN") {
+                    let chosenFactorId = context.factorId;
+                    // this event is fired when the user is shown the screen for 
+                    // picking one factor out of a choice of multiple factors
+                }
+            }
+        })
+    ]
+})
+```
+
+</FrontendTabs.Tab>
+
+</FrontendTabs>
+
+</UIType.PrebuiltUIContent>
+
+</UIType.Switch>
+
+### Handling support cases
+There are some situations in which users may be locked out of their accounts and would need you to do certain steps to unlock their accounts. These cases are:
+
+#### ERR_CODE_009
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signin POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_009)"
+        }
+        ```
+- This can happen if the email password account you are trying to do MFA with is not verified.
+
+#### ERR_CODE_010
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signin POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_010)"
+        }
+        ```
+- This can happen if the email password account you are trying to do MFA with is already linked to another primary user that is not equal to the session user.
+
+#### ERR_CODE_011
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signin POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_011)"
+        }
+        ```
+- This can happen if the email password account you are trying to do MFA cannot be linked to the session user because there already exists another primary user with the same email.
+
+#### ERR_CODE_012
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signin POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_012)"
+        }
+        ```
+- In order to link the email password user with the session user, we need to make sure that the session user is a primary user. However, that can fail if there exists another primary user with the same email as the session user, and in this case, this error is returned to the frontend.
+
+#### ERR_CODE_013
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_013)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - A user signs up with their phone number and OTP
+    - Post sign up, they are asked to add their email and a password for the account. In this case, since the entered email is not verified, this error will be shown.
+
+- To resolve this, we recommend that you change the flow to first ask the user to go through the email OTP flow post the first factor sign up, and then add a password to the account. This way, the email will be verified. 
+
+#### ERR_CODE_014
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_014)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - Let's say that the app is confgured to not have autmatic account linking during the first factor.
+    - A user creates an email password account with email `e1`, verifies it, and links social login account to it with email `e2`.
+    - The user logs out, and then creates a social login account with email `e1`. Then, they are asked to add a password to this account. Since an email password account with `e1` already exists, SuperTokens will try and link that to this new account, but fail, since the email password account with `e1` is already a primary user.
+
+- To resolve this, we recommend that manually link the `e1` social login account with the `e1` email password account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
+
+#### ERR_CODE_015
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_015)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - A user creates a social login account with email `e1` which becomes a primary user.
+    - The user logs out, and creates another social login account with email `e2`, which also becomes a primary user.
+    - The user is asked to add a password for the new account with an option to also specify an email with it (this is strange, but theoritically possible). They now enter the email `e1` for the email password account.
+    - This will cause this type of error since the linking of the new social logn and email account will fail since there already exists another primary user with the same (`e1`) email.
+
+- To resolve this, we recommend not allowing users to specify an email when asking them to add a password for their account.
+
+#### ERR_CODE_016
+- This can happen when the second factor is `emailpassword`:
+    - API Path is `/signup POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_016)"
+        }
+        ```
+- An example scenario of when in the following scenario:
+    - Let's say that the app is configured to not have automatic account linking during the first factor.
+    - A user signs up with a social login account using Google with email `e1`, and they add another social account, with Facebook, with the same email.
+    - The user logs out and creates another social login account with email `e1` (say Github), and then tries and adds a password to this account with email `e1`. Here, SuperTokens will try and make the Github login a primary user, but fail, since the email `e1` is already a primary user (with Google login). 
+
+- To resolve this, we recommend that manually link the `e1` Github social login account with the `e1` Google social login account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
+
+#### ERR_CODE_017
+- This can happen when the second factor is based on the passwordless recipe.
+    - API Path is `/signinup/code/consume POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_017)"
+        }
+        ```
+- This can happen when the passwordless account is trying to be linked to the account of the first factor, but it can't because the passwordless account is already linked with another primary user.
+
+#### ERR_CODE_018
+- This can happen when the second factor is based on the passwordless recipe.
+    - API Path is `/signinup/code/consume POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_018)"
+        }
+        ```
+- This can happen when the passwordless account is trying to be linked to the account of the first factor, but it can't because there exists another primary user with the same email as the passwordless account.
+
+#### ERR_CODE_019
+- This can happen when the second factor is based on the passwordless recipe.
+    - API Path is `/signinup/code POST` or `/signinup/code/consume POST`.
+    - Output JSON:
+        ```json
+        {
+            "status": "SIGN_IN_UP_NOT_ALLOWED",
+            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_019)"
+        }
+        ```
+- This can happen when the passwordless account is trying to be linked to the account of the first factor, but, the first factor account cannot become a primary user because there exists another account with the same email as the first factor user account which is already primary.

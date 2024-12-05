@@ -79,6 +79,7 @@ const migrateMdx = async (markdownContent: string) => {
 - Replace JSX elements based on the following mapping:
   - BackendSDKTabs -> BackendTabs
      - Replace the usage of TabItem inside the BackendSDKTabs with BackendTab.Tab
+     - Replace enableCurl and enableDashboard with the following prop additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]} 
   - AppInfoForm -> AppInfoForm 
      - Keep only the first usage and write it as a self closing component
      - Remove the other occurences
@@ -99,6 +100,13 @@ const migrateMdx = async (markdownContent: string) => {
   - ConditionalSection -> ContextCondition (rename the conditions prop to condition)
   - PythonSyncAsyncSubTabs -> PythonSyncAsyncCard
      - Replace the usage of TabItem inside the PythonSyncAsyncSubTabs with PythonSyncAsyncCard.Content
+  - NodeJSFrameworkSubTabsServerless -> NodeJSFrameworksCard
+     - Replace the usage of TabItem inside the NodeJSFrameworkSubTabsServerless with NodeJSFrameworksCard.Content
+  - PythonFrameworkSubTabs -> PythonFrameworksCard
+     - Replace the usage of TabItem inside the PythonFrameworkSubTabs with PythonFrameworksCard.Content
+  - GoFrameworkSubTabs -> GoFrameworksCard
+     - Replace the usage of TabItem inside the GoFrameworkSubTabs with GoFrameworksCard.Content
+
 - Remove the usage of the following components:
   - CoreInjector
   - OAuthVerifyTokensDisclaimer

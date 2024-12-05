@@ -1,0 +1,62 @@
+---
+id: important-concepts
+title: Important concepts
+hide_title: true
+sidebar_position: 2
+---
+
+# Important concepts
+
+## Auth factor IDs 
+Each auth challenge has a factor ID in SuperTokens:
+- Email password auth: `emailpassword`
+- Social login / enterprise SSO auth: `thirdparty`
+- Passwordless:
+    - With email OTP: `otp-email`
+    - With SMS OTP: `otp-phone`
+    - With email magic link: `link-email`
+    - With SMS magic link: `link-phone`
+- TOTP: `totp`
+
+These factor IDs will be used to configure the MFA requirements for users (except the `acccess-denied` one), and also will be used to indicate which auth challenges have been completed in the current session.
+
+## How are auth factors marked as completed?
+We indicate the status of which auth factors are completed and if there are any pending via the session's access token payload. We store the following claim structre in the access token for this:
+
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+        },
+        "v": false
+    }
+}
+```
+- `c` stands for `completed`, and `v` stands for `value`.
+- The above payload indicates that the `emailpassword` auth factor has been completed, and that there are still more factors left before the user has finished sign up / login.
+- The number against the `emailpassword` factor is the timestamp (in seconds since epoch) at which the factor was completed.
+- If `v` is `true`, then it means that the user has completed all the factors required for sign up / login. This may not include the email verification requirement since that is a different factor.
+
+Each time an auth factor is completed, the SuperTokens backend adds it to the `c` (completed) object, and then re-evaluates the `v` boolean based on the MFA requirements for the user. This is done by calling the `getMFARequirementsForAuth` function from the MFA recipe (on the backend), which you can override to return the factors required for the user. In this guide, we will show you how to override this function to achieve different forms of MFA experiences.
+
+## First vs additional / secondary auth factors
+There is a clear distinction that is made between first and additional factors in the SDK. When calling `MFA.init` on the backend, you need to provide a list of allowed first factors (or if using multi tenancy, you can configure the first factors on a per tenant basis and leave the `init` array empty).
+
+The first factors are those that are allowed to create a new session, whereas any other factor will only be allowed to modify an existing session. In case the user calls an additional factor's API without a session, the API will respond with a `401` error.
+
+## Relation of account linking and MFA
+Account linking is when you like multiple login methods to the same user account. The individual login methods create their own "recipe user", and each of recipe user is linked to another recipe user to create one primary user.
+
+Theoritically, one can link any recipe user to another (i.e. there is no need for them to have the same email / phone number), however, for first factor automatic linking, we only link login methods if they are verified and have the same email.
+
+From an MFA point of view, whenever the user sets up a new passwordless factor (otp-email or otp-sms), this will create a new recipe user for the passwordless recipe, and will auto link it to the existing session's recipe user.
+
+Therefore, it is necessary to enable account linking for MFA to work. That being said, in the MFA guide, we do not enable first factor account linking, but you can enable that by following the automatic account linking guide in other parts of the docs.
+
+## Limitations of MFA
+Magic link via email / SMS is only supported as a first factor for pre built UI. The reason we don't support it as a second factor is that if the magic link is opened on a different device, there would be no reference to the existing session (which was created post first factor completion).
+
+Instead, we support OTP based auth via email / SMS which achieves the same level of security as a magic link.
+
+Magic link is different form email verification links. Email verification links are supported in MFA flow since they do not create a new session on the browser in which they are opened.

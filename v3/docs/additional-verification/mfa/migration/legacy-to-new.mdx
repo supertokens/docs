@@ -1,0 +1,37 @@
+---
+id: legacy-to-new
+title: Migration from legacy MFA to new MFA method
+hide_title: true
+sidebar_position: 2
+---
+
+import { BackendTabs } from "/src/components/Tabs";
+
+
+# Migration from legacy MFA to new MFA method
+
+This page only applies if you have used our [legacy MFA method](./legacy-method/how-it-works) and want to migrate to the new MFA method.
+
+From a code point of view, [here is the diff](https://github.com/supertokens/supertokens-auth-react/commit/f96e11a527ccd9df71c25798c316dd3de770dde1) of all changes required:
+- We no longer need the custom `secondFactoeClaim` since the MFA recipe adds its [own MFA claim](./important-concepts#how-are-auth-factors-marked-as-completed).
+- On the backend, we initialise the MFA recipe:
+    - In the example app, we use email password and social login as the first factor, so the we set `firstFactors` variable to to `[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY]`.
+    - We also set the required second factor to return OTP phone, but you can set it to OTP email as well.
+    - We override the `resyncSessionAndFetchMFAInfoPUT` API to sync old session claim with the new one. This API is called from the frontend during sign in, and also whenever you use `<SessionAuth>` (for the pre built UI) or call `await Session.validateClaims()` for your custom UI.
+    - We remove the custom overrides for Passwordless.init and for Session.init since those are now handled by the new MFA recipe.
+    - We initialise the AccountLinking recipe with the config that enables account linking for first and second factors.
+    - A side effect of using our multi factor auth is that if you have enabled the email verification recipe, we will ask users to complete email verification before completing any secondary factors.
+- On the frontend for pre built UI:
+    - You will no longer need to use the custom SecondFactorClaim, and also no longer need to create a SecondFactor component (since we provide a pre built one).
+    - We initialise the MultiFactorAuth recipe, and remove the Session.init override from before asl well.
+- On the frontend for custom UI:
+    - You no longer will need to use the custom SecondFactorClaim and instead, you can see our guide for email / SMS OTP in the above sections.
+
+## Understanding the override code for `resyncSessionAndFetchMFAInfoPUT`
+We start by getting the user object from of the session's user ID along with the user's metadata. If the user object does not already contain a passwordless login method, it means we have not linked the passwordless user yet. If also, the metadata has the `passwordlessUserId` prop in it, it means that this user had previously setup email / SMS OTP as a second factor. In this case, we now attempt to link the passwordless user to the session user.
+
+For linking, we need to first ensure that the session user is a primary user, and if not, we call the `createPrimaryUser` function from the account linking recipe. After that, we call the `linkAccounts` function with the session user id and the passwordless user ID (pulled from the metadata). We are now in a state where the session user has two login methods:
+- The first factor login method
+- The passwordless login method for 2FA
+
+Finally, we update the session claim value to contain the MFA claim and also mark the `OTP_PHONE` factor as completed (you can use `OTP_EMAIL`). This will prevent users from being asked to complete the second factor again if they have already done so in the current session.
