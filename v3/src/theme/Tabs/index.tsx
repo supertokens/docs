@@ -10,6 +10,8 @@ import useIsBrowser from "@docusaurus/useIsBrowser";
 import type { Props } from "@theme/Tabs";
 import { Box, Tabs as RadixTabs } from "@radix-ui/themes";
 
+import { TabsContext, TabsContextProvider } from "@site/src/context";
+
 import styles from "./styles.module.css";
 
 function TabList({
@@ -60,15 +62,18 @@ function TabList({
 	};
 
 	return (
-		<RadixTabs.Root value={selectedValue} onValueChange={handleTabChange}>
-			<RadixTabs.List>
-				{tabValues.map(({ value, label, attributes }) => (
-					<RadixTabs.Trigger value={value} key={value} {...attributes}>
-						{label}
-					</RadixTabs.Trigger>
-				))}
-			</RadixTabs.List>
-		</RadixTabs.Root>
+		// @ts-expect-error
+		<TabsContextProvider tabValues={tabValues}>
+			<RadixTabs.Root value={selectedValue} onValueChange={handleTabChange}>
+				<RadixTabs.List>
+					{tabValues.map(({ value, label, attributes }) => (
+						<RadixTabs.Trigger value={value} key={value} {...attributes}>
+							{label}
+						</RadixTabs.Trigger>
+					))}
+				</RadixTabs.List>
+			</RadixTabs.Root>
+		</TabsContextProvider>
 	);
 }
 
@@ -120,23 +125,30 @@ function TabsComponent(
 		[onChange],
 	);
 	return (
-		<RadixTabs.Root mb="6" value={selectedValue} onValueChange={onValueChange}>
-			<RadixTabs.List
-				style={{
-					fontSize: "var(--font-size-4)",
-					lineHeight: "var(--line-height-4)",
-					letterSpacing: "var(--letter-spacing-4)",
-				}}
-				className={styles.tabList}
+		// @ts-expect-error
+		<TabsContextProvider tabValues={tabValues}>
+			<RadixTabs.Root
+				mb="6"
+				value={selectedValue}
+				onValueChange={onValueChange}
 			>
-				{tabValues.map(({ value, label, attributes }) => (
-					<RadixTabs.Trigger value={value} key={value} {...attributes}>
-						{label}
-					</RadixTabs.Trigger>
-				))}
-			</RadixTabs.List>
-			<Box pt="3">{props.children}</Box>
-		</RadixTabs.Root>
+				<RadixTabs.List
+					style={{
+						fontSize: "var(--font-size-4)",
+						lineHeight: "var(--line-height-4)",
+						letterSpacing: "var(--letter-spacing-4)",
+					}}
+					className={styles.tabList}
+				>
+					{tabValues.map(({ value, label, attributes }) => (
+						<RadixTabs.Trigger value={value} key={value} {...attributes}>
+							{label}
+						</RadixTabs.Trigger>
+					))}
+				</RadixTabs.List>
+				<Box pt="3">{props.children}</Box>
+			</RadixTabs.Root>
+		</TabsContextProvider>
 	);
 }
 

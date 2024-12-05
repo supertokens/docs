@@ -1,7 +1,6 @@
 import Tabs, { Props as TabsProps } from "@theme/Tabs";
-import TabItem, { Props as TabItemProps } from "@theme/TabItem";
-import { useContext, useMemo } from "react";
-import { TabsContextProvider, TabsContext } from "./TabsContex";
+import TabItem from "@theme/TabItem";
+import { useMemo } from "react";
 
 const SelfHostingTabsOptions = [
 	{ label: "With Docker", value: "with-docker" },
@@ -24,28 +23,13 @@ function SelfHostingTabsRoot(props: SelfHostingTabsProps) {
 	}, [exclude]);
 
 	return (
-		<TabsContextProvider tabItems={tabOptions}>
-			<Tabs values={tabOptions} groupId={SelfHostingTabsGroupId} {...rest}>
-				{children}
-			</Tabs>
-		</TabsContextProvider>
-	);
-}
-
-function SelfHostingTab({ children, value, ...rest }: TabItemProps) {
-	const { tabItems } = useContext(TabsContext);
-
-	if (!tabItems.find((v) => v.value === value)) {
-		throw new Error(`Invalid tab value ${value}`);
-	}
-
-	return (
-		<TabItem value={value} {...rest}>
+		<Tabs values={tabOptions} groupId={SelfHostingTabsGroupId} {...rest}>
 			{children}
-		</TabItem>
+		</Tabs>
 	);
 }
 
 export const SelfHostingTabs = Object.assign(SelfHostingTabsRoot, {
-	Tab: SelfHostingTab,
+	Tab: TabItem,
+	TabItem,
 });

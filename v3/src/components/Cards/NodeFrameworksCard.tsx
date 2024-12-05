@@ -20,4 +20,5 @@ function NodeFrameworksCardRoot({ children }: React.PropsWithChildren<{}>) {
 
 export const NodeFrameworksCard = Object.assign(NodeFrameworksCardRoot, {
 	Content: CodeSampleCard.Content(useNodeFrameworksSelection),
+	Section: CodeSampleCard.Section,
 });

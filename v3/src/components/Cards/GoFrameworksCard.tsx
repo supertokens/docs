@@ -20,4 +20,5 @@ function GoFrameworksCardRoot({ children }: React.PropsWithChildren<{}>) {
 
 export const GoFrameworksCard = Object.assign(GoFrameworksCardRoot, {
 	Content: CodeSampleCard.Content(useGoFrameworksSelection),
+	Section: CodeSampleCard.Section,
 });

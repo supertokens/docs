@@ -78,7 +78,7 @@ const migrateMdx = async (markdownContent: string) => {
 - Replace all headers that use a bracket numbering format with dot notation. Example "# 1) Step" becomes "# 1. Step"
 - Replace JSX elements based on the following mapping:
   - BackendSDKTabs -> BackendTabs
-     - Replace the usage of TabItem inside the BackendSDKTabs with BackendTab.Tab
+     - Replace the usage of TabItem inside the BackendSDKTabs with BackendTab.TabItem
      - Replace enableCurl and enableDashboard with the following prop additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]} 
   - AppInfoForm -> AppInfoForm 
      - Keep only the first usage and write it as a self closing component
@@ -91,11 +91,11 @@ const migrateMdx = async (markdownContent: string) => {
      - Replace the usage of TabItem inside the NpmOrScriptTab with NpmOrScriptsCard.Content
   - FrontendMobileSubTabs -> MobileFrameworksCard
      - Replace the usage of TabItem inside the FrontendMobileSubTabs with MobileFrameworksCard.Content
-  - FrontendPreBuiltUITabs -> FrontendTabs
-     - Replace the usage of TabItem inside the FrontendCustomUITabs with FrontendTabs.Tab
+  - FrontendPreBuiltUITabs -> FrontendPrebuiltUITabs
+     - Replace the usage of TabItem inside the FrontendCustomUITabs with FrontendPrebuiltUITabs.TabItem
      - Do not skip over TabItem usage inside the FrontendPreBuiltUITabs
-  - FrontendCustomUITabs -> FrontendTabs
-     - Replace the usage of TabItem inside the FrontendCustomUITabs with FrontendTabs.Tab
+  - FrontendCustomUITabs -> FrontendCustomUITabs
+     - Replace the usage of TabItem inside the FrontendCustomUITabs with FrontendCustomUITabs.TabItem
   - PasswordlessFrontendForm -> PasswordlessForm
   - ConditionalSection -> ContextCondition (rename the conditions prop to condition)
   - PythonSyncAsyncSubTabs -> PythonSyncAsyncCard
@@ -106,6 +106,7 @@ const migrateMdx = async (markdownContent: string) => {
      - Replace the usage of TabItem inside the PythonFrameworkSubTabs with PythonFrameworksCard.Content
   - GoFrameworkSubTabs -> GoFrameworksCard
      - Replace the usage of TabItem inside the GoFrameworkSubTabs with GoFrameworksCard.Content
+  - Replace the usage of TabItem inside the ReactRouterVersionTabs with ReactRouterVersionTabs.TabItem
 
 - Remove the usage of the following components:
   - CoreInjector
@@ -126,13 +127,14 @@ The <type-property> should be formatted in a human readable way.
 - Only return the generated content without wrapping it in backticks.
 import { UIType } from "/src/components/UITypeSwitch";
 import {
-  FrontendTabs,
+  FrontendPrebuiltUITabs,
+  FrontendCustomUITabs,
   BackendTabs,
   ReactRouterVersionTabs,
 } from "/src/components/Tabs";
 import { AppInfoForm } from "/src/components/AppInfoForm";
 import { PasswordlessForm } from "/src/components/Forms";
-import { NodePackageManagerCard, NpmOrScriptsCard, MobileFrameworksCard,  } from "/src/components/Cards";
+import { NodePackageManagerCard, NpmOrScriptsCard, MobileFrameworksCard, NodeJSFrameworksCard, PythonFrameworksCard, GoFrameworksCard  } from "/src/components/Cards";
 import { Question, Answer } from "/src/components/Question";
 import { ContextCondition } from "/src/components/DocItemContext";
 Extract only the components that are used in the file. 

@@ -1,16 +1,15 @@
 import Tabs, { Props as TabsProps } from "@theme/Tabs";
-import TabItem, { Props as TabItemProps } from "@theme/TabItem";
-import { useContext, useMemo } from "react";
-import { TabsContextProvider, TabsContext } from "./TabsContex";
+import TabItem from "@theme/TabItem";
+import { useMemo } from "react";
 
 const BackendLanguagesTabOptions = [
 	{ label: "NodeJS", value: "nodejs" },
 	{ label: "GoLang", value: "go" },
 	{ label: "Python", value: "python" },
-	// { label: "Other Frameworks", value: "otherFrameworks" },
+	{ label: "Other Frameworks", value: "otherFrameworks" },
 ];
 
-const BackendTabsGroupId = "frontend-tabs";
+const BackendTabsGroupId = "backend-language";
 
 type BackendTabsProps = Omit<TabsProps, "values" | "groupId"> & {
 	exclude?: string[];
@@ -32,28 +31,13 @@ function BackendTabsRoot(props: BackendTabsProps) {
 	}, [BackendLanguagesTabOptions, exclude, additionalValues]);
 
 	return (
-		<TabsContextProvider tabItems={tabOptions}>
-			<Tabs values={tabOptions} groupId={BackendTabsGroupId} {...rest}>
-				{children}
-			</Tabs>
-		</TabsContextProvider>
-	);
-}
-
-function BackendTab({ children, value, ...rest }: TabItemProps) {
-	const { tabItems } = useContext(TabsContext);
-
-	if (!tabItems.find((v) => v.value === value)) {
-		throw new Error(`Invalid tab value ${value}`);
-	}
-
-	return (
-		<TabItem value={value} {...rest}>
+		<Tabs values={tabOptions} groupId={BackendTabsGroupId} {...rest}>
 			{children}
-		</TabItem>
+		</Tabs>
 	);
 }
 
 export const BackendTabs = Object.assign(BackendTabsRoot, {
-	Tab: BackendTab,
+	Tab: TabItem,
+	TabItem,
 });

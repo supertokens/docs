@@ -1,8 +1,7 @@
 import Tabs, { Props as TabsProps } from "@theme/Tabs";
-import TabItem, { Props as TabItemProps } from "@theme/TabItem";
-import { createContext, useContext, useMemo } from "react";
+import TabItem from "@theme/TabItem";
+import { useContext, useMemo } from "react";
 import { DocItemContext } from "../DocItemContext";
-import { TabsContextProvider, TabsContext } from "./TabsContex";
 
 // TODO: Rename values to items
 const PrebuiltUITabValues = [
@@ -24,12 +23,6 @@ type FrontendTabsProps = Omit<TabsProps, "values" | "groupId"> & {
 	uiType?: string;
 };
 
-type FrontendTabsContextType = {
-	values: { value: string; label: string }[];
-};
-
-const FrontendTabsContext = createContext({} as FrontendTabsContextType);
-
 function FrontendTabsRoot(props: FrontendTabsProps) {
 	const { children, exclude, uiType: propsUiType, ...rest } = props;
 	const { uiType: contextUiType } = useContext(DocItemContext);
@@ -50,82 +43,12 @@ function FrontendTabsRoot(props: FrontendTabsProps) {
 	}, [exclude, baseTabValues]);
 
 	return (
-		<FrontendTabsContext.Provider value={{ values }}>
-			<Tabs values={values} groupId={groupId} {...rest}>
-				{children}
-			</Tabs>
-		</FrontendTabsContext.Provider>
-	);
-}
-
-function FrontendTab({ children, value, ...rest }: TabItemProps) {
-	const { values } = useContext(FrontendTabsContext);
-
-	if (!values.find((v) => v.value === value)) {
-		throw new Error(`Invalid tab value ${value}`);
-	}
-
-	return (
-		<TabItem
-			value={value}
-			{...rest}
-			attributes={{ onclick: (val) => console.log(val) }}
-		>
+		<Tabs values={values} groupId={groupId} {...rest}>
 			{children}
-		</TabItem>
+		</Tabs>
 	);
 }
 
 export const FrontendTabs = Object.assign(FrontendTabsRoot, {
-	Tab: FrontendTab,
+	Tab: TabItem,
 });
-
-const ReactRouterVersionTabItems = [
-	{ label: "react-router-dom >= v6", value: "v6" },
-	{ label: "react-router-dom <= v5", value: "v5" },
-];
-
-const ReactRouterVersionTabsGroupId = "react-router-group-id";
-
-type ReactRouterVersionTabsProps = Omit<TabsProps, "values" | "groupId">;
-
-function ReactRouterVersionTabsRoot(props: ReactRouterVersionTabsProps) {
-	const { children, ...rest } = props;
-
-	return (
-		<TabsContextProvider tabItems={ReactRouterVersionTabItems}>
-			<Tabs
-				values={ReactRouterVersionTabItems}
-				groupId={ReactRouterVersionTabsGroupId}
-				{...rest}
-			>
-				{children}
-			</Tabs>
-		</TabsContextProvider>
-	);
-}
-
-function ReactRouterVersionTab({ children, value, ...rest }: TabItemProps) {
-	const { tabItems } = useContext(TabsContext);
-
-	if (!tabItems.find((v) => v.value === value)) {
-		throw new Error("Invalid tab value");
-	}
-
-	return (
-		<TabItem
-			value={value}
-			{...rest}
-			attributes={{ onclick: (val) => console.log(val) }}
-		>
-			{children}
-		</TabItem>
-	);
-}
-
-export const ReactRouterVersionTabs = Object.assign(
-	ReactRouterVersionTabsRoot,
-	{
-		Tab: ReactRouterVersionTab,
-	},
-);

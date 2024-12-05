@@ -20,4 +20,5 @@ function PythonFrameworksCardRoot({ children }: React.PropsWithChildren<{}>) {
 
 export const PythonFrameworksCard = Object.assign(PythonFrameworksCardRoot, {
 	Content: CodeSampleCard.Content(usePythonFrameworksSelection),
+	Section: CodeSampleCard.Section,
 });

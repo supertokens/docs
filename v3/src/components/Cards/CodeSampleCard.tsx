@@ -1,11 +1,11 @@
-import { Flex, Card, Separator } from "@radix-ui/themes";
+import { Flex, Box, Card, Separator } from "@radix-ui/themes";
 
 import "./styles.scss";
 
 /*
  * Card abstraction used to render code samples sections
  * where you might need to change the content based on
- * differnt types of selections (npm/scriots, npm versions, node frameworks, etc)
+ * different types of selections (npm/scripts, npm versions, node frameworks, etc)
  *
  * The component allows you to place two types of selections/inputs
  * in the card header.
@@ -42,7 +42,19 @@ const CodeSampleCardContent =
 		return children;
 	};
 
+// Wrap anything that's not a code snippet inside this component
+// It provides a standardized way
+// to place the content inside a padded container
+function CodeSampleCardSection({ children }: React.PropsWithChildren<{}>) {
+	return (
+		<Box p="4" className="content-card__section">
+			{children}
+		</Box>
+	);
+}
+
 export const CodeSampleCard = Object.assign(CodeSampleCardRoot, {
 	Content: CodeSampleCardContent,
 	Header: CodeSampleCardHeader,
+	Section: CodeSampleCardSection,
 });
