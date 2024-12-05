@@ -23,14 +23,15 @@ const LOCAL_STORAGE_KEY_PREFIX = "supertokens-question-answer:";
 
 export function Question(
   props: PropsWithChildren<{
-    question: string;
+    question: string | (() => string);
     defaultAnswer?: string;
   }>,
 ) {
-  const { defaultAnswer, question, children } = props;
+  const { defaultAnswer, question: _question, children } = props;
   const [selectedAnswer, setSelectedAnswer] = useState<string | undefined>(
     defaultAnswer,
   );
+  const question = typeof _question === "string" ? _question : _question();
 
   const onSelectAnswer = useCallback((answer: string) => {
     setSelectedAnswer(answer);
@@ -93,4 +94,3 @@ export function Answer(props: PropsWithChildren<AnswerProps>) {
     </span>
   );
 }
-
