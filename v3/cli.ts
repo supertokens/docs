@@ -100,8 +100,8 @@ const migrateMdx = async (markdownContent: string) => {
   - ConditionalSection -> ContextCondition (rename the conditions prop to condition)
   - PythonSyncAsyncSubTabs -> PythonSyncAsyncCard
      - Replace the usage of TabItem inside the PythonSyncAsyncSubTabs with PythonSyncAsyncCard.Content
-  - NodeJSFrameworkSubTabsServerless -> NodeJSFrameworksCard
-     - Replace the usage of TabItem inside the NodeJSFrameworkSubTabsServerless with NodeJSFrameworksCard.Content
+  - NodeJSFrameworkSubTabsServerless -> NodeFrameworksCard
+     - Replace the usage of TabItem inside the NodeJSFrameworkSubTabsServerless with NodeFrameworksCard.Content
   - PythonFrameworkSubTabs -> PythonFrameworksCard
      - Replace the usage of TabItem inside the PythonFrameworkSubTabs with PythonFrameworksCard.Content
   - GoFrameworkSubTabs -> GoFrameworksCard
@@ -111,6 +111,7 @@ const migrateMdx = async (markdownContent: string) => {
 - Remove the usage of the following components:
   - CoreInjector
   - OAuthVerifyTokensDisclaimer
+- Remove <details> and <summary> tags but keep the content that's inside them
 - If you encounter a CustomAdmonition component replace it with a normal mdx admonition: 
 :::info <type-property>
 <children>
