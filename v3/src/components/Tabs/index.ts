@@ -4,3 +4,5 @@ export * from "./SelfHostingTabs";
 export * from "./FrontendCustomUITabs";
 export * from "./FrontendPrebuiltUITabs";
 export * from "./ReactRouterVersionsTabs";
+export * from "./DatabaseTabs";
+export * from "./OSTabs";

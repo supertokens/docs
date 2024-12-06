@@ -79,7 +79,7 @@ const migrateMdx = async (markdownContent: string) => {
 - Replace JSX elements based on the following mapping:
   - BackendSDKTabs -> BackendTabs
      - Replace the usage of TabItem inside the BackendSDKTabs with BackendTab.TabItem
-     - Replace enableCurl and enableDashboard with the following prop additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]} 
+     - If the BackendSDKTabs component has the following props: enableCurl, enableDashboard, Replace them with the following prop additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]} 
   - AppInfoForm -> AppInfoForm 
      - Keep only the first usage and write it as a self closing component
      - Remove the other occurences
