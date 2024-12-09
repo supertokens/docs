@@ -1,3 +1,4 @@
+import { AppTypeSelect } from "../Select";
 import {
 	PythonFrameworksSelect,
 	usePythonFrameworksSelection,
@@ -7,11 +8,15 @@ import { CodeSampleCard } from "./CodeSampleCard";
 
 import "./styles.scss";
 
-function PythonFrameworksCardRoot({ children }: React.PropsWithChildren<{}>) {
+function PythonFrameworksCardRoot({
+	children,
+	showAppTypeSelect = false,
+}: React.PropsWithChildren<{ showAppTypeSelect?: boolean }>) {
 	return (
 		<CodeSampleCard>
 			<CodeSampleCard.Header>
 				<PythonFrameworksSelect />
+				{showAppTypeSelect && <AppTypeSelect />}
 			</CodeSampleCard.Header>
 			{children}
 		</CodeSampleCard>

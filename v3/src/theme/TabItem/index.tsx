@@ -14,5 +14,9 @@ export default function TabItem({ children, value }: Props): JSX.Element {
 		throw new Error(`Invalid tab value ${value}`);
 	}
 
-	return <RadixTabs.Content value={value}>{children}</RadixTabs.Content>;
+	return (
+		<RadixTabs.Content className={styles.tabItem} value={value}>
+			{children}
+		</RadixTabs.Content>
+	);
 }

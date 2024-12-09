@@ -20,6 +20,7 @@ export type DocsItemStateType = {
 		websiteDomain: string;
 		websiteBasePath: string;
 	};
+	appType: "single" | "multi";
 	tenantType: "single" | "multi";
 	coreInfo: {
 		hasSupertokensSession: boolean;
@@ -39,17 +40,18 @@ const DefaultState: DocsItemStateType = {
 	},
 	uiType: "prebuilt",
 	tenantType: "single",
+	appType: "single",
 	appInfo: {
 		appName: "",
-		apiDomain: "https://try.supertokens.com",
-		apiBasePath: "/",
-		websiteDomain: "https://try.supertokens.com",
-		websiteBasePath: "/",
+		apiDomain: "",
+		apiBasePath: "/auth",
+		websiteDomain: "",
+		websiteBasePath: "/auth",
 	},
 	coreInfo: {
 		hasSupertokensSession: false,
-		uri: null,
-		key: null,
+		uri: "<CORE_API_ENDPOINT>",
+		key: "<YOUR_API_KEY>",
 	},
 };
 

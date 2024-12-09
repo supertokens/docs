@@ -1,3 +1,4 @@
+import { AppTypeSelect } from "../Select";
 import {
 	NodeFrameworksSelect,
 	useNodeFrameworksSelection,
@@ -7,11 +8,15 @@ import { CodeSampleCard } from "./CodeSampleCard";
 
 import "./styles.scss";
 
-function NodeFrameworksCardRoot({ children }: React.PropsWithChildren<{}>) {
+function NodeFrameworksCardRoot({
+	children,
+	showAppTypeSelect = false,
+}: React.PropsWithChildren<{ showAppTypeSelect?: boolean }>) {
 	return (
 		<CodeSampleCard>
 			<CodeSampleCard.Header>
 				<NodeFrameworksSelect />
+				{showAppTypeSelect && <AppTypeSelect />}
 			</CodeSampleCard.Header>
 			{children}
 		</CodeSampleCard>

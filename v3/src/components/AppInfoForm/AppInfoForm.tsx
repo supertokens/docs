@@ -53,7 +53,7 @@ export function AppInfoForm() {
 						<Form.Field name="appName" asChild>
 							<Flex gap="1" direction="column">
 								<Form.Label>
-									<Text weight="bold">App Name</Text>
+									<Text weight="bold">Application Name</Text>
 								</Form.Label>
 								<VisuallyHidden>
 									<Text as="span">
@@ -63,6 +63,7 @@ export function AppInfoForm() {
 								<Form.Control asChild>
 									<TextField.Root
 										name="appName"
+										placeholder="e.g. My awsome app"
 										defaultValue={appInfo.appName}
 										onChange={onChangeInputValue}
 										onBlur={onBlur}
@@ -86,6 +87,7 @@ export function AppInfoForm() {
 								<Form.Control asChild>
 									<TextField.Root
 										name="apiDomain"
+										placeholder="e.g. http://localhost:8080"
 										defaultValue={appInfo.apiDomain}
 										onChange={onChangeInputValue}
 										onBlur={onBlur}
@@ -125,6 +127,7 @@ export function AppInfoForm() {
 								<Form.Control asChild>
 									<TextField.Root
 										name="websiteDomain"
+										placeholder="e.g. http://localhost:3000"
 										defaultValue={appInfo.websiteDomain}
 										onChange={onChangeInputValue}
 										onBlur={onBlur}

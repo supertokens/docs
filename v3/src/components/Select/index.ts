@@ -7,3 +7,4 @@ export * from "./PythonFrameworksSelect";
 export * from "./JavascriptHttpLibrarySelect";
 export * from "./PythonSyncAsyncSelect";
 export * from "./ThirdpartyBuiltinProvidersSelect";
+export * from "./AppTypeSelect";

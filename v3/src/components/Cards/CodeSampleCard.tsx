@@ -24,7 +24,7 @@ function CodeSampleCardRoot({ children }: React.PropsWithChildren<{}>) {
 function CodeSampleCardHeader({ children }: React.PropsWithChildren<{}>) {
 	return (
 		<>
-			<Flex direction="row" pt="3" pb="3" px="3">
+			<Flex direction="row" pt="3" pb="3" px="3" justify="between">
 				{children}
 			</Flex>
 			<Separator size="4" />

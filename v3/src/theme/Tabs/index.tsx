@@ -146,7 +146,7 @@ function TabsComponent(
 						</RadixTabs.Trigger>
 					))}
 				</RadixTabs.List>
-				<Box pt="3">{props.children}</Box>
+				<Box pt="1">{props.children}</Box>
 			</RadixTabs.Root>
 		</TabsContextProvider>
 	);

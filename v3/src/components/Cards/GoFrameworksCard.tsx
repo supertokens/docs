@@ -1,3 +1,4 @@
+import { AppTypeSelect } from "../Select";
 import {
 	GoFrameworksSelect,
 	useGoFrameworksSelection,
@@ -7,11 +8,15 @@ import { CodeSampleCard } from "./CodeSampleCard";
 
 import "./styles.scss";
 
-function GoFrameworksCardRoot({ children }: React.PropsWithChildren<{}>) {
+function GoFrameworksCardRoot({
+	children,
+	showAppTypeSelect = false,
+}: React.PropsWithChildren<{ showAppTypeSelect?: boolean }>) {
 	return (
 		<CodeSampleCard>
 			<CodeSampleCard.Header>
 				<GoFrameworksSelect />
+				{showAppTypeSelect && <AppTypeSelect />}
 			</CodeSampleCard.Header>
 			{children}
 		</CodeSampleCard>

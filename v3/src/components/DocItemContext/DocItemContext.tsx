@@ -1,9 +1,11 @@
-import React, { createContext, useCallback } from "react";
+import React, { createContext, useCallback, useMemo } from "react";
 import { DocsItemStateType, useDocsItemStore } from "./DocItemStore";
 
 type DocItemContextType = DocsItemStateType & {
+	derived: Record<string, unknown>;
 	onChangeUIType: (type: DocsItemStateType["uiType"]) => void;
 	onChangeTenantType: (type: DocsItemStateType["tenantType"]) => void;
+	onChangeAppType: (type: DocsItemStateType["tenantType"]) => void;
 	onChangeRecipeProperty: (
 		recipeName: keyof DocsItemStateType["recipes"],
 		propertyName: string,
@@ -43,6 +45,16 @@ export function DocItemContextProvider({
 		[state],
 	);
 
+	const onChangeAppType = useCallback(
+		(type: DocsItemStateType["appType"]) => {
+			setState({
+				...state,
+				appType: type,
+			});
+		},
+		[state],
+	);
+
 	const onChangeAppInfoField = useCallback(
 		(fieldName: string, value: string) => {
 			setState({
@@ -76,10 +88,28 @@ export function DocItemContextProvider({
 		[state],
 	);
 
+	const derivedState = useMemo(() => {
+		return {
+			appIdPathname: state.appType === "single" ? "" : `/appid-<APP_ID>`,
+		};
+	}, [state]);
+
+	const coreUri = useMemo(() => {
+		return state.appType === "single"
+			? state.coreInfo.uri
+			: `${state.coreInfo.uri}/appid-<APP_ID>`;
+	}, [state]);
+
 	return (
 		<DocItemContext.Provider
 			value={{
 				...state,
+				coreInfo: {
+					...state.coreInfo,
+					uri: coreUri,
+				},
+				derived: derivedState,
+				onChangeAppType,
 				onChangeUIType,
 				onChangeTenantType,
 				onChangeRecipeProperty,

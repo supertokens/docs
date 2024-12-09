@@ -8,3 +8,4 @@ export * from "./JavascriptHttpLibraryCard";
 export * from "./ReferenceCard/ReferenceCard";
 export * from "./PythonSyncAsyncCard";
 export * from "./ThirdPartyBuiltinProvidersCard";
+export * from "./CodeSampleCard";

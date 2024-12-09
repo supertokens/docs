@@ -2,6 +2,7 @@ import React, { useCallback, useContext, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { DocItemContext } from "./DocItemContext";
 import { Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
+import BrowserOnly from "@docusaurus/BrowserOnly";
 import {
 	useTransform,
 	useMotionValue,
@@ -15,8 +16,6 @@ import { TOC_UI_TYPE_SWITCH_ID } from "../lib";
 function UITypeSwitch({}) {
 	const { uiType, onChangeUIType } = useContext(DocItemContext);
 	const { visibilityRef, isVisible } = useIsVisible();
-
-	console.log(isVisible, visibilityRef.current?.scrollHeight);
 
 	return (
 		<Flex
@@ -33,10 +32,7 @@ function UITypeSwitch({}) {
 					What type of UI are you using?
 				</Heading>
 				<Flex direction="row" gap="2" align="start">
-					<RadioCards.Root
-						defaultValue={uiType}
-						columns={{ initial: "1", sm: "2" }}
-					>
+					<RadioCards.Root value={uiType} columns={{ initial: "1", sm: "2" }}>
 						<RadioCards.Item
 							value="prebuilt"
 							onClick={() => onChangeUIType("prebuilt")}
@@ -57,19 +53,15 @@ function UITypeSwitch({}) {
 						</RadioCards.Item>
 					</RadioCards.Root>
 				</Flex>
-				<TOCSwitch isParentVisible={isVisible} parentRef={visibilityRef} />
+				<BrowserOnly>
+					{() => <TOCSwitch isParentVisible={isVisible} />}
+				</BrowserOnly>
 			</Card>
 		</Flex>
 	);
 }
 
-function TOCSwitch({
-	isParentVisible,
-	parentRef,
-}: {
-	isParentVisible: boolean;
-	parentRef: React.RefObject<HTMLDivElement>;
-}) {
+function TOCSwitch({ isParentVisible }: { isParentVisible: boolean }) {
 	const { uiType, onChangeUIType } = useContext(DocItemContext);
 	const root = document.getElementById(TOC_UI_TYPE_SWITCH_ID);
 	const elementRef = useRef<HTMLDivElement>(null);
