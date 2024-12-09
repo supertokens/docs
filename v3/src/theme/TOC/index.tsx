@@ -3,8 +3,10 @@ import clsx from "clsx";
 import TOCItems from "@theme/TOCItems";
 import type { Props } from "@theme/TOC";
 
+import { AnimatePresence } from "motion/react";
 import styles from "./styles.module.css";
 import { DocItemContext } from "@site/src/components/DocItemContext";
+import { TOC_UI_TYPE_SWITCH_ID } from "@site/src/lib/constants";
 
 // Using a custom className
 // This prevents TOCInline/TOCCollapsible getting highlighted by mistake
@@ -68,6 +70,7 @@ export default function TOC({ className, toc, ...props }: Props): JSX.Element {
 
 	return (
 		<div className={clsx(styles.tableOfContents, "thin-scrollbar", className)}>
+			<div id={TOC_UI_TYPE_SWITCH_ID} />
 			<TOCItems
 				{...props}
 				toc={parsedTocItems}
