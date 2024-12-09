@@ -1,0 +1,114 @@
+---
+sidebar_position: 3
+title: Frontend Setup
+hide_title: true
+---
+
+# Setting up the Frontend
+
+Setting up the frontend is relatively simple. You need to generate a request ID for each authentication event attempt.
+
+:::info Important
+This frontend setup is required only for bot detection and anomaly IP based detection such as impossible travel detection. We also recommend checking for bot detection only on the email password login flows.
+:::
+
+### Generating a Request ID on the Frontend
+
+In order to generate a request ID, you need to import and initialise the SDK using your public API key. This SDK is used to generate a unique request ID for each authentication event attempt.
+
+Below is an example of how to implement request ID generation on your frontend:
+
+```tsx
+const ENVIRONMENT_ID = "<environment-id>"; // Your environment ID that you received from the SuperTokens team
+// Initialize the agent on page load using your public API key that you received from the SuperTokens team.
+const supertokensRequestIdPromise = require("https://deviceid.supertokens.io/PqWNQ35Ydhm6WDUK/k9bwGCuvuA83Ad6s?apiKey=<PUBLIC_API_KEY>")
+    .then((RequestId: any) => RequestId.load({
+        endpoint: [
+            'https://deviceid.supertokens.io/PqWNQ35Ydhm6WDUK/CnsdzKsyFKU8Q3h2',
+            RequestId.defaultEndpoint
+        ]
+    }));
+
+async function getRequestId() {
+    const sdk = await supertokensRequestIdPromise;
+    const result = await sdk.get({
+        tag: {
+            environmentId: ENVIRONMENT_ID,
+        }
+    });
+    return result.requestId;
+}
+```
+
+:::info Note
+Make sure to replace the `<PUBLIC_API_KEY>` in the above string with the provided public API key.
+:::
+
+### Passing the Request ID to the Backend
+
+Once you have generated the request ID on the frontend, you need to pass it to the backend. This is done by including the `requestId` property along with the value as part of the preAPIHook body from the initialisation of the recipes.
+
+:::info Important
+If the request ID is not passed to the backend, the anomaly detection will only be able to detect password breaches and brute force attacks.
+:::
+
+Below is a full example of how to configure the SDK and pass the request ID to the backend. The request ID is being generated only for the email password sign in, sign up and reset password actions because these are the only actions that require bot detection (the reason the request ID is needed). For all the other recipes (or actions), this is not needed.
+
+```tsx
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
+
+const ENVIRONMENT_ID = "<environment-id>"; // Your environment ID that you received from the SuperTokens team
+// Initialize the agent on page load using your public API key that you received from the SuperTokens team.
+const supertokensRequestIdPromise = require("https://deviceid.supertokens.io/PqWNQ35Ydhm6WDUK/k9bwGCuvuA83Ad6s?apiKey=<PUBLIC_API_KEY>")
+    .then((RequestId: any) => RequestId.load({
+        endpoint: [
+            'https://deviceid.supertokens.io/PqWNQ35Ydhm6WDUK/CnsdzKsyFKU8Q3h2',
+            RequestId.defaultEndpoint
+        ]
+    }));
+
+async function getRequestId() {
+    const sdk = await supertokensRequestIdPromise;
+    const result = await sdk.get({
+        tag: {
+            environmentId: ENVIRONMENT_ID,
+        }
+    });
+    return result.requestId;
+}
+
+export const SuperTokensConfig = {
+    // ... other config options
+    appInfo: {
+        appName: "...",
+        apiDomain: '...',
+        websiteDomain: '...',
+    },
+    // recipeList contains all the modules that you want to
+    // use from SuperTokens. See the full list here: https://supertokens.com/docs/guides
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            preAPIHook: async (context) => {
+                let url = context.url;
+                let requestInit = context.requestInit;
+
+                let action = context.action;
+                if (action === "EMAIL_PASSWORD_SIGN_IN" || action === "EMAIL_PASSWORD_SIGN_UP" || action === "SEND_RESET_PASSWORD_EMAIL") {
+                    let requestId = await getRequestId();
+                    let body = context.requestInit.body;
+                    if (body !== undefined) {
+                        let bodyJson = JSON.parse(body as string);
+                        bodyJson.requestId = requestId;
+                        requestInit.body = JSON.stringify(bodyJson);
+                    }
+                }
+                return {
+                    requestInit, url
+                };
+            }
+            // highlight-end
+        }),
+    ],
+};
+```
