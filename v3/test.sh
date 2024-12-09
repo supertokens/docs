@@ -1,21 +1,29 @@
 #!/usr/bin/env bash
 
 bun run cli.ts migrate \
-	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/common-customizations/sessions/share-sessions-across-sub-domains.mdx \
-	docs/post-authentication/session-management
+	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/architecture.mdx \
+	docs/references
 
 bun run cli.ts migrate \
-	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/common-customizations/sessions/multiple-clients.mdx \
-	docs/post-authentication/session-management
+	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/other-frameworks.mdx \
+	docs/references
 
 bun run cli.ts migrate \
-	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/common-customizations/pre-built-ui/sign-out.mdx \
-	docs/post-authentication/session-management
+	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/user-object.mdx \
+	docs/references
 
 bun run cli.ts migrate \
-	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/common-customizations/pre-built-ui/auth-redirection.mdx \
-	docs/post-authentication/session-management
+	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/appinfo.mdx \
+	docs/references
 
 bun run cli.ts migrate \
-	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/common-customizations/sessions/.mdx \
-	docs/post-authentication/session-management
+	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/sdks.mdx \
+	docs/references
+
+bun run cli.ts migrate \
+	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/apis.mdx \
+	docs/references
+
+bun run cli.ts migrate \
+	/Users/bogdan/src/supertokens/docs/v2/thirdpartyemailpassword/advanced-customizations \
+	docs/references/sdks
