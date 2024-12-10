@@ -38,8 +38,8 @@ const config: Config = {
 						defaultSidebarItemsGenerator,
 						...args
 					}) {
+						// console.log(args);
 						const sidebarItems = await defaultSidebarItemsGenerator(args);
-						console.log(sidebarItems);
 						return sidebarItems;
 					},
 				},
