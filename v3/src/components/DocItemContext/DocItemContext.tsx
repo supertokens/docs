@@ -93,12 +93,14 @@ export function DocItemContextProvider({
 			"from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig";
 		let pythonContactMethodMethod = "ContactEmailOnlyConfig";
 		let goPasswordlessContactMethodMethod = "ContactMethodEmailConfig";
-		if (state.recipes.passwordless.contactMethod === "PHONE") {
+		if (state.recipes?.passwordless?.contactMethod === "PHONE") {
 			pythonContactMethodImport =
 				"from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig";
 			pythonContactMethodMethod = "ContactPhoneOnlyConfig";
 			goPasswordlessContactMethodMethod = "ContactMethodPhoneConfig";
-		} else if (state.recipes.passwordless.contactMethod === "EMAIL_OR_PHONE") {
+		} else if (
+			state.recipes?.passwordless?.contactMethod === "EMAIL_OR_PHONE"
+		) {
 			pythonContactMethodImport =
 				"from supertokens_python.recipe.passwordless import ContactEmailOrPhoneConfig";
 			pythonContactMethodMethod = "ContactEmailOrPhoneConfig";

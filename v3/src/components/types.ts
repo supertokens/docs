@@ -1,4 +1,0 @@
-//
-type HideableHeadingProps = {
-  headingGroupName?: string;
-};

@@ -58,7 +58,7 @@ const DefaultState: DocsItemStateType = {
 let isInitialized = false;
 let DocsItemState = DefaultState;
 
-const LOCAL_STORAGE_KEY = "docs-item-context";
+const LOCAL_STORAGE_KEY = "page-dynamic-values";
 
 const subscribers = new Set<() => void>();
 
