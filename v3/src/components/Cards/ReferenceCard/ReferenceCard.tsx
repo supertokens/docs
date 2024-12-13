@@ -56,7 +56,7 @@ function ReferenceCardAvatar({ icon }: { icon: string }) {
 
 function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
 	return (
-		<Text className="reference-card__title" asChild size="4" weight="bold">
+		<Text className="reference-card__title" size="4" weight="bold">
 			{children}
 		</Text>
 	);
@@ -64,7 +64,7 @@ function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
 
 function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
 	return (
-		<Text className="reference-card__description" asChild size="2" color="gray">
+		<Text className="reference-card__description" size="2" color="gray">
 			{children}
 		</Text>
 	);
