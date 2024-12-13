@@ -24,5 +24,6 @@ export const JavascriptHttpLibraryCard = Object.assign(
 	JavascriptHttpLibraryCardRoot,
 	{
 		Content: CodeSampleCard.Content(useJavascriptHttpLibrarySelection),
+		Section: CodeSampleCard.Section,
 	},
 );

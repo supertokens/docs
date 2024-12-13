@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Flex, Avatar, Grid, Text } from "@radix-ui/themes";
+import { Card, Flex, Avatar, Grid, Box, Text } from "@radix-ui/themes";
 
 import "./styles.scss";
 
@@ -16,24 +16,28 @@ function ReferenceCardRoot({
 
 	if (hasAvatarInChildren) {
 		return (
-			<Card className="reference-card">
-				<a href={href}>
-					<Flex gap="3" align="center">
-						{children}
-					</Flex>
-				</a>
-			</Card>
+			<Box p="4" asChild>
+				<Card className="reference-card" asChild>
+					<a href={href}>
+						<Flex gap="3" align="center">
+							{children}
+						</Flex>
+					</a>
+				</Card>
+			</Box>
 		);
 	}
 
 	return (
-		<Card className="reference-card">
-			<a href={href}>
-				<Flex gap="3" direction="column">
-					{children}
-				</Flex>
-			</a>
-		</Card>
+		<Box p="5" asChild>
+			<Card className="reference-card" asChild>
+				<a href={href}>
+					<Flex gap="3" direction="column">
+						{children}
+					</Flex>
+				</a>
+			</Card>
+		</Box>
 	);
 }
 
@@ -52,7 +56,7 @@ function ReferenceCardAvatar({ icon }: { icon: string }) {
 
 function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
 	return (
-		<Text as="div" size="4" weight="bold">
+		<Text className="reference-card__title" asChild size="4" weight="bold">
 			{children}
 		</Text>
 	);
@@ -60,7 +64,7 @@ function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
 
 function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
 	return (
-		<Text as="div" size="2" color="gray">
+		<Text className="reference-card__description" asChild size="2" color="gray">
 			{children}
 		</Text>
 	);

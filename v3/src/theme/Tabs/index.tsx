@@ -8,7 +8,7 @@ import {
 } from "@docusaurus/theme-common/internal";
 import useIsBrowser from "@docusaurus/useIsBrowser";
 import type { Props } from "@theme/Tabs";
-import { Box, Tabs as RadixTabs } from "@radix-ui/themes";
+import { Box, Card, Tabs as RadixTabs } from "@radix-ui/themes";
 
 import { TabsContext, TabsContextProvider } from "@site/src/context";
 
@@ -132,21 +132,30 @@ function TabsComponent(
 				value={selectedValue}
 				onValueChange={onValueChange}
 			>
-				<RadixTabs.List
-					style={{
-						fontSize: "var(--font-size-4)",
-						lineHeight: "var(--line-height-4)",
-						letterSpacing: "var(--letter-spacing-4)",
-					}}
-					className={styles.tabList}
-				>
-					{tabValues.map(({ value, label, attributes }) => (
-						<RadixTabs.Trigger value={value} key={value} {...attributes}>
-							{label}
-						</RadixTabs.Trigger>
-					))}
-				</RadixTabs.List>
-				<Box pt="1">{props.children}</Box>
+				<Box asChild p="0">
+					<Card asChild>
+						<RadixTabs.List
+							style={{
+								fontSize: "var(--font-size-4)",
+								lineHeight: "var(--line-height-4)",
+								letterSpacing: "var(--letter-spacing-4)",
+							}}
+							className={styles.tabList}
+						>
+							{tabValues.map(({ value, label, attributes }) => (
+								<RadixTabs.Trigger
+									value={value}
+									key={value}
+									className={styles.tabItem}
+									{...attributes}
+								>
+									{label}
+								</RadixTabs.Trigger>
+							))}
+						</RadixTabs.List>
+					</Card>
+				</Box>
+				<Box>{props.children}</Box>
 			</RadixTabs.Root>
 		</TabsContextProvider>
 	);

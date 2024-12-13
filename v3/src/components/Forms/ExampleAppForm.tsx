@@ -17,6 +17,8 @@ import {
 import CodeBlock from "@theme/CodeBlock";
 import { useLocation } from "@docusaurus/router";
 
+import "./ExampleAppForm.scss";
+
 function ExampleAppFormRoot() {
 	const { search } = useLocation();
 	const queryRecipe = useMemo(() => {
@@ -169,9 +171,9 @@ function ExampleAppFormRoot() {
 				</Flex>
 			</Form.Root>
 			<Separator size="4" mb="1" mt="5" />
-			<Box p="4">
-				<CodeBlock language="bash">{command}</CodeBlock>
-			</Box>
+			<CodeBlock language="bash" className="example-app-form-code-block">
+				{command}
+			</CodeBlock>
 		</Card>
 	);
 }

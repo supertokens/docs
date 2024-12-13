@@ -12,6 +12,7 @@ import "./styles.scss";
  * This component should not be used directly in MDX files, but rather
  * in intermediate components that can be imported and used easily in
  * the final files.
+ *
  */
 function CodeSampleCardRoot({ children }: React.PropsWithChildren<{}>) {
 	return (
@@ -45,9 +46,16 @@ const CodeSampleCardContent =
 // Wrap anything that's not a code snippet inside this component
 // It provides a standardized way
 // to place the content inside a padded container
-function CodeSampleCardSection({ children }: React.PropsWithChildren<{}>) {
+function CodeSampleCardSection({
+	children,
+	px = "4",
+	py = "4",
+}: React.PropsWithChildren<{
+	px?: React.ComponentProps<typeof Box>["px"];
+	py?: React.ComponentProps<typeof Box>["py"];
+}>) {
 	return (
-		<Box p="4" className="content-card__section">
+		<Box px={px} py={py} className="content-card__section">
 			{children}
 		</Box>
 	);

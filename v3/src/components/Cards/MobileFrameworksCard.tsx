@@ -20,4 +20,5 @@ function MobileFrameworksCardRoot({ children }: React.PropsWithChildren<{}>) {
 
 export const MobileFrameworksCard = Object.assign(MobileFrameworksCardRoot, {
 	Content: CodeSampleCard.Content(useMobileFrameworksSelection),
+	Section: CodeSampleCard.Section,
 });

@@ -13,6 +13,8 @@ import {
 } from "motion/react";
 import { TOC_UI_TYPE_SWITCH_ID } from "../lib";
 
+import "./RadioCard.scss";
+
 function UITypeSwitch({}) {
 	const { uiType, onChangeUIType } = useContext(DocItemContext);
 	const { visibilityRef, isVisible } = useIsVisible();
@@ -35,6 +37,7 @@ function UITypeSwitch({}) {
 					<RadioCards.Root value={uiType} columns={{ initial: "1", sm: "2" }}>
 						<RadioCards.Item
 							value="prebuilt"
+							className="radio-card-item"
 							onClick={() => onChangeUIType("prebuilt")}
 						>
 							<Flex direction="column" width="100%" height="100%" align="start">
@@ -44,6 +47,7 @@ function UITypeSwitch({}) {
 						</RadioCards.Item>
 						<RadioCards.Item
 							value="custom"
+							className="radio-card-item"
 							onClick={() => onChangeUIType("custom")}
 						>
 							<Flex direction="column" width="100%" height="100%" align="start">
@@ -109,6 +113,7 @@ function TOCSwitch({ isParentVisible }: { isParentVisible: boolean }) {
 							<RadioCards.Root defaultValue={uiType} columns="1" gap="2">
 								<RadioCards.Item
 									value="prebuilt"
+									className="radio-card-item"
 									onClick={() => onChangeUIType("prebuilt")}
 								>
 									<Flex
@@ -122,6 +127,7 @@ function TOCSwitch({ isParentVisible }: { isParentVisible: boolean }) {
 								</RadioCards.Item>
 								<RadioCards.Item
 									value="custom"
+									className="radio-card-item"
 									onClick={() => onChangeUIType("custom")}
 								>
 									<Flex

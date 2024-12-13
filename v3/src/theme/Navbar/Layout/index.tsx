@@ -8,9 +8,10 @@ import {
 import { translate } from "@docusaurus/Translate";
 import NavbarMobileSidebar from "@theme/Navbar/MobileSidebar";
 import type { Props } from "@theme/Navbar/Layout";
+import { useLocation } from "@docusaurus/router";
+import { TabNav, Box } from "@radix-ui/themes";
 
 import styles from "./styles.module.scss";
-import { useLocation } from "@docusaurus/router";
 
 function NavbarBackdrop(props: ComponentProps<"div">) {
 	return (
@@ -63,19 +64,23 @@ function NavbarTabs() {
 	const { pathname } = useLocation();
 
 	return (
-		<ul className={styles.navbarTabs}>
-			<li
-				className={styles.navbarTab}
-				data-is-active={!pathname.startsWith("/docs/references")}
-			>
-				<a href="/docs">Documentation</a>
-			</li>
-			<li
-				className={styles.navbarTab}
-				data-is-active={pathname.startsWith("/docs/references")}
-			>
-				<a href="/docs/references">References</a>
-			</li>
-		</ul>
+		<Box mt="auto">
+			<TabNav.Root className={styles.navbarTabs} size="2">
+				<TabNav.Link
+					active={!pathname.startsWith("/docs/references")}
+					href="/docs"
+					asChild
+				>
+					<a className={styles.navbarTab}>Documentation</a>
+				</TabNav.Link>
+				<TabNav.Link
+					active={pathname.startsWith("/docs/references")}
+					href="/docs/references"
+					asChild
+				>
+					<a className={styles.navbarTab}>References</a>
+				</TabNav.Link>
+			</TabNav.Root>
+		</Box>
 	);
 }

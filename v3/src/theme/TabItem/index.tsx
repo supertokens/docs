@@ -5,7 +5,7 @@ import { Tabs as RadixTabs } from "@radix-ui/themes";
 
 import { TabsContext } from "@site/src/context";
 
-import styles from "./styles.module.css";
+import "./styles.scss";
 
 export default function TabItem({ children, value }: Props): JSX.Element {
 	const { tabValues } = useContext(TabsContext);
@@ -15,7 +15,7 @@ export default function TabItem({ children, value }: Props): JSX.Element {
 	}
 
 	return (
-		<RadixTabs.Content className={styles.tabItem} value={value}>
+		<RadixTabs.Content className="tab-item" value={value}>
 			{children}
 		</RadixTabs.Content>
 	);

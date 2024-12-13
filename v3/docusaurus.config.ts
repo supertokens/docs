@@ -89,7 +89,7 @@ const config: Config = {
 			appId: "SBR5UR2Z16",
 		},
 		prism: {
-			theme: prismThemes.dracula,
+			theme: prismThemes.vsDark,
 			additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php"],
 		},
 	} satisfies Preset.ThemeConfig,

@@ -9,6 +9,8 @@ import React, {
 } from "react";
 import { Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
 
+import "./RadioCard.scss";
+
 type QuestionContextType = {
 	answer?: string;
 	setAnswer: (answer: string) => void;
@@ -38,7 +40,7 @@ export function Question(
 		cardVariant: variant,
 		questionSize = "5",
 		px = "4",
-		py = "5",
+		py = "4",
 		mb = "4",
 	} = props;
 	const [selectedAnswer, setSelectedAnswer] = useState<string | undefined>(
@@ -78,7 +80,6 @@ export function Question(
 					<Heading as="h3" size={questionSize}>
 						{question}
 					</Heading>
-
 					<Flex direction="row" gap="2" align="start">
 						<RadioCards.Root
 							defaultValue={defaultAnswer}
@@ -110,7 +111,11 @@ export function Answer(props: PropsWithChildren<AnswerProps>) {
 	}, []);
 
 	return (
-		<RadioCards.Item value={props.title} onClick={onClick}>
+		<RadioCards.Item
+			value={props.title}
+			onClick={onClick}
+			className="radio-card-item"
+		>
 			<Flex direction="column" width="100%" height="100%" align="start">
 				<Text weight="bold">{props.title}</Text>
 			</Flex>
