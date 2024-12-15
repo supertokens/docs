@@ -1,6 +1,7 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
+import addNofollowToExternalLinks from "./src/plugins/addNofollowToExternalLinks";
 
 import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues";
 
@@ -25,7 +26,7 @@ const config: Config = {
 			"classic",
 			{
 				docs: {
-					routeBasePath: "/docs",
+					routeBasePath: "docs",
 					sidebarPath: "./sidebars.ts",
 					exclude: ["**/_*", "**/_*/**"],
 					breadcrumbs: false,
@@ -34,11 +35,11 @@ const config: Config = {
 					editUrl:
 						"https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
 					beforeDefaultRemarkPlugins: [remarkDocItemContextValues],
+					rehypePlugins: [addNofollowToExternalLinks],
 					async sidebarItemsGenerator({
 						defaultSidebarItemsGenerator,
 						...args
 					}) {
-						// console.log(args);
 						const sidebarItems = await defaultSidebarItemsGenerator(args);
 						return sidebarItems;
 					},
@@ -62,6 +63,8 @@ const config: Config = {
 			logo: {
 				alt: "SuperTokens Logo",
 				src: "img/logoWithNameLight.svg",
+				href: "/",
+				target: "_blank",
 			},
 			items: [
 				{
@@ -103,7 +106,33 @@ const config: Config = {
 		"docusaurus-plugin-sass",
 		// tailwindPlugin,
 		process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
+		[
+			// loads the supertokens.com react bundle for footer and analytics etc..
+			"./src/plugins/reactBundle",
+			{
+				id: "react-bundle",
+			},
+		],
+		[
+			"./src/plugins/transformOpenSearchLink",
+			//used to transform the opensearch.xml location in the metatags.
+			{
+				id: "transform-opensearch-link",
+			},
+		],
+		// [
+		// 	"./src/plugins/copyDocsAndCodeTypeChecking",
+		// 	{
+		// 		// used for copying docs content via the <-COPY DOCS-> directive
+		// 		// used for do code type checking as well AFTER running cop docs
+		// 		id: "copy-docs-and-code-type-checking",
+		// 	},
+		// ],
 	].filter(Boolean),
+	clientModules: [
+		//used to intercept client side navigation and fire analytics events.
+		require.resolve("./src/plugins/locationInterceptor"),
+	],
 };
 
 // As far as I can tell docusaurus doesn't export this type

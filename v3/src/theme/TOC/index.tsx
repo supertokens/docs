@@ -24,7 +24,7 @@ const LINK_ACTIVE_CLASS_NAME = "table-of-contents__link--active";
 export default function TOC({ className, toc, ...props }: Props): JSX.Element {
 	const { uiType, tenantType } = useContext(DocItemContext);
 
-	const [parsedTocItems, setParsedTocItems] = useState<Props["toc"]>(toc);
+	const [parsedTocItems, setParsedTocItems] = useState<Props["toc"]>([]);
 
 	useLayoutEffect(() => {
 		const mainContentElement = document.querySelector(`main`);
@@ -41,7 +41,10 @@ export default function TOC({ className, toc, ...props }: Props): JSX.Element {
 		if (hiddenTenantTypeContainer)
 			hiddenElements.push(hiddenTenantTypeContainer);
 
-		if (!mainContentElement || !hiddenElements.length) return;
+		if (!mainContentElement || !hiddenElements.length) {
+			setParsedTocItems(toc);
+			return;
+		}
 
 		const allPageHeadings = document.querySelectorAll(`h2, h3`);
 		const visibleHeadingsIds = Array.from(allPageHeadings)
