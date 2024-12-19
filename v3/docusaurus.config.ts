@@ -100,7 +100,11 @@ const config: Config = {
 		[
 			"@docusaurus/plugin-client-redirects",
 			{
-				redirects: [{ from: "/docs", to: "/docs/quickstart/introduction" }],
+				redirects: [
+					{ from: "/docs", to: "/docs/quickstart/introduction" },
+					{ from: "/docs/passwordless", to: "/docs/quickstart/introduction" },
+					{ from: "/docs/emailpassword", to: "/docs/quickstart/introduction" },
+				],
 			},
 		],
 		"docusaurus-plugin-sass",
