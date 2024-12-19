@@ -5,6 +5,8 @@ import addNofollowToExternalLinks from "./src/plugins/addNofollowToExternalLinks
 
 import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues";
 
+import v2tov3RedirectMap from "./v2-to-v3-redirect-map.json";
+
 const config: Config = {
 	title: "SuperTokens Docs",
 	tagline: "Open Source User Authentication",
@@ -100,7 +102,7 @@ const config: Config = {
 		[
 			"@docusaurus/plugin-client-redirects",
 			{
-				redirects: [{ from: "/docs", to: "/docs/quickstart/introduction" }],
+				redirects: [...v2tov3RedirectMap],
 			},
 		],
 		"docusaurus-plugin-sass",
