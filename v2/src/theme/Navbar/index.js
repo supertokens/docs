@@ -24,10 +24,10 @@ const DefaultNavItemPosition = "right"; // If split links by left/right
 
 function splitNavItemsByPosition(items) {
   const leftItems = items.filter(
-    (item) => (item.position ?? DefaultNavItemPosition) === "left"
+    (item) => (item.position ?? DefaultNavItemPosition) === "left",
   );
   const rightItems = items.filter(
-    (item) => (item.position ?? DefaultNavItemPosition) === "right"
+    (item) => (item.position ?? DefaultNavItemPosition) === "right",
   );
   return {
     leftItems,
@@ -52,7 +52,7 @@ function Navbar() {
   }, [setSidebarShown]);
   const onToggleChange = useCallback(
     (e) => (e.target.checked ? setDarkTheme() : setLightTheme()),
-    [setLightTheme, setDarkTheme]
+    [setLightTheme, setDarkTheme],
   );
   const windowSize = useWindowSize();
   useEffect(() => {
