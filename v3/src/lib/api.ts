@@ -1,30 +1,203 @@
 import { API_URL, MOCK_ENABLED } from "./constants";
+import axios from "axios";
+import { SaasAppListItem, SaasConnectionUrlDomain } from "./types";
 
-const OLD_URL = `${API_URL}/saas/apps`;
-const NEW_URL = `${API_URL}/saas/multi-tenancy/connection-uri-domain/list`;
+const AxiosInstance = axios.create({
+	baseURL: API_URL,
+	timeout: 50000,
+	maxRedirects: 20,
+	withCredentials: true,
+	xsrfCookieName: "",
+	xsrfHeaderName: "",
+});
+
+export async function getWebJsURI() {
+	const endpoint = "/frontend/web-js";
+	const apiVersion = "0";
+
+	const response = await AxiosInstance.get(endpoint, {
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as { uri: Record<string, string> };
+}
+
+export async function getSupportedPlugins(planType: string) {
+	const endpoint = "/plugins";
+	const apiVersion = "0";
+	const response = await AxiosInstance.get(endpoint, {
+		params: {
+			planType: planType === "COMMERCIAL_TRIAL" ? "COMMERCIAL" : planType,
+			mode: "PRODUCTION",
+		},
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as { plugins: { id: string; displayName: string }[] };
+}
+
+export async function getSupportedFrontends() {
+	const endpoint = "/frontends";
+	const apiVersion = "0";
+	const response = await AxiosInstance.get(endpoint, {
+		params: {
+			mode: "PRODUCTION",
+		},
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as { frontends: { id: string; displayName: string }[] };
+}
+
+export async function getSupportedDrivers() {
+	const endpoint = "/drivers";
+	const apiVersion = "0";
+	const response = await AxiosInstance.get(endpoint, {
+		params: {
+			planType: "FREE",
+			mode: "PRODUCTION",
+		},
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as { drivers: { id: string; displayName: string }[] };
+}
+
+export async function getCompatibility(driver: string, frontend: string) {
+	const endpoint = "/compatibility";
+	const apiVersion = "0";
+	const response = await AxiosInstance.get(endpoint, {
+		params: {
+			planType: "FREE",
+			plugin: "postgresql",
+			driver,
+			frontend,
+		},
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as {
+		cores: string[];
+		coreToDriver: { [key: string]: string[] };
+		coreToPlugin: { [key: string]: string[] };
+		driverToFrontend: { [key: string]: string[] };
+	};
+}
+
+export async function getAuthReactURI() {
+	const endpoint = "/frontend/auth-react";
+	const apiVersion = "0";
+	const response = await AxiosInstance.get(endpoint, {
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as { uri: string };
+}
+
+export async function getUserInformation() {
+	const endpoint = "/user/info";
+	const apiVersion = "0";
+	const response = await AxiosInstance.get(endpoint, {
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as {
+		email: string;
+		name: string;
+		country: string;
+		company: string;
+	};
+}
+
+export async function getCoreVersionForPlugin(plugin: string) {
+	const endpoint = "/plugin/dependency/cores";
+	const apiVersion = "0";
+	const response = await AxiosInstance.get(endpoint, {
+		params: {
+			planType: "FREE",
+			mode: "PRODUCTION",
+			name: plugin,
+		},
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as { cores: string[] };
+}
 
 export async function getSaasApp() {
 	let apiResponse: SaasConnectionUrlDomain[] = [];
-	if (MOCK_ENABLED) apiResponse = MockAPIResponse;
+	if (MOCK_ENABLED) {
+		apiResponse = MockAPIResponse;
+	} else {
+		const oldApp = await getOldSaasApps();
+		if (oldApp) return oldApp;
+	}
 
-	// for (let i = 0; i < apiResponse.length; i++) {
-	// 	let curr = apiResponse[i];
-	// 	if (!curr.isTemporarilyRemoved) {
-	// 		for (let y = 0; y < curr.apps.length; y++) {
-	// 			let currApp = curr.apps[y];
-	// 			if (currApp.appId === "public") {
-	// 				let devDeployment = currApp.deployments[0];
-	// 				if (
-	// 					currApp.deployments.length > 1 &&
-	// 					currApp.deployments[1].deploymentType === "development"
-	// 				) {
-	// 					devDeployment = currApp.deployments[1];
-	// 				}
-	// 				return devDeployment.connectionInfo!;
-	// 			}
-	// 		}
-	// 	}
-	// }
+	apiResponse = await getNewSaasApps();
+
+	for (let i = 0; i < apiResponse.length; i++) {
+		let curr = apiResponse[i];
+		if ("apps" in curr && !curr.isTemporarilyRemoved) {
+			for (let y = 0; y < curr.apps.length; y++) {
+				let currApp = curr.apps[y];
+				if (currApp.appId === "public") {
+					let devDeployment = currApp.deployments[0];
+					if (
+						currApp.deployments.length > 1 &&
+						currApp.deployments[1].deploymentType === "development"
+					) {
+						devDeployment = currApp.deployments[1];
+					}
+					return devDeployment.connectionInfo!;
+				}
+			}
+		}
+	}
+}
+
+async function getOldSaasApps() {
+	const endpoint = "/saas/apps";
+	const apiVersion = "1";
+
+	const response = await AxiosInstance.get(endpoint, {
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+	const olderResult = response.data as SaasAppListItem[];
+	if (olderResult.length > 0) {
+		return olderResult[0].devDeployment.connectionInfo!;
+	}
+	return undefined;
+}
+
+async function getNewSaasApps() {
+	const endpoint = "/saas/multi-tenancy/connection-uri-domain/list";
+	const apiVersion = "1";
+
+	const response = await AxiosInstance.get(endpoint, {
+		headers: {
+			"api-version": apiVersion,
+		},
+	});
+
+	return response.data as SaasConnectionUrlDomain[] | undefined;
 }
 
 const MockAPIResponse: SaasConnectionUrlDomain[] = [
@@ -126,63 +299,3 @@ const MockAPIResponse: SaasConnectionUrlDomain[] = [
 		],
 	},
 ];
-
-type SaasConnectionUrlDomainCommonInfo = {
-	deploymentId: string;
-	deploymentName: string;
-	region: string;
-};
-
-type SaasAppDeploymentConnectionInfo = {
-	host: string;
-	apiKeys: string[];
-};
-
-type SaasConnectionUriDomainApp = {
-	appId: string;
-	deployments: SaasAppDeployment[];
-};
-
-type SaasAppDeploymentCommonInfo = {
-	coreVersion: string;
-	config: SaasAppDeploymentConfig[];
-	status: "active" | "restarting";
-};
-
-type SaasAppDeploymentConfig = {
-	keyName: string;
-	value: string;
-	description: string | number | boolean;
-};
-
-type SaasAppDevDeployment = SaasAppDeploymentCommonInfo & {
-	deploymentType: "development";
-	connectionInfo: SaasAppDeploymentConnectionInfo;
-};
-
-type SaasAppProdDeployment = SaasAppDeploymentCommonInfo & {
-	deploymentType: "production";
-	connectionInfo?: SaasAppDeploymentConnectionInfo & {
-		serviceApiKey: string;
-	};
-	pricing?: {
-		basePrice: number;
-		pricePerInstance: number;
-		numberOfInstancesToPayFor: number;
-		nextDueDate?: number;
-	};
-};
-
-type SaasAppDeployment = SaasAppDevDeployment | SaasAppProdDeployment;
-
-type SaasConnectionUrlDomain = SaasConnectionUrlDomainCommonInfo &
-	(
-		| {
-				isTemporarilyRemoved: false;
-				apps: SaasConnectionUriDomainApp[];
-		  }
-		| {
-				isTemporarilyRemoved: true;
-				isRecreating: boolean;
-		  }
-	);
