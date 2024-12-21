@@ -50,7 +50,7 @@ function NavbarContentLayout({
 }) {
 	return (
 		<div className={`navbar__inner ${styles.navbarInnerCustom}`}>
-			<div className="navbar__items">{left}</div>
+			<div className={"navbar__items"}>{left}</div>
 			<div className="navbar__items navbar__items--right">{right}</div>
 		</div>
 	);
@@ -70,7 +70,9 @@ export default function NavbarContent(): JSX.Element {
 				// TODO stop hardcoding items?
 				<>
 					{!mobileSidebar.disabled && <NavbarMobileSidebarToggle />}
-					<NavbarLogo />
+					<div className={styles.navbarLogoContainer}>
+						<NavbarLogo />
+					</div>
 					<NavbarItems items={leftItems} />
 				</>
 			}
