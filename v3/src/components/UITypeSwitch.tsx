@@ -69,7 +69,8 @@ function TOCSwitch({ isParentVisible }: { isParentVisible: boolean }) {
 				<motion.div
 					initial={{ opacity: 0, marginTop: -150 }}
 					animate={{ opacity: 1, marginTop: 0 }}
-					exit={{ opacity: 0, marginTop: -150 }}
+					// Use a lower margin value to fake a full slide animation on the toc menu
+					exit={{ opacity: 0, marginTop: -180 }}
 				>
 					<Flex
 						ref={elementRef}
