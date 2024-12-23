@@ -3,7 +3,6 @@ import clsx from "clsx";
 import TOCItems from "@theme/TOCItems";
 import type { Props } from "@theme/TOC";
 
-import { AnimatePresence } from "motion/react";
 import styles from "./styles.module.css";
 import { TOC_UI_TYPE_SWITCH_ID } from "@site/src/lib/constants";
 import useFilteredTocItems from "@site/src/hooks/useFilteredTocItems";

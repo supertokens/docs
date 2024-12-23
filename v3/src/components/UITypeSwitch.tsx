@@ -3,14 +3,7 @@ import ReactDOM from "react-dom";
 import { DocItemContext } from "./DocItemContext";
 import { Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
 import BrowserOnly from "@docusaurus/BrowserOnly";
-import {
-	useTransform,
-	useMotionValue,
-	useScroll,
-	AnimatePresence,
-	motion,
-	useSpring,
-} from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { TOC_UI_TYPE_SWITCH_ID } from "../lib";
 
 import "./RadioCard.scss";
@@ -69,33 +62,14 @@ function TOCSwitch({ isParentVisible }: { isParentVisible: boolean }) {
 	const { uiType, onChangeUIType } = useContext(DocItemContext);
 	const root = document.getElementById(TOC_UI_TYPE_SWITCH_ID);
 	const elementRef = useRef<HTMLDivElement>(null);
-	// TODO: Fix animation
-	// const prevScrollPositionRef = useRef<number>(0);
-	// const visibilityAnimationScrollStartRef = useRef<number | null>(null);
-	// const visibilityAnimationScrollRange = 100;
-	// const prevParentIsVisibleRef = useRef<boolean>(isParentVisible);
-	// const { scrollYProgress, scrollY } = useScroll();
-	// const translateY = useTransform(() => {
-	// 	if (!root || !parentRef.current) return 0;
-	// 	const parentBottom = parentRef.current.getBoundingClientRect().bottom;
-	// 	const scrollAnimationInterval = [
-	// 		parentBottom,
-	// 		parentBottom + visibilityAnimationScrollRange,
-	// 	];
-	// 	const scrollPosition = scrollY.get();
-	// 	console.log(scrollY.get(), parentRef.current.getBoundingClientRect());
-	// 	const transformValue = scrollY.get() + 10;
-	// 	return transformValue;
-	// });
 	if (!root) return null;
 	return ReactDOM.createPortal(
 		<AnimatePresence>
 			{!isParentVisible && (
 				<motion.div
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
-					// style={{ scaleX }}
+					initial={{ opacity: 0, marginTop: -150 }}
+					animate={{ opacity: 1, marginTop: 0 }}
+					exit={{ opacity: 0, marginTop: -150 }}
 				>
 					<Flex
 						ref={elementRef}
