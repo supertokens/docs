@@ -20,4 +20,5 @@ function NpmOrScriptsCardRoot({ children }: React.PropsWithChildren<{}>) {
 
 export const NpmOrScriptsCard = Object.assign(NpmOrScriptsCardRoot, {
 	Content: CodeSampleCard.Content(useNpmOrScriptsSelection),
+	Section: CodeSampleCard.Section,
 });

@@ -20,6 +20,7 @@ export function usePythonFrameworksSelection() {
 
 export function PythonFrameworksSelect({ exclude }: { exclude?: string[] }) {
 	const [value, setValue] = usePythonFrameworksSelection();
+
 	const selectOptions = useMemo(() => {
 		if (exclude)
 			return PythonFrameworksOptions.filter(

@@ -3,7 +3,7 @@ import { Select } from "@radix-ui/themes";
 import { useSelectionStore } from "../../lib/selectionStore";
 import { useMemo } from "react";
 
-const PythonSyncAsyncSelectionName = "python-framework";
+const PythonSyncAsyncSelectionName = "python-sync-async";
 const PythonSyncAsyncDefaultValue = "syncio";
 const PythonFrameworksOptions = [
 	{ label: "asyncio", value: "asyncio" },
