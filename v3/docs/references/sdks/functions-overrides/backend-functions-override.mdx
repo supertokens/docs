@@ -19,6 +19,7 @@ See all the [functions that can be overrided here](https://supertokens.com/docs/
 
 ```tsx
 import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
 import ThirdParty from "supertokens-node/recipe/thirdparty";
 
 SuperTokens.init({
@@ -31,6 +32,28 @@ SuperTokens.init({
         connectionURI: "...",
     },
     recipeList: [
+        Session.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        // here we are only overriding the function that's responsible
+                        // for creating a new session
+                        createNewSession: async function (input) {
+                            // TODO: some custom logic
+
+                            // or call the default behaviour as show below
+                            return await originalImplementation.createNewSession(input);
+                        },
+                        // ...
+                        // TODO: override more functions
+                    }
+                }
+            }
+            // highlight-end
+        }),
         ThirdParty.init({
             signInAndUpFeature: {
                 providers: [/* ... */]
@@ -72,7 +95,9 @@ See all the [functions that can be overrided here](https://pkg.go.dev/github.com
 
 ```go
 import (
-	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"	
 	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
@@ -80,6 +105,26 @@ import (
 func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				//highlight-start
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+						// First we make a copy of the original implementation
+						originalCreateNewSession := *originalImplementation.CreateNewSession
+
+						// Then we override the default impl
+						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+							// TODO: some custom logic
+
+							// or call the default behaviour as show below
+							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
 			thirdparty.Init(&tpmodels.TypeInput{
 				//highlight-start
 				Override: &tpmodels.OverrideStruct{
@@ -121,6 +166,7 @@ See all the [functions that can be overrided here](https://supertokens.com/docs/
 ```python
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe import session
 from supertokens_python.recipe.thirdparty.interfaces import RecipeInterface
 from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
 from typing import Dict, Any, Optional, Union
@@ -162,6 +208,38 @@ def override_thirdparty_functions(original_implementation: RecipeInterface):
     original_implementation.sign_in_up = sign_in_up
     return original_implementation
 
+# highlight-start
+def override_session_functions(original_implementation: RecipeInterface):
+    original_create_new_session = original_implementation.create_new_session
+
+    async def create_new_session(
+        user_id: str,
+        recipe_user_id: RecipeUserId,
+        access_token_payload: Optional[Dict[str, Any]],
+        session_data_in_database: Optional[Dict[str, Any]],
+        disable_anti_csrf: Optional[bool],
+        tenant_id: str,
+        user_context: Dict[str, Any],
+    ):
+        # TODO: custom logic
+
+        # or call the default behaviour as show below
+        return await original_create_new_session(
+            user_id,
+            recipe_user_id,
+            access_token_payload,
+            session_data_in_database,
+            disable_anti_csrf,
+            tenant_id,
+            user_context,
+        )
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+
+# highlight-end
+
 
 # highlight-end
 
@@ -169,6 +247,11 @@ init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
     framework="...",  # type: ignore
     recipe_list=[
+        session.init(
+            # highlight-start
+            override=session.InputOverrideConfig(functions=override_session_functions)
+            # highlight-end
+        ),
         thirdparty.init(
             # highlight-start
             override=thirdparty.InputOverrideConfig(

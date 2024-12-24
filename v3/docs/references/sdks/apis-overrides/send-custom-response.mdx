@@ -1,8 +1,7 @@
 ---
-id: throwing-error
-title: Via throwing errors
+title: Send a Custom Response
 hide_title: true
-sidebar_position: 1
+sidebar_position: 3
 ---
 
 import { BackendTabs } from "/src/components/Tabs";
@@ -11,7 +10,186 @@ import {
   PythonFrameworksCard,
 } from "/src/components/Cards";
 
-# How to send a custom response by throwing an error and catching it
+# Sending a Custom Response
+
+
+## Using the `GENERAL_ERROR` Status
+
+Sometimes, you may want to send a custom error message from your API override to display to the user on the frontend. This can be done by sending the following JSON response from the API:
+```json
+{
+    "status": "GENERAL_ERROR",
+    "message": "Some custom error message"
+}
+```
+
+If you are using our pre-built ReactJS UI, the above response will render the mesage `"Some custom error message"` on the frontend UI. For custom UI, you can read this response and display the message in an error UI. This response can be returned from most of the APIs exposed by the backend SDK.
+
+Let's take an example in which we want to prevent the user from signing up (via email / password) unless their email is preapproved by the app's admin. For this, we will override the sign up API to check if the input email is approved or not, and if not, we prevent the sign up, and send a custom error message.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```ts
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+
+EmailPassword.init({
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                signUpPOST: async function (input) {
+                    let email = input.formFields.find(i => i.id === "email")!.value as string;
+
+                    if (emailNotAllowed(email)) {
+                        // highlight-start
+                        return {
+                            status: "GENERAL_ERROR",
+                            message: "You are not allowed to sign up. Please contact the app's admin to get permission"
+                        }
+                        // highlight-end
+                    }
+                    return oI.signUpPOST!(input);
+                }
+            }
+        }
+    }
+})
+
+function emailNotAllowed(email: string) {
+    // TODO: your impl to check if email is allowed or not
+    return true;
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+    "errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	emailpassword.Init(&epmodels.TypeInput{
+		Override: &epmodels.OverrideStruct{
+			APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+				originalSignUp := *originalImplementation.SignUpPOST
+
+				(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
+					email := ""
+					for _, v := range formFields {
+						if v.ID == "email" {
+							valueAsString, asStrOk := v.Value.(string)
+							if !asStrOk {
+								return epmodels.SignUpPOSTResponse{}, errors.New("Should never come here as we check the type during validation")
+							}
+							email = valueAsString
+						}
+					}
+					if emailNotAllowed(email) {
+						// highlight-start
+						return epmodels.SignUpPOSTResponse{
+							GeneralError: &supertokens.GeneralErrorResponse{
+								Message: "You are not allowed to sign up. Please contact the app's admin to get permission",
+							},
+						}, nil
+						// highlight-end
+					}
+					return originalSignUp(formFields, tenantId, options, userContext)
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+
+func emailNotAllowed(email string) bool {
+	// TODO: your impl to check email
+	return true
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import (
+    APIInterface,
+    SignUpPostOkResult,
+    EmailAlreadyExistsError,
+    SignUpPostNotAllowedResponse,
+    APIOptions,
+)
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import Any, Dict, Union, List
+from supertokens_python.types import GeneralErrorResponse
+from supertokens_python.recipe.session import SessionContainer
+
+
+def override_apis(original_implementation: APIInterface):
+
+    # first we copy the original implementation
+    original_sign_up = original_implementation.sign_up_post
+
+    async def sign_up(
+        form_fields: List[FormField],
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ) -> Union[
+        SignUpPostOkResult,
+        EmailAlreadyExistsError,
+        SignUpPostNotAllowedResponse,
+        GeneralErrorResponse,
+    ]:
+        email = ""
+        for i in range(len(form_fields)):
+            if form_fields[i].id == "email":
+                email = form_fields[i].value
+
+        if is_not_allowed(email):
+            # highlight-start
+            return GeneralErrorResponse(
+                message="You are not allowed to sign up. Please contact the app's admin to get permission"
+            )
+            # highlight-end
+
+        return await original_sign_up(
+            form_fields,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            api_options,
+            user_context,
+        )
+
+    original_implementation.sign_up_post = sign_up
+
+    return original_implementation
+
+
+def is_not_allowed(email: str):
+    # TODO: your impl to check if the email is allowed
+    return True
+
+
+emailpassword.init(override=emailpassword.InputOverrideConfig(apis=override_apis))
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+
+## By Throwing an Error and Catching it
 
 This method is useful in case you want to send a custom response from an overrided function which doesn't have access to the response object. This can happen in case you are overriding any of our recipe interface functions. 
 
@@ -19,7 +197,7 @@ Let's take an example in which we want to prevent a user from logging into a new
 
 In the override, we will check if a session already exists for the given userId, and if it does, we will throw an error from the function. This error will be propogated to your application's error handler (or an error handler callback if you have provided one to us), in which you can catch this and send a custom response.
 
-## Step 1
+### Step 1
 
 First, we override the `createNewSession` function and throw an error in case a session already exists for a user. We can do this in the `Session.init` function:
 
@@ -152,7 +330,7 @@ session.init(override=session.InputOverrideConfig(functions=override_session_fun
 </BackendTabs.TabItem>
 </BackendTabs>
 
-## Step 2
+### Step 2
 
 Next, we want to catch the thrown error and then send a custom response to the client
 
@@ -484,4 +662,5 @@ class ErrorHandlerMiddleware:
 </PythonFrameworksCard>
 </BackendTabs.TabItem>
 </BackendTabs>
+
 
