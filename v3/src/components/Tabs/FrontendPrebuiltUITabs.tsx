@@ -1,5 +1,6 @@
 import Tabs, { Props as TabsProps } from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
+import { useMemo } from "react";
 
 const FrontendPrebuiltUITabOptions = [
 	{ label: "ReactJS", value: "reactjs" },
@@ -10,10 +11,19 @@ const FrontendPrebuiltUITabOptions = [
 
 const FrontendPrebuiltUIGroupId = "frontend-prebuilt-ui";
 
-type FrontendPrebuiltUIProps = Omit<TabsProps, "values" | "groupId">;
+type FrontendPrebuiltUIProps = Omit<TabsProps, "values" | "groupId"> & {
+	additionalValues?: { label: string; value: string }[];
+};
 
 function FrontendPrebuiltUIRoot(props: FrontendPrebuiltUIProps) {
-	const { children, ...rest } = props;
+	const { children, additionalValues, ...rest } = props;
+
+	const tabOptions = useMemo(() => {
+		const allOptions = additionalValues
+			? [...FrontendPrebuiltUITabOptions, ...additionalValues]
+			: FrontendPrebuiltUITabOptions;
+		return allOptions;
+	}, [FrontendPrebuiltUITabOptions, additionalValues]);
 
 	return (
 		<Tabs
