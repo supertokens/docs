@@ -5,6 +5,14 @@ import fs from "fs";
 import { readFile, writeFile } from "fs/promises";
 import OpenAI from "openai";
 import path, { join } from "path";
+import glob from "glob";
+import { visit } from "unist-util-visit";
+import { Node } from "unist";
+import { format } from "prettier";
+import { compile } from "@mdx-js/mdx";
+
+import * as prettierTypescript from "prettier/plugins/typescript";
+import * as prettierBabel from "prettier/plugins/babel";
 
 dotenv.config({ path: join(__dirname, ".env") });
 
@@ -20,6 +28,44 @@ const migrateFile = async (sourcePath: string, destinationPath: string) => {
 	const fileName = path.basename(sourcePath);
 	const destinationFilePath = path.join(destinationPath, fileName);
 	await writeFile(destinationFilePath, output);
+};
+
+const formatCodeBlocks = async () => {
+	const mdxFiles = glob.sync(path.join("./docs", `**/*.mdx`), { nodir: true });
+	const file = "docs/authentication/passwordless/_blocks/backend-sdk-init.mdx";
+
+	const content = await readFile(file, "utf8");
+	const codeBlocks: CodeBlockInfo[] = [];
+
+	try {
+		const mdxAst = await compile(content, {
+			remarkPlugins: [
+				() => (tree) => {
+					visit(tree, "code", (node: any) => {
+						// Find the original position in the source content
+						const start = content.indexOf(node.value);
+						codeBlocks.push({
+							language: node.lang,
+							value: node.value,
+							position: {
+								start: start,
+								end: start + node.value.length,
+							},
+						});
+					});
+				},
+			],
+			rehypePlugins: [],
+		});
+		console.log(codeBlocks);
+	} catch (error) {
+		console.error(error);
+	}
+};
+
+const writeCodeBlocks = async () => {
+	const mdxFiles = glob.sync(path.join("./docs", `**/*.mdx`), { nodir: true });
+	console.log(mdxFiles);
 };
 
 (async () => {
@@ -56,6 +102,20 @@ const migrateFile = async (sourcePath: string, destinationPath: string) => {
 			const newUrls = fs.readFileSync("./new-urls.json", "utf8");
 			const result = await createRedirectMap(oldUrls, newUrls);
 			fs.writeFileSync("./redirect-map.json", result);
+		});
+
+	program
+		.name("Format code blocks")
+		.command("format-code-blocks")
+		.action(async () => {
+			await formatCodeBlocks();
+		});
+
+	program
+		.name("Write code blocks")
+		.command("write-code-blocks")
+		.action(async () => {
+			await writeCodeBlocks();
 		});
 
 	try {
@@ -118,6 +178,16 @@ Extract only the components that are used in the file.
 	}
 	return output;
 };
+
+interface CodeBlockInfo {
+	language: string;
+	filePath: string;
+	value: string;
+	position: {
+		start: number;
+		end: number;
+	};
+}
 
 async function createRedirectMap(oldUrls: string, newUrls: string) {
 	let output = "";
