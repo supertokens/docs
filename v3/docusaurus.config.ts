@@ -14,8 +14,9 @@ const config: Config = {
 	baseUrl: "/",
 	favicon: "img/favicon.ico",
 	trailingSlash: false,
-	onBrokenLinks: "warn",
-	onBrokenMarkdownLinks: "warn",
+	onBrokenLinks: process.env.NODE_ENV === "production" ? "throw" : "warn",
+	onBrokenMarkdownLinks:
+		process.env.NODE_ENV === "production" ? "throw" : "warn",
 	// Even if you don't use internationalization, you can use this field to set
 	// useful metadata like html lang. For example, if your site is Chinese, you
 	// may want to replace "en" with "zh-Hans".
@@ -106,7 +107,6 @@ const config: Config = {
 			},
 		],
 		"docusaurus-plugin-sass",
-		// tailwindPlugin,
 		process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
 		[
 			// loads the supertokens.com react bundle for footer and analytics etc..
@@ -123,11 +123,9 @@ const config: Config = {
 			},
 		],
 		// [
-		// 	"./src/plugins/copyDocsAndCodeTypeChecking",
+		// 	"./src/plugins/codeTypeChecking",
 		// 	{
-		// 		// used for copying docs content via the <-COPY DOCS-> directive
-		// 		// used for do code type checking as well AFTER running cop docs
-		// 		id: "copy-docs-and-code-type-checking",
+		// 		id: "code-type-checking",
 		// 	},
 		// ],
 	].filter(Boolean),
