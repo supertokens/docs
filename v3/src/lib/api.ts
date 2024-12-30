@@ -15,13 +15,45 @@ export async function getWebJsURI() {
 	const endpoint = "/frontend/web-js";
 	const apiVersion = "0";
 
-	const response = await AxiosInstance.get(endpoint, {
-		headers: {
-			"api-version": apiVersion,
-		},
-	});
+	try {
+		const response = await AxiosInstance.get(endpoint, {
+			headers: {
+				"api-version": apiVersion,
+			},
+		});
 
-	return response.data as { uri: Record<string, string> };
+		return response.data as { uri: Record<string, string> };
+	} catch (err) {
+		return {
+			uri: {
+				dateprovider:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/dateprovider.test.js",
+				emailpassword:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/emailpassword.test.js",
+				emailverification:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/emailverification.test.js",
+				multifactorauth:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/multifactorauth.test.js",
+				multitenancy:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/multitenancy.test.js",
+				oauth2provider:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/oauth2provider.test.js",
+				passwordless:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/passwordless.test.js",
+				session:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/session.test.js",
+				supertokens:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/supertokens.test.js",
+				thirdparty:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/thirdparty.test.js",
+				totp: "https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/totp.test.js",
+				website:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/website.test.js",
+				userroles:
+					"https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/userroles.test.js",
+			},
+		};
+	}
 }
 
 export async function getSupportedPlugins(planType: string) {

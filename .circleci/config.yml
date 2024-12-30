@@ -15,7 +15,7 @@ commands:
       - run: docker run code-check
       # - slack/status
 jobs:
-  build-docusaurus:
+  build-docs:
     docker:
       - image: cimg/node:20.0
     steps:
@@ -51,24 +51,7 @@ jobs:
       - image: cimg/node:18.0
     steps:
       - checkout
-      # - restore_cache:
-      #     keys:
-      #       - backend-website-repo-{{ checksum "./.circleci/backend-website-cache-reference.md" }}
-      # - run:
-      #     name: Clone or Update Backend Website Repository
-      #     command: |
-      #       if [ ! -d "supertokens-backend-website/.git" ]; then
-      #         git clone --depth=1 git@github.com:supertokens/supertokens-backend-website.git supertokens-backend-website
-      #       else
-      #         cd supertokens-backend-website
-      #         git fetch origin
-      #         git reset --hard origin/master
-      #       fi
       - run: git clone --depth=1 git@github.com:supertokens/supertokens-backend-website.git supertokens-backend-website
-      # - save_cache:
-      #     paths:
-      #       - supertokens-backend-website
-      #     key: backend-website-repo-{{ checksum "./.circleci/backend-website-cache-reference.md" }}
       - attach_workspace:
           at: ./workspace
       - run: git config --global user.email "$EMAIL" && git config --global user.name "$NAME"
@@ -93,7 +76,7 @@ jobs:
     steps:
       - code-type-check:
           language: "javascript"
-  code-checking-ios-only:
+  run-code-type-checking-ios:
     macos:
       xcode: 14.1.0
     steps:
@@ -102,22 +85,22 @@ jobs:
           app-dir: "~/project/v2"
       - run:
           name: Setup iOS env
-          command: cd v2/src/plugins/codeTypeChecking/iosEnv/ && pod install
-          no_output_timeout: 30m
-      - run: nvm install 16 -y
-      - run:
-          no_output_timeout: 30m
-          name: Run build for iOS docs
-          command: nvm use 16 && cd v2 && npm run build:ios
-      - slack/status
+          command: |
+            cd ./workspace/v3/scripts/code-type-checking/swift
+            pod install
+      - run: |
+          cd ./workspace/v3/scripts/code-type-checking/swift
+          set -o pipefail
+          xcodebuild -workspace iosenv.xcworkspace -scheme iosenv build CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO -quiet | ./Pods/xcbeautify/xcbeautify
+      # - slack/status
 workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - build-docusaurus
+      - build-docs
       - commit-to-the-backend-website-repository:
           requires:
-            - build-docusaurus
+            - build-docs
           # filters:
           #   branches:
           #     only:

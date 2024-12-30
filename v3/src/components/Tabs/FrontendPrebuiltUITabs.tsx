@@ -1,4 +1,5 @@
 import Tabs, { Props as TabsProps } from "@theme/Tabs";
+import type { Props as TabItemProps } from "@theme/TabItem";
 import TabItem from "@theme/TabItem";
 import { useMemo } from "react";
 
@@ -36,6 +37,16 @@ function FrontendPrebuiltUIRoot(props: FrontendPrebuiltUIProps) {
 	);
 }
 
+function FrontendPrebuiltUITabItem(props: TabItemProps) {
+	const { value } = props;
+
+	if (value === "vue") {
+		console.log(props.children);
+	}
+
+	return <TabItem value={value} {...props} />;
+}
+
 export const FrontendPrebuiltUITabs = Object.assign(FrontendPrebuiltUIRoot, {
-	TabItem,
+	TabItem: FrontendPrebuiltUITabItem,
 });

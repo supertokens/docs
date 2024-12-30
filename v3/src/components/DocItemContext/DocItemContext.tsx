@@ -1,8 +1,10 @@
-import React, { createContext, useCallback, useMemo } from "react";
+import React, { createContext, useCallback, useEffect, useMemo } from "react";
 import { DocsItemStateType, useDocsItemStore } from "./DocItemStore";
+import { getWebJsURI } from "@site/src/lib/api";
 
 type DocItemContextType = DocsItemStateType & {
 	derived: Record<string, unknown>;
+	webJsVersions: Record<string, string>;
 	onChangeUIType: (type: DocsItemStateType["uiType"]) => void;
 	onChangeTenantType: (type: DocsItemStateType["tenantType"]) => void;
 	onChangeAppType: (type: DocsItemStateType["tenantType"]) => void;
@@ -24,6 +26,17 @@ export function DocItemContextProvider({
 	children: React.ReactNode;
 }) {
 	const [state, setState] = useDocsItemStore();
+	const [webJsVersions, setWebJsVersions] = React.useState<
+		Record<string, string>
+	>({});
+
+	const onLoadWebJsVersions = useCallback(async () => {
+		const result = await getWebJsURI();
+		setWebJsVersions(result.uri);
+	}, []);
+	useEffect(() => {
+		onLoadWebJsVersions();
+	}, []);
 
 	const onChangeUIType = useCallback(
 		(type: DocsItemStateType["uiType"]) => {
@@ -124,6 +137,7 @@ export function DocItemContextProvider({
 		<DocItemContext.Provider
 			value={{
 				...state,
+				webJsVersions,
 				coreInfo: {
 					...state.coreInfo,
 					uri: coreUri,
