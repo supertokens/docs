@@ -1,7 +1,7 @@
 import Tabs, { Props as TabsProps } from "@theme/Tabs";
+import { Children, cloneElement, isValidElement, ReactElement } from "react";
 import type { Props as TabItemProps } from "@theme/TabItem";
 import TabItem from "@theme/TabItem";
-import { useMemo } from "react";
 
 const FrontendPrebuiltUITabOptions = [
 	{ label: "ReactJS", value: "reactjs" },
@@ -18,13 +18,25 @@ type FrontendPrebuiltUIProps = Omit<TabsProps, "values" | "groupId"> & {
 
 function FrontendPrebuiltUIRoot(props: FrontendPrebuiltUIProps) {
 	const { children, additionalValues, ...rest } = props;
+	let parsedChildren = children;
+	const childrenArray = Children.toArray(children);
+	const vueTabItem = childrenArray.find(
+		(child): child is ReactElement<TabItemProps> =>
+			isValidElement(child) && child.props.value === "vue",
+	);
+	const angularTabItem = childrenArray.find(
+		(child): child is ReactElement<TabItemProps> =>
+			isValidElement(child) && child.props.value === "angular",
+	);
 
-	const tabOptions = useMemo(() => {
-		const allOptions = additionalValues
-			? [...FrontendPrebuiltUITabOptions, ...additionalValues]
-			: FrontendPrebuiltUITabOptions;
-		return allOptions;
-	}, [FrontendPrebuiltUITabOptions, additionalValues]);
+	if (!vueTabItem && angularTabItem) {
+		parsedChildren = [
+			// @ts-expect-error - TODO: Can't figure out the proper type here
+			...childrenArray,
+			// @ts-expect-error
+			cloneElement(angularTabItem, { key: `vue-tab-item`, value: "vue" }),
+		];
+	}
 
 	return (
 		<Tabs
@@ -32,21 +44,11 @@ function FrontendPrebuiltUIRoot(props: FrontendPrebuiltUIProps) {
 			groupId={FrontendPrebuiltUIGroupId}
 			{...rest}
 		>
-			{children}
+			{parsedChildren}
 		</Tabs>
 	);
 }
 
-function FrontendPrebuiltUITabItem(props: TabItemProps) {
-	const { value } = props;
-
-	if (value === "vue") {
-		console.log(props.children);
-	}
-
-	return <TabItem value={value} {...props} />;
-}
-
 export const FrontendPrebuiltUITabs = Object.assign(FrontendPrebuiltUIRoot, {
-	TabItem: FrontendPrebuiltUITabItem,
+	TabItem,
 });
