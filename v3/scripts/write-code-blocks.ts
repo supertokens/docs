@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "fs/promises";
-import { ensureDir, copy } from "fs-extra";
+import { ensureDir, emptyDir } from "fs-extra";
 import path, { join } from "path";
 import glob from "glob";
 import { visit } from "unist-util-visit";
@@ -27,7 +27,7 @@ const LanguageFoldersMap = {
 	dart: "dart",
 	php: "php",
 	java: "java",
-	csharp: "c#",
+	csharp: "csharp",
 };
 
 const LanguageExtensionsMap = {
@@ -98,15 +98,24 @@ async function writeCodeBlocks() {
 		countOfSameLanguageBlocksInAFile[key] = index;
 		const codeBlockFilePath = path.join(
 			"./scripts/code-type-checking/",
-			block.language,
+			block.languageFolder,
 			"snippets",
 			relativePath,
-			`${index}.${block.extension}`,
+			`${index}/code-block.${block.extension}`,
 		);
 
 		await ensureDir(path.dirname(codeBlockFilePath));
 
-		await writeFile(codeBlockFilePath, block.value);
+		let parsedBlockValue = block.value;
+		if (block.language === "go") {
+			const cleanPath = relativePath.replace(/\/+$/, "");
+			const segments = cleanPath.split("/");
+			const lastFolderName = segments[segments.length - 1] || "";
+			const nextToLastFolderName = segments[segments.length - 2] || "";
+			const packageName = `${nextToLastFolderName.replaceAll("-", "_")}_${lastFolderName.replaceAll("-", "_").replace(".mdx", "")}`;
+			parsedBlockValue = `package ${packageName}\n${parsedBlockValue}`;
+		}
+		await writeFile(codeBlockFilePath, parsedBlockValue);
 	}
 }
 
@@ -117,4 +126,11 @@ async function writeCodeBlocks() {
 // Removes custom header ids {#header-id} from the content
 function cleanMarkdownHeaders(markdown: string): string {
 	return markdown.replace(/^(#{1,6}\s+.*?)\s*(\{#[\w-]+\})?$/gm, "$1");
+}
+
+async function removeExistingSnippets() {
+	for (const languageFolder of Object.values(LanguageFoldersMap)) {
+		const folderPath = `./scripts/code-type-checking/${languageFolder}/snippets`;
+		await emptyDir(folderPath);
+	}
 }
