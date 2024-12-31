@@ -4,6 +4,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 import addNofollowToExternalLinks from "./src/plugins/addNofollowToExternalLinks";
 
 import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues";
+import remarkRemoveCodeTypeCheckingCommentsAndRows from "./src/plugins/remarkRemoveCodeTypeCheckingCommentsAndRows";
 import remarkRemoveWebJsScriptImports from "./src/plugins/remarkRemoveWebJsScriptImports";
 
 import v2tov3RedirectMap from "./v2-to-v3-redirect-map.json";
@@ -43,6 +44,7 @@ const config: Config = {
 						"https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
 					beforeDefaultRemarkPlugins: [
 						remarkDocItemContextValues,
+						remarkRemoveCodeTypeCheckingCommentsAndRows,
 						remarkRemoveWebJsScriptImports,
 					],
 					rehypePlugins: [addNofollowToExternalLinks],

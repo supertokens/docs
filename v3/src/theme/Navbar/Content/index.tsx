@@ -1,4 +1,4 @@
-import React, { type ReactNode } from "react";
+import React, { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useThemeConfig, ErrorCauseBoundary } from "@docusaurus/theme-common";
 import {
 	splitNavbarItems,
@@ -9,6 +9,7 @@ import NavbarColorModeToggle from "@theme/Navbar/ColorModeToggle";
 import SearchBar from "@theme/SearchBar";
 import NavbarMobileSidebarToggle from "@theme/Navbar/MobileSidebar/Toggle";
 import NavbarLogo from "@theme/Navbar/Logo";
+import supertokens from "supertokens-website";
 import NavbarSearch from "@theme/Navbar/Search";
 import { Button } from "@radix-ui/themes";
 
@@ -96,15 +97,28 @@ export default function NavbarContent(): JSX.Element {
 }
 
 function SignUpButton() {
+	const [label, setLabel] = useState("Sign Up");
+
+	const updateButtonLabel = useCallback(async () => {
+		console.log(supertokens);
+		if (await supertokens.doesSessionExist()) {
+			setLabel("Dashboard");
+		}
+	}, []);
+
+	useEffect(() => {
+		updateButtonLabel();
+	}, []);
+
 	return (
 		<Button asChild color="orange">
 			<a
-				style={{ width: "75px", paddingLeft: "0" }}
+				style={{ paddingRight: "var(--space-3)" }}
 				href="/auth"
 				target="_blank"
 				className={styles.signUpButtonLink}
 			>
-				Sign Up
+				{label}
 			</a>
 		</Button>
 	);

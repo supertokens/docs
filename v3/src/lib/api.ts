@@ -129,13 +129,21 @@ export async function getCompatibility(driver: string, frontend: string) {
 export async function getAuthReactURI() {
 	const endpoint = "/frontend/auth-react";
 	const apiVersion = "0";
-	const response = await AxiosInstance.get(endpoint, {
-		headers: {
-			"api-version": apiVersion,
-		},
-	});
 
-	return response.data as { uri: string };
+	try {
+		const response = await AxiosInstance.get(endpoint, {
+			headers: {
+				"api-version": apiVersion,
+			},
+		});
+
+		return response.data as { uri: string };
+	} catch (err) {
+		console.error(err);
+		return {
+			uri: "https://cdn.jsdelivr.net/gh/supertokens/prebuiltui@vX.Y.Z/build/static/js/main.test.js",
+		};
+	}
 }
 
 export async function getUserInformation() {

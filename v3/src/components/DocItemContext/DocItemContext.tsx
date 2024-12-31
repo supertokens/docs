@@ -1,10 +1,11 @@
 import React, { createContext, useCallback, useEffect, useMemo } from "react";
 import { DocsItemStateType, useDocsItemStore } from "./DocItemStore";
-import { getWebJsURI } from "@site/src/lib/api";
+import { getAuthReactURI, getWebJsURI } from "@site/src/lib/api";
 
 type DocItemContextType = DocsItemStateType & {
 	derived: Record<string, unknown>;
 	webJsVersions: Record<string, string>;
+	prebuiltUIVersion: string;
 	onChangeUIType: (type: DocsItemStateType["uiType"]) => void;
 	onChangeTenantType: (type: DocsItemStateType["tenantType"]) => void;
 	onChangeAppType: (type: DocsItemStateType["tenantType"]) => void;
@@ -29,13 +30,21 @@ export function DocItemContextProvider({
 	const [webJsVersions, setWebJsVersions] = React.useState<
 		Record<string, string>
 	>({});
+	const [prebuiltUIVersion, setPrebuiltUIVersion] = React.useState<string>("");
 
 	const onLoadWebJsVersions = useCallback(async () => {
 		const result = await getWebJsURI();
 		setWebJsVersions(result.uri);
 	}, []);
+
+	const onLoadPrebuiltUIVersion = useCallback(async () => {
+		const result = await getAuthReactURI();
+		setPrebuiltUIVersion(result.uri);
+	}, []);
+
 	useEffect(() => {
 		onLoadWebJsVersions();
+		onLoadPrebuiltUIVersion();
 	}, []);
 
 	const onChangeUIType = useCallback(
@@ -138,6 +147,7 @@ export function DocItemContextProvider({
 			value={{
 				...state,
 				webJsVersions,
+				prebuiltUIVersion,
 				coreInfo: {
 					...state.coreInfo,
 					uri: coreUri,

@@ -46,6 +46,16 @@ const LanguageExtensionsMap = {
 	csharp: "cs",
 };
 
+const Replacements: Array<string, string> = [
+	[
+		"^{derived.pythonContactMethodImport}",
+		"from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig",
+	],
+	["^{derived.pythonContactMethodMethod}", "ContactEmailOnlyConfig"],
+	["^{derived.goPasswordlessContactMethodMethod}", "ContactMethodEmailConfig"],
+	["^{recipes.passwordless.contactMethod}", "EMAIL"],
+	["^{recipes.passwordless.flowType}", "MAGIC_LINK"],
+];
 const SkipLanguages = ["text", "json", "bash", "html", "yaml", "sql", "batch"];
 
 async function writeCodeBlocks() {
@@ -115,6 +125,28 @@ async function writeCodeBlocks() {
 			const packageName = `${nextToLastFolderName.replaceAll("-", "_")}_${lastFolderName.replaceAll("-", "_").replace(".mdx", "")}`;
 			parsedBlockValue = `package ${packageName}\n${parsedBlockValue}`;
 		}
+
+		if (
+			block.languageFolder === "javascript" &&
+			parsedBlockValue.includes('<script lang="ts">')
+		) {
+			parsedBlockValue = parsedBlockValue.replace('<script lang="ts">', "");
+			parsedBlockValue = parsedBlockValue.replace("</script>", "");
+			parsedBlockValue = parsedBlockValue.replace("<template>", "");
+			parsedBlockValue = parsedBlockValue.replace("</template>", "");
+			parsedBlockValue = parsedBlockValue.replace(
+				'<div id="supertokensui" />',
+				"",
+			);
+		}
+
+		for (const replacement of Replacements) {
+			parsedBlockValue = parsedBlockValue.replaceAll(
+				replacement[0],
+				replacement[1],
+			);
+		}
+
 		await writeFile(codeBlockFilePath, parsedBlockValue);
 	}
 }

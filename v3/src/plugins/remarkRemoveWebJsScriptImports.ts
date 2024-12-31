@@ -2,7 +2,7 @@ import { visit } from "unist-util-visit";
 
 /**
  * Removes *-web-js-script and *-auth-react-script imports from ts files
- * Also adds window.supertokensUIInit for Angular and Vue code samples
+ * Also adds window.* to specific lines in Angular and Vue code samples
  *
  * For code snippets that use our JS SDK from scripts
  * we add custom imports in the docs CodeBlocks.
@@ -15,7 +15,7 @@ export default function remarkRemoveWebJsScriptImports() {
 			if (!targetedLanguages.includes(node.lang)) return;
 
 			const lines = node.value.split("\n");
-			const filteredLines = lines.filter((line) => {
+			let filteredLines = lines.filter((line) => {
 				return (
 					!line.includes("supertokens-web-js-script") &&
 					!line.includes("supertokens-auth-react-script")
@@ -23,8 +23,16 @@ export default function remarkRemoveWebJsScriptImports() {
 			});
 
 			const mappedLines = filteredLines.map((line) => {
-				if (line.startsWith("supertokensUIInit"))
+				if (
+					line.startsWith("supertokensUIInit") ||
+					line.startsWith("supertokensUIThirdParty") ||
+					line.startsWith("supertokensUIEmailPassword") ||
+					line.startsWith("supertokensUIPasswordless") ||
+					line.startsWith("supertokensUIOAuth2Provider") ||
+					line.startsWith("supertokensUISession")
+				)
 					return `(window as any).${line}`;
+
 				return line;
 			});
 
