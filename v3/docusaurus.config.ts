@@ -7,8 +7,6 @@ import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues
 import remarkRemoveCodeTypeCheckingCommentsAndRows from "./src/plugins/remarkRemoveCodeTypeCheckingCommentsAndRows";
 import remarkRemoveWebJsScriptImports from "./src/plugins/remarkRemoveWebJsScriptImports";
 
-import v2tov3RedirectMap from "./v2-to-v3-redirect-map.json";
-
 const config: Config = {
 	title: "SuperTokens Docs",
 	tagline: "Open Source User Authentication",
@@ -34,7 +32,7 @@ const config: Config = {
 			"classic",
 			{
 				docs: {
-					routeBasePath: "docs",
+					routeBasePath: "/docs",
 					sidebarPath: "./sidebars.ts",
 					exclude: ["**/_*", "**/_*/**"],
 					breadcrumbs: false,
@@ -109,12 +107,6 @@ const config: Config = {
 		},
 	} satisfies Preset.ThemeConfig,
 	plugins: [
-		[
-			"@docusaurus/plugin-client-redirects",
-			{
-				redirects: [...v2tov3RedirectMap],
-			},
-		],
 		"docusaurus-plugin-sass",
 		process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
 		[
