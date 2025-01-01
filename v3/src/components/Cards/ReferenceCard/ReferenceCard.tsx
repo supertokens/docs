@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, Flex, Avatar, Grid, Box, Text } from "@radix-ui/themes";
+import Link from "@docusaurus/Link";
 
 import "./styles.scss";
 
@@ -18,11 +19,11 @@ function ReferenceCardRoot({
 		return (
 			<Box p="4" asChild>
 				<Card className="reference-card" asChild>
-					<a href={href}>
+					<Link to={href}>
 						<Flex gap="3" align="center">
 							{children}
 						</Flex>
-					</a>
+					</Link>
 				</Card>
 			</Box>
 		);
@@ -30,12 +31,12 @@ function ReferenceCardRoot({
 
 	return (
 		<Box p="5" asChild>
-			<Card className="reference-card" asChild>
-				<a href={href}>
+			<Card className="reference-card">
+				<Link to={href}>
 					<Flex gap="3" direction="column">
 						{children}
 					</Flex>
-				</a>
+				</Link>
 			</Card>
 		</Box>
 	);

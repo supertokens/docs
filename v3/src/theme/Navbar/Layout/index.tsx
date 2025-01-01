@@ -1,4 +1,4 @@
-import React, { type ComponentProps } from "react";
+import React, { useEffect, type ComponentProps } from "react";
 import clsx from "clsx";
 import { useThemeConfig } from "@docusaurus/theme-common";
 import {
@@ -10,6 +10,7 @@ import NavbarMobileSidebar from "@theme/Navbar/MobileSidebar";
 import type { Props } from "@theme/Navbar/Layout";
 import { useLocation } from "@docusaurus/router";
 import { TabNav, Box } from "@radix-ui/themes";
+import Link from "@docusaurus/Link";
 
 import styles from "./styles.module.scss";
 
@@ -71,14 +72,14 @@ function NavbarTabs() {
 					href="/docs"
 					asChild
 				>
-					<a className={styles.navbarTab}>Documentation</a>
+					<Link className={styles.navbarTab}>Documentation</Link>
 				</TabNav.Link>
 				<TabNav.Link
 					active={pathname.startsWith("/docs/references")}
 					href="/docs/references"
 					asChild
 				>
-					<a className={styles.navbarTab}>References</a>
+					<Link className={styles.navbarTab}>References</Link>
 				</TabNav.Link>
 			</TabNav.Root>
 		</Box>
