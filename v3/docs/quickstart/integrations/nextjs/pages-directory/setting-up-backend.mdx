@@ -1,0 +1,68 @@
+---
+id: setting-up-backend
+title: 3. Adding auth APIs
+hide_title: true
+sidebar_position: 4
+---
+
+import { AppInfoForm } from "/src/components/AppInfoForm";
+
+# 3. Adding auth APIs
+
+We will add all the backend APIs for auth on `/api/auth`. This can be changed by setting the `apiBasePath` property in the `appInfo` object in the `appInfo.ts` file. For the rest of this page, we will assume you are using `/api/auth`.
+
+## 1. Create the `pages/api/auth/[[...path]].tsx` page
+- Be sure to create the `auth` folder in the `pages/api/` folder.
+- `[[...path]].tsx` will use the middleware exposed by `supertokens-node` which exposes all the APIs like sign in, sign up etc..
+
+## 2. Expose the SuperTokens APIs
+
+<AppInfoForm />
+
+```tsx title="pages/api/auth/[[...path]].ts"
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { middleware } from 'supertokens-node/framework/express'
+import { NextApiRequest, NextApiResponse } from 'next'
+import { Request, Response } from 'express';
+import supertokens from 'supertokens-node'
+// @ts-ignore
+import { backendConfig } from '../../../config/backendConfig'
+import NextCors from "nextjs-cors";
+
+supertokens.init(backendConfig())
+
+export default async function superTokens(
+  req: NextApiRequest & Request,
+  res: NextApiResponse & Response
+) {
+
+  await NextCors(req, res, {
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+    origin: "^{appInfo.websiteDomain}",
+    credentials: true,
+    allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+  });
+
+  await superTokensNextWrapper(
+    async (next) => {
+      res.setHeader(
+          "Cache-Control",
+          "no-cache, no-store, max-age=0, must-revalidate"
+      );
+      await middleware()(req, res, next)
+    },
+    req,
+    res
+  )
+  if (!res.writableEnded) {
+    res.status(404).send('Not found')
+  }
+}
+```
+
+:::note
+In the snippet above we add the `Cache-Control` header to the responses for all auth APIs. This is required if you are deploying your app with Vercel because API responses are automatically cached for production deployments. This results in problems because APIs such as `/session/refresh` return older session tokens resulting in infinite calls to refresh if an API returns unauthorised status. Setting the header ensures that Vercel does not cache any of the auth API responses.
+:::
+
+## 3. Use the login widget
+If you are now able to sign in or sign up, this means the backend setup is done correctly! If not, please feel free to ask questions on [Discord](https://supertokens.com/discord)

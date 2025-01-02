@@ -1,0 +1,227 @@
+---
+id: setup-lambda
+title: Set up Lambda
+hide_title: true
+sidebar_position: 2
+---
+
+import { AppInfoForm } from "/src/components/AppInfoForm";
+import { BackendTabs } from "/src/components/Tabs";
+import { AppTypeCard } from "/src/components/Cards";
+
+# Set up Lambda
+
+## 1. Create a new lambda
+
+- Click "Create Function" in the AWS Lambda dashboard, enter the function name and runtime, and create your Lambda function.
+<BackendTabs exclude={["go" ]}>
+  <BackendTabs.TabItem value="nodejs">
+    <img src="/img/integration-lambda/create-function-node.png" alt="Create new Lambda configurations UI Node"/>
+  </BackendTabs.TabItem>
+  <BackendTabs.TabItem value="python">
+    <img src="/img/integration-lambda/create-function-python.png" alt="Create new Lambda configurations UI Python"/>
+  </BackendTabs.TabItem>
+</BackendTabs>
+
+## 2. Link lambda layer with the lambda function
+
+- Scroll to the bottom and look for the `Layers` tab. Click on `Add a layer`
+<img src="/img/integration-lambda/add-a-layer.png" alt="Link Lambda function with the Lambda layer" width="700"/>
+
+- Select `Custom Layer` and then select the layer we created in the first step:
+
+<BackendTabs exclude={["go" ]}>
+  <BackendTabs.TabItem value="nodejs">
+    <img src="/img/integration-lambda/add-layer-detail-node.png" alt="Link custome layer with Lambda function Node"/>
+  </BackendTabs.TabItem>
+  <BackendTabs.TabItem value="python">
+    <img src="/img/integration-lambda/link-python-layer.png" alt="Link custome layer with Lambda function Python"/>
+  </BackendTabs.TabItem>
+</BackendTabs>
+
+## 3. Create a backend config file
+
+Using the editor provided by AWS, create a new config file and write the following code:
+
+<AppInfoForm />
+
+
+<BackendTabs exclude={["go"]}>
+<BackendTabs.TabItem value="nodejs">
+
+
+```tsx title="config.mjs" showAppTypeSelect
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+
+export function getBackendConfig() {
+  return {
+    framework: "awsLambda",
+    supertokens: {
+      connectionURI: "^{coreInfo.uri}",
+      // apiKey: "^{coreInfo.key}",
+    },
+    appInfo: {
+      // learn more about this on https://supertokens.com/docs/references/app-info
+      appName: "^{appInfo.appName}",
+      apiDomain: "^{appInfo.apiDomain}",
+      websiteDomain: "^{appInfo.websiteDomain}",
+      apiBasePath: "^{appInfo.apiBasePath}",
+      websiteBasePath: "^{appInfo.websiteBasePath}",
+      apiGatewayPath: "/dev"
+    },
+    recipeList: [
+      EmailPassword.init(),
+      Session.init(),
+    ],
+    isInServerlessEnv: true,
+  }
+}
+```
+
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python title="config.py" showAppTypeSelect
+from supertokens_python.recipe import emailpassword, session
+from supertokens_python import SupertokensConfig, InputAppInfo
+
+supertokens_config = SupertokensConfig(
+    connection_uri="^{coreInfo.uri}",
+    # api_key="^{coreInfo.key}"
+)
+
+app_info = InputAppInfo(
+    # learn more about this on https://supertokens.com/docs/references/app-info
+    app_name="^{appInfo.appName}",
+    api_domain="^{appInfo.apiDomain}",
+    website_domain="^{appInfo.websiteDomain}",
+    api_base_path="^{appInfo.apiBasePath}",
+    website_base_path="^{appInfo.websiteBasePath}",
+    api_gateway_path="/dev",
+)
+
+framework = "fastapi"
+
+recipe_list = [
+    session.init(),
+    emailpassword.init(),
+]
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+
+:::important
+In the above code, notice the extra config of `apiGatewayPath` that was added to the `appInfo` object. The value of this should be whatever you have set as the value of your [AWS stage](https://docs.aws.amazon.com/apigateway/latest/developerguide/stages.html) which scopes your API endpoints. For example, you may have a stage name per dev environment:
+- One for development (`/dev`).
+- One for testing (`/test`).
+- One for prod (`/prod`).
+
+So the value of `apiGatewayPath` should be set according to the above based on the env it's running under.
+
+You also need to change the `apiBasePath` on the frontend config to append the stage to the path. For example, if the frontend is query the development stage and the value of `apiBasePath` is `/auth`, you should change it to `/dev/auth`.
+:::
+
+:::note
+You may edit the `apiBasePath` and `apiGatewayPath` value later if you haven't setup the API Gateway yet. 
+:::
+
+## 4. Add the SuperTokens auth middleware
+
+Using the editor provided by AWS, create/replace the handler file contents with the following code:
+
+<BackendTabs exclude={["go", "otherFrameworks"]}>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx title="index.mjs"
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/awsLambda";
+// @ts-ignore
+import { getBackendConfig } from "./config.mjs";
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+
+supertokens.init(getBackendConfig());
+
+export const handler = middy(
+    // @ts-ignore
+    middleware((event) => {
+      // SuperTokens middleware didn't handle the route, return your custom response
+      return {
+        body: JSON.stringify({
+            msg: "Hello!",
+        }),
+        statusCode: 200,
+      };
+    })
+)
+    .use(
+        cors({
+            origin: getBackendConfig().appInfo.websiteDomain,
+            credentials: true,
+            headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+            methods: "OPTIONS,POST,GET,PUT,DELETE",
+        })
+    )
+    .onError((request) => {
+        throw request.error;
+    });
+```
+
+<img src="/img/integration-lambda/add-auth-middleware-node.png" alt="Add Supertokens auth middleware UI"/>
+
+:::important
+Since, we are using esm imports, we will need to set `NODE_OPTIONS="--experimental-specifier-resolution=node"` flag in the lambda environment variables. See the [Node.js](https://nodejs.org/docs/latest-v16.x/api/esm.html#customizing-esm-specifier-resolution-algorithm) documentation for more information.
+
+<img src="/img/integration-lambda/add-env-var-node.png" alt="Configuring env variables UI"/>
+:::
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python title="handler.py"
+import nest_asyncio # type: ignore
+nest_asyncio.apply() # type: ignore
+
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from mangum import Mangum
+
+from supertokens_python import init, get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
+
+import config # type: ignore
+
+init(
+    supertokens_config=config.supertokens_config, # type: ignore
+    app_info=config.app_info, # type: ignore
+    framework=config.framework, # type: ignore
+    recipe_list=config.recipe_list, # type: ignore
+    mode="asgi",
+)
+
+app = FastAPI(title="SuperTokens Example")
+
+app.add_middleware(get_middleware())
+
+app = CORSMiddleware(
+    app=app,
+    allow_origins=[
+        config.app_info.website_domain  # type: ignore
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+handler = Mangum(app)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>

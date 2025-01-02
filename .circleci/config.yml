@@ -1,25 +1,86 @@
 version: 2.1
 orbs:
-  node: circleci/node@4.1
+  node: circleci/node@7.0.0
   slack: circleci/slack@3.4.2
+commands:
+  code-type-check:
+    parameters:
+      language:
+        type: string
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./workspace
+      - run: cd ./workspace/v3/scripts/code-type-checking/<<parameters.language>> && docker build -t code-check .
+      - run: docker run code-check
 jobs:
-  deploy-to-test-site:
+  build-docs:
     docker:
-      - image: rishabhpoddar/supertokens_docs_building_with_android
-    resource_class: xlarge
+      - image: cimg/node:20.0
     steps:
       - checkout
       - node/install-packages:
-          app-dir: "~/project/v2"
-      - run: cd ../ && git clone git@github.com:supertokens/supertokens-backend-website.git
-      - run: apt-get update
-      - run: apt -y --fix-broken install
-      - run: cd v2 && npm run build-ignore-errors
-      - run: git config --global user.email "$EMAIL"
-      - run: git config --global user.name "$NAME"
-      - run: cd ../supertokens-backend-website && git add --all && git commit -m"docs changes" && git push && ./releaseDev.sh
+          pkg-manager: npm
+          app-dir: v3
+      - run:
+          name: Build Docusaurus Site
+          command: cd v3 && npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - v3/build
+  build-code-type-checking:
+    docker:
+      - image: cimg/node:20.0
+    steps:
+      - checkout
+      - run: sudo npm install -g bun
+      - node/install-packages:
+          pkg-manager: npm
+          app-dir: v3
+      - run:
+          name: Create code snippets
+          command: cd v3 && npm run write-code-blocks
+      - persist_to_workspace:
+          root: .
+          paths:
+            - v3/scripts/code-type-checking
+  create-supertokens-backend-website-dev-tag:
+    docker:
+      - image: cimg/node:18.0
+    steps:
+      - checkout
+      - run: git clone --depth=1 git@github.com:supertokens/supertokens-backend-website.git --branch=master supertokens-backend-website
+      - attach_workspace:
+          at: ./workspace
+      - run: git config --global user.email "$EMAIL" && git config --global user.name "$NAME"
+      - run:
+          name: Copy Docusaurus Build to Backend Website Folder
+          command: |
+            rm -rf supertokens-backend-website/app/docs/v2/*
+            cp -R ./workspace/v3/build/* supertokens-backend-website/app/docs/v2
+      - run:
+          name: Commit and Push Changes
+          command: |
+            cd supertokens-backend-website
+            git add --all
+            git commit -m "docs changes"
+            git push origin master
+            ./releaseDev.sh
       - slack/status
-  code-checking-ios-only:
+  run-code-type-checking:
+    machine:
+      image: ubuntu-2204:current
+      docker_layer_caching: true
+    steps:
+      - code-type-check:
+          language: "javascript"
+      - code-type-check:
+          language: "go"
+      - code-type-check:
+          language: "python"
+      - slack/status
+  run-code-type-checking-ios:
     macos:
       xcode: 14.1.0
     steps:
@@ -28,96 +89,33 @@ jobs:
           app-dir: "~/project/v2"
       - run:
           name: Setup iOS env
-          command: cd v2/src/plugins/codeTypeChecking/iosEnv/ && pod install
-          no_output_timeout: 30m
-      - run: nvm install 16 -y
-      - run:
-          no_output_timeout: 30m
-          name: Run build for iOS docs
-          command: nvm use 16 && cd v2 && npm run build:ios
-      - slack/status
-  code-checking:
-    environment:
-      TAR_OPTIONS: --no-same-owner
-    docker:
-      - image: rishabhpoddar/supertokens_docs_building_with_android
-    resource_class: xlarge
-    steps:
-      - checkout
-      - node/install-packages:
-          app-dir: "~/project/v2"
-      - run: cd ../ && git clone https://github.com/flutter/flutter.git
-      - run: cd ../ && export PATH="$PATH:/root/flutter/bin" && echo $PATH
-      - run: cd ../ && export PATH="$PATH:/root/flutter/bin" && flutter doctor && chown -R root:root /root/flutter
-      - run: cd ../ && git clone git@github.com:supertokens/supertokens-backend-website.git
-      - run:
-          name: Setup JS Env
-          command: cd v2/src/plugins/codeTypeChecking/jsEnv/ && npm i --force
-          no_output_timeout: 30m
-      - run:
-          name: Setup Go Env
-          command: wget  https://go.dev/dl/go1.21.3.linux-amd64.tar.gz && rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.3.linux-amd64.tar.gz && export PATH=$PATH:/usr/local/go/bin
-          no_output_timeout: 30m
-      - run: apt-get update
-      - run: apt-get install -y python3.8-dev python3.8-venv || true
-      - run: apt-get install python3-pip -y
-      - run: apt -y --fix-broken install
-      - run: python3.8 -m pip install virtualenv
-      - run: cd v2/src/plugins/codeTypeChecking/pythonEnv/ && python3.8 -m virtualenv ./venv && source venv/bin/activate && pip install -r ./requirements.txt
-      - run:
-          name: Setup Dart Env
-          command: cd v2/src/plugins/codeTypeChecking/dart_env && export PATH="$PATH:/root/flutter/bin" && flutter pub get
-          no_output_timeout: 30m
-      - run:
-          name: Install Java
           command: |
-            apt-get update
-            apt-get install -y openjdk-11-jdk
-            wget https://archive.apache.org/dist/maven/maven-3/3.8.4/binaries/apache-maven-3.8.4-bin.tar.gz
-            tar xzf apache-maven-3.8.4-bin.tar.gz
-            mv apache-maven-3.8.4 /opt/maven
-            echo 'export PATH=/opt/maven/bin:$PATH' >> $BASH_ENV
-            source $BASH_ENV
-      - run:
-          name: Install .NET
-          command: |
-            wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-            dpkg -i packages-microsoft-prod.deb
-            rm packages-microsoft-prod.deb
-            apt-get update
-            apt-get install -y apt-transport-https
-            apt-get update
-            apt-get install -y dotnet-sdk-6.0
-      - run:
-          command: export PATH="$PATH:/root/flutter/bin" && cd v2 && npm run build
-          no_output_timeout: 30m
+            cd ./workspace/v3/scripts/code-type-checking/swift
+            pod install
+      - run: |
+          cd ./workspace/v3/scripts/code-type-checking/swift
+          set -o pipefail
+          xcodebuild -workspace iosenv.xcworkspace -scheme iosenv build CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO -quiet | ./Pods/xcbeautify/xcbeautify
       - slack/status
-
 workflows:
   version: 2
-  test:
+  build-and-deploy:
     jobs:
-      - deploy-to-test-site:
+      - build-docs:
+          filters:
+            branches:
+              only:
+                - master
+      - create-supertokens-backend-website-dev-tag:
           requires:
-            - code-checking
-            - code-checking-ios-only
-          context:
-            - slack-notification
+            - build-docs
+  code-type-checking:
+    jobs:
+      - build-code-type-checking:
           filters:
             branches:
               only:
                 - master
-      - code-checking:
-          context:
-            - slack-notification
-          filters:
-            branches:
-              only:
-                - master
-      - code-checking-ios-only:
-          context:
-            - slack-notification
-          filters:
-            branches:
-              only:
-                - master
+      - run-code-type-checking:
+          requires:
+            - build-code-type-checking

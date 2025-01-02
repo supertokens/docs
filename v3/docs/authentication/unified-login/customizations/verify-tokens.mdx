@@ -1,0 +1,407 @@
+---
+title: Verify Tokens
+hide_title: true
+sidebar_position: 3
+---
+
+import { BackendTabs } from "/src/components/Tabs";
+import { AppInfoForm } from "/src/components/AppInfoForm";
+import PaidFeatureCallout from '../_blocks/paid-feature-callout.mdx'
+
+
+# Verify Tokens
+
+<PaidFeatureCallout />
+
+There are two ways with which you can verify an **OAuth2 Access Token**:
+- By using a standard **JWT**, JSON Web Token, verification library
+- By calling the special introspection endpoint that we expose through the core service
+
+We will explain when you should use each method in the sections below.
+
+One thing to note is that, besides the standard **OAuth2** token claims, our implementation includes an additional one called `stt`.
+This stands for `SuperTokens Token Type`.
+It is used to make sure that the validation is performed for the correct token type:
+- `0` represents a **SuperTokens Session Access Token** 
+- `1` represents an **OAuth2 Access Token**
+- `2` represents an **OAuth2 ID Token**.
+
+:::info
+
+The following guide covers only **OAuth2 Tokens** verification.
+For information on how to verify **Supertokens Session Tokens** please refer to the [following section](/docs/additional-verification/session-verification/protect-api-routes/overview).
+
+:::
+
+## Validation Method 
+
+### Using a generic JWT verification library
+
+This is the standard validation method and should be used for most of the operations that need to be protected.
+It will tell you that the token is valid from a cryptographic standpoint and that it has not expired.
+
+The code samples show you a basic validation scenario where we check if the token has the required scope in order for an action to be performed.
+
+:::info
+
+If your scenario involves a common backend with multiple frontend clients you can drop the `client_id` check. 
+
+:::
+
+<AppInfoForm />
+
+<BackendTabs additionalValues={[{ value: "c#", label: "C#" }, { value: "java", label: "Java" }, { value: "php", label: "PHP" } ]}>
+
+<BackendTabs.TabItem value="nodejs">
+
+For NodeJS you can use [jose](https://github.com/panva/jose) to verify the token.
+
+```tsx
+import jose from "jose";
+
+const JWKS = jose.createRemoteJWKSet(new URL('^{appInfo.apiDomain}^{appInfo.apiBasePath}jwt/jwks.json'))
+
+// Follow this example if you are using the Authorization Code Flow
+async function validateToken(jwt: string) {
+  const requiredScope = "<YOUR_REQUIRED_SCOPE>";
+  const clientId = '<CLIENT_ID>';
+
+  try {
+    const { payload } = await jose.jwtVerify(jwt, JWKS, {
+      requiredClaims: ['stt', 'scp', 'client_id'],
+    });
+
+    if(payload.stt !== 1) return false;
+    if(payload.client_id !== clientId) return false;
+    
+    const scopes = payload.scp as string[];
+    return scopes.includes(requiredScope);
+  } catch (err) {
+    return false;
+  }
+}
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+You can use the [jwx](https://github.com/lestrrat-go/jwx) library to verify the token.
+
+```go
+import (
+	"context"
+	"fmt"
+
+	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/jwk"
+)
+
+func ValidateToken(token string) bool {
+    apiDomain := "^{appInfo.apiDomain}"
+    apiBasePath := "^{appInfo.apiBasePath}" 
+    clientId := "<CLIENT_ID>"
+    requiredScope := "<REQUIRED_SCOPE>"
+
+    jwksURL := fmt.Sprintf("%s%sjwt/jwks.json", apiDomain, apiBasePath)
+    jwks, err := jwk.Fetch(context.Background(), jwksURL)
+    if err != nil {
+      return false
+    }
+
+    parsedToken, err := jwt.Parse(
+      []byte(token),
+      jwt.WithKeySet(jwks),
+      jwt.WithClaimValue("stt", 1),
+      jwt.WithClaimValue("client_id", clientId),
+    )
+    if err != nil {
+      return false
+    }
+
+    scp, ok := parsedToken.Get("scp")
+    if !ok {
+      return false
+    }
+
+    scopes, ok := scp.([]interface{})
+    if !ok {
+      return false
+    }
+
+    for _, scope := range scopes {
+      if scope, ok := scope.(string); ok && scope == requiredScope {
+        return true
+      }
+    }
+
+    return false;
+}
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+You can use the [PyJWT](https://github.com/jpadilla/pyjwt) library to verify the token.
+
+```python      
+from typing import Optional, List
+import jwt
+from jwt import PyJWKClient
+
+def validate_token(token: str) -> bool:
+  api_domain = "^{appInfo.apiDomain}"
+  api_base_path = "^{appInfo.apiBasePath}"
+  client_id = "<CLIENT_ID>"
+  required_scope = "<YOUR_REQUIRED_SCOPE>"
+
+  jwks_url = f"{api_domain}{api_base_path}jwt/jwks.json"
+  jwks_client = PyJWKClient(jwks_url)
+
+  try:
+      signing_key = jwks_client.get_signing_key_from_jwt(token)
+      decoded = jwt.decode(
+          token,
+          signing_key.key,
+          algorithms=['RS256'],
+          options={"require": ["stt", "client_id", "scp"]}
+      )
+
+      stt: Optional[int] = decoded.get('stt')
+      if stt != 1:
+          return False
+
+      token_client_id: Optional[str] = decoded.get('client_id', None)
+      if client_id != token_client_id:
+          return False
+
+
+      scopes: List[str] = decoded.get('scp', [])
+      if required_scope not in scopes:
+          return False
+
+      return True
+  except Exception: 
+      return False
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="php">
+
+You can use the [Firebase JWT](https://github.com/firebase/php-jwt) library to verify the token.
+
+```php
+
+require 'vendor/autoload.php';
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+function validateToken($jwt) {
+    $apiDomain = "^{appInfo.apiDomain}";
+    $apiBasePath = "^{appInfo.apiBasePath}";
+    $jwksUrl = $apiDomain . $apiBasePath . '/jwt/jwks.json';
+    $requiredScope = "<YOUR_REQUIRED_SCOPE>";
+    $clientId = "<CLIENT_ID>";
+
+    $jwks = json_decode(file_get_contents($jwksUrl), true);
+    try {
+        $decoded = JWT::decode($jwt, JWK::parseKeySet($jwks), 'RS256'));
+        if ($decoded->sst !== 1) {
+          return false;
+        }
+        if ($decoded->client_id !== $clientId) {
+            return false;
+        }
+        return in_array($requiredScope, $decoded->scp);
+    } catch (Exception $e) {
+        return false;
+    }
+}
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="java">
+
+You can use the [Auth0 JWT](https://github.com/auth0/java-jwt) library to verify the token.
+Here is an example of how you can do that:
+
+```java
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.interfaces.JWTVerifier;
+import com.auth0.jwt.JWTVerifier.Base;
+import com.auth0.jwt.algorithms.Algorithm;
+
+import java.net.URL;
+import java.util.Map;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
+
+public class JWTVerifier {
+
+    private static final String JWKS_URL = "^{appInfo.apiDomain}^{appInfo.apiBasePath}jwt/jwks.json";
+    private static final String CLIENT_ID = "<CLIENT_ID>";
+
+    private static Map<String, Object> fetchJWKS() throws Exception {
+        URL url = new URL(JWKS_URL);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        
+        InputStream responseStream = connection.getInputStream();
+        Scanner scanner = new Scanner(responseStream, StandardCharsets.UTF_8.name());
+        String responseBody = scanner.useDelimiter("\\A").next();
+        scanner.close();
+        
+        return JWT.decode(responseBody).getHeader();
+    }
+
+    public static boolean validateToken(String token) {
+        try {
+            Map<String, Object> jwks = fetchJWKS();
+            
+            Algorithm algorithm = Algorithm.RSA256(jwks.get("x5c"), null);
+            JWTVerifier verifier = JWT.require(algorithm)
+                    .build();
+            
+            DecodedJWT jwt = verifier.verify(token);
+            if(jwt.getClaim("sst").asInt() != 1) {
+              return false;
+            }
+
+            if(jwt.getClaim("client_id").asString() != CLIENT_ID) {
+              return false;
+            }
+
+            List<String> scopes = jwt.getClaim("scp").asList();
+            return scopes.contains(requiredScope);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="c#">
+
+You can use the [IdentityModel](https://github.com/IdentityModel/IdentityModel) library to verify the token.
+
+```csharp
+
+using System;
+using System.Linq;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+
+class AuthorizationCodeTokenValidator
+{
+    static async Task<bool> ValidateToken(string jwtStr)
+    {
+        string apiDomain = "^{appInfo.apiDomain}";
+        string apiBasePath = "^{appInfo.apiBasePath}";
+        string clientId = "<CLIENT_ID>";
+        string requiredScope = "<REQUIRED_SCOPE>";
+
+        HttpClient client = new HttpClient();
+        var response = await client.GetStringAsync($"{apiDomain}{apiBasePath}jwt/jwks.json");
+        var jwks = new JsonWebKeySet(response);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var validationParameters = new TokenValidationParameters
+        {
+            IssuerSigningKeys = jwks.Keys
+        };
+
+        try
+        {
+            SecurityToken validatedToken;
+            var principal = tokenHandler.ValidateToken(jwtStr, validationParameters, out validatedToken);
+            var claims = principal.Claims.ToDictionary(c => c.Type, c => c.Value);
+
+            if (!claims.ContainsKey("stt") || claims["stt"] != "1")
+            {
+                return false;
+            }
+
+            if (!claims.ContainsKey("client_id") || claims["client_id"] != clientId)
+            {
+                return false;
+            }
+
+            var scopes = claims["scp"].Split(" ");
+            if (!scopes.Contains(requiredScope))
+            {
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+}
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+#### Email Verification
+
+If you are using email and password based authentication, and you want to validate if the user has verified their email, you will have to check if the `email_verified` claim is true.
+
+### Calling the Token Introspection API
+
+When a user logs out, their token will be removed from the **SuperTokens Core** database. 
+That change will not reflect in token validation process that uses a JWT verification library.
+The token will stil be valid until its expiration time.
+
+In order to completely make sure that the token has not been removed you can directly call the **SuperTokens Core** service.
+We recommend that you perform this process for high security operations, in order to avoid the risk of a token being used by a malicious agent.
+
+Here is an example of how you can use this validation method:
+
+#### By Directly Calling the Introspection Endpoint
+
+```bash
+# The response status should be 200
+# and the body should have an "active" property set to true
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -d '{"token": "<YOUR_TOKEN>"}' \
+     "^{appInfo.apiDomain}^{appInfo.apiBasePath}/oauth/introspect"
+```
+
+#### By Using the SDK Method
+
+If you are using a **NodeJS** backend you can directly call the SDK.
+
+```tsx
+import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
+
+async function validateToken(token: string) {
+  const { status } = await OAuth2Provider.validateOAuth2AccessToken(
+    token,
+    {
+      clientId: "<CLIENT_ID>",
+      scopes: ["<REQUIRED_SCOPE>"],
+    },
+    true
+  );
+
+  return status === "OK";
+}
+```

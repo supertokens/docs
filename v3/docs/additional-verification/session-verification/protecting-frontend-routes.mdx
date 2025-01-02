@@ -1,0 +1,525 @@
+---
+id: protecting-frontend-routes
+title: Protecting frontend routes
+hide_title: true
+sidebar_position: 2
+---
+
+import { UIType } from "/src/components/UITypeSwitch";
+import {
+  FrontendPrebuiltUITabs,
+  FrontendCustomUITabs,
+} from "/src/components/Tabs";
+import { MobileFrameworksCard, NpmOrScriptsCard } from "/src/components/Cards";
+import { OAuthFrontendVerificationCallout } from "/src/components/Callouts";
+
+
+# Protecting frontend routes
+
+<OAuthFrontendVerificationCallout />
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+## Requiring a session to access a route
+
+<FrontendPrebuiltUITabs>
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+You can wrap your components with the `<SessionAuth>` react component. This will ensure that your component renders only if the user is logged in. If they are not logged in, the user will be redirected to the login page.
+
+```tsx 
+import React from "react";
+import {
+    BrowserRouter,
+    Routes,
+    Route,
+} from "react-router-dom";
+// highlight-next-line 
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import { SessionAuth } from "supertokens-auth-react/recipe/session";
+// @ts-ignore
+import MyDashboardComponent from "./dashboard";
+
+class App extends React.Component {
+    render() {
+        return (
+            <SuperTokensWrapper>
+                <BrowserRouter>
+                    <Routes>
+                        <Route path="/dashboard" element={
+                            // highlight-start
+                            <SessionAuth>
+                                {/*Components that require to be protected by authentication*/}
+                                <MyDashboardComponent />
+                            </SessionAuth>
+                            // highlight-end
+                        } />
+                    </Routes>
+                </BrowserRouter>
+            </SuperTokensWrapper>
+        );
+    }
+}
+```
+
+## Optional session on a route
+
+You can provide the `requireAuth={false}` prop when using `<SessionAuth>` as shown below:
+
+```tsx 
+import React from "react";
+import {
+    BrowserRouter,
+    Routes,
+    Route,
+} from "react-router-dom";
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import Session, { SessionAuth } from "supertokens-auth-react/recipe/session";
+
+class App extends React.Component {
+    render() {
+        return (
+            <SuperTokensWrapper>
+                <BrowserRouter>
+                    <Routes>
+                        <Route path="/dashboard" element={
+                            // highlight-start
+                            <SessionAuth requireAuth={false}>
+                            // highlight-end
+                                <MyDashboardComponent />
+                            </SessionAuth>
+                        } />
+                    </Routes>
+                </BrowserRouter>
+            </SuperTokensWrapper>
+        );
+    }
+}
+
+// highlight-start
+function MyDashboardComponent(props: any) {
+    let sessionContext = Session.useSessionContext();
+
+    if (sessionContext.loading) {
+        return null;
+    }
+
+    if (sessionContext.doesSessionExist) {
+        // TODO:
+    } else {
+        // TODO:
+    }
+
+    return null;
+}
+// highlight-end
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+You can use the `doesSessionExist` function to check if a session exists in all your routes.
+
+```tsx
+import Session from 'supertokens-web-js/recipe/session';
+
+async function doesSessionExist() {
+      if (await Session.doesSessionExist()) {
+            // user is logged in
+      } else {
+            // user has not logged in yet
+      }
+}
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+## Verifying the claims of a session
+
+Sometimes, you may also want to check if there are certain claims in the session before granting access to a route. For example, you may want to check that the session has the admin role claim for certain APIs, or that the user has completed 2FA.
+
+This can be done using our session claims validator feature. Let's take an example of using the user roles claim to check if the session has the admin claim:
+
+<FrontendPrebuiltUITabs>
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+```tsx
+import React from "react";
+import { SessionAuth } from 'supertokens-auth-react/recipe/session';
+import { AccessDeniedScreen } from 'supertokens-auth-react/recipe/session/prebuiltui';
+import { UserRoleClaim, /*PermissionClaim*/ } from 'supertokens-auth-react/recipe/userroles';
+
+const AdminRoute = (props: React.PropsWithChildren<any>) => {
+    return (
+        <SessionAuth 
+            accessDeniedScreen={AccessDeniedScreen}
+            overrideGlobalClaimValidators={(globalValidators) => [
+                ...globalValidators, UserRoleClaim.validators.includes("admin"),
+            ]
+        }>
+            {props.children}
+        </SessionAuth>
+    );
+}
+
+```
+Above we are creating a generic component called `AdminRoute` which enforces that its child components can only be rendered if the user has the admin role.
+
+In the `AdminRoute` component, we use the `SessionAuth` wrapper to ensure that the session exists. We also add the `UserRoleClaim` validator to the `<SessionAuth>` component which checks if the validators pass or not. If all validation passes, we render the `props.children` component. If the claim validation has failed, it will display the `AccessDeniedScreen` component instead of rendering the children. You can also pass your own custom component to the `accessDeniedScreen` prop.
+
+:::note
+You can extend the `AdminRoute` component to check for other types of validators as well. This component can then be reused to protect all of your app's components (In this case, you may want to rename this component to something more appropriate, like `ProtectedRoute`).
+:::
+
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-auth-react/recipe/session";
+import {UserRoleClaim} from "supertokens-auth-react/recipe/userroles"
+
+function ProtectedComponent() {
+    let claimValue = Session.useClaimValue(UserRoleClaim)
+    if (claimValue.loading || !claimValue.doesSessionExist) {
+        return null;
+    }
+    let roles = claimValue.value;
+    if (Array.isArray(roles) && roles.includes("admin")) {
+        // User is an admin
+    } else {
+        // User doesn't have any roles, or is not an admin..
+    }
+}
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim, /*PermissionClaim*/ } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    UserRoleClaim.validators.includes("admin"),
+                 /* PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.id === UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let roles = await Session.getClaimValue({claim: UserRoleClaim});
+        if (Array.isArray(roles) && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+</UIType.PrebuiltUIContent>
+
+<UIType.CustomUIContent>
+
+## Requiring a session to access a route
+
+## Verifying the claims of a session
+
+Sometimes, you may also want to check if there are certain claims in the session before granting access to a route. For example, you may want to check that the session has the admin role claim for certain APIs, or that the user has completed 2FA.
+
+This can be done using our session claims validator feature. Let's take an example of using the user roles claim to check if the session has the admin claim:
+
+<FrontendCustomUITabs>
+<FrontendCustomUITabs.TabItem value="web">
+
+<NpmOrScriptsCard>
+<NpmOrScriptsCard.Content value="npm">
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim, /*PermissionClaim*/ } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await Session.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    UserRoleClaim.validators.includes("admin"),
+                 /* PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.id === UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+import { UserRoleClaim } from "supertokens-web-js/recipe/userroles";
+
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await Session.doesSessionExist()) {
+        // highlight-start
+        let roles = await Session.getClaimValue({claim: UserRoleClaim});
+        if (roles !== undefined && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+</NpmOrScriptsCard.Content>
+<NpmOrScriptsCard.Content value="scripts">
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensUserRoles from "supertokens-web-js-script/recipe/userroles";
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+
+        // highlight-start
+        let validationErrors = await supertokensSession.validateClaims({
+            overrideGlobalClaimValidators: (globalValidators) =>
+                [...globalValidators,
+                    supertokensUserRoles.UserRoleClaim.validators.includes("admin"),
+                 /* supertokensUserRoles.PermissionClaim.validators.includes("modify") */
+                ]
+        });
+        // highlight-end
+
+        if (validationErrors.length === 0) {
+            // user is an admin
+            return true;
+        }
+
+        for (const err of validationErrors) {
+            if (err.id === supertokensUserRoles.UserRoleClaim.id) {
+                // user roles claim check failed
+            } else {
+                // some other claim check failed (from the global validators list)
+            }
+        }
+    }
+    // either a session does not exist, or one of the validators failed.
+    // so we do not allow access to this page.
+    return false
+}
+```
+
+- We call the `validateClaims` function with the `UserRoleClaim` validator which makes sure that the user has an `admin` role.
+- The `globalValidators` represents other validators that apply to all calls to the `validateClaims` function. This may include a validator that enforces that the user's email is verified (if enabled by you).
+- We can also add a `PermissionClaim` validator to enforce a permission.
+
+If you want to have more complex access control, you can get the roles list from the session as follows, and check the list yourself:
+
+```tsx
+import supertokensSession from "supertokens-web-js-script/recipe/session";
+import supertokensUserRoles from "supertokens-web-js-script/recipe/userroles";
+async function shouldLoadRoute(): Promise<boolean> {
+    if (await supertokensSession.doesSessionExist()) {
+        // highlight-start
+        let roles = await supertokensSession.getClaimValue({claim: supertokensUserRoles.UserRoleClaim});
+        if (roles !== undefined && roles.includes("admin")) {
+            // User is an admin
+            return true;
+        }
+         // highlight-end
+    }
+    // either a session does not exist, or the user is not an admin
+    return false
+}
+```
+
+</NpmOrScriptsCard.Content>
+</NpmOrScriptsCard>
+
+</FrontendCustomUITabs.TabItem>
+
+<FrontendCustomUITabs.TabItem value="mobile">
+
+<MobileFrameworksCard>
+
+<MobileFrameworksCard.Content value="reactnative">
+
+```tsx
+import SuperTokens from 'supertokens-react-native';
+
+async function getRole() {
+    if (await SuperTokens.doesSessionExist()) {
+
+        // highlight-start
+        let roles: string[] = (await SuperTokens.getAccessTokenPayloadSecurely())["st-role"].v;
+
+        if (roles.includes("admin")) {
+            // TODO..
+        } else {
+            // TODO..
+        }
+        // highlight-end
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="android">
+
+```kotlin
+import android.app.Application
+import com.supertokens.session.SuperTokens
+import org.json.JSONObject
+
+class MainApplication: Application() {
+    fun checkIfUserIsAnAdmin() {
+        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
+        val roles: List<String> = (accessTokenPayload.get("st-role") as JSONObject).get("v") as List<String>;
+        if (roles.contains("admin")) {
+            // user is an admin
+        } else {
+            // user is not an admin
+        }
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="ios">
+
+```swift
+import UIKit
+import SuperTokensIOS
+
+fileprivate class ViewController: UIViewController {
+    func checkIfUserIsAnAdmin() {
+        if let accessTokenPayload: [String: Any] = try? SuperTokens.getAccessTokenPayloadSecurely(), let roleObject: [String: Any] = accessTokenPayload["st-role"] as? [String: Any], let roles: [String] = roleObject["v"] as? [String] {
+            if roles.contains("admin") {
+                // user is an admin
+            } else {
+                // user is not an admin
+            }
+        }
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="flutter">
+
+```dart
+import 'package:supertokens_flutter/supertokens.dart';
+
+Future<void> checkIfUserIsAnAdmin() async {
+    var accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
+
+    if (accessTokenPayload.containsKey("st-role")) {
+      Map<String, dynamic> roleObject = accessTokenPayload["st-role"];
+
+      if (roleObject.containsKey("v")) {
+        List<String> roles = roleObject["v"];
+
+        if (roles.contains("admin")) {
+          // user is an admin
+        } else {
+          // user is not an admin
+        }
+      }
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+</MobileFrameworksCard>
+
+</FrontendCustomUITabs.TabItem>
+
+</FrontendCustomUITabs>
+
+</UIType.CustomUIContent>
+
+:::tip Feature
+You can also [build your own custom claim validators](/docs/post-authentication/session-management/claims/claim-validators) based on your app's requirements.
+:::

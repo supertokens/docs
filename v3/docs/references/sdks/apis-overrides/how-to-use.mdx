@@ -1,0 +1,234 @@
+---
+title: How to use
+hide_title: true
+sidebar_position: 2
+---
+
+import { BackendTabs } from "/src/components/Tabs";
+
+# How to send a custom response
+
+:::info Important
+This feature is only applicable for users who build their own frontend since our frontend requires on a specific output from the APIs as defined [here](https://supertokens.com/docs/fdi).
+:::
+
+Let's take an example of sending a custom response for the `/auth/emailpassword/email/exists GET` API (does email exist).
+
+We need to first override the function for that API (`emailExistsGET`) and then use the response object in the `input` param to send a custom response.
+
+The function signature expects an return type that has a certain shape, therefore, we must still return a valid response object from the function, but that will be ignored since you have already sent a response to the client.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```ts
+import SuperTokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        Session.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        // here we are only overriding the function that signs out a user
+                        signOutPOST: async function (input) {
+
+                            if (originalImplementation.signOutPOST === undefined) {
+                                throw Error("Should never come here")
+                            }
+                            // TODO: some custom logic
+
+                            // or call the default behaviour as show below
+                            return await originalImplementation.signOutPOST(input);
+                        },
+                        // ...
+                        // TODO: override more apis
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        EmailPassword.init({
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        emailExistsGET: async function (input) {
+
+                            // highlight-start
+                            // we can send a custom response like this:
+                            input.options.res.setStatusCode(200); // or any other status code
+                            input.options.res.sendJSONResponse({
+                                message: "my custom response",
+                                //...
+                            })
+                            // highlight-end
+
+                            // this return doesn't matter. But we must do it
+                            // cause the function signature expects a response.
+                            return {
+                                status: "OK",
+                                exists: false
+                            };
+                        }
+                    }
+                }
+            }
+        })
+    ]
+});
+
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"encoding/json"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				//highlight-start
+				Override: &sessmodels.OverrideStruct{
+					APIs: func(originalImplementation sessmodels.APIInterface) sessmodels.APIInterface {
+						// First we make a copy of the original implementation
+						originalSignOutPOST := *originalImplementation.SignOutPOST
+
+						// Then we override the default impl
+						(*originalImplementation.SignOutPOST) = func(sessionContainer sessmodels.SessionContainer, options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
+							// TODO: some custom logic
+
+							// or call the default behaviour as show below
+							return originalSignOutPOST(sessionContainer, options, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+      emailpassword.Init(&epmodels.TypeInput{
+        Override: &epmodels.OverrideStruct{
+          APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+
+            (*originalImplementation.EmailExistsGET) = func(email, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.EmailExistsGETResponse, error) {
+
+              // highlight-start
+              // we create our custom response.
+              options.Res.Header().Set("Content-Type", "application/json; charset=utf-8")
+              options.Res.WriteHeader(200)
+              responseJson := map[string]interface{}{
+                "message": "My custom response",
+                // ...
+              }
+
+              bytes, _ := json.Marshal(responseJson)
+              options.Res.Write(bytes)
+              // highlight-end
+
+              // this return doesn't matter. But we must do it
+              // cause the function signature expects a response.
+              return epmodels.EmailExistsGETResponse{
+                OK: &struct{ Exists bool }{
+                  Exists: false,
+                },
+              }, nil
+            }
+
+            return originalImplementation
+          },
+        },
+      }),
+		},
+	})
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.emailpassword.interfaces import APIOptions as EmailPasswordAPIOptions, EmailExistsGetOkResult, APIInterface as EmailPasswordAPIInterface
+from supertokens_python.recipe.session.interfaces import APIOptions as SessionAPIOptions, APIInterface as SessionAPIInterface
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe import session
+from typing import Dict, Any
+
+def override_emailpassword_apis(original_implementation: EmailPasswordAPIInterface):
+
+    async def email_exists_get(email: str, tenant_id: str, api_options: EmailPasswordAPIOptions, user_context: Dict[str, Any]):
+
+        # highlight-start
+        # send custom response like this
+        api_options.response.set_status_code(200)  # type: ignore
+        json_dict = {'message': 'Custom response'}
+        api_options.response.set_json_content(json_dict) # type: ignore
+        # highlight-end
+
+        # this return doesn't matter. But we must do it
+        # cause the function signature expects a response.
+        return EmailExistsGetOkResult(False)
+
+    original_implementation.email_exists_get = email_exists_get
+    return original_implementation
+
+# highlight-start
+def override_session_apis(original_implementation: SessionAPIInterface):
+    original_signout_post = original_implementation.signout_post
+
+    async def signout_post(
+        session: session.SessionContainer,
+        api_options: SessionAPIOptions,
+        user_context: Dict[str, Any],
+    ):
+        # TODO: custom logic
+
+        # or call the default behaviour as show below
+        return await original_signout_post(session, api_options, user_context)
+
+    original_implementation.signout_post = signout_post
+    return original_implementation
+
+
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        session.init(
+            # highlight-start
+            override=session.InputOverrideConfig(apis=override_session_apis)
+            # highlight-end
+        ),
+        emailpassword.init(override=emailpassword.InputOverrideConfig(apis=override_emailpassword_apis))
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
