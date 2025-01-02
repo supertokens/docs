@@ -14,6 +14,7 @@ import NavbarSearch from "@theme/Navbar/Search";
 import { Button } from "@radix-ui/themes";
 
 import styles from "./styles.module.css";
+import { trackButtonClick } from "@site/src/lib/analytics";
 
 function useNavbarItems() {
 	// TODO temporary casting until ThemeConfig type is improved
@@ -99,8 +100,15 @@ export default function NavbarContent(): JSX.Element {
 function SignUpButton() {
 	const [label, setLabel] = useState("Sign Up");
 
+	const onClick = useCallback(() => {
+		const eventName =
+			label === "Dashboard"
+				? "button_header_view_dashboard"
+				: "button_header_signup";
+		trackButtonClick(eventName, "v1");
+	}, [label]);
+
 	const updateButtonLabel = useCallback(async () => {
-		console.log(supertokens);
 		if (await supertokens.doesSessionExist()) {
 			setLabel("Dashboard");
 		}
@@ -114,6 +122,7 @@ function SignUpButton() {
 		<Button asChild color="orange">
 			<a
 				style={{ paddingRight: "var(--space-3)" }}
+				onClick={onClick}
 				href="/auth"
 				target="_blank"
 				className={styles.signUpButtonLink}

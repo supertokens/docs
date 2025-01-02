@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Card, Flex, Avatar, Grid, Box, Text } from "@radix-ui/themes";
 import Link from "@docusaurus/Link";
 
 import "./styles.scss";
+import { trackButtonClick } from "@site/src/lib/analytics";
 
 function ReferenceCardRoot({
 	children,
@@ -15,11 +16,17 @@ function ReferenceCardRoot({
 		return false;
 	});
 
+	const onClick = useCallback(() => {
+		trackButtonClick("button_reference_card", "v1", {
+			href,
+		});
+	}, [href]);
+
 	if (hasAvatarInChildren) {
 		return (
 			<Box p="4" asChild>
 				<Card className="reference-card" asChild>
-					<Link to={href}>
+					<Link to={href} onClick={onClick}>
 						<Flex gap="3" align="center">
 							{children}
 						</Flex>
@@ -32,7 +39,7 @@ function ReferenceCardRoot({
 	return (
 		<Box p="5" asChild>
 			<Card className="reference-card">
-				<Link to={href}>
+				<Link to={href} onClick={onClick}>
 					<Flex gap="3" direction="column">
 						{children}
 					</Flex>

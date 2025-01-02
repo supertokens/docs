@@ -18,7 +18,9 @@ const config: Config = {
 	onBrokenMarkdownLinks:
 		process.env.NODE_ENV === "production" ? "throw" : "warn",
 	future: {
-		experimental_faster: true,
+		// Use rspack only during the build phase for faster CI times
+		// In dev mode it crashes often while hot reloading
+		experimental_faster: process.env.NODE_ENV === "production" ? true : false,
 	},
 	// Even if you don't use internationalization, you can use this field to set
 	// useful metadata like html lang. For example, if your site is Chinese, you
@@ -130,10 +132,6 @@ const config: Config = {
 		// 	},
 		// ],
 	].filter(Boolean),
-	clientModules: [
-		//used to intercept client side navigation and fire analytics events.
-		require.resolve("./src/plugins/locationInterceptor"),
-	],
 };
 
 // As far as I can tell docusaurus doesn't export this type
