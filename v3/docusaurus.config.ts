@@ -105,7 +105,15 @@ const config: Config = {
 		},
 		prism: {
 			theme: prismThemes.vsDark,
-			additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php"],
+			additionalLanguages: [
+				"kotlin",
+				"java",
+				"swift",
+				"dart",
+				"csharp",
+				"php",
+				"bash",
+			],
 		},
 	} satisfies Preset.ThemeConfig,
 	plugins: [
