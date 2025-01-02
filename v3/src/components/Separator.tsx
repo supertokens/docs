@@ -1,5 +1,13 @@
 import { Separator as RadixSeparator } from "@radix-ui/themes";
 
-export function Separator() {
-	return <RadixSeparator size="4" my="2" />;
+type MarginProp = "1" | "2" | "3" | "5" | "6";
+
+export function Separator({
+	mt = "2",
+	mb = "2",
+}: {
+	mt: MarginProp;
+	mb: MarginProp;
+}) {
+	return <RadixSeparator size="4" mt={mt} mb={mb} />;
 }

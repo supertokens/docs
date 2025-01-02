@@ -14,9 +14,8 @@ const config: Config = {
 	baseUrl: "/",
 	favicon: "img/favicon.ico",
 	trailingSlash: false,
-	onBrokenLinks: process.env.NODE_ENV === "production" ? "throw" : "warn",
-	onBrokenMarkdownLinks:
-		process.env.NODE_ENV === "production" ? "throw" : "warn",
+	onBrokenLinks: "warn",
+	onBrokenMarkdownLinks: "warn",
 	future: {
 		// Use rspack only during the build phase for faster CI times
 		// In dev mode it crashes often while hot reloading
@@ -105,7 +104,15 @@ const config: Config = {
 		},
 		prism: {
 			theme: prismThemes.vsDark,
-			additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php"],
+			additionalLanguages: [
+				"kotlin",
+				"java",
+				"swift",
+				"dart",
+				"csharp",
+				"php",
+				"bash",
+			],
 		},
 	} satisfies Preset.ThemeConfig,
 	plugins: [

@@ -1,0 +1,174 @@
+---
+title: Account Migration
+hide_title: true
+sidebar_position: 2
+toc_max_heading_level: 4
+---
+
+import { Separator } from "/src/components/Separator";
+import { DescriptionText } from "/src/components/DescriptionText";
+
+# Account Migration 
+
+<DescriptionText>
+  To following guide will show how you can move your users from your current authentication solution to **SuperTokens**
+</DescriptionText>
+
+<Separator />
+
+## Overview
+
+The process of migrating your existing accounts can be broken down into two parts:
+
+### The initial bulk import
+
+This is where you will be importing most of your users through the **SuperTokens** bulk import API.
+The process is async and can work with large amounts of data.
+
+### The lazy migration of new users
+
+If new users get created through your previous authentication provider after you have exported the existing accounts, you will have to add the new ones one by one.
+To do this, we expose an API that allows you to create new users, in **SuperTokens**, when they sign up using your old flow.
+
+
+## Migration Steps
+
+### 1. Add the lazy migration flow
+
+You will have to call the lazy migration API when a new user signs up using your previous authentication provider.
+This will create a new account in **SuperTokens**, based on the information provided in the request body
+
+```bash showAppTypeSelect
+curl --location --request POST '^{coreInfo.uri}/bulk-import/import' \
+     --header 'api-key: ^{coreInfo.key}' \
+     --header 'Content-Type: application/json; charset=utf-8' \
+     --data-raw '{
+    "externalUserId": "<EXTERNAL_ID>",
+    "userMetadata": {},
+    "userRoles": [],
+    "totpDevices": [],
+    "loginMethods": []
+}
+```
+
+:::info
+If your application does not have a sign up process or if new users are created manually you can skip this step
+:::
+
+### 2. Export the accounts from your current authentication provider
+
+Export the users from your previous authentication provider and adjust the data to match the request body schema used in the previous step.
+ 
+### 3. Perform the bulk migration process
+
+#### 3.1 Add the accounts that should be imported
+
+Using the data that you have generated in the previous step, you will have to call the `add-users` endpoint.
+This step stages the data that will be imported later on by the background job.
+
+Keep in mind that the endpoint has a limit 10000 users per request.
+
+```bash showAppTypeSelect
+curl --location --request POST '^{coreInfo.uri}/bulk-import/add-users' \
+     --header 'api-key: ^{coreInfo.key}' \
+     --header 'Content-Type: application/json; charset=utf-8' \
+     --data-raw '{
+    users: [
+      {
+        "externalUserId": "<EXTERNAL_ID>",
+        "userMetadata": {},
+        "userRoles": [],
+        "totpDevices": [],
+        "loginMethods": []
+      }
+  ]
+}
+```
+
+:::info The Bulk Import Cron Job
+
+Every 5 minutes the **SuperTokens** core service will run a cron job that goes through the staged users and tries to import them.
+If a user gets imported successfully it will get removed from the staged list.
+:::
+
+
+#### 3.2 Monitor the progress of the job
+
+In order to determine if all the users have been processed by the import flow you can call the `count users` API.
+
+Before doing that, let's first understand the different states in which a staged user can be.
+During the import process, the user can have one of the following statuses:
+- **NEW**: The user has not yet been picked up by the import process.
+- **PROCESSING**: The import process has selected the user for import.
+- **FAILED**: The import process has failed for that user.
+
+If a user gets imported successfully it will then be removed from the staged list. Hence, no status is needed for that state.
+
+With this new information let's get back to the `count users` endpoint. The request works in two ways: 
+- If you use it without any query parameters it will return an aggregated count of all the user statuses: `{ "NEW": <number>, "PROCESSING": <number>, "FAILED": <number> }`.
+- If you pass it a status filter as a query parameter (eg. `status=NEW`) it will count only the users with that status: `{ "count": <number> }`.
+
+We recommend that you just call the `count users` API once, without filters, and check if there are any users left that have either the `NEW` or `PROCESSING` statuses.
+If both `NEW` and `PROCESSING` have the count 0, then you can consider the import process as done.
+
+```bash showAppTypeSelect
+  curl --location --request GET '^{coreInfo.uri}/bulk-import/users/count' \
+     --header 'api-key: ^{coreInfo.key}' \
+     --header 'Content-Type: application/json; charset=utf-8' \
+```
+
+
+#### 3.3 Handle staged users that failed to import 
+
+You will have to go through this step only if you have staged users that failed to import.
+This can happen for a number of reasons. Some of the most common reasons are:
+- `Email` / `phoneNumber` already exists
+- `externalUserId` is being already used by other user
+- A primary user already exists for the email but with a different login method
+
+If at the end of the previous step you have determined that you have staged users that failed to import you can debug the issues with the `get users` API.
+
+```bash showAppTypeSelect
+curl --location --request GET '^{coreInfo.uri}/bulk-import/users?status=FAILED' \
+     --header 'api-key: ^{coreInfo.key}' \
+     --header 'Content-Type: application/json; charset=utf-8' \
+```
+
+
+**Response Shape**
+
+```json
+{
+  "users": [
+    {
+      "id": "<string>",
+      "raw_data": {},
+      "status": null | "NEW" | "PROCESSING" | "FAILED",
+      "error_msg": [<string>],
+    }
+  ],
+  "nextPaginationToken": "<string>"
+}
+```
+
+The response will include the import error messages for each specific user.
+Use them to determine what needs to be corrected in your import data.
+After you have fixed the issues you can then run the process again, from step `3.1`, only for the corrected data.
+
+
+If you all your data has been imported correctly when can now consider the account migration process as done.
+
+:::success You have successfully migrated your accounts
+
+Now that you have completed the user migration process when can go on to the [next step](/docs/migration/session-migration).
+There you will see how you can move your active sessions from your previous authentication provider to **SuperTokens**.
+
+:::
+
+
+## See Also
+
+- [User Management](/docs)
+- [Account Linking](/docs)
+- [Email Verification](/docs)
+
