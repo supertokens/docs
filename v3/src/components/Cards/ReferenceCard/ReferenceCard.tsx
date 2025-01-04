@@ -80,10 +80,26 @@ function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
 
 function ReferenceCardGrid({ children }: React.PropsWithChildren<{}>) {
 	return (
-		<Grid columns="repeat(3, 1fr)" gap="4">
+		<Grid
+			columns={{
+				initial: "repeat(1, 1fr)",
+				lg: "repeat(3, 1fr)",
+				xs: "repeat(2, 1fr)",
+			}}
+			gap="4"
+		>
 			{children}
 		</Grid>
 	);
+}
+
+// In some cases we want to show a grid that has only two columns
+// but in which children stretch over a 1/3 of the width of the grid
+// It might be skill issue but I can't figure out anything other than this hacky solution.
+// We use an additional empty div to ensure the width size.
+// That div needs to work in responsive scenarios (dissapear when the grid changes to two columns)
+function ReferenceCardGridHelper() {
+	return <div className="reference-card__grid-helper" />;
 }
 
 export const ReferenceCard = Object.assign(ReferenceCardRoot, {
@@ -91,4 +107,5 @@ export const ReferenceCard = Object.assign(ReferenceCardRoot, {
 	Title: ReferenceCardTitle,
 	Description: ReferenceCardDescription,
 	Grid: ReferenceCardGrid,
+	GridHelper: ReferenceCardGridHelper,
 });
