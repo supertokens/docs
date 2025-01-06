@@ -20,7 +20,8 @@ export function NodePackageManagerSelect() {
 			<Select.Content>
 				<Select.Item value="npm7+">{`NPM>=7`}</Select.Item>
 				<Select.Item value="npm6">{`NPM6`}</Select.Item>
-				<Select.Item value="yarn">Yarn</Select.Item>
+				<Select.Item value="yarn">yarn</Select.Item>
+				<Select.Item value="pnpm">pnpm</Select.Item>
 			</Select.Content>
 		</Select.Root>
 	);
