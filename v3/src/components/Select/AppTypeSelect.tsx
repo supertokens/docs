@@ -8,7 +8,7 @@ export const AppTypeSelect = () => {
 
 	return (
 		<Select.Root value={appType} onValueChange={onChangeAppType}>
-			<Select.Trigger />
+			<Select.Trigger variant="ghost" color="gray" mr="xs" />
 			<Select.Content>
 				<Select.Item value="single">Single App Setup</Select.Item>
 				<Select.Item value="multi">Multi App Setup</Select.Item>
