@@ -1,0 +1,226 @@
+---
+title: Initial Setup
+hide_title: true
+sidebar_position: 2
+---
+
+import { UIType } from "/src/components/UITypeSwitch";
+
+# Quickstart
+
+## Overview
+
+This page will show you how to add the WebAuthn recipe to your project. The tutorial creates a login flow, rendered by either our Prebuilt UI components or by your own Custom UI.
+
+## Before you start
+
+-- important note --
+These intructions assume that you already have gone through our main quickstart guide. If you have skipped that page please follow the tutorial and return here once you're done.
+
+
+## Steps 
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+prebuilt
+
+</UIType.PrebuiltUIContent>
+
+<UIType.CustomUIContent>
+
+### 1. Initialize the Frontend SDK
+
+
+Call the SDK init function at the start of your application. The invocation includes the main configuration details, as well as the recipes that you will be using in your setup.
+
+- Web
+```ts
+import SuperTokens from 'supertokens-web-js';
+import Session from 'supertokens-web-js/recipe/session';
+import WebAuthN from 'supertokens-web-js/recipe/webauthn'
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "",
+        apiBasePath: "",
+        appName: "...",
+    },
+    recipeList: [
+        Session.init(),
+        WebAuthN.init(),
+    ],
+});
+```
+
+### 2. Add the Authentication UI
+
+The following section will demonstrate you what aspects you need to cover in order to implement the UI for the WebAuthN flow.
+
+
+#### 2.1 Add the Signup Form
+
+You will have to first add the UI elements which will render your form. When the users submits the form you will have to call the following API to create the credential and send it to the backend in order to create the user and store the credential.
+
+```ts
+import { registerAndSignup } from "supertokens-web-js/recipe/webauthn";
+
+async function signUp(email: string) {
+    try {
+        let response = await registerAndSignUp({
+            email
+        });
+
+        if (
+            response.status === "SIGN_UP_NOT_ALLOWED" ||
+            response.status === "INVALID_AUTHENTICATOR_ERROR"
+        ) {
+            // the reason string is a user friendly message
+            // about what went wrong. It can also contain a support code which users
+            // can tell you so you know why their sign in / up was not allowed.
+            window.alert(response.reason)
+        } else if (response.status === "INVALID_EMAIL_ERROR") {
+            window.alert("Please enter a valid email address");
+        } else if (response.status === "EMAIL_ALREADY_EXISTS_ERROR") {
+            window.alert("Please enter a different email address");
+        } else if (
+            response.status === "AUTHENTICATOR_ALREADY_REGISTERED" ||
+            response.status === "INVALID_GENERATED_OPTIONS_ERROR" ||
+            response.status === "INVALID_CREDENTIALS_ERROR" ||
+            response.status === "RECOVER_ACCOUNT_TOKEN_INVALID_ERROR" ||
+            response.status === "GENERATED_OPTIONS_NOT_FOUND_ERROR"
+        ) {
+            // These errors represent various issues with the authenticator, credential or the flow itself.
+            // These should be handled individually by you. 
+            // The user should be informed that they should retry the sign up process or get in touch with you.
+            window.alert("Please try again");
+        } else {
+            // User signed up successfully.
+            window.alert("You have been signed up successfully");
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you,
+            // or if the input email / phone number is not valid.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+#### 2.2 Add the Login Form
+
+You will have to first add the UI elements which will render your form. When the users submits the form you will have to call the following API to use the credential and send the response to the backend in order to login the user.
+
+```ts
+import { authenticateAndSignIn } from "supertokens-web-js/recipe/webauthn";
+
+async function signIn(email: string) {
+    try {
+        let response = await authenticateAndSignIn({
+            email
+        });
+
+        if (
+            response.status === "SIGN_IN_NOT_ALLOWED"
+        ) {
+            // the reason string is a user friendly message
+            // about what went wrong. It can also contain a support code which users
+            // can tell you so you know why their sign in / up was not allowed.
+            window.alert(response.reason)
+        } else if (response.status === "INVALID_CREDENTIALS_ERROR") {
+            window.alert("Please enter a valid email address or use the correct passkey");
+        } else if (
+            response.status === "INVALID_GENERATED_OPTIONS_ERROR" 
+        ) {
+            // These errors represent various issues with the authenticator, credential or the flow itself.
+            // These should be handled individually by you. 
+            // The user should be informed that they should retry the sign in process or get in touch with you.
+            window.alert("Please try again");
+        } else {
+            // User signed in successfully.
+            window.alert("You have been signed in successfully");
+        }
+    } catch (err: any) {
+        if (err.isSuperTokensGeneralError === true) {
+            // this may be a custom error message sent from the API by you,
+            // or if the input email / phone number is not valid.
+            window.alert(err.message);
+        } else {
+            window.alert("Oops! Something went wrong.");
+        }
+    }
+}
+```
+
+### 3. Initialize the Backend SDK
+
+You will have to intialize the Backend SDK alongside the code that starts your server. The init call will include configuration details for your app, how the backend will connect to the SuperTokens Core, as well as the Recipes that will be used in your setup.
+
+For the WebAuthN recipe, you can also specify the following optional parameters: 
+- `emailDelivery`: Configure how verification emails are sent to users. You can use the default email service or integrate your own email delivery provider.
+
+- `getRelyingPartyId`: Set the domain name that will be associated with the WebAuthn credentials (e.g. "example.com"). This helps ensure credentials can only be used on your domain. It defaults to the origin domain.
+
+- `getRelyingPartyName`: Set a human-readable name for your application that will be shown to users during the WebAuthn registration process (e.g. "My App"). It defaults to the app name.
+
+- `validateEmailAddress`: Add custom validation logic for email addresses. By default, basic email format validation is performed.
+
+- `getOrigin`: Configure the origin URL that WebAuthn credentials will be bound to (e.g. "https://example.com"). This should match your application's domain and protocol.
+
+
+```ts
+import supertokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import WebAuthN from "supertokens-node/recipe/webauthn";
+
+supertokens.init({
+    // Replace this with the framework you are using
+    framework: "express",
+    supertokens: {
+        // We use try.supertokens for demo purposes.
+        // At the end of the tutorial we will show you how to create
+        // your own SuperTokens core instance and then update your config.
+        connectionURI: "https://try.supertokens.io",
+        // apiKey: <YOUR_API_KEY>
+    },
+    appInfo: {
+        // learn more about this on https://supertokens.com/docs/emailpassword/appinfo
+        appName: "<YOUR_APP_NAME>",
+        apiDomain: "<YOUR_API_DOMAIN>",
+        websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+        apiBasePath: "/auth",
+        websiteBasePath: "/auth",
+    },
+    recipeList: [
+        WebAuthN.init({
+            getRelyingPartyId: () => {
+                return '<YOUR_API_DOMAIN>';
+            },
+            getRelyingPartyName: () => {
+                return '<YOUR_APP_NAME>';
+            },
+        }),
+        Session.init() 
+    ]
+});
+```
+
+</UIType.CustomUIContent>
+
+
+## Next Steps
+
+Now that you have completed the main setup you can explore more advanced topics related to the WebAuthN recipe.
+
+
+
+
+
+
+
+
+
