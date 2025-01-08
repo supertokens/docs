@@ -87,7 +87,14 @@ export function SDKCompatibilityTable() {
 								available versions.
 							</Text>
 							<Separator size="4" mt="3" mb="1" />
-							<Grid columns="repeat(2, 1fr)" gap="4" mt="2">
+							<Grid
+								columns={{
+									initial: "repeat(1, 1fr)",
+									lg: "repeat(2, 1fr)",
+								}}
+								gap="4"
+								mt="2"
+							>
 								<Form.Field name="backend-sdk" asChild>
 									<Flex gap="1" direction="column">
 										<Form.Label>
@@ -150,7 +157,14 @@ export function SDKCompatibilityTable() {
 				</Card>
 			</Box>
 
-			<Grid columns="repeat(2, 1fr)" gap="4" mt="5">
+			<Grid
+				columns={{
+					initial: "repeat(1, 1fr)",
+					lg: "repeat(2, 1fr)",
+				}}
+				gap="4"
+				mt="5"
+			>
 				<Box px="5" py="5" asChild>
 					<Form.Root asChild>
 						<ScrollArea
