@@ -49,7 +49,13 @@ export function AppInfoForm() {
 						configure. To learn more about what each field means check the{" "}
 						<a href="/docs/thirdpartyemailpassword/appinfo">references page</a>.
 					</Text>
-					<Grid columns="repeat(2, 1fr)" gap="4">
+					<Grid
+						columns={{
+							initial: "repeat(1, 1fr)",
+							lg: "repeat(2, 1fr)",
+						}}
+						gap="4"
+					>
 						<Form.Field name="appName" asChild>
 							<Flex gap="1" direction="column">
 								<Form.Label>
@@ -73,7 +79,13 @@ export function AppInfoForm() {
 						</Form.Field>
 					</Grid>
 					<Separator size="4" my="2" />
-					<Grid columns="repeat(2, 1fr)" gap="4">
+					<Grid
+						columns={{
+							initial: "repeat(1, 1fr)",
+							lg: "repeat(2, 1fr)",
+						}}
+						gap="4"
+					>
 						<Form.Field name="apiDomain" asChild>
 							<Flex gap="1" direction="column">
 								<Form.Label>

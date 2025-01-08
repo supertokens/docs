@@ -67,7 +67,14 @@ function ExampleAppFormRoot() {
 						Update the form based on your tech stack and requirements. Once
 						you're done, copy the command and run it in your terminal.
 					</Text>
-					<Grid columns="repeat(2, 1fr)" mt="2" gap="4">
+					<Grid
+						columns={{
+							initial: "repeat(1, 1fr)",
+							lg: "repeat(2, 1fr)",
+						}}
+						mt="2"
+						gap="4"
+					>
 						<Form.Field name="appName" asChild>
 							<Flex gap="1" direction="column">
 								<Form.Label>
@@ -120,7 +127,13 @@ function ExampleAppFormRoot() {
 							</Flex>
 						</Form.Field>
 					</Grid>
-					<Grid columns="repeat(2, 1fr)" gap="4">
+					<Grid
+						columns={{
+							initial: "repeat(1, 1fr)",
+							lg: "repeat(2, 1fr)",
+						}}
+						gap="4"
+					>
 						<Form.Field name="frontendFramework" asChild>
 							<Flex gap="1" direction="column">
 								<Form.Label>
