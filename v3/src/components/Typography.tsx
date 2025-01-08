@@ -14,7 +14,7 @@ export const H2 = forwardRef<
 	React.ElementRef<typeof Heading>,
 	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
 >(({ className, children, ...props }, ref) => (
-	<Heading ref={ref} {...props} as="h2">
+	<Heading ref={ref} {...props} size="6" as="h2">
 		{children}
 	</Heading>
 ));
@@ -24,7 +24,7 @@ export const H3 = forwardRef<
 	React.ElementRef<typeof Heading>,
 	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
 >(({ className, children, ...props }, ref) => (
-	<Heading ref={ref} {...props} as="h3">
+	<Heading ref={ref} {...props} size="5" as="h3">
 		{children}
 	</Heading>
 ));
@@ -35,7 +35,7 @@ export const H4 = forwardRef<
 	React.ElementRef<typeof Heading>,
 	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
 >(({ className, children, ...props }, ref) => (
-	<Heading ref={ref} {...props} as="h3">
+	<Heading ref={ref} {...props} as="h3" size="3">
 		{children}
 	</Heading>
 ));

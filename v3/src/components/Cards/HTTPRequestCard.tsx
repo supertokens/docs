@@ -19,6 +19,8 @@ import { SideModal } from "../Modal";
 import InfoIcon from "/img/icons/info.svg";
 import { OpenAPIDocument } from "@site/src/lib/types";
 
+import "./HTTPRequestCard.scss";
+
 type HTTPRequestContextType = {
 	environment: "shell" | "nodejs" | "python" | "go";
 	path: string;
@@ -149,7 +151,7 @@ function NodeJSExample({ children }: { children: React.ReactNode }) {
 		<>
 			<Flex direction="row" justify="between" align="center">
 				<Text color="gray" size="3" weight="bold">
-					Curl Example
+					Fetch Example
 				</Text>
 				<AppTypeSelect />
 			</Flex>
@@ -169,7 +171,7 @@ function PythonExample({ children }: { children: React.ReactNode }) {
 		<>
 			<Flex direction="row" justify="between" align="center">
 				<Text color="gray" size="3" weight="bold">
-					Curl Example
+					Requests Example
 				</Text>
 				<AppTypeSelect />
 			</Flex>
@@ -187,7 +189,7 @@ function GoExample({ children }: { children: React.ReactNode }) {
 		<>
 			<Flex direction="row" justify="between" align="center">
 				<Text color="gray" size="3" weight="bold">
-					Curl Example
+					HTTP Example
 				</Text>
 				<AppTypeSelect />
 			</Flex>
@@ -199,40 +201,22 @@ function GoExample({ children }: { children: React.ReactNode }) {
 }
 
 function DetailsModal({ children }) {
-	const { title, method, path } = useContext(HTTPRequestCardContext);
-
 	return (
 		<ScrollArea type="auto" style={{ height: "100%" }}>
-			<SideModal.Content style={{ paddingTop: "0", paddingBottom: "0" }}>
-				<Flex
-					direction="column"
-					pt="6"
-					style={{
-						position: "sticky",
-						top: 0,
-						background: "var(--color-panel-solid)",
-					}}
-				>
-					<Heading as="h1" color="orange" asChild>
-						<SideModal.Title>{title}</SideModal.Title>
-					</Heading>
-					<Flex px="1" style={{ alignSelf: "flex-start" }} asChild>
-						<Code weight="bold" variant="ghost" color="gray" size="3">
-							{method.toUpperCase()} {path}
-						</Code>
-					</Flex>
-					<Separator size="4" mt="4" />
-				</Flex>
-				<Flex direction="column" gap="2" flexGrow="1">
-					{children}
-				</Flex>
+			<SideModal.Content
+				style={{ paddingTop: "0", paddingBottom: "0" }}
+				className="http-request-card-details-modal"
+			>
+				{children}
 				<Flex
 					direction="row"
 					align="center"
 					justify="end"
 					pb="6"
+					pt="3"
 					style={{
 						position: "sticky",
+						zIndex: 10,
 						bottom: 0,
 						background: "var(--color-panel-solid)",
 					}}
@@ -248,134 +232,64 @@ function DetailsModal({ children }) {
 	);
 }
 
+function DetailsModalHeader({ children }: { children: React.ReactNode }) {
+	const { title, method, path } = useContext(HTTPRequestCardContext);
+
+	return (
+		<Flex
+			direction="column"
+			pt="6"
+			gap="1"
+			style={{
+				position: "sticky",
+				top: 0,
+				background: "var(--color-panel-solid)",
+				zIndex: 10,
+			}}
+		>
+			<Heading as="h1" color="orange" asChild>
+				<SideModal.Title>{title}</SideModal.Title>
+			</Heading>
+			<Flex px="1" style={{ alignSelf: "flex-start" }} mb="3" asChild>
+				<Code weight="bold" variant="ghost" color="gray" size="3">
+					{method.toUpperCase()} {path}
+				</Code>
+			</Flex>
+
+			{children}
+
+			<Separator size="4" mt="3" />
+		</Flex>
+	);
+}
+
+function DetailsModalBody({ children }: { children: React.ReactNode }) {
+	return (
+		<Flex direction="column" gap="2" flexGrow="1">
+			{children}
+		</Flex>
+	);
+}
+
+function RequestDescriptionText({ children }: { children: React.ReactNode }) {
+	return (
+		<Text
+			className="http-request-card-details-modal__description-text"
+			color="gray"
+			size="3"
+		>
+			{children}
+		</Text>
+	);
+}
+
 export const HTTPRequestCard = Object.assign(HTTPRequestCardRoot, {
 	ShellExample,
 	NodeJSExample,
 	PythonExample,
 	GoExample,
 	DetailsModal,
+	DetailsModalDescription: RequestDescriptionText,
+	DetailsModalBody: DetailsModalBody,
+	DetailsModalHeader: DetailsModalHeader,
 });
-
-// TODO: Move this into a separate section in docs
-const Requests: OpenAPIDocument = {
-	openapi: "3.0.0",
-	info: {
-		title: "SuperTokens Bulk Import API",
-		version: "1.0.0",
-	},
-	tags: [],
-	paths: {
-		"/bulk-import/import": {
-			post: {
-				description: "Add users to bulk import",
-				requestBody: {
-					content: {
-						"application/json": {
-							schema: {
-								type: "object",
-								properties: {
-									externalUserId: {
-										type: "string",
-										description:
-											"The external user ID of the user to be imported",
-									},
-									userMetadata: {
-										type: "object",
-										description: "The metadata of the user to be imported",
-									},
-									userRoles: {
-										type: "array",
-										description: "The roles of the user to be imported",
-										items: {
-											type: "string",
-										},
-									},
-									totpDevices: {
-										type: "array",
-										description: "The TOTP devices of the user to be imported",
-										items: {
-											type: "object",
-											properties: {
-												deviceName: {
-													type: "string",
-													description: "The name of the TOTP device",
-												},
-												secretKey: {
-													type: "string",
-													description: "The secret key of the TOTP device",
-												},
-												period: {
-													type: "number",
-													description: "The period of the TOTP device",
-												},
-												skew: {
-													type: "number",
-													description: "The skew of the TOTP device",
-												},
-												verified: {
-													type: "boolean",
-													description: "Whether the TOTP device is verified",
-												},
-												createdAt: {
-													type: "number",
-													description: "The creation time of the TOTP device",
-												},
-											},
-											required: [
-												"deviceName",
-												"secretKey",
-												"period",
-												"skew",
-												"verified",
-												"createdAt",
-											],
-										},
-									},
-									loginMethods: {
-										type: "array",
-										description: "The login methods of the user to be imported",
-										items: {
-											type: "object",
-											properties: {
-												id: {
-													type: "string",
-													description: "The ID of the login method",
-												},
-												createdAt: {
-													type: "number",
-													description: "The creation time of the login method",
-												},
-												updatedAt: {
-													type: "number",
-													description: "The update time of the login method",
-												},
-											},
-										},
-									},
-								},
-								required: [
-									"externalUserId",
-									"userMetadata",
-									"userRoles",
-									"totpDevices",
-									"loginMethods",
-								],
-							},
-						},
-					},
-				},
-				responses: {
-					"200": {
-						description: "Successfully added users to bulk import",
-					},
-					"400": {
-						description: "Bad request",
-					},
-					"500": {
-						description: "Internal server error",
-					},
-				},
-			},
-		},
-	},
-};
