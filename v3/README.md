@@ -1,4 +1,10 @@
+![SuperTokens banner](https://raw.githubusercontent.com/supertokens/supertokens-logo/master/images/Artboard%20%E2%80%93%2027%402x.png)
+
 # SuperTokens Documentation
+
+<a href="https://supertokens.com/discord">
+<img src="https://img.shields.io/discord/603466164219281420.svg?logo=discord"
+    alt="chat on Discord"></a>
 
 Welcome to the [**SuperTokens**](https://supertokens.com) Documentation Repository!
 
@@ -20,3 +26,7 @@ If you have found a problem with our documentation, please create an [issue](htt
 
 For quick fixes, like a misspelled word or a broken link, feel free to directly correct the document and merge your changes.  
 Go ahead and create a [pull request](https://github.com/clerk/clerk-docs/pulls) with the solution.
+
+## Contact us
+
+If you have other questions or if you want to discuss different aspects about our product, please join our [Discord](supertokens.com/discord) server or email us at <team@supertokens.com>.
