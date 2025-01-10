@@ -1,16 +1,10 @@
-FROM gradle:8.12-alpine
+# FROM gradle:jdk16
+FROM rishabhpoddar/supertokens_docs_building_with_android:latest
 
 WORKDIR /app
 
-RUN apk add --no-cache \
-  git \
-  bash
-COPY build.gradle gradle.properties gradlew gradlew.bat settings.gradle ./
-COPY app ./app
-COPY gradle ./gradle
+COPY . .
 
-# RUN gradle wrapper --validate
+COPY snippets/* ./app/src/main/java/com/example/myapplication
 
-RUN gradle dependencies
-
-CMD ["./gradlew", "build"]
+RUN ./gradlew build

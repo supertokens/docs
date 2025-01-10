@@ -4,8 +4,8 @@ WORKDIR /app
 
 COPY validate-java.sh .
 COPY snippets/ ./snippets
-COPY pom.xml .
+COPY pom.xml ./snippets/
 
 RUN chmod +x validate-java.sh
 
-ENTRYPOINT ["./validate-java.sh"]
+RUN ./validate-java.sh
