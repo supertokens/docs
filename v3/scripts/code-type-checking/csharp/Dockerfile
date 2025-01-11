@@ -4,7 +4,9 @@ WORKDIR /app
 
 COPY validate-csharp.sh .
 COPY snippets ./snippets
+COPY main.cs ./snippets/
+COPY snippets.csproj ./snippets/
 
 RUN chmod +x validate-csharp.sh
 
-ENTRYPOINT ["./validate-csharp.sh"]
+RUN ./validate-csharp.sh

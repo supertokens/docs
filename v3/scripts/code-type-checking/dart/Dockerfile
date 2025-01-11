@@ -24,6 +24,6 @@ COPY lib ./lib
 
 RUN flutter pub get
 
-COPY snippets ./lib/snippets
+COPY ./snippets ./lib/snippets
 
-CMD ["flutter", "build", "web", "-t", "./lib/main.dart"]
+RUN flutter build web -t ./lib/main.dart
