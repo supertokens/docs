@@ -2,6 +2,7 @@ import React from "react";
 // Import the original mapper
 import MDXComponents from "@theme-original/MDXComponents";
 import { DocItemContextValue } from "../components/DocItemContext";
+import { H4, H5, H6 } from "../components/Typography";
 
 import { Table } from "@radix-ui/themes";
 
@@ -14,7 +15,6 @@ const TableRoot = ({ children }) => {
 };
 
 export default {
-	// Re-use the default mapping
 	...MDXComponents,
 	table: TableRoot,
 	thead: Table.Header,
@@ -22,6 +22,9 @@ export default {
 	th: Table.ColumnHeaderCell,
 	td: Table.Cell,
 	tr: Table.Row,
+	h4: H4,
+	h5: H5,
+	h6: H6,
 
 	DocItemContextValue,
 };

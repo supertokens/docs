@@ -14,7 +14,7 @@ export const H2 = forwardRef<
 	React.ElementRef<typeof Heading>,
 	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
 >(({ className, children, ...props }, ref) => (
-	<Heading ref={ref} {...props} size="6" as="h2">
+	<Heading ref={ref} {...props} size="7" as="h2">
 		{children}
 	</Heading>
 ));
@@ -24,7 +24,7 @@ export const H3 = forwardRef<
 	React.ElementRef<typeof Heading>,
 	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
 >(({ className, children, ...props }, ref) => (
-	<Heading ref={ref} {...props} size="5" as="h3">
+	<Heading ref={ref} {...props} size="6" as="h3">
 		{children}
 	</Heading>
 ));
@@ -35,9 +35,31 @@ export const H4 = forwardRef<
 	React.ElementRef<typeof Heading>,
 	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
 >(({ className, children, ...props }, ref) => (
-	<Heading ref={ref} {...props} as="h3" size="3">
+	<Heading ref={ref} {...props} as="h4" size="5">
 		{children}
 	</Heading>
 ));
 
-H3.displayName = "H4";
+H4.displayName = "H4";
+
+export const H5 = forwardRef<
+	React.ElementRef<typeof Heading>,
+	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
+>(({ className, children, ...props }, ref) => (
+	<Heading ref={ref} {...props} as="h5" size="4">
+		{children}
+	</Heading>
+));
+
+H5.displayName = "H5";
+
+export const H6 = forwardRef<
+	React.ElementRef<typeof Heading>,
+	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
+>(({ className, children, ...props }, ref) => (
+	<Heading ref={ref} {...props} as="h6" size="2">
+		{children}
+	</Heading>
+));
+
+H6.displayName = "H6";
