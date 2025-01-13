@@ -7,6 +7,18 @@ import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues
 import remarkRemoveCodeTypeCheckingCommentsAndRows from "./src/plugins/remarkRemoveCodeTypeCheckingCommentsAndRows";
 import remarkRemoveWebJsScriptImports from "./src/plugins/remarkRemoveWebJsScriptImports";
 
+const kapaWidget = {
+  src: "https://widget.kapa.ai/kapa-widget.bundle.js",
+  "data-website-id": "a936b55a-5e99-4bb2-a666-f0c54d900c2e",
+  "data-project-name": "SuperTokens",
+  "data-project-color": "#3D3D42",
+  "data-project-logo": "https://github.com/user-attachments/assets/6855841e-52a9-4020-b7b5-d74fcbda7055",
+  "data-modal-title": "SuperTokens",
+  "data-modal-disclaimer": "This is a **[SuperTokens](https://supertokens.com)** AI assistant with access to all supertokens documentation, FAQs, API specs and tutorials.",
+  "data-search-mode-enabled": true,
+  async: true,
+}
+
 const config: Config = {
   title: "SuperTokens Docs",
   tagline: "Open Source User Authentication",
@@ -16,6 +28,7 @@ const config: Config = {
   trailingSlash: false,
   onBrokenLinks: process.env.NODE_ENV === "production" ? "throw" : "warn",
   onBrokenMarkdownLinks: process.env.NODE_ENV === "production" ? "throw" : "warn",
+  scripts: [kapaWidget],
   future: {
     // Use rspack only during the build phase for faster CI times
     // In dev mode it crashes often while hot reloading
