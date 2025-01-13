@@ -13,26 +13,26 @@ function ReferenceCardRoot({ children, href }: React.PropsWithChildren<{ href: s
     return false;
   });
 
-  const Avatar = React.Children.toArray(children).find((child) => {
-    if (React.isValidElement(child)) {
-      return child.type === ReferenceCardAvatar;
-    }
-    return false;
-  });
-
-  const titleString = React.Children.toArray(children).find((child) => {
-    if (!React.isValidElement(child) || child.type !== ReferenceCardTitle) {
-      return null;
-    }
-    return child.props.children.props.children as string;
-  });
-
-  const descriptionString = React.Children.toArray(children).find((child) => {
-    if (!React.isValidElement(child) || child.type !== ReferenceCardDescription) {
-      return null;
-    }
-    return child.props.children.props.children as string;
-  });
+  // const Avatar = React.Children.toArray(children).find((child) => {
+  //   if (React.isValidElement(child)) {
+  //     return child.type === ReferenceCardAvatar;
+  //   }
+  //   return false;
+  // });
+  //
+  // const titleString = React.Children.toArray(children).find((child) => {
+  //   if (!React.isValidElement(child) || child.type !== ReferenceCardTitle) {
+  //     return null;
+  //   }
+  //   return child.props.children.props.children as string;
+  // });
+  //
+  // const descriptionString = React.Children.toArray(children).find((child) => {
+  //   if (!React.isValidElement(child) || child.type !== ReferenceCardDescription) {
+  //     return null;
+  //   }
+  //   return child.props.children.props.children as string;
+  // });
 
   const onClick = useCallback(() => {
     trackButtonClick("button_reference_card", "v1", {
@@ -59,8 +59,7 @@ function ReferenceCardRoot({ children, href }: React.PropsWithChildren<{ href: s
       <Card className="reference-card" asChild>
         <Link href={href} onClick={onClick}>
           <Flex gap="3" direction="column">
-            <ReferenceCardTitle>{titleString}</ReferenceCardTitle>
-            <ReferenceCardDescription>{descriptionString}</ReferenceCardDescription>
+            {children}
           </Flex>
         </Link>
       </Card>
