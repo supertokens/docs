@@ -68,9 +68,16 @@ function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
 }
 
 function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
+  const contentWithoutThePTag = React.Children.toArray(children).map((child) => {
+    if (React.isValidElement(child) && child.type === "p") {
+      return child.props.children;
+    }
+    return child;
+  });
+
   return (
     <Text className="reference-card__description" size="2" color="gray">
-      {children}
+      {contentWithoutThePTag}
     </Text>
   );
 }
