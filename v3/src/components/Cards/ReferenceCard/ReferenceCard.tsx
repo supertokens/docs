@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { createContext, useCallback, useContext } from "react";
 import { Card, Flex, Avatar, Grid, Box, Text } from "@radix-ui/themes";
 import Link from "@docusaurus/Link";
 
@@ -12,27 +12,6 @@ function ReferenceCardRoot({ children, href }: React.PropsWithChildren<{ href: s
     }
     return false;
   });
-
-  // const Avatar = React.Children.toArray(children).find((child) => {
-  //   if (React.isValidElement(child)) {
-  //     return child.type === ReferenceCardAvatar;
-  //   }
-  //   return false;
-  // });
-  //
-  // const titleString = React.Children.toArray(children).find((child) => {
-  //   if (!React.isValidElement(child) || child.type !== ReferenceCardTitle) {
-  //     return null;
-  //   }
-  //   return child.props.children.props.children as string;
-  // });
-  //
-  // const descriptionString = React.Children.toArray(children).find((child) => {
-  //   if (!React.isValidElement(child) || child.type !== ReferenceCardDescription) {
-  //     return null;
-  //   }
-  //   return child.props.children.props.children as string;
-  // });
 
   const onClick = useCallback(() => {
     trackButtonClick("button_reference_card", "v1", {
@@ -82,7 +61,7 @@ function ReferenceCardAvatar({ icon }: { icon: string }) {
 
 function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
   return (
-    <Text className="reference-card__title" size="4" weight="bold" color="orange">
+    <Text className="reference-card__title" size="4" weight="bold" color="orange" asChild>
       {children}
     </Text>
   );
@@ -90,7 +69,7 @@ function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
 
 function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
   return (
-    <Text className="reference-card__description" size="2" color="gray">
+    <Text className="reference-card__description" size="2" color="gray" asChild>
       {children}
     </Text>
   );
