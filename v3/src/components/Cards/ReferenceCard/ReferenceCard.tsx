@@ -60,16 +60,19 @@ function ReferenceCardAvatar({ icon }: { icon: string }) {
 }
 
 function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
+  const asChild = typeof children === "string" ? false : true;
+
   return (
-    <Text className="reference-card__title" size="4" weight="bold" color="orange" asChild>
+    <Text className="reference-card__title" size="4" weight="bold" color="orange" asChild={asChild}>
       {children}
     </Text>
   );
 }
 
 function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
+  const asChild = typeof children === "string" ? false : true;
   return (
-    <Text className="reference-card__description" size="2" color="gray" asChild>
+    <Text className="reference-card__description" size="2" color="gray" asChild={asChild}>
       {children}
     </Text>
   );
