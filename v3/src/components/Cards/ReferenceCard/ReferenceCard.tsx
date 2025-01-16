@@ -3,7 +3,7 @@ import { Card, Flex, Avatar, Grid, Box, Text } from "@radix-ui/themes";
 import Link from "@docusaurus/Link";
 
 import "./styles.scss";
-import { trackButtonClick } from "@site/src/lib/analytics";
+import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
 
 function ReferenceCardRoot({ children, href }: React.PropsWithChildren<{ href: string }>) {
   const hasAvatarInChildren = React.Children.toArray(children).some((child) => {
@@ -14,7 +14,7 @@ function ReferenceCardRoot({ children, href }: React.PropsWithChildren<{ href: s
   });
 
   const onClick = useCallback(() => {
-    trackButtonClick("button_reference_card", "v1", {
+    trackButtonClick(AnalyticsEventNames.buttonReferenceCard, "v1", {
       href,
     });
   }, [href]);
