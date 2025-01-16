@@ -15,7 +15,7 @@ import type { DocSearchModal as DocSearchModalType, DocSearchModalProps } from "
 import type { InternalDocSearchHit, StoredDocSearchHit } from "@docsearch/react/dist/esm/types";
 
 import type { SearchClient } from "algoliasearch/lite";
-import { trackButtonClick } from "@site/src/lib/analytics";
+import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
 type DocSearchProps = Omit<DocSearchModalProps, "onClose" | "initialScrollY"> & {
   contextualSearch?: string;
   externalUrlRegex?: string;
@@ -26,7 +26,7 @@ let DocSearchModal: typeof DocSearchModalType | null = null;
 
 function Hit({ hit, children }: { hit: InternalDocSearchHit | StoredDocSearchHit; children: React.ReactNode }) {
   const onClick = useCallback(() => {
-    trackButtonClick("button_search_result", "v1", {
+    trackButtonClick(AnalyticsEventNames.buttonSearchResult, "v1", {
       query: hit.query,
       section: hit.section,
       title: hit.title,
@@ -113,7 +113,7 @@ function DocSearch({ contextualSearch, externalUrlRegex, ...props }: DocSearchPr
   }, []);
 
   const openModal = useCallback(() => {
-    trackButtonClick("button_search_trigger", "v1", {});
+    trackButtonClick(AnalyticsEventNames.buttonSearchTrigger, "v1", {});
     prepareSearchContainer();
     importDocSearchModalIfNeeded().then(() => setIsOpen(true));
   }, [importDocSearchModalIfNeeded, prepareSearchContainer]);
@@ -124,7 +124,7 @@ function DocSearch({ contextualSearch, externalUrlRegex, ...props }: DocSearchPr
   }, []);
 
   const clickViewMoreResults = useCallback(() => {
-    trackButtonClick("button_search_view_all_results", "v1", {});
+    trackButtonClick(AnalyticsEventNames.buttonSearchViewAllResults, "v1", {});
     setIsOpen(false);
     searchButtonRef.current?.focus();
   }, []);
