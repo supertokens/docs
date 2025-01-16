@@ -1,7 +1,8 @@
 import MDXComponents from "@theme-original/MDXComponents";
-import { DocItemContextValue } from "@site/src/components";
+import { DocItemContextValue, UIType } from "@site/src/components";
 
 export default {
   ...MDXComponents,
   DocItemContextValue,
+  UIType,
 };

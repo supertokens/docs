@@ -16,7 +16,7 @@ Explain the main purpose of the how-to guide:
 
 - This guide explains how to ...
 
-Additonally, you can add more context and details to the actual task that the user will be performing:
+Additionally, you can add more context and details to the actual task that the user will be performing:
 
 - why the task is needed
 - when will this task be performed
