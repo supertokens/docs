@@ -100,7 +100,33 @@ const config: Config = {
       theme: prismThemes.vsDark,
       additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php", "bash"],
     },
+    metadata: [{ name: "keywords", content: "authentication" }],
   } satisfies Preset.ThemeConfig,
+  headTags: [
+    {
+      tagName: "script",
+      attributes: { type: "application/ld+json" },
+      innerHTML: JSON.stringify({
+        viewport: "width=device-width, initial-scale=1",
+        "next-size-adjust": null,
+        description: "Open Source User Authentication. Build fast, maintain control, with reasonable pricing.",
+        title: "Welcome to SuperTokens Docs",
+        keywords: "authentication, open source, login, authorization, security, session management",
+        robots: "index, follow",
+        "og:title": "Welcome to SuperTokens Docs",
+        "og:description": "Open Source User Authentication. Build fast, maintain control, with reasonable pricing.",
+        "og:url": "https://supertokens.com/docs",
+        "og:image": "https://supertokens.com/assets/images/website/og/homepage.png",
+        "og:type": "website",
+        "twitter:card": "summary_large_image",
+        "twitter:creator": "@supertokens.io",
+        "twitter:title": "SuperTokens, Open Source User Authentication",
+        "twitter:description":
+          "Open Source User Authentication. Build fast, maintain control, with reasonable pricing.",
+        "twitter:image": "https://supertokens.com/assets/images/website/og/homepage.png",
+      }),
+    },
+  ],
   plugins: [
     "docusaurus-plugin-sass",
     process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
@@ -118,12 +144,6 @@ const config: Config = {
         id: "transform-opensearch-link",
       },
     ],
-    // [
-    // 	"./src/plugins/codeTypeChecking",
-    // 	{
-    // 		id: "code-type-checking",
-    // 	},
-    // ],
   ].filter(Boolean),
 };
 
