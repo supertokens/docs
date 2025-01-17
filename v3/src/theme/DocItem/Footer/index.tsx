@@ -2,10 +2,8 @@ import React, { useCallback, useState } from "react";
 import clsx from "clsx";
 import { ThemeClassNames } from "@docusaurus/theme-common";
 import { useDoc } from "@docusaurus/plugin-content-docs/client";
-import TagsListInline from "@theme/TagsListInline";
 
 import { motion } from "motion/react";
-import EditMetaRow from "@theme/EditMetaRow";
 import ThumbsUpIcon from "/img/icons/thumbs-up.svg";
 import PenIcon from "/img/icons/pen.svg";
 import ThumbsDownIcon from "/img/icons/thumbs-down.svg";
@@ -18,12 +16,12 @@ import "./index.scss";
 export default function DocItemFooter(): JSX.Element | null {
   const { metadata } = useDoc();
   const { editUrl, frontMatter, lastUpdatedAt, lastUpdatedBy, tags } = metadata;
-  const { showFeedback = true } = frontMatter;
+  const { show_feedback = true } = frontMatter;
 
   const canDisplayTagsRow = tags.length > 0;
   const canDisplayEditMetaRow = !!(editUrl || lastUpdatedAt || lastUpdatedBy);
 
-  const canDisplayFooter = canDisplayTagsRow || canDisplayEditMetaRow || showFeedback;
+  const canDisplayFooter = canDisplayTagsRow || canDisplayEditMetaRow || show_feedback;
 
   if (!canDisplayFooter) {
     return null;
@@ -39,7 +37,7 @@ export default function DocItemFooter(): JSX.Element | null {
           }}
           gap="4"
         >
-          {showFeedback && <DocFeedback />}
+          {show_feedback && <DocFeedback />}
           {canDisplayEditMetaRow && (
             <Flex
               ml={{
@@ -47,11 +45,13 @@ export default function DocItemFooter(): JSX.Element | null {
                 xs: "auto",
               }}
             >
-              <Button variant="ghost" color="gray" size="2" asChild>
-                <a href={editUrl} target="_blank">
-                  <PenIcon height="15" /> Suggest Edits
-                </a>
-              </Button>
+              <Box py="2" asChild>
+                <Button variant="ghost" color="gray" size="2" asChild>
+                  <a href={editUrl} target="_blank">
+                    <PenIcon height="15" /> Suggest Edits
+                  </a>
+                </Button>
+              </Box>
             </Flex>
           )}
         </Flex>
