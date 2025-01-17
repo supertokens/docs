@@ -1,10 +1,10 @@
 import { Select } from "@radix-ui/themes";
 import { useContext } from "react";
 
-import { DocItemContext } from "../DocItemContext";
+import { DocItemContext } from "@site/src/context";
 
 export const AppTypeSelect = () => {
-	const { appType, onChangeAppType } = useContext(DocItemContext);
+  const { appType, onChangeAppType } = useContext(DocItemContext);
 
 	return (
 		<Select.Root value={appType} onValueChange={onChangeAppType}>

@@ -14,4 +14,4 @@ COPY snippets/ ./snippets
 
 RUN chmod +x validate-php.sh
 
-ENTRYPOINT ["./validate-php.sh"]
+RUN ./validate-php.sh

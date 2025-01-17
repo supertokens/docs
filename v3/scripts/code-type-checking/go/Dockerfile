@@ -8,4 +8,4 @@ RUN go mod download
 
 COPY . .
 
-CMD ["go", "build", "./..."]
+RUN go build ./...

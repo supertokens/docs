@@ -12,7 +12,8 @@ export default function remarkRemoveCodeTypeCheckingCommentsAndRows() {
 			const filteredLines = lines.filter((line) => {
 				return (
 					!line.includes("REMOVE_FROM_OUTPUT") &&
-					!line.includes("@ts-expect-error")
+					!line.includes("@ts-expect-error") &&
+					!line.includes("@ts-ignore")
 				);
 			});
 			const parsedLines = filteredLines.map((line) => {
