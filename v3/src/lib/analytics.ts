@@ -173,6 +173,17 @@ export function trackButtonClick(eventName: string, version = "v1", options?: Ob
   );
 }
 
+export function trackFormSubmit(eventName: string, version = "v1", options?: Object) {
+  getAnalyticsInstance().sendEvent(
+    eventName,
+    {
+      type: "form_submit",
+      ...options,
+    },
+    version,
+  );
+}
+
 export function trackLinkClick(eventName: string, version = "v5", options?: Object) {
   getAnalyticsInstance().sendEvent(
     eventName,
@@ -218,4 +229,5 @@ export const AnalyticsEventNames = {
   buttonSearchViewAllResults: "button_search_view_all_results",
   buttonSearchTrigger: "button_search_trigger",
   buttonReferenceCard: "button_reference_card",
+  formFeedback: "form_feedback",
 };
