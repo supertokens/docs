@@ -7,6 +7,7 @@ import TagsListInline from "@theme/TagsListInline";
 import { motion } from "motion/react";
 import EditMetaRow from "@theme/EditMetaRow";
 import ThumbsUpIcon from "/img/icons/thumbs-up.svg";
+import PenIcon from "/img/icons/pen.svg";
 import ThumbsDownIcon from "/img/icons/thumbs-down.svg";
 
 import { Box, Text, Flex, TextArea, Button, Dialog, RadioGroup } from "@radix-ui/themes";
@@ -31,22 +32,36 @@ export default function DocItemFooter(): JSX.Element | null {
   return (
     <Box pt="8" asChild>
       <footer className={clsx(ThemeClassNames.docs.docFooter, "docusaurus-mt-lg")}>
-        {showFeedback && <DocFeedback />}
-        {canDisplayTagsRow && (
-          <div className={clsx("row margin-top--sm", ThemeClassNames.docs.docFooterTagsRow)}>
-            <div className="col">
-              <TagsListInline tags={tags} />
-            </div>
-          </div>
-        )}
-        {canDisplayEditMetaRow && (
-          <EditMetaRow
-            className={clsx("margin-top--sl", ThemeClassNames.docs.docFooterEditMetaRow)}
-            editUrl={editUrl}
-            lastUpdatedAt={lastUpdatedAt}
-            lastUpdatedBy={lastUpdatedBy}
-          />
-        )}
+        <Flex
+          direction={{
+            initial: "column",
+            xs: "row",
+          }}
+          gap="4"
+        >
+          {showFeedback && <DocFeedback />}
+          {canDisplayEditMetaRow && (
+            <Flex
+              ml={{
+                initial: "0",
+                xs: "auto",
+              }}
+            >
+              <Button variant="ghost" color="gray" size="2" asChild>
+                <a href={editUrl} target="_blank">
+                  <PenIcon height="15" /> Suggest Edits
+                </a>
+              </Button>
+            </Flex>
+          )}
+        </Flex>
+        {/* {canDisplayTagsRow && ( */}
+        {/*   <div className={clsx("row margin-top--sm", ThemeClassNames.docs.docFooterTagsRow)}> */}
+        {/*     <div className="col"> */}
+        {/*       <TagsListInline tags={tags} /> */}
+        {/*     </div> */}
+        {/*   </div> */}
+        {/* )} */}
       </footer>
     </Box>
   );
@@ -72,10 +87,8 @@ function DocFeedback() {
   const [hasSubmittedFeedback, setHasSubmittedFeedback] = React.useState(false);
   const [selectedReason, setSelectedReason] = React.useState<string | null>(null);
   const [feedback, setFeedback] = React.useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const onOpenChange = useCallback((isOpen) => {
-    setIsModalOpen(isOpen);
     if (isOpen) return;
     setSelectedReason(null);
     setFeedback(null);
@@ -103,7 +116,13 @@ function DocFeedback() {
       <Text size="4" weight="bold">
         Was this page helpful?
       </Text>
-      <Flex gap="2">
+      <Flex
+        gap="2"
+        ml={{
+          initial: "auto",
+          xs: "0",
+        }}
+      >
         <Dialog.Root onOpenChange={onOpenChange}>
           <Dialog.Trigger>
             <Button variant="solid" highContrast color="gray" size="1">
