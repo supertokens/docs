@@ -22,9 +22,6 @@ export default {
 	th: Table.ColumnHeaderCell,
 	td: Table.Cell,
 	tr: Table.Row,
-	h4: H4,
-	h5: H5,
-	h6: H6,
 
 	DocItemContextValue,
 };

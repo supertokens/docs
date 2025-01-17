@@ -12,8 +12,12 @@ import {
 	ScrollArea,
 } from "@radix-ui/themes";
 import CodeBlock from "@theme/CodeBlock";
+
+import Link from "@docusaurus/Link";
+import useBrokenLinks from "@docusaurus/useBrokenLinks";
+import { useThemeConfig } from "@docusaurus/theme-common";
 import { AppTypeSelect } from "/src/components/Select";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { SideModal } from "../Modal";
 
 import InfoIcon from "/img/icons/info.svg";
@@ -48,6 +52,12 @@ function HTTPRequestCardRoot({
 		useState<HTTPRequestContextType["environment"]>("shell");
 	const [showRequestDetails, setShowRequestDetails] = useState(false);
 
+	const titleId = useMemo(() => {
+		return `${title.replace(/\s/g, "-").toLowerCase()}-http-request`;
+	}, [title]);
+	const brokenLinks = useBrokenLinks();
+	brokenLinks.collectAnchor(titleId);
+
 	// if (!Requests.paths[path] || !Requests.paths[path][method]) {
 	// 	throw new Error(
 	// 		`Could not find request for path ${path} and method ${method}`,
@@ -69,11 +79,21 @@ function HTTPRequestCardRoot({
 				onOpenChange={setShowRequestDetails}
 			>
 				<Box p="0" asChild>
-					<Card mb="4">
+					<Card mb="4" className="http-request-card">
 						<Flex direction="row" pt="4" pb="3" px="4" justify="between">
 							<Flex direction="column" gap="2">
-								<Heading as="h3" mb="xs" size="6">
+								<Heading
+									as="h3"
+									mb="xs"
+									size="6"
+									style={{ scrollMarginTop: "200px" }}
+								>
 									{title}
+									{/* Use a custom anchor point so that the browser scroll snaps to the correct position */}
+									<a
+										className="http-request-card__heading-anchor"
+										id={titleId}
+									/>
 								</Heading>
 								<Box px="1" asChild>
 									<Code weight="bold" variant="ghost" color="gray" size="2">

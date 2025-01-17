@@ -52,16 +52,533 @@ If you have not, please check the [Quickstart Guide](/docs/quickstart/introducti
 
 ### 1. Add the lazy migration flow
 
-The following sub steps will go through all the use cases that you need to cover in order to ensure no downtime during the migration process.
+The following sub steps will show you how to ensure no downtime during the migration process.
 
-#### 1.1 Create new users when they sign up using your previous provider
+#### 1.1 Prevent sign ups from users who exist in your previous provider
 
-The `bulk migration` API exposes an endpoint that allows you to directly create new users.
-This way you generate new accounts in **SuperTokens**, on the fly, when someone signs up using your old authentication provider.
+Until you have fully migrated your setup, new sign up requests should only be handled by your previous provider.
+To manage this override, the `signUpPost` API on each of the authentication recipes that you are using.
+
+The function will have to first check if the user signing up has an account with the external provider.
+If true, then it should return `EMAIL_ALREADY_EXISTS_ERROR` as a `status` property.
 
 :::info
 If your application does not have a sign up process or if new users are created manually you can skip this step
 :::
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import EmailPassword from "supertokens-node/recipe/emailpassword"
+
+// If you are using multiple recipes you will have to override each of them
+EmailPassword.init({
+    override: {
+        apis: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                signUpPOST: async function (input) {
+                    let email = input.formFields.find((field) => field.id === "email")!.value as string;
+                    // Check if the user signing in exists in the external provider
+                    if (await doesUserExistInExternalProvider(email)) {
+                        // Return status "EMAIL_ALREADY_EXISTS_ERROR" since the user already exists in the external provider
+                        return {
+                            status: "EMAIL_ALREADY_EXISTS_ERROR"
+                        }
+                    }
+                    return originalImplementation.signUpPOST!(input);
+                },
+            }
+        },
+    }
+})
+
+async function doesUserExistInExternalProvider(email: string): Promise<boolean> {
+    // TODO: check if user with the input email exists in the external provider
+    return false;
+}
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import (
+    APIInterface,
+    APIOptions,
+    EmailAlreadyExistsError,
+)
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import Dict, Any, Union, List
+from supertokens_python.recipe.session.interfaces import SessionContainer
+
+
+# If you are using multiple recipes you will have to override each of them
+def override_email_password_apis(original_implementation: APIInterface):
+    original_sign_up = original_implementation.sign_up_post
+
+    async def sign_up(
+        form_fields: List[FormField],
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        email = ""
+        for field in form_fields:
+            if field.id == "email":
+                email = field.value
+        # check if the user signing in exists in the external provider
+        if await does_user_exist_in_external_provider(email):
+            # Return SignUpEmailAlreadyExistsError since the user exists in the external provider
+            return EmailAlreadyExistsError()
+
+        return await original_sign_up(
+            form_fields,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            api_options,
+            user_context,
+        )
+
+    original_implementation.sign_up_post = sign_up
+    return original_implementation
+
+
+async def does_user_exist_in_external_provider(email: str):
+    # TODO: Check if a user with the input email exists in the external provider
+    return False
+
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        emailpassword.init(
+            override=emailpassword.InputOverrideConfig(
+                apis=override_email_password_apis,
+            )
+        )
+    ],
+)
+```
+
+</BackendTabs.TabItem>   
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+    "errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+      // If you are using multiple recipes you will have to override each of them
+			emailpassword.Init(&epmodels.TypeInput{
+				Override: &epmodels.OverrideStruct{
+					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+
+						// Copy the original implementation of the signUp function
+						originalSignUp := *originalImplementation.SignUpPOST
+
+						// Override the signUp function
+						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
+							email := ""
+							for _, formField := range formFields {
+								if formField.ID == "email" {
+									valueAsString, asStrOk := formField.Value.(string)
+									if !asStrOk {
+										return epmodels.SignUpPOSTResponse{}, errors.New("Should never come here as we check the type during validation")
+									}
+									email = valueAsString
+								}
+							}
+							// Check if the user signing in exists in the external provider
+							if doesUserExistInExternalProvider(email) {
+								// Return status "EMAIL_ALREADY_EXISTS_ERROR" since the user already exists in the external provider
+								return epmodels.SignUpPOSTResponse{
+									EmailAlreadyExistsError: &struct{}{},
+								}, nil
+							}
+							return originalSignUp(formFields, tenantId, options, userContext)
+						}
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+
+func doesUserExistInExternalProvider(email string) bool {
+	// TODO: Check if user with the input email exists in the external provider
+	return false
+}
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+
+#### 1.2 Create new users when they try to sign in through SuperTokens
+
+Before you can allow users to authenticate through the **SuperTokens** integration you need to add one more step.
+In this scenario you have to ensure that between your current state and finalizng the bulk import process no user will experience any authentication issues.
+When someone that was not yet imported tries to login using **SuperTokens**, perform an additional check, against your previous provider. 
+
+This can be implemented by overriding the `signInPOST` API on each of the authentication recipes that you are using.
+The overriden function should follow these steps:
+- Determine if the authentication user needs to be migrated or not. 
+- Validate the input credentials against the legacy provider. 
+- Fetch the user data from your legacy provider.
+- Create the user in **SuperTokens** using the [`Import User`](#import-user-http-request) endpoint.
+
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
+import EmailVerification from "supertokens-node/recipe/emailverification"
+import { RecipeUserId } from "supertokens-node";
+
+// If you are using multiple recipes you will have to override each of them
+EmailPassword.init({
+  override: {
+    apis: (originalImplementation) => {
+      return {
+        ...originalImplementation,
+        signInPOST: async function (input) {
+          const superTokensUser = await getSuperTokensUser(input);
+          if(!superTokensUser) {
+            const legacyUser = await validateAndGetLegacyUser();
+            if(!legacyUser) {
+              return {
+                status: "WRONG_CREDENTIALS_ERROR"
+              }
+            }
+            await createSuperTokensUser(); 
+          }
+          return originalImplementation.signInPOST!(input)
+        },
+      }
+    },
+  }
+})
+
+async function getSuperTokensUser(email: string) {
+  let email = input.formFields.find((field) => field.id === "email")!.value as string;
+  let supertokensUsersWithSameEmail = await SuperTokens.listUsersByAccountInfo(input.tenantId, {
+      email: email
+  }, undefined, input.userContext);
+  return supertokensUsersWithSameEmail.find(u => {
+      return u.loginMethods.find(lM => lM.hasSameEmailAs(email) && lM.recipeId === "emailpassword") !== undefined;
+  })
+}
+
+async function validateAndGetLegacyUser(email: string, password: string): Promise<Record<string, unknown> | undefined> {
+    // TODO: Validate the input credentials against the external authentication provider. 
+    // If the credentials are valid return the user info.
+    return undefined
+}
+
+async function createSuperTokensUser(legacyUser: Record<string, unknown>) {
+    const superTokensUser = mapLegacyUserToSuperTokensUser(legacyUser);
+    // Call the /bulk-import/import endpoint. 
+    // Check the next section for a full description of the request.
+    const BASE_URL = '^{coreInfo.uri}';
+    const API_KEY = '^{coreInfo.key}';
+    const url = `${BASE_URL}/bulk-import/import`;
+    const options = {
+      method: 'POST',
+      headers: {
+        'api-key': API_KEY,
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify(superTokensUser)
+    }
+
+    await fetch(url, options)
+}
+
+function mapLegacyUserToSuperTokensUser(legacyUser: Record<string, unknown>) {
+    // TODO: Map the legacy user to a SuperTokens user
+    return {}
+}
+
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import emailpassword
+from supertokens_python.asyncio import create_user_id_mapping
+from supertokens_python.recipe.emailverification.asyncio import (
+    create_email_verification_token,
+    verify_email_using_token,
+)
+from supertokens_python.recipe.emailpassword.asyncio import sign_up
+from supertokens_python.recipe.emailverification.interfaces import (
+    CreateEmailVerificationTokenOkResult,
+)
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import (
+    APIInterface,
+    APIOptions,
+    SignUpOkResult,
+    WrongCredentialsError,
+)
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import Dict, Any, Union, List
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.asyncio import list_users_by_account_info
+from supertokens_python.types import AccountInfo, RecipeUserId
+
+
+# If you are using multiple recipes you will have to override each of them
+def override_emailpassword_apis(original_implementation: APIInterface):
+    original_emailpassword_sign_in = original_implementation.sign_in_post
+
+    async def sign_in(
+        form_fields: List[FormField],
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        email = ""
+        password = ""
+        for field in form_fields:
+            if field.id == "email":
+                email = field.value
+            if field.id == "password":
+                password = field.value
+        #  Check if an email-password user with the input email exists in SuperTokens
+        supertokens_user_with_same_email = await list_users_by_account_info(
+            tenant_id, AccountInfo(email=email), False, user_context
+        )
+        emailpassword_user = next(
+            (
+                user
+                for user in supertokens_user_with_same_email
+                if any(
+                    lm.recipe_id == "emailpassword" and lm.has_same_email_as(email)
+                    for lm in user.login_methods
+                )
+            ),
+            None,
+        )
+
+        if emailpassword_user is None:
+            # EmailPassword user with the input email does not exist in SuperTokens
+            # Check if the input credentials valid in the external provider
+            legacy_user_info = await validate_and_get_user_info_from_external_provider(
+                email, password
+            )
+            if legacy_user_info is None:
+                # Credentials are incorrect
+                return WrongCredentialsError()
+
+            # Call the sign_up function to create a new SuperTokens user.
+            response = await sign_up(tenant_id, email, password, None, user_context)
+            if not isinstance(response, SignUpOkResult):
+                raise Exception("Should never come here")
+
+            # Map the external provider's userId to the SuperTokens userId
+            await create_user_id_mapping(response.user.id, legacy_user_info.user_id)
+            # Set the userId in the response to use the provider's userId
+            response.user.id = legacy_user_info.user_id
+            response.user.login_methods[0].recipe_user_id = RecipeUserId(
+                legacy_user_info.user_id
+            )
+            response.recipe_user_id = RecipeUserId(legacy_user_info.user_id)
+
+            # You will also need to set the email verification status of the user
+            if legacy_user_info.isEmailVerified:
+                # Generate an email verification token for the user
+                generate_email_verification_response = (
+                    await create_email_verification_token(
+                        tenant_id,
+                        response.recipe_user_id,
+                        email,
+                        user_context,
+                    )
+                )
+                if isinstance(
+                    generate_email_verification_response,
+                    CreateEmailVerificationTokenOkResult,
+                ):
+                    await verify_email_using_token(
+                        tenant_id,
+                        generate_email_verification_response.token,
+                        True,
+                        user_context,
+                    )
+
+        return await original_emailpassword_sign_in(
+            form_fields,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            api_options,
+            user_context,
+        )
+
+    original_implementation.sign_in_post = sign_in
+    return original_implementation
+
+
+class ExternalUserInfo:
+    def __init__(self, user_id: str, isEmailVerified: bool):
+        self.user_id: str = user_id
+        self.isEmailVerified: bool = isEmailVerified
+
+
+async def validate_and_get_user_info_from_external_provider(
+    email: str, password: str
+) -> Union[None, ExternalUserInfo]:
+    return None
+
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        emailpassword.init(
+            override=emailpassword.InputOverrideConfig(apis=override_emailpassword_apis)
+        )
+    ],
+)
+```
+
+</BackendTabs.TabItem>   
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+      // If you are using multiple recipes you will have to override each of them
+			emailpassword.Init(&epmodels.TypeInput{
+				Override: &epmodels.OverrideStruct{
+					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+
+						// Copy the original implementation of the signIn function
+						originalSignIn := *originalImplementation.SignInPOST
+
+						// Override the function
+						(*originalImplementation.SignInPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignInPOSTResponse, error) {
+              superTokensUser, err := getSuperTokensUser(input);
+              if err != nil {
+                return epmodels.SignInPOSTResponse{}, err
+              }
+							if superTokensUser == nil {
+								// EmailPassword user with the input email does not exist in SuperTokens
+								// Check if the input credentials are valid in the external provider
+								legacyUserInfo := validateAndGetLegacyUser(email, password)
+
+								if legacyUserInfo == nil {
+									return epmodels.SignInPOSTResponse{
+										WrongCredentialsError: &struct{}{},
+									}, nil
+								}
+
+								// Call the email-password signup function to create a new SuperTokens user.
+								response, err := emailpassword.SignUp(tenantId, email, password)
+								if err != nil {
+									return epmodels.SignInPOSTResponse{}, err
+								}
+
+								if response.OK == nil {
+									return epmodels.SignInPOSTResponse{}, errors.New("Should never come here")
+								}
+
+								// Map the external provider's userId to the SuperTokens userId
+								_, err = supertokens.CreateUserIdMapping(response.OK.User.ID, legacyUserInfo.userId, nil, nil)
+								if err != nil {
+									return epmodels.SignInPOSTResponse{}, err
+								}
+								// Set the userId in the response to use the provider's userId
+								response.OK.User.ID = legacyUserInfo.userId
+							}
+
+							return originalSignIn(formFields, tenantId, options, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+
+// TODO: Adjust this type based on the schema of your legacy authentication provider
+type LegacyUserInfo struct {
+	userId          string
+}
+
+func getSuperTokensUser(input epmodels.SignInPOSTRequest) {
+  email := ""
+  password := ""
+  for _, formField := range formFields {
+    if formField.ID == "email" || formField.ID == "password" {
+      valueAsString, asStrOk := formField.Value.(string)
+      if !asStrOk {
+        return epmodels.SignInPOSTResponse{}, errors.New("Should never come here as we check the type during validation")
+      }
+      if formField.ID == "email" {
+        email = valueAsString
+      } else {
+        password = valueAsString
+      }
+    }
+  }
+  // Check if an email-password user with the input email exists in SuperTokens
+  return emailpassword.GetUserByEmail(tenantId, email)
+}
+
+func getLegacyUser(email string, password string) *LegacyUserInfo {
+	// TODO: Validate the input credentials against the external authentication provider.
+  // If the credentials are valid return the user info.
+	return nil
+}
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+
 
 <HTTPRequestCard path="/bulk-import/import" method="post" title="Import User">
   <HTTPRequestCard.ShellExample>
@@ -271,546 +788,8 @@ curl --location --request POST '^{coreInfo.uri}/bulk-import/import' \
   </HTTPRequestCard.DetailsModal>
 </HTTPRequestCard>
 
-#### 1.2 Prevent sign ups from users who exist in your previous provider
 
-Until you have fully migrated your setup, new sign up requests should only be handled by your previous provider.
-To manage this override, the `signUpPost` API on each of the authentication recipes that you are using.
-
-The function will have to first check if the user signing up has an account with the external provider.
-If true, then it should return `EMAIL_ALREADY_EXISTS_ERROR` as a `status` property.
-
-:::info
-If your application does not have a sign up process or if new users are created manually you can skip this step
-:::
-
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
-```tsx
-import EmailPassword from "supertokens-node/recipe/emailpassword"
-
-// If you are using multiple recipes you will have to override each of them
-EmailPassword.init({
-    override: {
-        apis: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                signUpPOST: async function (input) {
-                    let email = input.formFields.find((field) => field.id === "email")!.value as string;
-                    // Check if the user signing in exists in the external provider
-                    if (await doesUserExistInExternalProvider(email)) {
-                        // Return status "EMAIL_ALREADY_EXISTS_ERROR" since the user already exists in the external provider
-                        return {
-                            status: "EMAIL_ALREADY_EXISTS_ERROR"
-                        }
-                    }
-                    return originalImplementation.signUpPOST!(input);
-                },
-            }
-        },
-    }
-})
-
-async function doesUserExistInExternalProvider(email: string): Promise<boolean> {
-    // TODO: check if user with the input email exists in the external provider
-    return false;
-}
-```
-
-</BackendTabs.TabItem>
-
-<BackendTabs.TabItem value="python">
-
-```python
-from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.emailpassword.interfaces import (
-    APIInterface,
-    APIOptions,
-    EmailAlreadyExistsError,
-)
-from supertokens_python.recipe.emailpassword.types import FormField
-from typing import Dict, Any, Union, List
-from supertokens_python.recipe.session.interfaces import SessionContainer
-
-
-# If you are using multiple recipes you will have to override each of them
-def override_email_password_apis(original_implementation: APIInterface):
-    original_sign_up = original_implementation.sign_up_post
-
-    async def sign_up(
-        form_fields: List[FormField],
-        tenant_id: str,
-        session: Union[SessionContainer, None],
-        should_try_linking_with_session_user: Union[bool, None],
-        api_options: APIOptions,
-        user_context: Dict[str, Any],
-    ):
-        email = ""
-        for field in form_fields:
-            if field.id == "email":
-                email = field.value
-        # check if the user signing in exists in the external provider
-        if await does_user_exist_in_external_provider(email):
-            # Return SignUpEmailAlreadyExistsError since the user exists in the external provider
-            return EmailAlreadyExistsError()
-
-        return await original_sign_up(
-            form_fields,
-            tenant_id,
-            session,
-            should_try_linking_with_session_user,
-            api_options,
-            user_context,
-        )
-
-    original_implementation.sign_up_post = sign_up
-    return original_implementation
-
-
-async def does_user_exist_in_external_provider(email: str):
-    # TODO: Check if a user with the input email exists in the external provider
-    return False
-
-
-init(
-    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    framework="...",  # type: ignore
-    recipe_list=[
-        emailpassword.init(
-            override=emailpassword.InputOverrideConfig(
-                apis=override_email_password_apis,
-            )
-        )
-    ],
-)
-```
-
-</BackendTabs.TabItem>   
-
-<BackendTabs.TabItem value="go">
-
-```go
-import (
-    "errors"
-
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
-	"github.com/supertokens/supertokens-golang/supertokens"
-)
-
-func main() {
-	supertokens.Init(supertokens.TypeInput{
-		RecipeList: []supertokens.Recipe{
-      // If you are using multiple recipes you will have to override each of them
-			emailpassword.Init(&epmodels.TypeInput{
-				Override: &epmodels.OverrideStruct{
-					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
-
-						// Copy the original implementation of the signUp function
-						originalSignUp := *originalImplementation.SignUpPOST
-
-						// Override the signUp function
-						(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
-							email := ""
-							for _, formField := range formFields {
-								if formField.ID == "email" {
-									valueAsString, asStrOk := formField.Value.(string)
-									if !asStrOk {
-										return epmodels.SignUpPOSTResponse{}, errors.New("Should never come here as we check the type during validation")
-									}
-									email = valueAsString
-								}
-							}
-							// Check if the user signing in exists in the external provider
-							if doesUserExistInExternalProvider(email) {
-								// Return status "EMAIL_ALREADY_EXISTS_ERROR" since the user already exists in the external provider
-								return epmodels.SignUpPOSTResponse{
-									EmailAlreadyExistsError: &struct{}{},
-								}, nil
-							}
-							return originalSignUp(formFields, tenantId, options, userContext)
-						}
-						return originalImplementation
-					},
-				},
-			}),
-		},
-	})
-}
-
-func doesUserExistInExternalProvider(email string) bool {
-	// TODO: Check if user with the input email exists in the external provider
-	return false
-}
-```
-
-</BackendTabs.TabItem>
-
-</BackendTabs>
-
-
-#### 1.3 Create new users when they try to sign in through SuperTokens
-
-Before you can allow users to authenticate through the **SuperTokens** integration you need to add one more step.
-In this scenario you have to ensure that between your current state and finalizng the bulk import process no user will experience any authentication issues.
-When someone that was not yet imported tries to login using **SuperTokens**, perform an additional check, against your previous provider. 
-
-This can be implemented by overriding the `signInPOST` API on each of the authentication recipes that you are using.
-The overriden function should follow these steps:
-- Determine if the authentication user needs to be migrated or not by checking if it exists in the previous authentication provider and not in **SuperTokens**.
-- Validate the input credentials against the external provider
-- Map the external `userId` to the **SuperTokens** `userId`. This will allow SuperTokens functions to reference the user with the external `userId`.
-- Verify the user's email in **SuperTokens** (if necessary)
-
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
-```tsx
-import SuperTokens from "supertokens-node"
-import EmailPassword from "supertokens-node/recipe/emailpassword"
-import EmailVerification from "supertokens-node/recipe/emailverification"
-import { RecipeUserId } from "supertokens-node";
-
-// If you are using multiple recipes you will have to override each of them
-EmailPassword.init({
-    override: {
-        apis: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                signInPOST: async function (input) {
-                    // Check if an email-password user with the input email exists in SuperTokens
-                    let email = input.formFields.find((field) => field.id === "email")!.value as string;
-                    let password = input.formFields.find((field) => field.id === "password")!.value as string;
-                    let supertokensUsersWithSameEmail = await SuperTokens.listUsersByAccountInfo(input.tenantId, {
-                        email: email
-                    }, undefined, input.userContext);
-                    let emailPasswordUser = supertokensUsersWithSameEmail.find(u => {
-                        return u.loginMethods.find(lM => lM.hasSameEmailAs(email) && lM.recipeId === "emailpassword") !== undefined;
-                    })
-
-                    if (emailPasswordUser === undefined) {
-                        // EmailPassword user with the input email does not exist in SuperTokens
-                        // Check if the input credentials are valid in the external provider
-                        let legacyUserInfo = await validateAndGetUserInfoFromExternalProvider(email, password)
-                        if (legacyUserInfo === undefined) {
-                            // credentials are incorrect
-                            return {
-                                status: "WRONG_CREDENTIALS_ERROR"
-                            }
-                        }
-
-                        // Call the signup function to create a new SuperTokens user.
-                        let signUpResponse = await EmailPassword.signUp(input.tenantId, email, password, undefined, input.userContext);
-                        if (signUpResponse.status !== "OK") {
-                            throw new Error("Should never come here")
-                        }
-
-                        // Map the external provider's userId to the SuperTokens userId
-                        await SuperTokens.createUserIdMapping({ superTokensUserId: signUpResponse.user.id, externalUserId: legacyUserInfo.user_id })
-
-                        // Set the userId in the response to use the provider's userId
-                        signUpResponse.user.id = legacyUserInfo.user_id
-                        signUpResponse.user.loginMethods[0].recipeUserId = new RecipeUserId(legacyUserInfo.user_id);
-                        signUpResponse.recipeUserId = new RecipeUserId(legacyUserInfo.user_id);
-
-                        // You will also need to set the email verification status of the user
-                        if (legacyUserInfo.isEmailVerified) {
-                            // Generate an email verification token for the user
-                            let generateEmailVerificationTokenResponse = await EmailVerification.createEmailVerificationToken(input.tenantId, signUpResponse.recipeUserId, email, input.userContext);
-
-                            if (generateEmailVerificationTokenResponse.status === "OK") {
-                                // Verify the user's email
-                                await EmailVerification.verifyEmailUsingToken("public", generateEmailVerificationTokenResponse.token, undefined, input.userContext);
-                            }
-                        }
-                    }
-
-                    return originalImplementation.signInPOST!(input)
-                },
-            }
-        },
-    }
-})
-
-async function validateAndGetUserInfoFromExternalProvider(email: string, password: string): Promise<{
-    user_id: string,
-    isEmailVerified: boolean
-} | undefined> {
-    // TODO: Validate the input credentials against the external authentication provider. If the credentials are valid return the user info.
-    return undefined
-}
-```
-
-</BackendTabs.TabItem>
-
-<BackendTabs.TabItem value="python">
-
-```python
-from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import emailpassword
-from supertokens_python.asyncio import create_user_id_mapping
-from supertokens_python.recipe.emailverification.asyncio import (
-    create_email_verification_token,
-    verify_email_using_token,
-)
-from supertokens_python.recipe.emailpassword.asyncio import sign_up
-from supertokens_python.recipe.emailverification.interfaces import (
-    CreateEmailVerificationTokenOkResult,
-)
-from supertokens_python import init, InputAppInfo
-from supertokens_python.recipe import emailpassword
-from supertokens_python.recipe.emailpassword.interfaces import (
-    APIInterface,
-    APIOptions,
-    SignUpOkResult,
-    WrongCredentialsError,
-)
-from supertokens_python.recipe.emailpassword.types import FormField
-from typing import Dict, Any, Union, List
-from supertokens_python.recipe.session.interfaces import SessionContainer
-from supertokens_python.asyncio import list_users_by_account_info
-from supertokens_python.types import AccountInfo, RecipeUserId
-
-
-# If you are using multiple recipes you will have to override each of them
-def override_emailpassword_apis(original_implementation: APIInterface):
-    original_emailpassword_sign_in = original_implementation.sign_in_post
-
-    async def sign_in(
-        form_fields: List[FormField],
-        tenant_id: str,
-        session: Union[SessionContainer, None],
-        should_try_linking_with_session_user: Union[bool, None],
-        api_options: APIOptions,
-        user_context: Dict[str, Any],
-    ):
-        email = ""
-        password = ""
-        for field in form_fields:
-            if field.id == "email":
-                email = field.value
-            if field.id == "password":
-                password = field.value
-        #  Check if an email-password user with the input email exists in SuperTokens
-        supertokens_user_with_same_email = await list_users_by_account_info(
-            tenant_id, AccountInfo(email=email), False, user_context
-        )
-        emailpassword_user = next(
-            (
-                user
-                for user in supertokens_user_with_same_email
-                if any(
-                    lm.recipe_id == "emailpassword" and lm.has_same_email_as(email)
-                    for lm in user.login_methods
-                )
-            ),
-            None,
-        )
-
-        if emailpassword_user is None:
-            # EmailPassword user with the input email does not exist in SuperTokens
-            # Check if the input credentials valid in the external provider
-            legacy_user_info = await validate_and_get_user_info_from_external_provider(
-                email, password
-            )
-            if legacy_user_info is None:
-                # Credentials are incorrect
-                return WrongCredentialsError()
-
-            # Call the sign_up function to create a new SuperTokens user.
-            response = await sign_up(tenant_id, email, password, None, user_context)
-            if not isinstance(response, SignUpOkResult):
-                raise Exception("Should never come here")
-
-            # Map the external provider's userId to the SuperTokens userId
-            await create_user_id_mapping(response.user.id, legacy_user_info.user_id)
-            # Set the userId in the response to use the provider's userId
-            response.user.id = legacy_user_info.user_id
-            response.user.login_methods[0].recipe_user_id = RecipeUserId(
-                legacy_user_info.user_id
-            )
-            response.recipe_user_id = RecipeUserId(legacy_user_info.user_id)
-
-            # You will also need to set the email verification status of the user
-            if legacy_user_info.isEmailVerified:
-                # Generate an email verification token for the user
-                generate_email_verification_response = (
-                    await create_email_verification_token(
-                        tenant_id,
-                        response.recipe_user_id,
-                        email,
-                        user_context,
-                    )
-                )
-                if isinstance(
-                    generate_email_verification_response,
-                    CreateEmailVerificationTokenOkResult,
-                ):
-                    await verify_email_using_token(
-                        tenant_id,
-                        generate_email_verification_response.token,
-                        True,
-                        user_context,
-                    )
-
-        return await original_emailpassword_sign_in(
-            form_fields,
-            tenant_id,
-            session,
-            should_try_linking_with_session_user,
-            api_options,
-            user_context,
-        )
-
-    original_implementation.sign_in_post = sign_in
-    return original_implementation
-
-
-class ExternalUserInfo:
-    def __init__(self, user_id: str, isEmailVerified: bool):
-        self.user_id: str = user_id
-        self.isEmailVerified: bool = isEmailVerified
-
-
-async def validate_and_get_user_info_from_external_provider(
-    email: str, password: str
-) -> Union[None, ExternalUserInfo]:
-    return None
-
-
-init(
-    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    framework="...",  # type: ignore
-    recipe_list=[
-        emailpassword.init(
-            override=emailpassword.InputOverrideConfig(apis=override_emailpassword_apis)
-        )
-    ],
-)
-```
-
-</BackendTabs.TabItem>   
-
-<BackendTabs.TabItem value="go">
-
-```go
-import (
-	"errors"
-
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
-	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
-	"github.com/supertokens/supertokens-golang/recipe/emailverification"
-	"github.com/supertokens/supertokens-golang/supertokens"
-)
-
-func main() {
-	supertokens.Init(supertokens.TypeInput{
-		RecipeList: []supertokens.Recipe{
-      // If you are using multiple recipes you will have to override each of them
-			emailpassword.Init(&epmodels.TypeInput{
-				Override: &epmodels.OverrideStruct{
-					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
-
-						// Copy the original implementation of the signIn function
-						originalSignIn := *originalImplementation.SignInPOST
-
-						// Override the function
-						(*originalImplementation.SignInPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignInPOSTResponse, error) {
-							email := ""
-							password := ""
-							for _, formField := range formFields {
-								if formField.ID == "email" || formField.ID == "password" {
-									valueAsString, asStrOk := formField.Value.(string)
-									if !asStrOk {
-										return epmodels.SignInPOSTResponse{}, errors.New("Should never come here as we check the type during validation")
-									}
-									if formField.ID == "email" {
-										email = valueAsString
-									} else {
-										password = valueAsString
-									}
-								}
-							}
-							// Check if an email-password user with the input email exists in SuperTokens
-							emailPasswordUser, err := emailpassword.GetUserByEmail(tenantId, email)
-
-							if err != nil {
-								return epmodels.SignInPOSTResponse{}, err
-							}
-
-							if emailPasswordUser == nil {
-								// EmailPassword user with the input email does not exist in SuperTokens
-								// Check if the input credentials are valid in the external provider
-								legacyUserInfo := validateAndGetUserInfoFromExternalProvider(email, password)
-
-								if legacyUserInfo == nil {
-									return epmodels.SignInPOSTResponse{
-										WrongCredentialsError: &struct{}{},
-									}, nil
-								}
-
-								// Call the email-password signup function to create a new SuperTokens user.
-								response, err := emailpassword.SignUp(tenantId, email, password)
-								if err != nil {
-									return epmodels.SignInPOSTResponse{}, err
-								}
-
-								if response.OK == nil {
-									return epmodels.SignInPOSTResponse{}, errors.New("Should never come here")
-								}
-
-								// Map the external provider's userId to the SuperTokens userId
-								_, err = supertokens.CreateUserIdMapping(response.OK.User.ID, legacyUserInfo.userId, nil, nil)
-								if err != nil {
-									return epmodels.SignInPOSTResponse{}, err
-								}
-								// Set the userId in the response to use the provider's userId
-								response.OK.User.ID = legacyUserInfo.userId
-
-								// You will also need to set the email verification status of the user
-								if legacyUserInfo.isEmailVerified {
-									// Generate an email verification token for the user
-									generateEmailVerificationTokenResponse, err := emailverification.CreateEmailVerificationToken(tenantId, response.OK.User.ID, &email)
-									if err != nil {
-										return epmodels.SignInPOSTResponse{}, err
-									}
-
-									if generateEmailVerificationTokenResponse.OK != nil {
-										// Verify the user's email
-										emailverification.VerifyEmailUsingToken(tenantId, generateEmailVerificationTokenResponse.OK.Token)
-									}
-								}
-							}
-
-							return originalSignIn(formFields, tenantId, options, userContext)
-						}
-
-						return originalImplementation
-					},
-				},
-			}),
-		},
-	})
-}
-
-type ExternalUserInfo struct {
-	userId          string
-	isEmailVerified bool
-}
-
-func validateAndGetUserInfoFromExternalProvider(email string, password string) *ExternalUserInfo {
-	// TODO: Validate the input credentials against the external authentication provider. If the credentials are valid return the user info.
-	return nil
-}
-```
-
-</BackendTabs.TabItem>
-
-</BackendTabs>
-
-
-#### 1.4 Handle the password reset flow
+#### 1.3 Handle the password reset flow
 
 During your migration process you will also have to account for potential inconsistencies during the password reset flow.
 
@@ -2081,7 +2060,7 @@ Pass a status filter as a query parameter (eg. `status=NEW`) to count only the u
 Given that information, in order to check if your import is finalized do the following:
 1. Call the `count users` API once without any filters. If the count is 0, then the import process is done.
 2. If the count is not 0, then check if you still have rows that are getting processed (`status=PROCESSING`) or if there are rows that have not yet been picked up by the import job (`status=NEW`)
-3. If the only rows that are left are the ones with the `FAILED` status, then proceed to step `3.3`. There you will see how to debug those issues.
+3. If the only rows that are left are the ones with the `FAILED` status, then proceed to step `2.4`. There you will see how to debug those issues.
 
 
 <HTTPRequestCard path="/bulk-import/users/count" method="get" title="Count Staged Users">

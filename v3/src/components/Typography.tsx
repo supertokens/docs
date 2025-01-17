@@ -10,6 +10,16 @@ import { forwardRef } from "react";
  *
  */
 
+export const H1 = forwardRef<
+	React.ElementRef<typeof Heading>,
+	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
+>(({ className, children, ...props }, ref) => (
+	<Heading ref={ref} {...props} size="8" as="h1">
+		{children}
+	</Heading>
+));
+H1.displayName = "H1";
+
 export const H2 = forwardRef<
 	React.ElementRef<typeof Heading>,
 	Omit<React.ComponentPropsWithoutRef<typeof Heading>, "as">
