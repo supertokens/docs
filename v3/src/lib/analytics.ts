@@ -46,8 +46,16 @@ const userConfig = {
 
 class Analytics {
   private userId: string | null = null;
-  private pageViewEventSent = false;
   static instance: Analytics | null = null;
+  private currentPage: { pathname: string; hostname: string; timestamp: number } | null = null;
+
+  saveCurrentPage() {
+    this.currentPage = {
+      pathname: window.location.pathname,
+      hostname: window.location.hostname,
+      timestamp: Date.now(),
+    };
+  }
 
   getUserId() {
     let userIdInLocalStorage = localStorage === null ? null : localStorage.getItem(baseAnalyticsStorageKey);
@@ -56,7 +64,7 @@ class Analytics {
       return userIdInLocalStorage;
     }
 
-    if (checkCookieConsentIsAllowed() !== false) {
+    if (this.hasCookieConsent !== false) {
       const valueInCookie = Cookies.get(antcsCookieName);
       if (valueInCookie !== undefined) {
         return valueInCookie;
@@ -85,69 +93,107 @@ class Analytics {
     };
   }
 
-  shouldSendEventsToApi() {
+  get hasCookieConsent() {
+    if (window.location.hostname === "localhost") return true;
+    const consentCookie = Cookies.get(COOKIE_CONSENT);
+    if (consentCookie) {
+      if (consentCookie === "deny") {
+        return false;
+      } else {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  get canSendEvents() {
     const hostname = window.location.hostname;
     const userId = this.getCommonData().userId;
     if (
       (hostnameWhitelisting[hostname] === true || hostname.endsWith(".demo.supertokens.com")) &&
       udidBlacklised.hasOwnProperty(userId) === false &&
-      checkCookieConsentIsAllowed()
+      this.hasCookieConsent
     ) {
       return true;
     }
     return false;
   }
 
-  async sendEvent(eventName, userData, analyticsVersion) {
-    if (checkCookieConsentIsAllowed() !== false) {
-      const version = analyticsVersion;
-      const commonData = this.getCommonData();
-      const sessionUserId = await getSessionUserId();
-      const timestamp = Date.now();
-      const data = {
-        timestamp,
-        version,
-        sessionUserId,
-        ...commonData,
-        ...userData,
-      };
+  async sendEvent(
+    eventName: string,
+    payload: { data: Record<string, unknown>; version?: string; useBeacon?: boolean },
+  ) {
+    if (!this.hasCookieConsent) return;
+    const { data, version = "v1", useBeacon = false } = payload;
+    const commonData = this.getCommonData();
+    const sessionUserId = await getSessionUserId();
+    const timestamp = Date.now();
+    const eventData = {
+      timestamp,
+      version,
+      sessionUserId,
+      ...commonData,
+      ...data,
+    };
 
-      if (this.shouldSendEventsToApi()) {
-        // since we don't care about the data returned, we don't need to use await
-        // since we aren't using await, this shouldn't stop program as well if in case one of the api or function fails
-        const payload = {
-          eventName: eventName,
-          data,
-        };
-        axios
-          .post(ANTCS_ENDPOINT_URL, payload, userConfig)
-          .then(() => {
-            this.pageViewEventSent = true; // this is only for redirect links and only for page_view events
-          })
-          .catch(() => {
-            this.pageViewEventSent = true; // this is only for redirect links and only for page_view events
-          });
-        if (eventName !== "page_view") {
-          trackEvent(eventName, data);
-        }
-      } else {
-        this.pageViewEventSent = true;
-        // Do not remove this console logs as it's used on test and localhost site
-        console.log(eventName, data);
-      }
+    if (!this.canSendEvents) {
+      console.log(eventName, eventData);
       return;
     }
+
+    const eventPayload = {
+      eventName: eventName,
+      data: eventData,
+    };
+    axios.post(ANTCS_ENDPOINT_URL, eventPayload, userConfig).catch(console.error);
+    if (eventName !== "page_view") {
+      trackEvent(eventName, eventData, useBeacon);
+    }
+    return;
   }
 
-  async sendPageViewEvents() {
-    await this.sendEvent(
-      "page_view",
-      {
+  async sendPageViewEvent() {
+    if (!this.currentPage) {
+      this.saveCurrentPage();
+    } else {
+      this.sendPageExitEvent("page-change");
+    }
+    await this.sendEvent("page_view", {
+      data: {
         type: "page_view",
         referrer: document.referrer,
       },
-      "v1",
-    );
+      version: "v1",
+    });
+  }
+
+  isNewPage() {
+    if (this.currentPage.hostname !== window.location.hostname) {
+      return true;
+    }
+    if (this.currentPage.pathname !== window.location.pathname) {
+      return true;
+    }
+    return false;
+  }
+
+  // page-change: user navigates from one page to another inside the docs app
+  // app-close: user closes the tab, user navigates to another website from the same tab
+  async sendPageExitEvent(transitionType: "page-change" | "app-close") {
+    if (transitionType === "page-change" && !this.isNewPage()) return;
+    if (!this.currentPage) return;
+    const clickTimestamp = Date.now();
+    const timeSpentOnPage = clickTimestamp - this.currentPage.timestamp;
+    await this.sendEvent("page_exit", {
+      data: {
+        hostname: this.currentPage.hostname,
+        pathname: this.currentPage.pathname,
+        timeSpentOnPage,
+      },
+      version: "v1",
+      useBeacon: transitionType === "app-close",
+    });
+    this.saveCurrentPage();
   }
 }
 
@@ -159,52 +205,41 @@ function getAnalyticsInstance() {
 }
 
 export function trackPageView() {
-  getAnalyticsInstance().sendPageViewEvents();
+  getAnalyticsInstance().sendPageViewEvent();
+}
+
+export function trackPageExit(transitionType: "page-change" | "app-close") {
+  getAnalyticsInstance().sendPageExitEvent(transitionType);
 }
 
 export function trackButtonClick(eventName: string, version = "v1", options?: Object) {
-  getAnalyticsInstance().sendEvent(
-    eventName,
-    {
+  getAnalyticsInstance().sendEvent(eventName, {
+    data: {
       type: "button_click",
       ...options,
     },
     version,
-  );
+  });
 }
 
 export function trackFormSubmit(eventName: string, version = "v1", options?: Object) {
-  getAnalyticsInstance().sendEvent(
-    eventName,
-    {
+  getAnalyticsInstance().sendEvent(eventName, {
+    data: {
       type: "form_submit",
       ...options,
     },
     version,
-  );
+  });
 }
 
 export function trackLinkClick(eventName: string, version = "v5", options?: Object) {
-  getAnalyticsInstance().sendEvent(
-    eventName,
-    {
+  getAnalyticsInstance().sendEvent(eventName, {
+    data: {
       type: "link_click",
       ...options,
     },
     version,
-  );
-}
-
-function checkCookieConsentIsAllowed() {
-  const consentCookie = Cookies.get(COOKIE_CONSENT);
-  if (consentCookie) {
-    if (consentCookie === "deny") {
-      return false;
-    } else {
-      return true;
-    }
-  }
-  return undefined;
+  });
 }
 
 async function getSessionUserId() {
