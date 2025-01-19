@@ -264,5 +264,5 @@ export const AnalyticsEventNames = {
   buttonSearchViewAllResults: "button_search_view_all_results",
   buttonSearchTrigger: "button_search_trigger",
   buttonReferenceCard: "button_reference_card",
-  formFeedback: "form_feedback",
+  formFeedback: "docs_page_feedback",
 };
