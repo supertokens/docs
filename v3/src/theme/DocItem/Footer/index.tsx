@@ -93,15 +93,19 @@ function DocFeedback() {
     setSelectedReason(null);
     setFeedback(null);
   }, []);
-  const onSubmit = useCallback(() => {
-    if (!selectedReason) return;
+  const onSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (!selectedReason) return;
 
-    trackFormSubmit(AnalyticsEventNames.formFeedback, "v1", {
-      reason: selectedReason,
-      feedback: feedback,
-    });
-    setHasSubmittedFeedback(true);
-  }, [selectedReason, feedback]);
+      trackFormSubmit(AnalyticsEventNames.buttonFeedbackForm, "v1", {
+        reason: selectedReason,
+        additionalFeedback: feedback,
+      });
+      setHasSubmittedFeedback(true);
+    },
+    [selectedReason, feedback],
+  );
 
   if (hasSubmittedFeedback) {
     return (
