@@ -225,7 +225,7 @@ export function trackButtonClick(eventName: string, version = "v1", options?: Ob
 export function trackFormSubmit(eventName: string, version = "v1", options?: Object) {
   getAnalyticsInstance().sendEvent(eventName, {
     data: {
-      type: "form_submit",
+      type: "button_click",
       ...options,
     },
     version,

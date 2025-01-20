@@ -99,12 +99,12 @@ function DocFeedback() {
       if (!selectedReason) return;
 
       // @ts-expect-error
-      const feedbackType = event.target.dataset.feedbackType;
+      const feedbackType = event.target.dataset.feedbackType as string;
 
       trackFormSubmit(AnalyticsEventNames.buttonFeedbackForm, "v1", {
         feedbackType,
-        reason: selectedReason,
-        additionalFeedback: feedback,
+        feedbackReason: selectedReason,
+        feedbackAdditionalInfo: feedback,
       });
       setHasSubmittedFeedback(true);
     },
