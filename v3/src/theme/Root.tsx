@@ -13,14 +13,21 @@ export default function Root({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const handleBeforeUnload = () => {
       trackPageExit("app-close");
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload, { signal: controller.signal });
+    return () => controller.abort();
+  }, []);
 
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+  useEffect(() => {
+    const controller = new AbortController();
+    const handleVisibilityChange = () => {
+      trackPageExit("visibility-change", document.visibilityState);
     };
+    document.addEventListener("visibilitychange", handleVisibilityChange, { signal: controller.signal });
+    return () => controller.abort();
   }, []);
 
   return (

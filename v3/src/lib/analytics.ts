@@ -47,13 +47,17 @@ const userConfig = {
 class Analytics {
   private userId: string | null = null;
   static instance: Analytics | null = null;
-  private currentPage: { pathname: string; hostname: string; timestamp: number } | null = null;
+  public currentPage: {
+    pathname: string;
+    hostname: string;
+    pageViewIntervals: Array<{ start: number; end?: number }>;
+  } | null = null;
 
   saveCurrentPage() {
     this.currentPage = {
       pathname: window.location.pathname,
       hostname: window.location.hostname,
-      timestamp: Date.now(),
+      pageViewIntervals: [{ start: Date.now() }],
     };
   }
 
@@ -182,13 +186,19 @@ class Analytics {
   async sendPageExitEvent(transitionType: "page-change" | "app-close") {
     if (transitionType === "page-change" && !this.isNewPage()) return;
     if (!this.currentPage) return;
-    const clickTimestamp = Date.now();
-    const timeSpentOnPage = clickTimestamp - this.currentPage.timestamp;
+    const currentTime = Date.now();
+    this.currentPage.pageViewIntervals[this.currentPage.pageViewIntervals.length - 1].end = currentTime;
+    const totalTime = currentTime - this.currentPage.pageViewIntervals[0].start;
+    const activeTime = this.currentPage.pageViewIntervals.reduce((acc, interval) => {
+      if (interval.end === undefined) return acc;
+      return acc + interval.end - interval.start;
+    }, 0);
     await this.sendEvent("page_exit", {
       data: {
         hostname: this.currentPage.hostname,
         pathname: this.currentPage.pathname,
-        timeSpentOnPage,
+        totalTime,
+        activeTime,
       },
       version: "v1",
       useBeacon: transitionType === "app-close",
@@ -208,8 +218,23 @@ export function trackPageView() {
   getAnalyticsInstance().sendPageViewEvent();
 }
 
-export function trackPageExit(transitionType: "page-change" | "app-close") {
-  getAnalyticsInstance().sendPageExitEvent(transitionType);
+export function trackPageExit(transitionType: "page-change" | "app-close"): void;
+export function trackPageExit(transitionType: "visibility-change", visibilityState: "hidden" | "visible"): void;
+export function trackPageExit(
+  transitionType: "page-change" | "app-close" | "visibility-change",
+  visibilityState?: "hidden" | "visible",
+) {
+  const analyticsInstance = getAnalyticsInstance();
+  if (transitionType === "page-change" || transitionType === "app-close") {
+    analyticsInstance.sendPageExitEvent(transitionType);
+    return;
+  }
+  if (visibilityState === "hidden") {
+    analyticsInstance.currentPage.pageViewIntervals[analyticsInstance.currentPage.pageViewIntervals.length - 1].end =
+      Date.now();
+  } else if (visibilityState === "visible") {
+    analyticsInstance.currentPage.pageViewIntervals.push({ start: Date.now() });
+  }
 }
 
 export function trackButtonClick(eventName: string, version = "v1", options?: Object) {
