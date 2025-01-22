@@ -93,15 +93,23 @@ function DocFeedback() {
     setSelectedReason(null);
     setFeedback(null);
   }, []);
-  const onSubmit = useCallback(() => {
-    if (!selectedReason) return;
+  const onSubmit = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      if (!selectedReason) return;
 
-    trackFormSubmit(AnalyticsEventNames.formFeedback, "v1", {
-      reason: selectedReason,
-      feedback: feedback,
-    });
-    setHasSubmittedFeedback(true);
-  }, [selectedReason, feedback]);
+      // @ts-expect-error
+      const feedbackType = event.target.dataset.feedbackType as string;
+
+      trackFormSubmit(AnalyticsEventNames.buttonFeedbackForm, "v1", {
+        feedbackType,
+        feedbackReason: selectedReason,
+        feedbackAdditionalInfo: feedback,
+      });
+      setHasSubmittedFeedback(true);
+    },
+    [selectedReason, feedback],
+  );
 
   if (hasSubmittedFeedback) {
     return (
@@ -194,7 +202,7 @@ function DocFeedback() {
               </Flex>
               <Flex gap="3" mt="4" justify="end">
                 <Dialog.Close>
-                  <Button disabled={!selectedReason} onClick={onSubmit}>
+                  <Button disabled={!selectedReason} onClick={onSubmit} data-feedback-type="positive">
                     Submit
                   </Button>
                 </Dialog.Close>
@@ -272,7 +280,7 @@ function DocFeedback() {
               </Flex>
               <Flex gap="3" mt="4" justify="end">
                 <Dialog.Close>
-                  <Button disabled={!selectedReason} onClick={onSubmit}>
+                  <Button disabled={!selectedReason} onClick={onSubmit} data-feedback-type="negative">
                     Submit
                   </Button>
                 </Dialog.Close>
