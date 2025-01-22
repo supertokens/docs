@@ -2,7 +2,7 @@ import React, { type ReactNode } from "react";
 import Link from "@docusaurus/Link";
 import type { Props } from "@theme/PaginatorNavLink";
 
-import { Card, Grid, Flex, Text } from "@radix-ui/themes";
+import { Card, Flex, Grid, Text } from "@radix-ui/themes";
 
 export default function PaginatorNavLink(props: Props): ReactNode {
   const { permalink, title, subLabel, isNext } = props;
