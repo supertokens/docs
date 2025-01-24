@@ -1,5 +1,5 @@
 import MDXComponents from "@theme-original/MDXComponents";
-import { DocItemContextValue, UIType, NextjsRouterTypeSelect, ConditionalContent } from "@site/src/components";
+import { OSTabs, DocItemContextValue, UIType, NextjsRouterTypeSelect, ConditionalContent } from "@site/src/components";
 import { H4, H5, H6 } from "../components/Typography";
 
 import { Table } from "@radix-ui/themes";
@@ -20,6 +20,7 @@ export default {
   UIType,
   NextjsRouterTypeSelect,
   ConditionalContent,
+  OSTabs,
   th: Table.ColumnHeaderCell,
   td: Table.Cell,
   tr: Table.Row,
