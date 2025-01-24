@@ -9,3 +9,4 @@ export * from "./Select";
 export * from "./Tabs";
 export * from "./DocItemContextValue";
 export * from "./DocItemContextCondition";
+export * from "./ConditionalContent";
