@@ -66,10 +66,10 @@ The {product} APIs use the following error types:
 
 #### ExampleErrorType
 
-| Field          | Type     | Description                                                          |
-| -------------- | -------- | -------------------------------------------------------------------- |
-| {errorType}    | {enum}   | {Predefined error codes. Possible enum values are x, y, ..., and z.} |
-| {errorMessage} | {string} | {Additional information about why the error occurs.}                 |
+| Field            | Type       | Description                                                            |
+| ---------------- | ---------- | ---------------------------------------------------------------------- |
+| `{errorType}`    | `{enum}`   | {Predefined error codes. Possible `enum` values are x, y, ..., and z.} |
+| `{errorMessage}` | `{string}` | {Additional information about why the error occurs.}                   |
 
 ## {Resource name}
 
