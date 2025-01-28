@@ -1,0 +1,895 @@
+---
+title: Implement an invite link based sign up
+hide_title: true
+description: Discover how to implement an invite based sign up flow with the passwordless recipe.
+sidebar_position: 10
+---
+
+import { BackendTabs, ConditionalContent, NextjsRouterTypeSelect, NodeFrameworksCard, PythonFrameworksCard, GoFrameworksCard } from "/src/components";
+
+# Passwordless Login via Invite Link
+
+In this flow, the admin of the app will call an API to sign up a user and send them on invite link. Once the user clicks on that, they will be logged in and can access the app. If a user has not been invited before, their sign in attempt will fail.
+
+We start by overriding the `createCodePOST` API to check if the input email / phone number was already invited before. If not, we send back a user friendly message to the frontend. We can check if a user was invited before by checking if they already exist in SuperTokens - cause users are created in SuperTokens when they successfully complete the invite flow.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import Passwordless from "supertokens-node/recipe/passwordless";
+import supertokens from "supertokens-node";
+
+Passwordless.init({
+    contactMethod: "EMAIL", flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", // typecheck-only, removed from output
+    override: {
+        apis: (originalImplementation) => {
+            return {
+                ...originalImplementation,
+                createCodePOST: async function (input) {
+                    if ("email" in input) {
+                        let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+                            email: input.email
+                        });
+                        let existingPasswordlessUser = existingUsers.find(user => user.loginMethods.find(lM => lM.hasSameEmailAs(input.email) && lM.recipeId === "passwordless") !== undefined);
+                        if (existingPasswordlessUser === undefined) {
+                            // this is sign up attempt
+                            return {
+                                status: "GENERAL_ERROR",
+                                message: "Sign up disabled. Please contact the admin."
+                            }
+                        }
+                    } else {
+                        let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+                            phoneNumber: input.phoneNumber
+                        });
+                        let existingPasswordlessUser = existingUsers.find(user => user.loginMethods.find(lM => lM.hasSamePhoneNumberAs(input.phoneNumber) && lM.recipeId === "passwordless") !== undefined);
+                        if (existingPasswordlessUser === undefined) {
+                            // this is sign up attempt
+                            return {
+                                status: "GENERAL_ERROR",
+                                message: "Sign up disabled. Please contact the admin."
+                            }
+                        }
+                    }
+                    return await originalImplementation.createCodePOST!(input);
+                }
+            }
+        }
+    }
+})
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	passwordless.Init(plessmodels.TypeInput{
+		Override: &plessmodels.OverrideStruct{
+			APIs: func(originalImplementation plessmodels.APIInterface) plessmodels.APIInterface {
+				originalCreateCodePOST := *originalImplementation.CreateCodePOST
+
+				(*originalImplementation.CreateCodePOST) = func(email, phoneNumber *string, tenantId string, options plessmodels.APIOptions, userContext supertokens.UserContext) (plessmodels.CreateCodePOSTResponse, error) {
+
+					if email != nil {
+						existingUser, err := passwordless.GetUserByEmail(tenantId, *email)
+						if err != nil {
+							return plessmodels.CreateCodePOSTResponse{}, err
+						}
+						if existingUser == nil {
+							// sign up attempt
+							return plessmodels.CreateCodePOSTResponse{
+								GeneralError: &supertokens.GeneralErrorResponse{
+									Message: "Sign ups are disabled. Please contact the admin.",
+								},
+							}, nil
+						}
+					} else {
+						existingUser, err := passwordless.GetUserByPhoneNumber(tenantId, *phoneNumber)
+						if err != nil {
+							return plessmodels.CreateCodePOSTResponse{}, err
+						}
+						if existingUser == nil {
+							// sign up attempt
+							return plessmodels.CreateCodePOSTResponse{
+								GeneralError: &supertokens.GeneralErrorResponse{
+									Message: "Sign ups are disabled. Please contact the admin.",
+								},
+							}, nil
+						}
+					}
+					return originalCreateCodePOST(email, phoneNumber, tenantId, options, userContext)
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.types import GeneralErrorResponse
+from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless.interfaces import APIInterface, APIOptions
+from typing import Union, Dict, Any, Optional
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.asyncio import list_users_by_account_info
+from supertokens_python.types import AccountInfo
+
+
+def override_passwordless_apis(original_implementation: APIInterface):
+    original_create_code_post = original_implementation.create_code_post
+
+    async def create_code_post(
+        email: Union[str, None],
+        phone_number: Union[str, None],
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
+        tenant_id: str,
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        if email is not None:
+            existing_user = await list_users_by_account_info(
+                tenant_id, AccountInfo(email=email)
+            )
+            user_with_passwordless = next(
+                (
+                    user
+                    for user in existing_user
+                    if any(
+                        login_method.recipe_id == "passwordless"
+                        and login_method.has_same_email_as(email)
+                        for login_method in user.login_methods
+                    )
+                ),
+                None,
+            )
+            if user_with_passwordless is None:
+                # sign up attempt
+                return GeneralErrorResponse("Sign ups disabled. Please contact admin.")
+        else:
+            assert phone_number is not None
+            existing_user = await list_users_by_account_info(
+                tenant_id, AccountInfo(phone_number=phone_number)
+            )
+            user_with_passwordless = next(
+                (
+                    user
+                    for user in existing_user
+                    if any(
+                        login_method.recipe_id == "passwordless"
+                        and login_method.has_same_phone_number_as(phone_number)
+                        for login_method in user.login_methods
+                    )
+                ),
+                None,
+            )
+            if user_with_passwordless is None:
+                # sign up attempt
+                return GeneralErrorResponse("Sign ups disabled. Please contact admin.")
+
+        return await original_create_code_post(
+            email,
+            phone_number,
+            session,
+            should_try_linking_with_session_user,
+            tenant_id,
+            api_options,
+            user_context,
+        )
+
+    original_implementation.create_code_post = create_code_post
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        passwordless.init(
+            contact_config="",  # type: ignore # typecheck-only, removed from output
+            flow_type="USER_INPUT_CODE",
+            override=passwordless.InputOverrideConfig(
+                apis=override_passwordless_apis,
+            ),
+        )
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+`createCodePOST` is called when the user enters their email or phone number to login. We override it to check:
+- If there exists a user with the input email or phone number, it means they are signing in and so we allow the operation.
+- Otherwise it means that the user has not been invited to the app and we return an appropriate message to the frontend.
+
+
+Now we will see how to make the API in which the admin of the app can create new users and invite them:
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+<NodeFrameworksCard>
+<NodeFrameworksCard.Content value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+let app = express();
+
+app.post("/create-user", verifySession({
+    overrideGlobalClaimValidators: async function (globalClaimValidators) {
+        return [...globalClaimValidators,
+        UserRoles.UserRoleClaim.validators.includes("admin")]
+    }
+}), async (req: SessionRequest, res) => {
+	let email = req.body.email;
+
+    // this will create the user in supertokens if they don't already exist.
+    await Passwordless.signInUp({
+        tenantId: "public",
+        email
+    })
+
+    let inviteLink = await Passwordless.createMagicLink({
+        tenantId: "public",
+        email
+    });
+
+    // TODO: send inviteLink to user's email
+    res.send("Success");
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import { SessionRequest } from "supertokens-node/framework/hapi";
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/create-user",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    overrideGlobalClaimValidators: async function (globalClaimValidators) {
+                        return [...globalClaimValidators,
+                        UserRoles.UserRoleClaim.validators.includes("admin")]
+                    }
+                })
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        let email = (req.payload.valueOf() as any).email;
+
+        // this will create the user in supertokens if they don't already exist.
+        await Passwordless.signInUp({
+            tenantId: "public",
+            email
+        })
+
+        let inviteLink = await Passwordless.createMagicLink({
+        	tenantId: "public",
+            email
+    	});
+
+    	// TODO: send inviteLink to user's email
+        res.response("Success").code(200);
+    }
+})
+```
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+let fastify = Fastify();
+
+fastify.post("/create-user", {
+    preHandler: verifySession({
+        overrideGlobalClaimValidators: async function (globalClaimValidators) {
+            return [...globalClaimValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin")]
+        }
+    }),
+}, async (req, res) => {
+    let email = req.body.email;
+
+    // this will create the user in supertokens if they don't already exist.
+    await Passwordless.signInUp({
+        tenantId: "public",
+        email
+    })
+
+    let inviteLink = await Passwordless.createMagicLink({
+        tenantId: "public",
+        email
+    });
+
+    // TODO: send inviteLink to user's email
+    res.code(200).send("Success");
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEventV2 } from "supertokens-node/framework/awsLambda";
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+async function createUser(awsEvent: SessionEventV2) {
+    let email = JSON.parse(awsEvent.body!).email;
+
+    // this will create the user in supertokens if they don't already exist.
+    await Passwordless.signInUp({
+        tenantId: "public",
+        email
+    })
+
+    let inviteLink = await Passwordless.createMagicLink({
+        tenantId: "public",
+        email
+    });
+
+    // TODO: send inviteLink to user's email
+    return {
+        statusCode: '200',
+        body: "Success"
+    }
+};
+
+exports.handler = verifySession(createUser, {
+    overrideGlobalClaimValidators: async function (globalClaimValidators) {
+        return [...globalClaimValidators,
+        UserRoles.UserRoleClaim.validators.includes("admin")]
+    }
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+let router = new KoaRouter();
+
+router.post("/create-user", verifySession({
+    overrideGlobalClaimValidators: async function (globalClaimValidators) {
+        return [...globalClaimValidators,
+        UserRoles.UserRoleClaim.validators.includes("admin")]
+    }
+}), async (ctx: SessionContext, next) => {
+    let email = (ctx.body as any).email;
+
+    // this will create the user in supertokens if they don't already exist.
+    await Passwordless.signInUp({
+        tenantId: "public",
+        email
+    })
+
+    let inviteLink = await Passwordless.createMagicLink({
+        tenantId: "public",
+        email
+    });
+
+    // TODO: send inviteLink to user's email
+    ctx.status = 200;
+    ctx.body = "Success";
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+class LikeComment {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/create-user")
+    @intercept(verifySession({
+        overrideGlobalClaimValidators: async function (globalClaimValidators) {
+            return [...globalClaimValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin")]
+        }
+    }))
+    async handler() {
+        let email = "" // TODO: get from request body
+
+        // this will create the user in supertokens if they don't already exist.
+        await Passwordless.signInUp({
+            tenantId: "public",
+            email
+        })
+
+        let inviteLink = await Passwordless.createMagicLink({
+        	tenantId: "public",
+            email
+    	});
+
+    	// TODO: send inviteLink to user's email
+        // TODO: send 200 response to the client
+    }
+}
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nextjs">
+
+<NodeFrameworksCard.HeaderCustomActions>
+  <NextjsRouterTypeSelect />
+</NodeFrameworksCard.HeaderCustomActions>
+
+<ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+export default async function createUser(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                overrideGlobalClaimValidators: async function (globalClaimValidators) {
+                    return [...globalClaimValidators,
+                    UserRoles.UserRoleClaim.validators.includes("admin")]
+                }
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+
+    let email = req.body.email;
+
+    // this will create the user in supertokens if they don't already exist.
+    await Passwordless.signInUp({
+        tenantId: "public",
+        email
+    })
+
+    let inviteLink = await Passwordless.createMagicLink({
+        tenantId: "public",
+        email
+    });
+
+    // TODO: send inviteLink to user's email
+    res.status(200).json({ message: 'Success' })
+}
+```
+
+</ConditionalContent>
+
+
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withSession(request, async (err, session) => {
+        if (err) {
+            return NextResponse.json(err, { status: 500 });
+        }
+        const body = await request.json();
+        let email = body.email;
+
+        // this will create the user in supertokens if they don't already exist.
+        await Passwordless.signInUp({
+            tenantId: "public",
+            email
+        })
+
+        let inviteLink = await Passwordless.createMagicLink({
+            tenantId: "public",
+            email
+        });
+
+        // TODO: send inviteLink to user's email
+        return NextResponse.json({ message: 'Success' });
+    },
+    {
+        overrideGlobalClaimValidators: async function (globalClaimValidators) {
+            return [...globalClaimValidators, UserRoles.UserRoleClaim.validators.includes("admin")]
+        }
+    });
+}
+```
+</ConditionalContent>
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Session } from "@nestjs/common";
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import UserRoles from "supertokens-node/recipe/userroles";
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+@Controller()
+export class CreateUserController {
+  @Post('create-user')
+  @UseGuards(new AuthGuard({
+    overrideGlobalClaimValidators: async function (globalClaimValidators: any) {
+      return [...globalClaimValidators,
+      UserRoles.UserRoleClaim.validators.includes("admin")]
+    }
+  })) // For more information about this guard please read our NestJS guide.
+  async postAPI(@Session() session: SessionContainer): Promise<void> {
+    let email = "" // TODO: get from request body
+
+    // this will create the user in supertokens if they don't already exist.
+    await Passwordless.signInUp({
+        tenantId: "public",
+        email
+    })
+
+    let inviteLink = await Passwordless.createMagicLink({
+        tenantId: "public",
+        email
+    });
+
+    // TODO: send inviteLink to user's email
+    // TODO: send 200 response to the client
+  }
+}
+```
+</NodeFrameworksCard.Content>
+</NodeFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+<GoFrameworksCard>
+<GoFrameworksCard.Content value="http">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+				globalClaimValidators = append(globalClaimValidators, userrolesclaims.PermissionClaimValidators.Includes("admin", nil, nil))
+				return globalClaimValidators, nil
+			},
+		}, createUserAPI).ServeHTTP(rw, r)
+	})
+}
+
+func createUserAPI(w http.ResponseWriter, r *http.Request) {
+	email := "" // TODO: read email from request body
+
+    // This will create the user in supertokens if they don't already exist.
+    tenantId := "public"
+    passwordless.SignInUpByEmail(tenantId, email)
+
+	inviteLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
+	if err != nil {
+		// TODO: send 500 to the client
+		return
+	}
+	fmt.Println(inviteLink)
+	// TODO: send invite link
+	// TODO: send 200 to the client
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="gin">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := gin.New()
+
+	// Wrap the API handler in session.VerifySession
+	router.POST("/create-user", verifySession(&sessmodels.VerifySessionOptions{
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.PermissionClaimValidators.Includes("admin", nil, nil))
+			return globalClaimValidators, nil
+		},
+	}), createUserAPI)
+}
+
+// This is a function that wraps the supertokens verification function
+// to work the gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func createUserAPI(c *gin.Context) {
+	email := "" // TODO: read email from request body
+
+    // This will create the user in supertokens if they don't already exist.
+    tenantId := "public"
+    passwordless.SignInUpByEmail(tenantId, email)
+
+	inviteLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
+	if err != nil {
+		// TODO: send 500 to the client
+		return
+	}
+	fmt.Println(inviteLink)
+	// TODO: send invite link
+	// TODO: send 200 to the client
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="chi">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	r.Post("/create-user", session.VerifySession(&sessmodels.VerifySessionOptions{
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.PermissionClaimValidators.Includes("admin", nil, nil))
+			return globalClaimValidators, nil
+		},
+	}, createUserAPI))
+}
+
+func createUserAPI(w http.ResponseWriter, r *http.Request) {
+	email := "" // TODO: read email from request body
+
+    // This will create the user in supertokens if they don't already exist.
+    tenantId := "public"
+    passwordless.SignInUpByEmail(tenantId, email)
+
+	inviteLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
+	if err != nil {
+		// TODO: send 500 to the client
+		return
+	}
+	fmt.Println(inviteLink)
+	// TODO: send invite link
+	// TODO: send 200 to the client
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="mux">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	router.HandleFunc("/create-user", session.VerifySession(&sessmodels.VerifySessionOptions{
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.PermissionClaimValidators.Includes("admin", nil, nil))
+			return globalClaimValidators, nil
+		},
+	}, createUserAPI)).Methods(http.MethodPost)
+}
+
+func createUserAPI(w http.ResponseWriter, r *http.Request) {
+	email := "" // TODO: read email from request body
+
+    // This will create the user in supertokens if they don't already exist.
+    tenantId := "public"
+    passwordless.SignInUpByEmail(tenantId, email)
+
+	inviteLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
+	if err != nil {
+		// TODO: send 500 to the client
+		return
+	}
+	fmt.Println(inviteLink)
+	// TODO: send invite link
+	// TODO: send 200 to the client
+}
+```
+
+</GoFrameworksCard.Content>
+</GoFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+<PythonFrameworksCard>
+<PythonFrameworksCard.Content value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.passwordless.asyncio import create_magic_link, signinup
+
+@app.post('/create-user')  # type: ignore
+async def create_user(session: SessionContainer = Depends(verify_session(
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators +
+    [UserRoleClaim.validators.includes("admin")]
+))):
+    email = ""  # TODO: read from request body.
+
+    # this will creat the user in supertokens if they don't already exist
+    await signinup("public", email, None)
+
+    invite_link = await create_magic_link("public", email, None)
+
+    print(invite_link)
+    # TODO: send invite_link to email
+    # TODO: send 200 responspe to client
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.passwordless.syncio import create_magic_link, signinup
+
+@app.route('/create_user', methods=['POST'])  # type: ignore
+@verify_session(
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators +
+    [UserRoleClaim.validators.includes("admin")]
+)
+def create_user():
+    email = ""  # TODO: read from request body.
+
+    # this will creat the user in supertokens if they don't already exist
+    signinup("public", email, None)
+
+    invite_link = create_magic_link("public", email, None)
+
+    print(invite_link)
+    # TODO: send invite_link to email
+    # TODO: send 200 responspe to client
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.passwordless.asyncio import create_magic_link, signinup
+
+@verify_session(
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators +
+    [UserRoleClaim.validators.includes("admin")]
+)
+async def create_user(request: HttpRequest):
+    email = ""  # TODO: read from request body.
+
+    # this will creat the user in supertokens if they don't already exist
+    await signinup("public", email, None)
+
+    invite_link = await create_magic_link("public", email, None)
+
+    print(invite_link)
+    # TODO: send invite_link to email
+    # TODO: send 200 responspe to client
+```
+
+</PythonFrameworksCard.Content>
+</PythonFrameworksCard>
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+- We guard the above API such that only signed in users with the `"admin"` role can call it. Feel free to change that part of the API.
+- The code above uses the default magic link path for the invite link (`/auth/verify`). If you are using the pre-built UI, our frontend SDK will automatically log the user in. If you want to show a different UI to the user, then you can use a different path in the link (by modifying the `inviteLink` string) and make your own UI on that path. If you are making your own UI, you can [use the `consumeCode` function provided by our frontend SDK](/docs/authentication/passwordless/initial-setup) to call the passwordless API that verifies the code in the URL and creates the user.
+- You can change the lifetime of the magic link, and therefore the invite link, by following [this guide](/docs/authentication/passwordless/otp-magic-link-expiration).
+
+:::info Multi Tenancy
+In the above code snippets, we pass in the `"public"` tenantId when calling the functions - this is the default tenantId. If you are using our multi tenancy feature, you can pass in a different tenantId and this will ensure that the user with that email is added only to that tenant.
+
+You will also need to pass in the tenantId to the createMagicLink function which will add the tenantId to the generated magic link. The resulting link will use the `websiteDomain` that is configured in the `appInfo` object in `supertokens.init`, but you can change the link's domain to match that of the tenant before sending it.
+:::
+
