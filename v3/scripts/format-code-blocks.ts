@@ -59,9 +59,6 @@ async function formatCodeBlock(codeBlocks: CodeBlock[]) {
   const snippetLocalPath = "./tmp/code-snippet";
   const snippetContainerPath = "/tmp/code-snippet";
   for (const codeBlock of codeBlocks) {
-    // console.log(
-    //   `Formatting code block for ${codeBlock.language} in ${codeBlock.filePath} at ${codeBlock.position.start.line}`,
-    // );
     const parsedCodeBlockValue = codeBlock.language === "go" ? `package main\n\n${codeBlock.value}` : codeBlock.value;
     await write(snippetLocalPath, parsedCodeBlockValue);
     execSync(`docker cp ${snippetLocalPath} ${DOCKER_CONTAINER_NAME}:${snippetContainerPath}`);
@@ -74,7 +71,9 @@ async function formatCodeBlock(codeBlocks: CodeBlock[]) {
     }
 
     execSync(`docker cp ${DOCKER_CONTAINER_NAME}:${snippetContainerPath} ${snippetLocalPath}`);
-    const formattedCodeBlock = await file(snippetLocalPath).text();
+    let formattedCodeBlock = await file(snippetLocalPath).text();
+    formattedCodeBlock =
+      codeBlock.language === "go" ? formattedCodeBlock.replace("package main\n\n", "") : formattedCodeBlock;
     codeBlock.value = formattedCodeBlock;
   }
 }
