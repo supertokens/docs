@@ -7,6 +7,7 @@ export * from "./Callouts";
 export * from "./Forms";
 export * from "./Select";
 export * from "./Tabs";
+export * from "./DescriptionText";
 export * from "./DocItemContextValue";
 export * from "./DocItemContextCondition";
 export * from "./ConditionalContent";
