@@ -9,34 +9,31 @@ import { visit } from "unist-util-visit";
  * This is done to prevent errors in the code type checking process.
  */
 export default function remarkRemoveWebJsScriptImports() {
-	return (tree) => {
-		visit(tree, "code", (node) => {
-			const targetedLanguages = ["tsx", "ts", "typescript"];
-			if (!targetedLanguages.includes(node.lang)) return;
+  return (tree) => {
+    visit(tree, "code", (node) => {
+      const targetedLanguages = ["tsx", "ts", "typescript"];
+      if (!targetedLanguages.includes(node.lang)) return;
 
-			const lines = node.value.split("\n");
-			let filteredLines = lines.filter((line) => {
-				return (
-					!line.includes("supertokens-web-js-script") &&
-					!line.includes("supertokens-auth-react-script")
-				);
-			});
+      const lines = node.value.split("\n");
+      let filteredLines = lines.filter((line) => {
+        return !line.includes("supertokens-web-js-script") && !line.includes("supertokens-auth-react-script");
+      });
 
-			const mappedLines = filteredLines.map((line) => {
-				if (
-					line.startsWith("supertokensUIInit") ||
-					line.startsWith("supertokensUIThirdParty") ||
-					line.startsWith("supertokensUIEmailPassword") ||
-					line.startsWith("supertokensUIPasswordless") ||
-					line.startsWith("supertokensUIOAuth2Provider") ||
-					line.startsWith("supertokensUISession")
-				)
-					return `(window as any).${line}`;
+      const mappedLines = filteredLines.map((line) => {
+        if (
+          line.startsWith("supertokensUIInit") ||
+          line.startsWith("supertokensUIThirdParty") ||
+          line.startsWith("supertokensUIEmailPassword") ||
+          line.startsWith("supertokensUIPasswordless") ||
+          line.startsWith("supertokensUIOAuth2Provider") ||
+          line.startsWith("supertokensUISession")
+        )
+          return `(window as any).${line}`;
 
-				return line;
-			});
+        return line;
+      });
 
-			node.value = mappedLines.join("\n");
-		});
-	};
+      node.value = mappedLines.join("\n");
+    });
+  };
 }

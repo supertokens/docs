@@ -103,16 +103,18 @@ But there are exceptions to most rules.
 
 ### 1. **Clarity**
 
-- Use simple, direct language to explain concepts and instructions.
+- Use simple, direct language to explain concepts and instructions. Remove words that don’t add substance.
 - Write in the active voice.
   - Example: "The function returns a result" (not "A result is returned by the function").
 - Avoid vague or ambiguous statements. Be specific and actionable.
+- Avoid using Latin abbreviations "i.e." or "e.g.". Use "that is" or "for example" instead.
 
 ### 2. **Consistency**
 
 - Define acronyms on first use.
   - Example: "Command-Line Interface (CLI)."
-- Use a friendly tone of voice
+- Use a friendly tone of voice.
+- Use American spelling.
 
 ### 3. **User Focus**
 
@@ -130,6 +132,7 @@ But there are exceptions to most rules.
     - Use "to" instead of "in order to."
     - Use "now" instead of "at the present time."
 - Avoid repetition unless summarizing key points for clarity.
+- Avoid temporal words like "currently", "now", "will", etc. Describe the present state of the product.
 
 ### 5. **Structure and Flow**
 
@@ -155,9 +158,7 @@ But there are exceptions to most rules.
 - Avoid opinions, criticisms, or personal commentary.
 - Focus on presenting information that helps the user achieve their goals.
 
-## UI Elements
-
-## How to test your code
+## How to test your changes
 
 ### Preqrequisites
 
@@ -182,8 +183,8 @@ npm install -g bun
 
 #### Docker
 
-Used to run the code block validation.
-For other platforms check the [installation guide](https://docs.docker.com/get-docker/).
+Used to run the code block validation and formatting.
+For install instructions check the [guide](https://docs.docker.com/get-docker/).
 
 ### Testing Steps
 

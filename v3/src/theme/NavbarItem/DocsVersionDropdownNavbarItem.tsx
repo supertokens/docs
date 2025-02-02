@@ -1,36 +1,26 @@
-import React from 'react';
+import React from "react";
 import {
   useVersions,
   useActiveDocContext,
   useDocsVersionCandidates,
   useDocsPreferredVersion,
-} from '@docusaurus/plugin-content-docs/client';
-import {translate} from '@docusaurus/Translate';
-import {useLocation} from '@docusaurus/router';
-import DefaultNavbarItem from '@theme/NavbarItem/DefaultNavbarItem';
-import DropdownNavbarItem from '@theme/NavbarItem/DropdownNavbarItem';
-import type {Props} from '@theme/NavbarItem/DocsVersionDropdownNavbarItem';
-import type {LinkLikeNavbarItemProps} from '@theme/NavbarItem';
-import type {
-  GlobalVersion,
-  GlobalDoc,
-  ActiveDocContext,
-} from '@docusaurus/plugin-content-docs/client';
+} from "@docusaurus/plugin-content-docs/client";
+import { translate } from "@docusaurus/Translate";
+import { useLocation } from "@docusaurus/router";
+import DefaultNavbarItem from "@theme/NavbarItem/DefaultNavbarItem";
+import DropdownNavbarItem from "@theme/NavbarItem/DropdownNavbarItem";
+import type { Props } from "@theme/NavbarItem/DocsVersionDropdownNavbarItem";
+import type { LinkLikeNavbarItemProps } from "@theme/NavbarItem";
+import type { GlobalVersion, GlobalDoc, ActiveDocContext } from "@docusaurus/plugin-content-docs/client";
 
 function getVersionMainDoc(version: GlobalVersion): GlobalDoc {
   return version.docs.find((doc) => doc.id === version.mainDocId)!;
 }
 
-function getVersionTargetDoc(
-  version: GlobalVersion,
-  activeDocContext: ActiveDocContext,
-): GlobalDoc {
+function getVersionTargetDoc(version: GlobalVersion, activeDocContext: ActiveDocContext): GlobalDoc {
   // We try to link to the same doc, in another version
   // When not possible, fallback to the "main doc" of the version
-  return (
-    activeDocContext.alternateDocVersions[version.name] ??
-    getVersionMainDoc(version)
-  );
+  return activeDocContext.alternateDocVersions[version.name] ?? getVersionMainDoc(version);
 }
 
 export default function DocsVersionDropdownNavbarItem({
@@ -41,10 +31,10 @@ export default function DocsVersionDropdownNavbarItem({
   dropdownItemsAfter,
   ...props
 }: Props): JSX.Element {
-  const {search, hash} = useLocation();
+  const { search, hash } = useLocation();
   const activeDocContext = useActiveDocContext(docsPluginId);
   const versions = useVersions(docsPluginId);
-  const {savePreferredVersionName} = useDocsPreferredVersion(docsPluginId);
+  const { savePreferredVersionName } = useDocsPreferredVersion(docsPluginId);
 
   function versionToLink(version: GlobalVersion): LinkLikeNavbarItemProps {
     const targetDoc = getVersionTargetDoc(version, activeDocContext);
@@ -69,16 +59,13 @@ export default function DocsVersionDropdownNavbarItem({
   const dropdownLabel =
     mobile && items.length > 1
       ? translate({
-          id: 'theme.navbar.mobileVersionsDropdown.label',
-          message: 'Versions',
-          description:
-            'The label for the navbar versions dropdown on mobile view',
+          id: "theme.navbar.mobileVersionsDropdown.label",
+          message: "Versions",
+          description: "The label for the navbar versions dropdown on mobile view",
         })
       : dropdownVersion.label;
   const dropdownTo =
-    mobile && items.length > 1
-      ? undefined
-      : getVersionTargetDoc(dropdownVersion, activeDocContext).path;
+    mobile && items.length > 1 ? undefined : getVersionTargetDoc(dropdownVersion, activeDocContext).path;
 
   // We don't want to render a version dropdown with 0 or 1 item. If we build
   // the site with a single docs version (onlyIncludeVersions: ['1.0.0']),
