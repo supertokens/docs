@@ -190,11 +190,10 @@ For install instructions check the [guide](https://docs.docker.com/get-docker/).
 
 #### Linting
 
-Run `npm run lint` to perform a linting check on the entire project.
-This will do two things:
+Use the following commands to perform linting checks on the entire project:
 
-- Use prettier to check for potential formatting issues.
-- Use vale to check if the content of the `MDX` files are in line with the style guide.
+- `npm run lint:prettier`: Runs prettier on the `ts` files.
+- `npm run lint:vale`: Runs vale on the `MDX` files.
 
 #### Validating code blocks
 
