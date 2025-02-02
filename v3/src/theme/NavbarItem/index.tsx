@@ -1,17 +1,17 @@
-import React from 'react';
-import ComponentTypes from '@theme/NavbarItem/ComponentTypes';
-import type {NavbarItemType, Props} from '@theme/NavbarItem';
+import React from "react";
+import ComponentTypes from "@theme/NavbarItem/ComponentTypes";
+import type { NavbarItemType, Props } from "@theme/NavbarItem";
 
 function normalizeComponentType(type: NavbarItemType, props: object) {
   // Backward compatibility: navbar item with no type set
   // but containing dropdown items should use the type "dropdown"
-  if (!type || type === 'default') {
-    return 'items' in props ? 'dropdown' : 'default';
+  if (!type || type === "default") {
+    return "items" in props ? "dropdown" : "default";
   }
   return type;
 }
 
-export default function NavbarItem({type, ...props}: Props): JSX.Element {
+export default function NavbarItem({ type, ...props }: Props): JSX.Element {
   const componentType = normalizeComponentType(type, props);
   const NavbarItemComponent = ComponentTypes[componentType];
   if (!NavbarItemComponent) {
