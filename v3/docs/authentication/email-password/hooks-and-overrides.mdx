@@ -1,0 +1,859 @@
+---
+title: Hooks and overrides 
+hide_title: true
+sidebar_position: 4
+description: >-
+  Add custom logic in the authentication flow by overriding the SuperTokens APIs.
+---
+
+import {
+  BackendTabs,
+  FrontendPrebuiltUITabs,
+} from "/src/components/Tabs";
+import { NpmOrScriptsCard } from "/src/components/Cards";
+
+# Hooks and overrides
+
+
+**SuperTokens** exposes a set of constructs that allow you to trigger different actions during the authentication lifecycle or to even fully customize the logic based on your use case. 
+The following sections describe how you can modify adjust the `emailpassword` recipe to your needs.
+
+Explore the references section for a more in depth guide on [hooks](/docs/references/sdks/frontend-hooks/handle-event) and [overrides](/docs/references/sdks/functions-overrides/about).
+
+## Sign in 
+
+### Frontend hook 
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+This method gets fired, with the `SUCCESS` action, immediately after a successful sign in or sign up.
+Follow the code snippet to determine if the user is signing up or signing in.
+
+With this method you can fire events immediately after a successful sign in.
+You can use it to send analytics events. 
+
+<FrontendPrebuiltUITabs>
+
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+
+```tsx
+import SuperTokens from "supertokens-auth-react";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
+import Session from "supertokens-auth-react/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SUCCESS") {
+                    if (context.isNewRecipeUser && context.user.loginMethods.length === 1) {
+                        // TODO: Sign up
+                    } else {
+                        // TODO: Sign in
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword";
+import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+supertokensUIInit({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        supertokensUIEmailPassword.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SUCCESS") {
+                    if (context.isNewRecipeUser && context.user.loginMethods.length === 1) {
+                        // TODO: Sign up
+                    } else {
+                        // TODO: Sign in
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        supertokensUISession.init()
+    ]
+});
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+</UIType.PrebuiltUIContent>
+
+
+<UIType.CustomUIContent>
+
+:::caution Not applicable
+This section is not applicable for custom UI since you will be calling the sign in API yourself anyway. Anything that you want to do post sign in, can be done based on the result of the API call.
+:::
+
+</UIType.CustomUIContent>
+
+### Backend override 
+
+Overriding the `signIn` function will allow you to introduce your own logic for the sign in process.
+Use it to persist different types of data or to trigger various actions.
+
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signIn: async function (input) {
+
+                            // First we call the original implementation of signIn.
+                            let response = await originalImplementation.signIn(input);
+
+                            // Post sign up response, we check if it was successful
+                            if (response.status === "OK") {
+                                /**
+                                * 
+                                * response.user contains the following info:
+                                * - emails
+                                * - id
+                                * - timeJoined
+                                * - tenantIds
+                                * - phone numbers
+                                * - third party login info
+                                * - all the login methods associated with this user.
+                                * - information about if the user's email is verified or not.
+                                * 
+                                */
+
+                                // TODO: post sign in logic
+                            }
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			emailpassword.Init(&epmodels.TypeInput{
+				//highlight-start
+				Override: &epmodels.OverrideStruct{
+					Functions: func(originalImplementation epmodels.RecipeInterface) epmodels.RecipeInterface {
+						// create a copy of the originalImplementation func
+						originalSignIn := *originalImplementation.SignIn
+
+						// override the sign in up function
+						(*originalImplementation.SignIn) = func(email, password, tenantId string, userContext supertokens.UserContext) (epmodels.SignInResponse, error) {
+
+							// First we call the original implementation of SignIn.
+							response, err := originalSignIn(email, password, tenantId, userContext)
+							if err != nil {
+								return epmodels.SignInResponse{}, err
+							}
+
+							if response.OK != nil {
+								// sign in was successful
+
+								// user object contains the ID and email
+								user := response.OK.User
+
+								// TODO: Post sign in logic.
+								fmt.Println(user)
+
+							}
+							return response, nil
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session, emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import (
+    RecipeInterface,
+    SignInOkResult,
+)
+from typing import Dict, Any, Union
+from supertokens_python.recipe.session.interfaces import SessionContainer
+
+
+# highlight-start
+def override_emailpassword_functions(
+    original_implementation: RecipeInterface,
+) -> RecipeInterface:
+    original_sign_in = original_implementation.sign_in
+
+    async def sign_in(
+        email: str,
+        password: str,
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        user_context: Dict[str, Any],
+    ):
+        result = await original_sign_in(
+            email,
+            password,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            user_context,
+        )
+
+        if isinstance(result, SignInOkResult):
+            id = result.user.id
+            emails = result.user.emails
+            print(id)
+            print(emails)
+
+            # TODO: post sign in logic
+
+        return result
+
+    original_implementation.sign_in = sign_in
+
+    return original_implementation
+
+
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        emailpassword.init(
+            # highlight-start
+            override=emailpassword.InputOverrideConfig(
+                functions=override_emailpassword_functions
+            ),
+            # highlight-end
+        ),
+        session.init(),
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+
+## Sign up
+
+### Frontend hook 
+
+This method gets fired, with the `SUCCESS` action, immediately after a successful sign in or sign up.
+Follow the code snippet to determine if the user is signing up.
+
+<UIType.PrebuiltUIContent>
+
+<FrontendPrebuiltUITabs>
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+```tsx
+import SuperTokens from "supertokens-auth-react";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
+import Session from "supertokens-auth-react/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SUCCESS") {
+                    if (context.isNewRecipeUser && context.user.loginMethods.length === 1) {
+                        // TODO: Sign up
+                    } else {
+                        // TODO: Sign in
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword";
+import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+supertokensUIInit({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        supertokensUIEmailPassword.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SUCCESS") {
+                    if (context.isNewRecipeUser && context.user.loginMethods.length === 1) {
+                        // TODO: Sign up
+                    } else {
+                        // TODO: Sign in
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        supertokensUISession.init()
+    ]
+});
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+
+</UIType.PrebuiltUIContent>
+
+<UIType.CustomUIContent>
+
+:::caution Not applicable
+This section is not applicable for custom UI since you will be calling the sign up API yourself anyway. Anything that you want to do post sign up, can be done based on the result of the API call.
+:::
+
+</UIType.CustomUIContent>
+
+
+### Backend override 
+
+Overriding the `signUp` function will allow you to introduce your own logic for the sign in process.
+Use it to persist different types of data, synchronize users between **SuperTokens** and your systems or to trigger other types of actions.
+
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+
+// backend
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signUp: async function (input) {
+                            // First we call the original implementation of signUp.
+                            let response = await originalImplementation.signUp(input);
+
+                            // Post sign up response, we check if it was successful
+                            if (response.status === "OK" && response.user.loginMethods.length === 1 && input.session === undefined) {
+                                /**
+                                * 
+                                * response.user contains the following info:
+                                * - emails
+                                * - id
+                                * - timeJoined
+                                * - tenantIds
+                                * - phone numbers
+                                * - third party login info
+                                * - all the login methods associated with this user.
+                                * - information about if the user's email is verified or not.
+                                * 
+                                */
+                                // TODO: post sign up logic
+                            }
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			emailpassword.Init(&epmodels.TypeInput{
+				//highlight-start
+				Override: &epmodels.OverrideStruct{
+					Functions: func(originalImplementation epmodels.RecipeInterface) epmodels.RecipeInterface {
+						// create a copy of the originalImplementation func
+						originalSignUp := *originalImplementation.SignUp
+
+						// override the sign in up function
+						(*originalImplementation.SignUp) = func(email, password, tenantId string, userContext supertokens.UserContext) (epmodels.SignUpResponse, error) {
+
+							// First we call the original implementation of SignUp.
+							response, err := originalSignUp(email, password, tenantId, userContext)
+							if err != nil {
+								return epmodels.SignUpResponse{}, err
+							}
+
+							if response.OK != nil {
+								// sign up was successful
+
+								// user object contains the ID and email
+								user := response.OK.User
+
+								// TODO: Post sign up logic.
+								fmt.Println(user)
+
+							}
+							return response, nil
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session, emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import (
+    RecipeInterface,
+    SignUpOkResult,
+)
+from typing import Dict, Any, Union
+from supertokens_python.recipe.session.interfaces import SessionContainer
+
+
+# highlight-start
+def override_emailpassword_functions(
+    original_implementation: RecipeInterface,
+) -> RecipeInterface:
+    original_sign_up = original_implementation.sign_up
+
+    async def sign_up(
+        email: str,
+        password: str,
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        user_context: Dict[str, Any],
+    ):
+        result = await original_sign_up(
+            email,
+            password,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            user_context,
+        )
+
+        if isinstance(result, SignUpOkResult) and len(result.user.login_methods) == 1:
+            id = result.user.id
+            emails = result.user.emails
+            print(id)
+            print(emails)
+
+            # TODO: post sign up logic
+
+        return result
+
+    original_implementation.sign_up = sign_up
+
+    return original_implementation
+
+
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        emailpassword.init(
+            # highlight-start
+            override=emailpassword.InputOverrideConfig(
+                functions=override_emailpassword_functions
+            ),
+            # highlight-end
+        ),
+        session.init(),
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+
+
+## Password reset
+
+
+### Frontend hook 
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+This method gets fired during the password reset flow with either the `PASSWORD_RESET_SUCCESSFUL` or `RESET_PASSWORD_EMAIL_SENT` action.
+Use it to fire analytics events or to add any additional logic.
+
+<FrontendPrebuiltUITabs>
+
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+
+```tsx
+import SuperTokens from "supertokens-auth-react";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
+import Session from "supertokens-auth-react/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "PASSWORD_RESET_SUCCESSFUL") {
+                    // Add you custom logic here
+                } else if (context.action === "RESET_PASSWORD_EMAIL_SENT") {
+                    // Add you custom logic here
+                }
+            }
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword";
+import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+supertokensUIInit({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        supertokensUIEmailPassword.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "PASSWORD_RESET_SUCCESSFUL") {
+                    // Add you custom logic here
+                } else if (context.action === "RESET_PASSWORD_EMAIL_SENT") {
+                    // Add you custom logic here
+                }
+            }
+            // highlight-end
+        }),
+        supertokensUISession.init()
+    ]
+});
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+</UIType.PrebuiltUIContent>
+
+
+<UIType.CustomUIContent>
+
+:::caution Not applicable
+This section is not applicable for custom UI since you will be calling the sign in API yourself anyway. Anything that you want to do during the password reset flow, can be done based on the result of the API call.
+:::
+
+</UIType.CustomUIContent>
+
+
+### Backend override
+
+Overriding the `passwordResetPOST` function will allow you to introduce your own logic for the password reset process.
+Use it to introduce your own logic for the flow.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        passwordResetPOST: async function(input) {
+                            
+                            if (originalImplementation.passwordResetPOST === undefined) {
+                                throw Error("Should never come here");
+                            }
+
+                            // First we call the original implementation
+                            let response = await originalImplementation.passwordResetPOST(input);
+                            
+                            // Then we check if it was successfully completed
+                            if (response.status === "OK") {
+                                // TODO: post password reset logic
+                            }
+                            return response;
+                        }
+                    };
+                },
+            },
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			emailpassword.Init(&epmodels.TypeInput{
+
+				//highlight-start
+				Override: &epmodels.OverrideStruct{
+					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+
+						// first we copy the original implementation
+						originalPasswordResetPOST := *originalImplementation.PasswordResetPOST
+
+						// override the password reset API
+						(*originalImplementation.PasswordResetPOST) = func(formFields []epmodels.TypeFormField, token string, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.ResetPasswordPOSTResponse, error) {
+							// First we call the original implementation
+							resp, err := originalPasswordResetPOST(formFields, token, tenantId, options, userContext)
+
+							if err != nil {
+								return epmodels.ResetPasswordPOSTResponse{}, err
+							}
+
+							// Then we check if it was successfully completed
+							if resp.OK != nil {
+								// TODO: post password reset logic
+							}
+
+							return resp, nil
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+
+			}),
+		},
+	})
+}
+```
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import (
+    APIInterface,
+    PasswordResetPostOkResult,
+)
+from supertokens_python.recipe.emailpassword.interfaces import APIOptions
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import Dict, List, Any
+
+
+# highlight-start
+def override_apis(original_implementation: APIInterface):
+    original_password_reset_post = original_implementation.password_reset_post
+
+    async def password_reset_post(
+        form_fields: List[FormField],
+        token: str,
+        tenant_id: str,
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        response = await original_password_reset_post(
+            form_fields, token, tenant_id, api_options, user_context
+        )
+
+        # Then we check if it was successfully completed
+        if isinstance(response, PasswordResetPostOkResult):
+            pass  # TODO: post password reset logic
+
+        return response
+
+    original_implementation.password_reset_post = password_reset_post
+    return original_implementation
+
+
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        emailpassword.init(
+            # highlight-start
+            override=emailpassword.InputOverrideConfig(apis=override_apis)
+            # highlight-end
+        )
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+

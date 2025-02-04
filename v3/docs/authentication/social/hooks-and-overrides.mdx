@@ -1,0 +1,347 @@
+---
+title: Hooks and overrides
+hide_title: true
+sidebar_position: 5
+description: >-
+  Implement post authentication callbacks to trigger events like analytics or
+  database updates.
+---
+
+import { FrontendPrebuiltUITabs, BackendTabs } from "/src/components/Tabs";
+
+# Hooks and overrides
+
+
+**SuperTokens** exposes a set of constructs that allow you to trigger different actions during the authentication lifecycle or to even fully customize the logic based on your use case. 
+The following sections describe how you can modify adjust the `thirdparty` recipe to your needs.
+
+Explore the references section for a more in depth guide on [hooks](/docs/references/sdks/frontend-hooks/handle-event) and [overrides](/docs/references/sdks/functions-overrides/about).
+
+## Frontend hook
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+This method gets fired, with the `SUCCESS` action, immediately after a successful sign in or sign up.
+Follow the code snippet to determine if the user is signing up or signing in.
+
+With this method you can fire events immediately after a successful sign in.
+You can use it to send analytics events. 
+
+<FrontendPrebuiltUITabs>
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+
+```tsx
+import SuperTokens from "supertokens-auth-react";
+import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
+import Session from "supertokens-auth-react/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        ThirdParty.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SUCCESS") {
+                    if (context.isNewRecipeUser && context.user.loginMethods.length === 1) {
+                        // TODO: Sign up
+                    } else {
+                        // TODO: Sign in
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init()
+    ]
+});
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty";
+import supertokensUISession from "supertokens-auth-react-script/recipe/session";
+
+supertokensUIInit({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        supertokensUIThirdParty.init({
+            // highlight-start
+            onHandleEvent: async (context) => {
+                if (context.action === "SUCCESS") {
+                    if (context.isNewRecipeUser && context.user.loginMethods.length === 1) {
+                        // TODO: Sign up
+                    } else {
+                        // TODO: Sign in
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        supertokensUISession.init()
+    ]
+});
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+</UIType.PrebuiltUIContent>
+
+<UIType.CustomUIContent>
+
+:::caution Not applicable
+This section is not applicable for custom UI since you will be calling the `signInUp` API yourself anyway. Anything that you want to do post `signIn` / `signUp`, can be done based on the result of the API call.
+:::
+
+</UIType.CustomUIContent>
+
+## Backend override
+
+Overriding the `signInUp` function will allow you to introduce your own logic for the sign in process.
+Use it to persist different types of data or to trigger various actions.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdParty.init({
+            signInAndUpFeature: {
+                providers: [/* ... */]
+            },
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUp: async function (input) {
+
+                            // First we call the original implementation of signInUp.
+                            let response = await originalImplementation.signInUp(input);
+
+                            // Post sign up response, we check if it was successful
+                            if (response.status === "OK") {
+                                let { id, emails } = response.user;
+
+                                // This is the response from the OAuth 2 provider that contains their tokens or user info.
+                                let providerAccessToken = response.oAuthTokens["access_token"];
+                                let firstName = response.rawUserInfoFromProvider.fromUserInfoAPI!["first_name"];
+
+                                if (input.session === undefined) {
+                                    if (response.createdNewRecipeUser && response.user.loginMethods.length === 1) {
+                                        // TODO: Post sign up logic
+                                    } else {
+                                        // TODO: Post sign in logic
+                                    }
+                                }
+                            }
+                            return response;
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{
+				//highlight-start
+				Override: &tpmodels.OverrideStruct{
+					Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
+						// create a copy of the originalImplementation
+						originalSignInUp := *originalImplementation.SignInUp
+
+						// override the sign in up function
+						(*originalImplementation.SignInUp) = func(thirdPartyID string, thirdPartyUserID string, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext *map[string]interface{}) (tpmodels.SignInUpResponse, error) {
+
+							// First we call the original implementation of SignInUp.
+							response, err := originalSignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
+							if err != nil {
+								return tpmodels.SignInUpResponse{}, err
+							}
+
+							if response.OK != nil {
+								// sign in / up was successful
+
+								// user object contains the ID and email of the user
+								user := response.OK.User
+								fmt.Println(user)
+								fmt.Println(user.ID)
+								fmt.Println(user.Email)
+
+								providerAccessToken := response.OK.OAuthTokens["access_token"].(string)
+								firstname := response.OK.RawUserInfoFromProvider.FromUserInfoAPI["first_name"].(string)
+
+								fmt.Println(providerAccessToken)
+								fmt.Println(firstname)
+
+								if response.OK.CreatedNewUser {
+									// TODO: Post sign up logic
+								} else {
+									// TODO: Post sign in logic
+								}
+
+							}
+							return response, nil
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
+```
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.interfaces import (
+    RecipeInterface,
+    SignInUpOkResult,
+)
+from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
+from typing import Dict, Any, Optional, Union
+from supertokens_python.recipe.session.interfaces import SessionContainer
+
+
+# highlight-start
+def override_thirdparty_functions(
+    original_implementation: RecipeInterface,
+) -> RecipeInterface:
+    original_sign_in_up = original_implementation.sign_in_up
+
+    async def sign_in_up(
+        third_party_id: str,
+        third_party_user_id: str,
+        email: str,
+        is_verified: bool,
+        oauth_tokens: Dict[str, Any],
+        raw_user_info_from_provider: RawUserInfoFromProvider,
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Union[bool, None],
+        tenant_id: str,
+        user_context: Dict[str, Any],
+    ):
+        result = await original_sign_in_up(
+            third_party_id,
+            third_party_user_id,
+            email,
+            is_verified,
+            oauth_tokens,
+            raw_user_info_from_provider,
+            session,
+            should_try_linking_with_session_user,
+            tenant_id,
+            user_context,
+        )
+
+        if isinstance(result, SignInUpOkResult):
+            # user object contains the ID and email of the user
+            user = result.user
+            print(user)
+
+            # This is the response from the OAuth 2 provider that contains their tokens or user info.
+            provider_access_token = result.oauth_tokens["access_token"]
+            print(provider_access_token)
+
+            if result.raw_user_info_from_provider.from_user_info_api is not None:
+                first_name = result.raw_user_info_from_provider.from_user_info_api[
+                    "first_name"
+                ]
+                print(first_name)
+
+            if session is None:
+                if (
+                    result.created_new_recipe_user
+                    and len(result.user.login_methods) == 1
+                ):
+                    print("New user was created")
+                    # TODO: Post sign up logic
+                else:
+                    print("User already existed and was signed in")
+                    # TODO: Post sign in logic
+
+        return result
+
+    original_implementation.sign_in_up = sign_in_up
+
+    return original_implementation
+
+
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        thirdparty.init(
+            # highlight-start
+            override=thirdparty.InputOverrideConfig(
+                functions=override_thirdparty_functions
+            ),
+            # highlight-end
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[]),
+        )
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+

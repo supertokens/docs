@@ -13,9 +13,9 @@ function UITypeSwitch({}) {
   const { visibilityRef, isVisible } = useIsVisible();
 
   return (
-    <Flex ref={visibilityRef} gap="2" direction="column" mb="6" py="5" px="4" asChild>
+    <Flex ref={visibilityRef} gap="2" direction="column" mb="6" py="5" px="4" width="fit-content" asChild>
       <Card>
-        <Heading as="h3" size="5">
+        <Heading as="h3" size="4">
           What type of UI are you using?
         </Heading>
         <Flex direction="row" gap="2" align="start">

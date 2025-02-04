@@ -5,7 +5,7 @@ export function useDocPageData<T extends InferDotNotationKeys<DocPageState>>(pat
   const selector = () => {
     return getObjectPropertyValue(docPageStore.getSnapshot(), path);
   };
-  const value = useSyncExternalStore(docPageStore.subscribe.bind(docPageStore), selector);
+  const value = useSyncExternalStore(docPageStore.subscribe.bind(docPageStore), selector, selector);
   return value as InferDotNotationValue<DocPageState, T>;
 }
 

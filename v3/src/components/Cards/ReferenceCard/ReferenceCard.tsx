@@ -5,7 +5,7 @@ import Link from "@docusaurus/Link";
 import "./styles.scss";
 import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
 
-function ReferenceCardRoot({ children, href }: React.PropsWithChildren<{ href: string }>) {
+function ReferenceCardRoot({ children, href, label }: React.PropsWithChildren<{ href: string; label?: string }>) {
   const hasAvatarInChildren = React.Children.toArray(children).some((child) => {
     if (React.isValidElement(child)) {
       return child.type === ReferenceCardAvatar;
@@ -18,6 +18,18 @@ function ReferenceCardRoot({ children, href }: React.PropsWithChildren<{ href: s
       href,
     });
   }, [href]);
+
+  if (label) {
+    return (
+      <Box p="3" asChild>
+        <Card className="reference-card" asChild>
+          <Link href={href} onClick={onClick}>
+            <Text weight="bold">{label}</Text>
+          </Link>
+        </Card>
+      </Box>
+    );
+  }
 
   if (hasAvatarInChildren) {
     return (
