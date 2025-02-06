@@ -3,6 +3,8 @@ import { InferDotNotationKeys, InferDotNotationValue } from "./types";
 // TODO: Move all external store values this store
 export interface DocPageState {
   nextjsRouterType: "app-router" | "pages-router";
+  accountType: "managed" | "self-hosted";
+  selfHostedDeploymentType: "with-docker" | "without-docker";
 }
 
 class DocPageStore {
@@ -12,6 +14,8 @@ class DocPageStore {
   constructor() {
     this.state = {
       nextjsRouterType: "app-router",
+      accountType: "managed",
+      selfHostedDeploymentType: "with-docker",
     };
     this.listeners = new Set();
   }

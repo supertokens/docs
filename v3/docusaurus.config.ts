@@ -6,6 +6,7 @@ import addNofollowToExternalLinks from "./src/plugins/addNofollowToExternalLinks
 import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues";
 import remarkRemoveCodeTypeCheckingCommentsAndRows from "./src/plugins/remarkRemoveCodeTypeCheckingCommentsAndRows";
 import remarkRemoveWebJsScriptImports from "./src/plugins/remarkRemoveWebJsScriptImports";
+import remarkDocItemDescription from "./src/plugins/remarkDocItemDescription";
 
 const config: Config = {
   title: "SuperTokens Docs",
@@ -14,8 +15,8 @@ const config: Config = {
   baseUrl: "/",
   favicon: "img/favicon.ico",
   trailingSlash: false,
-  onBrokenLinks: process.env.NODE_ENV === "production" ? "throw" : "warn",
-  onBrokenMarkdownLinks: process.env.NODE_ENV === "production" ? "throw" : "warn",
+  onBrokenLinks: process.env.DEPLOYMENT_TYPE === "preview" ? "warn" : "throw",
+  onBrokenMarkdownLinks: process.env.DEPLOYMENT_TYPE === "preview" ? "warn" : "throw",
   future: {
     // Use rspack only during the build phase for faster CI times
     // In dev mode it crashes often while hot reloading
@@ -44,6 +45,7 @@ const config: Config = {
             remarkRemoveWebJsScriptImports,
           ],
           rehypePlugins: [addNofollowToExternalLinks],
+          remarkPlugins: [remarkDocItemDescription],
           async sidebarItemsGenerator({ defaultSidebarItemsGenerator, ...args }) {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
             return sidebarItems;

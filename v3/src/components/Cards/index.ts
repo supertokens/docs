@@ -11,3 +11,5 @@ export * from "./ThirdPartyBuiltinProvidersCard";
 export * from "./CodeSampleCard";
 export * from "./PasswordlessConfigCard";
 export * from "./HTTPRequestCard";
+export * from "./UIPreviewCard";
+export * from "./AccountTypeCard";

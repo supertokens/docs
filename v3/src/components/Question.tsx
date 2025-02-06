@@ -29,7 +29,7 @@ export function Question(
     children,
     cardVariant: variant,
     questionSize = "5",
-    px = "4",
+    px = "5",
     py = "4",
     mb = "4",
   } = props;
@@ -59,7 +59,7 @@ export function Question(
 
   return (
     <QuestionContext.Provider value={{ answer: selectedAnswer, setAnswer: onSelectAnswer }}>
-      <Flex gap="2" direction="column" mb={mb} py={py} px={px} asChild>
+      <Flex gap="2" direction="column" mb={mb} py={py} px={px} width="fit-content" asChild>
         <Card variant={variant}>
           <Heading as="h3" size={questionSize}>
             {question}
