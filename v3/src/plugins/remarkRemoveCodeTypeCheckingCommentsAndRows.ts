@@ -11,7 +11,10 @@ export default function remarkRemoveCodeTypeCheckingCommentsAndRows() {
       const lines = node.value.split("\n");
       const filteredLines = lines.filter((line) => {
         return (
-          !line.includes("REMOVE_FROM_OUTPUT") && !line.includes("@ts-expect-error") && !line.includes("@ts-ignore")
+          !line.includes("REMOVE_FROM_OUTPUT") &&
+          !line.includes("@ts-expect-error") &&
+          !line.includes("@ts-ignore") &&
+          !line.includes("// typecheck-only")
         );
       });
       const parsedLines = filteredLines.map((line) => {

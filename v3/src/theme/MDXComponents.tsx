@@ -1,19 +1,23 @@
 import MDXComponents from "@theme-original/MDXComponents";
 import {
   OSTabs,
-  Separator,
   DocItemContextValue,
   UIType,
   NextjsRouterTypeSelect,
   DescriptionText,
   ConditionalContent,
+  ReferenceCard,
 } from "@site/src/components";
-import { H4, H5, H6 } from "../components/Typography";
+import { Separator } from "@radix-ui/themes";
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
 import { Table } from "@radix-ui/themes";
+
+function HR() {
+  return <Separator size="4" mt="5" mb="3" />;
+}
 
 const TableRoot = ({ children }) => {
   return (
@@ -35,9 +39,10 @@ export default {
   th: Table.ColumnHeaderCell,
   td: Table.Cell,
   tr: Table.Row,
-  hr: Separator,
+  hr: HR,
   DescriptionText: DescriptionText,
   DocItemContextValue,
   Tabs,
   TabItem,
+  ReferenceCard,
 };
