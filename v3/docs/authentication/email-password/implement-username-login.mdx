@@ -2,6 +2,7 @@
 title: Implement username login 
 hide_title: true
 sidebar_position: 7
+toc_max_heading_level: 4
 description: >-
   Enable username login by replacing email with username in the SuperTokens
   authentication flow.
@@ -28,15 +29,29 @@ A few variations exist on how username-based flows can work:
 This guide implements the second flow: **Username and password login with optional email**.
 If you are using one of the other options, you can still follow this guide and make tweaks on parts of it to achieve your desired flow.
 
-<UIType.Switch />
-
-Our approach is to replace the `email` field in SuperTokens with the username field. This enables username and password login as well as enforces username uniqueness.
-
-Then the optional email saves against the `userID` of the user and you use it during sign in and reset password flows. You need to handle the mapping of email to `userID` and store it in your own database. The code snippets below create placeholder functions for you to implement.
+The approach is to update the `email` form field.
+This way it gets displayed and validated as a username.
+Then the optional email value gets saved against the `userID` of the user and you use it during sign in and reset password flows. You need to handle the mapping of email to `userID` and store it in your own database. The code snippets below create placeholder functions for you to implement.
 
 
-## Modify the default email validator function
-When the sign up / in `API` runs on the backend, SuperTokens first verifies the syntax of the input email. Since emails replace usernames, you need to change that function to allow for any `string`. You can do this in the following way:
+## Before you start
+
+This guide assumes that you have already implemented the [EmailPassword recipe](/docs/guides/emailpassword) and have a working application integrated with **SuperTokens**.
+If you have not, please check the [Quickstart Guide](/docs/quickstart/introduction). 
+
+## Steps
+
+
+### 1. Modify the default email validator function
+
+Update the backend validator function to check for your username format.
+The function runs during **sign up**, **sign in**, and **reset password**.
+Hence it needs to also match an email format since the user might enter it when signing in or resetting their password.
+
+Inside **SuperTokens**, the field is still called `email`.
+This ensures that the username is unique and that the authentication flows works.
+Use the next code snippet as a reference. 
+
 
 <BackendTabs>
 <BackendTabs.TabItem value="nodejs">
@@ -185,15 +200,16 @@ init(
 </BackendTabs.TabItem>
 </BackendTabs>
 
-- The `validate` function above runs during sign up, sign in, and reset password `APIs`. In the sign up `API`, the input would always be a username, but during sign in and reset password `APIs`, the input could be a username or an email. Therefore, this function needs to check for either of the two formats.
-- The new `validate` function first checks if the input is a valid email, and if it is, returns early. Else it checks if the input username has at least three characters and contains only alphanumeric, underscore or hyphen characters. If this criteria doesn't match, then the validator returns an appropriate error string. You can modify this function to be more complex and match your criteria.
-- You may have noticed that the `id` is still `"email"`. This is because from SuperTokens' point of view, the username is still stored in the SuperTokens' user's email field. This has no side effect other than you (the developer) having to fetch the user's username using the `user.email` field (where `user` is the user object returned by SuperTokens).
+### 2. Save the user email
 
-## Override the sign up API to save the user email
+#### 2.1 Update the sign up form validation
 
-The sign up `API` takes in the username, password, and an optional email. To support this, you must add a new form field for the email, along with a `validate` function that checks the uniqueness and syntax of the input email.
+The sign up `API` takes in the username, password, and an optional email.
+Add a new form field for the email, along with a `validate` function that checks the uniqueness and syntax of the input email.
 
-Then the sign up API must be overridden to save this email against the userID of that user.
+:::warning Custom Implementation
+To check if the email is unique you need to persist values in your own database and then check against them.
+:::
 
 <BackendTabs>
 <BackendTabs.TabItem value="nodejs">
@@ -396,10 +412,12 @@ init(
 </BackendTabs.TabItem>
 </BackendTabs>
 
-- The new form field is named `actualEmail`. You can change this if you like, but whatever you set it to should also be used by the frontend when calling the sign up `API`.
-- You need to implement the `getUserUsingEmail` function to check your database for if there already exists a user with that email. SuperTokens does not have this information since it stores the username of the user instead of their email.
 
-The sign up API must be overridden to save the `actualEmail` form field value against the user ID.
+#### 2.2 Save the email field value
+
+Override the sign up API to save the custom email form field.
+Use a mapping of `userID` to `email` to keep track of the association.
+Save the email value in your own database.
 
 <BackendTabs>
 <BackendTabs.TabItem value="nodejs">
@@ -653,12 +671,14 @@ init(
 </BackendTabs.TabItem>
 </BackendTabs>
 
-- The `original.signUpPOST` function is first called, which signs up the user with username and password login. It also enforces uniqueness of the username - if not unique, it returns an appropriate reply to the frontend.
-- If the sign up is successful, the `"actualEmail"` form field extracts from the input. If the value is `""`, it means that the user did not specify their email. Otherwise, the `userId` and email mapping saves using the `saveEmailForUser` function.
-- `saveEmailForUser` is a function that you must implement, similar to how you implemented the `getUserUsingEmail` function.
+### 3. Allow username or email during sign in
 
-## Override the sign in backend function to accept email or username
-The user should be able to sign in using their email or username along with their password. To implement this, the sign in recipe function must be overridden as follows:
+The user should be able to sign in using their email or username along with their password.
+In the new logic, if a user enters their email, you need to fetch the username associated with that email and then perform the authentication flow.
+Override the sign in recipe function to allow this.
+
+Use the next code snippet as a reference. The example use the `email` to `userId` mapping, mentioned earlier, to figure out which username to use.
+
 
 <BackendTabs>
 <BackendTabs.TabItem value="nodejs">
@@ -947,15 +967,19 @@ init(
 </BackendTabs.TabItem>
 </BackendTabs>
 
-- Notice that this time, the override function provides to `override.function` configuration and not the `override.apis` configuration. This is because this function runs not only during the sign in `API`, but also if the `Emailpassword.signIn` function runs manually in your own `APIs`.
-- First, the input checks to see if it is a valid email - using a regex. If it's not, then the `original.signIn` function runs, which attempts a username + password login.
-- If the input is an email, then the `userID` of that email fetches using the previously implemented `getUserUsingEmail` function. If that cannot find a user mapping, then the code falls through to `original.signIn`.
-- If a user ID exists, then SuperTokens queries using `EmailPassword.getUserById` to get the SuperTokens user object. From there, the `input.email` changes to the username of the user, which stores in `superTokensUser.email`. After modifying the input, the `original.signIn` function runs, which attempts a username and password login.
+### 4. Allow username or email during password reset
 
-## Override the password reset link API to accept username or email
-The password reset flow requires the user to have added an email during sign up. If there is no email associated with the user, an appropriate message returns to them to contact support.
+The password reset flow requires the user to have added an email during sign up.
+If there is no email associated with the user, return an appropriate message. 
 
-The user can enter either their username or their email when starting the password reset flow. Like the sign in customization, you must check if the input is an email. If it is, you must fetch the username associated with the user before calling the SuperTokens' default implementation of the generate password reset link `API`.
+To update the functionality you have to first change how the password reset token gets generated and then update the email sending logic.
+This way both methods take into account the new fields.
+
+#### 4.1 Override the token generation API
+
+The user should enter either their username or their email when starting the password reset flow.
+Like the sign in customization, you must check if the input is an email and, if it is, retrieve the username associated with the email.
+If you can't find a username from an email you have to return an appropriate message to the frontend.
 
 <BackendTabs>
 <BackendTabs.TabItem value="nodejs">
@@ -1388,12 +1412,9 @@ init(
 </BackendTabs.TabItem>
 </BackendTabs>
 
-- If the user has entered their email ID, then the username is first tried and replaced with their username - like how you did it in the sign in function.
-- Once you obtain the username, or if the user had entered their username originally, you check to see if there exists an email for that username. To do this, call the `getUserByEmail` function, passing in the username of the user. This queries SuperTokens to get the user object containing the user ID. Once you obtain the `userId`, check to see if there exists an email for that `userId` by calling the `getEmailUsingUserId` function.
-- `getEmailUsingUserId` is a function which you must implement by querying your database.
-- If an email is not returned, it means that the user signed up without an email. An appropriate message goes to the frontend. Otherwise, the `original.generatePasswordResetTokenPOST` function runs.
+#### 4.2 Override the email sending API
 
-The above customization allows users to enter an email or a username in the password reset form. However, when the SDK sends an email, it tries to send it to the username. That, of course, does not work. Therefore, the `sendEmail` function must also be overridden to fetch the email of the user from the input user ID before calling the original.`sendEmail`
+Update the email sending API to retrieve the user email if the user used a username in the password reset flow.
 
 <BackendTabs>
 <BackendTabs.TabItem value="nodejs">
@@ -1649,25 +1670,24 @@ init(
 </BackendTabs.TabItem>
 </BackendTabs>
 
-- In the above code snippet, the `sendEmail` function is overridden, which the SDK invokes to send the reset password email.
-- The input email to the function is actually the user's username (since SuperTokens stores the username and not the email). The user's actual email fetches from the `getEmailUsingUserId` function, which you implemented previously, and then assigns to the input before calling the original implementation.
-- Note that this function is only called if the user has an email associated with their account since that checks in the override for `generatePasswordResetTokenPOST`.
 
 
-<UIType.PrebuiltUIContent>
+### 5. Show the new fields in the user interface
 
-:::note
-This completes the changes required on the backend. Below are changes required for the frontend SDK.
+
+:::info
+The following instructions are only relevant if you are using the pre-built UI.
+If you created your own custom UI on the frontend, please make sure to pass the new email `formField` when you call the sign up function.
+Even if the user has not given an email, you must add it with an empty string.
 :::
 
-Add the following customization to the frontend default UI:
-- Change the email validator to not do validation on the frontend since username or email is permissible. The backend performs appropriate checks anyway.
+Update the pre-built UI to reflect the new flow:
+- Skip frontend validation for the `email` field since username or email is permissible. The backend performs those checks.
 - Change the "Email" label in the sign up form to say "Username".
 - Add an extra field in the sign up form where the user can enter their email.
 - Change the "Email" label in the sign in form to say "Username or email".
 - Change the "Email" label in the password reset form to say "Username or email".
-
-You can configure these using the following settings in the `init` function:
+- Update translations for the email field if necessary.
 
 ```tsx
 import SuperTokens from "supertokens-auth-react"
@@ -1726,27 +1746,14 @@ SuperTokens.init({
 });
 ```
 
-- The `languageTranslations` configuration replaces the label for "Email" in the password reset form.
-- The `signInForm` configuration adds, and the label and the placeholder associated with the `"email"` input change.
-- The `signUpForm` configuration adds, in which:
-    - The label and the placeholder associated with the `"email"` input change. The original `email` field corresponds to the username.
-    - Add an additional (optional) form field in which the user can enter their email. This would correspond to the `"actualEmail"` form field on the backend.
 
-:::success
 
-This completes the required changes .
+## See also
 
-:::
-
-</UIType.PrebuiltUIContent>
-
-<UIType.CustomUIContent>
-
-:::success
-This completes the changes required on the backend.
-
-When building your custom UI on the frontend, please make sure to pass the `"actualEmail"` `formField` when calling the sign up function.
-Even if the user has not given an email, you must add it with an empty string.
-:::
-
-</UIType.CustomUIContent>
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/authentication/email-password/customize-the-sign-in-form" label="Customize the sign in form" />
+  <ReferenceCard href="/docs/authentication/email-password/customize-the-sign-up-form" label="Customize the sign up form" />
+  <ReferenceCard href="/docs/authentication/email-password/password-hashing" label="Password Hashing" />
+  <ReferenceCard href="/docs/authentication/email-password/hooks-and-overrides" label="Hooks and overrides" />
+  <ReferenceCard href="/docs/authentication/email-password/password-reset" label="Password reset" />
+</ReferenceCard.Grid>

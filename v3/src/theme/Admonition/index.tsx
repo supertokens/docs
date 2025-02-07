@@ -48,6 +48,17 @@ export default function Admonition(unprocessedProps: Props): JSX.Element {
     title = type;
   }
 
+  if (title === "no-title") {
+    return (
+      <Callout.Root color={color} variant="surface" size="2" className="admonition">
+        <Callout.Icon>
+          <Icon />
+        </Callout.Icon>
+        <div className="admonition__content">{children}</div>
+      </Callout.Root>
+    );
+  }
+
   return (
     <Callout.Root color={color} variant="surface" size="2" className="admonition">
       <Flex direction="row" gap="2" align="center" mb="2">
