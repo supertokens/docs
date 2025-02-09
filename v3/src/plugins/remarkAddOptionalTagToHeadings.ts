@@ -19,6 +19,11 @@ const BadgeNode = {
       name: "data-radius",
       value: "full",
     },
+    // {
+    //   type: "mdxJsxAttribute",
+    //   name: "style",
+    //   value: { verticalAlign: "middle", marginLeft: "var(--space-1)" },
+    // },
   ],
   children: [
     {

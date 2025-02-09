@@ -1,22 +1,139 @@
 ---
-id: setup-lambda
-title: Set up Lambda
+title: Quickstart Guide
 hide_title: true
-sidebar_position: 2
-description: >-
-  Set up AWS Lambda with custom layers, backend config, and SuperTokens
-  authentication.
+toc_max_heading_level: 4
+sidebar_position: 1
+description: Learn how to integrate SuperTokens with AWS Lambda
 ---
 
-import { AppInfoForm } from "/src/components/Forms";
-import { BackendTabs } from "/src/components/Tabs";
-import { AppTypeCard } from "/src/components/Cards";
+import { BackendTabs, AppInfoForm } from "/src/components";
 
-# Set up Lambda
 
-## 1. Create a new lambda
+# Quickstart Guide
 
-- Click "Create Function" in the AWS Lambda dashboard, enter the function name and runtime, and create your Lambda function.
+The following guide shows you how to use **SuperTokens** in an AWS Lambda environment.
+You can also check out the [example repository](https://github.com/supertokens/supertokens-node/tree/master/examples/aws/with-emailpassword) for a full implementation.
+
+## Before you start
+
+These instructions assume that you have completed the [quickstart guide](/docs/quickstart/frontend-setup).
+If not, please go through it and create the example application before you start this tutorial.
+
+## Steps
+
+:::caution
+Follow the [quickstart guide](/docs/quickstart/frontend-setup) first to learn how to set up the frontend.
+:::
+
+### 1. Set up API Gateway
+
+#### 1.1 Create a REST API Gateway
+
+We will be using AWS API Gateway to create a REST API that will be used to communicate with our Lambda functions. 
+
+<img src="/img/integration-lambda/create-api-gateway.png" alt="Create API gateway step UI"/>
+
+#### 1.2 Set up authentication routes
+
+Create a `/auth` resource and then `/auth/{proxy+}` resources.
+This will act as a catch-all for all SuperTokens auth routes.
+**Enable CORS** while creating the proxy resource. 
+
+<img src="/img/integration-lambda/create-proxy-route.png" alt="Create proxy route step UI"/>
+
+<img src="/img/integration-lambda/route-creation-complete.png" alt="Route creation complete step UI"/>
+
+#### 1.3 Attach lambda to the `ANY` method of the proxy resource
+
+Click on the "ANY" method and then "Integration" to configure the lambda function.
+Check **Lambda proxy integration** and then select your lambda function.
+
+<img src="/img/integration-lambda/configure-lambda-integration.png" alt="Configure lambda integration UI"/>
+
+:::important
+
+Ensure that the **Lambda proxy integration** toggle is turned on.
+
+:::
+
+#### 1.4 Enable CORS for the proxy path
+
+Click on the `{proxy+}` resource and then "Enable CORS" button to open the CORS configuration page. 
+
+<img src="/img/integration-lambda/click-enable-cors.png" alt="Enable CORS for the proxy path UI" />
+
+
+In the CORS configuration page do the following:
+    - Select the 'Default 4XX' and 'Default 5XX' checkboxes under Gateway responses
+    - Select the 'OPTIONS' checkbox under Methods
+    - Add `rid,fdi-version,anti-csrf,st-auth-mode` to the existing `Access-Control-Allow-Headers`
+    - Set `Access-Control-Allow-Origin` to `'^{appInfo.websiteDomain}'`
+    - Select `Access-Control-Allow-Credentials` checkbox
+
+<img src="/img/integration-lambda/configure-cors.png" alt="CORS configuration page"/>
+
+#### 1.5 Deploy the API Gateway
+
+Click the **Deploy API** button in the top right corner to deploy the API. During deployment, you'll be prompted to create a stage; for this tutorial, name the stage `dev`. After deployment, you will receive your `Invoke URL`.
+
+:::important
+Update `apiDomain`, `apiBasePath`, and `apiGatewayPath` in both Lambda configuration and your frontend config if they have changed post API Gateway configuration.
+:::
+
+### 2. Set up Lambda layer
+
+#### 2.1 Create Lambda layer with required libraries
+
+<BackendTabs exclude={["go", "otherFrameworks"]}>
+
+<BackendTabs.TabItem value="nodejs">
+
+```bash
+mkdir lambda && cd lambda
+
+npm i -s supertokens-node @middy/core @middy/http-cors
+mkdir nodejs && cp -r node_modules nodejs
+zip -r supertokens-node.zip nodejs/
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```bash
+mkdir lambda && cd lambda
+
+pip install --target ./python fastapi uvicorn mangum nest_asyncio supertokens-python
+cd python && rm -r *dist-info **/__pycache__ && cd ..
+zip -r supertokens-python.zip python/
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+#### 2.2 Upload SuperTokens lambda layer
+
+Open AWS Lambda dashboard and click on layers:
+<img src="/img/integration-lambda/sidebar.png" alt="AWS Lambda sidebar UI" height="300" />
+
+Click "Create Layer" button:
+<img src="/img/integration-lambda/create-layer.png" alt="Create layer button UI" width="600" />
+
+Give a name for your layer, upload the zip and select the runtime
+
+<BackendTabs exclude={["go", "otherFrameworks"]}>
+  <BackendTabs.TabItem value="nodejs">
+    <img src="/img/integration-lambda/node-lambda-layer.png" alt="Lambda layer node configuration UI"/>
+  </BackendTabs.TabItem>
+  <BackendTabs.TabItem value="python">
+    <img src="/img/integration-lambda/python-lambda-layer.png" alt="Lambda layer python configuration UI"/>
+  </BackendTabs.TabItem>
+</BackendTabs>
+
+### 3. Set up Lambda
+
+#### 3.1 Create a new lambda
+
+ Click "Create Function" in the AWS Lambda dashboard, enter the function name and runtime, and create your Lambda function.
 <BackendTabs exclude={["go" ]}>
   <BackendTabs.TabItem value="nodejs">
     <img src="/img/integration-lambda/create-function-node.png" alt="Create new Lambda configurations UI Node"/>
@@ -26,12 +143,12 @@ import { AppTypeCard } from "/src/components/Cards";
   </BackendTabs.TabItem>
 </BackendTabs>
 
-## 2. Link lambda layer with the lambda function
+#### 3.2 Link lambda layer with the lambda function
 
-- Scroll to the bottom and look for the `Layers` tab. Click on `Add a layer`
+Scroll to the bottom and look for the `Layers` tab. Click on `Add a layer`
 <img src="/img/integration-lambda/add-a-layer.png" alt="Link Lambda function with the Lambda layer" width="700"/>
 
-- Select `Custom Layer` and then select the layer we created in the first step:
+Select `Custom Layer` and then select the layer we created in the first step:
 
 <BackendTabs exclude={["go" ]}>
   <BackendTabs.TabItem value="nodejs">
@@ -42,7 +159,7 @@ import { AppTypeCard } from "/src/components/Cards";
   </BackendTabs.TabItem>
 </BackendTabs>
 
-## 3. Create a backend config file
+#### 3.3 Create a backend config file
 
 Using the editor provided by AWS, create a new config file and write the following code:
 
@@ -136,7 +253,7 @@ You also need to change the `apiBasePath` on the frontend config to append the s
 You may edit the `apiBasePath` and `apiGatewayPath` value later if you haven't setup the API Gateway yet. 
 :::
 
-## 4. Add the SuperTokens auth middleware
+#### 3.4 Add the SuperTokens auth middleware
 
 Using the editor provided by AWS, create/replace the handler file contents with the following code:
 
