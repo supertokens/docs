@@ -173,11 +173,26 @@ At the moment we do not have support creating OAuth2 providers in the Go SDK.
 
 <BackendTabs.TabItem value="python">
 
-:::caution
+```python 
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import oauth2provider 
 
-At the moment we do not have support creating OAuth2 providers in the Python SDK.
-
-:::
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    framework="fastapi",
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+        api_key="..."
+    ),
+    recipe_list=[
+        oauth2provider.init()
+    ],
+)
+```
 
 </BackendTabs.TabItem>
 
@@ -225,11 +240,29 @@ At the moment we do not have support creating OAuth2 providers in the Go SDK.
 
 <BackendTabs.TabItem value="python">
 
-:::caution
+```python
+from supertokens_python import get_all_cors_headers
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from supertokens_python.framework.fastapi import get_middleware
 
-At the moment we do not have support creating OAuth2 providers in the Python SDK.
+app = FastAPI()
+app.add_middleware(get_middleware())
 
-:::
+
+app.add_middleware(
+    CORSMiddleware,
+    # highlight-start
+    allow_origins=[
+       "<YOUR_WEBSITE_DOMAIN>", "<CLIENT_DOMAIN_1>", "<CLIENT_DOMAIN_2>" 
+    ],
+    # highlight-end
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+```
 
 </BackendTabs.TabItem>
 
@@ -341,11 +374,79 @@ At the moment we do not have support creating OAuth2 providers in the Go SDK.
 
 <BackendTabs.TabItem value="python">
 
-:::caution
+```python 
+from supertokens_python.recipe.session.syncio import get_session
+from supertokens_python.recipe.session.exceptions import SuperTokensSessionError, TryRefreshTokenError 
+from fastapi.requests import Request
+from typing import List, Optional 
+import jwt
+from jwt import PyJWKClient
 
-At the moment we do not have support creating OAuth2 providers in the Python SDK.
 
-:::
+def verify_session(request: Request):
+   session = None
+   try:
+     session = get_session(request)
+   except SuperTokensSessionError as err:
+    if not isinstance(err, TryRefreshTokenError):
+        raise err
+
+
+   # In this case we are dealing with a SuperTokens Session
+   if session is not None:
+     return True
+   
+
+   # The OAuth2 Access Token needs to be manually extracted and validated
+   jwt = None
+   auth_header = request.headers.get("authorization")
+   if auth_header:
+       # Split the Authorization header and get the token
+       parts = auth_header.split("Bearer ")
+       if len(parts) > 1:
+           jwt = parts[1] 
+   if jwt is None:
+       raise ValueError("No JWT found in the request")
+    
+   validate_token(jwt, '<CUSTOM_SCOPE>');
+   return True
+
+
+def validate_token(token: str, required_scope: str) -> bool:
+  api_domain = "^{appInfo.apiDomain}"
+  api_base_path = "^{appInfo.apiBasePath}"
+  client_id = "<CLIENT_ID>"
+
+  jwks_url = f"{api_domain}{api_base_path}jwt/jwks.json"
+  jwks_client = PyJWKClient(jwks_url)
+
+  try:
+      signing_key = jwks_client.get_signing_key_from_jwt(token)
+      decoded = jwt.decode(
+          token,
+          signing_key.key,
+          algorithms=['RS256'],
+          options={"require": ["stt", "client_id", "scp"]}
+      )
+
+      stt: Optional[int] = decoded.get('stt')
+      if stt != 1:
+          return False
+
+      token_client_id: Optional[str] = decoded.get('client_id', None)
+      if client_id != token_client_id:
+          return False
+
+
+      scopes: List[str] = decoded.get('scp', [])
+      if required_scope not in scopes:
+          return False
+
+      return True
+  except Exception: 
+      return False
+  #
+```
 
 </BackendTabs.TabItem>
 
