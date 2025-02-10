@@ -6,7 +6,7 @@ module.exports = () => {
    * @param {string} href the URL that is to be checked
    * @returns boolean true if the URL is external and false otherwise
    */
-  function isUrlExternal (href) {
+  function isUrlExternal(href) {
     try {
       const hrefFromURL = new url.URL(href);
       const host = hrefFromURL.host;
@@ -36,14 +36,14 @@ module.exports = () => {
    * @param {Node} data element node from the document's tree
    * @returns boolean true if `nofollow` should be added and false otherwise
    */
-  function shouldAddNofollowToLink (data) {
+  function shouldAddNofollowToLink(data) {
     return (
       data !== undefined &&
       data.type === "element" &&
       data.tagName === "a" &&
       data.properties !== undefined &&
       isUrlExternal(data.properties.href)
-    )
+    );
   }
 
   /**
@@ -55,21 +55,21 @@ module.exports = () => {
     try {
       if (shouldAddNofollowToLink(data)) {
         data.properties = Object.assign({}, data.properties, {
-          rel: "nofollow noreferrer noopener"
+          rel: "nofollow noreferrer noopener",
         });
       }
-  
+
       if (data.children) {
         data.children = data.children.map((child) => {
           return addNofollowToExternalLinks(child);
         });
       }
-  
+
       return data;
     } catch (error) {
       console.log(error.message);
     }
-  };
+  }
 
   const transformer = (data, _) => {
     if (data.children !== undefined && data.children.length > 0) {
@@ -78,7 +78,7 @@ module.exports = () => {
       });
     }
     return data;
-  }
+  };
 
   return transformer;
-}
+};

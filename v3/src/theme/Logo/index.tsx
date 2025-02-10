@@ -6,15 +6,7 @@ import { useThemeConfig, type NavbarLogo } from "@docusaurus/theme-common";
 import ThemedImage from "@theme/ThemedImage";
 import type { Props } from "@theme/Logo";
 
-function LogoThemedImage({
-  logo,
-  alt,
-  imageClassName,
-}: {
-  logo: NavbarLogo;
-  alt: string;
-  imageClassName?: string;
-}) {
+function LogoThemedImage({ logo, alt, imageClassName }: { logo: NavbarLogo; alt: string; imageClassName?: string }) {
   const sources = {
     light: useBaseUrl(logo.src),
     dark: useBaseUrl(logo.srcDark || logo.src),
@@ -32,11 +24,7 @@ function LogoThemedImage({
 
   // Is this extra div really necessary?
   // introduced in https://github.com/facebook/docusaurus/pull/5666
-  return imageClassName ? (
-    <div className={imageClassName}>{themedImage}</div>
-  ) : (
-    themedImage
-  );
+  return imageClassName ? <div className={imageClassName}>{themedImage}</div> : themedImage;
 }
 
 export default function Logo(props: Props): JSX.Element {
@@ -59,18 +47,8 @@ export default function Logo(props: Props): JSX.Element {
   const alt = logo?.alt ?? fallbackAlt;
 
   return (
-    <Link
-      to={logoLink}
-      {...propsRest}
-      {...(logo?.target && { target: logo.target })}
-    >
-      {logo && (
-        <LogoThemedImage
-          logo={logo}
-          alt={alt}
-          imageClassName={imageClassName}
-        />
-      )}
+    <Link to={logoLink} {...propsRest} {...(logo?.target && { target: logo.target })}>
+      {logo && <LogoThemedImage logo={logo} alt={alt} imageClassName={imageClassName} />}
     </Link>
   );
 }

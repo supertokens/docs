@@ -17,25 +17,24 @@ import type { Props } from "@theme/DocItem/Content";
  - the markdown content does not already contain a top-level h1 heading
 */
 function useSyntheticTitle(): string | null {
-	const { metadata, frontMatter, contentTitle } = useDoc();
-	const shouldRender =
-		!frontMatter.hide_title && typeof contentTitle === "undefined";
-	if (!shouldRender) {
-		return null;
-	}
-	return metadata.title;
+  const { metadata, frontMatter, contentTitle } = useDoc();
+  const shouldRender = !frontMatter.hide_title && typeof contentTitle === "undefined";
+  if (!shouldRender) {
+    return null;
+  }
+  return metadata.title;
 }
 
 export default function DocItemContent({ children }: Props): JSX.Element {
-	const syntheticTitle = useSyntheticTitle();
-	return (
-		<div className={clsx(ThemeClassNames.docs.docMarkdown, "markdown")}>
-			{syntheticTitle && (
-				<header>
-					<Heading as="h1">{syntheticTitle}</Heading>
-				</header>
-			)}
-			<MDXContent>{children}</MDXContent>
-		</div>
-	);
+  const syntheticTitle = useSyntheticTitle();
+  return (
+    <div className={clsx(ThemeClassNames.docs.docMarkdown, "markdown")}>
+      {syntheticTitle && (
+        <header>
+          <Heading as="h1">{syntheticTitle}</Heading>
+        </header>
+      )}
+      <MDXContent>{children}</MDXContent>
+    </div>
+  );
 }

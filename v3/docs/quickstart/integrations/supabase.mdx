@@ -1,0 +1,442 @@
+---
+title: Supabase 
+hide_title: true
+sidebar_position: 8
+description: >-
+  Integrate SuperTokens with Supabase in a Next.js app for secure user data
+  management.
+---
+
+import { BackendTabs } from "/src/components/Tabs";
+
+# Supabase Guide
+
+## Overview
+
+The following guide will show you how to integrate a Next.js app with SuperTokens and Supabase.
+It includes instructions on how to:
+- Create a Supabase project with a table to store your user data
+- Create a Supabase JWT and store the user's session
+- Enable row level security policies in your Supabase table to ensure only authorized users can access their data
+
+In our example we will be storing the user's email mapped to their SuperTokens userId in Supabase.
+
+You can also check an [example repository](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-supabase) for specific references.
+
+## Before you start 
+
+The guide does not include instructions on how to setup a Next.js app with SuperTokens.
+To do this you can follow the [app router](/docs/quickstart/integrations/nextjs/app-directory/about) or [pages router](/docs/quickstart/integrations/nextjs/app-directory/about) instructions.
+
+## Steps
+
+### 1. Configure Supabase
+
+Supabase provides a database with authentication and authorization features. We will be using Supabase to store the user's info mapped to their SuperTokens `userId`.
+
+#### 1.1 Create a new Supabase project
+
+1. From your [Supabase dashboard](https://app.supabase.com/), click New project.
+2. Enter a Name for your Supabase project.
+3. Enter a secure Database Password.
+4. Select the same Region you host your app's backend in.
+5. Click Create new project.
+
+![Supabase dashboard](/img/thirdpartyemailpassword/supabase/supabase_dashboard_create.png)
+
+#### 1.2 Create the user table in Supabase
+
+1. From the sidebar menu in the [Supabase dashboard](https://app.supabase.com/), click Table editor, then New table.
+2. Enter `users` as the `Name` field.
+3. Select `Enable Row Level Security (RLS).`
+4. Remove the default columns
+5. Create two new columns:
+  - `user_id` as `varchar` as primary key
+  - email as `varchar`
+6. Click `Save` to create the new table.
+
+![Supabase table create](/img/thirdpartyemailpassword/supabase/supabase_table_create.png)
+
+### 2. Setup JWT creation
+
+In this section we will be overriding SuperTokens backend to create a JWT signed with Supabase's secret which contains the user's `userId`.
+We will use this token on the frontend and backend to read and write to Supabase's database.
+
+#### 2.1 Integrate your Next.js app with SuperTokens
+
+Follow either the [app router](/docs/quickstart/integrations/nextjs/app-directory/about) or [pages router](/docs/quickstart/integrations/nextjs/app-directory/about) guides for instructions on how to configure your application.
+
+#### 2.2 Save the Supabase configuration values
+
+Retrieve the Supabase configuration values from the dashboard and add them to your `.env` file:
+
+```bash
+// retrieve the following from your supabase dashboard
+
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_KEY=
+SUPABASE_SIGNING_SECRET=
+```
+
+#### 2.3 Create the Supabase JWT 
+
+In our Next.js app when a user signs up, we want to store the user's email in Supabase.
+We would then retrieve this email from Supabase and display it on our frontend.
+To use the Supabase client to query the database we will need to create a JWT signed with your Supabase app's signing secret.
+This JWT will also need to contain the user's `userId` so Supabase knows an authorized user is making the request.
+To create this flow we will need to modify SuperTokens so that, when a user signs up or signs in, a JWT signed with Supabase's signing secret is created and attached to the user's session.
+Attaching the JWT to the user's session will allow us to retrieve the Supabase JWT on the frontend and backend (post session verification), using which we can query Supabase.
+
+To create the JWT signed with Supabase's signing secret we will use the `jsonwebtoken` library.
+
+```bash
+npm install jsonwebtoken
+```
+
+We can add the JWT to the user's session by overriding the `createNewSession` function and add it to the `accessTokenPayload`
+
+```ts
+// config/backendConfig.ts
+
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import SessionNode from "supertokens-node/recipe/session";
+import { TypeInput, AppInfo } from "supertokens-node/types";
+import jwt from "jsonwebtoken";
+
+let appInfo: AppInfo = {
+    appName: "TODO: add your app name",
+    apiDomain: "TODO: add your website domain",
+    websiteDomain: "TODO: add your website domain"
+}
+
+let supabase_signing_secret = process.env.SUPABASE_SIGNING_SECRET || "TODO: Your Supabase Signing Secret";
+
+let backendConfig = (): TypeInput => {
+    return {
+        framework: "express",
+        supertokens: {
+            connectionURI: "https://try.supertokens.com",
+        },
+        appInfo,
+        recipeList: [
+            // @ts-ignore
+            EmailPassword.init({/*...*/}),
+            SessionNode.init({
+                override: {
+                    functions: (originalImplementation) => {
+                        return {
+                            ...originalImplementation,
+                            createNewSession: async function (input) {
+                                const payload = {
+                                    userId: input.userId,
+                                    exp: Math.floor(Date.now() / 1000) + 60 * 60,
+                                };
+
+                                const supabase_jwt_token = jwt.sign(payload, supabase_signing_secret);
+
+                                input.accessTokenPayload = {
+                                    ...input.accessTokenPayload,
+                                    supabase_token: supabase_jwt_token,
+                                };
+
+                                return await originalImplementation.createNewSession(input);
+                            },
+                        };
+                    },
+                },
+            }),
+        ],
+        isInServerlessEnv: true,
+    };
+};
+```
+
+### 3. Create a Supabase client
+
+We will be creating a client to interact with Supabase using the `supabase-js` library.
+
+#### 3.1 Install the `supabase-js` library
+
+    ```bash
+    npm install @supabase/supabase-js
+    ```
+
+#### 3.2 Create a new file called `utils/supabase.ts` and add the following:
+
+    ```ts
+    // utils/supabase.ts
+
+    import { createClient } from '@supabase/supabase-js'
+
+    let supabase_url = process.env.NEXT_PUBLIC_SUPABASE_URL || "TODO: Your Supabase URL"
+    let supabase_key = process.env.NEXT_PUBLIC_SUPABASE_KEY || "TODO: Your Supabase Key"
+
+    const getSupabase = (access_token: string) => {
+      const supabase = createClient(
+        supabase_url,
+        supabase_key
+      )
+
+      supabase.auth.session = () => ({
+        access_token,
+        token_type: "",
+        user: null
+      })
+
+      return supabase
+    }
+
+    export { getSupabase }
+    ```
+
+### 4. Insert users into Supabase when they sign up
+
+In our example app the user can sign up via Email-Password authentication.
+We will need to override both this API such that when a user signs up, their email mapped to their userId is stored in Supabase.
+
+#### 4.1 Override the Email-Password sign up function
+
+```ts
+// config/backendConfig.ts
+
+let appInfo: AppInfo = {
+    appName: "TODO: add your app name",
+    apiDomain: "TODO: add your website domain",
+    websiteDomain: "TODO: add your website domain"
+}
+
+// take a look at the Creating Supabase Client section to see how to define getSupabase
+let getSupabase: any;
+
+let backendConfig = (): TypeInput => {
+    return {
+        framework: "express",
+        supertokens: {
+            connectionURI: "https://try.supertokens.com",
+        },
+        appInfo,
+        recipeList: [
+            ^{recipeNameCapitalLetters}.init({
+                override: {
+                    apis: (originalImplementation) => {
+                        return {
+                            ...originalImplementation,
+                            // the signUpPOST function handles sign up
+                            signUpPOST: async function (input) {
+                                if (originalImplementation.signUpPOST === undefined) {
+                                    throw Error("Should never come here");
+                                }
+
+                                let response = await originalImplementation.signUpPOST(input);
+
+                                if (response.status === "OK" && response.user.loginMethods.length === 1 && input.session === undefined) {
+
+                                    // retrieve the accessTokenPayload from the user's session
+                                    const accessTokenPayload = response.session.getAccessTokenPayload();
+
+                                    // create a supabase client with the supabase_token from the accessTokenPayload
+                                    const supabase = getSupabase(accessTokenPayload.supabase_token);
+
+                                    // store the user's email mapped to their userId in Supabase
+                                    const { error } = await supabase
+                                        .from("users")
+                                        .insert({ email: response.user.emails[0], user_id: response.user.id });
+
+                                    if (error !== null) {
+
+                                        throw error;
+                                    }
+                                }
+
+                                return response;
+                            },
+                        };
+                    },
+                },
+            }),
+            SessionNode.init({/*...*/}),
+        ],
+        isInServerlessEnv: true,
+    };
+};
+
+```
+
+We will be changing the Email-Password sign up flow by overriding the `signUpPOST` API.
+When a user signs up we will retrieve the `supabase_token` from the user's `accessTokenPayload`(this was added in the previous step where we changed the `createNewSession` function) and use it to query Supabase to insert the new user's information.
+
+
+### 5. Retrieve the user email on the frontend
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+With the backend setup we can modify our frontend to retrieve the user's email from Supabase.
+
+```tsx
+// pages/index.tsx
+
+import React, { useState, useEffect } from 'react'
+import Head from 'next/head'
+import { SessionAuth, useSessionContext } from 'supertokens-auth-react/recipe/session'
+
+// take a look at the Creating Supabase Client section to see how to define getSupabase
+let getSupabase: any;
+
+export default function Home() {
+  return (
+    // We will wrap the ProtectedPage component with the SessionAuth so only an
+    // authenticated user can access it.
+    <SessionAuth>
+      <ProtectedPage />
+    </SessionAuth>
+  )
+}
+
+function ProtectedPage() {
+  // retrieve the authenticated user's accessTokenPayload and userId from the sessionContext
+  const session = useSessionContext()
+
+  const [userEmail, setEmail] = useState('')
+  useEffect(() => {
+    async function getUserEmail() {
+      if (session.loading) {
+        return;
+      }
+      // retrieve the supabase client who's JWT contains users userId, this will be
+      // used by supabase to check that the user can only access table entries which contain their own userId
+      const supabase = getSupabase(session.accessTokenPayload.supabase_token)
+
+      // retrieve the user's name from the users table whose email matches the email in the JWT
+      const { data } = await supabase.from('users').select('email').eq('user_id', session.userId)
+
+      if (data.length > 0) {
+        setEmail(data[0].email)
+      }
+    }
+    getUserEmail()
+  }, [session])
+
+  if (session.loading) {
+    return null;
+  }
+
+  return (
+    <div>
+      <Head>
+        <title>SuperTokens 💫</title>
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+
+      <main>
+        <p>
+          You are authenticated with SuperTokens! (UserId: {session.userId})
+          <br />
+          Your email retrieved from Supabase: {userEmail}
+        </p>
+      </main>
+    </div>
+  )
+}
+```
+
+</UIType.PrebuiltUIContent>
+
+<UIType.CustomUIContent>
+
+With the backend setup we can modify our frontend to retrieve the user's email from Supabase.
+
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+
+// take a look at the Creating Supabase Client section to see how to define getSupabase
+let getSupabase: any;
+
+async function getEmailFromSupabase() {
+  if (await Session.doesSessionExist()) {
+    let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
+    const supabase = getSupabase(accessTokenPayload.supabase_token)
+
+    const { data } = await supabase.from('users').select('email').eq('user_id', await Session.getUserId())
+
+    if (data.length > 0) {
+      return data[0].email;
+    }
+    return undefined;
+  }
+  throw new Error("Session does not exist");
+}
+```
+
+</UIType.CustomUIContent>
+
+As seen above we will fetch the access token payload from SuperTokens to retrieve the authenticated user's Supabase access token which can be used to fetch the user's email from Supabase.
+
+### 6. Enforce row level security for select and insert requests
+
+To enforce Row Level Security for the Users table we will need to create policies for Select and Insert requests.
+These polices will retrieve the `userId` from the JWT and check if it matches the `userId` in the Supabase table.
+We will need a PostgreSQL function to extract the `userId` from the JWT.
+
+The payload in the JWT will have the following structure:
+
+```bash
+{
+    userId,
+    exp
+}
+```
+
+#### 6.1 Create PostgreSQL function to retrieve `userId` from JWT
+
+To create the PostgreSQL function, let's navigate back to the Supabase dashboard, select `SQL` from the sidebar menu, and click `New query`. This will create a new query called `new sql snippet`, which will allow us to run any SQL against our Postgres database.
+Write the following and click `Run`.
+
+    ```bash
+    create or replace function auth.user_id() returns text as $$
+    select nullif(current_setting('request.jwt.claims', true)::json->>'userId', '')::text;
+    $$ language sql stable;
+    ```
+
+- This will create a function called `auth.user_id()`, which will inspect the `userId` field of our JWT payload.
+
+#### 6.2 Create Policies for `SELECT` and `INSERT` queries:
+
+##### `SELECT` query policy
+
+Our first policy will check whether the user is the owner of the email being retrieved.
+
+- Select `Authentication` from the Supabase sidebar menu, click `Policies`, and then `New Policy` on the `Users` table.
+
+    ![Create policy](/img/thirdpartyemailpassword/supabase/create_policy.png)
+
+- From the modal, select `Create a policy from scratch` and add the following.
+
+    ![select policy](/img/thirdpartyemailpassword/supabase/policy_config_select.png)
+
+- This policy is calling the PostgreSQL function we just created to get the currently logged in user's ID `auth.user_id()` and checking whether this matches the `user_id` column for the current `email`. If it does, then it will allow the user to select it, otherwise it will continue to deny.
+
+- Click `Review` and then `Save policy`.
+
+##### `INSERT` query policy
+
+Our second policy will check whether the `user_id` being inserted is the same as the `userId` in the JWT.
+
+- Create another policy and add the following:
+
+    ![insert policy](/img/thirdpartyemailpassword/supabase/policy_config_insert.png)
+
+Similar to the previous policy we are calling the PostgreSQL function we created to get the currently logged in user's ID and check whether this matches the `user_id` column for the row we are trying to insert. If it does, then it will allow the user to insert the row, otherwise it will continue to deny.
+
+Click `Review` and then `Save policy`.
+
+### 6.3 Test your changes
+
+You can now sign up and you should see the following screen:
+
+![auth screen](/img/thirdpartyemailpassword/supabase/supabase_app_authenticated_screen.png)
+
+If you navigate to your table you should see a new row with the user's `user_id` and `email`.
+
+![table with user](/img/thirdpartyemailpassword/supabase/table_with_user.png)

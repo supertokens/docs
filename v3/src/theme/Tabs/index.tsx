@@ -26,15 +26,7 @@ function TabsComponent(props: Props & { onChange?: (value: string) => void }): J
       <RadixTabs.Root mb="6" value={selectedValue} onValueChange={onValueChange}>
         <Box asChild p="0">
           <Card asChild>
-            <RadixTabs.List
-              style={{
-                fontSize: "var(--font-size-4)",
-                lineHeight: "var(--line-height-4)",
-                letterSpacing: "var(--letter-spacing-4)",
-              }}
-              wrap="wrap"
-              className={styles.tabList}
-            >
+            <RadixTabs.List wrap="wrap" className={styles.tabList}>
               {tabValues.map(({ value, label, attributes }) => (
                 <RadixTabs.Trigger value={value} key={value} className={styles.tabItem} {...attributes}>
                   {label}

@@ -1,5 +1,5 @@
-import React from 'react';
-import type {Props} from '@theme/Admonition/Icon/Tip';
+import React from "react";
+import type { Props } from "@theme/Admonition/Icon/Tip";
 
 export default function AdmonitionIconTip(props: Props): JSX.Element {
   return (

@@ -1,0 +1,368 @@
+---
+title: Customize the Magic Link
+hide_title: true
+sidebar_position: 3
+description: See how to change the magic link or how to generate it manually
+---
+
+import Tabs from "@theme/Tabs";
+import { PythonSyncAsyncCard } from "/src/components/Cards";
+import TabItem from "@theme/TabItem";
+import { BackendTabs, FrontendPrebuiltUITabs } from "/src/components/Tabs";
+
+# Customize the magic link
+
+## Change the magic link URL
+
+### Override the email delivery backend function
+
+You can change the URL of Magic Links by providing overriding the email delivery configuration on the backend.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Passwordless.init({
+            contactMethod: "EMAIL", // This example will work with any contactMethod
+            // This example works with the "USER_INPUT_CODE_AND_MAGIC_LINK" and "MAGIC_LINK" flows.
+            flowType: "USER_INPUT_CODE_AND_MAGIC_LINK", 
+
+            // highlight-start
+            emailDelivery: {
+                // highlight-start
+                override: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        sendEmail: async function (input) {
+                            return originalImplementation.sendEmail({
+                                ...input,
+                                urlWithLinkCode: input.urlWithLinkCode?.replace(
+                                    // This is: `^{appInfo.websiteDomain}^{appInfo.websiteBasePath}/verify`
+                                    "http://localhost:3000/auth/verify",
+                                    "http://your.domain.com/your/path"
+                                )
+                            })
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        Session.init({ /* ... */ })
+    ]
+});
+```
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"strings"
+
+	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			passwordless.Init(plessmodels.TypeInput{
+				EmailDelivery: &emaildelivery.TypeInput{
+					// highlight-start
+					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
+						ogSendEmail := *originalImplementation.SendEmail
+						(*originalImplementation.SendEmail) = func(input emaildelivery.EmailType, userContext supertokens.UserContext) error {
+							// By default: `^{appInfo.websiteDomain}/^{appInfo.websiteBasePath}/verify`
+							newUrl := strings.Replace(
+								*input.PasswordlessLogin.UrlWithLinkCode,
+								"http://localhost:3000/auth/verify",
+								"http://localhost:3000/custom/path",
+								1,
+							)
+							input.PasswordlessLogin.UrlWithLinkCode = &newUrl
+							return ogSendEmail(input, userContext)
+						}
+						return originalImplementation
+					},
+					// highlight-end
+				},
+			}),
+		},
+	})
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.passwordless.types import EmailDeliveryOverrideInput, EmailTemplateVars
+from supertokens_python.recipe import passwordless
+from typing import Dict, Any
+from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig
+
+def custom_email_deliver(original_implementation: EmailDeliveryOverrideInput) -> EmailDeliveryOverrideInput:
+    original_send_email = original_implementation.send_email
+
+    # highlight-start
+    async def send_email(template_vars: EmailTemplateVars, user_context: Dict[str, Any]) -> None:
+        assert template_vars.url_with_link_code is not None
+        # By default: `^{appInfo.websiteDomain}/^{appInfo.websiteBasePath}/verify`
+        template_vars.url_with_link_code = template_vars.url_with_link_code.replace(
+            "http://localhost:3000/auth/verify", "http://localhost:3000/custom/path")
+        return await original_send_email(template_vars, user_context)
+    # highlight-end
+
+    original_implementation.send_email = send_email
+    return original_implementation
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...', # type: ignore
+    recipe_list=[
+        passwordless.init(
+            contact_config="", # type: ignore # REMOVE_FROM_OUTPUT
+            flow_type="USER_INPUT_CODE", # REMOVE_FROM_OUTPUT
+            email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
+        )
+    ]
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+
+### Change the frontend page
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+<FrontendPrebuiltUITabs>
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+When the user clicks the magic link, you need to render the `LinkClicked` component that exported by the SDK on that page. By default, this already happens on the `^{appInfo.websiteDomain}^{appInfo.websiteBasePath}/verify` path. To change this, you need to:
+
+#### 1. Disable the default UI for the link clicked screen:
+```tsx
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+
+Passwordless.init({
+    contactMethod: "EMAIL", // This example will work with any contactMethod
+    linkClickedScreenFeature: {
+        disableDefaultUI: true
+    },
+});
+```
+
+#### 2. Render the link clicked screen on your custom route:
+```tsx
+import React from "react";
+import { LinkClicked } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
+function CustomLinkClickedScreen () {
+    return <LinkClicked />
+}
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+When the user clicks the magic link, you need to build your own UI on that page to handle the link clicked. You also need to disable the pre-built UI provided by the SDK for the link clicked screen as shown below:
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
+import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless";
+
+supertokensUIPasswordless.init({
+    contactMethod: "EMAIL", // This example will work with any contactMethod
+    linkClickedScreenFeature: {
+        disableDefaultUI: true
+    },
+});
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+</UIType.PrebuiltUIContent>
+<UIType.CustomUIContent>
+
+:::info Caution
+Not applicable since you do not use the pre-built UI
+:::
+
+</UIType.CustomUIContent>
+
+---
+
+## Generate the link manually
+
+
+You can use the backend SDK to generate magic links as shown below:
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import Passwordless from "supertokens-node/recipe/passwordless";
+
+async function createMagicLink(email: string) {
+    const magicLink = await Passwordless.createMagicLink({email, tenantId: "public"});
+
+    console.log(magicLink);
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"fmt"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+)
+
+func main() {
+	email := "..."
+
+	tenantId := "public"
+	magicLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
+	if err != nil {
+		// handle error
+	}
+
+	fmt.Println(magicLink)
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+
+<PythonSyncAsyncCard>
+
+<PythonSyncAsyncCard.Content value="asyncio">
+
+```python
+from supertokens_python.recipe.passwordless.asyncio import create_magic_link
+
+async def create_link(email: str):
+    magic_link = await create_magic_link("public", email, phone_number=None)
+
+    print(magic_link)
+```
+</PythonSyncAsyncCard.Content>
+
+<PythonSyncAsyncCard.Content value="syncio">
+
+```python
+from supertokens_python.recipe.passwordless.syncio import create_magic_link
+
+def create_link(email: str):
+    magic_link = create_magic_link("public", email, phone_number=None)
+
+    print(magic_link)
+```
+
+</PythonSyncAsyncCard.Content>
+
+</PythonSyncAsyncCard>
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+:::info Multi Tenancy
+
+Notice that you pass the `"public"` `tenantId` to the function call above - which is the default `tenantId`.
+
+If you are using the multi tenancy feature, you can pass in another `tenantId` which SuperTokens embeds in the link. This ensures that when the user clicks on the link and signs up, they sign up to the tenant you want to give them access to.
+
+Note that the generated link uses the configured `websiteDomain` from the `appInfo` object (in `supertokens.init`), however, you can change the domain of the generated link to match that of the tenant ID.
+
+:::
+
+---
+
+## Change the link lifetime
+
+You can change how long a user can use an OTP or a Magic Link to log in by changing the `passwordless_code_lifetime` core configuration value. You configure this value in milliseconds and it defaults to `900000` (15 minutes).
+
+:::caution
+
+Each new OTP / magic link generated, either by opening a new browser or by clicking on the "Resend" button, has a lifetime according to the `passwordless_code_lifetime` setting.
+
+:::
+
+<Tabs
+defaultValue="with-docker"
+values={[
+{label: 'With Docker', value: 'with-docker'},
+{label: 'Without Docker', value: 'without-docker'},
+{label: 'Managed Service', value: 'with-saas'}
+]}>
+<TabItem value="with-docker">
+
+```bash
+docker run \
+  -p 3567:3567 \
+  // highlight-start
+  -e PASSWORDLESS_CODE_LIFETIME=60000 \
+  // highlight-end
+  -d registry.supertokens.io/supertokens/supertokens-<db name>
+```
+
+</TabItem>
+
+<TabItem value="without-docker">
+
+```yaml
+# You need to add the following to the config.yaml file.
+# The file path can be found by running the "supertokens --help" command
+
+passwordless_code_lifetime: 60000
+
+```
+</TabItem>
+
+<TabItem value="with-saas">
+
+- Navigate to your SuperTokens managed service dashboard, and click on the Edit Configuration button.
+- In there, change the values of the following fields, and click on save.
+
+```yaml
+passwordless_code_lifetime: 60000
+```
+</TabItem>
+</Tabs>
+
+---
+
+## See also
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/authentication/passwordless/customize-the-otp" label="Customize the OTP" />
+  <ReferenceCard href="/docs/authentication/passwordless/hooks-and-overrides" label="Hooks and overrides" />
+  <ReferenceCard href="/docs/authentication/passwordless/configure-email-and-sms-behavior" label="Email and SMS behavior" />
+  <ReferenceCard href="/docs/authentication/passwordless/invite-link-flow" label="Invite link sign up" />
+  <ReferenceCard href="/docs/authentication/passwordless/allow-list-flow" label="Allow list sign up" />
+  <ReferenceCard href="/docs/platform-configuration/email-delivery/about" label="Email Delivery" />
+  <ReferenceCard href="/docs/platform-configuration/sms-delivery/about" label="SMS Delivery" />
+</ReferenceCard.Grid>

@@ -1,0 +1,630 @@
+---
+title: Session Verification
+hide_title: true
+sidebar_position: 2
+description: Verify user sessions when integrating SuperTokens with AWS Lambda.
+---
+
+import { BackendTabs } from "/src/components/Tabs";
+import { AppInfoForm } from "/src/components/Forms";
+
+import OAuthVerifyTokensCallout from "../../../_blocks/oauth-tokens-callout.mdx";
+
+# Session verification 
+
+The following page shows you three different ways to verify sessions in a lambda integration.
+Choose the one that works best based on the particularities of your use case.
+
+<OAuthVerifyTokensCallout />
+
+
+## Using Session Verification 
+
+When building your own APIs, you may need to verify the session of the user before proceeding further.
+SuperTokens SDK exposes a `verifySession` function that can be utilized for this.
+In this guide, we will be creating a `/user` `GET` route that will return the current session information.
+
+### 1. Add `/user` `GET` route in your API Gateway
+
+Create a `/user` resource and then `GET` method in your API Gateway. Configure the lambda integration and CORS just like we did [for the auth routes](/docs/quickstart/integrations/aws-lambda/quickstart-guide#13-attach-lambda-to-the-any-method-of-the-proxy-resource).
+
+### 2. Create a file in your lambda to handle the `/user` route.
+
+<BackendTabs exclude={["go", "otherFrameworks"]}>
+<BackendTabs.TabItem value="nodejs">
+
+An example of this is [here](https://github.com/supertokens/supertokens-node/blob/master/examples/aws/with-emailpassword/backend/user.mjs).
+
+```tsx title="user.mjs"
+import supertokens from "supertokens-node";
+// @ts-ignore
+import { getBackendConfig } from "./config.mjs";
+import { SessionEvent } from "supertokens-node/framework/awsLambda"; 
+import { APIGatewayAuthorizerEvent, PolicyDocument, Statement, AuthResponse, StatementEffect } from "aws-lambda"; // REMOVE_FROM_OUTPUT
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+
+supertokens.init(getBackendConfig());
+
+type AuthorizerEvent = SessionEvent & APIGatewayAuthorizerEvent; 
+
+const lambdaHandler = async (event: AuthorizerEvent) => {
+    return {
+        body: JSON.stringify({
+            sessionHandle: event.session?.getHandle(),
+            userId: event.session?.getUserId(),
+            accessTokenPayload: event.session?.getAccessTokenPayload(),
+        }),
+        statusCode: 200,
+    };
+};
+
+export const handler = middy(verifySession(lambdaHandler))
+    .use(
+        cors({
+            origin: getBackendConfig().appInfo.websiteDomain,
+            credentials: true,
+            headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+            methods: "OPTIONS,POST,GET,PUT,DELETE",
+        })
+    )
+    .onError((request) => {
+        throw request.error;
+    });
+```
+
+Now, import this function in your `index.mjs` handler file as shown below:
+
+```tsx title="index.mjs"
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/awsLambda";
+// @ts-ignore
+import { getBackendConfig } from "./config.mjs";
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+// highlight-start
+// @ts-ignore
+import { handler as userHandler } from "./user.mjs";
+// highlight-end
+
+supertokens.init(getBackendConfig());
+
+export const handler = middy(
+    middleware((event) => {
+
+        // highlight-start
+        if (event.path === "/user") {
+            return userHandler(event);
+        // highlight-end
+        }
+      
+        return {
+            body: JSON.stringify({
+                msg: "Hello!",
+            }),
+            statusCode: 200,
+        };
+    })
+)
+    .use(
+        cors({
+            origin: getBackendConfig().appInfo.websiteDomain,
+            credentials: true,
+            headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+            methods: "OPTIONS,POST,GET,PUT,DELETE",
+        })
+    )
+    .onError((request) => {
+        throw request.error;
+    });
+```
+
+:::note
+The `verifySession` middleware automatically returns a 401 Unauthorised error if the session is not valid. You can alter the default behaviour by passing `{ sessionRequired: false }` as the second argument to the `verifySession` middleware.
+
+If each API route has its own lambda function, you can skip using the SuperTokens auth middleware. Instead, ensure to call `supertokens.init` and include the `Session` recipe in the `recipeList` for each respective lambda function.
+:::
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python title="handler.py"
+import nest_asyncio # type: ignore
+nest_asyncio.apply() # type: ignore
+
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from mangum import Mangum
+
+from supertokens_python import init, get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
+
+import config # type: ignore
+
+init(
+    supertokens_config=config.supertokens_config, # type: ignore
+    app_info=config.app_info, # type: ignore
+    framework=config.framework, # type: ignore
+    recipe_list=config.recipe_list, # type: ignore
+    mode="asgi",
+)
+
+app = FastAPI(title="SuperTokens Example")
+
+# highlight-start
+from fastapi import Depends
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+
+@app.get("/user")
+def user(s: SessionContainer = Depends(verify_session())):
+    return {
+        "sessionHandle": s.get_handle(),
+        "userId": s.get_user_id(),
+        "accessTokenPayload": s.get_access_token_payload()
+    }
+# highlight-end
+
+app.add_middleware(get_middleware())
+
+app = CORSMiddleware(
+    app=app,
+    allow_origins=[
+        config.app_info.website_domain  # type: ignore
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+handler = Mangum(app)
+```
+:::note
+The `verify_session` middleware automatically returns a 401 Unauthorised error if the session is not valid. You can alter the default behaviour by passing `session_required=False` the `verify_session` middleware.
+
+If each API route has its own lambda function, you can skip using the SuperTokens auth middleware. Instead, ensure to call `init` function and include the `session` recipe in the `recipe_list` for each respective lambda function.
+:::
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+---
+
+## Using Lambda Authorizers
+
+
+You can use a lambda as an authorizer in API Gateways. This will enable you to use SuperTokens in a lambda to authorize requests to other integrations (e.g., AppSync). An `Authorizer` pointed to this lambda will add `context.authorizer.principalId` that you can map to a header. For example, you can map this to an "x-user-id" header which will be set to the id of the logged-in user. If there is no valid session for the request, this header won't exist.
+
+### 1. Add configurations and dependencies
+
+Refer to the [frontend](/docs/quickstart/frontend-setup), [lambda layer](/docs/quickstart/integrations/aws-lambda/quickstart-guide#2-set-up-lambda-layer), and [lambda setup](/docs/quickstart/integrations/aws-lambda/quickstart-guide#3-set-up-lambda).
+
+### 2. Add code to the lambda function handler
+
+<BackendTabs exclude={["go", "otherFrameworks"]}>
+<BackendTabs.TabItem value="python">
+
+Use the code below as the handler for the lambda. Remember that whenever we want to use any functions from the `supertokens-python` lib, we have to call the `init` function at the top of that serverless function file. We can then use `get_session()` to get the session.
+
+```python title="auth.py"
+import nest_asyncio # type: ignore
+import json
+nest_asyncio.apply() # type: ignore
+
+from typing import Optional, Dict, Any
+
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from mangum import Mangum
+
+from supertokens_python import init, get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
+
+import config # type: ignore
+
+init(
+    supertokens_config=config.supertokens_config, # type: ignore
+    app_info=config.app_info, # type: ignore
+    framework=config.framework, # type: ignore
+    recipe_list=config.recipe_list, # type: ignore
+    mode="asgi",
+)
+app = FastAPI(title="SuperTokens Example")
+
+def generate_policy(principal_id: str, effect: str, resource: str, context: Optional[Dict[str, Any]]):
+    policy_document = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {"Action": "execute-api:Invoke", "Effect": effect, "Resource": resource}
+        ],
+    }
+    auth_response = {
+        "principalId": principal_id,
+        "policyDocument": policy_document,
+        "context": context or {},
+    }
+
+    return auth_response
+
+
+def generate_allow(principal_id: str, resource: str, context: Optional[Dict[str, Any]] = None):
+    return generate_policy(principal_id, "Allow", resource, context)
+
+
+def generate_deny(principal_id: str, resource: str, context: Optional[Dict[str, Any]] = None):
+    return generate_policy(principal_id, "Deny", resource, context)
+
+
+from fastapi import Request
+from supertokens_python.recipe.session.syncio import get_session
+from supertokens_python.recipe.session.exceptions import (InvalidClaimsError,
+                                                          TryRefreshTokenError,
+                                                          UnauthorisedError)
+
+@app.get("/{full_path:path}")
+def handle_auth(request: Request, full_path: str):
+    event = request.scope["aws.event"]
+    method_arn = event.get("methodArn")
+
+    try:
+        session = get_session(request, session_required=False)
+        if session:
+            return generate_allow(session.get_user_id(), method_arn)
+        else:
+            return generate_allow("", method_arn)
+    except Exception as e:
+        if isinstance(e, TryRefreshTokenError) or isinstance(e, UnauthorisedError):
+            raise Exception("Unauthorized")
+        if isinstance(e, InvalidClaimsError):
+            claim_validation_errors = [err.to_json() for err in e.payload]
+            return generate_deny(
+                "",
+                method_arn,
+                {
+                    "body": {
+                        "message": "invalid claims",
+                        "claimValidationErrors": claim_validation_errors,
+                    }
+                },
+            )
+
+        raise e
+
+
+app.add_middleware(get_middleware())
+
+app = CORSMiddleware(
+    app=app,
+    allow_origins=[
+        config.app_info.website_domain  # type: ignore
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+def handler(event: Dict[str, Any], context: Any):
+    mangum_handler = Mangum(app)
+    response: Dict[str, Any] = mangum_handler(event, context)
+
+    if event.get("methodArn"):
+        gateway_response = json.loads(response["body"])
+        gateway_response["context"]["setCookie"] = response["headers"]["set-cookie"]
+        return gateway_response
+
+    return response
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="nodejs">
+
+Use the code below as the handler for the lambda.
+Remember that whenever we want to use any functions from the `supertokens-node` lib, we have to call the `supertokens.init` function at the top of that serverless function file.
+We can then use `getSession()` to get the session.
+
+```tsx title="index.mjs"
+import supertokens from "supertokens-node";
+import { SessionEvent } from "supertokens-node/framework/awsLambda"; 
+import { APIGatewayAuthorizerEvent, PolicyDocument, Statement, AuthResponse, StatementEffect } from "aws-lambda"; // REMOVE_FROM_OUTPUT
+import Session from "supertokens-node/recipe/session";
+
+// @ts-expect-error
+import { getBackendConfig } from "./config.mjs";
+
+supertokens.init(getBackendConfig());
+
+type AuthorizerEvent = SessionEvent & APIGatewayAuthorizerEvent; 
+
+export const handler = async function (event: AuthorizerEvent) {
+    try {
+        const session = await Session.getSession(event, event, { sessionRequired: false });
+        if (session) {
+            return generateAllow(session.getUserId(), event.methodArn, {
+                setCookie: event.supertokens.response.cookies.join(', '),
+            });
+        } else {
+            return generateAllow("", event.methodArn, {
+                setCookie: event.supertokens.response.cookies.join(', '),
+            });
+        }
+    } catch (ex: any) {
+        if (ex.type === "TRY_REFRESH_TOKEN" || ex.type === "UNAUTHORISED") {
+            throw new Error("Unauthorized");
+        }
+        if (ex.type === "INVALID_CLAIMS") {
+            return generateDeny("", event.methodArn, {
+                body: JSON.stringify({
+                    message: "invalid claim",
+                    claimValidationErrors: ex.payload,
+                }),
+                setCookie: event.supertokens.response.cookies.join(", "),
+            });
+        }
+        throw ex;
+    }
+}
+
+const generatePolicy = function (principalId: string, effect: StatementEffect, resource: string, context?: any) {
+    const policyDocument: PolicyDocument = {
+        Version: '2012-10-17',
+        Statement: [],
+    };
+
+    const statementOne: Statement = {
+        Action: 'execute-api:Invoke',
+        Effect: effect,
+        Resource: resource,
+    };
+
+    policyDocument.Statement[0] = statementOne;
+
+    const authResponse: AuthResponse = {
+        principalId: principalId,
+        policyDocument: policyDocument,
+        context,
+    };
+
+    return authResponse;
+}
+
+const generateAllow = function (principalId: string, resource: string, context?: any) {
+    return generatePolicy(principalId, 'Allow', resource, context);
+};
+
+const generateDeny = function (principalId: string, resource: string, context?: any) {
+    return generatePolicy(principalId, 'Deny', resource, context);
+};
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+### 3. Configure the Authorizer
+
+- Go to the `Authorizers` tab in the API Gateway configuration
+- Click **Create new Authorizer** and add it
+    - Fill the name field
+    - Set "Lambda function" to the one created above
+    - Set "Lambda Event Payload" to Request
+    - Delete the empty "Identity Source"
+    - Click "Create"
+
+### 4. Configure API Gateway
+
+
+- In your API Gateway, create the resources and methods you require, enabling CORS if necessary (see [setup API gateway](/docs/quickstart/integrations/aws-lambda/quickstart-guide#1-set-up-api-gateway) for details)
+- Select each method you want to enable the Authorizer and configure it to use the new `Authorizer`
+    - Click on "Method Request"
+    - Edit the "Authorization" field in Settings and set it to the one we just created.
+    - Go back to the method configuration and click on "Integration Request"
+        - Set up the integration you require (see [AppSync](/docs/quickstart/integrations/aws-lambda/appsync-integration) for an example)
+        - Add a header mapping to make use of the context set in the lambda.
+            - Open "HTTP Headers"
+            - Add all headers required (e.g., "x-user-id" mapped to "context.authorizer.principalId")
+            - Repeat for any values from the context you want to add as a Header
+
+    - Go back to the method configuration and click on "Method Response"
+        - Open the dropdown next to the 200 status code
+        - Add the "Set-Cookie" header
+        - Add any other headers that should be present on the response.
+
+    - Go back to the method configuration and click on "Integration Response"
+        - Open the dropdown
+        - Open "Header Mappings"
+        - Add "Set-Cookie" mapped to "context.authorizer.setCookie"
+- In the API Gateway left menu, select "Gateway Responses"
+    - Select "Access Denied"
+        - Click "Edit"
+        - Add response headers:
+            - Add `Access-Control-Allow-Origin` with value `'^{appInfo.websiteDomain}'`
+            - Add `Access-Control-Allow-Credentials` with value `'true'`. **Don't miss out on those quotes else it won't get configured correctly.**
+            - Add "Set-Cookie" with value `context.authorizer.setCookie` **no quotes**
+        - Under response templates:
+            - Select `application/json`:
+            - Set "Response template body" to `$context.authorizer.body`
+        - Click "Save"
+    - Select "Unauthorized"
+        - Add response headers:
+            - Add `Access-Control-Allow-Origin` with value `'^{appInfo.websiteDomain}'`
+            - Add `Access-Control-Allow-Credentials` with value `'true'`. **Don't miss out on those quotes else it won't get configured correctly.**
+        - Click "Save"
+- Deploy your API and test it
+
+---
+
+## Using JWT Authorizers
+
+:::caution
+
+AWS supports JWT authorizers for HTTP APIs and not REST APIs on the API Gateway service. For REST APIs follow the [Lambda authorizer](/docs/quickstart/integrations/aws-lambda/session-verification#using-lambda-authorizers) guide
+
+This guide will work if you are using **SuperTokens Session Tokens**.
+
+If you implementing an **OAuth2** setup, through the [**Unified Login**](/docs/authentication/unified-login/introduction) or the [**Microservice Authentication**](/docs/authentication/m2m/client-credentials) features, you will have to manually set the token audience property. 
+Please check the referenced pages for more information.
+
+:::
+
+### 1. Add the `aud` claim in the JWT based on the authorizer configuration
+
+<AppInfoForm />
+
+<BackendTabs exclude={["go"]}>
+
+<BackendTabs.TabItem value="nodejs">
+
+```tsx title="config.mjs" showAppTypeSelect
+
+import Session from 'supertokens-node/recipe/session'
+import SuperTokensTypes from 'supertokens-node/types'; // REMOVE_FROM_OUTPUT
+
+export function getBackendConfig() {
+  return {
+    framework: "awsLambda",
+    supertokens: {
+        connectionURI: "^{coreInfo.uri}",
+        apiKey: "^{coreInfo.key}",
+    },
+    appInfo: {
+        // learn more about this on https://supertokens.com/docs/session/appinfo
+        appName: "^{appInfo.appName}",
+        apiDomain: "^{appInfo.apiDomain}",
+        websiteDomain: "^{appInfo.websiteDomain}",
+        apiBasePath: "^{appInfo.apiBasePath}",
+        websiteBasePath: "^{appInfo.websiteBasePath}",
+    },
+    recipeList: [
+        // highlight-start
+      Session.init({
+          exposeAccessTokenToFrontendInCookieBasedAuth: true,
+          override: {
+            functions: function (originalImplementation) {
+                return {
+                    ...originalImplementation,
+                    createNewSession: async function (input) {
+                        input.accessTokenPayload = {
+                            ...input.accessTokenPayload,
+                            /*
+                            * AWS requires JWTs to contain an audience (aud) claim
+                            * The value for this claim should be the same
+                            * as the value you set when creating the
+                            * authorizer
+                            */
+                            aud: "jwtAuthorizers",
+                        };
+
+                        return originalImplementation.createNewSession(input);
+                    },
+                };
+            }
+        },
+      }),
+    ],
+    // highlight-end
+    isInServerlessEnv: true,
+  }
+}
+```
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python title="config.py" showAppTypeSelect
+from supertokens_python.recipe import session
+from supertokens_python import (
+    InputAppInfo,
+    SupertokensConfig,
+)
+from supertokens_python.recipe.session.interfaces import RecipeInterface as SessionRecipeInterface
+
+from typing import Any, Dict, Optional
+from supertokens_python.types import RecipeUserId
+
+supertokens_config = SupertokensConfig(
+    connection_uri="^{coreInfo.uri}",
+    api_key="^{coreInfo.key}"
+)
+
+app_info = InputAppInfo(
+    # learn more about this on https://supertokens.com/docs/session/appinfo
+    app_name="^{appInfo.appName}",
+    api_domain="^{appInfo.apiDomain}",
+    website_domain="^{appInfo.websiteDomain}",
+    api_base_path="^{appInfo.apiBasePath}",
+    website_base_path="^{appInfo.websiteBasePath}",
+    api_gateway_path="/dev",
+)
+
+framework = "fastapi"
+
+# highlight-start
+def override_session_functions(oi: SessionRecipeInterface) -> SessionRecipeInterface:
+    oi_create_new_session = oi.create_new_session
+
+    async def create_new_session(
+        user_id: str,
+        recipe_user_id: RecipeUserId,
+        access_token_payload: Optional[Dict[str, Any]],
+        session_data_in_database: Optional[Dict[str, Any]],
+        disable_anti_csrf: Optional[bool],
+        tenant_id: str,
+        user_context: Dict[str, Any],
+    ):
+        # AWS requires JWTs to contain an audience (aud) claim
+        # The value for this claim should be the same as the
+        # value you set when creating the authorizer
+
+        # highlight-next-line
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        access_token_payload["aud"] = "jwtAuthorizers"
+        return await oi_create_new_session(user_id, recipe_user_id, access_token_payload, session_data_in_database, disable_anti_csrf, tenant_id, user_context)
+
+    oi.create_new_session = create_new_session
+    return oi
+# highlight-end
+
+recipe_list = [
+    # highlight-start
+    session.init(
+        override=session.InputOverrideConfig(
+            functions=override_session_functions,
+        ),
+        expose_access_token_to_frontend_in_cookie_based_auth=True,
+    ),
+    # highlight-end
+]
+```
+
+</BackendTabs.TabItem>
+
+
+</BackendTabs>
+
+
+### 2. Configure your authorizer
+
+- Go to the "Authorizers" tab in the API Gateway configuration and select the "Manage authorizers" tab
+- Click "Create", in the creation screen select "JWT" as the "Authorizer type"
+- Enter a name for your authorizer (You can enter any name for this field)
+- Use `$request.header.Authorization` for the "Identity source". This means that API requests will contain the JWT as a Bearer token under the request header "Authorization".
+- Use `^{appInfo.apiDomain}/<apiGatewayPath>/^{appInfo.apiBasePath}` for the "Issuer URL".
+- Set a value for the "Audience" field, this will be the value you expect the JWT to have under the `aud` claim. In the backend config above the value is set to `"jwtAuthorizers"`
+
+### 3. Add the authorizer to your API
+- In the "Authorization" section select the "Attach authorizers to routes" tab
+- Click on the route you want to add the authorizer to and select the authorizer you created from the dropdown
+- Click "Attach authorizer"
+- Deploy your changes and test your API
+
+### 4. Check for auth claims of the JWT
+
+Once the JWT authorizer successfully validates the JWT, the claims of the JWT will be available to your lambda functions via `$event.requestContext.authorizer.jwt.claims`. You should check for the right authorization access here. 
+For example, if one of your lambda functions requires that the user's email is verified, then it should check for the `jwt` payload's `st-ev` claim value to be `{v: true, t:...}`, else it should reject the request. Similar checks need to be done to enforce the right user role or if 2FA is completed or not.
+This is required because SuperTokens issues JWTs immediately after the user signs up / logs in, regardless of if all the authorisation checks pass or not. Functions exposed by our SDK like `verifySession` or `getSession` do these authorisation checks on their own, but since these functions are not used in the this flow, you will have to check them on your own.
+
+
+

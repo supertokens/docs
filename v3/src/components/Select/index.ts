@@ -11,3 +11,5 @@ export * from "./AppTypeSelect";
 export * from "./PasswordlessFlowTypeSelect";
 export * from "./PasswordlessContactMethodSelect";
 export * from "./NextjsRouterTypeSelect";
+export * from "./AccountTypeSelect";
+export * from "./SelfHostedDeploymentType";
