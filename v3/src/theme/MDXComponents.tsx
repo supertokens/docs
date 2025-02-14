@@ -7,7 +7,8 @@ import {
   DescriptionText,
   ConditionalContent,
   ReferenceCard,
-  PaidFeatureBadge,
+  PaidFeatureCallout,
+  Steps,
 } from "@site/src/components";
 import { Separator, Heading } from "@radix-ui/themes";
 
@@ -78,6 +79,7 @@ export default {
   DocItemContextValue,
   Tabs,
   TabItem,
-  PaidFeatureBadge,
+  PaidFeatureCallout,
+  Steps: ({ children }) => <Steps mode="mdx">{children}</Steps>,
   ReferenceCard,
 };

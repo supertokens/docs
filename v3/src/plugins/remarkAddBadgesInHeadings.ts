@@ -36,16 +36,6 @@ const OptionalBadgeNode = {
   },
 };
 
-const PaidFeatureBadgeNode = {
-  type: "mdxJsxFlowElement",
-  name: "PaidFeatureBadge",
-  attributes: [],
-  children: [],
-  data: {
-    _mdxExplicitJsx: true,
-  },
-};
-
 /**
  * Adds an optional badge to headings that have the {{optional}} property
  */
@@ -55,9 +45,6 @@ export default function remarkAddBadgesInHeadings() {
       node.children = node.children.map((child) => {
         if (child.type === "mdxTextExpression" && child.value === "{optional}") {
           child = OptionalBadgeNode;
-        }
-        if (child.type === "mdxTextExpression" && child.value === "{paidFeature}") {
-          child = PaidFeatureBadgeNode;
         }
         return child;
       });

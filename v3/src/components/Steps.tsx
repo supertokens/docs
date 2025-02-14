@@ -61,20 +61,63 @@ function StepSeparator() {
   );
 }
 
-function StepsRoot({ children }: React.PropsWithChildren<{}>) {
+// The component works in two modes
+// 1. jsx - you define the content explicitly
+// by using the Step components <Step.Header />, <Step.Description />,
+//
+// 2. mdx - the component parses mdx content
+// and transforms it into <Step /> components
+// <Steps>
+//  ## Step Name
+//  Content
+//  ## Step Name
+//  Content
+// </Steps>
+function StepsRoot({ children, mode = "jsx" }: React.PropsWithChildren<{ mode?: "jsx" | "mdx" }>) {
   const childrenArray = Children.toArray(children);
+
+  if (mode === "jsx") {
+    return (
+      <Flex direction="column" gap="2">
+        {childrenArray.map((child, index) => {
+          if (!isValidElement(child)) return child;
+          return cloneElement(child, {
+            // @ts-expect-error
+            isLast: index === childrenArray.length - 1,
+            position: index + 1,
+            key: child.key || index,
+          });
+        })}
+      </Flex>
+    );
+  }
+
+  const steps: { title: React.ReactNode; description: React.ReactNode }[] = [];
+  let currentStep: { title: React.ReactNode; description: React.ReactNode } = null;
+
+  for (const child of childrenArray) {
+    // @ts-expect-error The array should always include elements as children
+    if (child.type.name === "h2") {
+      if (currentStep) {
+        steps.push(currentStep);
+      }
+      // @ts-expect-error
+      currentStep = { title: child.props.children, description: [] };
+    } else {
+      // @ts-expect-error
+      currentStep.description.push(child);
+    }
+  }
+  steps.push(currentStep);
 
   return (
     <Flex direction="column" gap="2">
-      {childrenArray.map((child, index) => {
-        if (!isValidElement(child)) return child;
-        return cloneElement(child, {
-          // @ts-expect-error
-          isLast: index === childrenArray.length - 1,
-          position: index + 1,
-          key: child.key || index,
-        });
-      })}
+      {steps.map(({ title, description }, index) => (
+        <Step key={index} isLast={index === steps.length - 1} position={index + 1}>
+          <StepHeader>{title}</StepHeader>
+          <StepDescription>{description}</StepDescription>
+        </Step>
+      ))}
     </Flex>
   );
 }

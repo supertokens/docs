@@ -1,18 +1,13 @@
-import React, { isValidElement, Children } from "react";
+import React, { isValidElement } from "react";
 
 interface ParagraphStripperProps {
   children: React.ReactNode;
 }
 
 export const ParagraphStripper: React.FC<ParagraphStripperProps> = ({ children }) => {
-  const child = Children.only(children);
-  console.log("stripper");
-
-  console.log(children);
-
-  if (isValidElement(child) && child.type === "p") {
-    return child.props.children;
+  if (isValidElement(children) && children.type === "p") {
+    return children.props.children;
   }
 
-  return child;
+  return children;
 };
