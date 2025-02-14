@@ -6,142 +6,154 @@ import addNofollowToExternalLinks from "./src/plugins/addNofollowToExternalLinks
 import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues";
 import remarkRemoveCodeTypeCheckingCommentsAndRows from "./src/plugins/remarkRemoveCodeTypeCheckingCommentsAndRows";
 import remarkRemoveWebJsScriptImports from "./src/plugins/remarkRemoveWebJsScriptImports";
+import remarkDocItemDescription from "./src/plugins/remarkDocItemDescription";
+import remarkAddOptionalTagsToHeadings from "./src/plugins/remarkAddOptionalTagToHeadings";
 
 const config: Config = {
-	title: "SuperTokens Docs",
-	tagline: "Open Source User Authentication",
-	url: "https://supertokens.com",
-	baseUrl: "/",
-	favicon: "img/favicon.ico",
-	trailingSlash: false,
-	onBrokenLinks: process.env.NODE_ENV === "production" ? "throw" : "warn",
-	onBrokenMarkdownLinks:
-		process.env.NODE_ENV === "production" ? "throw" : "warn",
-	future: {
-		// Use rspack only during the build phase for faster CI times
-		// In dev mode it crashes often while hot reloading
-		experimental_faster: process.env.NODE_ENV === "production" ? true : false,
-	},
-	// Even if you don't use internationalization, you can use this field to set
-	// useful metadata like html lang. For example, if your site is Chinese, you
-	// may want to replace "en" with "zh-Hans".
-	i18n: {
-		defaultLocale: "en",
-		locales: ["en"],
-	},
-	presets: [
-		[
-			"classic",
-			{
-				docs: {
-					routeBasePath: "/docs",
-					sidebarPath: "./sidebars.ts",
-					exclude: ["**/_*", "**/_*/**"],
-					breadcrumbs: false,
-					editUrl: "https://github.com/supertokens/docs/tree/master/v3/",
-					beforeDefaultRemarkPlugins: [
-						remarkDocItemContextValues,
-						remarkRemoveCodeTypeCheckingCommentsAndRows,
-						remarkRemoveWebJsScriptImports,
-					],
-					rehypePlugins: [addNofollowToExternalLinks],
-					async sidebarItemsGenerator({
-						defaultSidebarItemsGenerator,
-						...args
-					}) {
-						const sidebarItems = await defaultSidebarItemsGenerator(args);
-						return sidebarItems;
-					},
-				},
-				blog: false,
-				pages: false,
-				theme: {
-					customCss: ["./src/css/custom.scss", "./src/css/radix.css"],
-				},
-			} satisfies Preset.Options,
-		],
-	],
-	themeConfig: {
-		colorMode: {
-			defaultMode: "dark",
-			disableSwitch: true,
-		},
-		image: "https://supertokens.com/static/assets/home-meta.png",
-		navbar: {
-			title: "SuperTokens",
-			logo: {
-				alt: "SuperTokens Logo",
-				src: "img/logoWithNameLight.svg",
-				href: "/",
-				target: "_blank",
-			},
-			items: [
-				{
-					href: "/blog",
-					label: "Blog",
-					position: "right",
-					target: "_blank",
-				},
-				{
-					href: "https://supertokens.com/discord",
-					label: "Ask Questions",
-					position: "right",
-					className: "navbar__item_discord",
-				},
-				{
-					href: "https://github.com/supertokens/supertokens-core",
-					label: "GitHub",
-					position: "right",
-				},
-			],
-		},
-		algolia: {
-			apiKey: "ce04a158637d345fc094ebbfa9a5156a",
-			indexName: "supertokens",
-			appId: "SBR5UR2Z16",
-		},
-		prism: {
-			theme: prismThemes.vsDark,
-			additionalLanguages: [
-				"kotlin",
-				"java",
-				"swift",
-				"dart",
-				"csharp",
-				"php",
-				"bash",
-			],
-		},
-	} satisfies Preset.ThemeConfig,
-	plugins: [
-		"docusaurus-plugin-sass",
-		process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
-		[
-			// loads the supertokens.com react bundle for footer and analytics etc..
-			"./src/plugins/reactBundle",
-			{
-				id: "react-bundle",
-			},
-		],
-		[
-			"./src/plugins/transformOpenSearchLink",
-			//used to transform the opensearch.xml location in the metatags.
-			{
-				id: "transform-opensearch-link",
-			},
-		],
-		// [
-		// 	"./src/plugins/codeTypeChecking",
-		// 	{
-		// 		id: "code-type-checking",
-		// 	},
-		// ],
-	].filter(Boolean),
+  title: "SuperTokens Docs",
+  tagline: "Open Source User Authentication",
+  url: "https://supertokens.com",
+  baseUrl: "/",
+  favicon: "img/favicon.ico",
+  trailingSlash: false,
+  onBrokenLinks: process.env.DEPLOYMENT_TYPE === "preview" ? "warn" : "throw",
+  onBrokenMarkdownLinks: process.env.DEPLOYMENT_TYPE === "preview" ? "warn" : "throw",
+  future: {
+    // Use rspack only during the build phase for faster CI times
+    // In dev mode it crashes often while hot reloading
+    experimental_faster: process.env.NODE_ENV === "production" ? true : false,
+  },
+  // Even if you don't use internationalization, you can use this field to set
+  // useful metadata like html lang. For example, if your site is Chinese, you
+  // may want to replace "en" with "zh-Hans".
+  i18n: {
+    defaultLocale: "en",
+    locales: ["en"],
+  },
+  presets: [
+    [
+      "classic",
+      {
+        docs: {
+          routeBasePath: "/docs",
+          sidebarPath: "./sidebars.ts",
+          exclude: ["**/_*", "**/_*/**"],
+          breadcrumbs: false,
+          editUrl: "https://github.com/supertokens/docs/tree/master/v3/",
+          beforeDefaultRemarkPlugins: [
+            remarkDocItemContextValues,
+            remarkRemoveCodeTypeCheckingCommentsAndRows,
+            remarkRemoveWebJsScriptImports,
+            remarkAddOptionalTagsToHeadings,
+          ],
+          rehypePlugins: [addNofollowToExternalLinks],
+          remarkPlugins: [remarkDocItemDescription],
+          async sidebarItemsGenerator({ defaultSidebarItemsGenerator, ...args }) {
+            const sidebarItems = await defaultSidebarItemsGenerator(args);
+            return sidebarItems;
+          },
+        },
+        blog: false,
+        pages: false,
+        theme: {
+          customCss: ["./src/css/custom.scss", "./src/css/radix.css"],
+        },
+      } satisfies Preset.Options,
+    ],
+  ],
+  themeConfig: {
+    colorMode: {
+      defaultMode: "dark",
+      disableSwitch: true,
+    },
+    image: "https://supertokens.com/static/assets/home-meta.png",
+    navbar: {
+      title: "SuperTokens",
+      logo: {
+        alt: "SuperTokens Logo",
+        src: "img/logoWithNameLight.svg",
+        href: "/",
+        target: "_blank",
+      },
+      items: [
+        {
+          href: "/blog",
+          label: "Blog",
+          position: "right",
+          target: "_blank",
+        },
+        {
+          href: "https://supertokens.com/discord",
+          label: "Ask Questions",
+          position: "right",
+          className: "navbar__item_discord",
+        },
+        {
+          href: "https://github.com/supertokens/supertokens-core",
+          label: "GitHub",
+          position: "right",
+        },
+      ],
+    },
+    algolia: {
+      apiKey: "ce04a158637d345fc094ebbfa9a5156a",
+      indexName: "supertokens",
+      appId: "SBR5UR2Z16",
+    },
+    prism: {
+      theme: prismThemes.vsDark,
+      additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php", "bash"],
+    },
+    metadata: [{ name: "keywords", content: "authentication" }],
+  } satisfies Preset.ThemeConfig,
+  headTags: [
+    {
+      tagName: "script",
+      attributes: { type: "application/ld+json" },
+      innerHTML: JSON.stringify({
+        viewport: "width=device-width, initial-scale=1",
+        "next-size-adjust": null,
+        description: "Open Source User Authentication. Build fast, maintain control, with reasonable pricing.",
+        title: "Welcome to SuperTokens Docs",
+        keywords: "authentication, open source, login, authorization, security, session management",
+        robots: "index, follow",
+        "og:title": "Welcome to SuperTokens Docs",
+        "og:description": "Open Source User Authentication. Build fast, maintain control, with reasonable pricing.",
+        "og:url": "https://supertokens.com/docs",
+        "og:image": "https://supertokens.com/assets/images/website/og/homepage.png",
+        "og:type": "website",
+        "twitter:card": "summary_large_image",
+        "twitter:creator": "@supertokens.io",
+        "twitter:title": "SuperTokens, Open Source User Authentication",
+        "twitter:description":
+          "Open Source User Authentication. Build fast, maintain control, with reasonable pricing.",
+        "twitter:image": "https://supertokens.com/assets/images/website/og/homepage.png",
+      }),
+    },
+  ],
+  plugins: [
+    "docusaurus-plugin-sass",
+    process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
+    [
+      // loads the supertokens.com react bundle for footer and analytics etc..
+      "./src/plugins/reactBundle",
+      {
+        id: "react-bundle",
+      },
+    ],
+    [
+      "./src/plugins/transformOpenSearchLink",
+      //used to transform the opensearch.xml location in the metatags.
+      {
+        id: "transform-opensearch-link",
+      },
+    ],
+  ].filter(Boolean),
 };
 
 // As far as I can tell docusaurus doesn't export this type
 type NormalizedSidebarItems = Awaited<
-	ReturnType<Exclude<Preset.Options["docs"], false>["sidebarItemsGenerator"]>
+  ReturnType<Exclude<Preset.Options["docs"], false>["sidebarItemsGenerator"]>
 >[number];
 
 // Reorders the default sidebar items based on the "childrenOrder" property specified in _category_.json, in customProps

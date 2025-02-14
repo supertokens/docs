@@ -8,5 +8,5 @@ RUN npm install
 
 COPY . .
 
-CMD ["npm", "run", "test"]
+RUN npm run test
 

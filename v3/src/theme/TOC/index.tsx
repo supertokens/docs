@@ -13,17 +13,25 @@ const LINK_CLASS_NAME = "table-of-contents__link toc-highlight";
 const LINK_ACTIVE_CLASS_NAME = "table-of-contents__link--active";
 
 export default function TOC({ className, toc, ...props }: Props): JSX.Element {
-	const filteredTocItems = useFilteredTocItems(toc);
+  const filteredTocItems = useFilteredTocItems(toc);
+  console.log(filteredTocItems);
 
-	return (
-		<div className={clsx(styles.tableOfContents, "thin-scrollbar", className)}>
-			<div id={TOC_UI_TYPE_SWITCH_ID} />
-			<TOCItems
-				{...props}
-				toc={filteredTocItems}
-				linkClassName={LINK_CLASS_NAME}
-				linkActiveClassName={LINK_ACTIVE_CLASS_NAME}
-			/>
-		</div>
-	);
+  // TODO: Removes the "Optional" label set by the custom badge (see remark plugins for more info)
+  // This should be updated to search for a value that is not that generic
+  const parsedTocItems = filteredTocItems.map((tocItem) => ({
+    ...tocItem,
+    value: tocItem.value.endsWith("Optional") ? tocItem.value.replace("Optional", "") : tocItem.value,
+  }));
+
+  return (
+    <div className={clsx(styles.tableOfContents, "thin-scrollbar", className)}>
+      <div id={TOC_UI_TYPE_SWITCH_ID} />
+      <TOCItems
+        {...props}
+        toc={parsedTocItems}
+        linkClassName={LINK_CLASS_NAME}
+        linkActiveClassName={LINK_ACTIVE_CLASS_NAME}
+      />
+    </div>
+  );
 }

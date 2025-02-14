@@ -3,6 +3,9 @@ id: mysql
 title: MySQL
 hide_title: true
 sidebar_position: 1
+description: >-
+  Set up and connect MySQL database for SuperTokens, including table creation
+  and connection testing.
 ---
 
 import { SelfHostingTabs } from "/src/components/Tabs";
@@ -12,7 +15,7 @@ import { SelfHostingTabs } from "/src/components/Tabs";
 :::important
 This is needed only if you are running the SuperTokens core yourself.
 
-The minimum required version is **MySQL 5.7**.
+The minimum required version is **MySQL 8.0.11**.
 :::
 
 :::tip blog
@@ -31,9 +34,9 @@ You can skip this step if you want SuperTokens to write to your own database. In
 <SelfHostingTabs.TabItem value="with-docker">
 
 :::caution
-Host being `localhost` / `127.0.0.1` will not work in a docker image. Instead, please provide the database's local / public hostname or IP address.
+Host being `localhost` / `127.0.0.1` will not work in a docker image. Instead, please provide the database's local / public host name or IP address.
 
-You also need to make the database listen on all the IP's of the local machine.
+You also need to make the database listen on all the IPs of the local machine.
 This can be done by editing the `mysqld.cnf` config file and setting the value of `bind-address` to `0.0.0.0`. 
 :::
 
@@ -515,6 +518,27 @@ CREATE TABLE `totp_used_codes` (
 );
 
 CREATE INDEX `totp_used_codes_expiry_time_ms_index` ON `totp_used_codes` (`app_id`,`tenant_id`,`expiry_time_ms`);
+
+CREATE TABLE IF NOT EXISTS bulk_import_users (
+    id CHAR(36),
+    app_id VARCHAR(64) NOT NULL DEFAULT 'public',
+    primary_user_id VARCHAR(36),
+    raw_data TEXT NOT NULL,
+    status VARCHAR(128) DEFAULT 'NEW',
+    error_msg TEXT,
+    created_at BIGINT UNSIGNED NOT NULL, 
+    updated_at BIGINT UNSIGNED NOT NULL, 
+    PRIMARY KEY (app_id, id),
+    FOREIGN KEY(app_id) REFERENCES apps(app_id) ON DELETE CASCADE
+);
+
+CREATE INDEX bulk_import_users_status_updated_at_index ON bulk_import_users (app_id, status, updated_at);
+
+CREATE INDEX bulk_import_users_pagination_index1 ON bulk_import_users (app_id, status, created_at DESC, id DESC);
+ 
+CREATE INDEX bulk_import_users_pagination_index2 ON bulk_import_users (app_id, created_at DESC, id DESC);
+
+CREATE INDEX session_info_user_id_app_id_index ON session_info (user_id, app_id);
 ```
 
 :::tip

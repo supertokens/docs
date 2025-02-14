@@ -8,15 +8,15 @@ import { TabsContext } from "@site/src/context";
 import "./styles.scss";
 
 export default function TabItem({ children, value }: Props): JSX.Element {
-	const { tabValues } = useContext(TabsContext);
+  const { tabValues } = useContext(TabsContext);
 
-	if (!tabValues.find((v) => v.value === value)) {
-		throw new Error(`Invalid tab value ${value}`);
-	}
+  if (!tabValues.find((v) => v.value === value)) {
+    throw new Error(`Invalid tab value ${value}`);
+  }
 
-	return (
-		<RadixTabs.Content className="tab-item" value={value}>
-			{children}
-		</RadixTabs.Content>
-	);
+  return (
+    <RadixTabs.Content className="tab-item" value={value}>
+      {children}
+    </RadixTabs.Content>
+  );
 }

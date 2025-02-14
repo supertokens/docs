@@ -1,18 +1,18 @@
 import { Select } from "@radix-ui/themes";
 import { useContext } from "react";
 
-import { DocItemContext } from "../DocItemContext";
+import { DocItemContext } from "@site/src/context";
 
 export const AppTypeSelect = () => {
-	const { appType, onChangeAppType } = useContext(DocItemContext);
+  const { appType, onChangeAppType } = useContext(DocItemContext);
 
-	return (
-		<Select.Root value={appType} onValueChange={onChangeAppType}>
-			<Select.Trigger />
-			<Select.Content>
-				<Select.Item value="single">Single App Setup</Select.Item>
-				<Select.Item value="multi">Multi App Setup</Select.Item>
-			</Select.Content>
-		</Select.Root>
-	);
+  return (
+    <Select.Root value={appType} onValueChange={onChangeAppType}>
+      <Select.Trigger variant="ghost" color="gray" mr="xs" />
+      <Select.Content>
+        <Select.Item value="single">Single App Setup</Select.Item>
+        <Select.Item value="multi">Multi App Setup</Select.Item>
+      </Select.Content>
+    </Select.Root>
+  );
 };

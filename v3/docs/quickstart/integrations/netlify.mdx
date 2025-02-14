@@ -1,0 +1,197 @@
+---
+title: Netlify
+hide_title: true
+sidebar_position: 6
+toc_max_heading_level: 4
+description: >-
+  Learn to set up SuperTokens authentication with Netlify using serverless
+  functions.
+---
+
+
+import { NpmOrScriptsCard, MobileFrameworksCard } from "/src/components/Cards";
+import { AppInfoForm } from "/src/components/Forms";
+import { FrontendCustomUITabs } from "/src/components/Tabs";
+import OAuthVerifyTokensCallout from "../../_blocks/oauth-tokens-callout.mdx";
+
+# Netlify Guide
+
+
+## Overview 
+
+The following guide gets you though how to add SuperTokens to a Netlify serverless API.
+You can also check out the [example repository](https://github.com/supertokens/supertokens-auth-react/tree/master/examples/with-netlify) for a full working example.
+
+## Before you start
+
+This guide assumes that you are using Netlify for hosting your serverless API functions.
+If this is not the case, and you are only hosting your frontend using Netlify, please follow the [Quick setup guide](/docs/quickstart/frontend-setup) instead.
+
+## Steps
+
+### 1. Setup the frontend
+
+Follow the [initial quickstart guide](/docs/quickstart/frontend-setup) to configure the frontend.
+
+### 2. Setup the backend
+
+#### 2.1 Install the SuperTokens node package
+
+```bash
+npm i supertokens-node
+```
+
+#### 2.2 Create a configuration file 
+
+Create a `config` folder in the root directory of your project.
+Create a `supertokensConfig.js` inside the `config` folder.
+An example of this file can be found [here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-netlify/config/supertokensConfig.js).
+
+#### 2.3 Create a backend configuration function
+
+<AppInfoForm />
+
+```tsx title="/config/supertokensConfig.ts" showAppTypeSelect
+
+import EmailPassword from 'supertokens-node/recipe/emailpassword';
+import Session from 'supertokens-node/recipe/session'
+
+function getBackendConfig() {
+  return {
+    framework: "awsLambda",
+    supertokens: {
+      connectionURI: "^{coreInfo.uri}",
+      apiKey: "^{coreInfo.key}",
+    },
+    appInfo: {
+      // learn more about this on https://supertokens.com/docs/references/app-info
+      appName: "^{appInfo.appName}",
+      apiDomain: "^{appInfo.apiDomain}",
+      websiteDomain: "^{appInfo.websiteDomain}",
+      apiBasePath: "^{appInfo.apiBasePath}",
+      websiteBasePath: "^{appInfo.websiteBasePath}",
+    },
+    recipeList: [
+      EmailPassword.init(),
+      Session.init(),
+    ],
+    isInServerlessEnv: true,
+  }
+}
+
+module.exports.getBackendConfig = getBackendConfig;
+
+```
+
+
+### 3. Expose the authentication APIs
+
+We will add all the backend APIs for auth on `/.netlify/functions/auth/*`.
+This can be changed by setting the `apiBasePath` property in the `appInfo` object on the backend and frontend.
+For the rest of this page, we will assume you are using `/.netlify/functions/auth/*`.
+
+#### 3.1 Create the `netlify/functions/auth.js` page
+
+Be sure to create the `netlify/functions/` folder.
+An example of this can be found [here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-netlify/netlify/functions/auth.js).
+
+```tsx title="netlify/functions/auth.ts"
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/awsLambda";
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+// @ts-ignore
+import { getBackendConfig } from "../../config/supertokensConfig";
+
+supertokens.init(getBackendConfig());
+
+module.exports.handler = middy(middleware(async (event, context) => {
+    if (event.httpMethod === "OPTIONS") {
+        return {
+            statusCode: 200,
+            body: ""
+        }
+    }
+    
+    return {
+        statusCode: 404,
+        body: "Not Found",
+    }
+})).use(
+    cors({
+        origin: getBackendConfig().appInfo.websiteDomain,
+        credentials: true,
+        headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+        methods: "OPTIONS,POST,GET,PUT,DELETE",
+    })
+).onError(request => {
+    throw request.error;
+});
+```
+
+:::important
+- Notice that we called `supertokens.init` above. We will need to call this in all API endpoints that use any functions related to SuperTokens.
+- `CORS` is only needed if you are hosting your frontend using a separate domain (if your website domain is different that your API's domain).
+:::
+
+#### 3.2 Use the login widget
+If you are now able to sign in or sign up, this means the backend setup is done correctly! If not, please feel free to ask questions on [Discord](https://supertokens.com/discord)
+
+### 4. Add session verification 
+
+<OAuthVerifyTokensCallout />
+
+For this guide, we will assume that we want an API `/.netlify/functions/user GET` which returns the current session information.
+
+#### 4.1 Create a new file `netlify/functions/user.js`
+
+An example of this is [here](https://github.com/supertokens/supertokens-auth-react/blob/master/examples/with-netlify/netlify/functions/user.js).
+
+#### 4.2 Call the `supertokens.init` function
+
+Remember that whenever we want to use any functions from the `supertokens-node` lib, we have to call the `supertokens.init` function at the top of that serverless function file.
+
+```tsx title="netlify/functions/user.ts"
+import supertokens from "supertokens-node";
+// @ts-ignore
+import { getBackendConfig } from "../../config/supertokensConfig";
+
+supertokens.init(getBackendConfig())
+```
+
+#### 4.3 Use session verification with your API handler
+
+We use the `verifySession()` middleware to verify a session.
+
+```tsx title="netlify/functions/user.ts"
+import supertokens from "supertokens-node";
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda"
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+// @ts-ignore
+import { getBackendConfig } from "../../config/supertokensConfig";
+
+supertokens.init(getBackendConfig());
+
+const handler = async (event: SessionEvent) => {
+    return {
+        body: JSON.stringify({
+            sessionHandle: event.session!.getHandle(),
+            userId: event.session!.getUserId(),
+            accessTokenPayload: event.session!.getAccessTokenPayload(),
+        }),
+    };
+};
+
+module.exports.handler = middy(verifySession(handler)).use(
+    cors({
+        origin: getBackendConfig().appInfo.websiteDomain,
+        credentials: true,
+        headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+        methods: "OPTIONS,POST,GET,PUT,DELETE",
+    })
+).onError(request => {
+    throw request.error;
+});
+```

@@ -1,13 +1,13 @@
-import React, {useState} from 'react';
-import {useDocsSidebar} from '@docusaurus/plugin-content-docs/client';
-import BackToTopButton from '@theme/BackToTopButton';
-import DocRootLayoutSidebar from '@theme/DocRoot/Layout/Sidebar';
-import DocRootLayoutMain from '@theme/DocRoot/Layout/Main';
-import type {Props} from '@theme/DocRoot/Layout';
+import React, { useState } from "react";
+import { useDocsSidebar } from "@docusaurus/plugin-content-docs/client";
+import BackToTopButton from "@theme/BackToTopButton";
+import DocRootLayoutSidebar from "@theme/DocRoot/Layout/Sidebar";
+import DocRootLayoutMain from "@theme/DocRoot/Layout/Main";
+import type { Props } from "@theme/DocRoot/Layout";
 
-import styles from './styles.module.css';
+import styles from "./styles.module.css";
 
-export default function DocRootLayout({children}: Props): JSX.Element {
+export default function DocRootLayout({ children }: Props): JSX.Element {
   const sidebar = useDocsSidebar();
   const [hiddenSidebarContainer, setHiddenSidebarContainer] = useState(false);
   return (
@@ -21,9 +21,7 @@ export default function DocRootLayout({children}: Props): JSX.Element {
             setHiddenSidebarContainer={setHiddenSidebarContainer}
           />
         )}
-        <DocRootLayoutMain hiddenSidebarContainer={hiddenSidebarContainer}>
-          {children}
-        </DocRootLayoutMain>
+        <DocRootLayoutMain hiddenSidebarContainer={hiddenSidebarContainer}>{children}</DocRootLayoutMain>
       </div>
     </div>
   );

@@ -5,18 +5,11 @@ import { createContext } from "react";
  */
 type TabItem = { value: string; label: string };
 type TabsContextType = {
-	tabValues: TabItem[];
+  tabValues: TabItem[];
 };
 
 export const TabsContext = createContext({} as TabsContextType);
 
-export const TabsContextProvider = ({
-	tabValues,
-	children,
-}: React.PropsWithChildren<{ tabValues: TabItem[] }>) => {
-	return (
-		<TabsContext.Provider value={{ tabValues }}>
-			{children}
-		</TabsContext.Provider>
-	);
+export const TabsContextProvider = ({ tabValues, children }: React.PropsWithChildren<{ tabValues: TabItem[] }>) => {
+  return <TabsContext.Provider value={{ tabValues }}>{children}</TabsContext.Provider>;
 };

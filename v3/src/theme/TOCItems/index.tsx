@@ -1,17 +1,19 @@
-import React, {useMemo} from 'react';
-import {useThemeConfig} from '@docusaurus/theme-common';
+import React, { useMemo } from "react";
+import { useThemeConfig } from "@docusaurus/theme-common";
 import {
   useTOCHighlight,
   useFilteredAndTreeifiedTOC,
   type TOCHighlightConfig,
-} from '@docusaurus/theme-common/internal';
-import TOCItemTree from '@theme/TOCItems/Tree';
-import type {Props} from '@theme/TOCItems';
+} from "@docusaurus/theme-common/internal";
+import TOCItemTree from "@theme/TOCItems/Tree";
+import type { Props } from "@theme/TOCItems";
+
+import "./index.scss";
 
 export default function TOCItems({
   toc,
-  className = 'table-of-contents table-of-contents__left-border',
-  linkClassName = 'table-of-contents__link',
+  className = "table-of-contents table-of-contents__left-border",
+  linkClassName = "table-of-contents__link",
   linkActiveClassName = undefined,
   minHeadingLevel: minHeadingLevelOption,
   maxHeadingLevel: maxHeadingLevelOption,
@@ -19,10 +21,8 @@ export default function TOCItems({
 }: Props): JSX.Element | null {
   const themeConfig = useThemeConfig();
 
-  const minHeadingLevel =
-    minHeadingLevelOption ?? themeConfig.tableOfContents.minHeadingLevel;
-  const maxHeadingLevel =
-    maxHeadingLevelOption ?? themeConfig.tableOfContents.maxHeadingLevel;
+  const minHeadingLevel = minHeadingLevelOption ?? themeConfig.tableOfContents.minHeadingLevel;
+  const maxHeadingLevel = maxHeadingLevelOption ?? themeConfig.tableOfContents.maxHeadingLevel;
 
   const tocTree = useFilteredAndTreeifiedTOC({
     toc,
@@ -43,12 +43,5 @@ export default function TOCItems({
   }, [linkClassName, linkActiveClassName, minHeadingLevel, maxHeadingLevel]);
   useTOCHighlight(tocHighlightConfig);
 
-  return (
-    <TOCItemTree
-      toc={tocTree}
-      className={className}
-      linkClassName={linkClassName}
-      {...props}
-    />
-  );
+  return <TOCItemTree toc={tocTree} className={className} linkClassName={linkClassName} {...props} />;
 }

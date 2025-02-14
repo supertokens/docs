@@ -2,6 +2,7 @@ version: 2.1
 orbs:
   node: circleci/node@7.0.0
   slack: circleci/slack@3.4.2
+  vale: circleci/vale@1.2.0
 commands:
   code-type-check:
     parameters:
@@ -12,7 +13,6 @@ commands:
       - attach_workspace:
           at: ./workspace
       - run: cd ./workspace/v3/scripts/code-type-checking/<<parameters.language>> && docker build -t code-check .
-      - run: docker run code-check
 jobs:
   build-docs:
     docker:
@@ -29,6 +29,12 @@ jobs:
           root: .
           paths:
             - v3/build
+  vale-lint:
+    docker:
+      - image: jdkato/vale
+    steps:
+      - checkout
+      - run: vale --minAlertLevel=error --config=./v3/.vale.ini  ./v3/docs
   build-code-type-checking:
     docker:
       - image: cimg/node:20.0
@@ -79,23 +85,18 @@ jobs:
           language: "go"
       - code-type-check:
           language: "python"
-      - slack/status
-  run-code-type-checking-ios:
-    macos:
-      xcode: 14.1.0
-    steps:
-      - checkout
-      - node/install-packages:
-          app-dir: "~/project/v2"
-      - run:
-          name: Setup iOS env
-          command: |
-            cd ./workspace/v3/scripts/code-type-checking/swift
-            pod install
-      - run: |
-          cd ./workspace/v3/scripts/code-type-checking/swift
-          set -o pipefail
-          xcodebuild -workspace iosenv.xcworkspace -scheme iosenv build CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO -quiet | ./Pods/xcbeautify/xcbeautify
+      # - code-type-check:
+      #     language: "dart"
+      - code-type-check:
+          language: "swift"
+      - code-type-check:
+          language: "php"
+      - code-type-check:
+          language: "java"
+      - code-type-check:
+          language: "csharp"
+      - code-type-check:
+          language: "kotlin"
       - slack/status
 workflows:
   version: 2
@@ -106,11 +107,17 @@ workflows:
             branches:
               only:
                 - master
+      - vale-lint
       - create-supertokens-backend-website-dev-tag:
+          filters:
+            branches:
+              only:
+                - master
           context:
             - slack-notification
           requires:
             - build-docs
+            - vale-lint
   code-type-checking:
     jobs:
       - build-code-type-checking:

@@ -6,21 +6,22 @@ import { visit } from "unist-util-visit";
  *
  */
 export default function remarkRemoveCodeTypeCheckingCommentsAndRows() {
-	return (tree) => {
-		visit(tree, "code", (node) => {
-			const lines = node.value.split("\n");
-			const filteredLines = lines.filter((line) => {
-				return (
-					!line.includes("REMOVE_FROM_OUTPUT") &&
-					!line.includes("@ts-expect-error") &&
-					!line.includes("@ts-ignore")
-				);
-			});
-			const parsedLines = filteredLines.map((line) => {
-				return line.replaceAll("# type: ignore", "");
-			});
+  return (tree) => {
+    visit(tree, "code", (node) => {
+      const lines = node.value.split("\n");
+      const filteredLines = lines.filter((line) => {
+        return (
+          !line.includes("REMOVE_FROM_OUTPUT") &&
+          !line.includes("@ts-expect-error") &&
+          !line.includes("@ts-ignore") &&
+          !line.includes("// typecheck-only")
+        );
+      });
+      const parsedLines = filteredLines.map((line) => {
+        return line.replaceAll("# type: ignore", "");
+      });
 
-			node.value = parsedLines.join("\n");
-		});
-	};
+      node.value = parsedLines.join("\n");
+    });
+  };
 }
