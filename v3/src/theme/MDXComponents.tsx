@@ -7,8 +7,9 @@ import {
   DescriptionText,
   ConditionalContent,
   ReferenceCard,
+  PaidFeatureBadge,
 } from "@site/src/components";
-import { Separator } from "@radix-ui/themes";
+import { Separator, Heading } from "@radix-ui/themes";
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
@@ -27,8 +28,41 @@ const TableRoot = ({ children }) => {
   );
 };
 
+const H1 = ({ children, ...props }) => {
+  return (
+    <Heading as="h1" size="8" mb="4" {...props}>
+      {children}
+    </Heading>
+  );
+};
+
+const H2 = ({ children, ...props }) => {
+  return (
+    <Heading as="h2" size="7" mb="4" {...props}>
+      {children}
+    </Heading>
+  );
+};
+
+const H3 = ({ children, ...props }) => {
+  return (
+    <Heading as="h3" size="6" mb="4" {...props}>
+      {children}
+    </Heading>
+  );
+};
+
+const H4 = ({ children, ...props }) => {
+  return (
+    <Heading as="h4" size="6" mb="4" {...props}>
+      {children}
+    </Heading>
+  );
+};
+
 export default {
   ...MDXComponents,
+  h1: H1,
   table: TableRoot,
   thead: Table.Header,
   tbody: Table.Body,
@@ -44,5 +78,6 @@ export default {
   DocItemContextValue,
   Tabs,
   TabItem,
+  PaidFeatureBadge,
   ReferenceCard,
 };

@@ -14,7 +14,6 @@ const LINK_ACTIVE_CLASS_NAME = "table-of-contents__link--active";
 
 export default function TOC({ className, toc, ...props }: Props): JSX.Element {
   const filteredTocItems = useFilteredTocItems(toc);
-  console.log(filteredTocItems);
 
   // TODO: Removes the "Optional" label set by the custom badge (see remark plugins for more info)
   // This should be updated to search for a value that is not that generic

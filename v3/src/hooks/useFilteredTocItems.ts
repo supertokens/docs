@@ -30,7 +30,7 @@ export default function useFilteredTocItems(toc: Props["toc"]) {
       return;
     }
 
-    const allPageHeadings = document.querySelectorAll(`h2, h3`);
+    const allPageHeadings = document.querySelectorAll(`h2, h3, h4`);
     const visibleHeadingsIds = Array.from(allPageHeadings)
       .filter((heading) => {
         return hiddenElements.every((hiddenElement) => {

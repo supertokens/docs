@@ -90,13 +90,24 @@ function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
   );
 }
 
-function ReferenceCardGrid({ children }: React.PropsWithChildren<{}>) {
+type ReferenceCardGridProps = {
+  lg?: string;
+  xs?: string;
+  initial?: string;
+};
+
+function ReferenceCardGrid({
+  children,
+  lg = "repeat(3, 1fr)",
+  xs = "repeat(2, 1fr)",
+  initial = "repeat(1, 1fr)",
+}: React.PropsWithChildren<ReferenceCardGridProps>) {
   return (
     <Grid
       columns={{
-        initial: "repeat(1, 1fr)",
-        lg: "repeat(3, 1fr)",
-        xs: "repeat(2, 1fr)",
+        initial,
+        lg,
+        xs,
       }}
       gap="4"
     >

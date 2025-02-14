@@ -7,7 +7,7 @@ import remarkDocItemContextValues from "./src/plugins/remarkDocItemContextValues
 import remarkRemoveCodeTypeCheckingCommentsAndRows from "./src/plugins/remarkRemoveCodeTypeCheckingCommentsAndRows";
 import remarkRemoveWebJsScriptImports from "./src/plugins/remarkRemoveWebJsScriptImports";
 import remarkDocItemDescription from "./src/plugins/remarkDocItemDescription";
-import remarkAddOptionalTagsToHeadings from "./src/plugins/remarkAddOptionalTagToHeadings";
+import remarkAddBadgesInHeadings from "./src/plugins/remarkAddBadgesInHeadings";
 
 const config: Config = {
   title: "SuperTokens Docs",
@@ -44,7 +44,7 @@ const config: Config = {
             remarkDocItemContextValues,
             remarkRemoveCodeTypeCheckingCommentsAndRows,
             remarkRemoveWebJsScriptImports,
-            remarkAddOptionalTagsToHeadings,
+            remarkAddBadgesInHeadings,
           ],
           rehypePlugins: [addNofollowToExternalLinks],
           remarkPlugins: [remarkDocItemDescription],
