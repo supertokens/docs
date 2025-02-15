@@ -23,9 +23,9 @@ function StepHeader({ children }: React.PropsWithChildren<{}>) {
   return (
     <Flex direction="row" align="center">
       <StepBadge />
-      <Heading as="h3" size="3" ml="4" mb="0">
+      <Text size="4" ml="4" mb="0">
         <ParagraphStripper>{children}</ParagraphStripper>
-      </Heading>
+      </Text>
     </Flex>
   );
 }
@@ -43,7 +43,13 @@ function StepBadge() {
 
   return (
     <Flex width="30px" height="30px" display="flex" justify="center" align="center" asChild>
-      <Badge radius="full" size="3" variant="solid" highContrast color="gray">
+      <Badge
+        radius="full"
+        size="3"
+        variant="outline"
+        color="gray"
+        style={{ background: "var(--color-background)", zIndex: 5 }}
+      >
         <Text weight="bold">{position}</Text>
       </Badge>
     </Flex>
@@ -55,8 +61,8 @@ function StepSeparator() {
   if (isLast) return null;
 
   return (
-    <Box position="absolute" left="15px" asChild>
-      <Separator orientation="vertical" size="4" my="5" />
+    <Box position="absolute" left="15px" top="30px" asChild>
+      <Separator orientation="vertical" size="4" />
     </Box>
   );
 }
@@ -78,7 +84,7 @@ function StepsRoot({ children, mode = "jsx" }: React.PropsWithChildren<{ mode?: 
 
   if (mode === "jsx") {
     return (
-      <Flex direction="column" gap="2">
+      <Flex direction="column" gap="2" data-exclude-headings-from-toc="true">
         {childrenArray.map((child, index) => {
           if (!isValidElement(child)) return child;
           return cloneElement(child, {
@@ -111,7 +117,7 @@ function StepsRoot({ children, mode = "jsx" }: React.PropsWithChildren<{ mode?: 
   steps.push(currentStep);
 
   return (
-    <Flex direction="column" gap="2">
+    <Flex direction="column" gap="2" data-exclude-headings-from-toc="true">
       {steps.map(({ title, description }, index) => (
         <Step key={index} isLast={index === steps.length - 1} position={index + 1}>
           <StepHeader>{title}</StepHeader>

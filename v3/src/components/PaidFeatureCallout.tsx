@@ -34,7 +34,7 @@ export function PaidFeatureCallout(): JSX.Element {
                 <Separator size="4" mb="5" />
 
                 <Text mt="2">
-                  This feature is only available to paid users. Enabel it by following the next instructions.{" "}
+                  This feature is only available to paid users. Enabel it using the provided instructions.
                 </Text>
                 <Callout.Root color="blue" variant="surface" size="2" mt="4">
                   <Callout.Icon>
@@ -43,12 +43,12 @@ export function PaidFeatureCallout(): JSX.Element {
                   <Box mb="0" asChild>
                     <Callout.Text>
                       You can test the feature in a development environment for free. We only start charging once you
-                      use it production environments.
+                      use it production.
                     </Callout.Text>
                   </Box>
                 </Callout.Root>
 
-                <Heading as="h2" size="6" mt="6">
+                <Heading as="h2" size="6" mb="5" mt="6">
                   Managed Service
                 </Heading>
                 <Steps>
@@ -85,7 +85,7 @@ export function PaidFeatureCallout(): JSX.Element {
                   </Steps.Step>
                 </Steps>
 
-                <Heading as="h2" size="6" mt="6">
+                <Heading as="h2" size="6" mt="8">
                   Self Hosted
                 </Heading>
                 <Steps>
