@@ -1,2 +1,3 @@
 export * from "./OAuthCallouts";
-export * from "./PaidFeatureCallouts.tsx";
+export * from "./PaidFeatureCallouts";
+export * from "./TokensCallout";

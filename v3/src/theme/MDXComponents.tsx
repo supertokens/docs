@@ -8,7 +8,9 @@ import {
   ConditionalContent,
   ReferenceCard,
   PaidFeatureCallout,
+  TokensCallout,
   Steps,
+  Accordion,
 } from "@site/src/components";
 import { Separator, Heading } from "@radix-ui/themes";
 
@@ -80,6 +82,16 @@ export default {
   Tabs,
   TabItem,
   PaidFeatureCallout,
-  Steps: ({ children }) => <Steps mode="mdx">{children}</Steps>,
+  TokensCallout,
+  Steps: ({ children, ...rest }) => (
+    <Steps mode="mdx" {...rest}>
+      {children}
+    </Steps>
+  ),
+  Accordion: ({ children, ...rest }) => (
+    <Accordion mode="mdx" {...rest}>
+      {children}
+    </Accordion>
+  ),
   ReferenceCard,
 };

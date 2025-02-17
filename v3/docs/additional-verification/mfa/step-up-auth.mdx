@@ -1,11 +1,10 @@
 ---
-id: step-up-auth
-title: Step up auth
+title: Implement step-up authentication
 hide_title: true
-sidebar_position: 7
+toc_max_heading_level: 4
+sidebar_position: 6
 description: >-
-  Implement step-up authentication using SuperTokens for enhanced security with
-  TOTP, password, or OTP.
+  Implement step-up authentication using SuperTokens MFA recipe.
 ---
 
 import { MobileFrameworksCard, NpmOrScriptsCard, NodeFrameworksCard, PythonFrameworksCard } from "/src/components/Cards";
@@ -15,29 +14,38 @@ import {
   BackendTabs,
 } from "/src/components/Tabs";
 
-import PaidFeatureCallout from "./_blocks/paid-feature-callout.mdx"
 
-# Step up auth
+# Step-up authentication
+
+## Overview
+
+Step-up authentication enforces the user to complete an authentication challenge before navigating to a page, or before doing a specific action.
+You can implement it with **SuperTokens** as full page navigation, or as popups on the current page.
+
+## Before you start
 
 <PaidFeatureCallout />
 
-Step up auth is when you want the user to complete an auth challenge before navigating to a page, or before doing an action on a page.
+These instructions assume that you already have some knowledge of MFA.
+If you are not familiar with terms like authentication factors and challenegs, please go through the [MFA concepts page](/docs/additional-verification/mfa/important-concepts).
 
-SuperTokens allows you to implement step up auth using the following factors:
-- TOTP
+### Prerequisites
+
+Step-up authentication can be used with the following factors:
+- `TOTP`
 - Password (available only for custom UI)
-- Email / SMS OTP
+- Email or SMS `OTP`
 
-You can implement these as full page navigation, or as popups on the current page.
+If you are using **OAuth2** in your configuration, step-up authentication is not supported at the moment.
 
-:::caution
 
-If you are using **OAuth2** in your configuration, step up authentication is not supported at the moment.
+## Steps
 
-:::
+### 1. Add the backend validators
 
-## Step 1. Adding backend validators
-To protect sensitive APIs with step up auth, you need to check that the user has completed the required auth challenge within a certain amount of time. If they haven't, you should return a `403` to the frontend which highlights which factor is required. The frontend can then consume this and show the auth challenge to the user.
+To protect sensitive APIs with step up auth, you need to check that the user has completed the required auth challenge within a certain amount of time.
+If they haven't, you should return a `403` to the frontend which highlights which factor is required.
+The frontend can then consume this and show the auth challenge to the user.
 
 <BackendTabs>
 <BackendTabs.TabItem value="nodejs">
@@ -549,13 +557,16 @@ async def get_user_info_api(request: HttpRequest):
 - You can check other factor types in this was as well. For example, if you want to check that the user has done email OTP in the last 5 minutes, you can use the factor ID of `otp-email`, or if you want to check that the user has entered their account password in the last 5 minutes, you can check `emailpassword` factor ID.
 - If users have different login methods, and / or different MFA configurations, you may want to first check what factor applies to them. You can check their login method by fetching the user object using the `getUser` function from our SDK, and then matching the `session.getRecipeId()` to the login methods in the user object. As per the MFA factors, you can see which ones are enabled for this user by using the `MultiFactorAuth.getRequiredSecondaryFactorsForUser` function. For performance reasons, you may want to put this information in the session's access token payload of the user in the `createNewSession` override function of the session recipe.
 
-## Step 2. Preventing factor setup during step up auth
-By default, SuperTokens allows a factor setup (for example, creating a new TOTP device), as long as the user has a session and has completed all the MFA factors required during login. This opens up a security issue when it comes to completing step up auth. Consider the following scenario:
+### 2. Prevent factor setup during step-up authentication
+
+By default, SuperTokens allows a factor setup (for example, creating a new TOTP device), as long as the user has a session and has completed all the MFA factors required during login.
+This opens up a security issue when it comes to completing step up auth. Consider the following scenario:
 - The user has logged in and completed TOTP
 - After 5 minutes, the user tries to do a sensitive action and the API for that fails with a 403 (cause of the check in step 1, above).
 - The user is shown the TOTP challenge on the frontend. However, instead of completing that, they call the create TOTP device API which would succeed and then use the new TOTP device to complete the factor challenge required for the API.
 
-This allows someone malicious to bypass step up auth. In order to prevent this, we need to override one fo the MFA recipe functions on the backend to enforce that the factor setup can only happen if the user is not in a step up auth state:
+This allows someone malicious to bypass step up auth.
+In order to prevent this, we need to override one fo the MFA recipe functions on the backend to enforce that the factor setup can only happen if the user is not in a step up auth state:
 
 <BackendTabs>
 <BackendTabs.TabItem value="nodejs">
@@ -731,7 +742,8 @@ init(
 
 The customisation above prevents the security issue highlighted in the beginning of this step.
 
-## Step 3. Handling `403` on the frontend
+### 3. Handle `403` on the frontend
+
 The JSON body of the step up auth claim failure will look like this:
 
 ```json
@@ -755,7 +767,8 @@ The JSON body of the step up auth claim failure will look like this:
 
 You can check for this structure and the `factorId` to decide what factor to show on the frontend. You have two options to show the UI to the user:
 
-### Full page redirect to the factor
+#### Full page redirect to the factor
+
 To redirect the user to as factor challenge page and then navigate them back to the current page, you can use the following function:
 
 <FrontendPrebuiltUITabs>
@@ -787,7 +800,8 @@ In order to add a new device, you can redirect the user to `/{websiteBasePath}/m
 
 </FrontendPrebuiltUITabs>
 
-### Show the factor in a popup
+#### Show the factor in a popup
+
 Checkout the docs for embedding the pre-built UI factor components in a page / popup:
 - [TOTP](./totp/embed)
 - [Email / SMS OTP](./email-sms-otp/embed)
@@ -801,11 +815,13 @@ You can check for this structure and the `factorId` to decide what factor to sho
 </UIType.CustomUIContent>
 
 
-## Step 4. Checking for step up auth on page navigation
+### 4. Check for step-up authentication on page navigation
 
-Sometimes, you may want to ask users to complete step up auth before displaying a page on the frontend. This is a different scenario that the above steps cause here, you do not want to reply on an API call to fail, instead you want to check for the step up auth condition before rendering the page itself. 
+Sometimes, you may want to ask users to complete step up auth before displaying a page on the frontend.
+This is a different scenario that the above steps cause here, you do not want to reply on an API call to fail, instead you want to check for the step up auth condition before rendering the page itself. 
 
-To do this, we read the access token payload on the frontend and check the completed time of the factor we care about before rendering the page. If the completed time is older than 5 minutes (as an example), we should redirect the user to the factor challenge page.
+To do this, we read the access token payload on the frontend and check the completed time of the factor we care about before rendering the page.
+If the completed time is older than 5 minutes (as an example), we should redirect the user to the factor challenge page.
 
 
 <UIType.PrebuiltUIContent>

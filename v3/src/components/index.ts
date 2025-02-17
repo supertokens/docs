@@ -11,6 +11,6 @@ export * from "./DescriptionText";
 export * from "./DocItemContextValue";
 export * from "./DocItemContextCondition";
 export * from "./ConditionalContent";
-export * from "./PaidFeatureBadge";
 export * from "./Steps";
+export * from "./Accordion";
 export * from "./PaidFeatureCallout";

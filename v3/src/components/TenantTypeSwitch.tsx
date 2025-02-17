@@ -1,26 +1,30 @@
 import React, { useContext } from "react";
 import { DocItemContext } from "@site/src/context";
 import { Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
+import { useIsVisible } from "../hooks";
 
 function TenantTypeSwitch({}) {
   const { tenantType, onChangeTenantType } = useContext(DocItemContext);
+  const { visibilityRef, isVisible } = useIsVisible();
 
   return (
-    <Flex gap="2" direction="column" mb="6" py="5" px="4" asChild>
+    <Flex ref={visibilityRef} gap="2" direction="column" mb="6" py="5" px="4" width="fit-content" asChild>
       <Card>
-        <Heading as="h3" size="5">
-          Are you using a multi-tenant setup?
+        <Heading as="h3" size="4">
+          What is your setup type?
         </Heading>
         <Flex direction="row" gap="2" align="start">
-          <RadioCards.Root defaultValue={tenantType === "multi" ? "yes" : "no"} columns={{ initial: "1", sm: "2" }}>
-            <RadioCards.Item value="yes" onClick={() => onChangeTenantType("multi")}>
+          <RadioCards.Root value={tenantType} columns={{ initial: "1", sm: "2" }}>
+            <RadioCards.Item value="single" className="radio-card-item" onClick={() => onChangeTenantType("single")}>
               <Flex direction="column" width="100%" height="100%" align="start">
-                <Text weight="bold">Yes</Text>
+                <Text weight="bold">Single Tenant</Text>
+                <Text>One common user pool for your entire application</Text>
               </Flex>
             </RadioCards.Item>
-            <RadioCards.Item value="no" onClick={() => onChangeTenantType("single")}>
+            <RadioCards.Item value="multi" className="radio-card-item" onClick={() => onChangeTenantType("multi")}>
               <Flex direction="column" width="100%" height="100%" align="start">
-                <Text weight="bold">No</Text>
+                <Text weight="bold">Multi Tenant</Text>
+                <Text>Different users pools grouped by tenant</Text>
               </Flex>
             </RadioCards.Item>
           </RadioCards.Root>
