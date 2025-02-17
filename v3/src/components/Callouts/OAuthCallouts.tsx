@@ -23,8 +23,8 @@ function OAuthVerifyTokensCallout() {
               <strong>Microservice Authentication</strong>
             </a>
             , features that make use of <strong>OAuth2 Access Tokens</strong>, please check the{" "}
-            <a href="/docs/authentication/unified-login/customizations/verify-tokens">separate page</a> that shows you
-            how to verify those types of tokens.
+            <a href="/docs/authentication/unified-login/verify-tokens">separate page</a> that shows you how to verify
+            those types of tokens.
           </p>
         </div>
       </div>
@@ -51,8 +51,8 @@ function OAuthEmailVerificationCallout() {
             </a>{" "}
             you will have to manually check the <code>email_verified</code> claim on the{" "}
             <strong>OAuth2 Access Tokens</strong>. Please read the{" "}
-            <a href="/docs/authentication/unified-login/customizations/verify-tokens">separate page</a> that shows you
-            how to verify the token.
+            <a href="/docs/authentication/unified-login/verify-tokens">separate page</a> that shows you how to verify
+            the token.
           </p>
         </div>
       </div>
