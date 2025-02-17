@@ -97,6 +97,11 @@ async function writeCodeBlocks() {
 
   let blockIndex = 0;
   for (const block of codeBlocks) {
+    if (
+      block.value.startsWith("// exclude-from-type-checking") ||
+      block.value.startsWith("# exclude-from-type-checking")
+    )
+      continue;
     blockIndex += 1;
     const relativePath = path.relative("./docs", block.filePath);
     const key = `${relativePath}/${block.languageFolder}`;
