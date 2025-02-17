@@ -4,7 +4,6 @@ import Link from "@docusaurus/Link";
 import InfoCircleIcon from "/img/icons/info-circled.svg";
 
 import { SideModal } from "../Modal";
-import { Steps } from "../Steps";
 
 export function TokensCallout(): JSX.Element {
   return (
@@ -47,32 +46,27 @@ export function TokensCallout(): JSX.Element {
                 </Text>
                 <Text mt="2">Read more on each token type in the next section.</Text>
 
-                <Heading as="h2" size="6" mb="5" mt="6">
+                <Separator size="3" mt="6" mb="4" />
+                <Heading as="h2" size="6" mb="5">
                   SuperTokens Tokens
                 </Heading>
-                <Text mt="2" asChild>
-                  <ul>
-                    <li>Used in</li>
-                    <li>Provides</li>
-                    <li>Holds</li>
-                    <li>asda</li>
-                  </ul>
+                <Text mt="2">
+                  The standard tokens implemented in <b>SuperTokens</b>. They are used in the authentication methods
+                  that do not follow <b>OAuth2</b> flows.
                 </Text>
 
-                <Heading as="h2" size="6" mt="8">
+                <Separator size="3" mt="6" mb="4" />
+                <Heading as="h2" size="6">
                   OAuth2 Tokens
                 </Heading>
                 <Text mt="2">
-                  <ul>
-                    <li>Used in</li>
-                    <li>Provides</li>
-                    <li>Holds</li>
-                    <li>asda</li>
-                  </ul>
+                  These tokens adhere to the OAuth2 specifications. They are used in the <b>Client Credentials</b> (M2M)
+                  and in the <b>Authorization Code</b> (Unified Login) flows to authenticate clients and access
+                  protected resources.
                 </Text>
               </Flex>
 
-              <Flex direction="row" align="center" justify="end" pb="3" pt="3">
+              <Flex direction="row" align="center" justify="end">
                 <SideModal.Close>
                   <Button variant="solid" color="gray" highContrast size="2">
                     Close
