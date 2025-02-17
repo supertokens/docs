@@ -1,0 +1,155 @@
+---
+title: Hooks and overrides
+hide_title: true
+sidebar_position: 9
+description: >-
+  Configure your application for multi-factor authentication with account linking and
+  tenant-specific configurations.
+---
+
+import {
+  FrontendPrebuiltUITabs,
+} from "/src/components/Tabs";
+
+# Hooks and overrides
+
+**SuperTokens** exposes a set of constructs that allow you to trigger different actions during the authentication lifecycle or to even fully customize the logic based on your use case. 
+The following sections describe how you can modify adjust the `mfa` recipe to your needs.
+
+Explore the references pages for a more in depth guide on [hooks](/docs/references/sdks/frontend-hooks/handle-event) and [overrides](/docs/references/sdks/functions-overrides/about).
+
+## Frontend event hooks
+
+The pre-built UI emits a few events that you can listen to on the frontend. As an example, you can use these for analytics:
+
+<FrontendPrebuiltUITabs>
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+```tsx
+import SuperTokens from "supertokens-auth-react"
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
+import TOTP from "supertokens-auth-react/recipe/totp";
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+
+SuperTokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        Passwordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+            onHandleEvent: (context) => {
+                if (context.action === "PASSWORDLESS_CODE_SENT") {
+                    // this event is fired when the user has successfully sent out an OTP email / SMS
+                } else if (context.action === "PASSWORDLESS_RESTART_FLOW") {
+                    // This event is fired when the user's OTP has expired, or
+                    // they have reached the max limit of number of failed OTP attempts.
+                } else if (context.action === "SUCCESS" && !context.createdNewSession) {
+                    // this event is fired when successfully completing the OTP email / SMS challenge
+                    // and if it's not used in first factor (cause we do !context.createdNewSession)
+                }
+            }
+        }),
+        TOTP.init({
+            onHandleEvent: (context) => {
+                if (context.action === "TOTP_DEVICE_CREATED") {
+                    // this event is fired during factor setup, when the user has successfully created the TOTP device. They still have to verify it by entering the TOTP.
+                } else if (context.action === "TOTP_DEVICE_VERIFIED") {
+                    // this event is fired during factor setup, when the user has successfully verified the TOTP device
+                } else if (context.action === "TOTP_CODE_VERIFIED") {
+                    // this event is fired when the user has successfully verified the TOTP code
+                    // marking the TOTP factor as completed
+                }
+            }
+        }),
+        MultiFactorAuth.init({
+            firstFactors: [/*...*/],
+            onHandleEvent: (context) => {
+                if (context.action === "FACTOR_CHOOSEN") {
+                    let chosenFactorId = context.factorId;
+                    // this event is fired when the user is shown the screen for 
+                    // picking one factor out of a choice of multiple factors
+                }
+            }
+        })
+    ]
+})
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
+import supertokensUITOTP from "supertokens-auth-react-script/recipe/totp";
+import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless";
+
+supertokensUIInit({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        supertokensUIPasswordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+            onHandleEvent: (context) => {
+                if (context.action === "PASSWORDLESS_CODE_SENT") {
+                    // this event is fired when the user has successfully sent out an OTP email / SMS
+                } else if (context.action === "PASSWORDLESS_RESTART_FLOW") {
+                    // This event is fired when the user's OTP has expired, or
+                    // they have reached the max limit of number of failed OTP attempts.
+                } else if (context.action === "SUCCESS" && !context.createdNewSession) {
+                    // this event is fired when successfully completing the OTP email / SMS challenge
+                    // and if it's not used in first factor (cause we do !context.createdNewSession)
+                }
+            }
+        }),
+        supertokensUITOTP.init({
+            onHandleEvent: (context) => {
+                if (context.action === "TOTP_DEVICE_CREATED") {
+                    // this event is fired during factor setup, when the user has successfully created the TOTP device. They still have to verify it by entering the TOTP.
+                } else if (context.action === "TOTP_DEVICE_VERIFIED") {
+                    // this event is fired during factor setup, when the user has successfully verified the TOTP device
+                } else if (context.action === "TOTP_CODE_VERIFIED") {
+                    // this event is fired when the user has successfully verified the TOTP code
+                    // marking the TOTP factor as completed
+                }
+            }
+        }),
+        supertokensUIMultiFactorAuth.init({
+            firstFactors: [/*...*/],
+            onHandleEvent: (context) => {
+                if (context.action === "FACTOR_CHOOSEN") {
+                    let chosenFactorId = context.factorId;
+                    // this event is fired when the user is shown the screen for 
+                    // picking one factor out of a choice of multiple factors
+                }
+            }
+        })
+    ]
+})
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+## Backend overrides
+
+It's a common use case to want to override the default behavior of SuperTokens after a user signs up or signs in.
+For example, you may want to change your database state whenever someone signs up.
+You can do this by overriding the sign up / sign in recipe functions in the backend SDK:
+- [Passwordless recipe](/docs/authentication/passwordless/hooks-and-overrides)
+- [EmailPassword recipe](/docs/authentication/email-password/hooks-and-overrides)
+- [ThirdParty recipe](/docs/authentication/social/hooks-and-overrides)
+
+Since the sign up / sign in APIs share functionality for first factor and second factor login, your override applies to both first and second factor login. If you want to have different behavior for first and second factor login, you can use the `input` argument to the function to determine if the user is doing first or second factor login.
+
+The `input` argument contains the `session` object using which you can determine if the user is doing first or second factor login. If the `session` property is `undefined`, it means it's a first factor login, else it's a second factor login. In the links above, the code snippets check for `input.session === undefined` to determine if it's a first factor login.

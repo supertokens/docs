@@ -1,6 +1,6 @@
 import { visit } from "unist-util-visit";
 
-const BadgeNode = {
+const OptionalBadgeNode = {
   type: "mdxJsxFlowElement",
   name: "span",
   attributes: [
@@ -39,12 +39,12 @@ const BadgeNode = {
 /**
  * Adds an optional badge to headings that have the {{optional}} property
  */
-export default function remarkAddOptionalTagToHeadings() {
+export default function remarkAddBadgesInHeadings() {
   return (tree, file) => {
     visit(tree, "heading", (node, index, parent) => {
       node.children = node.children.map((child) => {
         if (child.type === "mdxTextExpression" && child.value === "{optional}") {
-          child = BadgeNode;
+          child = OptionalBadgeNode;
         }
         return child;
       });

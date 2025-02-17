@@ -1,8 +1,8 @@
 ---
-id: implementation-guide
-title: Implementation Guide
+title: Legacy Flow 
 hide_title: true
-sidebar_position: 1
+sidebar_position: 3
+toc_max_heading_level: 4
 description: >-
   Guide for implementing JWT-based authentication between microservices using
   SuperTokens Core.
@@ -13,41 +13,70 @@ import { AppInfoForm } from "/src/components/Forms";
 import { Question, Answer } from "/src/components/Question";
 import { PythonSyncAsyncCard } from "/src/components/Cards";
 
-# Legacy Flow
+# Legacy flow
+
+## Overview
 
 This custom flow makes use of the **SuperTokens Core** without adhering to the **OAuth2** standard.
 It involves creating private access tokens and passing them to the microservices.
 
+The authentication sequence works in the following way:
+
+<Steps>
+  ## Microservice `M1` requests a JWT (JSON Web Token) from the **SuperTokens Core**
+  ## Microservice `M1` sends the JWT to `M2`
+  ## Microservice `M2` verifies the JWT and completes the action if the JWT is valid
+</Steps>
+
 <img src="/img/microservice_auth/architecture.png" alt="Microservice auth flow diagram" />
 
-The authentication sequence will work in the following way:
+The first step is to create a JWT from the microservice that sends the request (refer to this microservice as `M1`).
+Other microservices verify this JWT when `M1` sends them a request.
+Since this JWT remains static per microservice, the best time to create this is on process starts - that is when `M1` starts.
 
-1. Microservice `M1` requests a JWT (JSON Web Token) from the **SuperTokens Core**
-2. Microservice `M1` sends the JWT to `M2`
-3. Microservice `M2` will verifies the JWT and completes the action if the JWT is valid
-
-## Creating a JWT
-
-### When to create a JWT?
-The first step is to create a JWT from the microservice that will be sending the request (let's call this microservice `M1`). This JWT will be verified by other microservices when `M1` sends them a request. Since this JWT remains static per microservice, the best time to create this is on process starts - i.e. when `M1` starts.
-
-### What to add in the JWT?
-The JWT can contain any information you like, but at a minimum, it needs to contain information proving that it is a microservice that is allowed to query other microservices in your infrastructure. This is needed since you may issue a JWT to an end user as well, and they should not be able to query any microservice directly.
-
-We can add the following claim in the JWT to "mark" the JWT as one that is meant for microservice auth only:
+The JWT can contain any information you like. At a minimum, it needs to contain information proving that it is a microservice allowed to query other microservices in your infrastructure.
+This is necessary since you may issue a JWT to an end user as well, and they should not be able to query any microservice directly.
+Add the following claim in the JWT to "mark" the JWT as one meant for microservice auth only:
 ```json
 {..., "source": "microservice", ...}
 ```
+In the receiving microservice (`M2`), verify the JWT and check that this claim is present before serving the request.
 
-In the receiving microservice (`M2`), we can then [verify the JWT](#verify-jwts) and check that this claim is present before serving the request. 
 
-### Code for creating a JWT
+### Security considerations
+
+#### Who can query the microservices?
+Anyone or any service that has direct access to the SuperTokens core can produce a valid JWT and query your microservices.
+If the core is open to the internet, you *must* add an API key to protect it.
+Even though end users may receive a JWT for their session (that the core signs), they cannot query a microservice directly. Their JWT *should* not have the `source: "microservice"` claim in it.
+
+#### What happens if someone compromises the core's API key?
+
+Then the attacker can issue their own JWTs to be able to query your microservices. To limit this protection, you may want to add firewall rules to allow access to the core only from services on your backend.
+You can also provide multiple API keys to the core and give a unique key to each microservice in your infrastructure. This way, it would be easier to track where a leak came from.
+
+#### What happens if someone compromises the JWT signing key?
+
+In this case, the attacker could fabricate their own JWT to be able to query your microservices.
+To limit this risk, a JWT signing key rotation methodology is in place. Until then, you can limit the reachability of your microservices based on the request's IP address.
+
+#### How to limit which microservice can query another one?
+
+If an organisation has several teams and microservices, it is common to limit which other services a given microservice can query.
+For example, if there exists `M1`, `M2` and `M3` microservices, there may be a situation in which `M1` should only be able to query `M2` and not `M3`.
+With one SuperTokens core deployment, having this type of restriction is impossible. All the microservices create and verify their JWTs using the same public/private keys. So if `M3` receives a request, it has no way of reliably knowing if the request is from `M1` or `M2` (assuming that IP-based access control is not implemented).
+This type of restriction can occur by deploying multiple cores connected to their own databases. In this example, a dedicated SuperTokens core can handle `M3`'s auth, such that only `M3` uses that to verify the incoming JWTs. Then, only other services that have access to that core can create JWTs that `M3` accepts. So if `M1` doesn't have access to `M3`'s core's API key, it can be assured that successful requests to `M3` are not from `M1`.
+
+
+## Steps
+
+### 1. Create a JWT
 
 <Question question="Are you using the SuperTokens SDK?" defaultAnswer="Yes">
 
 <Answer title="Yes">
 
-First, we need to initialise the `JWT` recipe in the `supertokens.init` function call:
+First, initialize the `JWT` recipe in the `supertokens.init` function call:
 
 <BackendTabs>
 
@@ -131,8 +160,8 @@ init(
 </BackendTabs>
 
 :::important
-- The value of `apiDomain` should be the domain part of the JWKS URL that will be used to verify the JWT (from `M2`). This should ideally be the domain of the microservice that has all the other SuperTokens' recipes initialised in them. 
-- If this microservice does not initialise any other recipe, the values of `appName` and `websiteDomain` don't matter.
+- The value of `apiDomain` should be the domain part of the JWKS URL used to verify the JWT (from `M2`). This should ideally be the domain of the microservice that has all the other SuperTokens' recipes initialized in them.
+- If this microservice does not initialize any other recipe, the values of `appName` and `websiteDomain` don't matter.
 :::
 
 After this, you can use the JWT recipe to create your own JWT whenever required:
@@ -229,11 +258,11 @@ else:
 </BackendTabs>
 
 :::note
-By default, the lifetime of the JWT will be a 100 years. You can pass a second argument to the `createJWT` function indicating a custom lifetime (in seconds) for the JWT.
+By default, the lifetime of the JWT is a 100 years. You can pass a second argument to the `createJWT` function indicating a custom lifetime (in seconds) for the JWT.
 :::
 
 :::note
-By default, the JWT is signed by a static key, not subject to the key rotation normally applied to access tokens. You can pass `false` as the third argument to the `createJWT` function to use use the dynamic keys.
+By default, the JWT uses a static key for signing, not subject to the key rotation normally applied to access tokens. You can pass `false` as the third argument to the `createJWT` function to use the dynamic keys.
 :::
 
 </Answer>
@@ -259,8 +288,8 @@ curl --location --request POST '${connectionURI}/recipe/jwt' \
 }'
 ```
 - The value of `${connectionURI}` is the core's location
-- `${APIKey}` is the API key to query the core. This is only needed if an API key is configured on the core.
-- The value of `${apiDomain}` is the domain on which the JWKs URLs will be served from
+- `${APIKey}` is the API key to query the core. This is only needed if an API key exists on the core.
+- The value of `${apiDomain}` is the domain on which the JWKs URLs are available from
 - `${validityInSeconds}` is the lifetime of the JWT
 
 An example response is as follows:
@@ -276,8 +305,10 @@ An example response is as follows:
 
 </Question>
 
-### What to do with the JWT?
-Once the JWT is created, you can store it in a (globally accessible) variable and access it when you want to talk to a microservice. You can add the JWT as an `Authorization: Bearer` token like so:
+### 2. Store the JWT
+
+Once you create the JWT, you can store it in a (globally accessible) variable and access it when you want to talk to a microservice.
+Add the JWT as an `Authorization: Bearer` token like so:
 
 ```bash
 curl --location --request POST 'https://microservice_location/path' \
@@ -288,7 +319,7 @@ curl --location --request POST 'https://microservice_location/path' \
 }'
 ```
 
-## Verify JWTs
+### 3. Verify JWTs
 
 <AppInfoForm />
 
@@ -296,18 +327,16 @@ When a target microservice receives a JWT, it must first verify it before procee
 - A standard verification of the JWT
 - Checking the JWT claim to make sure that another microservice has queried it.
 
-### Standard verification of a JWT
-
-#### Method 1. Using JWKS endpoint
+#### Using JWKS endpoint
 
 <BackendTabs disableOtherFrameworks={true}>
 <BackendTabs.TabItem value="nodejs">
 
-##### a) Get JWKS endpoint
+##### Get JWKS endpoint
 
-The JWKS endpoint is `^{appInfo.apiDomain}/^{appInfo.apiBasePath}/jwt/jwks.json`. Here the `apiDomain` and `apiBasePath` are values pointing to the server in which you have initialised SuperTokens using our backend SDK.
+The JWKS endpoint is `^{appInfo.apiDomain}/^{appInfo.apiBasePath}/jwt/jwks.json`. Here the `apiDomain` and `apiBasePath` are values pointing to the server in which you have initialized SuperTokens using the backend SDK.
 
-##### b) Verify the JWT
+##### Verify the JWT
 
 Some libraries let you provide a JWKS endpoint to verify a JWT. For example for NodeJS you can use `jsonwebtoken` and `jwks-rsa` together to achieve this.
 
@@ -337,31 +366,31 @@ JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
 <BackendTabs.TabItem value="python">
 
 Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa) for a code reference of how use `PyJWK` to do JWT verification. The gist contains two files:
-- `jwt_verification.py` (which you can just copy / paste into your application). You will have to modify the `JWKS_URI` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL). This file is written for `sync` python apps, and can be modified to work with `async` apps as well.
+- `jwt_verification.py` (which you can copy/paste into your application). You have to modify the `JWKS_URI` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL). This file is for `sync` python apps, and you can modify it to work with `async` apps as well.
   - This file essentially exposes a function called `verify_jwt` which takes an input JWT string.
-  - This function takes care of caching public keys in memory + auto `refetching` if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This will not cause any user logouts, and is just a security feature.
+  - This function takes care of caching public keys in memory + auto `refetching` if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts, and is just a security feature.
 - `views.py`: This is an example `GET` API which extracts the JWT token from the authorization header in the request and calls the `verify_jwt` function from the other file.
 
 </BackendTabs.TabItem>
 <BackendTabs.TabItem value="go">
 
 Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d) for a code reference of how use the Golang `jwt` lib to do session verification. The gist contains two files:
-- `verifyToken.go` (which you can just copy / paste into your application). You will have to modify the `coreUrl` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL).
-  - This file essentially exposes a function called `GetJWKS` which returns a reference to the JWKS public keys that can be used for JWT verification.
-  - This function takes care of caching public keys in memory + auto `refetching` if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This will not cause any user logouts, and is just a security feature.
-- `main.go`: This is an example of how to verify a JWT using the golang JWT verification lib along with our helper function to get the JWKs keys.
+- `verifyToken.go` (which you can copy/paste into your application). You have to modify the `coreUrl` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL).
+  - This file essentially exposes a function called `GetJWKS` which returns a reference to the JWKS public keys useful for JWT verification.
+  - This function takes care of caching public keys in memory + auto `refetching` if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts, and is just a security feature.
+- `main.go`: This is an example of how to verify a JWT using the golang JWT verification lib along with a helper function to get the JWKs keys.
 
 </BackendTabs.TabItem>
 </BackendTabs>
 
-#### Method 2. Using public key string
+#### Using public key string
 
 <BackendTabs disableOtherFrameworks={true}>
 <BackendTabs.TabItem value="nodejs">
 
 Some JWT verification libraries require you to provide the JWT secret / public key for verification. You can obtain the JWT secret from SuperTokens in the following way:
 
-- First, we query the `JWKS.json` endpoint:
+- First, query the `JWKS.json` endpoint:
   ```bash
   curl --location --request GET '^{appInfo.apiDomain}^{appInfo.apiBasePath}/jwt/jwks.json'
 
@@ -388,10 +417,10 @@ Some JWT verification libraries require you to provide the JWT secret / public k
   ```
 
   :::important
-  The above shows an example output which returns two keys. There could be more keys returned based on the configured key rotation setting in the core. If you notice, each key's `kid` starts with a `s-..` or a `d-..`. The `s-..` key is a static key that will never change, whereas `d-...` keys are dynamic keys that keep changing. So if you are `hardcoding` public keys somewhere, you always want to pick the `s-..` key.
+  The above shows an example output which returns two keys. There could be more keys returned based on the configured key rotation setting in the core. If you notice, each key's `kid` starts with a `s-..` or a `d-..`. The `s-..` key is a static key that never changes, whereas `d-...` keys are dynamic keys that keep changing. So if you are `hardcoding` public keys somewhere, you always want to pick the `s-..` key.
   :::
 
-- Next, we run the NodeJS script below to convert the above output to a `PEM` file format.
+- Next, run the NodeJS script below to convert the above output to a `PEM` file format.
   ```tsx
   import jwkToPem from 'jwk-to-pem';
 
@@ -421,7 +450,7 @@ Some JWT verification libraries require you to provide the JWT secret / public k
   -----END PUBLIC KEY-----
   ```
 
-- Now you can use the generated PEM string in your code like shown below:
+- You can use the generated PEM string in your code like shown below:
   ```ts
   import JsonWebToken from 'jsonwebtoken';
 
@@ -451,7 +480,8 @@ Not applicable. Please use method 1 instead.
 </BackendTabs.TabItem>
 </BackendTabs>
 
-### Claim verification
+#### Claim verification
+
 The second step is to get the JWT payload and check that it has the `"source": "microservice"` claim:
 
 <BackendTabs disableOtherFrameworks={true}>
@@ -488,22 +518,22 @@ JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
 </BackendTabs.TabItem>
 <BackendTabs.TabItem value="python">
 
-Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa), we can see in `views.py`, between lines 20 and 28, that we are checking for the value of a certain claim in the decoded JWT payload. You can do something similar and check for the `source` claim whose value must be `microservice`. If it is, then all's good, else you can return a 401.
+Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa), in `views.py`, between lines 20 and 28, the value of a certain claim in the decoded JWT payload undergoes a check. You can do something similar and check for the `source` claim whose value must be `microservice`. If it is, then all's good, else you can return a 401.
 
 </BackendTabs.TabItem>
 <BackendTabs.TabItem value="go">
 
-Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d), we can see in `main.go`, between lines 32 and 44, that we are checking for the value of a certain claim in the decoded JWT payload. You can do something similar and check for the `source` claim whose value must be `microservice`. If it is, then all's good, else you can return a 401.
+Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d), in `main.go`, between lines 32 and 44, the value of a certain claim in the decoded JWT payload undergoes a check. You can do something similar and check for the `source` claim whose value must be `microservice`. If it is, then all's good, else you can return a 401.
 
 </BackendTabs.TabItem>
 </BackendTabs>
 
-### M2M and frontend session verification for the same API
-You may have a setup wherein the same API is called from the frontend as well as from other microservices. The frontend session works differently than m2m sessions, so we have to account for both forms of token inputs. 
+#### M2M and frontend session verification for the same API
+You may have a setup wherein the same API receives calls from the frontend as well as from other microservices. The frontend session works differently than m2m sessions, so both forms of token inputs must be accounted for.
 
-Our approach here would be to first attempt frontend session verification, and if that fails, then attempt m2m JWT verification (using the above method). If both fails, then we send back a `401` response.
+The approach here would be to first attempt frontend session verification, and if that fails, then attempt m2m JWT verification (using the above method). If both fail, then send back a `401` response.
 
-We will use the [`getSession` function](https://supertokens.com/docs/session/common-customizations/sessions/session-verification-in-api/get-session) for frontend session verification.
+The [`getSession` function](https://supertokens.com/docs/session/common-customizations/sessions/session-verification-in-api/get-session) serves for frontend session verification.
 
 <BackendTabs disableOtherFrameworks={true}>
 <BackendTabs.TabItem value="nodejs">
@@ -558,9 +588,9 @@ app.post("/like-comment", async (req, res, next) => {
 });
 ```
 
-- Notice that we add the `sessionRequired: false` option when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function will return `undefined`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function will throw a try refresh token error, sending a 401 to the frontend. This will trigger a session refresh flow as expected.
-- If the `getSession` function returns `undefined`, it means that the session is not from the frontend and we can attempt a microservice auth verification using the JWT verification method shown previously in this page.
-- If that fails too, we can send back a `401` response.
+- Notice that the `sessionRequired: false` option appears when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function returns `undefined`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function throws a try refresh token error, sending a 401 to the frontend. This triggers a session refresh flow as expected.
+- If the `getSession` function returns `undefined`, it means that the session is not from the frontend and a microservice auth verification can occur using the JWT verification method shown previously in this page.
+- If that fails too, send back a `401` response.
 
 </BackendTabs.TabItem>
 <BackendTabs.TabItem value="python">
@@ -588,9 +618,9 @@ async def like_comment(request: HttpRequest):
     print(user_id)  # TODO
 ```
 
-- Notice that we add the `sessionRequired: false` option when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function will return `None`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function will throw a try refresh token error, sending a 401 to the frontend. This will trigger a session refresh flow as expected.
-- If the `getSession` function returns `None`, it means that the session is not from the frontend and we can attempt a microservice auth verification using the JWT verification method shown previously in this page.
-- If that fails too, we can send back a `401` response.
+- Notice that the `sessionRequired: false` option appears when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function returns `None`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function throws a try refresh token error, sending a 401 to the frontend. This triggers a session refresh flow as expected.
+- If the `getSession` function returns `None`, it means that the session is not from the frontend and a microservice auth verification can occur using the JWT verification method shown previously in this page.
+- If that fails too, send back a `401` response.
 
 </BackendTabs.TabItem>
 <BackendTabs.TabItem value="go">
@@ -652,9 +682,9 @@ func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- Notice that we add the `sessionRequired: false` option when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function will return `nil`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function will return an error, and the `supertokens.ErrorHandler` will send a 401 to the frontend. This will trigger a session refresh flow as expected.
-- If the `getSession` function returns `nil`, it means that the session is not from the frontend and we can attempt a microservice auth verification using the JWT verification method shown previously in this page.
-- If that fails too, we can send back a `401` response.
+- Notice that the `sessionRequired: false` option appears when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function returns `nil`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function returns an error, and the `supertokens.ErrorHandler` sends a 401 to the frontend. This triggers a session refresh flow as expected.
+- If the `getSession` function returns `nil`, it means that the session is not from the frontend and a microservice auth verification can occur using the JWT verification method shown previously in this page.
+- If that fails too, send back a `401` response.
 
 </BackendTabs.TabItem>
 </BackendTabs>

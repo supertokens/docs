@@ -6,6 +6,8 @@ import Heading from "@theme/Heading";
 import MDXContent from "@theme/MDXContent";
 import type { Props } from "@theme/DocItem/Content";
 
+import "./index.scss";
+
 /**
  Title can be declared inside md content or declared through
  front matter and added manually. To make both cases consistent,
