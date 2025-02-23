@@ -1,0 +1,311 @@
+---
+id: validate-claims
+title: Session Claims and Validation
+hide_title: true
+toc_max_heading_level: 4
+sidebar_position: 1
+description: >-
+  Guide on using SuperTokens session claims and validation to manage access control and custom claims.
+---
+
+import {
+  FrontendPrebuiltUITabs,
+  FrontendCustomUITabs,
+  BackendTabs,
+  ReactRouterVersionTabs,
+} from "/src/components/Tabs";
+import {
+  NpmOrScriptsCard,
+  MobileFrameworksCard,
+  PythonSyncAsyncCard,
+  NodeFrameworksCard,
+  PythonFrameworksCard,
+  GoFrameworksCard,
+} from "/src/components/Cards";
+import { ContextCondition } from "/src/components";
+
+# Session Claims and Validation
+
+## Overview
+
+**SuperTokens** provides two main approaches for managing session access control and custom claims:
+
+1. **Session Claims**: The default way to manage access control with automatic validation and refresh capabilities
+2. **Access Token Payload**: A barebones way to store custom data in the session token and use it for validation
+
+This guide covers both approaches.
+In most of the cases the recommended approach is to use session claims but you can use the next table to help you decide.
+
+
+| Feature                              | Session Claims | Access Token Payload |
+| ------------------------------------ | -------------- | -------------------- |
+| Store simple static data             | ✅             | ✅                   |
+| Built-in validation                  | ✅             | ❌                   |
+| Automatic refresh mechanism          | ✅             | ❌                   |
+| Graceful validation failure handling | ✅             | ❌                   |
+| Lightweight implementation           | ❌             | ✅                   |
+| No validation overhead               | ❌             | ✅                   |
+
+## Before you start
+
+<TokensCallout />
+
+---
+
+## Using session claims
+
+Session claims provide a powerful way to manage access control with built-in validation and automatic refresh capabilities.
+
+### Session Claim Interface
+
+```tsx
+interface SessionClaim<T> {
+  readonly key: string;
+  fetchValue(userId: string, userContext: any): Promise<T | undefined>;
+  addToPayload(payload: any, value: T): any;
+  getValueFromPayload(payload: any): T | undefined;
+}
+```
+
+### Creating a Custom Claim
+
+```tsx
+import { BooleanClaim } from "supertokens-node/recipe/session/claims";
+
+const SecondFactorClaim = new BooleanClaim({
+  key: "2fa-completed",
+  fetchValue: () => false,
+});
+```
+
+### Adding Claim Validators
+
+#### Global Validation
+
+<BackendTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+  recipeList: [
+    Session.init({
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getGlobalClaimValidators: async function (input) {
+              return [...input.claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
+```
+
+</TabItem>
+</BackendTabs>
+
+#### Route-Specific Validation
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { UserRoleClaim } from "supertokens-node/recipe/userroles";
+
+let app = express();
+
+app.post(
+  "/admin-only",
+  verifySession({
+    overrideGlobalClaimValidators: async (globalValidators) => [
+      ...globalValidators,
+      UserRoleClaim.validators.includes("admin"),
+    ],
+  }),
+  async (req, res) => {
+    // Only admin users can access this endpoint
+  },
+);
+```
+
+### Frontend Validation
+
+```tsx
+import React from "react";
+import { SessionAuth } from "supertokens-auth-react/recipe/session";
+import { UserRoleClaim } from "supertokens-auth-react/recipe/userroles";
+
+const AdminRoute = (props: React.PropsWithChildren<any>) => {
+  return (
+    <SessionAuth
+      overrideGlobalClaimValidators={(globalValidators) => [
+        ...globalValidators,
+        UserRoleClaim.validators.includes("admin"),
+      ]}
+    >
+      {props.children}
+    </SessionAuth>
+  );
+};
+```
+
+### Handling Validation Failures
+
+#### Custom Error Handling
+
+```tsx
+import { Error as STError } from "supertokens-node/recipe/session";
+
+if (roles === undefined || !roles.includes("admin")) {
+  throw new STError({
+    type: "INVALID_CLAIMS",
+    message: "User is not an admin",
+    payload: [
+      {
+        id: UserRoleClaim.key,
+      },
+    ],
+  });
+}
+```
+
+#### Frontend Redirection
+
+```tsx
+const AdminRoute = (props: React.PropsWithChildren<any>) => {
+  return (
+    <SessionAuth
+      overrideGlobalClaimValidators={(globalValidators) => [
+        ...globalValidators,
+        {
+          ...UserRoleClaim.validators.includes("admin"),
+          onFailureRedirection: () => "/not-an-admin",
+        },
+      ]}
+    >
+      {props.children}
+    </SessionAuth>
+  );
+};
+```
+
+--- 
+
+## Using the access token payload
+
+The access token payload is a simple way to store custom data that needs to be accessible on both frontend and backend.
+
+### Add custom claims to access token payload
+
+:::important
+The access token payload has a set of default claims that can not be overwritten.
+They are reserved for standard or SuperTokens specific use-cases.
+Those claims are: `sub`, `iat`, `exp`, `sessionHandle`, `refreshTokenHash1`, `parentRefreshTokenHash1`, `antiCsrfToken`
+
+Trying to overwrite these values will result in errors in the authentication flow process.
+:::
+
+You can add custom claims to the access token payload in two ways:
+
+#### During Session Creation
+
+<BackendTabs>
+<TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init({
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            createNewSession: async function (input) {
+              let userId = input.userId;
+
+              // This goes in the access token, and is available to read on the frontend.
+              input.accessTokenPayload = {
+                ...input.accessTokenPayload,
+                someKey: "someValue",
+              };
+
+              return originalImplementation.createNewSession(input);
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
+```
+
+</TabItem>
+</BackendTabs>
+
+#### Post Session Creation (Online Mode)
+
+<BackendTabs>
+<TabItem value="nodejs">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+let app = express();
+
+app.post("/updateinfo", verifySession(), async (req: SessionRequest, res) => {
+  let session = req.session;
+  await session!.mergeIntoAccessTokenPayload({ newKey: "newValue" });
+  res.json({ message: "successfully updated access token payload" });
+});
+```
+
+</TabItem>
+</BackendTabs>
+
+### Reading the Access Token Payload
+
+#### On the Backend
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+
+let app = express();
+
+app.get("/myApi", verifySession(), async (req, res) => {
+  let session = req.session;
+  let accessTokenPayload = session.getAccessTokenPayload();
+  let customClaimValue = accessTokenPayload.customClaim;
+});
+```
+
+#### On the Frontend
+
+```tsx
+import Session from "supertokens-auth-react/recipe/session";
+
+async function someFunc() {
+  if (await Session.doesSessionExist()) {
+    let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
+    let customClaimValue = accessTokenPayload.customClaim;
+  }
+}
+```
