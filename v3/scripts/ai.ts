@@ -202,7 +202,7 @@ const printStatus = (status: string) => {
 };
 
 (async () => {
-  const startPath = "./docs/additional-verification/mfa/initial-setup.mdx";
+  const startPath = "./docs/post-authentication/session-management";
   const valeReport = await runVale(startPath);
 
   for (const file in valeReport) {
