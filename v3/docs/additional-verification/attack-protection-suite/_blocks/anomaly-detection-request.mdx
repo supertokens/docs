@@ -1,0 +1,354 @@
+import { H2, H3, H4 } from "/src/components/Typography";
+import { HTTPRequestCard } from "/src/components/Cards";
+
+<HTTPRequestCard.DetailsModalHeader>
+  <HTTPRequestCard.DetailsModalDescription>
+    Checks for suspicious activity and potential security threats during authentication events.
+  </HTTPRequestCard.DetailsModalDescription>
+  <HTTPRequestCard.DetailsModalDescription>
+    **Authorization**: Set the `Authorization` header to `Bearer <secret-api-key>` where `<secret-api-key>` is your SuperTokens Attack Protection Suite API key.
+  </HTTPRequestCard.DetailsModalDescription>
+</HTTPRequestCard.DetailsModalHeader>
+
+<HTTPRequestCard.DetailsModalBody>
+
+<H2>Request</H2>
+
+<H3>Body Schema</H3>
+
+| Name         | Type                         | Description                                                                                                                                                              | Required |
+| ------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| `email`        | `string`                     | User's email address. If omitted (along with `phoneNumber`), the system skips impossible travel detection, new device detection, and device count detection.                 | No       |
+| `phoneNumber`  | `string`                     | User's phone number. If omitted (along with email), the system skips impossible travel detection, new device detection, and device count detection.                        | No       |
+| `passwordHash` | `string`                     | First 5 characters of the `SHA-1` hash of the password. If omitted, the system skips the password breach check.                                                                 | No       |
+| `requestId`    | `string`                     | Frontend-generated request ID. If omitted, the system skips bot detection, impossible travel detection, new device detection, device count detection, and request ID info. | No       |
+| `actionType`   | `ActionType`                     | Type of authentication action performed                                                                                                                            | No       |
+| `bruteForce`   | `array` of `BruteForceCheck` | Configuration for brute force detection                                                                                                                                  | No       |
+
+<H4>Action type</H4>
+
+Action type is a string that can have one of the following values:
+
+- `emailpassword-sign-in`: Email password sign in attempt
+- `emailpassword-sign-up`: Email password sign up attempt
+- `send-password-reset-email`: Password reset email request
+- `passwordless-send-email`: Passwordless email code/link
+- `passwordless-send-sms`: Passwordless SMS code
+- `totp-verify-device`: TOTP device verification
+- `totp-verify-totp`: TOTP code verification
+- `thirdparty-login`: Third-party provider login
+- `emailverification-send-email`: Email verification request
+
+<H4>Brute force check</H4>
+
+| Name        | Type                    | Description                                                        | Required |
+| ----------- | ----------------------- | ------------------------------------------------------------------ | -------- |
+| `key`         | `string`                | Unique identifier for rate limiting (for example, email, phone number, IP) | Yes      |
+| `maxRequests` | `array` of `MaxRequest` | Rate limit rules                                                   | Yes      |
+
+<H4>Max request</H4>
+
+| Name              | Type     | Description                        | Required |
+| ----------------- | -------- | ---------------------------------- | -------- |
+| `limit`             | `number` | Maximum number of requests allowed | Yes      |
+| `perTimeIntervalMS` | `number` | Time window in milliseconds        | Yes      |
+
+
+<H3>Example</H3>
+
+```bash
+curl --location --request POST 'https://security-us-east-1.aws.supertokens.io/v1/security' \
+     --header 'Authorization: Bearer <secret-api-key>' \
+     --header 'Content-Type: application/json' \
+     --data-raw '{
+    "email": "user@email.com",
+    "phoneNumber": "+1234567890",
+    "passwordHash": "9cf95dacd226dcf43da376cdb6cbba7035218920",
+    "requestId": "some-request-id",
+    "actionType": "emailpassword-sign-in",
+    "bruteForce": [
+        {
+            "key": "some-key",
+            "maxRequests": [
+                {
+                    "limit": 1,
+                    "perTimeIntervalMS": 1000
+                }
+            ]
+        }
+    ]
+}'
+```
+
+Additional examples that show specific use cases:
+
+```tsx
+const userIp = "127.0.0.1"; // this should be the user's IP address
+const userEmail = "user@email.com"; // this should be the user's email
+
+// Useful for limiting a user's attempt fom the same network
+// This is the most common use case
+// ---
+// This does two check:
+// 1. 1 request per second - fast rate of requests
+// 2. 100 requests per 60 minutes - slow brute force - some attackers might try sidestepping the regular brute force detection by using a slower rate of requests
+const checkUserInSameNetwork = [
+  {
+    key: `${userIp}-${userEmail}`,
+    maxRequests: [
+      {
+        limit: 1,
+        perTimeIntervalMS: 1000,
+      },
+      {
+        limit: 100,
+        perTimeIntervalMS: 60 * 1000 * 60,
+      },
+    ],
+  },
+];
+
+```
+
+```tsx
+const userIp = "127.0.0.1"; // this should be the user's IP address
+
+// Useful for limiting requests from the same network
+// This should usually have a higher number of requests/time interval allowed
+const checkNetwork = [
+  {
+    key: `${userIp}`,
+    maxRequests: [
+      {
+        limit: 100,
+        perTimeIntervalMS: 1000,
+      },
+    ],
+  },
+];
+
+```
+
+```tsx
+const userEmail = "user@email.com"; // this should be the user's email
+
+// Useful for limiting requests for the user only
+const checkUserOnly = [
+  {
+    key: `${userEmail}`,
+    maxRequests: [
+      {
+        limit: 1,
+        perTimeIntervalMS: 1000,
+      },
+    ],
+  },
+];
+
+```
+
+```tsx
+const userIp = "127.0.0.1"; // this should be the user's IP address
+const userEmail = "user@email.com"; // this should be the user's email
+
+// Checking by multiple keys at once
+const checkUserOnly = [
+  {
+    key: `${userEmail}-${userIp}`,
+    maxRequests: [
+      {
+        limit: 1,
+        perTimeIntervalMS: 1000,
+      },
+      {
+        limit: 100,
+        perTimeIntervalMS: 60 * 1000 * 60,
+      },
+    ],
+  },
+  {
+    key: `${userIp}`,
+    maxRequests: [
+      {
+        limit: 100,
+        perTimeIntervalMS: 1000,
+      },
+    ],
+  },
+];
+
+```
+
+<H2>Response</H2>
+
+<H3>200</H3>
+
+Returns the anomaly detection results.
+
+<H4>Response schema</H4>
+
+| Name                         | Type      | Description                                                                |
+| ---------------------------- | --------- | -------------------------------------------------------------------------- |
+| `id`                           | `string`  | Unique identifier for the anomaly detection check                          |
+| `bruteForce`                   | `object`  | Brute force detection results                                              |
+| `emailRisk`                    | `object`  | Email risk assessment results                                              |
+| `phoneNumberRisk`              | `object`  | Phone number risk assessment results                                       |
+| `passwordBreaches`             | `object`  | Password breach check results                                              |
+| `isNewDevice`                  | `boolean` | Whether this is a new device for the user                                  |
+| `isImpossibleTravel`           | `boolean` | Whether the system detects impossible travel                                     |
+| `numberOfUniqueDevicesForUser` | `number`  | Number of unique devices used by the user                                  |
+| `requestIdInfo`                | `object`  | Information about the request including Virtual Private Network (VPN) detection, bot detection, etc. |
+
+<H4>Example</H4>
+
+```ts
+{
+  id: "0191bc35-d527-7bbd-88df-1e7669e82cc0", // the id of the anomaly detection check
+  bruteForce: {
+    detected: true,
+    key: "some-key", // this will be present only if brute force has been detected and the value will be the key for which the brute force detection has been detected
+  },
+  emailRisk: null,
+  phoneNumberRisk: null,
+  passwordBreaches: {
+    c1d808e04732adf679965ccc34ca7ae3441: "120", // the suffix of the password hash and the number of times it has been breached
+    "7acba4f54f55aafc33bb06bbbf6ca803e9a": "399", // the suffix of the password hash and the number of times it has been breached
+  }, // can be null if the password hash is not provided
+  isNewDevice: false, // can be null if the email or phone number is not provided
+  isImpossibleTravel: false, // can be null if the email or phone number is not provided
+  numberOfUniqueDevicesForUser: 1, // can be null if the email or phone number is not provided
+  /*
+        All the values below can be null based on the request ID provided and what has been detected
+    */
+  requestIdInfo: {
+    // can be null if the request ID is not provided
+    vpn: {
+      result: true, // this is true if the user is using a VPN
+      methods: {
+        publicVPN: true, // this is true if the user is using a public VPN
+        osMismatch: false,
+        auxiliaryMobile: false,
+        timezoneMismatch: true,
+      },
+      originCountry: "unknown",
+      originTimezone: "Europe/Bucharest",
+    },
+    frida: false,
+    proxy: false, // this is true if the user is using a proxy
+    valid: true,
+    ipInfo: {
+      v4: {
+        asn: { asn: "16509", name: "AMAZON-02", network: "127.0.0.1/13" },
+        address: "127.0.0.1",
+        datacenter: { name: "Amazon AWS", result: true },
+        geolocation: {
+          city: { name: "Frankfurt am Main" },
+          country: { code: "DE", name: "Germany" },
+          latitude: 51.1187,
+          timezone: "Europe/Berlin",
+          continent: { code: "EU", name: "Europe" },
+          longitude: 9.6842,
+          postalCode: "12345",
+          subdivisions: [{ name: "Hesse", isoCode: "HE" }],
+          accuracyRadius: 200,
+        },
+      },
+      v6: null, // contains same information as v4 if the user is using IPv6
+    },
+    velocity: {
+      events: { intervals: { "1h": 3, "5m": 3, "24h": 5 } },
+      distinctIp: { intervals: { "1h": 1, "5m": 1, "24h": 1 } },
+      distinctCountry: { intervals: { "1h": 1, "5m": 1, "24h": 1 } },
+      distinctLinkedId: { intervals: null },
+    },
+    clonedApp: false,
+    incognito: false,
+    tampering: { result: false, anomalyScore: 0 },
+    isEmulator: false,
+    isUsingTor: false, // this is true if the user is using Tor
+    jailbroken: false,
+    botDetected: false, // this is true if the user is a bot
+    ipBlocklist: {
+      result: false,
+      details: { emailSpam: false, attackSource: false },
+    },
+    factoryReset: { time: "1970-01-01T00:00:00Z", timestamp: 0 },
+    highActivity: false,
+    remoteControl: false,
+    identification: {
+      tag: { environmentId: "cddd8855-ff50-4bbe-bb82-62b5057fa4f4" }, // this is the environment ID that you will receive from the SuperTokens team
+      url: "http://example.com/index.html?eid=cddd8855-ff50-4bbe-bb82-62b5057fa4f4", // this is the URL that has been used to generate the request ID
+      linkedId: null,
+      timeInMS: 1723130887458,
+      incognito: false,
+      requestId: "1723130887451.92r32x", // this is the request ID that has been generated on the frontend
+      visitorId: "mEYaqlY67Z55cHgzt37y",
+      confidence: { score: 1 },
+      browserDetails: {
+        os: "Mac OS X",
+        device: "Other",
+        osVersion: "10.15.7",
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+        browserName: "Chrome",
+        browserFullVersion: "127.0.0",
+        browserMajorVersion: "127",
+      },
+    },
+    virtualMachine: false,
+    privacySettings: false,
+    locationSpoofing: false,
+    rawDeviceAttributes: {
+      // These are the raw device attributes that are being sent from the frontend
+      // They might vary based on the device and browser that is being used
+      audio: { value: 124.04346607114712 },
+      fonts: {
+        value: ["Arial Unicode MS", "Gill Sans", "Helvetica Neue", "Menlo"],
+      },
+      canvas: {
+        value: {
+          Text: "32a115bd05e0f411c5ecd7e285fd36e2",
+          Winding: true,
+          Geometry: "d45e7d71dc99e368affd8a40840c833d",
+        },
+      },
+      contrast: { value: 0 },
+      cpuClass: {},
+      colorDepth: { value: 124.04346607114712 },
+      colorGamut: { value: "p3" },
+      architecture: { value: 127 },
+      cookiesEnabled: { value: true },
+    },
+  },
+};
+```
+
+<H3>400</H3>
+
+The request was invalid.
+
+<H4>Example</H4>
+
+```json
+{
+  "error": "Invalid request body"
+}
+```
+
+<H3>401</H3>
+
+Invalid or missing API key.
+
+<H4>Example</H4>
+
+```json
+{
+  "error": "Unauthorized"
+}
+```
+
+<H3>500</H3>
+
+An internal server error occurred.
+
+</HTTPRequestCard.DetailsModalBody>
