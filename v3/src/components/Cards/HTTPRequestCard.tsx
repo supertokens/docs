@@ -13,9 +13,7 @@ import {
 } from "@radix-ui/themes";
 import CodeBlock from "@theme/CodeBlock";
 
-import Link from "@docusaurus/Link";
 import useBrokenLinks from "@docusaurus/useBrokenLinks";
-import { useThemeConfig } from "@docusaurus/theme-common";
 import { AppTypeSelect } from "/src/components/Select";
 import { createContext, useContext, useMemo, useState } from "react";
 import { SideModal } from "../Modal";
@@ -120,7 +118,13 @@ function HTTPRequestCardRoot({
   );
 }
 
-function ShellExample({ children }: { children: React.ReactNode }) {
+function ShellExample({
+  children,
+  showTenatSelection = true,
+}: {
+  children: React.ReactNode;
+  showTenatSelection?: boolean;
+}) {
   const { environment } = useContext(HTTPRequestCardContext);
 
   if (environment !== "shell") return null;
@@ -131,7 +135,7 @@ function ShellExample({ children }: { children: React.ReactNode }) {
         <Text color="gray" size="3" weight="bold">
           Curl Example
         </Text>
-        <AppTypeSelect />
+        {showTenatSelection && <AppTypeSelect />}
       </Flex>
       {/* <CodeBlock language="bash"> */}
       {children}
@@ -140,7 +144,13 @@ function ShellExample({ children }: { children: React.ReactNode }) {
   );
 }
 
-function NodeJSExample({ children }: { children: React.ReactNode }) {
+function NodeJSExample({
+  children,
+  showTenatSelection = true,
+}: {
+  children: React.ReactNode;
+  showTenatSelection?: boolean;
+}) {
   const { environment } = useContext(HTTPRequestCardContext);
 
   if (environment !== "nodejs") return null;
@@ -151,7 +161,7 @@ function NodeJSExample({ children }: { children: React.ReactNode }) {
         <Text color="gray" size="3" weight="bold">
           Fetch Example
         </Text>
-        <AppTypeSelect />
+        {showTenatSelection && <AppTypeSelect />}
       </Flex>
       {/* <CodeBlock language="tsx"> */}
       {children}
@@ -160,7 +170,13 @@ function NodeJSExample({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PythonExample({ children }: { children: React.ReactNode }) {
+function PythonExample({
+  children,
+  showTenatSelection = true,
+}: {
+  children: React.ReactNode;
+  showTenatSelection?: boolean;
+}) {
   const { environment } = useContext(HTTPRequestCardContext);
 
   if (environment !== "python") return null;
@@ -171,14 +187,22 @@ function PythonExample({ children }: { children: React.ReactNode }) {
         <Text color="gray" size="3" weight="bold">
           Requests Example
         </Text>
-        <AppTypeSelect />
+        {showTenatSelection && <AppTypeSelect />}
       </Flex>
-      <CodeBlock language="bash">{children}</CodeBlock>
+      {/* <CodeBlock language="tsx"> */}
+      {children}
+      {/* </CodeBlock> */}
     </>
   );
 }
 
-function GoExample({ children }: { children: React.ReactNode }) {
+function GoExample({
+  children,
+  showTenatSelection = true,
+}: {
+  children: React.ReactNode;
+  showTenatSelection?: boolean;
+}) {
   const { environment } = useContext(HTTPRequestCardContext);
 
   if (environment !== "go") return null;
@@ -189,7 +213,7 @@ function GoExample({ children }: { children: React.ReactNode }) {
         <Text color="gray" size="3" weight="bold">
           HTTP Example
         </Text>
-        <AppTypeSelect />
+        {showTenatSelection && <AppTypeSelect />}
       </Flex>
       {/* <CodeBlock language="bash"> */}
       {children}
