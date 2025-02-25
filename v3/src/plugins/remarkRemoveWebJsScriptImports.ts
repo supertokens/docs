@@ -19,16 +19,14 @@ export default function remarkRemoveWebJsScriptImports() {
         return !line.includes("supertokens-web-js-script") && !line.includes("supertokens-auth-react-script");
       });
 
-      const mappedLines = filteredLines.map((line) => {
-        if (
-          line.startsWith("supertokensUIInit") ||
-          line.startsWith("supertokensUIThirdParty") ||
-          line.startsWith("supertokensUIEmailPassword") ||
-          line.startsWith("supertokensUIPasswordless") ||
-          line.startsWith("supertokensUIOAuth2Provider") ||
-          line.startsWith("supertokensUISession")
-        )
-          return `(window as any).${line}`;
+      const mappedLines = filteredLines.map((line: string) => {
+        const supertokensUIRegex =
+          /^(\s*)(supertokensUI(?:Init|ThirdParty|EmailPassword|Passwordless|OAuth2Provider|Session).*)/;
+        const match = line.match(supertokensUIRegex);
+        if (match) {
+          const [, spaces, content] = match;
+          return `${spaces}(window as any).${content}`;
+        }
 
         return line;
       });
