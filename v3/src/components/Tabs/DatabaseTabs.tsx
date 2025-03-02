@@ -5,7 +5,6 @@ import { useMemo } from "react";
 const DatabaseTabsOptions = [
   { label: "MySQL", value: "mysql" },
   { label: "PostgreSQL", value: "postgresql" },
-  { label: "MongoDB", value: "mongodb" },
 ];
 
 const DatabaseTabsGroupId = "database";

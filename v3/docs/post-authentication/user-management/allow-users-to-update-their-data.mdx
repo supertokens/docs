@@ -1,0 +1,1380 @@
+---
+title: Allow users to update their data
+hide_title: true
+sidebar_position: 3
+toc_max_heading_level: 4
+description: >-
+  Enable users to change their email or password.
+---
+
+import { BackendTabs } from "/src/components/Tabs";
+import { AppInfoForm } from "/src/components/Forms";
+
+
+# Allow users to change their data 
+
+
+## Overview
+
+This guide shows you how to implement a feature that allows users to update their email or password.
+
+## Before you start
+
+:::caution
+SuperTokens does not provide the UI for this type of use case.
+You need to create the UI and set up a route on your backend to have this functionality.
+:::
+
+---
+
+
+## Email update
+
+This section has instructions on how to create a route, on your backend, to update a user's email.
+Calling this route checks if the new email is valid and not already in use and proceeds to update the user's account with the new email.
+
+### Without email verification
+
+In this flow, a user can update their account's email without verifying the new email ID.
+
+#### 1. Create the email update endpoint
+
+- You need to create a route on your backend protected by the session verification middleware, ensuring that only an authenticated user can access the protected route.
+- To learn more about how to use the session verification middleware for other frameworks, click [this link](/docs/additional-verification/session-verification/protect-api-routes)
+
+<BackendTabs>
+
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express"
+import express from "express";
+
+let app = express();
+
+// highlight-start
+app.post("/change-email", verifySession(), async (req: SessionRequest, res: express.Response) => {
+    // TODO: see next steps
+})
+
+// highlight-end
+```
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+// highlight-start
+// the following example uses net/http
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
+	})
+}
+
+func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: see next steps
+}
+
+// highlight-end
+```
+
+</BackendTabs.TabItem>
+
+
+<BackendTabs.TabItem value="python">
+
+```python
+# the following example uses flask
+from supertokens_python.recipe.session.framework.flask import verify_session
+from flask import Flask
+
+app = Flask(__name__)
+
+# highlight-start
+@app.route('/change-email', methods=['POST']) # type: ignore
+@verify_session()
+def change_email():
+    pass # TODO: see next steps
+# highlight-end
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+#### 2. Update the account
+
+- Validate the input email.
+- Update the account with the input email.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+// the following example uses express
+import Passwordless from "supertokens-node/recipe/passwordless";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express"
+import express from "express";
+
+let app = express();
+
+app.post("/change-email", verifySession(), async (req: SessionRequest, res: express.Response) => {
+
+    // highlight-start
+    let session = req.session!;
+    let email = req.body.email;
+
+    // Validate the input email
+    if (!isValidEmail(email)) {
+        // TODO: handle invalid email error
+        return 
+    }
+    
+    // Update the email
+    let resp = await Passwordless.updateUser({
+        recipeUserId: session.getRecipeUserId(),
+        email: email
+    })
+
+    if (resp.status === "OK") {
+        // TODO: send successfully updated email response
+        return 
+    }
+    if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
+        // TODO: handle error that email exists with another account.
+        return
+    }
+    if (resp.status === "EMAIL_CHANGE_NOT_ALLOWED_ERROR") {
+        // This is possible if you have enabled account linking.
+        // See our docs for account linking to know more about this. 
+        // TODO: tell the user to contact support.
+    }
+    throw new Error("Should never come here");
+    // highlight-end
+
+})
+
+function isValidEmail(email: string) {
+    let regexp = new RegExp(
+        /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+    );
+    return regexp.test(email);
+}
+```
+
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"regexp"
+
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+type RequestBody struct {
+	Email string
+}
+
+// the following example uses net/http
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
+	})
+}
+
+func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	var requestBody RequestBody
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	// validate the input email
+	if !isValidEmail(requestBody.Email) {
+		// TODO: handle invalid email error
+		return
+	}
+
+	// update the email
+	userId := sessionContainer.GetUserID()
+	updateResponse, err := passwordless.UpdateUser(userId, &requestBody.Email, nil)
+
+	if err != nil {
+		// TODO: handle error
+	}
+
+	if updateResponse.OK != nil {
+		// TODO: send successfully updated email response
+		return
+	}
+
+	if updateResponse.EmailAlreadyExistsError != nil {
+		// TODO: handle error that email exists with another account
+		return
+	}
+
+	log.Fatal("should not reach here")
+	// highlight-end
+
+}
+
+func isValidEmail(email string) bool {
+	emailCheck, err := regexp.Match(`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`, []byte(email))
+	if err != nil {
+		return false
+	}
+	return emailCheck
+}
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.passwordless.syncio import update_user
+from supertokens_python.recipe.passwordless.interfaces import (
+    UpdateUserOkResult,
+    UpdateUserEmailAlreadyExistsError,
+    EmailChangeNotAllowedError,
+)
+from flask import g, request, Flask
+from re import fullmatch
+
+app = Flask(__name__)
+
+
+@app.route("/change-email", methods=["POST"])  # type: ignore
+@verify_session()
+def change_email():
+    # highlight-start
+    session: SessionContainer = g.supertokens
+
+    request_body = request.get_json()
+
+    email = str(request_body["email"])  # type: ignore
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
+
+    # validate the input email
+    if not is_valid_email(email):
+        # TODO: handle invalid email error
+        return
+
+    # update the users email
+    update_response = update_user(session.get_recipe_user_id(), email=email)
+
+    if isinstance(update_response, UpdateUserOkResult):
+        # TODO send successful email update response
+        return
+
+    if isinstance(update_response, UpdateUserEmailAlreadyExistsError):
+        # TODO handle error, email already exists
+        return
+
+    if isinstance(update_response, EmailChangeNotAllowedError):
+        # This is possible if you have enabled account linking.
+        # See our docs for account linking to know more about this.
+        # TODO: tell the user to contact support.
+        return
+
+    raise Exception("Should never reach here")
+
+    # highlight-end
+
+
+def is_valid_email(value: str) -> bool:
+    return (
+        fullmatch(
+            r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
+            value,
+        )
+        is not None
+    )
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+### With email verification
+
+In this flow, the user's account updates once they have verified the new email.
+
+#### 1. Create the email update endpoint 
+
+- You need to create a route on your backend protected by the session verification middleware, ensuring that only an authenticated user can access the protected route.
+- To learn more about how to use the session verification middleware for other frameworks, click [this link](/docs/additional-verification/session-verification/protect-api-routes)
+
+<BackendTabs>
+
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express"
+import express from "express";
+
+let app = express();
+
+// highlight-start
+app.post("/change-email", verifySession(), async (req: SessionRequest, res: express.Response) => {
+    // TODO: see next steps
+})
+
+// highlight-end
+```
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+// highlight-start
+// the following example uses net/http
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
+	})
+}
+
+func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: see next steps
+}
+
+// highlight-end
+```
+
+</BackendTabs.TabItem>
+
+
+<BackendTabs.TabItem value="python">
+
+```python
+# the following example uses flask
+from supertokens_python.recipe.session.framework.flask import verify_session
+from flask import Flask
+
+app = Flask(__name__)
+
+# highlight-start
+@app.route('/change-email', methods=['POST']) # type: ignore
+@verify_session()
+def change_password():
+    pass # TODO: see next steps
+# highlight-end
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+#### 2. Initiate the email verification flow
+
+- Validate the input email
+- Check if the input email associates with an account.
+- Check if the input email is already verified.
+- If the email is **NOT** verified, create and send the verification email.
+- If the email has been verified, update the account with the new email.
+
+<AppInfoForm />
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import Passwordless from "supertokens-node/recipe/passwordless";
+import EmailVerification from "supertokens-node/recipe/emailverification";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express"
+import express from "express";
+import supertokens from "supertokens-node";
+import {isEmailChangeAllowed} from "supertokens-node/recipe/accountlinking"
+
+let app = express();
+
+app.post("/change-email", verifySession(), async (req: SessionRequest, res: express.Response) => {
+
+    // highlight-start
+    let session = req.session!;
+    let email = req.body.email;
+
+    // validate the input email
+    if (!isValidEmail(email)) {
+        return res.status(400).send("Email is invalid");
+    }
+
+    // Then, we check if the email is verified for this user ID or not.
+    // It is important to understand that SuperTokens stores email verification
+    // status based on the user ID AND the email, and not just the email.
+    let isVerified = await EmailVerification.isEmailVerified(session.getRecipeUserId(), email);
+
+    if (!isVerified) {
+        if (!(await isEmailChangeAllowed(session.getRecipeUserId(), email, false))) {
+            // this can come here if you have enabled the account linking feature, and 
+            // if there is a security risk in changing this user's email.
+            return res.status(400).send("Email change not allowed. Please contact support");
+        }
+        // Before sending a verification email, we check if the email is already
+        // being used by another user. If it is, we throw an error.
+        let user = (await supertokens.getUser(session.getUserId()))!;
+        for (let i = 0; i < user?.tenantIds.length; i++) {
+            // Since once user can be shared across many tenants, we need to check if
+            // the email already exists in any of the tenants.
+            let usersWithEmail = await supertokens.listUsersByAccountInfo(user?.tenantIds[i], {
+                email
+            })
+            for (let y = 0; y < usersWithEmail.length; y++) {
+                if (usersWithEmail[y].id !== session.getUserId()) {
+                    // TODO handle error, email already exists with another user.
+                    return
+                }
+            }
+        }
+
+        // Now we create and send the email verification link to the user for the new email.
+        await EmailVerification.sendEmailVerificationEmail(session.getTenantId(), session.getUserId(), session.getRecipeUserId(), email);
+
+        // TODO send successful response that email verification email sent.
+        return
+    }
+
+    // Since the email is verified, we try and do an update
+    let resp = await Passwordless.updateUser({
+        recipeUserId: session.getRecipeUserId(),
+        email: email,
+    });
+
+    if (resp.status === "OK") {
+        // TODO send successful response that email updated.
+        return
+    }
+    if (resp.status === "EMAIL_ALREADY_EXISTS_ERROR") {
+        // TODO handle error, email already exists with another user.
+        return
+    }
+
+    throw new Error("Should never come here");
+    // highlight-end
+
+})
+
+function isValidEmail(email: string) {
+    let regexp = new RegExp(
+        /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+    );
+    return regexp.test(email);
+}
+```
+
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"regexp"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+type RequestBody struct {
+	Email string
+}
+
+// the following example uses net/http
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changeEmailAPI).ServeHTTP(rw, r)
+	})
+}
+
+func changeEmailAPI(w http.ResponseWriter, r *http.Request) {
+	// highlight-start
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	var requestBody RequestBody
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	// validate the input email
+	if !isValidEmail(requestBody.Email) {
+		// TODO: handle invalid email error
+		return
+	}
+
+	// Check if the new email is already associated with another email-password user.
+	// If it is, then we throw an error. If it's already associated with this user,
+	// then we return a success response with an appropriate message.
+	userId := sessionContainer.GetUserID()
+
+	// Then, we check if the email is verified for this user ID or not.
+	// It is important to understand that SuperTokens stores email verification
+	// status based on the user ID AND the email, and not just the email.
+	isVerified, err := emailverification.IsEmailVerified(userId, &requestBody.Email)
+
+	if err != nil {
+		// TODO: handle error
+	}
+
+	if !isVerified {
+		// Now we create and send the email verification link to the user for the new email.
+        _, err := emailverification.SendEmailVerificationEmail(sessionContainer.GetTenantId(), userId, &requestBody.Email)
+
+        if err != nil {
+            // TODO: handle error
+        }
+
+        return
+	}
+
+	// Since the email is verified, we try and do an update
+	updateResponse, err := passwordless.UpdateUser(userId, &requestBody.Email, nil)
+
+	if err != nil {
+		// TODO: handle error
+	}
+
+	if updateResponse.OK != nil {
+		// TODO: send successfully updated email response
+		return
+	}
+
+	if updateResponse.EmailAlreadyExistsError != nil {
+		// TODO: handle error, email already exists for another account
+		return
+	}
+
+	log.Fatal("should not reach here")
+	// highlight-end
+
+}
+
+func isValidEmail(email string) bool {
+	emailCheck, err := regexp.Match(`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`, []byte(email))
+	if err != nil {
+		return false
+	}
+	return emailCheck
+}
+
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.passwordless.syncio import update_user
+from supertokens_python.recipe.passwordless.interfaces import (
+    UpdateUserOkResult,
+    UpdateUserEmailAlreadyExistsError,
+)
+
+from supertokens_python.recipe.emailverification.syncio import (
+    is_email_verified,
+    send_email_verification_email,
+)
+
+from flask import g, request, Flask
+from re import fullmatch
+from supertokens_python.recipe.accountlinking.syncio import is_email_change_allowed
+from supertokens_python.syncio import get_user, list_users_by_account_info
+from supertokens_python.types import AccountInfo
+
+app = Flask(__name__)
+
+
+@app.route("/change-email", methods=["POST"])  # type: ignore
+@verify_session()
+def change_email():
+    # highlight-start
+    session: SessionContainer = g.supertokens  # type: ignore
+
+    request_body = request.get_json()
+
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
+
+    # validate the input email
+    if not is_valid_email(request_body["email"]):
+        # TODO: handle invalid email error
+        return
+
+    user_id = session.get_user_id()
+
+    # Then, we check if the email is verified for this user ID or not.
+    # It is important to understand that SuperTokens stores email verification
+    # status based on the user ID AND the email, and not just the email.
+    is_verified = is_email_verified(session.get_recipe_user_id(), request_body["email"])
+
+    if not is_verified:
+        if not is_email_change_allowed(
+            session.get_recipe_user_id(), request_body["email"], False
+        ):
+            # Email change is not allowed, send a 400 error
+            return {"error": "Email change not allowed"}, 400
+        # Before sending a verification email, we check if the email is already
+        # being used by another user. If it is, we throw an error.
+        user = get_user(user_id)
+
+        if user is not None:
+            for tenant_id in user.tenant_ids:
+                users_with_same_email = list_users_by_account_info(
+                    tenant_id, AccountInfo(email=request_body["email"])
+                )
+                for curr_user in users_with_same_email:
+                    # Since one user can be shared across many tenants, we need to check if
+                    # the email already exists in any of the tenants that belongs to this user.
+                    if curr_user.id != user_id:
+                        # TODO handle error, email already exists with another user.
+                        return
+
+        # Create and send the email verification link to the user for the new email.
+        send_email_verification_email(
+            session.get_tenant_id(),
+            user_id,
+            session.get_recipe_user_id(),
+            request_body["email"],
+        )
+
+        # TODO send successful email verification response
+        return
+
+    # update the users email
+    update_response = update_user(
+        session.get_recipe_user_id(), email=request_body["email"]
+    )
+
+    if isinstance(update_response, UpdateUserOkResult):
+        # TODO send successful email update response
+        return
+
+    if isinstance(update_response, UpdateUserEmailAlreadyExistsError):
+        # TODO handle error, email already exists
+        return
+
+    # highlight-end
+
+    raise Exception("Should never reach here")
+
+
+def is_valid_email(value: str) -> bool:
+    return (
+        fullmatch(
+            r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
+            value,
+        )
+        is not None
+    )
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+:::info Multi Tenancy
+
+- Notice that the process loops through all the tenants that this user belongs to check that for each of the tenants, there is no other user with the new email. If this step is not done, then calling `updateEmailOrPassword` would fail because the email is already used by another user in one of the tenants that this user belongs to. In that case, the verification process should not proceed either.
+- We also pass in the `tenantId` of the current session when calling the `sendEmailVerificationEmail` function, ensuring that the link generated opens the tenant's UI that the user interacts with.
+- When calling `updateEmailOrPassword`, it returns `EMAIL_ALREADY_EXISTS_ERROR` if the new email exists in any of the tenants that the user ID is a part of.
+
+:::
+
+#### 3. Update the account on successful email verification
+
+- Update the accounts email on successful email verification.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import EmailVerification from "supertokens-node/recipe/emailverification";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        Passwordless.init({
+            flowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
+            contactMethod: "EMAIL_OR_PHONE"
+        }),
+        EmailVerification.init({
+            mode: "REQUIRED",
+            override: {
+                apis: (oI) => {
+                    return {
+                        ...oI,
+                        verifyEmailPOST: async function (input) {
+                            // highlight-start
+                            let response = await oI.verifyEmailPOST!(input);
+                            if (response.status === "OK") {
+                                // This will update the email of the user to the one
+                                // that was just marked as verified by the token.
+                                await Passwordless.updateUser({
+                                    recipeUserId: response.user.recipeUserId,
+                                    email: response.user.email,
+                                });
+                            }
+                            return response;
+                            // highlight-end
+                        },
+                    };
+                },
+            },
+        }),
+        Session.init(),
+    ],
+});
+```
+
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/emailverification"
+	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	err := supertokens.Init(supertokens.TypeInput{
+		AppInfo: supertokens.AppInfo{
+			AppName:       "...",
+			APIDomain:     "...",
+			WebsiteDomain: "...",
+		},
+		RecipeList: []supertokens.Recipe{
+			passwordless.Init(plessmodels.TypeInput{
+				FlowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
+				ContactMethodEmailOrPhone: plessmodels.ContactMethodEmailOrPhoneConfig{
+					Enabled: true,
+				},
+			}),
+			emailverification.Init(evmodels.TypeInput{
+				Mode: evmodels.ModeRequired,
+				Override: &evmodels.OverrideStruct{
+					APIs: func(originalImplementation evmodels.APIInterface) evmodels.APIInterface {
+
+						originalVerifyEmailPOST := *originalImplementation.VerifyEmailPOST
+
+						(*originalImplementation.VerifyEmailPOST) = func(token string, sessionContainer sessmodels.SessionContainer, tenantId string, options evmodels.APIOptions, userContext supertokens.UserContext) (evmodels.VerifyEmailPOSTResponse, error) {
+							// highlight-start
+							response, err := originalVerifyEmailPOST(token, sessionContainer, tenantId, options, userContext)
+							if response.OK != nil {
+								// This will update the email of the user to the one
+								// that was just marked as verified by the token.
+								_, err := passwordless.UpdateUser(response.OK.User.ID, &response.OK.User.Email, nil)
+								if err != nil {
+									// TODO: Handle error
+								}
+							}
+							// highlight-end
+
+							return response, err
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+			session.Init(nil),
+		},
+	})
+
+	if err != nil {
+		panic(err.Error())
+	}
+}
+
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import passwordless, emailverification
+from supertokens_python.recipe.emailverification.interfaces import (
+    APIInterface,
+    APIOptions,
+)
+
+from supertokens_python.recipe.passwordless.asyncio import update_user
+
+from supertokens_python.recipe.passwordless import ContactEmailOrPhoneConfig
+
+from supertokens_python.recipe.emailverification.interfaces import (
+    EmailVerifyPostOkResult,
+)
+
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python import (
+    InputAppInfo,
+    SupertokensConfig,
+)
+
+from typing import Optional, Dict, Any
+
+
+def override_email_verification_apis(original_implementation: APIInterface):
+    original_email_verification_verify_email_post = (
+        original_implementation.email_verify_post
+    )
+
+    async def email_verify_post(
+        token: str,
+        session: Optional[SessionContainer],
+        tenant_id: str,
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ):
+        # highlight-start
+        verification_response = await original_email_verification_verify_email_post(
+            token, session, tenant_id, api_options, user_context
+        )
+
+        if isinstance(verification_response, EmailVerifyPostOkResult):
+            await update_user(
+                verification_response.user.recipe_user_id,
+                verification_response.user.email,
+            )
+
+        return verification_response
+        # highlight-end
+
+    original_implementation.email_verify_post = email_verify_post
+    return original_implementation
+
+
+init(
+    supertokens_config=SupertokensConfig(connection_uri="..."),
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="flask",
+    recipe_list=[
+        passwordless.init(
+            flow_type="USER_INPUT_CODE_AND_MAGIC_LINK",
+            contact_config=ContactEmailOrPhoneConfig(),
+        ),
+        emailverification.init(
+            "REQUIRED",
+            override=emailverification.InputOverrideConfig(
+                # highlight-start
+                apis=override_email_verification_apis
+                # highlight-end
+            ),
+        ),
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+---
+
+## Password update 
+
+This section has instructions on how to create a route, on your backend, that can update a user's password.
+Calling this route checks if the old password is valid and updates the user's profile with the new password.
+
+### 1. Create the password update endpoint
+
+- You need to create a route on your backend protected by the session verification middleware, ensuring that only an authenticated user can access the protected route.
+- To learn more about how to use the session verification middleware for other frameworks, click [this link](/docs/additional-verification/session-verification/protect-api-routes#using-verify-session)
+
+<BackendTabs>
+
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express"
+import express from "express";
+
+let app = express();
+
+// highlight-start
+app.post("/change-password", verifySession(), async (req: SessionRequest, res: express.Response) => {
+    // TODO: see next steps
+})
+
+// highlight-end
+```
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+// highlight-start
+// the following example uses net/http
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changePasswordAPI).ServeHTTP(rw, r)
+	})
+}
+
+func changePasswordAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: see next steps
+}
+
+// highlight-end
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+# the following example uses flask
+from supertokens_python.recipe.session.framework.flask import verify_session
+from flask import Flask
+
+app = Flask(__name__)
+
+# highlight-start
+@app.route('/change-password', methods=['POST']) # type: ignore
+@verify_session()
+def change_password():
+    pass # TODO: see next steps
+# highlight-end
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+### 2. Update the user password
+
+- You can use the `session` object to retrieve the logged-in user's `userId`.
+- Use the recipe's sign in function and check if the old password is valid
+- Update the user's password. 
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+// the following example uses express
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express"
+import express from "express";
+import supertokens from "supertokens-node";
+
+let app = express();
+
+app.post("/change-password", verifySession(), async (req: SessionRequest, res: express.Response) => {
+// highlight-start
+    // get the supertokens session object from the req
+    let session = req.session
+
+    // retrieve the old password from the request body
+    let oldPassword = req.body.oldPassword
+
+    // retrieve the new password from the request body
+    let updatedPassword = req.body.newPassword
+
+    // get the signed in user's email from the getUserById function
+    let userInfo = await supertokens.getUser(session!.getUserId())
+
+    if (userInfo === undefined) {
+        throw new Error("Should never come here")
+    }
+
+    let loginMethod = userInfo.loginMethods.find((lM) => lM.recipeUserId.getAsString() === session!.getRecipeUserId().getAsString() && lM.recipeId === "emailpassword");
+    if (loginMethod === undefined) {
+        throw new Error("Should never come here")
+    }
+    const email = loginMethod.email!;
+
+    // call signin to check that input password is correct
+    let isPasswordValid = await EmailPassword.verifyCredentials(session!.getTenantId(), email, oldPassword)
+
+    if (isPasswordValid.status !== "OK") {
+        // TODO: handle incorrect password error
+        return
+    }
+
+
+    // update the user's password using updateEmailOrPassword
+    let response = await EmailPassword.updateEmailOrPassword({
+        recipeUserId: session!.getRecipeUserId(),
+        password: updatedPassword,
+		tenantIdForPasswordPolicy: session!.getTenantId()
+    })
+
+    if (response.status === "PASSWORD_POLICY_VIOLATED_ERROR") {
+        // TODO: handle incorrect password error
+        return
+    }
+    
+    // TODO: send successful password update response
+    // highlight-end
+
+})
+
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changePasswordAPI).ServeHTTP(rw, r)
+	})
+}
+
+type RequestBody struct {
+	OldPassword string
+	NewPassword string
+}
+
+func changePasswordAPI(w http.ResponseWriter, r *http.Request) {
+
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	// retrieve the old password from the request body
+	var requestBody RequestBody
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// get the userId from the session
+	userID := sessionContainer.GetUserID()
+
+	// get the signed in user's email from the getUserById function
+	userInfo, err := emailpassword.GetUserByID(userID)
+	if err != nil {
+		// TODO: Handle error
+		return
+	}
+
+	// call signin to check that the input is correct
+	isPasswordValid, err := emailpassword.SignIn(sessionContainer.GetTenantId(), userInfo.Email, requestBody.OldPassword)
+	if err != nil {
+		// TODO: Handle error
+		return
+	}
+
+	// highlight-start
+	if isPasswordValid.WrongCredentialsError != nil {
+		// TODO: Handle error
+		return
+	}
+
+	tenantId := sessionContainer.GetTenantId()
+	updateResponse, err := emailpassword.UpdateEmailOrPassword(userID, &userInfo.Email, &requestBody.NewPassword, nil, &tenantId, nil)
+	if err != nil {
+		// TODO: Handle error
+		return
+	}
+
+	if updateResponse.PasswordPolicyViolatedError != nil {
+		// This error is returned if the new password doesn't match the defined password policy
+		// TODO: Handle error
+		return
+	}
+	// TODO: send successful password update response
+	// highlight-end
+
+}
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.emailpassword.syncio import (
+    verify_credentials,
+    update_email_or_password,
+)
+from supertokens_python.syncio import get_user
+from supertokens_python.recipe.emailpassword.interfaces import (
+    WrongCredentialsError,
+    PasswordPolicyViolationError,
+)
+from flask import g, request
+
+
+@app.route("/change-password", methods=["POST"])  # type: ignore
+@verify_session()
+def change_password():
+
+    # highlight-start
+    session: SessionContainer = g.supertokens  # type: ignore
+
+
+    # get the signed in user's email from the getUserById function
+    users_info = get_user(session.get_user_id())
+
+    if users_info is None:
+        raise Exception("TODO: Handle error. User not found.")
+
+    # Find the login method for the current user
+    login_method = next(
+        (
+            lm
+            for lm in users_info.login_methods
+            if lm.recipe_user_id.get_as_string() == session.get_recipe_user_id()
+            and lm.recipe_id == "emailpassword"
+        ),
+        None,
+    )
+
+    if login_method is None:
+        raise Exception("Should never come here")
+
+    email = login_method.email
+
+    if email is None:
+        raise Exception("Email not found for the user")
+
+    request_body = request.get_json()
+
+    if request_body is None:
+        # TODO: handle invalid body error
+        return
+
+    # call signin to check that the input password is correct
+    isPasswordValid = verify_credentials(
+        "public", email, password=request_body["oldPassword"]
+    )
+
+    if isinstance(isPasswordValid, WrongCredentialsError):
+        # TODO: handle incorrect password error
+        return
+
+    # update the users password
+    update_response = update_email_or_password(
+        session.get_recipe_user_id(),
+        password=request_body["newPassword"],
+        tenant_id_for_password_policy=session.get_tenant_id(),
+    )
+
+    if isinstance(update_response, PasswordPolicyViolationError):
+        # TODO: handle password policy violation error
+        return
+
+    # TODO: send successful password update response
+    # highlight-end
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+:::info Multi Tenancy
+Notice that the `tenantId` passes as an argument to the `signIn` and the `updateEmailOrPassword` functions. This ensures that the current tenant has email password enabled, and it ensures that the user's new password matches the password policy defined for their tenant (if different password policies exist for different tenants).
+
+If this user shares access across multiple tenants, their password changes for all tenants.
+:::
+
+### 3. Revoke all sessions associated with the user {{optional}}
+
+- Revoking all sessions associated with the user forces them to re-authenticate with their new password.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+// the following example uses express
+import Session from "supertokens-node/recipe/session";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express"
+import express from "express";
+
+let app = express();
+
+app.post("/change-password", verifySession(), async (req: SessionRequest, res: express.Response) => {
+
+   let userId = req.session!.getUserId();
+
+    /**
+     * 
+     * ...
+     * see previous step
+     * ...
+     * 
+     *  */
+
+    // highlight-start
+    // revoke all sessions for the user
+    await Session.revokeAllSessionsForUser(userId)
+
+    // revoke the current user's session, we do this to remove the auth cookies, logging out the user on the frontend.
+    await req.session!.revokeSession()
+    //highlight-end
+
+    // TODO: send successful password update response
+
+})
+
+```
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, changePasswordAPI).ServeHTTP(rw, r)
+	})
+}
+
+type ResponseBody struct {
+	OldPassword string
+	NewPassword string
+}
+
+func changePasswordAPI(w http.ResponseWriter, r *http.Request) {
+
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+	userID := sessionContainer.GetUserID()
+
+	/**
+	 *
+	 * ...
+	 * see previous step
+	 * ...
+	 *
+	 *  */
+
+	// highlight-start
+
+	// revoke all sessions for the user
+	_, err := session.RevokeAllSessionsForUser(userID, nil)
+	if err != nil {
+		// TODO: Handle error
+	}
+
+	// revoke the user's current session, we do this to remove the auth cookies, logging out the user on the frontend
+	err = sessionContainer.RevokeSession()
+	if err != nil {
+		// TODO: Handle error
+	}
+
+	// highlight-end
+
+	// TODO: send successful password update response
+}
+```
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session.syncio import revoke_all_sessions_for_user
+from flask import Flask
+from supertokens_python.recipe.session import SessionContainer
+
+app = Flask(__name__)
+@app.route('/change-password', methods=['POST']) # type: ignore
+@verify_session()
+def change_password():
+    
+    session: SessionContainer = g.supertokens # type: ignore
+    
+    # get the userId from the session object
+    user_id = session.get_user_id()
+
+    # TODO: see previous step...
+
+    # highlight-start
+    # revoke all sessions for the user
+    revoke_all_sessions_for_user(user_id)
+    
+    # revoke the user's current session, we do this to remove the auth cookies, logging out the user on the frontend
+    session.sync_revoke_session()
+    # highlight-end
+
+    # TODO: send successful password update response
+```
+</BackendTabs.TabItem>
+
+</BackendTabs>
