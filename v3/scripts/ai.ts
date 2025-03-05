@@ -202,7 +202,7 @@ const printStatus = (status: string) => {
 };
 
 (async () => {
-  const startPath = "./docs/post-authentication/session-management";
+  const startPath = "./docs/deployment";
   const valeReport = await runVale(startPath);
 
   for (const file in valeReport) {
@@ -250,7 +250,8 @@ async function writeLintingCorrectionsToFile(filePath: string, lintingIssues: Va
 }
 
 async function runVale(itemPath: string): Promise<ValeReport> {
-  const { stdout } = await $`vale ${itemPath}  --output=JSON --no-exit`.nothrow();
+  const { stdout } = await $`vale ${itemPath} --output=JSON --no-exit`.nothrow();
+  // const { stdout } = await $`vale ${itemPath} --minAlertLevel=error  --output=JSON --no-exit`.nothrow();
   const parsedReport = JSON.parse(stdout.toString());
   return parsedReport as ValeReport;
 }

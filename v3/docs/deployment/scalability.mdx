@@ -10,23 +10,40 @@ description: >-
 
 # Scalability
 
-## SuperTokens users and tenants scalability
+## Overview
 
-SuperTokens can handle 10s of millions of users and tenants (organizations). In fact, you can even make one tenant per user and it would work well. For most operations, the database structure and queries are designed in a way to be easily partitioned based on tenants and users. This means that as the number of tenants scale, it does not affect performance on most operations on a per tenant scale, and as the number of users scale, it does not affect performance on most operations on a per user scale.
+The following page addresses how the **SuperTokens** components scale based on different factors.
 
-## SuperTokens core scalability
+---
+
+## Users and tenants 
+
+SuperTokens can handle 10s of millions of users and tenants.
+In fact, you can even make one tenant per user and it would work well.
+For most operations, the database structure and queries allow partitioning based on tenants and users.
+As the number of tenants scales, it does not affect performance on most operations per tenant. Similarly, as the number of users scales, it does not affect performance on most operations per user.
+
+---
+
+## SuperTokens core 
 
 :::important
-If you are using our managed service, the SuperTokens core is fully managed by us, and you don't have to worry about scaling it. This section is for those who are self-hosting the SuperTokens core service.
+If you are using the managed service, the SuperTokens core is fully managed, and you don't have to worry about scaling it.
+This section is for those who are self-hosting the SuperTokens core service.
 :::
 
-The SuperTokens core service is designed to be horizontally scalable. This means that you can add more instances of the core service to handle more requests. The core service is also stateless, which means that you can add or remove instances without worrying about the state of the system.
+The SuperTokens core service supports horizontal scalability.
+This means that you can add more instances of the core service to handle more requests.
+The core service is also stateless, which means that you can add or remove instances without worrying about the state of the system.
 
-The core service is designed to be able to handle a high number of requests per second (RPS). The exact number of RPS that the core service can handle depends on the hardware that you are using, but in general, the core service is designed to be able to handle a large number of requests.
+The core service can handle a high number of requests per second (`RPS`).
+The exact number of requests per second (`RPS`) that the core service can handle depends on the hardware you are using. In general, the core service can manage many requests.
 
-For example, the average latency of requests is ~40 milliseconds at 100-150 requests per second (6,000-10,000 RPM) as you can see below. The compute deployed is 6 instances of the SuperTokens core service, each on a t3.micro EC2 instance behind a round robin load balancer. The CPU usage of each instance is around 10%.
+For example, the average latency of requests is ~40 milliseconds at 100-150 requests per second (6,000-10,000 requests per minute).
+The compute deployed is 6 instances of the SuperTokens core service, each on a t3.
+micro EC2 instance behind a round robin load balancer. The `CPU` usage of each instance is around 10%.
 
-The scale of number of end users that this can support is in the older of 1-2 million monthly active users, with a total user count of several millions more.
+The scale of end users that this can support is in the order of 1-2 million monthly active users, with a total user count of millions more.
 
 ### Average latency over 1 day
 
@@ -36,17 +53,42 @@ The scale of number of end users that this can support is in the older of 1-2 mi
 
 <img src="/img/rpm.png" />
 
-## Database scalability
+### Performance tuning
 
-SuperTokens works with PSQL and MySQL databases and one instance of the database is enough to handle 10s of millions of MAUs, easily. For example, a database with 1 million users would occupy ~ 1.5 GB of disk space (assuming you add minimal custom metadata to the user object).
+If you are facing performance issues, here are some tips to help you tune the performance of your SuperTokens setup:
+- If you are self-hosting the SuperTokens core, know that it is stateless and can scale horizontally. You can add more instances of the core service to handle more requests (behind a load balancer).
+- Check which part of the request cycle is slow. Is it the SuperTokens core responding, or is it the backend SDK APIs responding? The performance of the backend SDK API depends mainly on how you have set up your API layer (that integrates with the backend SDK) to perform. You can check which is slow by enabling debug logs in the backend SDK, and then inspecting the timestamps around the core requests. If they sum up to be much less than the total time taken for the request (from the `frontend`'s point of view), then the bottleneck is likely in the backend SDK.
+- If you are self-hosting the SuperTokens core, check if there are any database queries that are too slow. You can do this using debugging tools provided by the PostgreSQL or MySQL databases. If you find a query that's causing issues, please reach out to support.
+- Check that the compute used to run the backend SDK, the SuperTokens core (in case you are self-hosting it), and the database is sufficient. Using a t3.micro EC2 instance for the core should work well for even 100,000 MAUs. You can check the `CPU` and memory usage of the instances to see if they have maxed out, or if you have run out of `CPU` credits. If they are, you can consider upgrading the instances to more powerful ones.
+- In case you are self-hosting the SuperTokens core, you can tune its performance by setting different values for the following configurations in the configuration.yaml file, or docker `env`:
+    - `max_server_pool_size`: Sets the max thread pool size for incoming `http` server requests. Default value is 10.
+    - `postgresql_connection_pool_size` (if using psql): Defines the connection pool size to PostgreSQL. Default value is 10.
+    - `postgresql_minimum_idle_connections` (if using psql): Minimum number of idle connections to remain active. If not set, minimum idle connections are the same as the connection pool size. By default, this is not set.
+    - `postgresql_idle_connection_timeout`: (if using psql): Timeout in milliseconds for the idle connections to close. Default is 60000 MS.
+    - `mysql_connection_pool_size` (if using `mysql`): Defines the connection pool size to MySQL. Default value is 10.
+    - `mysql_minimum_idle_connections` (if using `mysql`): Minimum number of idle connections to remain active. If not set, minimum idle connections are the same as the connection pool size. By default, this is not set.
+    - `mysql_idle_connection_timeout`: (if using `mysql`): Timeout in milliseconds for the idle connections to close. Default is 60000 MS.
+- Check if you have access token blacklisting enabled in the backend SDK. The default is `false`, but if you have it enabled, then it means that every session verification attempt queries the SuperTokens core to check the database. This adds latency to the session verification process and increases the load on the core. If you want to keep this to `true`, consider making it only for non `GET` APIs for your application.
+- You can increase the value of `access_token_validity` in the SuperTokens core. It sets the validity of the access token. Default value is 3,600 seconds (1 hour). The lower this value, the more often the refresh API calls the core, increasing the load on the core.
 
-## Backend SDK scalability
+---
 
-The backend SDK does not store any information on its own. It's just a "big middleware" between the frontend requests and the SuperTokens core. As such, its scalability depends entirely on the scalability of your API layer into which our backend SDK has been integrated.
+## Database 
 
-## Session verification scalability
+SuperTokens works with PostgreSQL and MySQL databases, and one instance of the database is enough to handle tens of millions of MAUs.
+For example, a database with 1 million users would occupy ~ 1.5 GB of disk space (assuming you add minimal custom metadata to the user object).
 
-The access token is a JWT, and so, they are verified by our backend SDK without any network requests, making them very fast, and very scalable. The refresh token is verified by the core service, and so, the scalability of session refresh requests depends on the scalability of the core service, however, session refreshes would be a relatively rare compared to access token verification.
+---
 
-## Need help?
-See the section on [tuning SuperTokens](/docs/platform-configuration/supertokens-core/performance) to get tips on how to improve performance.
+## Backend SDK
+
+The backend SDK does not store any information on its own.
+It's a "big middleware" between the frontend requests and the SuperTokens core.
+As such, its scalability depends entirely on the scalability of your API layer into which the backend SDK integrates.
+
+---
+
+## Session verification 
+
+The access token is a JWT, and the backend SDK verifies them without any network requests, making them fast and scalable.
+The core service verifies the refresh token, and the scalability of session refresh requests depends on the core service's scalability. However, session refreshes are rare compared to access token verification.
