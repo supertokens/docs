@@ -25,7 +25,6 @@ export default function useFilteredTocItems(toc: Props["toc"]) {
     const hiddenTenantTypeContainer = document.querySelector(`[data-heading-filter="${hiddenTenantType}"]`);
     if (hiddenTenantTypeContainer) hiddenElements.push(hiddenTenantTypeContainer);
     const hiddenContainers = document.querySelectorAll(`[data-exclude-headings-from-toc="true"]`);
-    console.log(hiddenContainers);
 
     hiddenContainers.forEach((container) => hiddenElements.push(container));
 

@@ -58,7 +58,7 @@ function AccordionRoot({
         <Flex p="0" direction="column" gap="0" align="stretch" data-exclude-headings-from-toc="true" asChild>
           <RadixAccordion.Root className="accordion" type="multiple">
             {items.map(({ title, content }, index) => (
-              <AccordionItem value={title.toString()} key={index}>
+              <AccordionItem value={`${title.toString()}-${index}`} key={index}>
                 <AccordionItemHeader>{title}</AccordionItemHeader>
                 <AccordionItemContent>{content}</AccordionItemContent>
               </AccordionItem>
