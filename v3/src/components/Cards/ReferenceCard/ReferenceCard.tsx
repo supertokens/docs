@@ -58,14 +58,22 @@ function ReferenceCardRoot({ children, href, label }: React.PropsWithChildren<{ 
   );
 }
 
-function ReferenceCardAvatar({ icon }: { icon: string }) {
+function ReferenceCardAvatar({
+  icon,
+  size = "3",
+  radius = "small",
+}: {
+  icon: string;
+  size?: React.ComponentProps<typeof Avatar>["size"];
+  radius?: React.ComponentProps<typeof Avatar>["radius"];
+}) {
   return (
     <Avatar
       src={`/img/icons/${icon}.svg`}
       alt="Icon"
-      size="3"
+      size={size}
       className="reference-card__avatar"
-      radius="full"
+      radius={radius}
       fallback="T"
     />
   );

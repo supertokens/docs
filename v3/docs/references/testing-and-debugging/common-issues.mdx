@@ -1,0 +1,186 @@
+---
+title: Cmmon issues
+hide_title: true
+sidebar_position: 3
+description: >-
+  Resolve common issues that might occur when you integrate SuperTokens. 
+---
+
+# Common issues 
+
+## Overview
+
+If you run into issues during your integration, please go through [this checklist](https://github.com/supertokens/supertokens-core/issues/1044) to see if you can find a resolution. 
+Additionally, you are encountering a CORS issue, you can read this page to learn how to resolve some common problems. 
+
+## CORS issues
+
+Cross-Origin Resource Sharing (CORS) is a mechanism that supports secure cross-origin requests and data transfers.
+This allows actions such as loading web fonts or making API calls from new domains.
+Cross-origin requests can be vulnerable to different types of attacks.
+For example, you might log into your bank account, and a malicious site could make an AJAX request to the bank site to retrieve your bank balance.
+
+Since the SuperTokens integration involves configuring both a frontend and a backend application, you need to configure CORS in your backend to allow authentication requests from the client application.
+Below is a quick example of how to add CORS to work with SuperTokens in an NodeJS application.
+
+```tsx
+import SuperTokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+let app = express();
+
+// ...other middlewares
+
+app.use(
+  cors({
+    origin: "http://127.0.0.1:3000",
+    allowedHeaders: ["content-type", ...SuperTokens.getAllCORSHeaders()],
+    methods: ["GET", "PUT", "POST", "DELETE"],
+    credentials: true,
+  })  
+);
+
+// ...your API routes
+```
+
+| Option | Description | Usage in SuperTokens |
+|--------|-------------|--------|
+| `origin` | Configures the `Access-Control-Allow-Origin` header | Required for the SuperTokens frontend SDK to communicate with the backend SDK. It gets initialized with the domain value of your frontend SDK. It gets initialized with the domain value of your frontend SDK. |
+| `allowedHeaders` | Configures the `Access-Control-Allow-Headers` header | Required to allow custom authentication headers used by SuperTokens. The `SuperTokens.getCORSAllowedHeaders()` call returns the custom header list |
+| `methods` | Configures the `Access-Control-Allow-Methods` header | Should allow the `GET`, `POST`, and `PUT` methods used by the SDK |
+| `credentials` | Configures the `Access-Control-Allow-Credentials` header | Must be `true` to allow cookies for SuperTokens sessions |
+
+
+The next chapters go through a series of common CORS issues that you might encounter when integrating SuperTokens.
+
+
+---
+
+### Credentials flag is true, but Access-Control-Allow-Credentials is not "true".
+
+This happens when the CORS credentials field is not set to true.
+
+Set credentials to `true` in the CORS setting to remedy this issue.
+
+```tsx
+import SuperTokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+let app = express();
+
+// ...other middlewares
+
+app.use(
+  cors({
+      origin: "http://localhost:3000",
+    allowedHeaders: ["content-type", ...SuperTokens.getAllCORSHeaders()],
+    methods: ["GET", "PUT", "POST", "DELETE"],
+    //highlight-start
+    credentials: true, // Make sure credentials is set to true
+    //highlight-end
+
+  })  
+);
+```
+
+<br/>
+
+### Origin http://localhost:3000 is not allowed by Access-Control-Allow-Origin. Status code: 204
+      
+A couple of cases might cause this to happen. 
+
+1. When the `Access-Control-Allow-Origin` doesn't have `http://localhost:3000` (website domain) in its values and the website request gets blocked. Ensure the `origin` field lines up with the website domain located in other parts of the code to remedy this issue.
+
+2. The CORS middleware is after the SuperTokens middleware - in this case, the OPTIONS API has the right value for `Access-Control-Allow-Origin`, but the actual `GET` / `POST` / `PUT` API does not since the SuperTokens middleware returns a response before the CORS middleware is even called. To fix this, put the CORS middleware before the SuperTokens middleware.
+
+3. Another variant of this error occurs when the OPTIONS API returns a 404 error. If the `origin` field is correctly set up, then the error is likely a misconfigured API gateway or reverse proxy. 
+
+```tsx
+import supertokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+
+supertokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+
+  appInfo: {
+    appName: "...",
+    apiDomain: "...", 
+    // highlight-next-line
+    websiteDomain: "http://localhost:3000",
+  },
+   recipeList: [/* ... */],
+});
+
+const app = express();
+app.use(
+   cors({
+      //highlight-start
+      origin: "http://localhost:3000", // Make sure this is the same as the website domain
+      //highlight-end
+      allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+      methods: ["GET", "PUT", "POST", "DELETE"],
+      credentials: true,
+   })
+);
+```
+
+<br />
+
+---
+
+### Cannot use wildcard in Access-Control-Allow-Origin when credentials flag is true.
+
+This appears when `Access-Control-Allow-Origin` header uses `*`. To fix, add the correct origin value in the CORS settings.
+
+```tsx
+import supertokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+
+const app = express();
+
+app.use(
+   cors({
+      //highlight-start
+      origin: "http://localhost:3000",  // Make sure this is the same as the website domain
+      //highlight-end
+      allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+      methods: ["GET", "PUT", "POST", "DELETE"],
+      credentials: true,
+   })
+);
+```
+
+<br />
+
+---
+
+### Origin 'HTTP://localhost:3000' gets blocked by CORS policy ... the value of 'Access-Control-Allow-Origin' header in the response must not be the wildcard '*' when the request's credential mode is 'include'
+
+Similar to the previous issue, this appears when `Access-Control-Allow-Origin` header includes `*`. To fix, add in the correct origin value, `http://localhost:3000` in this case, in the CORS settings.
+
+```tsx
+import supertokens from "supertokens-node";
+import express from "express";
+import cors from "cors";
+
+const app = express();
+
+app.use(
+   cors({
+      //highlight-start
+      origin: "http://localhost:3000",  // Make sure this is the same as the website domain
+      //highlight-end
+      allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+      methods: ["GET", "PUT", "POST", "DELETE"],
+      credentials: true,
+   })
+);
+```
+
+---
+
+Have an error not mentioned above? Join the [discord server](https://supertokens.com/discord) and we will provide assistance to debug the error!
