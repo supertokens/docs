@@ -5,6 +5,7 @@ import { Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 import { AnimatePresence, motion } from "motion/react";
 import { TOC_UI_TYPE_SWITCH_ID } from "../lib";
+import { useIsVisible } from "../hooks";
 
 import "./RadioCard.scss";
 
@@ -105,29 +106,3 @@ export const UIType = {
   PrebuiltUIContent,
   CustomUIContent,
 };
-
-function useIsVisible() {
-  const [isVisible, setIsVisible] = React.useState(false);
-  const elementRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const visible = entry.isIntersecting;
-        setIsVisible(visible);
-      },
-      {
-        threshold: 0.3,
-      },
-    );
-
-    if (elementRef.current) {
-      observer.observe(elementRef.current);
-    }
-    return () => {
-      if (elementRef.current) {
-        observer.unobserve(elementRef.current);
-      }
-    };
-  }, [elementRef]);
-  return { visibilityRef: elementRef, isVisible };
-}

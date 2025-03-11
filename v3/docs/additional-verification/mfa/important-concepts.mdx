@@ -3,67 +3,137 @@ id: important-concepts
 title: Important concepts
 hide_title: true
 sidebar_position: 2
+toc_max_heading_level: 4
 description: >-
   Understand SuperTokens auth factor IDs, completion status, and multi-factor
   authentication setup.
 ---
 
-import PaidFeatureCallout from "./_blocks/paid-feature-callout.mdx"
 
 # Important concepts
 
-<PaidFeatureCallout />
+## Overview
 
-## Auth factor IDs 
+If you are new to Multi-factor authentication, MFA, this page provides a quick summary of how it works and the main terminology used in it.
+
+MFA enhances security by requiring users to authenticate through:
+
+<Steps>
+
+## **Initial login**
+
+  The user enters their primary credentials, typically a username and password (first factor).
+  
+## **Authentication challenge**
+
+Upon successful entry of the primary credentials, the user receives an authentication challenge, prompting them to provide a secondary factor, such as an OTP or biometric verification.
+
+## **Access granted** 
+
+Access to the account or service is only granted when both the primary and secondary factors are successfully verified.
+
+</Steps>
+
+This layered approach reduces the risk of unauthorized access, as an attacker would need to compromise multiple authentication methods to gain access.
+
+## Terminology
+
+### Authentication challenge
+
+An authentication challenge is a prompt that requires the user to provide additional credentials beyond the primary factor to verify their identity.
+This typically involves requesting a secondary factor, such as entering an OTP received via SMS/email or approving a push notification from an authenticator app.
+Authentication challenges are crucial in detecting and preventing unauthorized access by requiring proof of possession or identity beyond a password.
+
+### Factors
+
+Factors refer to the different categories of credentials used in MFA:
+- **Something You Know**: Information only the user knows, such as a password or personal identification number (`PIN`).
+- **Something You Have**: A physical item the user possesses, such as a smartphone or hardware token used for generating one-time passwords (OTPs).
+- **Something You Are**: Biometric characteristics unique to the user, such as fingerprints, facial recognition, or voice patterns.
+
 Each auth challenge has a factor ID in SuperTokens:
-- Email password auth: `emailpassword`
-- Social login / enterprise SSO auth: `thirdparty`
-- Passwordless:
-    - With email OTP: `otp-email`
-    - With SMS OTP: `otp-phone`
-    - With email magic link: `link-email`
-    - With SMS magic link: `link-phone`
-- TOTP: `totp`
 
-These factor IDs will be used to configure the MFA requirements for users (except the `acccess-denied` one), and also will be used to indicate which auth challenges have been completed in the current session.
+| Authentication Type | Factor ID |
+|-------------------|-----------|
+| Email password auth | `emailpassword` |
+| Social login / enterprise SSO auth | `thirdparty` |
+| Passwordless - Email OTP | `otp-email` |
+| Passwordless - SMS OTP | `otp-phone` |
+| Passwordless - Email magic link | `link-email` |
+| Passwordless - SMS magic link | `link-phone` |
+| TOTP | `totp` |
 
-## How are auth factors marked as completed?
-We indicate the status of which auth factors are completed and if there are any pending via the session's access token payload. We store the following claim structure in the access token for this:
+These factor IDs get used to configure the MFA requirements for users (except the `acccess-denied` one). 
+They are also used to indicate which authentication challenges have completed in the current session.
+
+#### Factor completion status 
+
+You can determine the status of the authentication factors by checking the session's access token payload.
+In the payload you can find the following claim structure: 
 
 ```json
 {
     "st-mfa": {
+        // c stands for completed, and 
+        // Shows that only the emailpassword factor has been completed
         "c": {
+            // the timestamp when the factor was completed
             "emailpassword": 1702877939,
         },
+        // v stands for value
+        // In this example, the false value indicates that the MFA flow is not completed  
+        // Once the second factor is finalized v will change to true  
         "v": false
     }
 }
 ```
-- `c` stands for `completed`, and `v` stands for `value`.
-- The above payload indicates that the `emailpassword` auth factor has been completed, and that there are still more factors left before the user has finished sign up / login.
-- The number against the `emailpassword` factor is the timestamp (in seconds since epoch) at which the factor was completed.
-- If `v` is `true`, then it means that the user has completed all the factors required for sign up / login. This may not include the email verification requirement since that is a different factor.
 
-Each time an auth factor is completed, the SuperTokens backend adds it to the `c` (completed) object, and then re-evaluates the `v` boolean based on the MFA requirements for the user. This is done by calling the `getMFARequirementsForAuth` function from the MFA recipe (on the backend), which you can override to return the factors required for the user. In this guide, we will show you how to override this function to achieve different forms of MFA experiences.
+Each time an authentication factor completes, the SuperTokens backend adds it to the `c` (completed) object, and then re-evaluates the `v` boolean based on the MFA requirements for the user.
 
-## First vs additional / secondary auth factors
-A clear distinction is made between first and additional factors in the SDK. When calling `MFA.init` on the backend, you need to provide a list of allowed first factors (or if using multi tenancy, you can configure the first factors on a per tenant basis and leave the `init` array empty).
+### First factor vs. secondary factor
 
-The first factors are those that are allowed to create a new session, whereas any other factor will only be allowed to modify an existing session. In case the user calls an additional factor's API without a session, the API will respond with a `401` error.
+- **First Factor**: The primary authentication method, traditionally a password or `PIN`.
+This is the initial layer of security in the authentication process.
+  
+- **Secondary Factor**: An additional security layer that complements the first factor.
+Common secondary factors include OTPs sent via email/SMS, authenticator apps like Google Authenticator, or biometric data.
+Secondary factors enhance security by adding an extra step to the verification process.
 
-## Relation of account linking and MFA
-Account linking is when you like multiple login methods to the same user account. The individual login methods create their own "recipe user", and each of recipe user is linked to another recipe user to create one primary user.
+A clear distinction exists between first and additional factors in the SDK.
+When you call `MFA.init` on the backend, you need to provide a list of allowed first factors. If using multi-tenancy, you can configure the first factors on a per-tenant basis and leave the `init` array empty.
 
-Theoretically, one can link any recipe user to another (i.e. there is no need for them to have the same email / phone number), however, for first factor automatic linking, we only link login methods if they are verified and have the same email.
+The first factors are those allowed to create a new session, whereas any other factor can only modify an existing session.
+In case the user calls an additional factor's API without a session, the API responds with a `401` error.
 
-From an MFA point of view, whenever the user sets up a new passwordless factor (otp-email or otp-sms), this will create a new recipe user for the passwordless recipe, and will auto link it to the existing session's recipe user.
 
-Therefore, it is necessary to enable account linking for MFA to work. That being said, in the MFA guide, we do not enable first factor account linking, but you can enable that by following the automatic account linking guide in other parts of the docs.
 
-## Limitations of MFA
-Magic link via email / SMS is only supported as a first factor for pre-built UI. The reason we don't support it as a second factor is that if the magic link is opened on a different device, there would be no reference to the existing session (which was created post first factor completion).
 
-Instead, we support OTP based auth via email / SMS which achieves the same level of security as a magic link.
+### Account linking
 
-Magic link is different form email verification links. Email verification links are supported in MFA flow since they do not create a new session on the browser in which they are opened.
+Account linking refers to the process of connecting multiple accounts or identities across platforms or services.
+In the context of MFA, account linking ensures that a user's secondary authentication factors (for example, an authenticator app or backup method) are correctly associated with their primary account.
+This is crucial for streamlined access and maintaining secure authentication across different services without the need to set up separate MFA methods for each account.
+
+
+#### The relation between account linking and MFA
+
+During account linking, the individual login methods create their own "recipe user", and each recipe user links to another recipe user to create one primary user.
+Theoretically, one can link any recipe user to another (there is no need for them to have the same email or phone number).
+However, for first factor automatic linking, only link login methods if they have been verified and have the same email.
+
+From an MFA point of view, whenever the user sets up a new passwordless factor (otp-email or otp-sms), this creates a new recipe user for the passwordless recipe. It then auto-links it to the existing session's recipe user.
+Therefore, it is necessary to enable account linking for MFA to work.
+In the MFA guide, first factor account linking is not enabled, but you can enable that by following the automatic account linking guide in other parts of the docs.
+
+---
+
+## See also
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/additional-verification/mfa/initial-setup" label="MFA Initial Setup" />
+  <ReferenceCard href="/docs/additional-verification/mfa/email-sms-otp/otp-for-all-users" label="Email & SMS OTP for MFA" />
+  <ReferenceCard href="/docs/additional-verification/mfa/totp/totp-for-all-users" label="TOTP for MFA" />
+  <ReferenceCard href="/docs/additional-verification/mfa/step-up-auth" label="Step-up Authentication" />
+  <ReferenceCard href="/docs/additional-verification/mfa/protect-routes" label="Protect Routes with MFA" />
+</ReferenceCard.Grid>
+

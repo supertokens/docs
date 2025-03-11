@@ -1,28 +1,35 @@
 ---
-id: automatic-account-linking
 title: Automatic account linking
 hide_title: true
-sidebar_position: 2
+sidebar_position: 3
+toc_max_heading_level: 4
 description: >-
   Enable automatic account linking for multiple login methods with SuperTokens,
   ensuring secure account management.
 ---
 
 import { BackendTabs } from "/src/components/Tabs";
-import PaidFeatureCallout from "./_blocks/paid-feature-callout.mdx"
 
 
 # Automatic account linking
 
+## Overview
+
+Automatic account linking is a feature that allows users to automatically sign in to their existing account using more than one login method. On a high level, SuperTokens automatically links the accounts for the different login methods provided that:
+- Their emails or phone numbers are the same.
+- They have verified their emails or phone numbers.
+
+SuperTokens ensures that accounts are automatically linked only if there is no risk of account takeover.
+
+
+## Before you start
+
 <PaidFeatureCallout />
 
-Automatic account linking is a feature that allows users to automatically sign in to their existing account using more than one login method. On a high level, the accounts for the different login methods are linked automatically by SuperTokens provided that:
-- Their emails or phone numbers are the same.
-- Their emails or phone numbers are verified.
 
-SuperTokens ensures that accounts are automatically linked only if there is [no risk of account takeover](./security-considerations).
+## Steps
 
-## Enabling automatic account linking
+### 1. Enable the recipe
 
 You can enable this feature by providing the following callback implementation on the backend SDK:
 
@@ -130,79 +137,107 @@ init(
 </BackendTabs.TabItem>
 </BackendTabs>
 
-#### Input `args` meaning:
-- `newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }`: This object contains information about the user whose account is going to be linked, or will become a primary user. The object contains the user's email, social login info and phone number (whichever they used to sign in / up with). It also contains the login method (`emailpassword`, `thirdparty`, or `passwordless`). It may also contain the `recipeUserId` of the user that is going to be linked in case SuperTokens is attempting account linking during sign in.
+<Accordion>
 
-    Notice that in case of `newAccountInfo.recipeUserId !== undefined && user !== undefined` being `true`, we add some extra logic to check if the user ID has any info associated with them in your application db. This is to prevent data loss for this user ID (see the [migration section below](#migration-of-user-data-when-accounts-are-linked)).
-- `user: User | undefined`: If this is not `undefined`, it means that `newAccountInfo` user is about to linked to this `user`. If this is `undefined`, it means that `newAccountInfo` user is about to become a primary user.
-- `session: SessionContainerInterface | undefined`: The session object of the user that is about to be linked. This is `undefined` if it's the first factor login. If a user has completed the first factor, and calls a sign up / in API again of some login method (either for MFA or for social login linking), then the `session` object will be defined. In the above snippet, we prevent account linking if a session is defined so that account linking only happens during the first factor login.
-- `tenant: string`: The ID of the tenant that the user is signing in / up to.
-- `userContext: any`: User defined `userContext`.
+## Input 
 
-#### Output `args` meaning:
-- `shouldAutomaticallyLink`: If this is `true`, it means that the `newAccountInfo` will be linked or will become a primary user during this API call (assuming a set of security checks pass). If this is `false`, it means that there will be no account linking related operation during this API call.
-- `shouldRequireVerification`: If this is `true`, that account linking operations will only happen if the `newAccountInfo` is verified. **We strongly recommend keeping it set to `true` for security reasons.**
+| Argument | Type | Description |
+|----------|------|-------------|
+| `newAccountInfo` | `AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }` | Contains information about the user whose account is going to link or become a primary user. Includes email, social login info, phone number, and login method (`emailpassword`, `thirdparty`, or `passwordless`). May contain `recipeUserId` during account linking. Note: When `newAccountInfo.recipeUserId !== undefined && user !== undefined`, extra logic checks if the user ID has associated data in your application db to prevent data loss. |
+| `user` | `User \| undefined` | If not `undefined`, indicates `newAccountInfo` user links to this user. If `undefined`, `newAccountInfo` user becomes a primary user. |
+| `session` | `SessionContainerInterface \| undefined` | Session object of the user who is linking. `undefined` for first factor login. Defined if user completed first factor and calls sign up/in API again (MFA or social login linking). |
+| `tenant` | `string` | ID of the tenant the user is signing in/up to. |
+| `userContext` | `any` | User defined context object. |
+
+## Output
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `shouldAutomaticallyLink` | `boolean` | If `true`, `newAccountInfo` links or becomes primary user during API call (subject to security checks). If `false`, no account linking operation occurs. |
+| `shouldRequireVerification` | `boolean` | If `true`, account linking only happens if `newAccountInfo` verifies. **Strongly recommended to keep as `true` for security.** |
+
+</Accordion>
+
+<br />
 
 :::important
-If you are returning `shouldRequireVerification` as `true`, then you need to also [enable the email verification recipe](/docs/additional-verification/email-verification/enable-email-verification) in `REQUIRED` mode. This means that if the login method does not inherently verify the email (like for email password login), SuperTokens will require the user to go through the email verification flow first and then attempt auto linking of the account. For other login methods like sign in with Google, the email is already verified during login, so the user will not be asked to verify the email again, and account linking will be tried immediately.
+If you are returning `shouldRequireVerification` as `true`, then you need to also [enable the email verification recipe](/docs/additional-verification/email-verification/initial-setup) in `REQUIRED` mode. This means that if the login method does not inherently verify the email (like for email password login), SuperTokens requires the user to go through the email verification flow first. Then, it attempts auto linking of the account. For other login methods like sign in with Google, the email is already verified during login. The user does not need to verify the email again, and account linking occurs immediately.
 
-If you enable email verification in `OPTIONAL` mode, then whilst the user can access the account after email password login, account linking will only be attempted after they have verified their email later on. This is risky because whilst the user had access to their email password account after sign up, they could loose access to that after verification and after account linking has been completed due to the change in the primary user ID (though we provide a callback - see below - to help you migrate data from one user ID to another).
+If you enable email verification in `OPTIONAL` mode, the user can access the account after email password login. However, account linking only occurs after they verify their email later on. This is risky because while the user had access to their email password account after sign up, they could lose access after verification and account linking completes due to the change in the primary user ID. A callback is available to help migrate data from one user ID to another.
 :::
 
 You can use the input of the function to dynamically decide if you want to do account linking for a particular user and / or login method or not.
 
-## Different scenarios of automatic account linking
 
-- **During sign up**: If there exists another account with the same email or phone number within the current tenant, the new account will be linked to the existing account if:
+## References
+
+### Automatic account linking scenarios
+
+#### During sign up
+
+If there exists another account with the same email or phone number within the current tenant, the new account links to the existing account if:
     - The existing account is a primary user
-    - If `shouldRequireVerification` is `true`, the new account needs to be created via a method that has the email as verified (for example via passwordless or google login). If the new method doesn't inherently verify the email (like in email password login), the the accounts will be linked post email verification.
+    - If `shouldRequireVerification` is `true`, the new account needs creation via a method that has the email as verified (for example via passwordless or google login). If the new method doesn't inherently verify the email (like in email password login), the accounts link post email verification.
     - Your implementation for `shouldDoAutomaticAccountLinking` returns `true` for the `shouldAutomaticallyLink` boolean.
 
-- **During sign in**: If the current user is not already linked and if there exists another user with the same email or phone number within the current tenant, the accounts will be linked if:
-    - The user being signed into is NOT a primary user, and the other user with the same email / phone number IS a primary user
-    - If `shouldRequireVerification` is `true`, the current account (that's being signed into) has its email as verified.
+#### During sign in
+
+If the current user is not already linked and if there exists another user with the same email or phone number within the current tenant, the accounts link if:
+    - The user signing into is not a primary user, and the other user with the same email / phone number is a primary user
+    - If `shouldRequireVerification` is `true`, the current account (that's signing into) has its email as verified.
     - Your implementation for `shouldDoAutomaticAccountLinking` returns `true` for the `shouldAutomaticallyLink` boolean.
 
-- **After email verification**: If the current user whose email got verified is not a primary user, and there exists another primary user in the same tenant with the same email, then we link the two accounts if:
+#### After email verification
+
+If the current user whose email got verified is not a primary user, and there exists another primary user in the same tenant with the same email, then the two accounts link if:
     - Your implementation for `shouldDoAutomaticAccountLinking` returns `true` for the `shouldAutomaticallyLink` boolean.
 
-- **During password reset flow**: If there already exists a user with the same email in a non email password recipe (social login for example), and the user is doing a password reset flow, a new email password user is created and linked to the existing account if:
+:::info no-title
+For a primary user, if two login methods (L1 & L2) share the same email, but L1's email verifies and L2's does not, SuperTokens automatically verifies L2's email under these conditions:
+-   The user logs in with L2.
+-   The `updateEmailOrPassword` (email password recipe) or `updateUser` (passwordless recipe) function calls to update L2's email to match L1's.
+:::
+
+#### During the password reset flow
+
+If there already exists a user with the same email in a non email password recipe (social login for example), and the user is doing a password reset flow, a new email password user creates and links to the existing account if:
     - The non email password user is a primary user.
     - Your implementation for `shouldDoAutomaticAccountLinking` returns `true` for the `shouldAutomaticallyLink` boolean.
 
-## Affect on email verification
-For a primary user, if there exists two login method (L1 & L2), and they both have the same email, but the email for L1 is verified and not for L2, SuperTokens will auto verify the email for L2 when:
-- The user next logs in with L2.
-- If you call `updateEmailOrPassword` from the email password or `updateUser` from the passwordless recipe, updating L2's email to be equal to L1's email.
 
-## Affect on email update
-When updating the email of a login method for a user, SuperTokens needs to make sure that the account linking conditions mentioned above remain intact. This means that you cannot update the email of a primary user to a value that matches the email of another primary user. 
+:::info Email update implications
+When updating a user's login email, SuperTokens ensures account linking conditions remain valid.
+A primary user's email cannot update to match another primary user's email.
 
-For example, if User A has login method `AL1` (email `e1`) and `AL2` (email `e1`), and User B has login method `BL1` (email `e2`) and `BL2` (email `e3`), then we cannot update `AL1` email to `e2` or `e3` because that would lead to two primary users having the same email.
+User A has login methods `AL1` (email `e1`) and `AL2` (email `e1`). User B has login methods `BL1` (email `e2`) and `BL2` (email `e3`). Updating `AL1`'s email to `e2` or `e3` is not allowed, as it would create two primary users with the same email.
 
-Now email updates can happen in different scenarios:
-- 1. Calling the `updateEmailOrPassword` from the email password recipe
-- 2. Calling the `updateUser` function from the passwordless recipe
-- 3. Logging in via social login can also update emails if the email has changed from the provider's side.
+**Email updates occur in these scenarios:**
 
-In each of these cases, the operation will fail and an appropriate status code will be returned:
-- For function calls (1) and (2), you will get back a response with a status indicating that email update was not possible.
-- For social login API call (3), the client will get a response with a status indicating to contact support, with a support status code (see below).
+*   `updateEmailOrPassword` function (email password recipe)
+*   `updateUser` function (passwordless recipe)
+*   Social login (if email from provider has changed)
 
-## Migration of user data when accounts are linked
-When two accounts are linked the primary user ID of the non primary user changes.
+If the update violates account linking rules, the operation fails:
 
-For example, if we have User A with with primary user ID `p1` and user B, which is a non primary user, and has a user ID of `p2`, and we link them, then the primary user ID of User B will be changed to `p1`. 
+*   Function calls return a status indicating the update was impossible.
+*   Social login API calls return a status prompting the user to contact support.
+:::
 
-This has an effect that if the user logs in with login method from User B, the `session.getUserId()` will return `p1`. If there was any older data associated with User B (against user ID `p2`), in your database, that data will essentially be "lost".
+### User data changes during account linking
+
+When two accounts link, the primary user ID of the non primary user changes.
+For example, if User A has a primary user ID `p1` and user B, which is a non primary user, has a user ID of `p2`, and they link, then the primary user ID of User B changes to `p1`.
+
+This has an effect that if the user logs in with login method from User B, the `session.getUserId()` returns `p1`.
+If there was any older data associated with User B (against user ID `p2`), in your database, that data essentially becomes "lost".
 
 To prevent this scenario, you should:
-- Make sure that you return `false` for `shouldAutomaticallyLink` boolean in the `shouldDoAutomaticAccountLinking` function implementation if there exists a `recipeUserId` in the `newAccountInfo` object, and if you have some information related to that user ID in your own database. This can be seen in the [code snippet above](#enabling-automatic-account-linking).
-
-- If you do not want to return `false` in this case, and want the accounts to be linked, then make sure to implement the `onAccountLinked` callback:
-
+- Make sure that you return `false` for `shouldAutomaticallyLink` boolean in the `shouldDoAutomaticAccountLinking` function implementation if there exists a `recipeUserId` in the `newAccountInfo` object, and if you have some information related to that user ID in your own database.
+This appears in the [code snippet above](#enabling-automatic-account-linking).
+- If you do not want to return `false` in this case, and want the accounts to link, then make sure to implement the `onAccountLinked` callback:
+<br />
     ```tsx
-    import supertokens, { User, RecipeUserId } from "supertokens-node";
+    import supertokens, { User, RecipeUserId } from "supertokens-node"
     import AccountLinking from "supertokens-node/recipe/accountlinking";
     import { AccountInfoWithRecipeId, RecipeLevelUser } from "supertokens-node/recipe/accountlinking/types";
     import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
@@ -239,13 +274,17 @@ To prevent this scenario, you should:
     ```
 
 :::caution
-If your logic in `onAccountLinked` throws an error, then it will not be called again, and will still have resulted in the accounts being linked. However, the end user would see an error on the UI as the API would return a `500` status code. They can retry the login action and will be logged into the primary user's account as expected. 
+If your logic in `onAccountLinked` throws an error, then it is not called again, and still results in linking the accounts. However, the end user would see an error on the UI as the API returns a `500` status code. They can retry the login action and log into the primary user's account as expected. 
 :::
 
-## Support status codes
-The following is a list of support status codes that the end user might see during their interaction with the login UI (as a general error message in the pre-built UI).
+### Error status codes
 
-### ERR_CODE_001 
+The following is a list of error status codes that the end user might see during their interaction with the login UI (as a general error message in the pre-built UI).
+
+<Accordion px="4">
+
+## `ERR_CODE_001` 
+
 - This can happen during creating a password reset code in the email password flow:
     - API path and method: `/user/password/reset/token POST` 
     - Output JSON:
@@ -260,15 +299,16 @@ The following is a list of support status codes that the end user might see duri
 
     <img src="/img/account-linking/err_001.png" alt="pre-built UI screenshot showing error message for ERR_CODE_001." style={{ height: "400px" }}/>
 
-- Below is the scenario for when this status is returned:
+- Below is the scenario for when this status returns:
     
-    A malicious user, User A, which is a primary user, has login methods with email `e1` (social login) and email `e1` (`emailpassword` login). If user A changes their `emailpassword` email to `e2` (which is now in unverified state), and the real user of `e2` (the victim) tries to sign up via email password, they will see a message saying that the email already exists. The victim may then try to do a password reset (thinking they had previously signed up). If we allow this to happen, and the victim resets the password (since they are the real owner of the email), then they will be able to login to the account, and the attacker can spy on what the user is doing via their third party login method.
+A malicious user, User A, which is a primary user, has login methods with email `e1` (social login) and email `e1` (`emailpassword` login). If user A changes their `emailpassword` email to `e2` (which is in unverified state), and the real user of `e2` (the victim) tries to sign up via email password, they see a message saying that the email already exists. The victim may then try to do a password reset (thinking they had previously signed up). If this happens, and the victim resets the password (since they are the real owner of the email), then they can login to the account, and the attacker can spy on what the user is doing via their third party login method.
 
-    To prevent this scenario, we enforce that the password link is only generated if the primary user has at least one login method that has the input email ID and is verified, or if not, we check that the primary user has no other login method with a different email, or phone number. If these cases are not satisfied, then we return the error code `ERR_CODE_001`.
+To prevent this scenario, enforcement ensures that the password link is only generated if the primary user has at least one login method that has the input email ID and verifies it, or if not, checks that the primary user has no other login method with a different email, or phone number. If these cases are not satisfied, then the system returns the error code `ERR_CODE_001`.
 
-- To resolve this, you would have to manually verify the user's identity and check that they own each of the emails / phone numbers associated with the primary user. Once verified, you can manually mark the email from the email password account as verified, and then ask them to go through the password reset flow once again. If they do not own each of the emails / phone numbers associated with the account, you can manually unlink the login methods which they do not own, and then ask them to go through the password reset flow once again. **You can do these actions using our user management dashboard.**
+- To resolve this, you would have to manually verify the user's identity and check that they own each of the emails / phone numbers associated with the primary user. Once verified, you can manually mark the email from the email password account as verified, and then ask them to go through the password reset flow once again. If they do not own each of the emails / phone numbers associated with the account, you can manually unlink the login methods which they do not own, and then ask them to go through the password reset flow once again. **You can do these actions using the user management dashboard.**
 
-### ERR_CODE_002
+## `ERR_CODE_002`
+
 - This can happen during the passwordless recipe's create or consume code API (during sign up):
     - API path and method: `/signinup/code POST` or `/signinup/code/consume POST`
     - Output JSON:
@@ -282,18 +322,20 @@ The following is a list of support status codes that the end user might see duri
 
     <img src="/img/account-linking/err_002.png" alt="pre-built UI screenshot showing error message for ERR_CODE_002." style={{ height: "400px" }} />
 
-- Below is as example scenario for when this status is returned (one amongst many):
-    A user is trying to sign up using passwordless login method with email `e1`. There exists an email password login method with `e1`, which is unverified (owned by an attacker). If we allow the passwordless sign up, and then the attacker initiates the email verification flow for the email password method, the real user might click on the verification email (since they just signed up, they do not get suspicious), and then the attacker's login method is linked to the passwordless login method. This way, the attacker now has access to the user's account.
+- Below is an example scenario for when this status returns (one amongst many):
+A user is trying to sign up using passwordless login method with email `e1`. There exists an email password login method with `e1`, which remains unverified (owned by an attacker). If this scenario occurs, and then the attacker initiates the email verification flow for the email password method, the real user might click on the verification email (since they signed up, they do not get suspicious), and then the attacker's login method links to the passwordless login method. This way, the attacker gains access to the user's account.
 
-    To prevent this, we do not allow sign up with passwordless login in case there exists another account with the same email and is unverified.
+    To prevent this, sign up with passwordless login is not allowed in case there exists another account with the same email and remains unverified.
 
-- To resolve this issue, you should ask the user to try another login method (which already has their email), or then mark their email as verified in the other account that has the same email, before asking them to retry passwordless login. **You can do these actions using our user management dashboard.**
+- To resolve this issue, you should ask the user to try another login method (which already has their email), or then mark their email as verified in the other account that has the same email, before asking them to retry passwordless login. **You can do these actions using the user management dashboard.**
 
 
-### ERR_CODE_003
-This used to be an error code which is no longer valid and can be ignored.
+## `ERR_CODE_003`
 
-### ERR_CODE_004
+This used to be an error code which is no longer valid and you can ignore it.
+
+## `ERR_CODE_004`
+  
 - This can happen during the third party recipe's `/signinup` API (during sign in):
     - API path and method: `/signinup POST`
     - Output JSON:
@@ -306,12 +348,13 @@ This used to be an error code which is no longer valid and can be ignored.
     - The pre-built UI on the frontend displays this error in the following way:
     <img src="/img/account-linking/err_004.png" alt="Pre-built UI screenshot showing error for message ERR_CODE_004." style={{ height: "400px" }}/>
 
-- Below is as example scenario for when this status is returned (one amongst many):
-    There exists a `thirdparty` user with email `e1`, sign in with Google (owned by the victim, and the email is verified). There exists another `thirdparty` login method with email, `e2` (owned by an attacker), let's say it's login with GitHub. The attacker then goes to their GitHub and changes their email to `e1` (which is in unverified state). The next time the attacker tries to login, via GitHub, they will see this error code. We prevent login, because if we didn't, then the attacker might send an email verification link to `e1`, and if the victim clicks on it, then the attacker's account will be linked to the victim's account.
+- Below is an example scenario for when this status returns (one amongst many):
+There exists a `thirdparty` user with email `e1`, sign in with Google (owned by the victim, and the email is verified). There exists another `thirdparty` login method with email, `e2` (owned by an attacker), such as login with GitHub. The attacker then goes to their GitHub and changes their email to `e1` (which is in unverified state). The next time the attacker tries to login, via GitHub, they see this error code. Login is prevented, because if it wasn't, then the attacker might send an email verification link to `e1`, and if the victim clicks on it, then the attacker's account will link to the victim's account.
 
-- To resolve this issue, you can delete the login method that has the unverified email, or if manually mark the unverified account as verified (if you confirm the identity of its owner). **You can do these actions using our user management dashboard.**
+- To resolve this issue, you can delete the login method that has the unverified email, or if manually mark the unverified account as verified (if you confirm the identity of its owner). **You can do these actions using the user management dashboard.**
 
-### ERR_CODE_005
+## `ERR_CODE_005`
+
 - This can happen during the third party recipe's `signinup` API (during sign in):
     - API path and method: `/signinup POST`
     - Output JSON:
@@ -324,12 +367,13 @@ This used to be an error code which is no longer valid and can be ignored.
     - The pre-built UI on the frontend displays this error in the following way:
     <img src="/img/account-linking/err_005.png" alt="Pre-built UI screenshot showing error message for ERR_CODE_005." style={{ height: "400px" }}/>
 
-- Below is as example scenario for when this status is returned (one amongst many):
-    There exists a primary, third party user with email `e1`, sign in with Google. There exists another email password user with email `e2`, which is a primary user. Now, if the user changes their email on Google to `e2`, and then try logging in via Google, they will see this error code. We do this because if we didn't, then it would result in two primary users having the same email, which violates one of the account linking rules.
+- Below is as example scenario for when this status returns (one amongst many):
+There exists a primary, third party user with email `e1`, sign in with Google. There exists another email password user with email `e2`, which is a primary user. If the user changes their email on Google to `e2`, and then try logging in via Google, they see this error code. This occurs because if it wasn't, then it would result in two primary users having the same email, which violates one of the account linking rules.
 
-- To resolve this issue, you can make one of the primary users as non primary (this can be done by using the unlink button against the login method on our user management dashboard). Once the user is not a primary user, you can ask the user to re-login with that method, and it should auto link that account with the existing primary user.
+- To resolve this issue, you can make one of the primary users as non primary (use the unlink button against the login method on the user management dashboard). Once the user is not a primary user, you can ask the user to re-login with that method, and it should auto link that account with the existing primary user.
 
-### ERR_CODE_006
+## `ERR_CODE_006`
+
 - This can happen during the third party recipe's `signinup` API (during sign up):
     - API path and method: `/signinup POST`
     - Output JSON:
@@ -342,14 +386,15 @@ This used to be an error code which is no longer valid and can be ignored.
     - The pre-built UI on the frontend displays this error in the following way:
     <img src="/img/account-linking/err_006.png" alt="Pre-built UI screenshot showing error message for ERR_CODE_006." style={{ height: "400px" }}/>
 
-- Below is as example scenario for when this status is returned (one amongst many):
-    A user is trying to sign up using third party login method with email `e1`. There exists an email password login method with `e1`, which is unverified (owned by an attacker). If we allow the third party sign up, and then the attacker initiates the email verification flow for the email password method, the real user might click on the verification email (since they just signed up, they do not get suspicious), and then the attacker's login method is linked to the third party login method. This way, the attacker now has access to the user's account.
+- Below is as example scenario for when this status returns (one amongst many):
+A user is trying to sign up using third party login method with email `e1`. There exists an email password login method with `e1`, which remains unverified (owned by an attacker). If the third party sign up is allowed, and then the attacker initiates the email verification flow for the email password method, the real user might click on the verification email (since they signed up, they do not get suspicious), and then the attacker's login method links to the third party login method. This way, the attacker has access to the user's account.
 
-    To prevent this, we do not allow sign up with third party login in case there exists another account with the same email and is unverified.
+    To prevent this, sign up with third party login is not allowed in case there exists another account with the same email and remains unverified.
 
-- To resolve this issue, you should ask the user to try another login method (which already has their email), or then manually mark their email as verified in the other account that has the same email, before asking them to retry third party login. **You can do these actions using our user management dashboard.**
+- To resolve this issue, you should ask the user to try another login method (which already has their email), or then manually mark their email as verified in the other account that has the same email, before asking them to retry third party login. **You can do these actions using the user management dashboard.**
 
-### ERR_CODE_007
+## `ERR_CODE_007`
+
 - This can happen during the email password sign up API:
     - API path and method: `/signup POST`
     - Output JSON:
@@ -362,12 +407,13 @@ This used to be an error code which is no longer valid and can be ignored.
     - The pre-built UI on the frontend displays this error in the following way:
     <img src="/img/account-linking/err_007.png" alt="Pre-built UI screenshot showing error message for ERR_CODE_007." style={{ height: "400px" }}/>
 
-- Below is as example scenario for when this status is returned (one amongst many):
-    There exists a primary, social login account with email `e1`, sign in with Google. Now an attacker tries to sign up with email password with email `e1`. If we allow this, an email verification email will be sent to the victim, and they may click it since they had previously signed up with Google. This will result in the attacker's account being linked to the victim's account.
+- Below is as example scenario for when this status returns (one amongst many):
+There exists a primary, social login account with email `e1`, sign in with Google. If an attacker tries to sign up with email password with email `e1`, the system sends an email verification email to the victim, and they may click it since they had previously signed up with Google. This links the attacker's account to the victim's account.
 
 - To resolve this issue, you can ask the user to try and login, or go through the reset password flow.
 
-### ERR_CODE_008
+## `ERR_CODE_008`
+
 - This can happen during the email password sign in API:
     - API path and method: `/signin POST`
     - Output JSON:
@@ -380,12 +426,13 @@ This used to be an error code which is no longer valid and can be ignored.
     - The pre-built UI on the frontend displays this error in the following way:
     <img src="/img/account-linking/err_008.png" alt="Pre-built UI screenshot showing error message for ERR_CODE_008." style={{ height: "400px" }}/>
 
-- Below is as example scenario for when this status is returned (one amongst many):
-    There exists a primary, social login account with email `e1`, sign in with Google. There also exists an email password account (owned by the attacker) that is unverified with the same email `e1` (this is not a primary user). Now if the attacker tries to sign in with email password, they will see this error. We do this because if we didn't, then the attacker might send an email verification email on sign in, and the actual user may click on it (since they had previously signed up). Upon verifying that account, the attacker's account will be linked to the victim's account.
+- Below is as example scenario for when this status returns (one amongst many):
+There exists a primary, social login account with email `e1`, sign in with Google. There also exists an email password account (owned by the attacker) that remains unverified with the same email `e1` (this is not a primary user). If the attacker tries to sign in with email password, they see this error. This occurs because if it wasn't, then the attacker might send an email verification email on sign in, and the actual user may click on it (since they had previously signed up). Upon verifying that account, the system links the attacker's account to the victim's account.
 
 - To resolve this issue, you can ask the user to try the reset password flow.
 
-### ERR_CODE_014
+## `ERR_CODE_014`
+
 - This can happen when adding a password to an existing session user:
     - API Path is `/signup POST`.
     - Output JSON:
@@ -396,13 +443,14 @@ This used to be an error code which is no longer valid and can be ignored.
         }
         ```
 - An example scenario of when in the following scenario:
-    - Let's say that the app is configured to not have automatic account linking during the first factor.
+- Let's say that the app configures to not have automatic account linking during the first factor.
     - A user creates an email password account with email `e1`, verifies it, and links social login account to it with email `e2`.
-    - The user logs out, and then creates a social login account with email `e1`. Then, they are asked to add a password to this account. Since an email password account with `e1` already exists, SuperTokens will try and link that to this new account, but fail, since the email password account with `e1` is already a primary user.
+- The user logs out, and then creates a social login account with email `e1`. Then, they receive a request to add a password to this account. Since an email password account with `e1` already exists, SuperTokens tries and links that to this new account, but fails, since the email password account with `e1` is already a primary user.
 
-- To resolve this, we recommend that manually link the `e1` social login account with the `e1` email password account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
+- To resolve this, it is recommended to manually link the `e1` social login account with the `e1` email password account. Alternatively, enable automatic account linking for first factor to prevent the above scenario.
 
-### ERR_CODE_015
+## `ERR_CODE_015`
+
 - This can happen when adding a password to an existing session user:
     - API Path is `/signup POST`.
     - Output JSON:
@@ -415,12 +463,13 @@ This used to be an error code which is no longer valid and can be ignored.
 - An example scenario of when in the following scenario:
     - A user creates a social login account with email `e1` which becomes a primary user.
     - The user logs out, and creates another social login account with email `e2`, which also becomes a primary user.
-    - The user is asked to add a password for the new account with an option to also specify an email with it (this is strange, but theoretically possible). They now enter the email `e1` for the email password account.
-    - This will cause this type of error since the linking of the new social login and email account will fail since there already exists another primary user with the same (`e1`) email.
+- The user receives a request to add a password for the new account with an option to also specify an email with it (this is strange, but theoretically possible). They enter the email `e1` for the email password account.
+- This causes this type of error since the linking of the new social login and email account fails since there already exists another primary user with the same (`e1`) email.
 
-- To resolve this, we recommend not allowing users to specify an email when asking them to add a password for their account.
+- To resolve this, it is recommended not allowing users to specify an email when asking them to add a password for their account.
 
-### ERR_CODE_016
+## `ERR_CODE_016`
+
 - This can happen when adding a password to an existing session user:
     - API Path is `/signup POST`.
     - Output JSON:
@@ -433,11 +482,12 @@ This used to be an error code which is no longer valid and can be ignored.
 - An example scenario of when in the following scenario:
     - Let's say that the app is configured to not have automatic account linking during the first factor.
     - A user signs up with a social login account using Google with email `e1`, and they add another social account, with Facebook, with the same email.
-    - The user logs out and creates another social login account with email `e1` (say GitHub), and then tries and adds a password to this account with email `e1`. Here, SuperTokens will try and make the GitHub login a primary user, but fail, since the email `e1` is already a primary user (with Google login). 
+    - The user logs out and creates another social login account with email `e1` (say GitHub), and then tries and adds a password to this account with email `e1`. Here, SuperTokens tries and makes the GitHub login a primary user, but fails, since the email `e1` is already a primary user (with Google login). 
 
-- To resolve this, we recommend that manually link the `e1` GitHub social login account with the `e1` Google social login account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
+- To resolve this, it is recommended that you manually link the `e1` GitHub social login account with the `e1` Google social login account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
 
-### ERR_CODE_020
+## `ERR_CODE_020`
+
 - This can happen during association of a third party login to an existing session's account.
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -447,10 +497,11 @@ This used to be an error code which is no longer valid and can be ignored.
             "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_020)"
         }
         ```
-- This can happen when the third party account that is trying to be linked to the session's account is not verified. It could happen when you are trying to associate a social login account to a user, but that social account's email is not verified (and if the email of that account is not the same as the current session's account's email). 
+- This can happen when the third party account that is trying to link to the session's account is not verified. It could happen when you are trying to associate a social login account to a user, but that social account's email is not verified (and if the email of that account is not the same as the current session's account's email). 
 - To resolve this, you can return `shouldRequireVerification` as `false` in the `shouldDoAutomaticAccountLinking` function implementation, or you can only allow users to link social login accounts that give verified accounts.
 
-### ERR_CODE_021
+## `ERR_CODE_021`
+
 - This can happen during association of a third party login to an existing session's account.
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -460,9 +511,10 @@ This used to be an error code which is no longer valid and can be ignored.
             "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_021)"
         }
         ```
-- This can happen when the third party account that is trying to be linked to the session's account is already linked with another primary user.
+- This can happen when the third party account that is trying to link to the session's account is already linked with another primary user.
 
-### ERR_CODE_022
+## `ERR_CODE_022`
+
 - This can happen during association of a third party login to an existing session's account.
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -472,9 +524,10 @@ This used to be an error code which is no longer valid and can be ignored.
             "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_022)"
         }
         ```
-- This can happen when the third party account that is trying to be linked to the session's account has the same email as another primary user. 
+- This can happen when the third party account that is trying to link to the session's account has the same email as another primary user. 
 
-### ERR_CODE_023
+## `ERR_CODE_023`
+
 - This can happen during association of a third party login to an existing session's account.
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -484,9 +537,10 @@ This used to be an error code which is no longer valid and can be ignored.
             "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_023)"
         }
         ```
-- In order to link the third party user with the session user, we need to make sure that the session user is a primary user. However, that can fail if there exists another primary user with the same email as the session user, and in this case, this error is returned to the frontend.
+- To link the third party user with the session user, we need to make sure that the session user is a primary user. However, that can fail if there exists another primary user with the same email as the session user, and in this case, this error returns to the frontend.
 
-### ERR_CODE_024
+## `ERR_CODE_024`
+
 - This happens during third party sign in, when the user is trying to sign in with a non-primary user, and the third party provider does not verify their email, and their exists a primary user with the same email. This can also happen the other way around wherein the user is trying to sign in with the primary user (unverified email), and there exists a non-primary user with the same email. 
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -496,7 +550,23 @@ This used to be an error code which is no longer valid and can be ignored.
             "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_024)"
         }
         ```
-- This can be resolved by deleting the (non primary) user that has the same email ID, or by manually marking the email of the user as verified for the login method that they are trying to sign in with.
+- You can resolve this by deleting the (non primary) user that has the same email ID, or by manually marking the email of the user as verified for the login method that they are trying to sign in with.
 
-### Changing the error message on the frontend
-If you want to display a different message to the user, or use a different status code, you can change them on the frontend via [the language translation feature](/docs/references/user-interface/general-customization/translations).
+
+</Accordion>
+
+#### Changing the error message on the frontend
+
+If you want to display a different message to the user, or use a different status code, you can change them on the frontend via [the language translation feature](/docs/references/frontend-sdks/prebuilt-ui/translations).
+
+---
+
+## See also
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/post-authentication/account-linking/manual-account-linking" label="Manual account linking" />
+  <ReferenceCard href="/docs/post-authentication/account-linking/link-social-accounts" label="Link social accounts" />
+  <ReferenceCard href="/docs/post-authentication/account-linking/add-passwords-to-an-existing-account" label="Add passwords to account" />
+  <ReferenceCard href="/docs/post-authentication/account-linking/important-concepts" label="Important concepts" />
+  <ReferenceCard href="/docs/post-authentication/user-management/account-deduplication" label="Account deduplication" />
+</ReferenceCard.Grid>

@@ -1,0 +1,3219 @@
+---
+title: Protect backend routes
+hide_title: true
+sidebar_position: 1
+description: >-
+  Explore three session verification methods with SuperTokens: middleware,
+  function, and manual JWT verification.
+---
+
+import { AppInfoForm } from '/src/components/Forms';
+import { BackendTabs } from "/src/components/Tabs";
+import { TokensCallout } from "/src/components";
+import { NodeFrameworksCard, PythonFrameworksCard, GoFrameworksCard } from "/src/components/Cards";
+
+import SessionObject from "./_blocks/session-object.mdx";
+
+
+# Protect API routes
+
+## Overview
+
+You can choose between three different methods to check for a session inside an API route handler.
+The easiest way to do it is to use the `Verify Session` middleware.
+Also, depending on your use case, you can directly fetch the session or manually verify the JWT.
+Check each method to see which one works for you.
+
+
+## Before you start
+
+<TokensCallout />
+
+
+---
+
+## Using `Verify Session`
+
+This function acts as a middleware inside your API endpoints.
+Hence, it requires that your backend framework supports the concept of middlewares.
+Besides checking for a session, it also writes responses to the client on its own, based on the session's validity and the provided configuration.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+<NodeFrameworksCard>
+<NodeFrameworksCard.Content value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+let app = express();
+
+// highlight-start
+app.post("/like-comment", verifySession(), (req: SessionRequest, res) => {
+    let userId = req.session!.getUserId();
+    // highlight-end
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import { SessionRequest } from "supertokens-node/framework/hapi";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/like-comment",
+    method: "post",
+    //highlight-start
+    options: {
+        pre: [
+            {
+                method: verifySession()
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        let userId = req.session!.getUserId();
+        //highlight-end
+        //...
+    }
+})
+```
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+
+let fastify = Fastify();
+
+//highlight-start
+fastify.post("/like-comment", {
+    preHandler: verifySession(),
+}, (req: SessionRequest, res) => {
+    let userId = req.session!.getUserId();
+    //highlight-end
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEventV2 } from "supertokens-node/framework/awsLambda";
+
+async function likeComment(awsEvent: SessionEventV2) {
+    let userId = awsEvent.session!.getUserId();
+    //....
+};
+
+//highlight-next-line
+exports.handler = verifySession(likeComment);
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+
+let router = new KoaRouter();
+
+//highlight-start
+router.post("/like-comment", verifySession(), (ctx: SessionContext, next) => {
+    let userId = ctx.session!.getUserId();
+    //highlight-end
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import { SessionContext } from "supertokens-node/framework/loopback";
+
+class LikeComment {
+    //highlight-start
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/like-comment")
+    @intercept(verifySession())
+    @response(200)
+    handler() {
+        let userId = (this.ctx as SessionContext).session!.getUserId();
+        //highlight-end
+        //....
+    }
+}
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nextjs">
+
+<NodeFrameworksCard.HeaderCustomActions>
+  <NextjsRouterTypeSelect />
+</NodeFrameworksCard.HeaderCustomActions>
+
+<ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+// highlight-start
+export default async function likeComment(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession()(req, res, next);
+        },
+        req,
+        res
+    )
+
+    let userId = req.session!.getUserId();
+    // highlight-end
+    //....
+}
+```
+
+</ConditionalContent>
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withSession(request, async (err, session) => {
+        if (err) {
+            return NextResponse.json(err, { status: 500 });
+        }
+        let userId = session!.getUserId();
+        //....
+        return NextResponse.json({})
+    });
+}
+```
+
+</ConditionalContent>
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Session } from "@nestjs/common";
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard()) // For more information about this guard please read our NestJS guide.
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    //highlight-start
+    let userId = session.getUserId();
+
+    //highlight-end
+    //....
+    return true;
+  }
+}
+```
+</NodeFrameworksCard.Content>
+</NodeFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+<GoFrameworksCard>
+<GoFrameworksCard.Content value="HTTP">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		session.VerifySession(nil, likeCommentAPI).ServeHTTP(rw, r)
+	})
+}
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	fmt.Println(userID)
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="gin">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
+
+func main() {
+	router := gin.New()
+
+	// Wrap the API handler in session.VerifySession
+	router.POST("/likecomment", verifySession(nil), likeCommentAPI)
+}
+
+// This is a function that wraps the supertokens verification function
+// to work the gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func likeCommentAPI(c *gin.Context) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(c.Request.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	fmt.Println(userID)
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="chi">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	r.Post("/likecomment", session.VerifySession(nil, likeCommentAPI))
+}
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	fmt.Println(userID)
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="mux">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	router.HandleFunc("/likecomment", session.VerifySession(nil, likeCommentAPI)).Methods(http.MethodPost)
+}
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	fmt.Println(userID)
+}
+```
+
+</GoFrameworksCard.Content>
+</GoFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+<PythonFrameworksCard>
+<PythonFrameworksCard.Content value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+
+# highlight-start
+@app.post('/like_comment') # type: ignore
+async def like_comment(session: SessionContainer = Depends(verify_session())):
+    user_id = session.get_user_id()
+    # highlight-end
+
+    print(user_id)
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from flask import g
+
+# highlight-start
+@app.route('/update-jwt', methods=['POST']) # type: ignore
+@verify_session()
+def like_comment():
+    session: SessionContainer = g.supertokens # type: ignore
+
+    user_id = session.get_user_id()
+    # highlight-end
+
+    print(user_id)
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.session import SessionContainer
+
+# highlight-start
+@verify_session()
+async def like_comment(request: HttpRequest):
+    session: SessionContainer = request.supertokens # type: ignore
+
+    user_id = session.get_user_id()
+    # highlight-end
+    
+    print(user_id)
+```
+
+</PythonFrameworksCard.Content>
+</PythonFrameworksCard>
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+
+
+<Accordion>
+
+## The `Session` object
+
+<SessionObject />
+
+</Accordion>
+
+
+### Optional session verification
+
+To make an API endpoint accessible even if there is no session update the middleware call to mark the session as not required.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+<NodeFrameworksCard>
+<NodeFrameworksCard.Content value="express">
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+let app = express();
+
+app.post("/like-comment", 
+    // highlight-next-line
+    verifySession({sessionRequired: false}), 
+    (req: SessionRequest, res) => {
+        if (req.session !== undefined) {
+            let userId = req.session.getUserId();
+        } else {
+            // user is not logged in...
+        }
+    }
+);
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import { SessionRequest } from "supertokens-node/framework/hapi";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/like-comment",
+    method: "post",
+    options: {
+        pre: [
+            {
+                // highlight-next-line
+                method: verifySession({ sessionRequired: false })
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        if (req.session !== undefined) {
+            let userId = req.session.getUserId();
+        } else {
+            // user is not logged in...
+        }
+    }
+})
+```
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+
+let fastify = Fastify();
+
+fastify.post("/like-comment", {
+    // highlight-next-line
+    preHandler: verifySession({ sessionRequired: false }),
+}, (req: SessionRequest, res) => {
+    if (req.session !== undefined) {
+        let userId = req.session.getUserId();
+    } else {
+        // user is not logged in...
+    }
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEventV2 } from "supertokens-node/framework/awsLambda";
+
+async function likeComment(awsEvent: SessionEventV2) {
+    if (awsEvent.session !== undefined) {
+        let userId = awsEvent.session.getUserId();
+    } else {
+        // user is not logged in...
+    }
+};
+
+// highlight-next-line
+exports.handler = verifySession(likeComment, { sessionRequired: false });
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import { SessionContext } from "supertokens-node/framework/koa";
+
+let router = new KoaRouter();
+
+router.post("/like-comment",
+    // highlight-next-line
+    verifySession({ sessionRequired: false }),
+    (ctx: SessionContext, next) => {
+        if (ctx.session !== undefined) {
+            let userId = ctx.session.getUserId();
+        } else {
+            // user is not logged in...
+        }
+    }
+);
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import { SessionContext } from "supertokens-node/framework/loopback";
+
+class LikeComment {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/like-comment")
+    // highlight-next-line
+    @intercept(verifySession({ sessionRequired: false }))
+    @response(200)
+    handler() {
+        let session = (this.ctx as SessionContext).session;
+        if (session !== undefined) {
+            let userId = session.getUserId();
+        } else {
+            // user is not logged in...
+        }
+    }
+}
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nextjs">
+
+<NodeFrameworksCard.HeaderCustomActions>
+  <NextjsRouterTypeSelect />
+</NodeFrameworksCard.HeaderCustomActions>
+
+<ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+// highlight-start
+export default async function likeComment(req: any, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({ sessionRequired: false })(req, res, next);
+        },
+        req,
+        res
+    )
+
+    let session = (req as SessionRequest).session;
+
+    if (session !== undefined) {
+        let userId = session.getUserId();
+        // session exists
+    } else {
+        // session doesn't exist
+    }
+    // highlight-end
+    //....
+}
+```
+
+</ConditionalContent>
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withSession(request, async (err, session) => {
+        if (err) {
+            return NextResponse.json(err, { status: 500 });
+        }
+
+        if (session !== undefined) {
+            let userId = session.getUserId();
+            // session exists
+        } else {
+            // session doesn't exist
+        }
+        //....
+        return NextResponse.json({});
+    },
+    { sessionRequired: false });
+}
+```
+
+</ConditionalContent>
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Session } from "@nestjs/common";
+import { SessionContainer } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { OptionalAuthGuard } from './auth/optionalAuth.guard';
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new OptionalAuthGuard()) // For more information about this guard please read our NestJS guide.
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    //highlight-start
+    if (session !== undefined) {
+        let userId = session.getUserId();
+        // session exists
+    } else {
+        // session doesn't exist
+    }
+
+    //highlight-end
+    //....
+    return true;
+  }
+}
+```
+</NodeFrameworksCard.Content>
+</NodeFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+<GoFrameworksCard>
+<GoFrameworksCard.Content value="HTTP">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
+
+func main() {
+
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Wrap the API handler in session.VerifySession
+		sessionRequired := false
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			//highlight-next-line
+			SessionRequired: &sessionRequired,
+		}, likeCommentAPI).ServeHTTP(rw, r)
+	})
+}
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	fmt.Println(userID)
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="gin">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
+
+func main() {
+	router := gin.New()
+
+	// Wrap the API handler in session.VerifySession
+	sessionRequired := false
+	router.POST("/likecomment", verifySession(&sessmodels.VerifySessionOptions{
+		//highlight-next-line
+		SessionRequired: &sessionRequired,
+	}), likeCommentAPI)
+}
+
+// This is a function that wraps the supertokens verification function
+// to work the gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func likeCommentAPI(c *gin.Context) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(c.Request.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	fmt.Println(userID)
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="chi">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	sessionRequired := false
+	r.Post("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		//highlight-next-line
+		SessionRequired: &sessionRequired,
+	}, likeCommentAPI))
+}
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	fmt.Println(userID)
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="mux">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	sessionRequired := false
+	router.HandleFunc("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		//highlight-next-line
+		SessionRequired: &sessionRequired,
+	}, likeCommentAPI)).Methods(http.MethodPost)
+}
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	// retrieve the session object as shown below
+	sessionContainer := session.GetSessionFromRequestContext(r.Context())
+
+	userID := sessionContainer.GetUserID()
+
+	fmt.Println(userID)
+}
+```
+
+</GoFrameworksCard.Content>
+</GoFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+<PythonFrameworksCard>
+<PythonFrameworksCard.Content value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from fastapi import Depends
+from supertokens_python.recipe.session import SessionContainer
+
+# highlight-start
+@app.post('/like_comment') # type: ignore
+async def like_comment(session: SessionContainer = Depends(verify_session(session_required=False))):
+    if session is not None:
+        user_id = session.get_user_id()
+        print(user_id) # TODO..
+    else:
+        pass # user is not logged in
+    # highlight-end
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.session import SessionContainer
+from typing import Union
+from flask import g
+
+# highlight-start
+@app.route('/update-jwt', methods=['POST']) # type: ignore
+@verify_session(session_required=False)
+def like_comment():
+    session: Union[SessionContainer, None] = g.supertokens # type: ignore
+
+    if session is not None:
+        user_id = session.get_user_id()
+        print(user_id) # TODO..
+    else:
+        pass # user is not logged in
+    # highlight-end
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.session import SessionContainer
+from typing import Union
+
+# highlight-start
+@verify_session(session_required=False)
+async def like_comment(request: HttpRequest):
+    session: Union[None, SessionContainer] = request.supertokens # type: ignore
+    
+    if session is not None:
+        user_id = session.get_user_id()
+        print(user_id) # TODO..
+    else:
+        pass # user is not logged in
+    # highlight-end
+```
+
+</PythonFrameworksCard.Content>
+</PythonFrameworksCard>
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+### Verify the claims of a session
+
+To check if there are certain claims in the session as part of the verification process you can override the session validators.
+For example, you may want to check that the session has the `admin` role claim for certain APIs, or that the user has completed MFA, multi-factor authentication.
+You can achieve this by including the user role claim validator in the middleware `global validators` option.
+The `global validators` represent other validators that apply to all API routes by default.
+This may include things like a validator that ensures that the user's email is verified.
+
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+<NodeFrameworksCard>
+<NodeFrameworksCard.Content value="express">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import express from "express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let app = express();
+
+app.post(
+    "/update-blog",
+    verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ],
+    }),
+    async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user is an admin.
+    }
+);
+```
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
+import {SessionRequest} from "supertokens-node/framework/hapi";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/update-blog",
+    method: "post",
+    options: {
+        pre: [
+            {
+                method: verifySession({
+                    overrideGlobalClaimValidators: async (globalValidators) => [
+                        ...globalValidators,
+                        UserRoles.UserRoleClaim.validators.includes("admin"),
+                        // UserRoles.PermissionClaim.validators.includes("edit")
+                    ],
+                }),
+            },
+        ],
+    },
+    handler: async (req: SessionRequest, res) => {
+        // All validator checks have passed and the user is an admin.
+    }
+})
+```
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
+import { SessionRequest } from "supertokens-node/framework/fastify";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let fastify = Fastify();
+
+fastify.post("/update-blog", {
+    preHandler: verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ],
+    }),
+}, async (req: SessionRequest, res) => {
+    // All validator checks have passed and the user is an admin.
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="awsLambda">
+
+```tsx
+import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+async function updateBlog(awsEvent: SessionEvent) {
+    // All validator checks have passed and the user is an admin.
+};
+
+exports.handler = verifySession(updateBlog, {
+    overrideGlobalClaimValidators: async (globalValidators) => ([
+        ...globalValidators, 
+        UserRoles.UserRoleClaim.validators.includes("admin"),
+        // UserRoles.PermissionClaim.validators.includes("edit")
+    ])
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import { verifySession } from "supertokens-node/recipe/session/framework/koa";
+import {SessionContext} from "supertokens-node/framework/koa";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let router = new KoaRouter();
+
+router.post("/update-blog", verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => ([
+            ...globalValidators, 
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ])
+    }), async (ctx: SessionContext, next) => {
+    // All validator checks have passed and the user is an admin.
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="loopback">
+
+```tsx
+import { inject, intercept } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import { verifySession } from "supertokens-node/recipe/session/framework/loopback";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+class SetRole {
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/update-blog")
+    @intercept(verifySession({
+        overrideGlobalClaimValidators: async (globalValidators) => ([
+            ...globalValidators, 
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ])
+    }))
+    @response(200)
+    async handler() {
+        // All validator checks have passed and the user is an admin.
+    }
+}
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nextjs">
+
+<NodeFrameworksCard.HeaderCustomActions>
+  <NextjsRouterTypeSelect />
+</NodeFrameworksCard.HeaderCustomActions>
+
+<ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+// highlight-start
+export default async function setRole(req: SessionRequest, res: any) {
+    await superTokensNextWrapper(
+        async (next) => {
+            await verifySession({
+                overrideGlobalClaimValidators: async (globalValidators) => ([
+                    ...globalValidators, 
+                    UserRoles.UserRoleClaim.validators.includes("admin"),
+                    // UserRoles.PermissionClaim.validators.includes("edit")
+                ])
+            })(req, res, next);
+        },
+        req,
+        res
+    )
+    // All validator checks have passed and the user is an admin.
+}
+```
+
+</ConditionalContent>
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+import UserRoles from "supertokens-node/recipe/userroles";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withSession(request, async (err, session) => {
+        if (err) {
+            return NextResponse.json(err, { status: 500 });
+        }
+        // All validator checks have passed and the user is an admin.
+        return NextResponse.json({})
+    },
+    {
+        // highlight-start
+        overrideGlobalClaimValidators: async function (globalClaimValidators) {
+            return [...globalClaimValidators, UserRoles.UserRoleClaim.validators.includes("admin")]
+        }
+        // highlight-end
+    });
+}
+```
+
+</ConditionalContent>
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Request, Response, Session } from "@nestjs/common";
+import { SessionContainer, SessionClaimValidator } from "supertokens-node/recipe/session";
+// @ts-ignore
+import { AuthGuard } from './auth/auth.guard';
+import UserRoles from "supertokens-node/recipe/userroles";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  @UseGuards(new AuthGuard({
+    overrideGlobalClaimValidators: async (globalValidators: SessionClaimValidator[]) => ([
+        ...globalValidators, 
+        UserRoles.UserRoleClaim.validators.includes("admin"),
+        // UserRoles.PermissionClaim.validators.includes("edit")
+    ])
+  }))
+  async postExample(@Session() session: SessionContainer): Promise<boolean> {
+    // All validator checks have passed and the user is an admin.
+    return true;
+  }
+}
+```
+</NodeFrameworksCard.Content>
+
+</NodeFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+<GoFrameworksCard>
+<GoFrameworksCard.Content value="http">
+
+```go
+import (
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	_ = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		session.VerifySession(&sessmodels.VerifySessionOptions{
+			// highlight-start
+			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+				globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+				return globalClaimValidators, nil
+			},
+			// highlight-end
+		}, exampleAPI).ServeHTTP(rw, r)
+	})
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all validators have passed..
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="gin">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := gin.New()
+
+	// Wrap the API handler in session.VerifySession
+	router.POST("/likecomment", verifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}), exampleAPI)
+}
+
+// This is a function that wraps the supertokens verification function
+// to work the gin
+func verifySession(options *sessmodels.VerifySessionOptions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session.VerifySession(options, func(rw http.ResponseWriter, r *http.Request) {
+			c.Request = c.Request.WithContext(r.Context())
+			c.Next()
+		})(c.Writer, c.Request)
+		// we call Abort so that the next handler in the chain is not called, unless we call Next explicitly
+		c.Abort()
+	}
+}
+
+func exampleAPI(c *gin.Context) {
+	// TODO: session is verified and all claim validators pass.
+}
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="chi">
+
+```go
+import (
+	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	r := chi.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	r.Post("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}, exampleAPI))
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
+
+```
+
+</GoFrameworksCard.Content>
+<GoFrameworksCard.Content value="mux">
+
+```go
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	router := mux.NewRouter()
+
+	// Wrap the API handler in session.VerifySession
+	router.HandleFunc("/likecomment", session.VerifySession(&sessmodels.VerifySessionOptions{
+		// highlight-start
+		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+		},
+		// highlight-end
+	}, exampleAPI)).Methods(http.MethodPost)
+}
+
+func exampleAPI(w http.ResponseWriter, r *http.Request) {
+	// TODO: session is verified and all claim validators pass.
+}
+```
+
+</GoFrameworksCard.Content>
+</GoFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+<PythonFrameworksCard>
+<PythonFrameworksCard.Content value="fastapi">
+
+```python
+from supertokens_python.recipe.session.framework.fastapi import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+from supertokens_python.recipe.session import SessionContainer
+from fastapi import Depends
+
+@app.post('/like_comment')  # type: ignore
+async def like_comment(session: SessionContainer = Depends(
+        verify_session(
+            # highlight-start
+            # We add the UserRoleClaim's includes validator
+            override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+            [UserRoleClaim.validators.includes("admin")]
+            # highlight-end
+        )
+)):
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="flask">
+
+```python
+from supertokens_python.recipe.session.framework.flask import verify_session
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@app.route('/update-jwt', methods=['POST'])  # type: ignore
+@verify_session(
+    # highlight-start
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+    # highlight-end
+)
+def like_comment():
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="django">
+
+```python
+from supertokens_python.recipe.session.framework.django.asyncio import verify_session
+from django.http import HttpRequest
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@verify_session(
+    # highlight-start
+    # We add the UserRoleClaim's includes validator
+    override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+    [UserRoleClaim.validators.includes("admin")]
+    # highlight-end
+)
+async def like_comment(request: HttpRequest):
+    # All validator checks have passed and the user has a verified email address
+    pass
+```
+
+</PythonFrameworksCard.Content>
+</PythonFrameworksCard>
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+
+:::tip Feature
+You can also [build your own custom claim validators](/docs/additional-verification/session-verification/claim-validation#using-session-claims) based on your app's requirements.
+:::
+
+---
+
+## Using `Get Session`
+
+The `Get Session` function does the same thing as the middleware, but it does not write to the client on its own.
+It throws errors that you can catch and handle.
+If these errors remain unhandled, the SuperTokens error handler catches these errors and writes to the client (like the `verifySession` middleware).
+
+You should use this function if your framework does not support middlewares or if you want additional control over error management.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+<NodeFrameworksCard>
+<NodeFrameworksCard.Content value="express">
+
+```tsx
+import express from "express";
+import Session from "supertokens-node/recipe/session";
+
+let app = express();
+
+// highlight-start
+app.post("/like-comment", async (req, res, next) => {
+    try {
+        let session = await Session.getSession(req, res);
+
+        let userId = session.getUserId();
+        // highlight-end
+        //....
+    } catch (err) {
+        next(err);
+    }
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import Session from "supertokens-node/recipe/session";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/like-comment",
+    method: "post",
+    //highlight-start
+    handler: async (req, res) => {
+        let session = await Session.getSession(req, res);
+
+        let userId = session.getUserId();
+        //highlight-end
+        //...
+    }
+})
+```
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import Session from "supertokens-node/recipe/session";
+
+let fastify = Fastify();
+
+//highlight-start
+fastify.post("/like-comment", async (req, res) => {
+    let session = await Session.getSession(req, res);
+
+    let userId = session.getUserId();
+    //highlight-end
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="awsLambda">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import { middleware } from "supertokens-node/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+
+//highlight-start
+async function likeComment(awsEvent: SessionEvent) {
+    let session = await Session.getSession(awsEvent, awsEvent);
+
+    let userId = session.getUserId();
+    //highlight-end
+    //....
+};
+
+//highlight-next-line
+exports.handler = middleware(likeComment);
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import Session from "supertokens-node/recipe/session";
+
+let router = new KoaRouter();
+
+//highlight-start
+router.post("/like-comment", async (ctx, next) => {
+    let session = await Session.getSession(ctx, ctx);
+
+    let userId = session.getUserId();
+    //highlight-end
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="loopback">
+
+```tsx
+import { inject } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import Session from "supertokens-node/recipe/session";
+
+class LikeComment {
+    //highlight-start
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/like-comment")
+    @response(200)
+    async handler() {
+        let session = await Session.getSession(this.ctx, this.ctx);
+
+        let userId = session.getUserId();
+        //highlight-end
+        //....
+    }
+}
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nextjs">
+
+<NodeFrameworksCard.HeaderCustomActions>
+  <NextjsRouterTypeSelect />
+</NodeFrameworksCard.HeaderCustomActions>
+
+<ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import Session from "supertokens-node/recipe/session";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+// highlight-start
+export default async function likeComment(req: SessionRequest, res: any) {
+    let session = await superTokensNextWrapper(
+        async (next) => {
+            return await Session.getSession(req, res);
+        },
+        req,
+        res
+    )
+
+    let userId = session.getUserId();
+    // highlight-end
+    //....
+}
+```
+
+</ConditionalContent>
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withPreParsedRequestResponse } from "supertokens-node/nextjs";
+import { CollectingResponse, PreParsedRequest } from "supertokens-node/framework/custom";
+import Session from "supertokens-node/recipe/session";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withPreParsedRequestResponse(request, async (baseRequest: PreParsedRequest, baseResponse: CollectingResponse) => {
+        const session = await Session.getSession(baseRequest, baseResponse);
+        let userId = session.getUserId();
+        return NextResponse.json({});
+    });
+}
+```
+
+</ConditionalContent>
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Req, Res } from "@nestjs/common";
+import type { Request, Response } from "express";
+import Session from "supertokens-node/recipe/session";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  async postExample(@Req() req: Request, @Res({passthrough: true}) res: Response): Promise<boolean> {
+    //highlight-start
+    // This should be done inside a parameter decorator, for more information please read our NestJS guide.
+    const session = await Session.getSession(req, res);
+
+    const userId = session.getUserId();
+    //highlight-end
+    //....
+    return true;
+  }
+}
+```
+</NodeFrameworksCard.Content>
+</NodeFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	sessionContainer, err := session.GetSession(r, w, nil)
+
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			// TODO: send 500 to client
+		}
+		return
+	}
+
+	userID := sessionContainer.GetUserID()
+
+	// TODO: API logic...
+	fmt.Println(userID)
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+<PythonFrameworksCard>
+<PythonFrameworksCard.Content value="fastapi">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_session
+from fastapi.requests import Request
+
+@app.post('/like-comment') # type: ignore
+async def like_comment(request: Request):
+    # highlight-next-line
+    session = await get_session(request)
+
+    if session is None:
+        raise Exception("Should never come here")
+
+    user_id = session.get_user_id()
+
+    print(user_id)
+    # TODO
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="flask">
+
+```python
+from supertokens_python.recipe.session.syncio import get_session
+from flask.wrappers import Request
+
+@app.route('/like-comment', methods=['POST']) # type: ignore
+def like_comment(request: Request):
+    # highlight-next-line
+    session = get_session(request)
+
+    if session is None:
+        raise Exception("Should never come here")
+
+    user_id = session.get_user_id()
+
+    print(user_id) 
+    # TODO
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="django">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_session
+from django.http import HttpRequest
+
+async def like_comment(request: HttpRequest):
+    # highlight-next-line
+    session = await get_session(request)
+    if session is None:
+        raise Exception("Should never come here")
+
+    user_id = session.get_user_id()
+
+    print(user_id) # TODO
+```
+
+</PythonFrameworksCard.Content>
+</PythonFrameworksCard>
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+<Accordion>
+
+## The `Session` object
+
+<SessionObject />
+
+</Accordion>
+
+### Optional session verification
+
+To make an API endpoint accessible even if there is no session update the middleware call to mark the session as not required.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+<NodeFrameworksCard>
+<NodeFrameworksCard.Content value="express">
+
+```tsx
+import express from "express";
+import Session from "supertokens-node/recipe/session";
+
+let app = express();
+
+app.post("/like-comment", async (req, res, next) => {
+    try {
+        let session = await Session.getSession(req, res, { sessionRequired: false })
+
+        if (session !== undefined) {
+            let userId = session.getUserId();
+        } else {
+            // user is not logged in...
+        }
+        //....
+    } catch (err) {
+        next(err);
+    }
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import Session from "supertokens-node/recipe/session";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/like-comment",
+    method: "post",
+
+    handler: async (req, res) => {
+        let session = await Session.getSession(req, res, { sessionRequired: false })
+
+        if (session !== undefined) {
+            let userId = session.getUserId();
+        } else {
+            // user is not logged in...
+        }
+
+        //...
+    }
+})
+```
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import Session from "supertokens-node/recipe/session";
+
+let fastify = Fastify();
+
+fastify.post("/like-comment", async (req, res) => {
+    let session = await Session.getSession(req, res, { sessionRequired: false })
+
+    if (session !== undefined) {
+        let userId = session.getUserId();
+    } else {
+        // user is not logged in...
+    }
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="awsLambda">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import { middleware } from "supertokens-node/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+
+async function likeComment(awsEvent: SessionEvent) {
+    let session = await Session.getSession(awsEvent, awsEvent, { sessionRequired: false })
+
+    if (session !== undefined) {
+        let userId = session.getUserId();
+    } else {
+        // user is not logged in...
+    }
+
+    //....
+};
+
+//highlight-next-line
+exports.handler = middleware(likeComment);
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import Session from "supertokens-node/recipe/session";
+
+let router = new KoaRouter();
+
+router.post("/like-comment", async (ctx, next) => {
+    let session = await Session.getSession(ctx, ctx, { sessionRequired: false })
+
+    if (session !== undefined) {
+        let userId = session.getUserId();
+    } else {
+        // user is not logged in...
+    }
+
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="loopback">
+
+```tsx
+import { inject } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import Session from "supertokens-node/recipe/session";
+
+class LikeComment {
+
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/like-comment")
+    @response(200)
+    async handler() {
+        let session = await Session.getSession(this.ctx, this.ctx, { sessionRequired: false })
+
+        if (session !== undefined) {
+            let userId = session.getUserId();
+        } else {
+            // user is not logged in...
+        }
+
+        //....
+    }
+}
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nextjs">
+
+<NodeFrameworksCard.HeaderCustomActions>
+  <NextjsRouterTypeSelect />
+</NodeFrameworksCard.HeaderCustomActions>
+
+<ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import Session from "supertokens-node/recipe/session";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+export default async function likeComment(req: SessionRequest, res: any) {
+    let session = await superTokensNextWrapper(
+        async (next) => {
+            return await Session.getSession(req, res, { sessionRequired: false });
+        },
+        req,
+        res
+    )
+
+    if (session !== undefined) {
+        let userId = session.getUserId();
+    } else {
+        // user is not logged in...
+    }
+    //....
+}
+```
+
+</ConditionalContent>
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withPreParsedRequestResponse } from "supertokens-node/nextjs";
+import { CollectingResponse, PreParsedRequest } from "supertokens-node/framework/custom";
+import Session from "supertokens-node/recipe/session";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withPreParsedRequestResponse(request, async (baseRequest: PreParsedRequest, baseResponse: CollectingResponse) => {
+        const session = await Session.getSession(baseRequest, baseResponse, { sessionRequired: false });
+        if (session !== undefined) {
+            let userId = session.getUserId();
+        } else {
+            // user is not logged in...
+        }
+        return NextResponse.json({});
+    });
+}
+```
+
+</ConditionalContent>
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Req, Res } from "@nestjs/common";
+import type { Request, Response } from "express";
+import Session from "supertokens-node/recipe/session";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  async postExample(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<boolean> {
+    //highlight-start
+    // This should be done inside a parameter decorator, for more information please read our NestJS guide.
+    const session = await Session.getSession(req, res, { sessionRequired: false })
+
+    if (session !== undefined) {
+      const userId = session.getUserId();
+    } else {
+      // user is not logged in...
+    }
+    //highlight-end
+    //....
+    return true;
+  }
+}
+```
+</NodeFrameworksCard.Content>
+</NodeFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	sessionRequired := false
+	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
+		SessionRequired: &sessionRequired,
+	})
+
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			// TODO: send 500 to client
+		}
+		return
+	}
+    if sessionContainer != nil {
+        // session exists
+	    userID := sessionContainer.GetUserID()
+        fmt.Println(userID)
+    } else {
+        // user is not logged in
+    }
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+<PythonFrameworksCard>
+<PythonFrameworksCard.Content value="fastapi">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_session
+from fastapi import Request
+
+@app.post('/like-comment') # type: ignore
+async def like_comment(request: Request):
+    # highlight-next-line
+    session = await get_session(request, session_required=False)
+
+    if session is not None:
+        user_id = session.get_user_id()
+        print(user_id) # TODO:
+    else:
+       pass # user is not logged in
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="flask">
+
+```python
+from supertokens_python.recipe.session.syncio import get_session
+from flask.wrappers import Request
+
+@app.route('/like-comment', methods=['POST']) # type: ignore
+def like_comment(request: Request):
+    # highlight-next-line
+    session = get_session(request, session_required=False)
+
+    if session is not None:
+        user_id = session.get_user_id()
+        print(user_id) # TODO..
+    else:
+        pass # user is not logged in
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="django">
+
+```python
+from django.http import HttpRequest
+from supertokens_python.recipe.session.asyncio import get_session
+
+async def like_comment(request: HttpRequest):
+    # highlight-next-line
+    session = await get_session(request, session_required=False)
+
+    if session is not None:
+        user_id = session.get_user_id()
+        print(user_id) # TODO..
+    else:
+        pass # user is not logged in
+```
+
+</PythonFrameworksCard.Content>
+</PythonFrameworksCard>
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+### Verify the claims of a session
+
+To check if there are certain claims in the session as part of the verification process you can override the session validators.
+For example, you may want to check that the session has the `admin` role claim for certain APIs, or that the user has completed MFA, multi-factor authentication.
+This can be achieved by including the user role claim validator in the middleware `global validators` option.
+The `global validators` represent other validators that apply to all API routes by default.
+This may include things like a validator that ensures that the user's email is verified.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+<NodeFrameworksCard>
+<NodeFrameworksCard.Content value="express">
+
+```tsx
+import express from "express";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let app = express();
+
+// highlight-start
+app.post("/like-comment", async (req, res, next) => {
+    try {
+        let session = await Session.getSession(req, res, {
+            overrideGlobalClaimValidators: async (globalValidators) => [
+                ...globalValidators,
+                UserRoles.UserRoleClaim.validators.includes("admin"),
+                // UserRoles.PermissionClaim.validators.includes("edit")
+            ]
+        });
+
+        let userId = session.getUserId();
+        // highlight-end
+        //....
+    } catch (err) {
+        next(err)
+    }
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="hapi">
+
+```tsx
+import Hapi from "@hapi/hapi";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let server = Hapi.server({ port: 8000 });
+
+server.route({
+    path: "/like-comment",
+    method: "post",
+    //highlight-start
+    handler: async (req, res) => {
+        let session = await Session.getSession(req, res, {
+            overrideGlobalClaimValidators: async (globalValidators) => [
+                ...globalValidators,
+                UserRoles.UserRoleClaim.validators.includes("admin"),
+                // UserRoles.PermissionClaim.validators.includes("edit")
+            ]
+        });
+
+        let userId = session.getUserId();
+        //highlight-end
+        //...
+    }
+})
+```
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="fastify">
+
+```tsx
+import Fastify from "fastify";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let fastify = Fastify();
+
+//highlight-start
+fastify.post("/like-comment", async (req, res) => {
+    let session = await Session.getSession(req, res, {
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ]
+    });
+
+    let userId = session.getUserId();
+    //highlight-end
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="awsLambda">
+
+```tsx
+import Session from "supertokens-node/recipe/session";
+import { middleware } from "supertokens-node/framework/awsLambda";
+import { SessionEvent } from "supertokens-node/framework/awsLambda";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+//highlight-start
+async function likeComment(awsEvent: SessionEvent) {
+    let session = await Session.getSession(awsEvent, awsEvent, {
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ]
+    });
+
+    let userId = session.getUserId();
+    //highlight-end
+    //....
+};
+
+//highlight-next-line
+exports.handler = middleware(likeComment);
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="koa">
+
+```tsx
+import KoaRouter from "koa-router";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+let router = new KoaRouter();
+
+//highlight-start
+router.post("/like-comment", async (ctx, next) => {
+    let session = await Session.getSession(ctx, ctx, {
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ]
+    });
+
+    let userId = session.getUserId();
+    //highlight-end
+    //....
+});
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="loopback">
+
+```tsx
+import { inject } from "@loopback/core";
+import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+class LikeComment {
+    //highlight-start
+    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
+    @post("/like-comment")
+    @response(200)
+    async handler() {
+        let session = await Session.getSession(this.ctx, this.ctx, {
+            overrideGlobalClaimValidators: async (globalValidators) => [
+                ...globalValidators,
+                UserRoles.UserRoleClaim.validators.includes("admin"),
+                // UserRoles.PermissionClaim.validators.includes("edit")
+            ]
+        });
+
+        let userId = session.getUserId();
+        //highlight-end
+        //....
+    }
+}
+```
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nextjs">
+
+<NodeFrameworksCard.HeaderCustomActions>
+  <NextjsRouterTypeSelect />
+</NodeFrameworksCard.HeaderCustomActions>
+
+<ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
+
+```tsx
+import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import Session from "supertokens-node/recipe/session";
+import { SessionRequest } from "supertokens-node/framework/express";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+// highlight-start
+export default async function likeComment(req: SessionRequest, res: any) {
+    let session = await superTokensNextWrapper(
+        async (next) => {
+            return await Session.getSession(req, res, {
+                overrideGlobalClaimValidators: async (globalValidators) => [
+                    ...globalValidators,
+                    UserRoles.UserRoleClaim.validators.includes("admin"),
+                    // UserRoles.PermissionClaim.validators.includes("edit")
+                ]
+            });
+        },
+        req,
+        res
+    )
+
+    let userId = session.getUserId();
+    // highlight-end
+    //....
+}
+```
+
+</ConditionalContent>
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
+
+```tsx
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withPreParsedRequestResponse } from "supertokens-node/nextjs";
+import { CollectingResponse, PreParsedRequest } from "supertokens-node/framework/custom";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+// @ts-ignore
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+    return withPreParsedRequestResponse(request, async (baseRequest: PreParsedRequest, baseResponse: CollectingResponse) => {
+        const session = await Session.getSession(baseRequest, baseResponse, {
+            overrideGlobalClaimValidators: async (globalValidators) => [
+                ...globalValidators,
+                UserRoles.UserRoleClaim.validators.includes("admin"),
+                // UserRoles.PermissionClaim.validators.includes("edit")
+            ]
+        });
+        let userId = session.getUserId();
+        return NextResponse.json({});
+    });
+}
+```
+
+</ConditionalContent>
+
+</NodeFrameworksCard.Content>
+<NodeFrameworksCard.Content value="nestjs">
+
+```tsx
+import { Controller, Post, UseGuards, Req, Res } from "@nestjs/common";
+import type { Request, Response } from "express";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
+@Controller()
+export class ExampleController {
+  @Post('example')
+  async postExample(@Req() req: Request, @Res({passthrough: true}) res: Response): Promise<boolean> {
+    //highlight-start
+    // This should be done inside a parameter decorator, for more information please read our NestJS guide.
+    const session = await Session.getSession(req, res, {
+        overrideGlobalClaimValidators: async (globalValidators) => [
+            ...globalValidators,
+            UserRoles.UserRoleClaim.validators.includes("admin"),
+            // UserRoles.PermissionClaim.validators.includes("edit")
+        ]
+    });
+
+    const userId = session.getUserId();
+    //highlight-end
+    //....
+    return true;
+  }
+}
+```
+</NodeFrameworksCard.Content>
+</NodeFrameworksCard>
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/claims"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/userroles/userrolesclaims"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
+	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
+        // highlight-start
+        OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
+            globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
+            return globalClaimValidators, nil
+        },
+        // highlight-end
+    })
+
+	if err != nil {
+		err = supertokens.ErrorHandler(err, r, w)
+		if err != nil {
+			// TODO: send 500 to client
+		}
+		return
+	}
+
+	userID := sessionContainer.GetUserID()
+
+	// TODO: API logic...
+	fmt.Println(userID)
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+<PythonFrameworksCard>
+<PythonFrameworksCard.Content value="fastapi">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_session
+from fastapi.requests import Request
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@app.post('/like-comment') # type: ignore
+async def like_comment(request: Request):
+    session = await get_session(request,
+        override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+        [UserRoleClaim.validators.includes("admin")])
+
+    if session is None:
+        raise Exception("Should never come here")
+
+    user_id = session.get_user_id()
+
+    print(user_id)
+    # TODO
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="flask">
+
+```python
+from supertokens_python.recipe.session.syncio import get_session
+from flask.wrappers import Request
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+@app.route('/like-comment', methods=['POST']) # type: ignore
+def like_comment(request: Request):
+    session = get_session(request,
+        override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+        [UserRoleClaim.validators.includes("admin")])
+
+    if session is None:
+        raise Exception("Should never come here")
+
+    user_id = session.get_user_id()
+
+    print(user_id) 
+    # TODO
+```
+
+</PythonFrameworksCard.Content>
+<PythonFrameworksCard.Content value="django">
+
+```python
+from supertokens_python.recipe.session.asyncio import get_session
+from django.http import HttpRequest
+from supertokens_python.recipe.userroles import UserRoleClaim
+
+async def like_comment(request: HttpRequest):
+    session = await get_session(request,
+        override_global_claim_validators=lambda global_validators, session, user_context: global_validators + \
+        [UserRoleClaim.validators.includes("admin")])
+    if session is None:
+        raise Exception("Should never come here")
+
+    user_id = session.get_user_id()
+
+    print(user_id) # TODO
+```
+
+</PythonFrameworksCard.Content>
+</PythonFrameworksCard>
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+:::tip feature
+You can also [build your own custom claim validators](/docs/additional-verification/session-verification/claim-validation#using-session-claims) based on your app's requirements.
+:::
+
+### Build your own middleware
+
+Both these functions perform session verification.
+However, `Verify Session` is a middleware that returns a reply directly to the frontend if the input access token is invalid or expired.
+On the other hand, `Get Session` is a function that returns a session object on successful verification.
+It throws an exception that you can handle if the access token expires or is invalid.
+
+Internally, `Verify Session` uses `Get Session` in the following way:
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import { VerifySessionOptions } from "supertokens-node/recipe/session/types";
+import { errorHandler } from "supertokens-node/framework/express";
+import { NextFunction, Request, Response } from "express";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+function verifySession(options?: VerifySessionOptions) {
+    return async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            (req as any).session = await Session.getSession(req, res, options);
+            next();
+        } catch (err) {
+            if (SuperTokensError.isErrorFromSuperTokens(err)) {
+                if (err.type === Session.Error.TRY_REFRESH_TOKEN) {
+                    // This means that the session exists, but the access token
+                    // has expired.
+
+                    // You can handle this in a custom way by sending a 401.
+                    // Or you can call the errorHandler middleware as shown below
+                } else if (err.type === Session.Error.UNAUTHORISED) {
+                    // This means that the session does not exist anymore.
+
+                    // You can handle this in a custom way by sending a 401.
+                    // Or you can call the errorHandler middleware as shown below
+                } else if (err.type === Session.Error.INVALID_CLAIMS) {
+                    // The user is missing some required claim. 
+                    // You can pass the missing claims to the frontend and handle it there. Send a 403 to the frontend.
+                }
+
+                // OR you can use this errorHandler which will
+                // handle all of the above errors in the default way
+                errorHandler()(err, req, res, (err) => {
+                    next(err)
+                })
+            } else {
+                next(err)
+            }
+        }
+    };
+}
+```
+
+The `errorHandler` sends a `401` reply to the frontend if the `getSession` function throws an exception indicating that the session does not exist or if the access token has expired.
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"context"
+	"net/http"
+
+	defaultErrors "errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func VerifySession(options *sessmodels.VerifySessionOptions, otherHandler http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := session.GetSession(r, w, options)
+		if err != nil {
+			if defaultErrors.As(err, &errors.TryRefreshTokenError{}) {
+				// This means that the session exists, but the access token
+				// has expired.
+
+				// You can handle this in a custom way by sending a 401.
+				// Or you can call the errorHandler middleware as shown below
+			} else if defaultErrors.As(err, &errors.UnauthorizedError{}) {
+				// This means that the session does not exist anymore.
+
+				// You can handle this in a custom way by sending a 401.
+				// Or you can call the errorHandler middleware as shown below
+			} else if defaultErrors.As(err, &errors.InvalidClaimError{}) {
+				// The user is missing some required claim.
+				// You can pass the missing claims to the frontend and handle it there. Send a 403 to the frontend.
+			}
+
+			// OR you can use this errorHandler which will
+			// handle all of the above errors in the default way
+			err = supertokens.ErrorHandler(err, r, w)
+			if err != nil {
+				// TODO: send a 500 error to the frontend
+			}
+			return
+		}
+		if session != nil {
+			ctx := context.WithValue(r.Context(), sessmodels.SessionContext, session)
+			otherHandler(w, r.WithContext(ctx))
+		} else {
+			otherHandler(w, r)
+		}
+	})
+}
+```
+
+The `SuperTokens.ErrorHandler` sends a `401` reply to the frontend if the `getSession` function throws an exception indicating that the session does not exist or if the access token has expired.
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from functools import wraps
+from typing import Any, Callable, Dict, TypeVar, Union, cast, List, Optional
+
+from supertokens_python.framework.flask.flask_request import FlaskRequest
+from supertokens_python.recipe.session.syncio import get_session
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.interfaces import SessionClaimValidator
+from supertokens_python.types import MaybeAwaitable
+from supertokens_python.recipe.session.exceptions import (
+    UnauthorisedError,
+    InvalidClaimsError,
+    TryRefreshTokenError
+)
+
+_T = TypeVar("_T", bound=Callable[..., Any])
+
+
+def verify_session(
+    session_required: bool = True,
+    anti_csrf_check: Union[bool, None] = None,
+    check_database: bool = True,
+    override_global_claim_validators: Optional[
+        Callable[
+            [List[SessionClaimValidator], SessionContainer, Dict[str, Any]],
+            MaybeAwaitable[List[SessionClaimValidator]],
+        ]
+    ] = None,
+) -> Callable[[_T], _T]:
+
+    def session_verify(f: _T) -> _T:
+        @wraps(f)
+        def wrapped_function(*args: Any, **kwargs: Any):
+            from flask import make_response, request
+
+            baseRequest = FlaskRequest(request)
+            try:
+                session = get_session(baseRequest,
+                                      session_required,
+                                      anti_csrf_check,
+                                      check_database,
+                                      override_global_claim_validators)
+            except Exception as e:
+                if isinstance(e, TryRefreshTokenError):
+                    # This means that the session exists, but the access token
+                    # has expired.
+
+                    # You can handle this in a custom way by sending a 401.
+                    # Or you can call the errorHandler middleware as shown below
+                    pass
+                if isinstance(e, UnauthorisedError):
+                    # This means that the session does not exist anymore.
+
+                    # You can handle this in a custom way by sending a 401.
+                    # Or you can call the errorHandler middleware as shown below
+                    pass
+                if isinstance(e, InvalidClaimsError):
+                    # The user is missing some required claim.
+                    # You can pass the missing claims to the frontend and handle it there. Send a 403 to the frontend.
+                    pass
+
+                # OR you can raise this error which will
+                # handle all of the above errors in the default way
+                raise e
+            if session is None:
+                if session_required:
+                    raise Exception("Should never come here")
+                baseRequest.set_session_as_none()
+            else:
+                baseRequest.set_session(session)
+            response = make_response(f(*args, **kwargs))
+            return response
+
+        return cast(_T, wrapped_function)
+
+    return session_verify
+```
+
+If `get_session` throws an error (in case the input access token is invalid or has expired), then the SuperTokens middleware added to your app handles that exception. It sends a `401` to the frontend.
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+### Get the session using the `Access Token`
+
+In the above snippets, `Get Session` requires the `request` object and, depending on your backend language and framework, may also require the `response` object.
+Either way, this version of `Get Session` automatically reads from the request.
+And automatically sets the response based on the update to the session tokens.
+Whilst this is convenient, sometimes, you may not have the `request` or `response` objects, or you may not want SuperTokens to set the tokens in the response automatically.
+In this case, you can use the `getSessionWithoutRequestResponse` function.
+
+This function works similarly to `getSession`, except that it doesn't depend on the `request` or `response` objects.
+It's your responsibility to provide this function the access token.
+You must write the update tokens to the response if the tokens update during this API call.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import { VerifySessionOptions } from "supertokens-node/recipe/session/types";
+import { SessionContainer } from "supertokens-node/recipe/session";
+import Session from "supertokens-node/recipe/session";
+import { Error as SuperTokensError } from "supertokens-node";
+
+async function verifySession(accessToken: string, antiCsrfToken?: string, options?: VerifySessionOptions) {
+    let session: SessionContainer | undefined;
+    try {
+        session = await Session.getSessionWithoutRequestResponse(accessToken, antiCsrfToken, options);
+    } catch (err) {
+        if (SuperTokensError.isErrorFromSuperTokens(err)) {
+            if (err.type === Session.Error.TRY_REFRESH_TOKEN) {
+                // This means that the session exists, but the access token
+                // has expired.
+
+                // You can handle this in a custom way by sending a 401.
+                // Or you can call the errorHandler middleware as shown below
+            } else if (err.type === Session.Error.UNAUTHORISED) {
+                // This means that the session does not exist anymore.
+
+                // You can handle this in a custom way by sending a 401.
+                // Or you can call the errorHandler middleware as shown below
+            } else if (err.type === Session.Error.INVALID_CLAIMS) {
+                // The user is missing some required claim. 
+                // You can pass the missing claims to the frontend and handle it there. Send a 403 to the frontend.
+            }
+        }
+        throw err;
+    }
+    if (session !== undefined) {
+        // we can use the `session` container as we usually do..
+        // TODO: API logic...
+
+        // At the end of the API logic, we must fetch all the tokens from the session container
+        // and set them in the response headers / cookies ourselves.
+        const tokens = session.getAllSessionTokensDangerously();
+        if (tokens.accessAndFrontTokenUpdated) {
+            // TODO: set access token in response via tokens.accessToken
+            // TODO: set front-token in response via tokens.frontToken
+            if (tokens.antiCsrfToken) {
+                // TODO: set anti-csrf token update in response via tokens.antiCsrfToken
+            }
+        }
+    }
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	defaultErrors "errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/errors"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+)
+
+func VerifySession(accessToken string, antiCsrfToken *string, options *sessmodels.VerifySessionOptions) error {
+	session, err := session.GetSessionWithoutRequestResponse(accessToken, antiCsrfToken, options)
+	if err != nil {
+		if defaultErrors.As(err, &errors.TryRefreshTokenError{}) {
+			// This means that the session exists, but the access token
+			// has expired.
+
+			// You can handle this in a custom way by sending a 401.
+			// Or you can call the errorHandler middleware as shown below
+		} else if defaultErrors.As(err, &errors.UnauthorizedError{}) {
+			// This means that the session does not exist anymore.
+
+			// You can handle this in a custom way by sending a 401.
+			// Or you can call the errorHandler middleware as shown below
+		} else if defaultErrors.As(err, &errors.InvalidClaimError{}) {
+			// The user is missing some required claim.
+			// You can pass the missing claims to the frontend and handle it there. Send a 403 to the frontend.
+		} else {
+			// TODO: send a 500 error to the frontend
+		}
+		return err
+	}
+	if session != nil {
+		// we can use the `session` container as we usually do..
+		// TODO: API logic...
+
+		// At the end of the API logic, we must fetch all the tokens from the session container
+		// and set them in the response headers / cookies ourselves.
+		tokens := session.GetAllSessionTokensDangerously()
+		if tokens.AccessAndFrontendTokenUpdated {
+			// TODO: set access token in response via tokens.accessToken
+			// TODO: set front-token in response via tokens.frontToken
+			if tokens.AntiCsrfToken != nil {
+				// TODO: set anti-csrf token update in response via *tokens.AntiCsrfToken
+			}
+		}
+	}
+	return nil
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from typing import Any, Callable, Dict, TypeVar, List, Optional
+
+from supertokens_python.recipe.session.syncio import get_session_without_request_response
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.interfaces import SessionClaimValidator
+from supertokens_python.types import MaybeAwaitable
+from supertokens_python.recipe.session.exceptions import (
+    UnauthorisedError,
+    InvalidClaimsError,
+    TryRefreshTokenError
+)
+
+_T = TypeVar("_T", bound=Callable[..., Any])
+
+
+def verify_session(
+    access_token: str,
+    anti_csrf_token: Optional[str],
+    anti_csrf_check: Optional[bool],
+    session_required: Optional[bool],
+    check_database: Optional[bool],
+    override_global_claim_validators: Optional[
+        Callable[
+            [List[SessionClaimValidator], SessionContainer, Dict[str, Any]],
+            MaybeAwaitable[List[SessionClaimValidator]],
+        ]
+    ] = None,
+):
+    try:
+        session = get_session_without_request_response(access_token,
+                                                       anti_csrf_token,
+                                                       anti_csrf_check,
+                                                       session_required,
+                                                       check_database,
+                                                       override_global_claim_validators)
+    except Exception as e:
+        if isinstance(e, TryRefreshTokenError):
+            # This means that the session exists, but the access token
+            # has expired.
+
+            # You can handle this in a custom way by sending a 401.
+            # Or you can call the errorHandler middleware as shown below
+            pass
+        if isinstance(e, UnauthorisedError):
+            # This means that the session does not exist anymore.
+
+            # You can handle this in a custom way by sending a 401.
+            # Or you can call the errorHandler middleware as shown below
+            pass
+        if isinstance(e, InvalidClaimsError):
+            # The user is missing some required claim.
+            # You can pass the missing claims to the frontend and handle it there. Send a 403 to the frontend.
+            pass
+
+        # OR you can raise this error which will
+        # handle all of the above errors in the default way
+        raise e
+
+    if session is not None:
+        # we can use the `session` container as we usually do..
+        # TODO: API logic...
+
+        # At the end of the API logic, we must fetch all the tokens from the session container
+        # and set them in the response headers / cookies ourselves.
+        tokens = session.get_all_session_tokens_dangerously()
+        if tokens["accessAndFrontTokenUpdated"]:
+            # TODO: set access token in response via tokens["accessToken"]
+            # TODO: set front-token in response via tokens["frontToken"]
+            if tokens["antiCsrfToken"] is not None:
+                # TODO: set anti-csrf token update in response via tokens["antiCsrfToken"]
+                pass
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+
+---
+
+## Using a JWT verification library
+
+If the previous methods are not suitable for your use case, you can use validate the token manually.
+This method works for cases like:
+- Your APIs are on a backend for which SuperTokens doesn't have SDKs.
+- You are using a non `http` protocol (like `websockets`) and passing in the access token.
+- You are using an API gateway which does JWT verification based on the JWKs endpoint.
+
+:::caution
+The downside to using JWT verification manually is that:
+- Pick and configure a JWT verification library for your framework. Many online guides explain how to do this.
+- You need to manually verify some custom claims in the JWT (like the user's role is `admin`, or that the user's email is verified) based on your authorization rules.
+- You don't have access to the [`session` object](/docs/additional-verification/session-verification/protect-api-routes#using-verify-session) using which you can modify the session's access token payload, or revoke the session. These operations can occur in an offline manner, but they reflect in the user's session only after a session refresh.
+:::
+
+The manual session verification method should work in this way:
+
+<Steps>
+  ## Verify the JWT signature and expiry using a JWT verification library
+  ## Check for custom claim values for authorization.
+  ## Prevent cross-site request forgery (CSRF) attacks in case you are using cookies to store the JWT.
+</Steps>
+
+<AppInfoForm />
+
+### With the JSON Web Key Set (JWKS) Endpoint
+
+<BackendTabs additionalValues={[{value: "java", label: "Java"}]}>
+<BackendTabs.TabItem value="nodejs">
+
+Some libraries let you provide a JSON Web Key Set (JWKS) endpoint to verify a JWT.
+The JSON Web Key Set (JWKS) endpoint exposed by SuperTokens is available at the following URL:
+
+```bash
+curl --location --request GET '^{appInfo.apiDomain}^{appInfo.apiBasePath}/jwt/jwks.json'
+```
+
+Below is an example for NodeJS showing how you can use `jsonwebtoken` and `jwks-rsa` together to achieve JWT verification using the `jwks.json` endpoint.
+
+```ts
+import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+var client = jwksClient({
+  jwksUri: '^{appInfo.apiDomain}^{appInfo.apiBasePath}/jwt/jwks.json'
+});
+
+function getKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    var signingKey = key!.getPublicKey();
+    callback(err, signingKey);
+  });
+}
+
+let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
+JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
+  let decodedJWT = decoded;
+  // Use JWT
+});
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa) for a code reference of how use `PyJWK` to do session verification. The gist contains two files:
+- `jwt_verification.py` (which you can copy/paste into your application). You need to modify the `JWKS_URI` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL). This file is for `sync` python apps and can be modified to work with `async` apps as well.
+  - This file essentially exposes a function called `verify_jwt` which takes an input JWT string.
+  - This function takes care of caching public keys in memory and auto re-fetching if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts and is a security feature.
+- `views.py`: This is an example `GET` API which extracts the JWT token from the authorization header in the request and calls the `verify_jwt` function from the other file. If you are using cookie based auth instead of header based auth, you should read the JWT from the `sAccessToken` cookie in the request.
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d) for a code reference of how use the Golang `jwt` lib to do session verification. The gist contains two files:
+- `verifyToken.go` (which you can copy/paste into your application). You need to modify the `coreUrl` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL).
+  - This file essentially exposes a function called `GetJWKS` which returns a reference to the JSON Web Key Set (JWKS) public keys usable for JWT verification.
+  - This function takes care of caching public keys in memory and auto re-fetching if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts and is a security feature.
+- `main.go`: This is an example of how to verify a JWT using the golang JWT verification lib along with the helper function to get the JWKs keys. If you are using header-based auth, you can fetch the JWT from the `Authorization Bearer` header, otherwise for cookie-based auth, you can fetch it from the `sAccessToken` cookie.
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="java">
+
+Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/5b2d19c02337ed7ee387723c84def9cd) for a code reference of how use the Java `nimbus-jose-jwt` lib to do session verification. The gist contains three files:
+- `JWTVerification.java` You need to modify the `CORE_URL` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL).
+  - This is an example of how to verify a JWT using the Java `nimbus-jose-jwt` lib along with the helper method to get the JWKs keys. If you are using header-based auth, you can fetch the JWT from the `Authorization Bearer` header, otherwise for cookie-based auth, you can fetch it from the `sAccessToken` cookie.
+  - This file has a method called `setSource` which returns a reference to the JSON Web Key Set (JWKS) public keys usable for JWT verification. This method takes care of caching public keys in memory and auto re-fetching if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts and is a security feature.
+- `pom.xml`: This shows the version of `nimbus-jose-jwt` used for this project.
+- `InvalidClaimsException.java`: This holds the custom Exception thrown when someone has an invalid JWT body, hasn't verified their email, or hasn't set up MFA.
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+### With the public key string
+
+<BackendTabs additionalValues={[{value: "java", label: "Java"}]}>
+<BackendTabs.TabItem value="nodejs">
+
+:::caution
+This method is less secure compared to the first method because it disables key rotation of the access token signing key.
+In this case, if the private key is somehow stolen, it can be used indefinitely to forge access tokens (Unless you manually change the key in the database).
+:::
+
+Some JWT verification libraries require you to provide the JWT secret / public key for verification.
+You can obtain the JWT secret from SuperTokens in the following way:
+
+<Steps>
+
+## Query the `JWKS.json` endpoint:
+
+  <br />
+
+  ```bash
+  curl --location --request GET '^{appInfo.apiDomain}^{appInfo.apiBasePath}/jwt/jwks.json'
+
+  {
+    "keys": [
+      {
+        "kty": "RSA",
+        "kid": "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
+        "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
+        "e": "AQAB",
+        "alg": "RS256",
+        "use": "sig"
+      },
+      {
+        "kty": "RSA",
+        "kid": "d-230...802340",
+        "n": "AMZruthvYz7...lx0rU8c=",
+        "e": "...",
+        "alg": "RS256",
+        "use": "sig"
+      }
+    ]
+  }
+  ```
+
+  :::important
+  The above shows an example output which returns two keys.
+  More keys could return based on the configured key rotation setting in the core.
+  If you notice, each key's `kid` starts with a `s-..` or a `d-..`. The `s-..` key is a static key that never changes, whereas `d-...` keys are dynamic keys that keep changing. If you are hard-coding public keys somewhere, you always want to pick the `s-..` key.
+
+  One exception is that if you see a key with `kid` that doesn't start with `s-` or with `d-`, then treat that as a static key.
+  This only happens if you used to run an older SuperTokens core that was less than version `5.0`.
+  :::
+
+## Run the NodeJS script below to convert the above output to a `PEM` file format.
+
+  <br />
+
+  ```tsx
+  import jwkToPem from 'jwk-to-pem';
+
+  // This JWK is copied from the result of the above SuperTokens core request
+  let jwk = {
+    "kty": "RSA",
+    "kid": "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
+    "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
+    "e": "AQAB",
+    "alg": "RS256",
+    "use": "sig"
+  };
+
+  // @ts-ignore
+  let certString = jwkToPem(jwk);
+  ```
+
+  The above snippet would generate the following certificate string:
+
+  ```text
+  -----BEGIN PUBLIC KEY-----
+  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9I
+  QQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm
+  ... (truncated for display)
+  XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStT
+  xwIDAQAB
+  -----END PUBLIC KEY-----
+  ```
+
+ Use the generated Privacy-Enhanced Mail (PEM) string in your code as shown below:
+
+  ```ts
+  import JsonWebToken from 'jsonwebtoken';
+
+  // Truncated for display
+  let certificate = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9IQQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm...XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStTxwIDAQAB\n-----END PUBLIC KEY-----";
+  let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
+  JsonWebToken.verify(jwt, certificate, function (err, decoded) {
+      let decodedJWT = decoded;
+      // Use JWT
+  });
+  ```
+
+## Tell SuperTokens to always only use the static key when creating a new session.
+
+You can accomplish this by setting the below configuration in the backend SDK:
+
+  ```tsx
+  import SuperTokens from "supertokens-node";
+  import Session from "supertokens-node/recipe/session";
+
+  SuperTokens.init({
+      supertokens: {
+          connectionURI: "...",
+      },
+      appInfo: {
+          apiDomain: "...",
+          appName: "...",
+          websiteDomain: "..."
+      },
+      recipeList: [
+          Session.init({
+              //highlight-next-line
+              useDynamicAccessTokenSigningKey: false,
+          })
+      ]
+  });
+  ```
+
+:::caution
+Updating this value causes a spike in the session refresh API, as and when users visit your application.
+:::
+
+</Steps>
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+:::caution
+Not applicable. Please use method 1 instead.
+:::
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+:::caution
+Not applicable. Please use method 1 instead.
+:::
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="java">
+
+:::caution
+Not applicable. Please use method 1 instead.
+:::
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+### Check for custom claim values for authorization
+
+<BackendTabs additionalValues={[{value: "java", label: "Java"}]}>
+<BackendTabs.TabItem value="nodejs">
+
+Once you have verified the access token, you can fetch the payload and perform authorization checks based on the values of the custom claims. For example, if you want to check if the user's email is verified, you should check the `st-ev` claim in the payload as shown below:
+
+```ts
+import JsonWebToken, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+
+var client = jwksClient({
+  jwksUri: '^{appInfo.apiDomain}^{appInfo.apiBasePath}/jwt/jwks.json'
+});
+
+function getKey(header: JwtHeader, callback: SigningKeyCallback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    var signingKey = key!.getPublicKey();
+    callback(err, signingKey);
+  });
+}
+
+let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
+JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
+  if (err) {
+    // send a 401 to the frontend..
+  }
+  if (decoded !== undefined && typeof decoded !== "string") {
+    let isEmailVerified = (decoded as any)["st-ev"].v
+    if (!isEmailVerified) {
+      // send a 403 to the frontend..
+    }
+  }
+});
+```
+
+Claims like email verification and user roles claims are included in the access token by the backend SDK automatically. You can even [add your own custom claims](/docs/additional-verification/session-verification/claim-validation#using-the-access-token-payload) to the access token payload, and those claims will be in the JWT as expected.
+
+:::important
+On claim validation failure, you must send a `403` to the frontend, which causes the frontend SDK (pre-built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.
+:::
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa), in `views.py`, between lines 20 and 28, the `st-ev` claim in the JWT payload undergoes verification. If the claim is not present or has a value of `false`, a `403` is sent to the frontend, causing the frontend SDK (pre-built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d), in `main.go`, between lines 32 and 44, the `st-ev` claim in the JWT payload undergoes verification. If the claim is not present or has a value of `false`, a `403` is sent to the frontend, causing the frontend SDK (pre-built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="java">
+
+Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/5b2d19c02337ed7ee387723c84def9cd), in `JWTVerification.java`, between lines 42 and 58, the `st-ev` and `st-mfa` claims in the JWT payload undergo verification.
+If the claims are not present or have a value of `false`, a `403` is sent to the frontend, causing the frontend SDK (pre-built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+### Check for anti-csrf during authorization
+
+:::important
+You need to check for anti-cross-site request forgery (CSRF) for **non** GET requests when cookie-based authentication is active.
+:::
+
+Two methods exist for configuring [cross-site request forgery (CSRF) protection](/docs/post-authentication/session-management/security#anti-csrf): `VIA_CUSTOM_HEADER` and `VIA_TOKEN`.
+
+####  `VIA_CUSTOM_HEADER` 
+
+`VIA_CUSTOM_HEADER` is automatically set if `sameSite` is `none` or if your `apiDomain` and `websiteDomain` do not share the same top level domain.
+In this case, you need to check for the presence of the `rid` header from incoming requests.
+
+#### `VIA_TOKEN` 
+
+When configured with `VIA_TOKEN`, an explicit `anti-csrf` token attaches as a header to requests with `anti-csrf` as the key.
+To verify the `anti-csrf` token, you need to compare it to the value of the `antiCsrfToken` key from the payload of the decoded JWT.
+
+---
+
+## See also
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/additional-verification/session-verification/protect-frontend-routes" label="Protect frontend routes" />
+  <ReferenceCard href="/docs/additional-verification/session-verification/claim-validation" label="Claim validation" />
+  <ReferenceCard href="/docs/additional-verification/session-verification/with-websocket" label="WebSockets authentication" />
+  <ReferenceCard href="/docs/post-authentication/session-management/access-session-data" label="Access session data" />
+</ReferenceCard.Grid>

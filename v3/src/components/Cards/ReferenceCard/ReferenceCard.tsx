@@ -58,14 +58,22 @@ function ReferenceCardRoot({ children, href, label }: React.PropsWithChildren<{ 
   );
 }
 
-function ReferenceCardAvatar({ icon }: { icon: string }) {
+function ReferenceCardAvatar({
+  icon,
+  size = "3",
+  radius = "small",
+}: {
+  icon: string;
+  size?: React.ComponentProps<typeof Avatar>["size"];
+  radius?: React.ComponentProps<typeof Avatar>["radius"];
+}) {
   return (
     <Avatar
       src={`/img/icons/${icon}.svg`}
       alt="Icon"
-      size="3"
+      size={size}
       className="reference-card__avatar"
-      radius="full"
+      radius={radius}
       fallback="T"
     />
   );
@@ -90,13 +98,24 @@ function ReferenceCardDescription({ children }: React.PropsWithChildren<{}>) {
   );
 }
 
-function ReferenceCardGrid({ children }: React.PropsWithChildren<{}>) {
+type ReferenceCardGridProps = {
+  lg?: string;
+  xs?: string;
+  initial?: string;
+};
+
+function ReferenceCardGrid({
+  children,
+  lg = "repeat(3, 1fr)",
+  xs = "repeat(2, 1fr)",
+  initial = "repeat(1, 1fr)",
+}: React.PropsWithChildren<ReferenceCardGridProps>) {
   return (
     <Grid
       columns={{
-        initial: "repeat(1, 1fr)",
-        lg: "repeat(3, 1fr)",
-        xs: "repeat(2, 1fr)",
+        initial,
+        lg,
+        xs,
       }}
       gap="4"
     >

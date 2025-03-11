@@ -1,0 +1,213 @@
+---
+title: User Object
+hide_title: true
+sidebar_position: 6
+description: >-
+  User Object page explains user structure, primary vs recipe user IDs, and
+  account linking.
+---
+
+# The user object
+
+## Overview
+
+The user object represents the entity that exposes user information during an authentication flow.
+
+## Prerequisites
+
+:::info Important
+This is only applicable for NodeJS SDK >= 16.0 and for Python SDK >= 0.25.0. For other versions, or SDKs, please see: https://github.com/supertokens/core-driver-interface/wiki
+:::
+
+
+## Structure
+
+### `User`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `string` | The primary user ID. It can change if the user links to another user. |
+| `timeJoined` | `number` | Time (in MS since epoch) when user first signed up. It does not update when new login methods appear. |
+| `isPrimaryUser` | `boolean` | `true` if the user can accept other login methods from other users. Important for account linking. |
+| `tenantIds` | `string[]` | List of tenantIds the user belongs to. Union of all login methods' tenantIds. |
+| `emails` | `string[]` | List of all emails associated with this user. |
+| `phoneNumbers` | `string[]` | List of all phone numbers associated with this user. |
+| `thirdParty` | `ThirdParty` | List of third party provider information. See Third Party Properties table below. |
+| `loginMethods` | `LoginMethod[]` | List of all login methods. See Login Method Properties table below. |
+
+### `ThirdParty`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `string` | Unique identifier for the third party provider (for example, "google") |
+| `userId` | `string` | User ID from the third party provider |
+
+### `LoginMethod`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `recipeId` | `string` | ID representing the login method (for example, "email password", "third party", "passwordless") |
+| `tenantIds` | `string[]` | List of tenantIds for this login method |
+| `timeJoined` | `number` | Time (in MS since epoch) when user signed up with this method |
+| `recipeUserId` | `RecipeUserId` | Recipe user ID for this login method |
+| `verified` | `boolean` | `true` if email/phone verifies for this method |
+| `email` | `string` | Email for this login method (undefined if not applicable) |
+| `phoneNumber` | `string` | Phone number for this method (undefined if not applicable) |
+| `thirdParty` | `ThirdParty` | Third party info for this method (undefined if not third party) |
+| `hasSameEmailAs` | `function` | Helper function to compare normalized emails |
+| `hasSamePhoneNumberAs` | `function` | Helper function to compare normalized phone numbers |
+| `hasSameThirdPartyInfoAs` | `function` | Helper function to compare third party info |
+
+<br />
+
+<Accordion>
+
+## Code sample
+
+```ts
+type User = {
+    id: string;
+    timeJoined: number;
+    isPrimaryUser: boolean;
+    tenantIds: string[];
+    emails: string[];
+    phoneNumbers: string[];
+    thirdParty: {
+        id: string;
+        userId: string;
+    }[];
+    loginMethods: ({
+        recipeId: "emailpassword" | "thirdparty" | "passwordless";
+        tenantIds: string[];
+        timeJoined: number;
+        recipeUserId: RecipeUserId;
+        verified: boolean;
+        email?: string;
+        phoneNumber?: string;
+        thirdParty?: {
+            id: string;
+            userId: string;
+        };
+        hasSameEmailAs: (email: string | undefined) => boolean;
+        hasSamePhoneNumberAs: (phoneNumber: string | undefined) => boolean;
+        hasSameThirdPartyInfoAs: (thirdParty?: { id: string; userId: string }) => boolean;
+    })[];
+};
+
+class RecipeUserId {
+    private recipeUserId: string;
+    constructor(recipeUserId: string) {
+        this.recipeUserId = recipeUserId;
+    }
+
+    public getAsString = () => {
+        return this.recipeUserId;
+    };
+}
+
+```
+
+</Accordion>
+
+
+## Primary and recipe user ID
+
+In SuperTokens, each user can have multiple login methods.
+For example, one user may be able to login with both, email password and social login.
+Each of these login methods gives the user a **unique user ID** - this is a `recipeUserId`.
+
+When the user logs in with either of the two methods, **SuperTokens** resolves a common ID.
+This user ID is the **primary user ID**.
+The value of the **primary user ID** is equal to the **recipe user ID** of the initial login method registered by the user.
+
+### Example
+
+- A user first signs up with the email password recipe.
+- This gives them the **recipe user ID** `r1`. As well, their **primary user ID** is also `r1`.
+- They sign in with Google with the same email.
+- This creates a different **recipe user ID**, `r2`.
+- If you have enabled the automatic account linking, then the two recipe `userIds` link, and `r2`'s **primary user ID** becomes `r1`.
+- If you have not enabled automatic account linking, then you have two distinct users, with two different **primary user IDs**.
+
+
+## Examples
+
+### Email password user without account linking
+
+In a simple case, if there is a user who signed up with email password (with `test@example.com`), and automatic account linking is not enabled, their user object would look like:
+
+```text
+{
+    id: "3f23dca5-79da-4d84-9a72-90286ef6ea0d";
+    timeJoined: 1693286254150;
+    isPrimaryUser: false;
+    tenantIds: ["public"];
+    emails: ["test@example.com"];
+    phoneNumbers: [];
+    thirdParty: [];
+    loginMethods: [{
+        recipeId: "emailpassword";
+        tenantIds: ["public"];
+        timeJoined: 1693286254150;
+        recipeUserId: new RecipeUserId("3f23dca5-79da-4d84-9a72-90286ef6ea0d");
+        verified: false;
+        email: "test@example.com";
+        hasSameEmailAs: (email: string | undefined) => boolean;
+        hasSamePhoneNumberAs: (phoneNumber: string | undefined) => boolean;
+        hasSameThirdPartyInfoAs: (thirdParty?: { id: string; userId: string }) => boolean;
+    }];
+};
+```
+
+- Notice that the value of `isPrimaryUser` is `false`.
+This means that if this user links to another user, this user's primary user ID changes to the other user's primary user ID.
+- This user has one login method (email password), since it's not linked to any other user.
+
+### Email password user linked with a social login user
+
+We have a user who signed up with email password (with `test@example.com`), and then with Google (with the same email).
+Automatic account linking is active, therefore these two users get linked.
+
+```text
+{
+    id: "3f23dca5-79da-4d84-9a72-90286ef6ea0d";
+    timeJoined: 1693286254150;
+    isPrimaryUser: true;
+    tenantIds: ["public"];
+    emails: ["test@example.com"];
+    phoneNumbers: [];
+    thirdParty: [{
+        id: "google";
+        userId: "1234567890";
+    }];
+    loginMethods: [{
+        recipeId: "emailpassword";
+        tenantIds: ["public"];
+        timeJoined: 1693286254150;
+        recipeUserId: new RecipeUserId("3f23dca5-79da-4d84-9a72-90286ef6ea0d");
+        verified: false;
+        email: "test@example.com";
+        hasSameEmailAs: (email: string | undefined) => boolean;
+        hasSamePhoneNumberAs: (phoneNumber: string | undefined) => boolean;
+        hasSameThirdPartyInfoAs: (thirdParty?: { id: string; userId: string }) => boolean;
+    }, {
+        recipeId: "thirdparty";
+        tenantIds: ["public"];
+        timeJoined: 1693286254250;
+        recipeUserId: new RecipeUserId("6ffc0ac5-d840-4a5b-92e8-86965f67c2ea");
+        verified: true;
+        email: "test@example.com";
+        thirdParty: {
+            id: "google";
+            userId: "1234567890";
+        };
+        hasSameEmailAs: (email: string | undefined) => boolean;
+        hasSamePhoneNumberAs: (phoneNumber: string | undefined) => boolean;
+        hasSameThirdPartyInfoAs: (thirdParty?: { id: string; userId: string }) => boolean;
+    }];
+};
+```
+
+- Notice that the value of `isPrimaryUser` is `true`. This means that if this user links to another user, this user's primary user ID does not change.
+- This user has two login methods (email password and third party). The top level `timeJoined` value is the min of the two `timeJoined` values in the `loginMethods`.
+- In this example, the top level `emails` array has one item since both the login methods emails are the same, but if they were different, there would be two items in this array.

@@ -13,6 +13,7 @@ export default function remarkRemoveCodeTypeCheckingCommentsAndRows() {
         return (
           !line.includes("REMOVE_FROM_OUTPUT") &&
           !line.includes("@ts-expect-error") &&
+          !line.includes("@ts-nocheck") &&
           !line.includes("@ts-ignore") &&
           !line.includes("// typecheck-only")
         );

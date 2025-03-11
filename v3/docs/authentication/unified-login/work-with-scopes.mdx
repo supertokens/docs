@@ -1,0 +1,123 @@
+---
+title: Work with scopes
+hide_title: true
+sidebar_position: 4
+description: >-
+  Manage OAuth2 scopes, request specific scopes, and override granted scopes
+  during authentication.
+---
+
+import { BackendTabs } from "/src/components/Tabs";
+
+# Work with scopes
+
+## Overview
+
+The creation process of an **OAuth2 Client** determines the allowed scopes.
+By default, the **OAuth2** implementation adds the following built-in scopes:
+
+| Scope | Claims Added | Notes |
+|-------|-------------|--------|
+| `email` | `email`, `emails`, `email_verified` | Added to ID Token and User Info |
+| `phoneNumber` | `phoneNumber`, `phoneNumbers`, `phoneNumber_verified` | Added to ID Token and User Info |
+| `roles` | The roles return by `getRolesForUser` | Added to ID Token and Access Token |
+| `permissions` | The list of permissions obtained by concatenating the result of `getPermissionsForRole` for all roles returned by `getRolesForUser`  | Added to ID Token and Access Token |
+ 
+---
+
+## Request specific scopes
+
+The client can request specific scopes by adding `scope` query parameter to the **Authorization URL**.
+The requested scopes have to be a subset of what the client allows, otherwise the authentication request fails.
+By default, the client receives all scopes.
+
+---
+
+## Override granted scopes
+
+If you want to manually modify the list of scopes that the client receives during the authentication flow, you can do this by using overrides.
+
+<BackendTabs>
+
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
+
+OAuth2Provider.init({
+    override: {
+        functions: (originalFunctions) => ({
+            ...originalFunctions,
+            getRequestedScopes: async (input) => {
+                const originallyRequestedScopes = await originalFunctions.getRequestedScopes(input);
+                const filteredScopes = originallyRequestedScopes.filter((scope) => scope !== "profile");
+                return [...filteredScopes, "custom-scope"];
+            },
+        }),
+    },
+});
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+:::caution
+The Go SDK does not support creating OAuth2 providers.
+:::
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import oauth2provider 
+from supertokens_python.recipe.oauth2provider.interfaces import RecipeInterface
+from supertokens_python.types import RecipeUserId
+from typing import Dict, List, Any, Optional 
+
+def override_oauth2provider_functions(original_implementation: RecipeInterface):
+  original_get_requested_scopes = original_implementation.get_requested_scopes
+
+  async def get_requested_scopes(
+        recipe_user_id: Optional[RecipeUserId],
+        session_handle: Optional[str],
+        scope_param: List[str],
+        client_id: str,
+        user_context: Dict[str, Any],
+    ):
+    originally_requested_scopes = await original_get_requested_scopes(
+      recipe_user_id, session_handle, scope_param, client_id, user_context
+    )
+    filtered_scopes = [scope for scope in originally_requested_scopes if scope != "profile"]
+    return [*filtered_scopes, "custom-scope"]
+
+  original_implementation.get_requested_scopes = get_requested_scopes
+  return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    framework="fastapi",
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+        api_key="..."
+    ),
+    recipe_list=[
+        oauth2provider.init(
+          override=oauth2provider.InputOverrideConfig(functions=override_oauth2provider_functions)
+        )
+    ],
+)
+
+
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>

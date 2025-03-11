@@ -1,0 +1,508 @@
+---
+title: Multiple frontend domains with separate backends
+hide_title: true
+sidebar_position: 2
+description: >-
+  Set up multiple frontend domains with separate backends using
+  OAuth2 authentication.
+---
+
+import { BackendTabs, FrontendPrebuiltUITabs } from "/src/components/Tabs";
+import { AppInfoForm } from "/src/components/Forms";
+import { Question, Answer } from "/src/components/Question";
+
+import CustomUIGuide from "../_blocks/custom-ui-guide.mdx";
+import CreateOAuth2ClientRequest from "../_blocks/create-oauth2-client-request.mdx";
+
+# Multiple frontend domains with separate backends
+
+## Overview
+
+You can use the following guide if you have a single [**Authorization Service**](/docs/authentication/unified-login/oauth2-basics#authorization-server) that multiple applications use.
+In turn, each app has separate **`frontend`** and **`backend`** instances that serve from different domains.
+The authentication flow works in the following way:
+
+<Steps>
+  ## The User accesses the `frontend` app 
+   - The application `frontend` calls a login endpoint on the `backend` application.
+   - The `backend` application generates an `authorization` URL to the [**Authorization Service**](/docs/authentication/unified-login/oauth2-basics#authorization-server) and redirects the user to it.
+   - The [**Authorization Service**](/docs/authentication/unified-login/oauth2-basics#authorization-server) backend redirects the user to the login UI
+
+  ## The User completes the login attempt  
+   - The [**Authorization Service**](/docs/authentication/unified-login/oauth2-basics#authorization-server) backend redirects the user to a `callback URL` that includes the **Authorization Code**.
+
+  ## The user accesses the callback URL
+   - The **Authentication Code** gets sent to the application `backend` 
+   - The `backend` exchanges the **Authentication Code** for an [**OAuth2 Access Token**](/docs/authentication/unified-login/oauth2-basics#oauth2-access-token)
+   - The `backend` saves the received token in a server session and sends it back to the `frontend` as a cookie.
+</Steps>
+
+The `frontend` can use the new cookie to access protected resources from the `backend`.
+
+<img src="/img/oauth/multiple-frontend-domains-with-separate-backends.png" alt="Multiple Frontend Domains with separate Backends"/>
+
+
+## Before you start
+
+<PaidFeatureCallout />
+
+These instructions assume that you already have gone through the main [quickstart guide](/docs/quickstart/introduction).
+If you have skipped that page, please follow the tutorial and return here once you're done.
+
+:::info
+Note that, if the *frontends* and *backends* are in different *sub domains*, you don't need to use *OAuth* and can instead use [session sharing across sub domains](/docs/post-authentication/session-management/share-session-across-sub-domains).
+:::
+
+
+## Steps
+
+### 1. Enable the Unified Login feature
+
+Go to the [**SuperTokens.com SaaS Dashboard**](https://supertokens.com) and follow these instructions:
+1. Click on the **Enabled Paid Features** button
+2. Click on **Managed Service**
+3. Check the **Unified Login / M2M** option
+4. Click *Save* 
+
+
+### 2. Create the OAuth2 Clients
+
+
+For each of your applications you need to create a separate [**OAuth2 client**](/docs/authentication/unified-login/oauth2-basics#client).
+You can do this by directly calling the **SuperTokens Core** API.
+
+
+<CreateOAuth2ClientRequest />
+
+:::caution
+You have to save the create OAuth2 Client response because this is not persisted internally for security reasons.
+The information is necessary for the next steps.
+:::
+
+
+### 3. Set Up your Authorization Service backend
+
+In your [**Authorization Service**](/docs/authentication/unified-login/oauth2-basics#authorization-server) you need to initialize the **OAuth2Provider** recipe.
+The recipe exposes the endpoints needed for enabling the [**OAuth 2.0**](/docs/authentication/unified-login/oauth2-basics) flow.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+Update the `supertokens.init` call to include the `OAuth2Provider` recipe.
+
+Add the import statement for the recipe and update the list of recipes with the new initialization step.
+
+```tsx 
+import supertokens from "supertokens-node";
+import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "...",
+        apiKey: "...",
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        OAuth2Provider.init(),
+    ]
+});
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+:::caution
+
+At the moment there is no support for creating OAuth2 providers in the Go SDK.
+
+:::
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python 
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import oauth2provider 
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    framework="fastapi",
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+        api_key="..."
+    ),
+    recipe_list=[
+        oauth2provider.init()
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+### 4. Configure the Authorization Service frontend 
+
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+#### 4.1 Initialize the recipe 
+
+<FrontendPrebuiltUITabs>
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+Add the import statement for the new recipe and update the list of recipe to also include the new initialization.
+
+```tsx
+import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
+import SuperTokens from "supertokens-auth-react";
+
+SuperTokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        OAuth2Provider.init()
+    ]
+});
+```
+
+#### 4.2 Include the pre-built UI in the rendering tree.
+
+<Question question="Do you use react-router-dom?">
+
+<Answer title="Yes">
+
+```tsx
+import React from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Link
+} from "react-router-dom";
+
+import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
+import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
+import { OAuth2ProviderPreBuiltUI } from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+import * as reactRouterDom from "react-router-dom";
+
+class App extends React.Component {
+    render() {
+        return (
+            <SuperTokensWrapper>
+                <BrowserRouter>
+                    <Routes>
+                        {/*This renders the login UI on the /auth route*/}
+                        {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [OAuth2ProviderPreBuiltUI])}
+                        {/*Your app routes*/}
+                    </Routes>
+                </BrowserRouter>
+            </SuperTokensWrapper>
+        );
+    }
+}
+```
+
+</Answer>
+
+<Answer title="No">
+
+```tsx
+import React from 'react';
+import { OAuth2ProviderPreBuiltUI } from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
+import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
+
+class App extends React.Component {
+    render() {
+        if (canHandleRoute([OAuth2ProviderPreBuiltUI])) {
+            // This renders the login UI on the /auth route
+            return getRoutingComponent([OAuth2ProviderPreBuiltUI])
+        }
+
+        return (
+            <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>
+        );
+    }
+}
+```
+
+</Answer>
+
+</Question>
+    
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+Update the `AuthComponent` to include the `OAuth2Provider` recipe.
+You need to add a new item in the `recipeList` array.
+
+
+```tsx title="/app/auth/auth.component.ts"
+  import {init as supertokensUIInit} from "supertokens-auth-react";
+  import supertokensUIOAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
+  import { Component, OnDestroy, AfterViewInit, Renderer2, Inject } from "@angular/core";
+  import { DOCUMENT } from "@angular/common";
+
+  @Component({
+      selector: "app-auth",
+      template: '<div id="supertokensui"></div>',
+  })
+  export class AuthComponent implements OnDestroy, AfterViewInit {
+
+      constructor(
+          private renderer: Renderer2,
+          @Inject(DOCUMENT) private document: Document
+      ) { }
+
+      ngAfterViewInit() {
+          this.loadScript('^{prebuiltUIVersion}');
+      }
+
+      ngOnDestroy() {
+          // Remove the script when the component is destroyed
+          const script = this.document.getElementById('supertokens-script');
+          if (script) {
+              script.remove();
+          }
+      }
+
+      private loadScript(src: string) {
+          const script = this.renderer.createElement('script');
+          script.type = 'text/javascript';
+          script.src = src;
+          script.id = 'supertokens-script';
+          script.onload = () => {
+              supertokensUIInit({
+                  appInfo: {
+                      appName: "^{appInfo.appName}",
+                      apiDomain: "^{appInfo.apiDomain}",
+                      websiteDomain: "^{appInfo.websiteDomain}",
+                      apiBasePath: "^{appInfo.apiBasePath}",
+                      websiteBasePath: "^{appInfo.websiteBasePath}"
+                  },
+                  recipeList: [
+                    // Don't forget to also include the other recipes that you are already using
+                    supertokensUIOAuth2Provider.init()
+                  ],
+              });
+          }
+          this.renderer.appendChild(this.document.body, script);
+      }
+  }
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="vue">
+
+
+Update the `AuthView` component to include the `OAuth2Provider` recipe.
+You need to add a new item in the `recipeList` array, inside the `supertokensUIInit` call.
+
+```tsx
+    import {init as supertokensUIInit} from "supertokens-auth-react";
+    import supertokensUIOAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
+    <script lang="ts">
+        import { defineComponent, onMounted, onUnmounted } from 'vue';
+        export default defineComponent({
+            setup() {
+                const loadScript = (src: string) => {
+                    const script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.src = src;
+                    script.id = 'supertokens-script';
+                    script.onload = () => {
+                        supertokensUIInit({
+                            appInfo: {
+                                appName: "^{appInfo.appName}",
+                                apiDomain: "^{appInfo.apiDomain}",
+                                websiteDomain: "^{appInfo.websiteDomain}",
+                                apiBasePath: "^{appInfo.apiBasePath}",
+                                websiteBasePath: "^{appInfo.websiteBasePath}"
+                            },
+                            recipeList: [
+                              // Don't forget to also include the other recipes that you are already using
+                              supertokensUIOAuth2Provider.init()
+                            ],
+                        });
+                    };
+                    document.body.appendChild(script);
+                };
+
+                onMounted(() => {
+                    loadScript('^{prebuiltUIVersion}');
+                });
+
+                onUnmounted(() => {
+                    const script = document.getElementById('supertokens-script');
+                    if (script) {
+                        script.remove();
+                    }
+                });
+            },
+        });
+    </script>
+
+    <template>
+        <div id="supertokensui" />
+    </template>
+```
+
+
+</FrontendPrebuiltUITabs.TabItem>
+    
+</FrontendPrebuiltUITabs>
+
+</UIType.PrebuiltUIContent>
+
+<UIType.CustomUIContent>
+<CustomUIGuide />
+</UIType.CustomUIContent>
+
+### 5. Set up session handling in each application
+
+In each of your individual `applications` you need to set up logic for handling the **OAuth 2.0** authentication flow.
+You can use a generic **OIDC** or **OAuth2** library to do this.
+
+<BackendTabs additionalValues={[{ value: "c#", label: "C#" }, { value: "java", label: "Java" }, { value: "php", label: "PHP" } ]}>
+
+<BackendTabs.TabItem value="nodejs">
+
+You can use the [passport-oauth2](https://www.passportjs.org/packages/passport-oauth2/) library. 
+Follow the instructions on the library's page and set up your application `backend`.
+You can determine the configuration parameters based on the response received in **step 2**, when creating the **OAuth2 Client**.
+
+- `authorizationURL` corresponds to `authorizeUrl`
+- `tokenURL` corresponds to `tokenFetchUrl`
+- `clientID` corresponds to `clientId`
+- `clientSecret` corresponds to `clientSecret`
+- `callbackURL` corresponds to a value from `callbackUrls`
+- `scope` corresponds to `scope` 
+
+Make sure that you expose an endpoint that calls `passport.authenticate('oauth2')`.
+This way the user ends up accessing the actual login page served by the **Authorization Service**.
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+You can use the [OAuth2](https://pkg.go.dev/golang.org/x/oauth2) library.
+Follow these [instructions](https://golang.org/pkg/golang.org/x/oauth2/#example-Config-RequestToken) and implement it in your `backend`.
+
+You can determine the configuration parameters based on the response received in **step 2**.
+- `ClientID` corresponds to `clientId`
+- `ClientSecret` corresponds to `clientSecret`
+- `Scopes` corresponds to `scope`
+- `Endpoint.AuthURL` corresponds to `authorizeUrl`
+- `Endpoint.TokenURL` corresponds to `tokenFetchUrl`
+
+Make sure that you expose an endpoint that redirects to the authentication URL obtained from calling `AuthCodeURL`.
+This way the user ends up accessing the actual login page served by the **Authorization Service**.
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python"> 
+
+You can use the [AuthLib](https://docs.authlib.org/) library.
+Follow these [instructions](https://docs.authlib.org/en/latest/client/oauth2.html) and implement it in your `backend`.
+
+You can determine the configuration parameters based on the response received in **step 2**.
+- `client_id` corresponds to `clientId`
+- `client_secret` corresponds to `clientSecret`
+- `scope` corresponds to `scope` 
+- `authorization_endpoint` corresponds to `authorizeUrl`
+- `token_endpoint` corresponds to `tokenFetchUrl`
+
+Make sure that you expose an endpoint that redirects to the authentication URL obtained from calling `create_authorization_url`.
+This way the user ends up accessing the actual login page served by the **Authorization Service**.
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="php"> 
+
+You can use the [League OAuth2 Client](https://github.com/thephpleague/oauth2-client) library.
+Follow these [instructions](https://oauth2-client.thephpleague.com/usage/) and implement it in your `backend`.
+
+You can determine the configuration parameters based on the response received in **step 2**.
+- `clientId` corresponds to `clientId`
+- `clientSecret` corresponds to `clientSecret`
+- `redirectUri` corresponds to a value from `callbackUrls` 
+- `urlAuthorize` corresponds to `authorizeUrl`
+- `urlAccessToken` corresponds to `tokenFetchUrl`
+
+Make sure that you expose an endpoint that redirects to the authentication URL obtained from calling `getAuthorizationUrl`.
+This way the user ends up accessing the actual login page served by the **Authorization Service**.
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="java">
+
+You can use the [Spring Security](https://github.com/spring-projects/spring-security) library.
+Follow these [instructions](https://docs.spring.io/spring-security/reference/servlet/oauth2/index.html#oauth2-client-log-users-in) and implement it in your `backend`.
+
+You can determine the configuration parameters based on the response received in **step 2**.
+
+- `client-id` corresponds to `clientId`
+- `client-secret` corresponds to `clientSecret`
+- `scope` corresponds to `scope` 
+- `issuer-uri` corresponds to `^{appInfo.apiDomain}^{appInfo.apiBasePath}` 
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="c#">
+
+You can use the [IdentityModel](https://github.com/IdentityModel/IdentityModel) library.
+Follow these [instructions](https://identitymodel.readthedocs.io/en/latest/client/token.html#requesting-a-token-using-the-authorization-code-grant-type) and implement it in your `backend`.
+
+You can determine the configuration parameters based on the response received in **step 2**.
+
+- `Address` corresponds to `^{appInfo.apiDomain}^{appInfo.apiBasePath}` 
+- `ClientId` corresponds to `clientId`
+- `ClientSecret` corresponds to `clientSecret`
+- `RedirectUri` corresponds to a value from `callbackUrls` 
+
+Make sure that you expose an endpoint that redirects to the authentication URL obtained by using [this example](https://identitymodel.readthedocs.io/en/latest/misc/request_url.html#authorization-endpoint).
+This way the user ends up accessing the actual login page served by the **Authorization Service**.
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+:::info
+
+If you want to use the [**OAuth2 Refresh Tokens**](/docs/authentication/unified-login/oauth2-basics#oauth2-refresh-token) make sure to include the `offline_access` scope during the initialization step.
+
+:::
+
+### 6. Update the login flow in your frontend applications
+
+In your `frontend` applications you need to add a login action that directs the user to the authentication page.
+
+The user should first redirect to the `backend` authentication endpoint defined during the previous step.
+There the `backend` generates a safe `authorization` URL using the **OAuth2** library and then redirects the user there.
+After the user has logged in from the [**Authorization Service**](/docs/authentication/unified-login/oauth2-basics#authorization-server) they redirect to the `backend` callback URL.
+Then the `backend` creates the authentication session and sends it to the user agent as a cookie.
+
+### 7. Test the new authentication flow
+
+With everything set up, you can test your login flow.
+Use the setup created in the previous step to check if the authentication flow completes without any issues.

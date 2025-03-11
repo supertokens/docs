@@ -6,9 +6,14 @@ import "./SideModal.scss";
 
 const SideModalContent = React.forwardRef<
   React.ElementRef<typeof Dialog.Content>,
-  React.ComponentPropsWithoutRef<typeof Dialog.Content>
->(({ className, children, ...props }, ref) => (
-  <Dialog.Content ref={ref} className={`side-modal-content side-modal-content--right ${className || ""}`} {...props}>
+  React.ComponentPropsWithoutRef<typeof Dialog.Content> & { size?: "s" | "m" | "l" }
+>(({ className, size = "m", children, ...props }, ref) => (
+  <Dialog.Content
+    ref={ref}
+    className={`side-modal-content side-modal-content--right ${className || ""}`}
+    data-size={size}
+    {...props}
+  >
     {children}
   </Dialog.Content>
 ));

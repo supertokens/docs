@@ -107,6 +107,7 @@ const correctLinting = async (lintingIssues: ValeLintingIssue[]) => {
         - Return the same amount of array elements as the input. Match the array elements by their index.
         - If you do not know how to correct a line, return the original line.
         - Do not change import statements
+        - Update lines that report "pasive voice" errors to use active voice
         - Do not change values inside inline code expressions (single backticks: \`appInfo\`). Ignore errors for this type of expressions.
         - Values that look like variable names should be wrapped in backticks (\`appInfo\`)
         - If you encounter "signup" or "signin" errors, replace the words with "sign up" or "sign in"
@@ -201,12 +202,12 @@ const printStatus = (status: string) => {
 };
 
 (async () => {
-  const startPath = "./docs/authentication/enterprise";
+  const startPath = "./docs/references";
   const valeReport = await runVale(startPath);
 
   for (const file in valeReport) {
     console.log(`Processing ${file}`);
-    const lintingIssues = valeReport[file];
+    const lintingIssues = valeReport[file].slice(0, 50);
     await readLinesWithLintingIssues(file, lintingIssues);
     await correctLinting(lintingIssues);
     await writeLintingCorrectionsToFile(file, lintingIssues);
@@ -249,7 +250,8 @@ async function writeLintingCorrectionsToFile(filePath: string, lintingIssues: Va
 }
 
 async function runVale(itemPath: string): Promise<ValeReport> {
-  const { stdout } = await $`vale ${itemPath}  --output=JSON --no-exit`.nothrow();
+  const { stdout } = await $`vale ${itemPath} --output=JSON --no-exit`.nothrow();
+  // const { stdout } = await $`vale ${itemPath} --minAlertLevel=error  --output=JSON --no-exit`.nothrow();
   const parsedReport = JSON.parse(stdout.toString());
   return parsedReport as ValeReport;
 }

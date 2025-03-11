@@ -1,0 +1,191 @@
+---
+title: Important concepts
+hide_title: true
+sidebar_position: 2
+description: >-
+  Link multiple authentication methods to a single account, ensuring security
+  and user management.
+---
+
+# Important concepts
+
+## Overview
+
+The following page describes concepts that are relevant towards understanding how account linking works in **SuperTokens**.
+
+## References
+
+Each authentication recipe has a unique *user* object.
+
+### Primary and non-primary users
+
+The system identifies a primary or a non-primary user by the `isPrimaryUser` boolean within the user object.
+The primary user ID remains constant when accounts link to it.
+
+A user can become a primary user only if no other primary users share the same email, third-party information, or phone number across all tenants. This applies to all tenants to which the user belongs.
+Hence, two primary users with the same email address, one using email/password login and the other using social login.
+
+:::info Multi-tenancy
+Additionally, the following scenario is not permitted in a multi-tenant context:
+- User A is a primary user with email `test@example.com` and belongs to tenants `t1` and `t2`.
+- User B is a primary user with email `test@example.com` and belongs to tenant `t2`.
+
+This is not allowed because there are two primary users with the same email in tenant `t2`.
+:::
+
+For accounts to link, one user must be a primary user.
+The resulting user ID of the linked accounts becomes the primary user's ID.
+For example, if User A is a primary user with user ID `u1` and links to User B (a non-primary user) with user ID `u2`, the resulting user's primary ID becomes `u1`.
+The recipe ID remains `u1` for User A and `u2` for User B.
+
+**Tenant Considerations:**
+
+*   When designating a user as a primary user, the system verifies the primary user condition (as defined above) across all tenants to which the user belongs.
+*   When linking two accounts, the primary user condition and account linking condition must satisfy across the union of all tenants to which the primary and non-primary users belong. For example, if User A (tenant `t1`, `t2`) links to User B (tenant `t3`), the system checks the conditions across `t1`, `t2`, and `t3`.
+
+### Primary user ID and recipe user ID
+
+For most purposes, you care about the user's primary user ID.
+For example, when a user with two login methods, email password and social login, logs in, you get back the same primary user ID when you get their user ID from the session (or read the `sub` claim in the JWT).
+
+However, if you want to identify what the login method used for the current session is, you can use the session's `recipeUserId`.
+Then you can compare its value to the `recipeUserId` in each of the `loginMethods` in the user object.
+
+Some functions from the backend SDK also accept a `recipeUserId` as a parameter.
+For example, the `updateEmailOrPassword` function from the `emailpassword` recipe takes in a `recipeUserId` to determine which login method needs the update.
+If it took a `string` user ID instead, and you passed it a user's primary user ID, it may unintentionally lead to updating the wrong login method's email or password. It may also throw an error if the primary user is not an email password user.
+
+### User unlinking
+
+User unlinking is the process of removing a login method from a user. For example, if a user has both email password and social login, and they want to remove their social login, you can use the unlinking function from the backend SDK.
+
+A few scenarios exist here:
+1. If unlinking a login method that **is not** associated with the primary user, it results in two users: one as the primary user and the other as the non-primary user.
+For example, if User A (primary user, with email password login) links with User B (social login), and then you unlink User B, this results in two separate users: User A (primary user), with one login method (email password) and User B (non-primary user) with social login.
+The primary user ID of user B changes to be equal to their recipe user ID.
+2. If you unlink a login method associated with the primary user, it deletes the login method of the primary user ID.
+For example, if User A (primary user, with email password login) links with User B (social login), and then you unlink User A, this results in the deletion of the email password user.
+Only User B remains, which is a social login user, and its primary user ID equals User A's primary user ID (even though the system deleted the login method for A).
+Any metadata, role, sessions info continues to exist.
+3. If unlinking a User A which is a primary user ID, but it has not linked users, it results in this user becoming a non-primary user.
+
+:::important
+All the above checks happen automatically. You don't need to worry about them. But it is important to understand what's happening.
+:::
+
+## Security 
+
+Below is the list of all points in time when account linking occurs, and for each point, you can see the list of security checks that happen:
+
+### During sign up
+
+#### First case
+
+- Email is `e1`
+- Email verification: `false` (is the case with email password sign up or social login with a provider that does not require email verification)
+
+##### Checks done:
+- If there is no primary user with the same email, then sign up is not allowed if there exists any other non-primary account with the same email and that account is not verified.
+This occurs because if not, there is a risk that if this user signs up and becomes a primary user, the other account (which could be malicious), might resend a verification email. The user might click on it (since they signed up) and verify the malicious account, thereby linking it to their account.
+This way, the malicious user gains access to the victim's account.
+- If there exists a primary user with the same email, then the system rejects the sign up of this new user.
+This occurs because if allowed, and this sign up is from a malicious user, then the actual user (the primary user owner) may get an email for verification, and might click it (since they did sign up previously).
+This causes the new, malicious account to link, thereby giving the malicious user access to the victim's account.
+
+###### What users see: 
+- In case of email password login, users see an account already exists error. In this case, they can try logging in with another method, or go through the password reset flow, which creates a new email password account for them as well as verify it.
+- In case of social login, users see that they should try a different login method for security reasons.
+
+#### Second case
+
+- Email is `e1`
+- Email verified: `true` (this is the case with social login with a provider that requires email verification, like Google, or it could be a passwordless sign up)
+
+##### Checks done:
+- Same as in the first case. 
+- If there exists a primary user with the same email, then the system allows sign up only if there exists at least one login method in the primary user with email `e1` which the system has verified.
+This occurs because if not, then the following account takeover is possible:
+    - Malicious user signs up with email password, with email `e2`, verifies it, and becomes a primary user.
+    - They then change their email to `e1`, and keep it in an unverified state.
+    - The actual user (victim) does a Google sign in with email `e1`.
+    - If this sign up is not stopped, then the new sign up links to the primary user, and the malicious user gains access to the victim's account.
+
+##### What users see: 
+- Users see that they should try a different login method for security reasons.
+
+### During sign in
+
+#### First case
+- Email is `e1`
+- Email verified: `false`
+- User is not a primary user
+
+##### Checks done:
+- If there exists another user with the same email, and they are not a primary user, but their email remains unverified, the system disallows this sign in because if it allowed it, and this user verifies their email, it results in this user becoming a primary user.
+If the other account then sends an email verification email, this user may click on it (they may not get too suspicious), and verify the other account, thereby linking it to their account.
+This way, the other account, which may belong to a malicious user, gains access to the victim's account.
+- If there exists another user with the same email, and they are not a primary user, the system disallows signing in.
+This occurs because if allowed, and this sign in is from a malicious user, then the actual user (the primary user owner) may get an email for verification, and might click it (since they did sign up previously).
+This causes the new, malicious account to link, thereby giving the malicious user access to the victim's account.
+
+##### What users see:
+- For email password sign in, users see a wrong credentials error message.
+This prompts them to go through the password reset flow, which also marks the email as verified, thereby allowing them to sign in.
+This also blocks sign ins from malicious users, since the new password is only known to the actual owner of the email.
+- For passwordless or social login, users see that they should try a different login method for security reasons.
+
+#### Second case
+- The user first does a social login sign up with email `e1`.
+- They then change their email to `e2` on the provider and tries signing in again.
+- The third party provider does not verify emails, resulting in `e2` remaining unverified.
+
+##### Checks done:
+- If the social login user is **not** a primary user, and there exists another primary user with email `e2`, then the system disallows sign in here.
+This occurs because if allowed, and this sign in is from a malicious user, then the actual user (the primary user owner) may get an email for verification, and might click it (since they did sign up previously).
+This causes the new, malicious account to link, thereby giving the malicious user access to the victim's account.
+- If this user is a primary user, and there exists another primary user with email `e2`, the system disallows sign in because there can't be two primary users with the same email.
+The system rejects the email update which happens during sign in for social login.
+
+##### What users see:
+- For the first point, users see a message asking them to try a different login method, or contact support for security reasons.
+- For the second case, users see that email update is not allowed and to contact support.
+
+### During the password reset flow
+
+- Malicious user has email password and a social login account with email `e1`, and the system links them both.
+- They then change their email to `e2` for the email password login, which belongs to the victim.
+- Actual owner of `e2` tries to sign up, but sees that their account already exists (Case 1), they then try to sign in, but can't cause they don't know the password.
+They try the password reset flow.
+
+#### Checks done:
+- In this case, we deny generating the password reset token because if we did, then the real user would change the password of the email password account, and also mark it as verified.
+They would have access to the account, however, the malicious user could also then login using social login (with email `e1`) to access the same account. 
+
+During password reset, the system does not generate a token if the email password account for that email associates with a primary account that also has other emails / phone numbers. If the email for which the password is being reset is not verified for any of the login methods in that primary user, the token is not generated.
+
+#### What users see:
+- They see a message telling them that the reset password link was not generated because of account takeover risk, and to contact support.
+
+### During the email update flow:
+- A user has email `e1`, and they want to change it to email `e2`
+
+#### Checks done:
+- If the user's account is not a primary user, and there exists another primary user with email `e2`, then the system disallows email update here.
+This occurs because if allowed, and this email update is from a malicious user, then the actual user (the primary user owner) may get an email for verification, and might click it (since they did sign up previously).
+This causes the system to link the new, malicious account, thereby giving the malicious user access to the victim's account.
+- If this user is a primary user, and there exists another primary user with email `e2`, the system disallows email update because there can't be two primary users with the same email.
+
+#### What users see:
+- If the email update is happening during sign in of social login, users see a message that email update is not allowed and to contact support.
+- If this is happening post login (from a settings page), then you can send any message you want to the user, since this would be your custom API.
+
+---
+
+## See also
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/post-authentication/account-linking/automatic-account-linking" label="Automatic Account Linking" />
+  <ReferenceCard href="/docs/post-authentication/account-linking/manual-account-linking" label="Manual Account Linking" />
+  <ReferenceCard href="/docs/post-authentication/account-linking/link-social-accounts" label="Link Social Accounts" />
+  <ReferenceCard href="/docs/post-authentication/account-linking/add-passwords-to-an-existing-account" label="Add Passwords to an Existing Account" />
+</ReferenceCard.Grid>
