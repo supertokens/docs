@@ -202,7 +202,7 @@ const printStatus = (status: string) => {
 };
 
 (async () => {
-  const startPath = "./docs/deployment";
+  const startPath = "./docs/references";
   const valeReport = await runVale(startPath);
 
   for (const file in valeReport) {
