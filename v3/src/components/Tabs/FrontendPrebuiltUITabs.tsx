@@ -7,7 +7,6 @@ const FrontendPrebuiltUITabOptions = [
   { label: "ReactJS", value: "reactjs" },
   { label: "Angular", value: "angular" },
   { label: "Vue", value: "vue" },
-  { label: "Mobile", value: "mobile" },
 ];
 
 const FrontendPrebuiltUIGroupId = "frontend-prebuilt-ui";
