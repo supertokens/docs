@@ -150,7 +150,7 @@ function ExampleAppFormRoot() {
                     <Select.Trigger />
                     <Select.Content>
                       <Select.Item value="node">NodeJS</Select.Item>
-                      <Select.Item value="go">Go</Select.Item>
+                      <Select.Item value="go-http">Go</Select.Item>
                       <Select.Item value="python">Python</Select.Item>
                     </Select.Content>
                   </Select.Root>
