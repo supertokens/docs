@@ -5,6 +5,7 @@ export interface DocPageState {
   nextjsRouterType: "app-router" | "pages-router";
   accountType: "managed" | "self-hosted";
   selfHostedDeploymentType: "with-docker" | "without-docker";
+  tenantType: "single-tenant" | "multi-tenant";
 }
 
 class DocPageStore {
@@ -13,6 +14,7 @@ class DocPageStore {
 
   constructor() {
     this.state = {
+      tenantType: "single-tenant",
       nextjsRouterType: "app-router",
       accountType: "managed",
       selfHostedDeploymentType: "with-docker",

@@ -1,0 +1,2228 @@
+openapi: 3.0.0
+servers: []
+info:
+  description: |
+    These are the APIs exposed by our backend SDK. To be consumed by the frontend only.
+    `<tenantId>` in all the APIs are optional. Its default value is `public`
+  version: "3.0.0"
+  title: Frontend Driver Interface
+  contact:
+    email: team@supertokens.io
+tags:
+  - name: Session Recipe
+  - name: EmailPassword Recipe
+  - name: ThirdParty Recipe
+  - name: Passwordless Recipe
+  - name: EmailVerification Recipe
+  - name: MultiFactorAuth Recipe
+  - name: TOTP Recipe
+  - name: JWT Recipe
+  - name: OpenId Recipe
+paths:
+  /{apiBasePath}/mfa/info:
+    put:
+      tags:
+        - MultiFactorAuth Recipe
+      operationId: getMFAInfo
+      description: |
+        Returns information about the auth factors of the current user and refreshes the related session claim
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/multiFactorAuthRid"
+        - $ref: "#/components/parameters/anti-csrf"
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+
+      responses:
+        "200":
+          description: Information about the auth factors of the current user and optionally the session with a refreshed MFA claim
+          headers:
+            Set-Cookie:
+              description: Sent in cookie-based sessions if the access token payload is updated
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: Sent in cookie-based sessions if the access token payload is updated
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: Sent if enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              description: Sent if the access token payload is updated
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      factors:
+                        type: object
+                        properties:
+                          alreadySetup:
+                            type: array
+                            items:
+                              type: string
+                          allowedToSetup:
+                            type: array
+                            items:
+                              type: string
+                          next:
+                            type: array
+                            items:
+                              type: string
+                      emails:
+                        type: object
+                        properties:
+                          emailpassword:
+                            type: array
+                            items:
+                              type: string
+                          otp-email:
+                            type: array
+                            items:
+                              type: string
+                          link-email:
+                            type: array
+                            items:
+                              type: string
+                      phoneNumbers:
+                        type: object
+                        properties:
+                          otp-phone:
+                            type: array
+                            items:
+                              type: string
+                          link-phone:
+                            type: array
+                            items:
+                              type: string
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/totp/device/list:
+    get:
+      tags:
+        - TOTP Recipe
+      operationId: listTOTPdevices
+      description: |
+        List the TOTP devices of the current user
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/totpRid"
+        - $ref: "#/components/parameters/anti-csrf"
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+      responses:
+        "200":
+          description: The list of the TOTP devices of the session user
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      devices:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: "asdf123"
+                            period:
+                              type: number
+                              example: 30
+                            skew:
+                              type: number
+                              example: 30
+                            verified:
+                              type: boolean
+                              example: false
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/totp/device:
+    post:
+      tags:
+        - TOTP Recipe
+      operationId: createTOTPDevice
+      description: |
+        Creates an unverified totp device
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/totpRid"
+        - $ref: "#/components/parameters/anti-csrf"
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceName:
+                  type: string
+                  example: "asdf123"
+      responses:
+        "200":
+          description: |
+            Information about the created (unverified) device. Based on the this,
+            the user can add the device to their TOTP app and verify it.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      deviceName:
+                        type: string
+                        example: "asfd123"
+                      qrCodeString:
+                        type: string
+                        example: "otpauth://totp/Supertokens:alice@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Supertokens"
+                      secret:
+                        type: string
+                        example: "JBSWY3DPEHPK3PXP"
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["DEVICE_ALREADY_EXISTS_ERROR"]
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "403":
+          $ref: "#/components/responses/403-factor-setup"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/totp/device/remove:
+    post:
+      tags:
+        - TOTP Recipe
+      operationId: removeTOTPDevice
+      description: |
+        Removes a totp device
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/totpRid"
+        - $ref: "#/components/parameters/anti-csrf"
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceName:
+                  type: string
+                  example: "asdf123"
+      responses:
+        "200":
+          description: Success report
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      didDeviceExist:
+                        type: boolean
+                        example: true
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/totp/device/verify:
+    post:
+      tags:
+        - TOTP Recipe
+      operationId: verifyTOTPDevice
+      description: |
+        Checks that the TOTP sent in the body belongs to the totp device (specified by deviceName, belonging to the session user)
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/totpRid"
+        - $ref: "#/components/parameters/anti-csrf"
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                totp:
+                  type: string
+                  example: "123456"
+                deviceName:
+                  type: string
+                  example: "asdf123asdf"
+
+      responses:
+        "200":
+          description: Verification result and optionally the session with a refreshed MFA claim
+          headers:
+            Set-Cookie:
+              description: Sent in cookie-based sessions if the access token payload is updated
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: Sent in cookie-based sessions if the access token payload is updated
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: Sent if enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              description: Sent if the access token payload is updated
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["UNKNOWN_DEVICE_ERROR"]
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["INVALID_TOTP_ERROR"]
+                      currentNumberOfFailedAttempts:
+                        type: number
+                        example: 2
+                      maxNumberOfFailedAttempts:
+                        type: number
+                        example: 5
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["LIMIT_REACHED_ERROR"]
+                      retryAfterMs:
+                        type: number
+                        example: 30000
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "403":
+          $ref: "#/components/responses/403-factor-setup"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/totp/verify:
+    post:
+      tags:
+        - TOTP Recipe
+      operationId: verifyTOTP
+      description: |
+        Checks that the TOTP sent in the body belongs to a verified totp device of the session user
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/totpRid"
+        - $ref: "#/components/parameters/anti-csrf"
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                totp:
+                  type: string
+                  example: "123456"
+      responses:
+        "200":
+          description: Verification result and optionally the session with a refreshed MFA claim
+          headers:
+            Set-Cookie:
+              description: Sent in cookie-based sessions if the access token payload is updated
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: Sent in cookie-based sessions if the access token payload is updated
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: Sent if enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              description: Sent if the access token payload is updated
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["INVALID_TOTP_ERROR"]
+                      currentNumberOfFailedAttempts:
+                        type: number
+                        example: 2
+                      maxNumberOfFailedAttempts:
+                        type: number
+                        example: 5
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["LIMIT_REACHED_ERROR"]
+                      retryAfterMs:
+                        type: number
+                        example: 30000
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signinup/code:
+    post:
+      tags:
+        - Passwordless Recipe
+      operationId: passwordlessSignInUpStart
+      description: |
+        Start sign in/up process with passwordless
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/passwordlessRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    email:
+                      $ref: "#/components/schemas/email"
+                  required:
+                    - email
+                - type: object
+                  properties:
+                    phoneNumber:
+                      $ref: "#/components/schemas/phoneNumber"
+                  required:
+                    - phoneNumber
+
+      responses:
+        "200":
+          description: Started the passwordless sign in/up process.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      deviceId:
+                        $ref: "#/components/schemas/deviceId"
+                      preAuthSessionId:
+                        $ref: "#/components/schemas/preAuthSessionId"
+                      flowType:
+                        type: string
+                        enum: ["MAGIC_LINK", "USER_INPUT_CODE_AND_MAGIC_LINK", "USER_INPUT_CODE"]
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["SIGN_IN_UP_NOT_ALLOWED"]
+                      reason:
+                        type: string
+                        example: "Cannot sign in / up due to security reasons. Please contact support. (IS_SIGN_IN_ALLOWED_FALSE)"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "403":
+          $ref: "#/components/responses/403-factor-setup"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signinup/code/resend:
+    post:
+      tags:
+        - Passwordless Recipe
+      operationId: passwordlessSignInUpResend
+      description: |
+        Resend passwordless code
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/passwordlessRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceId:
+                  $ref: "#/components/schemas/deviceId"
+                preAuthSessionId:
+                  $ref: "#/components/schemas/preAuthSessionId"
+              required:
+                - deviceId
+                - preAuthSessionId
+
+      responses:
+        "200":
+          description: Started the passwordless sign in/up process.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["OK", "RESTART_FLOW_ERROR"]
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signinup/code/consume:
+    post:
+      tags:
+        - Passwordless Recipe
+      operationId: passwordlessSignInUpConsume
+      description: |
+        Finish sign in/up process with passwordless
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/passwordlessRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    preAuthSessionId:
+                      $ref: "#/components/schemas/preAuthSessionId"
+                    linkCode:
+                      type: string
+                      example: b10lbT_SnDC4flA6Fn7pE5TtG5k5NfigLef4QMBeGA8
+                  required:
+                    - preAuthSessionId
+                    - linkCode
+
+                - type: object
+                  properties:
+                    preAuthSessionId:
+                      $ref: "#/components/schemas/preAuthSessionId"
+                    deviceId:
+                      $ref: "#/components/schemas/deviceId"
+                    userInputCode:
+                      type: string
+                      example: 432123
+                  required:
+                    - preAuthSessionId
+                    - deviceId
+                    - userInputCode
+      responses:
+        "200":
+          description: Signin/up a user
+          headers:
+            Set-Cookie:
+              description: In cookie-based sessions
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax; sRefreshToken=K91cQ7ezMbu...cb61c3.V2; Path=/auth/session/refresh; Expires=Thu, 30 Sep 2021 06:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            st-refresh-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: If enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token, st-refresh-token"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      createdNewRecipeUser:
+                        type: boolean
+                        example: true
+                      user:
+                        $ref: "#/components/schemas/user"
+
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["INCORRECT_USER_INPUT_CODE_ERROR", "EXPIRED_USER_INPUT_CODE_ERROR"]
+
+                      failedCodeInputAttemptCount:
+                        type: number
+                        example: 2
+                      maximumCodeInputAttempts:
+                        type: number
+                        example: 5
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["RESTART_FLOW_ERROR"]
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["SIGN_IN_UP_NOT_ALLOWED"]
+                      reason:
+                        type: string
+                        example: "Cannot sign in / up due to security reasons. Please contact support. (IS_SIGN_IN_ALLOWED_FALSE)"
+
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "403":
+          $ref: "#/components/responses/403-factor-setup"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signup/email/exists⠀⠀:
+    get:
+      deprecated: true
+      tags:
+        - Passwordless Recipe
+      operationId: passwordlessEmailExistsDepr
+      description: |
+        Check if an email exists
+        Note that there is an invisible character at the end of the path, this was to avoid a conflict with the OpenAPI spec.
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/passwordlessRid"
+        - $ref: "#/components/parameters/email"
+      responses:
+        "200":
+          description: Checks if an email exists
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      exists:
+                        $ref: "#/components/schemas/exists"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/passwordless/email/exists:
+    get:
+      tags:
+        - Passwordless Recipe
+      operationId: passwordlessEmailExists
+      description: |
+        Check if an email exists
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/passwordlessRid"
+        - $ref: "#/components/parameters/email"
+      responses:
+        "200":
+          description: Checks if an email exists
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      exists:
+                        $ref: "#/components/schemas/exists"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signup/phoneNumber/exists:
+    get:
+      deprecated: true
+      tags:
+        - Passwordless Recipe
+      operationId: passwordlessPhoneNumberExistsDepr
+      description: |
+        Check if a phone number exists
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/passwordlessRid"
+        - $ref: "#/components/parameters/phoneNumber"
+      responses:
+        "200":
+          description: Checks if a phone number exists
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      exists:
+                        $ref: "#/components/schemas/exists"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/passwordless/phoneNumber/exists:
+    get:
+      tags:
+        - Passwordless Recipe
+      operationId: passwordlessPhoneNumberExists
+      description: |
+        Check if a phone number exists
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/passwordlessRid"
+        - $ref: "#/components/parameters/phoneNumber"
+      responses:
+        "200":
+          description: Checks if a phone number exists
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      exists:
+                        $ref: "#/components/schemas/exists"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/signout:
+    post:
+      tags:
+        - Session Recipe
+      operationId: signout
+      description: |
+        Logout user
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/rid"
+        - $ref: "#/components/parameters/anti-csrf"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Logout user
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: "sAccessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax sRefreshToken=; Path=/auth/session/refresh; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: Set to an empty string to trigger token clearing in the client SDK
+              schema:
+                type: string
+                example: ""
+            st-refresh-token:
+              description: Set to an empty string to trigger token clearing in the client SDK
+              schema:
+                type: string
+                example: ""
+            front-token:
+              schema:
+                type: string
+                example: remove
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: front-token, st-access-token, st-refresh-token
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/session/refresh:
+    post:
+      tags:
+        - Session Recipe
+      operationId: refresh
+      security:
+        - RefreshTokenBearer: []
+        - RefreshTokenCookie: []
+      description: |
+        Refresh the user session
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/rid"
+        - $ref: "#/components/parameters/anti-csrf"
+      responses:
+        "200":
+          description: Refresh users
+          headers:
+            Set-Cookie:
+              description: In cookie-based sessions
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax; sRefreshToken=K91cQ7ezMbu...cb61c3.V2; Path=/auth/session/refresh; Expires=Thu, 30 Sep 2021 06:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            st-refresh-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: If enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token, st-refresh-token"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signin:
+    post:
+      tags:
+        - EmailPassword Recipe
+      operationId: signIn
+      description: |
+        Signin a user with email ID and password
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/rid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                formFields:
+                  $ref: "#/components/schemas/formFields"
+      responses:
+        "200":
+          description: Sign in Response
+          headers:
+            Set-Cookie:
+              description: In cookie-based sessions
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax; sRefreshToken=K91cQ7ezMbu...cb61c3.V2; Path=/auth/session/refresh; Expires=Thu, 30 Sep 2021 06:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            st-refresh-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: If enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token, st-refresh-token"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/signInResponse"
+                  - $ref: "#/components/schemas/signInNotAllowedResponse"
+                  - $ref: "#/components/schemas/fieldErrorResponse"
+                  - $ref: "#/components/schemas/wrongCredentialsResponse"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "403":
+          $ref: "#/components/responses/403-factor-setup"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signup:
+    post:
+      tags:
+        - EmailPassword Recipe
+      operationId: signUp
+      description: |
+        Signup a user with email ID and password
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/emailPasswordRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                formFields:
+                  $ref: "#/components/schemas/formFields"
+      responses:
+        "200":
+          description: Sign up Response
+          headers:
+            Set-Cookie:
+              description: In cookie-based sessions
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax; sRefreshToken=K91cQ7ezMbu...cb61c3.V2; Path=/auth/session/refresh; Expires=Thu, 30 Sep 2021 06:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            st-refresh-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: If enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token, st-refresh-token"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/signupResponse"
+                  - $ref: "#/components/schemas/signUpNotAllowedResponse"
+                  - $ref: "#/components/schemas/fieldErrorResponse"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "403":
+          $ref: "#/components/responses/403-factor-setup"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signup/email/exists:
+    get:
+      deprecated: true
+      tags:
+        - EmailPassword Recipe
+      operationId: emailExistsDepr
+      description: |
+        Check if an email exists
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/emailPasswordRid"
+        - $ref: "#/components/parameters/email"
+      responses:
+        "200":
+          description: Checks if an email exists
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      exists:
+                        $ref: "#/components/schemas/exists"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/emailpassword/email/exists:
+    get:
+      tags:
+        - EmailPassword Recipe
+      operationId: emailExists
+      description: |
+        Check if an email exists
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/emailPasswordRid"
+        - $ref: "#/components/parameters/email"
+      responses:
+        "200":
+          description: Checks if an email exists
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      exists:
+                        $ref: "#/components/schemas/exists"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/user/password/reset/token:
+    post:
+      tags:
+        - EmailPassword Recipe
+      operationId: passwordResetToken
+      description: |
+        Generate a new reset password token for this user
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/emailPasswordRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                formFields:
+                  $ref: "#/components/schemas/formFields"
+              example: { formFields: [{ id: "email", value: "test@email.com" }] }
+      responses:
+        "200":
+          description: Generate a new reset password token for this user
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/passwordResetTokenResponse"
+                  - $ref: "#/components/schemas/passwordResetNotAllowedResponse"
+                  - $ref: "#/components/schemas/fieldErrorResponse"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/user/password/reset:
+    post:
+      tags:
+        - EmailPassword Recipe
+      operationId: passwordReset
+      description: |
+        Reset a password using password reset token
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/emailPasswordRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                method:
+                  $ref: "#/components/schemas/method"
+                formfields:
+                  $ref: "#/components/schemas/formFields"
+                token:
+                  $ref: "#/components/schemas/token"
+              example:
+                {
+                  method: "token",
+                  formFields: [{ id: "password", value: "newPass123" }],
+                  token: "ZTRiOTBjNz...jI5MTZlODkxw",
+                }
+      responses:
+        "200":
+          description: Reset a password using password reset token
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/passwordResetResponse"
+                  - $ref: "#/components/schemas/passwordResetErrorResponse"
+                  - $ref: "#/components/schemas/fieldErrorResponse"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/signinup:
+    post:
+      tags:
+        - ThirdParty Recipe
+      operationId: signInUp
+      description: |
+        Signin/up a user
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/thirdPartyRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required:
+                    - thirdPartyId
+                    - redirectURIInfo
+                  properties:
+                    thirdPartyId:
+                      $ref: "#/components/schemas/thirdPartyId"
+                    clientType:
+                      $ref: "#/components/schemas/clientType"
+                    redirectURIInfo:
+                      type: object
+                      required:
+                        - redirectURIOnProviderDashboard
+                        - redirectURIQueryParams
+                      properties:
+                        redirectURIOnProviderDashboard:
+                          $ref: "#/components/schemas/redirectURI"
+                        redirectURIQueryParams:
+                          type: object
+                          example:
+                            code: "neqmpdsfuqe141m5lk437867masdf"
+                            state: "ljayfgqewertbh13245njw0"
+                        pkceCodeVerifier:
+                          type: string
+                          example: abcd1234
+                - type: object
+                  required:
+                    - thirdPartyId
+                    - oAuthTokens
+                  properties:
+                    thirdPartyId:
+                      $ref: "#/components/schemas/thirdPartyId"
+                    clientType:
+                      $ref: "#/components/schemas/clientType"
+                    oAuthTokens:
+                      $ref: "#/components/schemas/oAuthTokens"
+      responses:
+        "200":
+          description: Signin/up a user
+          headers:
+            Set-Cookie:
+              description: In cookie-based sessions
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax; sRefreshToken=K91cQ7ezMbu...cb61c3.V2; Path=/auth/session/refresh; Expires=Thu, 30 Sep 2021 06:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            st-refresh-token:
+              description: In header-based sessions
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: If enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token, st-refresh-token"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/signinupResponse"
+                  - $ref: "#/components/schemas/signinupErrorResponse"
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "403":
+          $ref: "#/components/responses/403-factor-setup"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/authorisationurl:
+    get:
+      tags:
+        - ThirdParty Recipe
+      operationId: authorisationUrl
+      description: |
+        Get the thirdparty provider's authorisation URL to which the user should be redirected to.
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/thirdPartyRid"
+        - in: query
+          name: thirdPartyId
+          required: true
+          schema:
+            $ref: "#/components/schemas/thirdPartyId"
+        - in: query
+          name: redirectURIOnProviderDashboard
+          required: true
+          schema:
+            $ref: "#/components/schemas/redirectURI"
+        - in: query
+          name: clientType
+          required: false
+          schema:
+            $ref: "#/components/schemas/clientType"
+      responses:
+        "200":
+          description: Get the OAuth authorisation URL
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required:
+                      - status
+                      - url
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      urlWithQueryParams:
+                        type: string
+                        example: https://providerdomain.com/authorize?client_id=..&scope=..&access_type=..
+                      pkceCodeVerifier:
+                        type: string
+                        example: abcd1234
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/loginmethods:
+    get:
+      tags:
+        - Multitenancy Recipe
+      operationId: loginmethods
+      description: |
+        Get enabled login methods: Returns recipes with their enabled setting and recipe specific configuration.
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/multitenancyRid"
+        - in: query
+          name: clientType
+          required: false
+          schema:
+            $ref: "#/components/schemas/clientType"
+      responses:
+        "200":
+          description: Get enabled login methods
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required:
+                      - status
+                      - recipes
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      recipes:
+                        type: object
+                        required:
+                          - emailPassword
+                          - thirdParty
+                          - passwordless
+                          - firstFactors
+                        properties:
+                          emailPassword:
+                            type: object
+                            required:
+                              - enabled
+                            properties:
+                              enabled:
+                                type: boolean
+                                example: true
+                          thirdParty:
+                            type: object
+                            required:
+                              - enabled
+                              - providers
+                            properties:
+                              enabled:
+                                type: boolean
+                                example: true
+                              providers:
+                                type: array
+                                items:
+                                  type: object
+                                  required:
+                                    - id
+                                  properties:
+                                    id:
+                                      $ref: "#/components/schemas/thirdPartyId"
+                                    name:
+                                      type: string
+                                      example: Google
+                          passwordless:
+                            type: object
+                            required:
+                              - enabled
+                            properties:
+                              enabled:
+                                type: boolean
+                                example: true
+                          firstFactors:
+                            type: array
+                            items:
+                              type: string
+                  - $ref: "#/components/schemas/generalErrorResponse"
+        "404":
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/callback/apple:
+    post:
+      tags:
+        - ThirdParty Recipe
+      operationId: thirdPartyCallbackApple
+      description: |
+        Handles sign in with the apple.
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: "The Authorization code which will be exchanged for an access token"
+                state:
+                  type: string
+                  description: "A unique string used to mitigate CSRF attacks"
+      responses:
+        "303":
+          description: Redirects the user to the client's app.
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/user/email/verify/token:
+    post:
+      tags:
+        - EmailVerification Recipe
+      operationId: verifyEmailToken
+      description: |
+        Send email verification email
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/emailVerificationRid"
+        - $ref: "#/components/parameters/anti-csrf"
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+      responses:
+        "200":
+          description: Send email verification email
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["OK", "EMAIL_ALREADY_VERIFIED_ERROR"]
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/<tenantId>/user/email/verify:
+    post:
+      tags:
+        - EmailVerification Recipe
+      operationId: verifyEmail
+      description: |
+        Verify an email
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/emailVerificationRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                method:
+                  $ref: "#/components/schemas/method"
+                token:
+                  $ref: "#/components/schemas/token"
+      responses:
+        "200":
+          description: Verify an email
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: ["OK", "EMAIL_VERIFICATION_INVALID_TOKEN_ERROR"]
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/user/email/verify:
+    get:
+      tags:
+        - EmailVerification Recipe
+      operationId: getVerifyEmail
+      description: |
+        Checks if an email is verified and adds this information into the access token payload as well
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+        - $ref: "#/components/parameters/emailVerificationRid"
+        - $ref: "#/components/parameters/anti-csrf"
+      security:
+        - AccessTokenBearer: []
+        - AccessTokenCookie: []
+
+      responses:
+        "200":
+          description: Checks if an email is verified and adds this information into the access token payload as well
+          headers:
+            Set-Cookie:
+              description: Sent in cookie-based sessions if the access token payload is updated
+              schema:
+                type: string
+                example: "sAccessToken=eyJhb...%3D%3D; Path=/; Expires=Tue, 22 Jun 2021 07:43:07 GMT; HttpOnly; SameSite=Lax"
+            st-access-token:
+              description: Sent in cookie-based sessions if the access token payload is updated
+              schema:
+                $ref: "#/components/schemas/token"
+            anti-csrf:
+              description: Sent if enabled by the user
+              schema:
+                $ref: "#/components/schemas/token"
+            front-token:
+              description: Sent if the access token payload is updated
+              schema:
+                $ref: "#/components/schemas/token"
+            Access-Control-Expose-Headers:
+              schema:
+                type: string
+                example: "anti-csrf, front-token, st-access-token"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/statusOK"
+                      isVerified:
+                        type: boolean
+                        example: true
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/jwt/jwks.json:
+    get:
+      tags:
+        - JWT Recipe
+      operationId: getJWKS
+      description: |
+        Get all JSON web keys for JWT verification
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+      responses:
+        "200":
+          description: Retrieve JWKs for JWT verification
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      keys:
+                        type: array
+                        items:
+                          type: object
+                          description: A JWK that can be used to verify a JWT
+                          properties:
+                            alg:
+                              type: string
+                              description: The algorithm to use when creating the JWT.
+                              enum: ["RS256"]
+                            kty:
+                              type: string
+                              example: RSA
+                            use:
+                              type: string
+                              example: sig
+                            kid:
+                              type: string
+                              description: Unique identifier for the JWK
+                            n:
+                              type: string
+                              description: Modulus for the key
+                            e:
+                              type: string
+                              description: Exponent for the key
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "400":
+          $ref: "#/components/responses/400"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /{apiBasePath}/.well-known/openid-configuration:
+    get:
+      tags:
+        - OpenId Recipe
+      operationId: getOpenIdDiscoveryConfiguration
+      description: |
+        Get OpenID discovery configuration
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+      responses:
+        "200":
+          description: Retrieve OpenID configuration
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      issuer:
+                        type: string
+                        description: URL using the https scheme with no query or fragment component that the OP asserts as its Issuer Identifier (https://openid.net/specs/openid-connect-discovery-1_0.html section 3)
+                        example: https://api.example.com/auth
+                      jwks_uri:
+                        type: string
+                        description: URL for fetching a list JsonWebKey, used for JWT signature verification. Refer to /jwt/jwks.json API in the JWT recipe for JWK details
+                        example: https://api.example.com/auth/jwt/jwks.json
+                  - $ref: "#/components/schemas/generalErrorResponse"
+
+        "400":
+          $ref: "#/components/responses/400"
+
+        "404":
+          $ref: "#/components/responses/404"
+
+        "500":
+          $ref: "#/components/responses/500"
+
+  /example:
+    get:
+      tags:
+        - App API
+      operationId: exampleAppAPI
+      description: |
+        API endpoint in your application, checked with `verifySession`
+      parameters:
+        - $ref: "#/components/parameters/apiBasePath"
+      responses:
+        "200":
+          description: The session passed verification and went through the application code
+
+        "401":
+          description: The session doesn't exists or if it needs to be refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: unauthorised or try refresh token
+                    example: try refresh token
+
+        "403":
+          description: The session exists, but didn't pass a claim validator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: invalid claim
+                  claimValidationErrors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: st-ev
+                        reason:
+                          type: object
+                          example:
+                            message: "value does not exist"
+                            expectedValue: val
+                            actualValue: claimVal
+
+components:
+  parameters:
+    rid:
+      name: rid
+      in: header
+      example: session
+      schema:
+        type: string
+
+    emailPasswordRid:
+      name: rid
+      in: header
+      example: emailpassword
+      schema:
+        type: string
+
+    thirdPartyRid:
+      name: rid
+      in: header
+      example: thirdparty
+      schema:
+        type: string
+
+    passwordlessRid:
+      name: rid
+      in: header
+      example: passwordless
+      schema:
+        type: string
+
+    emailVerificationRid:
+      name: rid
+      in: header
+      example: emailverification
+      schema:
+        type: string
+
+    multitenancyRid:
+      name: rid
+      in: header
+      example: multitenancy
+      schema:
+        type: string
+
+    multiFactorAuthRid:
+      name: rid
+      in: header
+      example: multifactorauth
+      schema:
+        type: string
+
+    totpRid:
+      name: rid
+      in: header
+      example: totp
+      schema:
+        type: string
+
+    anti-csrf:
+      name: anti-csrf
+      in: header
+      description: This will only be here if enabled by the user.
+      schema:
+        $ref: "#/components/schemas/token"
+
+    apiBasePath:
+      name: apiBasePath
+      in: path
+      description: Its value depends on the apiBasePath set by the user
+      required: true
+      schema:
+        type: string
+        example: auth
+
+    email:
+      name: email
+      in: query
+      required: true
+      schema:
+        type: string
+        example: johndoe@gmail.com
+
+    phoneNumber:
+      name: phoneNumber
+      in: query
+      required: true
+      schema:
+        type: string
+        example: "0036701234567"
+
+  responses:
+    500:
+      description: error code 500
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/internalError"
+
+    400:
+      description: error code 400
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/badRequest"
+
+    404:
+      description: error code 404
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/notFound"
+
+    403-factor-setup:
+      description: A claim validation error happened during factor setup
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                properties:
+                  message:
+                    type: string
+                    example: invalid claim
+                  claimValidationErrors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: st-ev
+                        reason:
+                          type: object
+                          example:
+                            message: "wrong value"
+                            expectedValue: true
+                            actualValue: false
+              - type: object
+                properties:
+                  message:
+                    type: string
+                    example: invalid claim
+                  claimValidationErrors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: st-mfa
+                        reason:
+                          type: string
+                          example: "Completed factors in the session does not satisfy the MFA requirements for auth"
+
+  schemas:
+    statusOK:
+      type: string
+      enum:
+        - OK
+
+    generalErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - GENERAL_ERROR
+        message:
+          type: string
+
+    token:
+      type: string
+      example: ZTRiOTBjNz...jI5MTZlODkxw
+
+    cookie:
+      type: string
+      example: ed3164...06c0d; Path=/; Expires=Thu, 30 Sep 2021 06:43:07 GMT; HttpOnly; SameSite=Lax
+
+    id:
+      type: string
+      enum: ["email", "password"]
+
+    userId:
+      type: string
+      example: fa7a0841-b533-4478-95533-0fde890c3483
+
+    user:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/userId"
+        timeJoined:
+          type: number
+          example: 1638433545183
+        isPrimaryUser:
+          type: boolean
+          example: true
+        tenantIds:
+          type: array
+          items:
+            type: string
+            example: public
+        emails:
+          type: array
+          items:
+            type: string
+            example: johndoe@gmail.com
+        phoneNumbers:
+          type: array
+          items:
+            type: string
+            example: +36201234123
+        thirdParty:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: google
+              userId:
+                type: string
+                example: rq238mrq2389rvq123213
+        loginMethods:
+          type: array
+          items:
+            type: object
+            properties:
+              recipeId:
+                type: string
+                enum: ["emailpassword", "thirdparty", "passwordless"]
+              recipeUserId:
+                $ref: "#/components/schemas/userId"
+              verified:
+                type: boolean
+                example: true
+              tenantIds:
+                type: array
+                items:
+                  type: string
+                  example: public
+              timeJoined:
+                type: number
+                example: 1638433545183
+              email:
+                type: string
+                example: johndoe@gmail.com
+              phoneNumber:
+                type: string
+                example: +36201234123
+              thirdParty:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: google
+                  userId:
+                    type: string
+                    example: rq238mrq2389rvq123213
+
+    email:
+      type: string
+      example: johndoe@gmail.com
+
+    phoneNumber:
+      type: string
+      example: "0036701234567"
+
+    deviceId:
+      type: string
+      description: This should be saved on the starting device to enable the manual code entry flow.
+      example: TU/52WOcktSv99zqaAZuWJG9BSoS0aRLfCbep8rFEwk=
+
+    preAuthSessionId:
+      type: string
+      description: An identifier that used to identify the login attempt/device.
+      example: kFmkPQEAJtACiT2w/K8fndEuNm+XozJXSZSlWEr+iGs=
+
+    thirdPartyId:
+      type: string
+      example: google
+
+    exists:
+      type: boolean
+      example: true
+
+    method:
+      type: string
+      example: "token"
+
+    code:
+      $ref: "#/components/schemas/token"
+
+    authCodeResponse:
+      description: Can contain random data other than the two listed below
+      type: object
+      required:
+        - access_token
+      properties:
+        access_token:
+          type: string
+        id_token:
+          type: string
+
+    redirectURI:
+      type: string
+      example: https://yourdomain.com/callback
+
+    clientType:
+      type: string
+      example: web
+
+    oAuthTokens:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: ZTRiOTBjNz...jI5MTZlODkxw
+        id_token:
+          type: string
+          example: ZTRiOTBjNz...jI5MTZlODkxw
+
+    formFields:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            $ref: "#/components/schemas/id"
+          value:
+            type: string
+      example: [{ id: email, value: johndoe@gmail.com }, { id: password, value: testPass123 }]
+
+    signInResponse:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/statusOK"
+        user:
+          $ref: "#/components/schemas/user"
+
+    signInNotAllowedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["SIGN_IN_NOT_ALLOWED"]
+        reason:
+          type: string
+          example: "Cannot sign in due to security reasons. Please try resetting your password, use a different login method or contact support. (ERR_CODE_008)"
+
+    signupResponse:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/statusOK"
+        user:
+          $ref: "#/components/schemas/user"
+
+    signUpNotAllowedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["SIGN_UP_NOT_ALLOWED"]
+        reason:
+          type: string
+          example: "Cannot sign up due to security reasons. Please try resetting your password, use a different login method or contact support. (ERR_CODE_007)"
+
+    passwordResetTokenResponse:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/statusOK"
+
+    passwordResetNotAllowedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["PASSWORD_RESET_NOT_ALLOWED"]
+        reason:
+          type: string
+          example: "Token generation was not done because of account take over risk. Please contact support. (HAS_OTHER_EMAIL_OR_PHONE)"
+
+    signinupResponse:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/statusOK"
+        user:
+          $ref: "#/components/schemas/user"
+        createdNewRecipeUser:
+          type: boolean
+          example: true
+
+    passwordResetErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["RESET_PASSWORD_INVALID_TOKEN_ERROR"]
+
+    passwordResetResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["OK"]
+
+    fieldErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["FIELD_ERROR"]
+        formFields:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: email
+              error:
+                type: string
+                example: "Error Message"
+
+    wrongCredentialsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["WRONG_CREDENTIALS_ERROR"]
+
+    signinupErrorResponse:
+      oneOf:
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: ["NO_EMAIL_GIVEN_BY_PROVIDER"]
+
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: ["SIGN_IN_UP_NOT_ALLOWED"]
+            reason:
+              type: string
+              example: "Cannot sign in / up due to security reasons. Please contact support. (IS_SIGN_IN_ALLOWED_FALSE)"
+
+    internalError:
+      type: string
+      enum:
+        - Internal Error
+
+    badRequest:
+      type: string
+      enum:
+        - Bad request
+
+    notFound:
+      type: string
+      enum:
+        - Not Found
+
+  securitySchemes:
+    AccessTokenCookie:
+      description: This is an HTTPOnly cookie, set by sign-in and refresh endpoints and present on requests that update the access token
+      type: apiKey
+      in: cookie
+      name: sAccessToken
+
+    AccessTokenBearer:
+      description: Returned as the "st-access-token" header from sign-in and refresh endpoints and present on requests that update the access token payload
+      type: http
+      scheme: bearer
+
+    RefreshTokenBearer:
+      description: This is an HTTPOnly cookie, set by sign-in and refresh endpoints
+      scheme: bearer
+      type: http
+
+    RefreshTokenCookie:
+      description: Returned as the "st-refresh-token" header from sign-in and refresh endpoints
+      type: apiKey
+      in: cookie
+      name: sRefreshToken
