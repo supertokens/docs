@@ -13,7 +13,7 @@ export type APIRequestResponse = Omit<OpenAPIResponseObject, "content" | "header
   content?: Record<
     string,
     {
-      schema?: APIRequestSchema | { oneOf: APIRequestSchema[] };
+      schema?: APIRequestSchema | APIRequestSchema[];
       examples?: Record<string, any>;
     }
   >;
@@ -28,11 +28,10 @@ export type APIRequest = {
   summary?: string;
   description?: string;
   method: APIRequestMethod;
-  headers: Record<string, APIRequestHeader>;
   parameters?: Record<string, APIRequestParameter>;
   body: {
     description?: string;
-    schema?: Record<string, APIRequestSchema | { oneOf: APIRequestSchema[] }>;
+    schema?: Record<string, APIRequestSchema | APIRequestSchema[]>;
     required?: boolean;
   };
   deprecated?: boolean;

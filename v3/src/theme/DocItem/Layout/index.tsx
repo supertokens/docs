@@ -14,6 +14,7 @@ import ContentVisibility from "@theme/ContentVisibility";
 import type { Props } from "@theme/DocItem/Layout";
 
 import styles from "./styles.module.css";
+import { Flex, Grid } from "@radix-ui/themes";
 
 /**
  * Decide if the toc should be rendered, on mobile or desktop viewports
@@ -38,7 +39,18 @@ function useDocTOC() {
 
 export default function DocItemLayout({ children }: Props): JSX.Element {
   const docTOC = useDocTOC();
-  const { metadata } = useDoc();
+  const { metadata, frontMatter } = useDoc();
+
+  if (frontMatter["page_type"] === "api-reference") {
+    return (
+      <DocItemContent>
+        <Flex direction={{ initial: "column", md: "row" }} gap="8" width="100%">
+          {children}
+        </Flex>
+      </DocItemContent>
+    );
+  }
+
   return (
     <div className="row">
       <div className={clsx("col", !docTOC.hidden && styles.docItemCol)}>

@@ -1,6 +1,7 @@
 import { useEffect, useState, lazy } from "react";
 import { APIRequest } from "../types";
 
+// TODO: Cache the schema
 export function useLoadOpenApiSchema(apiName: "cdi" | "fdi", path: string, method: string): APIRequest | null {
   const [schema, setSchema] = useState<APIRequest | null>(null);
 

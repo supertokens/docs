@@ -1,4 +1,5 @@
 import { APIRequest, APIRequestSchema } from "../types";
+import { generateExampleFromAPIRequestSchema } from "./generateExampleFromAPIRequestSchema";
 
 type Environment = "shell" | "nodejs" | "go" | "python";
 
@@ -35,6 +36,25 @@ abstract class APICodeSnippet {
     public request: APIRequest,
     public environment: string,
   ) {}
+
+  get queryParams(): string {
+    const queryParams = Object.keys(this.request.parameters).filter(
+      (key) => this.request.parameters[key].in === "query" && this.request.parameters[key].required,
+    );
+    if (!queryParams.length) return "";
+    return queryParams
+      .map((paramName) => {
+        const parameter = this.request.parameters[paramName];
+        const example = generateExampleFromAPIRequestSchema(parameter.schema);
+        return `${paramName}=${example}`;
+      })
+      .join("&");
+  }
+
+  get pathWithQueryParams() {
+    const queryParams = this.queryParams;
+    return queryParams ? `${this.request.path}?${queryParams}` : this.request.path;
+  }
 
   get body(): Record<string, unknown> | null {
     const requestBody = this.request.body;
@@ -103,25 +123,12 @@ abstract class APICodeSnippet {
 }
 
 class ShellAPICodeSnippet extends APICodeSnippet {
-  private get url() {
-    const queryParams = this.request.parameters
-      ? Object.entries(this.request.parameters)
-          .filter(([_, param]) => param.in === "query")
-          .map(([name, _]) => `${name}=\${${name}}`)
-          .join("&")
-      : "";
-
-    return queryParams
-      ? `${this.apiDomain}${this.request.path}?${queryParams}`
-      : `${this.apiDomain}${this.request.path}`;
-  }
-
   private get method() {
     return this.request.method.toUpperCase();
   }
 
   render() {
-    let snippet = `curl --location --request ${this.method} '${this.url}' \\
+    let snippet = `curl --location --request ${this.method} '${this.apiDomain}${this.pathWithQueryParams}' \\
      --header 'Content-Type: application/json; charset=utf-8'`;
 
     const body = this.body;
@@ -145,7 +152,7 @@ class NodeJSAPICodeSnippet extends APICodeSnippet {
 
     return `const BASE_URL = "${this.apiDomain}"
 
-const url = \`\$\{BASE_URL\}${this.request.path}\`;
+const url = \`\$\{BASE_URL\}${this.pathWithQueryParams}\`;
 const options = {
   method: '${this.method}',
   headers: {
@@ -186,7 +193,7 @@ class GoAPICodeSnippet extends APICodeSnippet {
 
 func main() {
   baseUrl := "${this.apiDomain}"
-  url := fmt.Sprintf("%s${this.request.path}", baseUrl)
+  url := fmt.Sprintf("%s${this.pathWithQueryParams}", baseUrl)
   ${bodyCode}
 
   req.Header.Add("accept", "application/json")
@@ -229,7 +236,7 @@ from typing import Dict, Any`;
 
 BASE_URL = "${this.apiDomain}"
 
-url = f"{BASE_URL}${this.request.path}"
+url = f"{BASE_URL}${this.pathWithQueryParams}"
 
 ${bodyCode ? bodyCode + "\n\n" : ""}headers = {
     "Content-Type": "application/json",

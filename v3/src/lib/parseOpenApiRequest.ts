@@ -33,8 +33,8 @@ function resolveReference(schema: OpenAPISchema, ref: string): any {
 
 function transformSchema(
   schema: OpenAPISchema,
-  schemaObj: OpenAPISchemaObject | OpenAPIReferenceObject | undefined,
-): APIRequestSchema | undefined {
+  schemaObj: OpenAPISchemaObject | OpenAPIReferenceObject | { oneOf: Array<OpenAPISchemaObject> } | undefined,
+): APIRequestSchema | APIRequestSchema[] | undefined {
   if (!schemaObj) {
     return undefined;
   }
@@ -42,6 +42,20 @@ function transformSchema(
   if ("$ref" in schemaObj) {
     const resolved = resolveReference(schema, schemaObj.$ref);
     return transformSchema(schema, resolved);
+  }
+
+  if ("oneOf" in schemaObj) {
+    const acc: APIRequestSchema[] = [];
+    for (const schemaOption of schemaObj.oneOf) {
+      let result: APIRequestSchema | APIRequestSchema[];
+      result = transformSchema(schema, schemaOption);
+      if (Array.isArray(result)) {
+        acc.push(...result);
+      } else {
+        acc.push(result);
+      }
+    }
+    return acc;
   }
 
   const { properties, items, ...rest } = schemaObj;
@@ -72,7 +86,7 @@ function transformParameter(
 
   return {
     ...param,
-    schema: transformSchema(schema, param.schema),
+    schema: transformSchema(schema, param.schema) as APIRequestSchema,
   };
 }
 
@@ -87,7 +101,7 @@ function transformHeader(
 
   return {
     ...header,
-    schema: transformSchema(schema, header.schema),
+    schema: transformSchema(schema, header.schema) as APIRequestSchema,
   };
 }
 
@@ -108,21 +122,11 @@ function transformResponse(
     result.content = {};
     for (const [mediaType, content] of Object.entries(response.content)) {
       if (content.schema) {
-        if (typeof content.schema === "object" && "oneOf" in content.schema) {
-          const oneOfArray = content.schema.oneOf.map(
-            (schemaOption) =>
-              transformSchema(schema, schemaOption as OpenAPISchemaObject | OpenAPIReferenceObject) as APIRequestSchema,
-          );
-          result.content[mediaType] = {
-            ...content,
-            schema: { oneOf: oneOfArray },
-          };
-        } else {
-          result.content[mediaType] = {
-            ...content,
-            schema: transformSchema(schema, content.schema as OpenAPISchemaObject | OpenAPIReferenceObject),
-          };
-        }
+        result.content[mediaType] = {
+          ...content,
+          // @ts-expect-error
+          schema: transformSchema(schema, content.schema),
+        };
       } else {
         result.content[mediaType] = {
           examples: content.examples,
@@ -152,24 +156,13 @@ export function parseOpenApiRequest(schema: OpenAPISchema, path: string, method:
     throw new Error(`Method ${method} not found for path: ${path}`);
   }
 
-  const headers: Record<string, APIRequestHeader> = {};
   const parameters: Record<string, APIRequestParameter> = {};
 
   const allParams = [...(pathObj.parameters || []), ...(operation.parameters || [])];
 
   for (const param of allParams) {
     const transformedParam = transformParameter(schema, param);
-
-    if (transformedParam.in === "header") {
-      headers[transformedParam.name] = {
-        description: transformedParam.description,
-        required: transformedParam.required,
-        deprecated: transformedParam.deprecated,
-        schema: transformedParam.schema,
-      };
-    } else {
-      parameters[transformedParam.name] = transformedParam;
-    }
+    parameters[transformedParam.name] = transformedParam;
   }
 
   const body: APIRequest["body"] = {};
@@ -189,11 +182,10 @@ export function parseOpenApiRequest(schema: OpenAPISchema, path: string, method:
       for (const [mediaType, content] of Object.entries(requestBody.content)) {
         if (!content.schema) continue;
         if ("oneOf" in content.schema) {
-          body.schema[mediaType] = {
-            oneOf: content.schema.oneOf.map(
-              (schemaOption) => transformSchema(schema, schemaOption) as APIRequestSchema,
-            ),
-          };
+          body.schema[mediaType] = content.schema.oneOf.map(
+            // @ts-expect-error
+            (schemaOption) => transformSchema(schema, schemaOption) as APIRequestSchema,
+          );
         } else {
           body.schema[mediaType] = transformSchema(schema, content.schema) as APIRequestSchema;
         }
@@ -211,7 +203,6 @@ export function parseOpenApiRequest(schema: OpenAPISchema, path: string, method:
     method,
     summary: operation.summary,
     description: operation.description,
-    headers,
     parameters: Object.keys(parameters).length > 0 ? parameters : undefined,
     body,
     deprecated: operation.deprecated,

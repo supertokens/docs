@@ -62,7 +62,13 @@ export interface OpenAPIResponseObject {
       schema?:
         | OpenAPISchemaObject
         | OpenAPIReferenceObject
-        | { oneOf: Array<OpenAPISchemaObject | OpenAPIReferenceObject> };
+        | {
+            oneOf: Array<
+              | OpenAPISchemaObject
+              | OpenAPIReferenceObject
+              | { oneOf: Array<OpenAPISchemaObject | OpenAPIReferenceObject> }
+            >;
+          };
       examples?: Record<string, any>;
     }
   >;
@@ -94,7 +100,13 @@ interface OpenAPIOperationObject {
         schema?:
           | OpenAPISchemaObject
           | OpenAPIReferenceObject
-          | { oneOf: Array<OpenAPISchemaObject | OpenAPIReferenceObject> };
+          | {
+              oneOf: Array<
+                | OpenAPISchemaObject
+                | OpenAPIReferenceObject
+                | { oneOf: Array<OpenAPISchemaObject | OpenAPIReferenceObject> }
+              >;
+            };
       }
     >;
     required?: boolean;
@@ -119,7 +131,6 @@ interface OpenAPIPathItemObject {
   parameters?: (OpenAPIParameterObject | OpenAPIReferenceObject)[];
 }
 
-// Components Object Type
 interface OpenAPIComponentsObject {
   schemas?: Record<string, OpenAPISchemaObject | OpenAPIReferenceObject>;
   responses?: Record<string, OpenAPIResponseObject | OpenAPIReferenceObject>;

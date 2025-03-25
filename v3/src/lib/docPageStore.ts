@@ -6,6 +6,7 @@ export interface DocPageState {
   accountType: "managed" | "self-hosted";
   selfHostedDeploymentType: "with-docker" | "without-docker";
   tenantType: "single-tenant" | "multi-tenant";
+  apiRequestExampleLanguage: "shell" | "nodejs" | "python" | "go";
 }
 
 class DocPageStore {
@@ -18,6 +19,7 @@ class DocPageStore {
       nextjsRouterType: "app-router",
       accountType: "managed",
       selfHostedDeploymentType: "with-docker",
+      apiRequestExampleLanguage: "shell",
     };
     this.listeners = new Set();
   }
