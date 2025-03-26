@@ -1,4 +1,4 @@
-FROM oven/bun:slim
+FROM node:18-alpine
 
 WORKDIR /app
 
