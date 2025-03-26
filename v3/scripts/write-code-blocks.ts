@@ -46,7 +46,7 @@ const LanguageExtensionsMap = {
   csharp: "cs",
 };
 
-const Replacements: Array<string, string> = [
+const Replacements: Array<[string, string]> = [
   ["^{derived.pythonContactMethodImport}", "from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig"],
   ["^{derived.pythonContactMethodMethod}", "ContactEmailOnlyConfig"],
   ["^{derived.goPasswordlessContactMethodMethod}", "ContactMethodEmailConfig"],
@@ -143,6 +143,11 @@ async function writeCodeBlocks() {
     // Prevent typescript for complaining about vairables with the same name
     if (block.languageFolder === "javascript") {
       parsedBlockValue = `${parsedBlockValue}\nexport {}`;
+
+      // Overwrite "script" imports
+      parsedBlockValue = parsedBlockValue.replace(/supertokens-web-js-script/g, "supertokens-web-js");
+      parsedBlockValue = parsedBlockValue.replace(/supertokens-website-script/g, "supertokens-website");
+      parsedBlockValue = parsedBlockValue.replace(/supertokens-auth-react-script/g, "supertokens-auth-react");
     }
 
     // Generate unique class names for kotlin files
