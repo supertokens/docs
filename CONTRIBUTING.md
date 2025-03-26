@@ -1,264 +1,205 @@
-# Contributing
+# Contributing to the SuperTokens Documentation
 
-We’re glad that you are interested in contributing to SuperTokens 🎉
-We welcome contributions of all kinds (discussions, bug fixes, features, design changes, videos, articles) and from anyone 👩‍💻🤚🏿🤚🏽🤚🏻🤚🏼🤚🏾👨‍💻.
+Thank you for your interest in contributing to the SuperTokens documentation!
+This guide provides all the information needed to set up, build, and contribute effectively to this repository.
 
-## Folder structure
+## Overview
 
-1. You will most likely want edit only the `./v2` folder, as it contains all the latest docs. The other folders are for backwards compatibility with older SDKs and docs.
+The documentation project relies on the [Docusaurus](https://docusaurus.io/) framework to transform `MDX` files into an actual static website. MDX allows us to embed React components in the content, unlocking rich, interactive documentation experiences.
 
-2. Inside `./v2`, is a standard [Docusaurus](https://docusaurus.io/docs) project. We have set it up to be a [multi instance project](https://docusaurus.io/docs/docs-multi-instance).
+That being said, there are several things that are added on top of the Docusaurus utilities in order to adjust the tooling to our needs.
+Those are presented throughout this document.
 
-## Modifying and seeing your changes
+## How to run the project
 
-You will need to use Node 16 for this project
+### Prerequisites
 
-1. Go into the `v2` folder
-2. Run `npm i -d`
-3. Run `npm run set-up-hooks` to setup the pre-commit hooks
-4. Run `npm run start`. This should open `http://localhost:3000` on your browser.
-5. Makes changes to the `.md` or `.mdx` files, and see the changes on your browser instantly.
-6. Issue a PR to our repo.
-7. **NOTE**: If you are working on a docs that has versioning, you will need to suffix the docs name in url with `/next/` to see your changes. For example, if you are working on `community` docs and made changes to the `introduction` page, then you will need to visit: `http://localhost:3000/docs/community/next/introduction` instead of `http://localhost:3000/docs/community/introduction` to see your changes.
+To work with the documentation project locally, ensure you have the following tools installed:
 
-## Changing SEO meta tags
-1. This is normally done via google sheets.
-2. But for docusaurus v2, you need to go to v2 > src > themes > Layout > index.js and add the custom meta tags there.
+- [Node.js](https://nodejs.org/en/download/) (version 18 or higher)
 
-## Writing guide
-### Code snippets
-- Always use ` ```tsx ` or ` ```jsx` instead of ` ```ts ` or ` ```js` so that HTML is rendered nicely as well.
-- All code should be copy pasted from a working "playground" for that SDK. For example, in `supertokens-node`, we have `/test/with-typescript/index.ts` file which can be used to write any code using the SDK and whenever writing code in docs for nodeJS, you should first write it in the playground, make sure it's correct, and the copy / paste that in the docs.
+### Setup Steps
 
-### Code tabs
-- Depending on the options you want to show in the tabs / sub tab, please use the correct `groupId` so that tab selections are synced. Some `groupIds`:
-   - For backend language: `backendsdk`
-   - For nodeJS framework: `nodejs-framework`
-   - For frontend languages: `frontendsdk`
-   - For `.ts` vs `.js`, use `ts-or-js`
-- If there are custom wrapper components made for a type of code tab, please use that. You can find them in v2 > src > components > tabs folder:
-   - For backend: `import BackendSDKTabs from "/src/components/tabs/BackendSDKTabs"`
-   - For nodejs framework: `import NodeJSFrameworkSubTabs from "/src/components/tabs/NodeJSFrameworkSubTabs"`
-   - For frontend: `import FrontendSDKTabs from "/src/components/tabs/FrontendSDKTabs"`
-- In recipe docs, we must always use code tabs that display all options. In case there is a missing child, we will show a not supported message under that.
-- Sometimes the context of the code being displayed is specific for a framework. For example, in the auth-react SDK, we will only want to show ReactJS code. In this case, you do not want to use code tabs, and instead, want to use code title.
+1. Install the dependencies:
 
-### Heading guide
-- The main title of the page (if present) should be the only element in H1.
-- The other parts of the page should be divided such that users can see their sections in the correct heirarchy to the right of the page.
-- In some pages (in the sdk level docs), the page starts with a code snippet (for function signature). Those should start with H2
-
-### Showing an important / caution / danger / note message:
-- Docusaurus has several admonitions that can help with this. You can find this list in v2 > change_me > introduction.mdx
-
-### Building custom react components:
-- These should go in v2 > src > components > <some-folder>
-
-### Linking to other parts of supertokens.com site:
-- For non docs links, you need to use `https://supertokens.com/*`. Otherwise the build process will fail (cause of broken link). This also adds a limitation that those links can be seen / tested only in production.
-
-### Creating a new docs:
-- Please see v2 > HOW_TO_NEW_DOCS.md
-
-### Using Copy docs plugin
-- This is a custom plugin in which one `.mdx` file's content can be copied into another by providing the location of one in another.
-- A file that uses `<!-- COPY DOCS -->` is utilising this plugin.
-- This should be used across recipe docs, when the content of the page is exactly the same across docs.
-- An example of this can be found `v2 > community > database-setup > mysql.mdx`.
-- A file can also contain a `<!-- COPY SECTION -->` comment like this:
-```
-<!-- COPY SECTION -->
-<!-- ./emailpassword/introduction.mdx -->
-<!-- 1 -->
-
-.....
-
-<!-- END COPY SECTION -->
-```
-And the contents of `./emailpassword/introduction.mdx` with the ID `1` will get copied over into that section.
-
-### Using Copy tabs
-- If your tabs have the same content as another tab you can use the copy tabs feature to copy the contents of one tab to another.
-- Add `~COPY-TAB=TAB_ID` to your snippet. This will copy the contents of the tab with id `TAB_ID` to your tab.
-- You can add multiple `,` seperated `TAB_ID` like `~COPY-TAB=TAB_ID_1,TAB_ID_2,TAB_ID_3` so that if the first tab id does not exist it will move on to the next one until it finds a match.
-
-### Swizzling components:
-- Docusaurus allows "swizzling" of their components so that they can be modified as per our needs. Once a component is swizzled, it's placed in the v2 > src > theme folder, and can be edited freely.
-- To swizzle a component:
-   - Open `docusaurus.config.js` and comment out all the custom plugins like: `"./src/plugins/reactBundle"` and `"./src/plugins/copyDocs"`.
-   - Run the swizzle command: `npx docusaurus swizzle --danger "@docusaurus/theme-classic" "TODO: COMPONENT_NAME"`
-   - Uncomment the two plugins that have been commented.
-- To know a list of components that can be swizzled, run `npx docusaurus swizzle --danger "@docusaurus/theme-classic" "App"`
-
-### Using variables in markdown files
-There may be cases where you want to use variables in markdown files, for example:
-- Multiple files have the same content except for things like import statements, class names etc
-- Repetitive elements that would normally require changing multiple lines in the same file
-
-In such cases being able to configure and use variables can save a lot of time. In order to use variables you need to:
-
-- Declare the variables in the `v2/src/plugins/markdownVariables.json` files. To declare a variable you need to use the following structure 
-
-```json
-{
-   "recipeName": {
-      "variableName": "variable value"
-   }
-}
-```
-
-For example in order to make changes to `v2/thirdpartyemailpassword/common-customizations/sign-out.mdx` the structure would look like
-
-```json
-{
-   "thirdpartyemailpassword": {
-      ...
-   }
-}
-```
-
-- Use variables in the markdown file using the `^{variableName}` syntax. For example to use a variable in an import statement you could use
-
-```javascript
-import { signOut } from "supertokens-auth-react/recipe/^{recipeImportName}";
-```
-
-When the documentation pages are built, the variable will be replaced with the value in the JSON value. You can also use this in combination with plugins like the Copy Docs plugin explained above.
-
-NOTE: The variable values are only used in the final HTML output, the markdown files themselves are not modified.
-
-### Using question components
-You can ask users questions and show markdown based on what they select as answers. This can be achieved by using:
-```jsx
-import {Question, Answer}from "/src/components/question"
-
-<Question question="question...">
-<Answer title="ans1">
-...
-</Answer>
-<Answer title="ans2">
-...
-</Answer>
-</Question>
-```
-
-- Use this component instead of tabs when you think that the tabs title are not obvious enough for the user to choose the right tab.
-- It can also be used to guide for showing optional content. For example, some part of docs is only relevant if the user is using axios on their frontend. So we ask them if they are using axios, and if they say yes, only then we render the content, else we render something else.
-- Note that using this too much might affect SEO since the useful content is hidden behind a user interaction.
-
-### Using custom UI / pre built UI switcher
-There may be pages where you want to switch between explaining how it works for pre built vs custom UI. In that case, you can display a switcher which allows the user to choose between these options. To display the switcher, update the front matter section of the mdx file to have:
-```
----
-show_ui_switcher: true
----
-```
-
-You can then continue to use `PreBuiltOrCustomUISwitcher` component:
-```
-import {PreBuiltOrCustomUISwitcher, PreBuiltUIContent, CustomUIContent} from "/src/components/preBuiltOrCustomUISwitcher"
-
-<PreBuiltOrCustomUISwitcher>
-
-<PreBuiltUIContent>
-
-Content for Pre built UI
-
-</PreBuiltUIContent>
-      
-Some content shown in both UIs
-
-<CustomUIContent>
-
-Content for Custom UI
-
-</CustomUIContent>
-
-</PreBuiltOrCustomUISwitcher>
-```
-
-## Generating screenshots / gifs
-
-`screenshots` folder has scripts to generate screenshots and gifs. To generate them, do the following steps:
-
-- Setup supertokens demo app using `npx create-supertokens-app@latest`
-- Update `config.ts` to point to `localhost:3567` instead of `try.supertokens.com`
-- Run Supertokens core locally using [docker](https://supertokens.com/docs/thirdpartypasswordless/pre-built-ui/setup/core/with-docker)
-- Create a [dashboard user](https://supertokens.com/docs/thirdpartypasswordless/pre-built-ui/setup/user-management-dashboard/setup#creating-dashboard-credentials) with email `demo@example.com` and password `demopass123`.
-- Run:
-  - `cd screenshots`
-  - `npm i`
-  - `bash generate-all.sh`
-
-Once all the commands run successfully, the screenshots will be placed appropriately in the `static` directory.
-
-## Building for deployment
-- This only works if have access to the `supertokens-backend-website` and `main-website` repo.
-- Make sure that the `main-website` repo contains the `docs` repo and the `supertokens-backend-website` repo.
-- To build all docs, run the `./buildAllDocs` command.
-- To only build `v2` docs, go into `v2` and run `npm run build`. If this throws an error and you still want to finish building it, then run `npm run build-ignore-errors`.
-- To build non `v2` docs, run `./buildDocs <folder name>` command.
-
-### Fixing broken links
-While building, we may get broken links errors. There are different types:
-- External links: Make sure to give the full path to these links
-- Links to `supertokens.com`, but non docs pages: These links should be `https://supertokens.com/...`
-- Internal docs links: These need to be fixed since it's most likely due to a writing error.
-- `COPY DOCS` related links: Sometimes the source doc's structure may not match the destination doc. For example, the core docs in v2 > community folder are being shown in the recipes, but not in the community docs, and the pages it links to exist in the recipe docs, but not in the community docs. To fix this, we create dummy pages in the community docs like found here: `v2 > community > common-customizations > core > api-keys.mdx`
-
-### Using code type checker
-This feature allows you to type check code snippets in the docs. To use this during docs writing, you want to run:
-```
-CODE_TYPE_CHECK=lang1,lang2 npm run start
-```
-Where `lang1`, `lang2`, `langN` are the languages for which you want to check the snippets for. For example, if you want to check for `typescript`, you should run `CODE_TYPE_CHECK=typescript npm run start`, or if you want to check for Golang and TS, then you should run `CODE_TYPE_CHECK=typescript,go npm run start`. Instructions on how to setup each language will be printed out in case there is an error while typechecking.
-
-You can even check for all languages by running
-```
-CODE_TYPE_CHECK=all npm run start
-```
-
-#### Adding lines for type checking only
-
-You may need to add something to the code that is necessary for type checking but shouldn't appear in the output documentation. You can do this by adding a comment to the end of the line stating: `typecheck-only, removed from output`. Lines ending with this comment will be removed from the output but kept for type checking.
-
-Omitting substrings from the final output while retaining them for type checking can be achieved using the `__OMIT_START__` and `__OMIT_END__` specifier. This is particularly useful for incorporating type annotations into code snippets without including them in the end result. Consider the following example:
-
-```mjs
-function square(num__OMIT_START__: number__OMIT_END__) {
-  return num * num;
-}
-```
-
-During code checking, the plugin will analyze the following code:
-
-```mjs
-function square(num: number) {
-  return num * num;
-}
-```
-
-However, the final output will exclude type annotations:
-
-```mjs
-function square(num) {
-  return num * num;
-}
-```
-
-#### Tips JS / TS
-- If you need to purposely tell TS to ignore errors in the next line, you can add a `// @ts-ignore` comment in your code snippets. This will make the TS checker pass. The type checking engine will also remove these from the final code output so that users don't see this unnecessarily.
-- If you are working with snippets that use an older version of supertokens-node you can use a custom import for that version. For example some snippets use `supertokens-node7` as the import to fix typing. The type checking engine replaces this with `supertokens-node`. NOTE: If you need to add another node version as a custom import, please modify the type checking script to replace the import statement to use `supertokens-node`
-- When working with snippets that rely on supertokens-web-js being imported as an HTML script tag, import `supertokens-web-js-script` to fix typing. The type checking engine will remove this line from the final output
-
-#### Loading different versions of SDK to check
-If you are writing docs for a new version of the SDK, you want to load that version and then run the `CODE_TYPE_CHECK=lang1,lang2 npm run start` command. In order to change the SDK version, you want to navigate to `v2/src/plugins/codeTypeChecking/<lang>Env` and the modify that env's dependency file, and install the new dependencies.
-
-For example, if you want to test a new version of supertokens-node SDK, you should go to `v2/src/plugins/codeTypeChecking/jsEnv`, and modify `package.json` to use the new version. Then you want to run `npm i` in that dir.
-
-#### Skipping copies
-
-We have many documentation files that are recipe specific copies of an original. In many (but not all) cases, this can result in a single error being reported for each recipe. To avoid this, you can set the `SKIP_COPIES` environment variable to `true`. Doing this will only type-check the original versions of documents. This is off by default, because it could cause you to miss a recipe specific error. To check only on the "originals" you can:
 ```bash
-SKIP_COPIES=true CODE_TYPE_CHECK=all npm run start
+npm install
 ```
+
+2. Start the development server:
+
+```bash
+npm run start
+```
+
+## Project Structure
+
+The two main directories where you will work are:
+
+- `docs`: This is where the actual content sits. All the `.mdx` files are located here.
+- `src`: This is where you will find the React components and the custom logic used in the website's functionality.
+
+Below is a breakdown of the main directories and files in the project:
+
+```
+├── docs                     # The actual documentation pages
+│   ├── _templates           # Templates that can be used as a starting point for new docs
+│   ├── _blocks              # Reusable MDX blocks
+│   └── [section-name]
+│       └── _category_.json  # Info about how the folder will be shown in the left sidebar
+├── src                      # The business logic of the website
+│   ├── components
+│   ├── context
+│   ├── css
+│   ├── hooks
+│   ├── lib
+│   ├── plugins              # Plugins used by docusaurus during the build process
+│   └── theme                # Docusaurus components that get adjusted by us
+├── scripts
+├── sidebars.ts
+└── docusaurus.config.ts
+```
+
+### Routing
+
+The project uses file based routing so it's pretty straightforward to determine the actual path of a page.
+Each subfolder has a `_category_.json` file that specifies the name of the sidebar category and the order of the pages inside that category.
+Additionally, each MDX file has a `sidebar_position` property that specifies the order of the page inside the sidebar category.
+
+#### Where to place a new page
+
+##### The `Documentation` Section
+
+The `Documentation` section includes guides and tutorials for integrating **SuperTokens**.
+
+Pages are grouped based on where that subject might be relevant during the lifecycle of an authentication flow.
+
+- The initial `Authentication` phase covers information about the sign up/sign in flow relative to each authentication method that we support.
+- `Additional Verification` includes extra layers the extra protection layers that can be added (MFA, Bot Detection, etc.)
+- `Post Authentication` covers things that should happen after a user has been authenticated (managing sessions, linking accounts, etc.)
+- High level topics like, that don't fit into the previous buckets, like `Multi-Tenancy` and `Migration`, are treated as individual categories.
+- `Platform Configuration` and `Deployment` talk about the final steps in the process of going to production with your **SuperTokens** integration.
+
+###### Quickstart
+
+`Quickstart` is the first category in the sidebar since that is the main thing that new users will look after.
+It includes `quickstart` guides that show how to get from zero to a fully working application that uses **SuperTokens**.
+
+##### The `References` Section
+
+The `References` section includes reference style pages that that talk about different aspects of our SDKs and APIs.
+
+## How to add changes
+
+As mentioned before, most of the "action" happens in the `/docs` folder.
+To add or edit a documentation page just start from there and keep in mind the next instructions.
+
+## Writing Guide
+
+The following paragraphs describe what you should keep in mind when you write documentation content.
+Treat this as a guide rather than a rulebook.
+Your aim should be to follow the general style.
+But there are exceptions to most rules.
+
+### 1. **Clarity**
+
+- Use simple, direct language to explain concepts and instructions. Remove words that don’t add substance.
+- Write in the active voice.
+  - Example: "The function returns a result" (not "A result is returned by the function").
+- Avoid vague or ambiguous statements. Be specific and actionable.
+- Avoid using Latin abbreviations "i.e." or "e.g.". Use "that is" or "for example" instead.
+
+### 2. **Consistency**
+
+- Define acronyms on first use.
+  - Example: "Command-Line Interface (CLI)."
+- Use a friendly tone of voice.
+- Use American spelling.
+
+### 3. **User Focus**
+
+- Address the user directly and prioritize their perspective.
+  - Example: "Click the button to save your changes."
+- Explain concepts in terms of what the user can do, not what they can't.
+  - Positive: "To access paid features you need to generate a license key."
+  - Negative: "You can not access paid features out of the box. Generate a license key first."
+
+### 4. **Conciseness**
+
+- Remove unnecessary words and phrases.
+  - Avoid fillers like "so," "simply," "easily," and "very."
+  - Replace verbose phrases with shorter alternatives:
+    - Use "to" instead of "in order to."
+    - Use "now" instead of "at the present time."
+- Avoid repetition unless summarizing key points for clarity.
+- Avoid temporal words like "currently", "now", "will", etc. Describe the present state of the product.
+
+### 5. **Structure and Flow**
+
+- Organize content logically with headings and subheadings.
+- Summarize key points at the end of sections or pages to reinforce understanding.
+- Use numbered or bulleted lists for steps, examples, and key takeaways.
+
+### 6. **Avoid Marketing Speak**
+
+- Stick to factual, clear descriptions. Let the product's functionality speak for itself.
+- Avoid exaggerations, superlatives, or subjective statements.
+  - Instead of "Our product is incredibly fast," write "This product processes data in under X milliseconds."
+
+### 7. **Respect the Reader’s Time**
+
+- Assume the reader is trying to solve a problem or learn something specific.
+- Provide the most critical information first and link to detailed content for further reading.
+- Use an "elevator pitch" approach for complex topics:
+  - Start with a concise overview before diving into details.
+
+### 8. **Be Objective and Neutral**
+
+- Avoid opinions, criticisms, or personal commentary.
+- Focus on presenting information that helps the user achieve their goals.
+
+## How to test your changes
+
+### Preqrequisites
+
+Before running the actual checks you need to install some dependencies.
+
+#### Vale
+
+Used to validate the content of the `MDX` files.
+For other platforms check the [installation guide](https://vale.sh/docs/install).
+
+```sh
+brew install vale
+```
+
+#### bun
+
+Used to run the files in the `scripts` folder.
+
+```sh
+npm install -g bun
+```
+
+#### Docker
+
+Used to run the code block validation and formatting.
+For install instructions check the [guide](https://docs.docker.com/get-docker/).
+
+### Testing Steps
+
+#### Linting
+
+Use the following commands to perform linting checks on the entire project:
+
+- `npm run lint:prettier`: Runs prettier on the `ts` files.
+- `npm run lint:vale`: Runs vale on the `MDX` files.
+
+#### Validating code blocks
+
+Run `npm run check-code-blocks <language>` to validate all the code blocks for a particular language.
+
+Code block validation is done in two steps:
+
+- First, we extract all the code blocks from the `MDX` files and save them in the `/scripts/code-type-checking/<language>/snippets` folder.
+- Then, we load the code in a Docker image and run it to validate the code. This way we do not have to deal with installing different dependencies for different languages.
