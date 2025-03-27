@@ -1,0 +1,227 @@
+---
+title: NestJS
+hide_title: true
+sidebar_position: 5
+toc_max_heading_level: 4
+description: >-
+  Integrate SuperTokens with NestJS backend, covering modules, services,
+  middleware, and session management.
+---
+
+import { FrontendTabs, BackendTabs } from "/src/components/Tabs";
+import { AppInfoForm } from "/src/components/Forms";
+import { NodeFrameworksCard } from "/src/components";
+
+import { Question, Answer } from "/src/components/Question";
+import { OAuthVerifyTokensCallout } from "/src/components/Callouts"
+
+
+
+# NestJS guide
+
+## Overview
+
+
+Integrating SuperTokens into a NestJS backend differs in some aspects from the main quickstart guide.
+That's because of the additional framework specific entities that are involved.
+To aid the process you can use the `supertokens-nestjs` package which exposes abstractions that speed up the setup.
+
+## Before you start
+
+This guide assumes that you have already completed the [main quickstart guide](/docs/quickstart/introduction).
+If not, please go through it before continuing with this page.
+You need to first understand how to configure the required recipes and run a sample project.
+
+You can also explore the [example projects](https://github.com/supertokens/supertokens-nestjs/tree/main/examples) for complete code references on how to use the libraries.
+
+## Steps
+
+### 1. Install the required packages 
+
+```bash
+npm i -s supertokens-node supertokens-nestjs
+```
+
+### 2. Initialize the `SuperTokensModule` 
+
+Inside your main application module, initialize the **SuperTokensModule** with your required configuration.
+
+```tsx
+import { Module } from '@nestjs/common'
+import { SuperTokensModule } from 'supertokens-nestjs'
+
+@Module({
+  imports: [
+    SuperTokensModule.forRoot({
+      // Choose between 'express' and 'fastify'
+      // If you are using fastify make sure to also set the fastifyAdapter property
+      framework: 'express',
+      supertokens: {
+        connectionURI: '...',
+      },
+      appInfo: {
+        appName: '...',
+        apiDomain: '...',
+        websiteDomain: '...',
+      },
+      recipeList: [
+        /* ... */
+      ],
+    }),
+  ],
+  controllers: [
+    /* ... */
+  ],
+  providers: [
+    /* ... */
+  ],
+})
+export class AppModule {}
+```
+
+
+:::info Tip
+You can use the `SuperTokensModule.forRootAsync` if you want to load the configuration asynchronously.
+:::
+
+### 3. Update the `bootstrap` function
+
+Inside your `bootstrap` function, you have to update the CORS configuration and set the exception filter.
+**SuperTokens** generates a set of CORS headers that the authentication flow requires.
+And, the global filter ensures that all authentication related errors get handled by the SDK.
+
+```tsx
+import supertokens from 'supertokens-node'
+import { SuperTokensExceptionFilter } from 'supertokens-nestjs'
+import { NestFactory } from '@nestjs/core'
+// @ts-expect-error
+import { AppModule } from './app.module'
+// @ts-expect-error
+import { appInfo } from './config' 
+
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule)
+  app.enableCors({
+    origin: [appInfo.websiteDomain],
+    allowedHeaders: ['content-type', ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+  })
+  app.useGlobalFilters(new SuperTokensExceptionFilter())
+
+  await app.listen(3001)
+}
+```
+### 4. Add the `SuperTokensAuthGuard`
+
+The `SuperTokensAuthGuard` automatically marks the routes that it targets as protected.
+By default session validation gets performed based on the default configuration provided in the `Session.init` call.
+You can customize the validation logic with decorators. 
+More on that in the next step.
+
+#### As a global guard
+
+This applies the `SuperTokensAuthGuard` to all routes in exposed by controllers registered in that module.
+
+```tsx
+import { Module } from '@nestjs/common'
+import { APP_GUARD } from '@nestjs/core'
+import { SuperTokensAuthGuard } from 'supertokens-nestjs'
+
+@Module({
+  imports: [
+    /* ... */
+  ],
+  controllers: [
+    /* ... */
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: SuperTokensAuthGuard,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+#### As a controller guard
+
+This applies the `SuperTokensAuthGuard` only to the routes defined in the controller.
+
+```tsx
+import { Controller, UseGuards } from '@nestjs/common'
+import { SuperTokensAuthGuard } from 'supertokens-nestjs'
+
+@Controller()
+@UseGuards(SuperTokensAuthGuard)
+export class AppController {}
+```
+
+### 5. Manage authentication with decorators
+
+The `supertokens-nestjs` package exposes two sets of decorators:
+- Function decorators like `VerifySession` and `PublicAccess` that you can use on controller methods to customize the session validation logic.
+- Parameter decorators like `Session` that you can use to access the session data in your controller methods.
+
+
+```tsx
+import { Controller, Delete, Get, Patch, Post } from '@nestjs/common'
+import { PublicAccess, Session, VerifySession } from 'supertokens-nestjs'
+import { SessionContainer } from "supertokens-node/recipe/session";
+
+@Controller()
+class AppController {
+  @Get('/user')
+  @VerifySession()
+  async getUserInfo(@Session('userId') userId: string) {}
+
+  @Get('/user/:userId')
+  @VerifySession({
+    roles: ['admin'],
+  })
+  async deleteUser(@Session() session: SessionContainer) {}
+
+  @Get('/user/profile')
+  @PublicAccess()
+  async getUserProfile() {}
+}
+```
+
+:::info tip
+With the `VerifySession` decorator, you can specify the following options:
+| Option | Type | Description |
+|--------|------|-------------|
+| `roles` | `string[]` | Roles that the user must have to access the route |
+| `permissions` | `string[]` | Permissions that the user must have to access the route |
+| `requiresMfa` | `boolean` | Indicates whether the user must have MFA enabled to access the route |
+| `requireEmailVerification` | `boolean` | Indicates whether the user must have their email verified to access the route |
+| `options` | `VerifySessionOptions` | The value that normally passed to the `getSession` or `verifySession` functions. Use it if you want additional levels of customization. |
+
+:::
+
+
+### 6. Configure SuperTokens core
+
+<Question
+    question={() => {
+        return (
+            <span>Are you using <code>https://try.supertokens.com</code> as the connection URI in the init function?</span>
+        )
+    }} defaultAnswer="Yes">
+<Answer title="Yes">
+
+You need to setup an instance of the SuperTokens core for your app (that your backend should connect to). You have two options:
+- [Managed service](/docs/quickstart/next-steps#configure-the-core-service)
+- [Self hosted](/docs/deployment/self-host-supertokens) 
+
+
+</Answer>
+<Answer title="No">
+
+:::success
+You have successfully completed the quick setup! Head over to the "Post login operations" or "Common customizations" section.
+:::
+
+</Answer>
+</Question>

@@ -1,0 +1,497 @@
+---
+title: Claims validation
+hide_title: true
+toc_max_heading_level: 5
+sidebar_position: 5
+description: >-
+   Validate your resources based on claims that get attached to the session.
+---
+
+import {
+  FrontendPrebuiltUITabs,
+  FrontendCustomUITabs,
+  BackendTabs,
+  ReactRouterVersionTabs,
+} from "/src/components/Tabs";
+import {
+  NpmOrScriptsCard,
+  MobileFrameworksCard,
+  PythonSyncAsyncCard,
+  NodeFrameworksCard,
+  PythonFrameworksCard,
+  GoFrameworksCard,
+} from "/src/components/Cards";
+import { ContextCondition } from "/src/components";
+
+# Claim validation
+
+## Overview
+
+**SuperTokens** provides two approaches for managing access control: 
+
+1. **Session Claims**: An abstraction that includes automatic validation and refresh capabilities
+2. **Access Token Payload**: A basic way to check the token payload
+
+In most of the cases the recommended way is to use session claims.
+You can use next table to understand the differences between the two approaches.
+
+| Feature                              | Session Claims | Access Token Payload |
+| ------------------------------------ | -------------- | -------------------- |
+| Store simple static data             | ✅             | ✅                   |
+| Built-in validation                  | ✅             | ❌                   |
+| Automatic refresh mechanism          | ✅             | ❌                   |
+| Graceful validation failure handling | ✅             | ❌                   |
+| Lightweight implementation           | ❌             | ✅                   |
+| No validation overhead               | ❌             | ✅                   |
+
+This guide shows you how to use each method.
+
+## References
+
+
+<Accordion px="4">
+
+## Session Claim
+
+### Session claim interface
+
+```tsx
+import { RecipeUserId } from "supertokens-node";
+
+type JSONObject = any; // REMOVE_FROM_OUTPUT
+interface SessionClaim<T> {
+    // Unique identifier for the claim.
+    // For a `boolean` claim (for example if the email is verified or not), this would be a string like `"st-ev"`.
+    readonly key: string;
+
+    /**
+     * Fetches the current value of this claim for the user.
+     * The undefined return value signifies that we don't want to update the claim payload and or the claim value is not present in the database
+     * This can happen for example with a second factor auth claim, where we don't want to add the claim to the session automatically.
+     */
+    fetchValue(
+        userId: string,
+        recipeUserId: RecipeUserId,
+        tenantId: string,
+        currentPayload: JSONObject | undefined,
+        // @ts-expect-error
+        userContext: UserContext
+    ): Promise<T | undefined> | T | undefined;
+
+    /**
+     * Removes the claim from the payload, by cloning and updating the entire object.
+     *
+     * @returns The modified payload object
+     */
+     // @ts-expect-error
+    removeFromPayload(payload: JSONObject, userContext: UserContext): JSONObject;
+
+    /**
+     * Gets the value of the claim stored in the payload
+     *
+     * @returns Claim value
+     */
+     // @ts-expect-error
+    getValueFromPayload(payload: JSONObject, userContext: UserContext): T | undefined;
+}
+```
+
+The SDK provides a few base claim classes which make it easy for you to implement your own claims:
+- [`PrimitiveClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveClaim.ts): Use this to add any primitive type value (`boolean`, `string`, `number`) to the session payload.
+- [`PrimitiveArrayClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts): Use this to add any primitive array type value (`boolean[]`, `string[]`, `number[]`) to the session payload.
+- [`BooleanClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/booleanClaim.ts): A special case of the `PrimitiveClaim`, used to add a `boolean` type claim.
+
+All the recipe claims are built around these primitives:
+- [`EmailVerificationClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/emailverification/emailVerificationClaim.ts): This stores information about whether the user has verified their email.
+- [`RolesClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/userroles/userRoleClaim.ts): This stores the list of roles associated with a user.
+- [`PermissionClaim`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/userroles/permissionClaim.ts): This stores the list of permissions associated with the user.
+
+
+
+#### On the frontend
+
+Like the backend, the frontend also has the concept of session claim objects which need to conform to the following interface:
+
+```tsx
+type SessionClaim<T> = {
+    // Refresh the claim values based on an async API call
+    refresh(): Promise<void>;
+
+    // Returns the value from the session claim
+    getValueFromPayload(payload: any): T | undefined;
+    
+    // Returns the last time the claim was refreshed
+    getLastFetchedTime(payload: any): number | undefined;
+};
+```
+
+When used, these objects provide a way for the SuperTokens SDK to update the claim values when needed.
+For example, in the built-in email verification claim, the `refresh` function calls the backend API to check if the email has verification. That API in turn updates the session claim to reflect the email verification status. This way, even if the system marked the email as verified in offline mode, the frontend can get the email verification status update automatically.
+
+Like the backend SDK, the frontend SDK also exposes a few base claims:
+- [`BooleanClaim`](https://github.com/supertokens/supertokens-website/blob/master/lib/ts/claims/booleanClaim.ts)
+- [`PrimitiveClaim`](https://github.com/supertokens/supertokens-website/blob/master/lib/ts/claims/primitiveClaim.ts)
+- [`PrimitiveArrayClaim`](https://github.com/supertokens/supertokens-website/blob/master/lib/ts/claims/primitiveArrayClaim.ts)
+
+## Claim Validator
+
+Once you add a claim to the session, specify the checks that need to run on them during session verification. For example, if an API should allow access only to `admin` roles, there must be a way to tell SuperTokens to do that check. This is where claim validators come into the picture. Here is the shape for a claim validator object:
+
+
+```tsx
+type SessionClaim<T> = any; // REMOVE_FROM_OUTPUT
+type SessionClaimValidator = {
+    // Identifies the session claim validator
+    // Used to know which validator failed in case multiple of them undergo checking at the same time. 
+    // The value of this is typically the same as the claim object's `key`, but you can set it to anything else.
+    id: string;
+
+    // A reference to the claim object that's associated with this validator.
+    claim: SessionClaim<any>;
+
+    // Determines if the value of the claim should undergo fetching again.
+    // In the built-in validators, this function typically returns `true` if the claim does not exist in the `payload`, or if it's too old. 
+    shouldRefetch: (payload: any, userContext: any) => Promise<boolean>;
+
+    /** extracts the claim value from the input `payload` (typically using `claim.getValueFromPayload`), and determines if the validator check has passed or not.
+    * For example, if the validator aims to enforce that the user has verified their email, and if the claim value is `false`, then this function would return:
+    * {
+    *  isValid: false,
+    *    reason: {
+    *      message: "wrong value",
+    *      expectedValue: true,
+    *      actualValue: false
+    *    }
+    *  }
+    */
+    validate: (payload: any, userContext: any) => Promise<ClaimValidationResult>;
+};
+
+type ClaimValidationResult = { isValid: true } | { isValid: false; reason?: any };
+```
+
+Using this interface and the claims interface, SuperTokens runs the following session claim validation process during session verification:
+
+```tsx
+// @ts-nocheck
+function validateSessionClaims(accessToken, claimValidators) {
+    payload = accessToken.getPayload();
+    
+    // Step 1: refetch claims if required
+    for(validator in claimValidators) {
+        if (validator.shouldRefetch(payload)) {
+            claimValue = validator.claim.fetchValue(accessToken.sub)
+            payload = validator.claim.addToPayload_internal(payload, claimValue) 
+        }
+    }
+
+    failedClaims = []
+
+    // Step 2: Validate all claims
+    for(validator in claimValidators) {
+        validationResult = validator.validate(payload)
+        if (!validationResult.isValid) {
+            failedClaims.push({id: validator.id, reason: validationResult.reason})
+        }
+    }
+
+    return failedClaims
+}
+```
+
+The built-in base claims (`PrimitiveClaim`, `PrimitiveArrayClaim`, `BooleanClaim`) all expose a set of useful validators:
+
+- [`PrimitiveClaim.validators.hasValue(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveClaim.ts#L50): This function call returns a validator object that enforces that the session claim has the specified `val`.
+
+- [`PrimitiveArrayClaim.validators.includes(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L50): This checks if the the session claims value, which is an array, includes the input `val`.
+
+- [`PrimitiveArrayClaim.validators.excludes(val, maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L91): This checks if the the session claims value, which is an array, excludes the input `val`.
+
+- [`PrimitiveArrayClaim.validators.includesAll(val[], maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L136): This checks if the session claims value, which is an array, includes all the items in the input `val[]`.
+
+- [`PrimitiveArrayClaim.validators.excludesAll(val[], maxAgeInSeconds?)`](https://github.com/supertokens/supertokens-node/blob/master/lib/ts/recipe/session/claimBaseClasses/primitiveArrayClaim.ts#L178): This checks if the session claims value, which is an array, excludes all the items in the input `val[]`.
+
+
+In all the above claim validators, the `maxAgeInSeconds`/`maxAge` input (which is optional) governs how often to refetch the session claim value:
+- A value of `0` causes it to refetch the claim value each time a check happens.
+- If not passed, the claim is only refetched if it's missing in the session. The built-in claims like email verification or user roles claims have a default value of five minutes, meaning that those claim values refresh from the database after every five minutes.
+
+```tsx
+interface SessionClaim<T> {
+  readonly key: string;
+  fetchValue(userId: string, userContext: any): Promise<T | undefined>;
+  addToPayload(payload: any, value: T): any;
+  getValueFromPayload(payload: any): T | undefined;
+}
+```
+
+
+</Accordion>
+
+## Before you start
+
+<TokensCallout />
+
+---
+
+## Using session claims
+
+SuperTokens sessions have a property called `accessTokenPayload`.
+This is a `JSON` object which you can access on the frontend and backend.
+The key-values in this JSON payload refer to **claims**.
+
+
+### 1. Create a custom claim
+
+```tsx
+import { BooleanClaim } from "supertokens-node/recipe/session/claims";
+
+const SecondFactorClaim = new BooleanClaim({
+  key: "2fa-completed",
+  fetchValue: () => false,
+});
+```
+
+### 2. Add claim validators
+
+#### Backend global validation
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init({
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getGlobalClaimValidators: async function (input) {
+              // @ts-expect-error
+              return [...input.claimValidatorsAddedByOtherRecipes, SecondFactorClaim.validators.isTrue()];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
+```
+
+#### Backend route-specific validation
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { UserRoleClaim } from "supertokens-node/recipe/userroles";
+
+let app = express();
+
+app.post(
+  "/admin-only",
+  verifySession({
+    overrideGlobalClaimValidators: async (globalValidators) => [
+      ...globalValidators,
+      UserRoleClaim.validators.includes("admin"),
+    ],
+  }),
+  async (req, res) => {
+    // Only admin users can access this endpoint
+  },
+);
+```
+
+#### Frontend validation
+
+```tsx
+import React from "react";
+import { SessionAuth } from "supertokens-auth-react/recipe/session";
+import { UserRoleClaim } from "supertokens-auth-react/recipe/userroles";
+
+const AdminRoute = (props: React.PropsWithChildren<any>) => {
+  return (
+    <SessionAuth
+      overrideGlobalClaimValidators={(globalValidators) => [
+        ...globalValidators,
+        UserRoleClaim.validators.includes("admin"),
+      ]}
+    >
+      {props.children}
+    </SessionAuth>
+  );
+};
+```
+
+### 3. Handle validation failures
+
+#### Backend custom error handling
+
+```tsx
+import { Error as STError } from "supertokens-node/recipe/session";
+import { UserRoleClaim } from "supertokens-node/recipe/userroles";
+
+// @ts-expect-error
+if (roles === undefined || !roles.includes("admin")) {
+  throw new STError({
+    type: "INVALID_CLAIMS",
+    message: "User is not an admin",
+    payload: [
+      {
+        id: UserRoleClaim.key,
+      },
+    ],
+  });
+}
+```
+
+#### Frontend redirection
+
+```tsx
+import { SessionAuth } from "supertokens-auth-react/recipe/session";
+import { UserRoleClaim } from "supertokens-auth-react/recipe/userroles";
+
+const AdminRoute = (props: React.PropsWithChildren<any>) => {
+  return (
+    <SessionAuth
+      overrideGlobalClaimValidators={(globalValidators) => [
+        ...globalValidators,
+        {
+          ...UserRoleClaim.validators.includes("admin"),
+          onFailureRedirection: () => "/not-an-admin",
+        },
+      ]}
+    >
+      {props.children}
+    </SessionAuth>
+  );
+};
+```
+
+--- 
+
+## Using the Access Token Payload
+
+The access token payload is a simple way to store custom data that needs to be accessible on both the frontend and the backend.
+
+### 1. Add Custom Claims to the Access Token Payload
+
+:::important
+The access token payload has a set of default claims that can not be overwritten.
+They reserve these for standard or SuperTokens specific use-cases.
+Those claims are: `sub`, `iat`, `exp`, `sessionHandle`, `refreshTokenHash1`, `parentRefreshTokenHash1`, `antiCsrfToken`
+
+Trying to overwrite these values results in errors in the authentication flow process.
+:::
+
+You can add custom claims to the access token payload in two ways:
+
+#### During session creation
+
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init({
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            createNewSession: async function (input) {
+              let userId = input.userId;
+
+              // This goes in the access token, and is available to read on the frontend.
+              input.accessTokenPayload = {
+                ...input.accessTokenPayload,
+                someKey: "someValue",
+              };
+
+              return originalImplementation.createNewSession(input);
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
+```
+
+
+#### Post Session Creation
+
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { SessionRequest } from "supertokens-node/framework/express";
+
+let app = express();
+
+app.post("/updateinfo", verifySession(), async (req: SessionRequest, res) => {
+  let session = req.session;
+  await session!.mergeIntoAccessTokenPayload({ newKey: "newValue" });
+  res.json({ message: "successfully updated access token payload" });
+});
+```
+
+### 2. Read the Access Token Payload
+
+#### On the backend
+
+```tsx
+import express from "express";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
+
+let app = express();
+
+app.get("/myApi", verifySession(), async (req, res) => {
+  let session = req.session;
+  let accessTokenPayload = session.getAccessTokenPayload();
+  let customClaimValue = accessTokenPayload.customClaim;
+});
+```
+
+#### On the frontend
+
+```tsx
+import Session from "supertokens-auth-react/recipe/session";
+
+async function someFunc() {
+  if (await Session.doesSessionExist()) {
+    let accessTokenPayload = await Session.getAccessTokenPayloadSecurely();
+    let customClaimValue = accessTokenPayload.customClaim;
+  }
+}
+
+```
+
+---
+
+## See also
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/additional-verification/session-verification/protect-api-routes" label="Protect Backend Routes" />
+  <ReferenceCard href="/docs/additional-verification/session-verification/protect-frontend-routes" label="Protect Frontend Routes" />
+  <ReferenceCard href="/docs/additional-verification/user-roles/protecting-routes" label="User Roles" />
+  <ReferenceCard href="/docs/additional-verification/session-verification/with-websocket" label="WebSockets authentication" />
+  <ReferenceCard href="/docs/post-authentication/session-management/access-session-data" label="Access session data" />
+</ReferenceCard.Grid>

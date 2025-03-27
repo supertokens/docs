@@ -1,0 +1,786 @@
+---
+title: API Overrides
+hide_title: true
+sidebar_position: 3
+toc_max_heading_level: 4
+description: >-
+  Override APIs to control frontend-backend interactions and customize
+  input/output specifications.
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import { BackendTabs } from "/src/components/Tabs";
+import {
+  NodeFrameworksCard,
+  PythonFrameworksCard,
+} from "/src/components/Cards";
+
+# APIs override
+
+## Overview
+
+Overriding APIs allows you to take full control of what happens when the frontend SDK calls the backend authentication endpoints.
+You can send analytics events, syncronize additional information in your own database, or adjust the request input.
+
+
+---
+
+## General example
+
+Like with the [functions override](/docs/references/backend-sdks/function-overrides) feature, you need to call the original implementation reference to avoid any errors in the authentication flow.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```ts
+import SuperTokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        Session.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+
+                        // here we are only overriding the function that signs out a user
+                        signOutPOST: async function (input) {
+
+                            if (originalImplementation.signOutPOST === undefined) {
+                                throw Error("Should never come here")
+                            }
+                            // TODO: some custom logic
+
+                            // or call the default behaviour as show below
+                            return await originalImplementation.signOutPOST(input);
+                        },
+                        // ...
+                        // TODO: override more apis
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        EmailPassword.init({
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        emailExistsGET: async function (input) {
+
+                            // highlight-start
+                            // we can send a custom response like this:
+                            input.options.res.setStatusCode(200); // or any other status code
+                            input.options.res.sendJSONResponse({
+                                message: "my custom response",
+                                //...
+                            })
+                            // highlight-end
+
+                            // this return doesn't matter. But we must do it
+                            // cause the function signature expects a response.
+                            return {
+                                status: "OK",
+                                exists: false
+                            };
+                        }
+                    }
+                }
+            }
+        })
+    ]
+});
+
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"encoding/json"
+
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				//highlight-start
+				Override: &sessmodels.OverrideStruct{
+					APIs: func(originalImplementation sessmodels.APIInterface) sessmodels.APIInterface {
+						// First we make a copy of the original implementation
+						originalSignOutPOST := *originalImplementation.SignOutPOST
+
+						// Then we override the default impl
+						(*originalImplementation.SignOutPOST) = func(sessionContainer sessmodels.SessionContainer, options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
+							// TODO: some custom logic
+
+							// or call the default behaviour as show below
+							return originalSignOutPOST(sessionContainer, options, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+      emailpassword.Init(&epmodels.TypeInput{
+        Override: &epmodels.OverrideStruct{
+          APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+
+            (*originalImplementation.EmailExistsGET) = func(email, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.EmailExistsGETResponse, error) {
+
+              // highlight-start
+              // we create our custom response.
+              options.Res.Header().Set("Content-Type", "application/json; charset=utf-8")
+              options.Res.WriteHeader(200)
+              responseJson := map[string]interface{}{
+                "message": "My custom response",
+                // ...
+              }
+
+              bytes, _ := json.Marshal(responseJson)
+              options.Res.Write(bytes)
+              // highlight-end
+
+              // this return doesn't matter. But we must do it
+              // cause the function signature expects a response.
+              return epmodels.EmailExistsGETResponse{
+                OK: &struct{ Exists bool }{
+                  Exists: false,
+                },
+              }, nil
+            }
+
+            return originalImplementation
+          },
+        },
+      }),
+		},
+	})
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe.emailpassword.interfaces import APIOptions as EmailPasswordAPIOptions, EmailExistsGetOkResult, APIInterface as EmailPasswordAPIInterface
+from supertokens_python.recipe.session.interfaces import APIOptions as SessionAPIOptions, APIInterface as SessionAPIInterface
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe import session
+from typing import Dict, Any
+
+def override_emailpassword_apis(original_implementation: EmailPasswordAPIInterface):
+
+    async def email_exists_get(email: str, tenant_id: str, api_options: EmailPasswordAPIOptions, user_context: Dict[str, Any]):
+
+        # highlight-start
+        # send custom response like this
+        api_options.response.set_status_code(200)  # type: ignore
+        json_dict = {'message': 'Custom response'}
+        api_options.response.set_json_content(json_dict) # type: ignore
+        # highlight-end
+
+        # this return doesn't matter. But we must do it
+        # cause the function signature expects a response.
+        return EmailExistsGetOkResult(False)
+
+    original_implementation.email_exists_get = email_exists_get
+    return original_implementation
+
+# highlight-start
+def override_session_apis(original_implementation: SessionAPIInterface):
+    original_signout_post = original_implementation.signout_post
+
+    async def signout_post(
+        session: session.SessionContainer,
+        api_options: SessionAPIOptions,
+        user_context: Dict[str, Any],
+    ):
+        # TODO: custom logic
+
+        # or call the default behaviour as show below
+        return await original_signout_post(session, api_options, user_context)
+
+    original_implementation.signout_post = signout_post
+    return original_implementation
+
+
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        session.init(
+            # highlight-start
+            override=session.InputOverrideConfig(apis=override_session_apis)
+            # highlight-end
+        ),
+        emailpassword.init(override=emailpassword.InputOverrideConfig(apis=override_emailpassword_apis))
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+---
+
+## Error management
+
+If you want to send a custom error message from the API override function you can send a `GENERAL_ERROR` response.
+
+If you are using the pre-built UI, the response renders directly in the frontend UI.
+For custom UI, you can read this response and display the message in an error UI.
+
+The next example shows you how to prevent the user from signing up unless their email is pre-approved by the application's admin.
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```ts
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+
+EmailPassword.init({
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                signUpPOST: async function (input) {
+                    let email = input.formFields.find(i => i.id === "email")!.value as string;
+
+                    if (emailNotAllowed(email)) {
+                        // highlight-start
+                        return {
+                            status: "GENERAL_ERROR",
+                            message: "You are not allowed to sign up. Please contact the app's admin to get permission"
+                        }
+                        // highlight-end
+                    }
+                    return oI.signUpPOST!(input);
+                }
+            }
+        }
+    }
+})
+
+function emailNotAllowed(email: string) {
+    // TODO: your impl to check if email is allowed or not
+    return true;
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+    "errors"
+
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	emailpassword.Init(&epmodels.TypeInput{
+		Override: &epmodels.OverrideStruct{
+			APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+				originalSignUp := *originalImplementation.SignUpPOST
+
+				(*originalImplementation.SignUpPOST) = func(formFields []epmodels.TypeFormField, tenantId string, options epmodels.APIOptions, userContext supertokens.UserContext) (epmodels.SignUpPOSTResponse, error) {
+					email := ""
+					for _, v := range formFields {
+						if v.ID == "email" {
+							valueAsString, asStrOk := v.Value.(string)
+							if !asStrOk {
+								return epmodels.SignUpPOSTResponse{}, errors.New("Should never come here as we check the type during validation")
+							}
+							email = valueAsString
+						}
+					}
+					if (emailNotAllowed(email)) {
+						// highlight-start
+						return epmodels.SignUpPOSTResponse{
+							GeneralError: &supertokens.GeneralErrorResponse{
+								Message: "You are not allowed to sign up. Please contact the app's admin to get permission",
+							},
+						}, nil
+						// highlight-end
+					}
+					return originalSignUp(formFields, tenantId, options, userContext)
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+
+func emailNotAllowed(email string) bool {
+	// TODO: your impl to check email
+	return true
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python.recipe import emailpassword
+from supertokens_python.recipe.emailpassword.interfaces import (
+    APIInterface,
+    SignUpPostOkResult,
+    EmailAlreadyExistsError,
+    SignUpPostNotAllowedResponse,
+    APIOptions,
+)
+from supertokens_python.recipe.emailpassword.types import FormField
+from typing import Any, Dict, Union, List
+from supertokens_python.types import GeneralErrorResponse
+from supertokens_python.recipe.session import SessionContainer
+
+
+def override_apis(original_implementation: APIInterface):
+
+    # first we copy the original implementation
+    original_sign_up = original_implementation.sign_up_post
+
+    async def sign_up(
+        form_fields: List[FormField],
+        tenant_id: str,
+        session: Union[SessionContainer, None],
+        should_try_linking_with_session_user: Union[bool, None],
+        api_options: APIOptions,
+        user_context: Dict[str, Any],
+    ) -> Union[
+        SignUpPostOkResult,
+        EmailAlreadyExistsError,
+        SignUpPostNotAllowedResponse,
+        GeneralErrorResponse,
+    ]:
+        email = ""
+        for i in range(len(form_fields)):
+            if form_fields[i].id == "email":
+                email = form_fields[i].value
+
+        if is_not_allowed(email):
+            # highlight-start
+            return GeneralErrorResponse(
+                message="You are not allowed to sign up. Please contact the app's admin to get permission"
+            )
+            # highlight-end
+
+        return await original_sign_up(
+            form_fields,
+            tenant_id,
+            session,
+            should_try_linking_with_session_user,
+            api_options,
+            user_context,
+        )
+
+    original_implementation.sign_up_post = sign_up
+
+    return original_implementation
+
+
+def is_not_allowed(email: str):
+    # TODO: your impl to check if the email is allowed
+    return True
+
+
+emailpassword.init(override=emailpassword.InputOverrideConfig(apis=override_apis))
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+---
+
+## Disable APIs
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+To disable an API entirely, all you need to do is override the API implementation with `undefined`.
+
+For example, if you want to disable the sign up / sign in API from this recipe, all you do is this:
+
+<Tabs
+	isSubTab={true}
+	groupId="node-80X-version"
+	defaultValue="greater"
+	values={[
+		{ label: '>= v8.0.0', value: 'greater' },
+		{ label: '< v8.0.0', value: 'lesser' },
+	]}>
+<TabItem value="greater">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        EmailPassword.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInPOST: undefined, // disable sign in with email & password
+                        signUpPOST: undefined, // disable sign up with email & password
+                    }
+                }
+            }
+            // highlight-end
+        }),
+        ThirdParty.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUpPOST: undefined // disable sign in & up with third party
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+});
+```
+
+</TabItem>
+<TabItem value="lesser">
+
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        appName: "...",
+        websiteDomain: "..."
+    },
+    supertokens: {
+        connectionURI: "...",
+    },
+    recipeList: [
+        ThirdParty.init({
+            // highlight-start
+            override: {
+                apis: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        signInUpPOST: undefined
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+});
+```
+
+</TabItem>
+</Tabs>
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+To disable an API entirely, all you need to do is override the API implementation with `nil`.
+
+For example, if you want to disable the sign up / sign in API from this recipe, all you do is this:
+
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{
+				//highlight-start
+				Override: &tpmodels.OverrideStruct{
+					APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
+
+						// disable sign in & up with third party
+						originalImplementation.SignInUpPOST = nil
+
+						return originalImplementation
+
+					},
+				},
+				//highlight-end
+			}),
+			emailpassword.Init(&epmodels.TypeInput{
+				//highlight-start
+				Override: &epmodels.OverrideStruct{
+					APIs: func(originalImplementation epmodels.APIInterface) epmodels.APIInterface {
+
+						// disable sign in with email & password
+						originalImplementation.SignInPOST = nil
+
+						// disable sign up with email & password
+						originalImplementation.SignUpPOST = nil
+
+						return originalImplementation
+					},
+				},
+				//highlight-end
+			}),
+		},
+	})
+}
+```
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+To disable an API entirely, all you need to do is override the API disable `bool` value to `True`.
+
+For example, if you want to disable the sign up / sign in API from this recipe, all you do is this:
+
+```python
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdparty, emailpassword
+from supertokens_python.recipe.thirdparty.interfaces import (
+    APIInterface as ThirdPartyAPIInterface,
+)
+from supertokens_python.recipe.emailpassword.interfaces import (
+    APIInterface as EmailPasswordAPIInterface,
+)
+
+
+# highlight-start
+def thirdparty_apis_override(original_impl: ThirdPartyAPIInterface):
+    # disable sign in & up with third party
+    original_impl.disable_sign_in_up_post = True
+
+    return original_impl
+# highlight-end
+
+
+# highlight-start
+def emailpassword_apis_override(original_impl: EmailPasswordAPIInterface):
+    # disable sign up with email & password
+    original_impl.disable_sign_up_post = True
+
+    # disable sign in with email & password
+    original_impl.disable_sign_in_post = True
+    return original_impl
+# highlight-end
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",  # type: ignore
+    recipe_list=[
+        thirdparty.init(
+            # highlight-start
+            override=thirdparty.InputOverrideConfig(apis=thirdparty_apis_override),
+            # highlight-end
+        ),
+        emailpassword.init(
+            # highlight-start
+            override=emailpassword.InputOverrideConfig(
+                apis=emailpassword_apis_override
+            ),
+            # highlight-end
+        ),
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+:::info Important
+You then need to define your own routes that handle this API call. You can see the [Frontend driver interface API spec here](/docs/references/api-reference)
+:::
+
+
+---
+
+## Read custom request information
+
+<BackendTabs additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]}>
+<BackendTabs.TabItem value="nodejs">
+
+We use the `getRequestFromUserContext` function provided by the SDK to get the request object from the user context.
+
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+Session.init({
+    override: {
+        apis: (oI) => {
+            return {
+                ...oI,
+                signOutPOST: async (input) => {
+                    if (oI.signOutPOST === undefined) {
+                        throw Error("Signout API is disabled");
+                    }
+
+                    // highlight-start
+                    let customHeaderValue = "";
+                    const request = SuperTokens.getRequestFromUserContext(input.userContext);
+
+                    if (request !== undefined) {
+                        //@ts-ignore
+                        customHeaderValue = request.getHeaderValue("customHeader");
+                    } else {
+                        /**
+                         * This is possible if the function is triggered from the user management dashboard
+                         * 
+                         * In this case set a reasonable default value to use
+                         */
+                        customHeaderValue = "default";
+                    }
+
+                    // highlight-end
+
+                    // Perform custom logic based on the value of customHeaderValue
+
+                    return oI.signOutPOST(input);
+                },
+            };
+        }
+    },
+})
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+We use the `GetRequestFromUserContext` function provided by the SDK to get the request object from the user context.
+
+```go
+import (
+    "github.com/supertokens/supertokens-golang/recipe/session"
+    "github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+    "github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+    session.Init(&sessmodels.TypeInput{
+        Override: &sessmodels.OverrideStruct{
+            APIs: func(originalImplementation sessmodels.APIInterface) sessmodels.APIInterface {
+                originalSignOutPost := *originalImplementation.SignOutPOST
+
+                *originalImplementation.SignOutPOST = func(sessionContainer sessmodels.SessionContainer, options sessmodels.APIOptions, userContext supertokens.UserContext) (sessmodels.SignOutPOSTResponse, error) {
+                    // highlight-start
+                    customHeadervalue := ""
+                    request := supertokens.GetRequestFromUserContext(userContext)
+
+                    if request != nil {
+                        customHeadervalue = request.Header.Get("customHeader")
+                    } else {
+                        /**
+                        * This is possible if the function is triggered from the user management dashboard
+                        * 
+                        * In this case set a reasonable default value to use
+                        */
+                        customHeadervalue = "default";
+                    }
+                    // highlight-end
+
+                    print(customHeadervalue)
+
+                    // Perform custom logic based on the value of customHeadervalue
+
+                    return originalSignOutPost(sessionContainer, options, userContext)
+                }
+
+                return originalImplementation
+            },
+        },
+    })
+}
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+We use the `get_request_from_user_context` function provided by the SDK to get the request object from the user context.
+
+```python
+from supertokens_python import get_request_from_user_context
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import APIInterface, APIOptions
+from typing import Any, Dict
+
+
+def override_session_apis(original_implementation: APIInterface):
+    original_signout_post = original_implementation.signout_post
+
+    async def signout_post(session: session.SessionContainer, api_options: APIOptions, user_context: Dict[str, Any]):
+        # highlight-start
+        request=get_request_from_user_context(user_context)
+        customHeaderValue=""
+
+        if request is not None:
+            customHeaderValue=request.get_header("customHeader")
+        else:
+            #
+            # This is possible if the function is triggered from the user management dashboard
+            # 
+            # In this case set a reasonable default value to use
+            #
+            customHeaderValue="default"
+        # highlight-end
+        
+        print(customHeaderValue)
+        # Perform custom logic based on the value of customHeadervalue
+
+        return await original_signout_post(session, api_options, user_context)
+
+    original_implementation.signout_post = signout_post
+    return original_implementation
+
+session.init(
+    override=session.InputOverrideConfig(
+        apis=override_session_apis
+    ),
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
