@@ -1,0 +1,621 @@
+import {
+  FrontendCustomUITabs,
+  BackendTabs,
+} from "/src/components/Tabs";
+import { AppInfoForm } from "/src/components/Forms";
+import { PasswordlessConfigCard, NpmOrScriptsCard, MobileFrameworksCard } from "/src/components/Cards";
+import { Question, Answer } from "/src/components/Question";
+
+### Sign in with Apple example
+
+<MobileFrameworksCard>
+
+<MobileFrameworksCard.Content value="reactnative">
+
+#### Fetching the authorisation token on the frontend
+
+For react native apps, this involves setting up the [react-native-apple-authentication library](https://github.com/invertase/react-native-apple-authentication) in your app. Check out their `README` for steps on how to integrate their `SDK` into your application. The minimum scope required by SuperTokens is the one that gives the user's email. In the case of Apple, that could be the user's actual email or the proxy email provided by Apple - it doesn't matter.
+
+Once the integration is complete, you should call the `appleAuth.performRequest` function for iOS and the `appleAuthAndroid.signIn` function for Android. Either way, the result of the function is a one-time use auth code which you should send to your backend as shown in the next step.
+
+A full example of this is available in [the example app](https://github.com/supertokens/supertokens-react-native/blob/master/examples/with-thirdparty/apple.ts).
+
+In case you are using Expo, you can use the [expo-apple-authentication](https://docs.expo.dev/versions/latest/sdk/apple-authentication/) library instead (not that this library only works on iOS).
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="android">
+
+#### Fetching the authorisation token on the frontend
+
+:::info
+Coming Soon
+:::
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="ios">
+
+#### Fetching the authorisation token on the frontend
+
+For iOS you use the normal sign in with apple flow and then use the authorization code to login with SuperTokens. You can see a full example of this in the `onAppleClicked` function in [the example app](https://github.com/supertokens/supertokens-ios/blob/master/examples/with-thirdparty/with-thirdparty/LoginScreen/LoginScreenViewController.swift).
+
+```swift
+import UIKit
+import AuthenticationServices
+
+fileprivate class ViewController: UIViewController, ASAuthorizationControllerPresentationContextProviding, ASAuthorizationControllerDelegate {
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return view.window!
+    }
+
+    func loginWithApple() {
+        let authorizationRequest = ASAuthorizationAppleIDProvider().createRequest()
+        authorizationRequest.requestedScopes = [.email, .fullName]
+        
+        let authorizationController = ASAuthorizationController(authorizationRequests: [authorizationRequest])
+        
+        authorizationController.presentationContextProvider = self
+        authorizationController.delegate = self
+        authorizationController.performRequests()
+    }
+    
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let credential: ASAuthorizationAppleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+            let authorizationCode = credential.authorizationCode,
+            let authorizationCodeString: String = String(data: authorizationCode, encoding: .utf8),
+            let email: String = credential.email as? String,
+            let nameComponents: PersonNameComponents = credential.fullName as? PersonNameComponents,
+            let firstName: String = nameComponents.givenName as? String,
+            let lastName: String = nameComponents.familyName as? String else {return}
+        
+        // Send the user information and auth code to the backend. Refer to the next step.
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="flutter">
+
+#### Fetching the authorisation token on the frontend
+
+For flutter, use the [`sign_in_with_apple`](https://pub.dev/packages/sign_in_with_apple) package. Make sure to follow the prerequisite steps to get the package setup. After setup, use the snippet below to trigger the apple sign-in flow. You can see a full example of this in the `loginWithApple` function in [the example app](https://github.com/supertokens/supertokens-flutter/blob/master/examples/with-thirdparty/lib/screens/login.dart).
+
+```dart
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+
+void loginWithApple() async {
+  try {
+    var credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+        ],
+        // Required for Android only
+        webAuthenticationOptions: WebAuthenticationOptions(
+            clientId: "<CLIENT_ID>",
+            redirectUri: Uri.parse(
+            "<API_DOMAIN>/<API_BASE_PATH>/callback/apple",
+            ),
+        ),
+    );
+
+    String authorizationCode = credential.authorizationCode;
+    String? idToken = credential.identityToken;
+    String? email = credential.email;
+    String? firstname = credential.givenName;
+    String? lastName = credential.familyName;
+
+    // Send the user information and auth code to the backend. Refer to the next step.
+  } catch (e) {
+    // Sign in aborted or failed
+  }
+}
+```
+
+In the snippet above for Android, you need an additional `webAuthenticationOptions` property when signing in with Apple.
+This is because on Android the library uses the web login flow and requires the client id and redirection URI.
+The `redirectUri` property here is the URL to which Apple makes a `POST` request after the user has logged in.
+The SuperTokens backend SDKs provide an API for this at `<API_DOMAIN>/<API_BASE_PATH>/callback/apple`.
+
+#### Additional steps for Android 
+
+For android, a way for the web login flow to redirect back to the app is also needed. By default, the API provided by the backend `SDKs` redirects to the website domain you provide when initializing the `SDK`. The API can be overridden to redirect to the app instead. For example, if using the Node.js `SDK`:
+
+<BackendTabs>
+
+<BackendTabs.TabItem value="nodejs">
+
+```tsx
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+ThirdParty.init({
+    // highlight-start
+    override: {
+        apis: (original) => {
+            return {
+                ...original,
+                appleRedirectHandlerPOST: async (input) => {
+                    if (original.appleRedirectHandlerPOST === undefined) {
+                        throw Error("Should never come here");
+                    }
+
+                    // inut.formPostInfoFromProvider contains all the query params attached by Apple
+                    const stateInBase64 = input.formPostInfoFromProvider.state;
+
+                    // The web SDKs add a default state
+                    if (stateInBase64 === undefined) {
+                        // Redirect to android app
+                        // We create a dummy URL to create the query string
+                        const dummyUrl = new URL("http://localhost:8080");
+                        for (const [key, value] of Object.entries(input.formPostInfoFromProvider)) {
+                            dummyUrl.searchParams.set(key, `${value}`);
+                        }
+
+                        const queryString = dummyUrl.searchParams.toString();
+                        // Refer to the README of sign_in_with_apple to understand what this url is
+                        const redirectUrl = `intent://callback?${queryString}#Intent;package=YOUR.PACKAGE.IDENTIFIER;scheme=signinwithapple;end`;
+
+                        input.options.res.setHeader("Location", redirectUrl, false);
+                        input.options.res.setStatusCode(303);
+                        input.options.res.sendHTMLResponse("");
+                    } else {
+                        // For the web flow we can use the original implementation
+                        original.appleRedirectHandlerPOST(input);
+                    }
+                },
+            };
+        },
+    },
+    // highlight-end
+})
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="go">
+
+```go
+import (
+	"net/http"
+	"strings"
+
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	thirdparty.Init(&tpmodels.TypeInput{
+		Override: &tpmodels.OverrideStruct{
+			// highlight-start
+			APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
+				originalAppleRedirectPost := *originalImplementation.AppleRedirectHandlerPOST
+
+				*originalImplementation.AppleRedirectHandlerPOST = func(formPostInfoFromProvider map[string]interface{}, options tpmodels.APIOptions, userContext *map[string]interface{}) error {
+					// formPostInfoFromProvider contains all the query params attached by Apple
+					state, stateOk := formPostInfoFromProvider["state"].(string)
+
+					queryParams := []string{}
+					if (!stateOk) || state == "" {
+						// Redirect to android app
+						for key, value := range formPostInfoFromProvider {
+							queryParams = append(queryParams, key+"="+value.(string))
+						}
+
+						queryString := ""
+						if len(queryParams) > 0 {
+							queryString = strings.Join(queryParams, "&")
+						}
+
+						// Refer to the README of sign_in_with_apple to understand what this url is
+						redirectUri := "intent://callback?" + queryString + "#Intent;package=YOUR.PACKAGE.IDENTIFIER;scheme=signinwithapple;end"
+
+						options.Res.Header().Set("Location", redirectUri)
+						options.Res.WriteHeader(http.StatusSeeOther)
+						return nil
+					} else {
+						return originalAppleRedirectPost(formPostInfoFromProvider, options, userContext)
+					}
+				}
+
+				return originalImplementation
+			},
+		},
+		// highlight-end
+	})
+}
+```
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.interfaces import APIInterface, APIOptions
+from typing import Dict, Any
+
+# highlight-start
+def override_thirdparty_apis(original_implementation: APIInterface):
+    original_apple_redirect_post = original_implementation.apple_redirect_handler_post
+
+    async def apple_redirect_handler_post(
+        form_post_info: Dict[str, Any],
+        api_options: APIOptions,
+        user_context: Dict[str, Any]
+    ):
+        # form_post_info contains all the query params attached by Apple
+        state = form_post_info["state"]
+
+        # The web SDKs add a default state
+        if state is None:
+            query_items = [
+                f"{key}={value}" for key, value in form_post_info.items()
+            ]
+
+            query_string = "&".join(query_items)
+
+            # Refer to the README of sign_in_with_apple to understand what this url is
+            redirect_url = "intent://callback?" + query_string + "#Intent;package=YOUR.PACKAGE.IDENTIFIER;scheme=signinwithapple;end"
+
+            api_options.response.set_header("Location", redirect_url)
+            api_options.response.set_status_code(303)
+            api_options.response.set_html_content("")
+        else:
+            return await original_apple_redirect_post(form_post_info, api_options, user_context)
+
+    original_implementation.apple_redirect_handler_post = apple_redirect_handler_post
+    return original_implementation
+# highlight-end
+
+thirdparty.init(
+    # highlight-start
+    override=thirdparty.InputOverrideConfig(
+        apis=override_thirdparty_apis
+    ),
+    # highlight-end
+)
+```
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+In the code above, the `appleRedirectHandlerPOST` API is overridden to check if the request came from the Android app. You can skip checking the state if you only have a mobile app and no website. `sign_in_with_apple` requires parsing the query params sent by Apple and including them in the redirect URL in a specific way. Then, redirect to the deep link URL. Refer to the README for `sign_in_with_apple` to read about the deep link setup required in Android.
+
+</MobileFrameworksCard.Content>
+
+</MobileFrameworksCard>
+
+#### Calling the `signinup` API to consume the authorisation token
+
+<AppInfoForm />
+
+Once you have the authorization code from the auth provider, you need to call the `/signinup` API exposed by the backend `SDK` as shown below:
+
+```bash
+curl --location --request POST '^{appInfo.apiDomain}^{appInfo.apiBasePath}/signinup' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+    "thirdPartyId": "apple",
+    "clientType": "...",
+    "redirectURIInfo": {
+        "redirectURIOnProviderDashboard": "^{appInfo.apiDomain}^{appInfo.apiBasePath}/callback/apple",
+        "redirectURIQueryParams": {
+            "code": "...",
+            "user": {
+                "name":{
+                    "firstName":"...",
+                    "lastName":"..."
+                },
+                "email":"..."
+            }
+        }
+    }
+}'
+```
+
+:::important
+- On iOS, the client id set in the backend should be the same as the bundle identifier for your app.
+- The `clientType` input is optional and required only if you initialize more than one client in the provider on the backend (See the "Social / `SSO` login for both, web and mobile apps" section below).
+- On iOS, `redirectURIOnProviderDashboard` doesn't matter and its value can be a universal link configured for your app.
+- On Android, the `redirectURIOnProviderDashboard` should match the one configured on the Apple developer dashboard.
+- The `user` object contains information provided by Apple.
+:::
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This status occurs if the social / `SSO` provider did not provide an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overridden the backend API to send back a custom error message which should display on the frontend.
+- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen during automatic account linking or during `MFA`. The `reason` prop that's in the response body contains a support code using which you can see why the sign in / up was not allowed.
+
+:::note
+On success, the backend sends back session tokens as part of the response headers which are automatically handled by the frontend `SDK` for you.
+:::
+
+
+### Sign in with Google example
+
+<MobileFrameworksCard>
+
+<MobileFrameworksCard.Content value="reactnative">
+
+#### Fetching the authorisation token on the frontend
+
+This involves setting up the [@react-native-google-signin/google-signin](https://github.com/react-native-google-signin/google-signin) in your app. Checkout their `README` for steps on how to integrate their `SDK` into your application. The minimum scope required by SuperTokens is the one that gives the user's email.
+
+Once you configure the library, use `GoogleSignin.configure` and `GoogleSignin.signIn` to trigger the login flow and sign the user in with Google. Refer to [the example app](https://github.com/supertokens/supertokens-react-native/blob/master/examples/with-thirdparty/google.ts) to see the full code for this.
+
+```tsx
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+
+export const performGoogleSignIn = async (): Promise<boolean> => {
+  GoogleSignin.configure({
+    webClientId: "GOOGLE_WEB_CLIENT_ID",
+    iosClientId: "GOOGLE_IOS_CLIENT_ID",
+  });
+
+  try {
+    const response = await GoogleSignin.signIn({});
+    const authCode = response.data?.serverAuthCode;
+
+    // Refer to step 2
+
+    return true;
+  } catch (e) {
+    console.log("Google sign in failed with error", e);
+  }
+
+  return false;
+};
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="android">
+
+#### Fetching the authorisation token on the frontend
+
+Follow the [official Google Sign In guide](https://developers.google.com/identity/sign-in/android/start-integrating) to set up their library and sign the user in with Google. Fetch the authorization code from the Google sign-in result. For a full example, refer to the `signInWithGoogle` function in [the example app](https://github.com/supertokens/supertokens-android/blob/master/examples/with-thirdparty/app/src/main/java/com/supertokens/supertokensexample/LoginActivity.kt).
+
+```kotlin
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.util.Log
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import android.content.Intent
+
+class LoginActivity : AppCompatActivity() {
+    private lateinit var googleResultLauncher: ActivityResultLauncher<Intent>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        googleResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            onGoogleResultReceived(it)
+        }
+    }
+
+    private fun signInWithGoogle() {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestServerAuthCode("GOOGLE_WEB_CLIENT_ID")
+            .requestEmail()
+            .build()
+
+        val googleClient = GoogleSignIn.getClient(this, gso)
+        val signInIntent = googleClient.signInIntent
+
+        googleResultLauncher.launch(signInIntent)
+    }
+
+    private fun onGoogleResultReceived(it: ActivityResult) {
+        val task = GoogleSignIn.getSignedInAccountFromIntent(it.data)
+        val account = task.result
+        val authCode = account.serverAuthCode
+
+        // Refer to step 2
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="ios">
+
+#### Fetching the authorisation token on the frontend
+
+For iOS, use the `GoogleSignIn` library. Follow the [official guide](https://developers.google.com/identity/sign-in/ios/start-integrating) to set up the library and sign the user in with Google. Use the result of Google sign-in to get the authorization code. For a full example, refer to the `onGoogleCliked` function in [the example app](https://github.com/supertokens/supertokens-ios/blob/master/examples/with-thirdparty/with-thirdparty/LoginScreen/LoginScreenViewController.swift).
+
+```swift
+import UIKit
+import GoogleSignIn
+
+fileprivate class LoginScreenViewController: UIViewController {
+    @IBAction func onGoogleCliked() {
+        GIDSignIn.sharedInstance.signIn(withPresenting: self) { signInResult, error in
+            guard error == nil else { return }
+
+            guard let authCode: String = signInResult?.serverAuthCode as? String else {
+                print("Google login did not return an authorisation code")
+                return
+            }
+            
+            // Refer to step 2
+        }
+    }
+}
+```
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="flutter">
+
+#### Fetching the authorisation token on the frontend
+
+For flutter, use the [`google_sign_in`](https://pub.dev/packages/google_sign_in) package. Make sure to follow the prerequisite steps to get the package setup. After setup, use the snippet below to trigger the Google sign-in flow. For a full example, refer to the `loginWithGoogle` in [the example app](https://github.com/supertokens/supertokens-flutter/blob/master/examples/with-thirdparty/lib/screens/login.dart).
+
+```dart
+import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:io';
+
+Future<void> loginWithGoogle() async {
+    GoogleSignIn googleSignIn;
+
+    if (Platform.isAndroid) {
+      googleSignIn = GoogleSignIn(
+        serverClientId: "GOOGLE_WEB_CLIENT_ID",
+        scopes: [
+          'email',
+        ],
+      );
+    } else {
+      googleSignIn = GoogleSignIn(
+        clientId: "GOOGLE_IOS_CLIENT_ID",
+        serverClientId: "GOOGLE_WEB_CLIENT_ID",
+        scopes: [
+          'email',
+        ],
+      );
+    }
+
+    GoogleSignInAccount? account = await googleSignIn.signIn();
+
+    if (account == null) {
+        print("Google sign in was aborted");
+        return;
+    }
+
+    String? authCode = account.serverAuthCode;
+
+    if (authCode == null) {
+        print("Google sign in did not return a server auth code");
+        return;
+    }
+
+    // Refer to step 2
+  }
+```
+
+</MobileFrameworksCard.Content>
+
+</MobileFrameworksCard>
+
+<h4>Step 2) Calling the `signinup` API to consume the authorisation token</h4>
+
+<AppInfoForm />
+
+Once you have the authorization code from the auth provider, you need to call the `signinup` API exposed by the backend `SDK` as shown below:
+
+```bash
+curl --location --request POST '^{appInfo.apiDomain}^{appInfo.apiBasePath}/signinup' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+    "thirdPartyId": "google",
+    "clientType": "...",
+    "redirectURIInfo": {
+        "redirectURIOnProviderDashboard": "",
+        "redirectURIQueryParams": {
+            "code": "...",
+        }
+    }
+}'
+```
+
+:::important
+When calling the API exposed by the SuperTokens backend `SDK`, pass an empty string for `redirectURIOnProviderDashboard`.
+The native login flow using the authorization code does not involve any redirection on the frontend.
+:::
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This status occurs if the social / `SSO` provider did not provide an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overridden the backend API to send back a custom error message which should display on the frontend.
+- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen during automatic account linking or during `MFA`. The `reason` prop that's in the response body contains a support code using which you can see why the sign in / up was not allowed.
+
+:::note
+On success, the backend sends back session tokens as part of the response headers which are automatically handled by the frontend `SDK` for you.
+:::
+
+
+### Authorization code grant flow with `PKCE`
+
+This is similar to the first one, except that you do **not** need to provide a client secret during backend init.
+This flow only works for providers which support the [`PKCE` flow](https://oauth.net/2/pkce/).
+
+<MobileFrameworksCard>
+
+<MobileFrameworksCard.Content value="reactnative">
+
+#### Fetching the authorisation token on the frontend
+
+You can use the [react native auth library](https://github.com/FormidableLabs/react-native-app-auth) to also return the `PKCE` code verifier along with the authorization code. Achieve this by setting the `usePKCE` boolean to `true` and also by setting the `skipCodeExchange` to `true` when configuring the react native auth library.
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="android">
+
+#### Fetching the authorisation token on the frontend
+
+You can use the [AppAuth-Android](https://github.com/openid/AppAuth-Android) library to use the `PKCE` flow by using the `setCodeVerifier` method when creating a `AuthorizationRequest`.
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="ios">
+
+#### Fetching the authorisation token on the frontend
+
+You can use the [AppAuth-iOS](https://github.com/openid/AppAuth-iOS) library to use the `PKCE` flow.
+
+</MobileFrameworksCard.Content>
+
+<MobileFrameworksCard.Content value="flutter">
+
+#### Fetching the authorisation token on the frontend
+
+You can use [`flutter_appauth`](https://pub.dev/packages/flutter_appauth) to use the `PKCE` flow by providing a `codeVerifier` when you call the `appAuth.token` function.
+
+</MobileFrameworksCard.Content>
+
+</MobileFrameworksCard>
+
+#### Calling the `signinup` API to consume the authorisation token
+
+<AppInfoForm />
+
+Once you have the authorization code and `PKCE` verifier from the auth provider, you need to call the `/signinup` API exposed by the backend `SDK` as shown below:
+
+```bash
+curl --location --request POST '^{appInfo.apiDomain}^{appInfo.apiBasePath}/signinup' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "thirdPartyId": "THIRD_PARTY_ID",
+    "clientType": "...",
+    "redirectURIInfo": {
+        "redirectURIOnProviderDashboard": "REDIRECT_URI",
+        "redirectURIQueryParams": {
+            "code": "...",
+        },
+        "pkceCodeVerifier": "..."
+    }
+}'
+```
+
+:::important
+- Replace `THIRD_PARTY_ID` with the provider id. The provider id must match the one you configure in the backend when initialising SuperTokens.
+- `REDIRECT_URI` must exactly match the value you configure on the providers dashboard.
+:::
+
+The response body from the API call has a `status` property in it:
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: This status occurs if the social / `SSO` provider did not provide an email for the user. In this case, you want to ask the user to pick another method of sign in. Or, you can also override the backend functions to create a fake email for the user for this provider.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overridden the backend API to send back a custom error message which should display on the frontend.
+- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen during automatic account linking or during `MFA`. The `reason` prop that's in the response body contains a support code using which you can see why the sign in / up was not allowed.
+
+:::note
+On success, the backend sends back session tokens as part of the response headers which are automatically handled by the frontend `SDK` for you.
+:::
