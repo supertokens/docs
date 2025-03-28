@@ -5,7 +5,8 @@ import {
   OpenAPIParameterObject,
 } from "./openapischema";
 
-export type APIRequestSchema = Omit<OpenAPISchemaObject, "properties" | "items"> & {
+export type APIRequestSchema = Omit<OpenAPISchemaObject, "properties" | "items" | "type"> & {
+  type: "object" | "string" | "number" | "integer" | "boolean" | "array" | "dictionary";
   properties?: Record<string, APIRequestSchema>;
   items?: APIRequestSchema;
 };

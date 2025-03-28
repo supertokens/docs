@@ -38,6 +38,7 @@ abstract class APICodeSnippet {
   ) {}
 
   get queryParams(): string {
+    if (!this.request.parameters) return "";
     const queryParams = Object.keys(this.request.parameters).filter(
       (key) => this.request.parameters[key].in === "query" && this.request.parameters[key].required,
     );
@@ -100,6 +101,10 @@ abstract class APICodeSnippet {
 
     if (schema.default) {
       return schema.default;
+    }
+
+    if (schema.type === "object" && !schema.properties) {
+      console.log(schema);
     }
 
     switch (schema.type) {

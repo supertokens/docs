@@ -37,13 +37,15 @@ export interface OpenAPIParameterObject {
 }
 
 export interface OpenAPISchemaObject {
-  type?: string;
+  type?: "object" | "string" | "number" | "integer" | "boolean" | "array";
   format?: string;
   title?: string;
   description?: string;
   default?: any;
   properties?: Record<string, OpenAPISchemaObject | OpenAPIReferenceObject>;
   items?: OpenAPISchemaObject | OpenAPIReferenceObject;
+  // TODO: Extend based on this https://swagger.io/docs/specification/v3_0/data-models/dictionaries/
+  additionalProperties?: boolean;
   required?: string[];
   example?: any;
   enum?: any[];

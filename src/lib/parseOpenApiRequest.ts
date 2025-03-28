@@ -59,6 +59,10 @@ function transformSchema(
   }
 
   const { properties, items, ...rest } = schemaObj;
+  if (!rest.type) {
+    throw new Error(`Schema type is required: ${JSON.stringify(rest)}`);
+  }
+  // @ts-expect-error
   const result: APIRequestSchema = { ...rest };
 
   if (schemaObj.properties) {
@@ -66,6 +70,13 @@ function transformSchema(
     for (const [key, value] of Object.entries(schemaObj.properties)) {
       result.properties[key] = transformSchema(schema, value) as APIRequestSchema;
     }
+  }
+
+  if (schemaObj.additionalProperties) {
+    result.type = "dictionary";
+  }
+
+  if (schemaObj.additionalProperties) {
   }
 
   if (schemaObj.items) {
