@@ -1,0 +1,56 @@
+name: Code Type Checking
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "docs/**"
+
+jobs:
+  write-code-blocks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Write Code Snippets
+        run: bun run write-code-blocks
+
+      - name: Upload Code Type Checking Scripts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-blocks
+          path: scripts/code-type-checking
+          retention-days: 1
+
+  code-type-checking:
+    needs: write-code-blocks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        language:
+          - javascript
+          - go
+          - python
+          - swift
+          - php
+          - java
+          - csharp
+          # TODO: Check kotlin issues
+          # - kotlin
+    steps:
+      - name: Download Code Blocks
+        uses: actions/download-artifact@v4
+        with:
+          name: code-blocks
+          path: ./scripts/code-type-checking
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Check code snippets for ${{ matrix.language }}
+        working-directory: ./scripts/code-type-checking/${{ matrix.language }}
+        run: docker build -t code-check-${{ matrix.language }} .
