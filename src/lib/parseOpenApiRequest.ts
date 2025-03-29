@@ -59,6 +59,7 @@ function transformSchema(
   }
 
   const { properties, items, ...rest } = schemaObj;
+
   if (!rest.type) {
     throw new Error(`Schema type is required: ${JSON.stringify(rest)}`);
   }
@@ -72,11 +73,12 @@ function transformSchema(
     }
   }
 
-  if (schemaObj.additionalProperties) {
+  if (schemaObj.type === "object" && !schemaObj.properties) {
     result.type = "dictionary";
   }
 
   if (schemaObj.additionalProperties) {
+    result.type = "dictionary";
   }
 
   if (schemaObj.items) {

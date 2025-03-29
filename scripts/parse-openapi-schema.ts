@@ -5,7 +5,7 @@ import { z } from "zod";
 import { parseOpenApiRequest } from "../src/lib/parseOpenApiRequest";
 import { APIRequestMethod } from "../src/types";
 
-const API_NAME = "fdi";
+const API_NAME = "cdi";
 
 const APIRequestSchemaSchema = z.lazy(() =>
   z
@@ -91,7 +91,7 @@ function parseOpenApiSchema() {
         const validationResult = APIRequestSchema.safeParse(request);
 
         if (!validationResult.success) {
-          console.error(`Validation failed for ${method} ${path}:`, validationResult.error.format());
+          console.error(`Validation failed for ${method} ${path}:`, validationResult.error);
           errorCount++;
           continue;
         }
