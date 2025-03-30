@@ -99,15 +99,7 @@ class Analytics {
 
   get hasCookieConsent() {
     if (window.location.hostname === "localhost") return true;
-    const consentCookie = Cookies.get(COOKIE_CONSENT);
-    if (consentCookie) {
-      if (consentCookie === "deny") {
-        return false;
-      } else {
-        return true;
-      }
-    }
-    return false;
+    return getCookieConsent() === "allow";
   }
 
   get canSendEvents() {
@@ -265,6 +257,21 @@ export function trackLinkClick(eventName: string, version = "v5", options?: Obje
     },
     version,
   });
+}
+
+export function getCookieConsent(): "allow" | "deny" | "unset" {
+  const consentCookie = Cookies.get(COOKIE_CONSENT);
+  if (consentCookie && consentCookie === "deny") {
+    return "deny";
+  }
+  if (consentCookie && consentCookie === "allow") {
+    return "allow";
+  }
+  return "unset";
+}
+
+export function setCookieConsent(consent: "allow" | "deny") {
+  Cookies.set(COOKIE_CONSENT, consent);
 }
 
 async function getSessionUserId() {
