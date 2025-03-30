@@ -1,4 +1,5 @@
 import * as amplitude from "@amplitude/analytics-browser";
+import { sessionReplayPlugin } from "@amplitude/plugin-session-replay-browser";
 
 let amplitudeInitialized = false;
 let amplitudeUserIdentified = false;
@@ -7,6 +8,10 @@ export const initAmplitude = () => {
   if (amplitudeInitialized) {
     return;
   }
+  const sessionReplayTracking = sessionReplayPlugin({
+    sampleRate: 1,
+  });
+  amplitude.add(sessionReplayTracking);
   amplitude.init("b61f581fe0775f56038a6264af879aa9", {
     logLevel: isTestEnv() || isDev() ? amplitude.Types.LogLevel.Debug : amplitude.Types.LogLevel.None,
     autocapture: {

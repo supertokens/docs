@@ -3,7 +3,7 @@ import supertokens from "supertokens-website";
 import { v1 as uuidv1 } from "uuid";
 import Cookies from "js-cookie";
 
-import { trackEvent } from "./amplitude";
+import { initAmplitude, trackEvent } from "./amplitude";
 
 const COOKIE_CONSENT = "cookieconsent_status";
 const ANTCS_ENDPOINT_URL = "https://api.supertokens.com/0/antcs/ents";
@@ -113,6 +113,11 @@ class Analytics {
       return true;
     }
     return false;
+  }
+
+  init() {
+    if (!this.canSendEvents) return;
+    initAmplitude();
   }
 
   async sendEvent(
@@ -227,6 +232,12 @@ export function trackPageExit(
   } else if (visibilityState === "visible") {
     analyticsInstance.currentPage.pageViewIntervals.push({ start: Date.now() });
   }
+}
+
+export function init() {
+  const analyticsInstance = getAnalyticsInstance();
+
+  return analyticsInstance.init();
 }
 
 export function trackButtonClick(eventName: string, version = "v1", options?: Object) {

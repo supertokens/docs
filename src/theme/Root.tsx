@@ -1,12 +1,18 @@
 import { Theme, Card, Text, Flex, Button, Box } from "@radix-ui/themes";
 
 import { DocItemContextProvider } from "@site/src/context";
-import { getCookieConsent, setCookieConsent, trackPageExit, trackPageView } from "@site/src/lib/analytics";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { init, getCookieConsent, setCookieConsent, trackPageExit, trackPageView } from "@site/src/lib/analytics";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "@docusaurus/router";
 
 export default function Root({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    // This just initializes amplitude in order to start session recording
+    // regardless if the user interacts with the page or not
+    init();
+  }, []);
 
   useEffect(() => {
     if (localStorage.getItem("analytics-consent") === "true") {
@@ -47,8 +53,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
 function AnalyticsConsentBanner() {
   const [showConsentBanner, setShowConsentBanner] = useState(() => {
     const consent = getCookieConsent();
-    console.log(consent);
-
     return consent === "unset";
   });
 
