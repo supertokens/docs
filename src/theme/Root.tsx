@@ -66,8 +66,6 @@ function AnalyticsConsentBanner() {
     setCookieConsent("deny");
   }, []);
 
-  console.log(showConsentBanner);
-
   if (!showConsentBanner) return null;
 
   return (
