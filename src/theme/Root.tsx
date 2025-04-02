@@ -52,7 +52,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
 function AnalyticsConsentBanner() {
   const [showConsentBanner, setShowConsentBanner] = useState(() => {
+    if (typeof window === "undefined") return false;
     const consent = getCookieConsent();
+
     return consent === "unset";
   });
 
