@@ -21,21 +21,21 @@ export function APIRequestSchemaCard({
       <Box p="0" asChild>
         <Card asChild>
           <Flex p="0" direction="column" gap="0" align="stretch" asChild>
-            <RadixAccordion.Root type="multiple">
-              <RadixAccordion.Item value={name}>
+            <RadixAccordion.Root type="multiple" className="api-request-accordion">
+              <RadixAccordion.Item value={name} className="api-request-accordion__item">
                 <Flex asChild>
                   <Heading size="2" as="h4" mb="0" asChild>
                     <RadixAccordion.Header>
                       <Flex justify="between" align="center" px="3" py="2" asChild flexGrow="1">
-                        <RadixAccordion.Trigger className="api-request-card__accordion-trigger">
+                        <RadixAccordion.Trigger className="api-request-accordion__trigger">
                           {name}
-                          <ChevronDownIcon className="api-request-card__accordion-trigger-icon" aria-hidden />
+                          <ChevronDownIcon className="api-request-accordion__icon" aria-hidden />
                         </RadixAccordion.Trigger>
                       </Flex>
                     </RadixAccordion.Header>
                   </Heading>
                 </Flex>
-                <RadixAccordion.Content>
+                <RadixAccordion.Content className="api-request-accordion__content">
                   <SchemaPropertiesList schema={schema} nestingLevel={nestingLevel} />
                 </RadixAccordion.Content>
               </RadixAccordion.Item>
@@ -98,7 +98,7 @@ function SchemaPropertiesList({ schema, nestingLevel }: { schema: APIRequestSche
                   <APIRequestSchemaCard
                     schema={properties[propName].items}
                     nestingLevel={nestingLevel + 1}
-                    name="Array Items"
+                    name={`${propName} Items`}
                   />
                 ) : null}
               </Flex>

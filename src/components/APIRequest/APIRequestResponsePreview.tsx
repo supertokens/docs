@@ -82,7 +82,7 @@ export function APIRequestResponsePreview() {
                     >
                       {response.statusCode}
                     </Badge>
-                    {response.schema.title ? <Text ml="1">Success</Text> : null}
+                    {response?.schema?.title ? <Text ml="1">Success</Text> : null}
                   </Flex>
                 </Select.Item>
               ))}

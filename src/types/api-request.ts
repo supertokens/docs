@@ -27,6 +27,8 @@ export type APIRequestParameter = Omit<OpenAPIParameterObject, "schema"> & { sch
 export type APIRequest = {
   path: string;
   summary?: string;
+  title?: string;
+  frontmatter?: Record<string, string | number | boolean>;
   description?: string;
   method: APIRequestMethod;
   parameters?: Record<string, APIRequestParameter>;

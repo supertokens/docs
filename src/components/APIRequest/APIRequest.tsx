@@ -9,6 +9,8 @@ import { APIRequestParametersCard } from "./APIRequestParametersCard";
 import * as Accordion from "@radix-ui/react-accordion";
 import { APIRequestSchemaCard } from "./APIRequestSchemaCard";
 
+import "./APIRequest.scss";
+
 type APIRequestContextType = {
   path: string;
   formattedPath: string;
@@ -302,28 +304,28 @@ export function APIRequestResponse() {
   if (!statusCodes.length) return null;
 
   return (
-    <Box px="0" py="4" asChild>
-      <Card asChild>
-        <Accordion.Root type="multiple" defaultValue={[statusCodes[0]]}>
-          {statusCodes.map((statusCode, index) => {
-            const response = schema.responses[statusCode];
+    <>
+      <Box p="0" asChild>
+        <Card asChild>
+          <Accordion.Root type="multiple" defaultValue={[statusCodes[0]]} className="api-request-accordion">
+            {statusCodes.map((statusCode, index) => {
+              const response = schema.responses[statusCode];
 
-            const hasContent = response.content && Object.keys(response.content).length > 0;
-            const hasHeaders = response?.headers && Object.keys(response.headers).length > 0;
-            const firstContentType = hasContent ? Object.keys(response.content)[0] : null;
-            const hasApplicationJsonContent = firstContentType === "application/json";
-            const content = hasContent ? response.content[firstContentType] : null;
-            const contentSchema = content?.schema;
+              const hasContent = response.content && Object.keys(response.content).length > 0;
+              const hasHeaders = response?.headers && Object.keys(response.headers).length > 0;
+              const firstContentType = hasContent ? Object.keys(response.content)[0] : null;
+              const hasApplicationJsonContent = firstContentType === "application/json";
+              const content = hasContent ? response.content[firstContentType] : null;
+              const contentSchema = content?.schema;
 
-            let statusCodeColor: "green" | "red" = "green";
-            if (statusCode.startsWith("4") || statusCode.startsWith("5")) statusCodeColor = "red";
+              let statusCodeColor: "green" | "red" = "green";
+              if (statusCode.startsWith("4") || statusCode.startsWith("5")) statusCodeColor = "red";
 
-            return (
-              <>
-                <Box px="4" asChild>
-                  <Accordion.Item value={statusCode} defaultChecked>
+              return (
+                <>
+                  <Accordion.Item value={statusCode} className="api-request-accordion__item" defaultChecked>
                     <Flex direction="row" align="center" gap="2" width="100%" asChild>
-                      <Accordion.Trigger>
+                      <Accordion.Trigger className="api-request-accordion__trigger">
                         <Flex direction="row" gap="2" align="center" mb="0" asChild>
                           <Accordion.Header>
                             <Code size="4" color={statusCodeColor}>
@@ -340,17 +342,20 @@ export function APIRequestResponse() {
                         <Code size="3" color="gray" ml="auto">
                           {firstContentType}
                         </Code>
-                        <ChevronDownIcon className="api-request-card__accordion-trigger-icon" aria-hidden />
+                        <ChevronDownIcon className="api-request-accordion__icon" aria-hidden />
                       </Accordion.Trigger>
                     </Flex>
 
-                    <Accordion.Content>
-                      <Box pb="3" mt="3">
+                    <Accordion.Content className="api-request-accordion__content">
+                      <Box pb="4" px="4" mt="3">
                         {contentSchema && Array.isArray(contentSchema) && hasApplicationJsonContent ? (
                           <>
                             <Box mb="2">
+                              <Heading as="h3" size="4" mb="1">
+                                Body
+                              </Heading>
                               <Text size="3" color="gray">
-                                One of the following response schemas will be returned:
+                                One of the following body schemas will be returned:
                               </Text>
                             </Box>
                             <Flex direction="column" gap="2">
@@ -373,27 +378,36 @@ export function APIRequestResponse() {
                         ) : null}
 
                         {contentSchema && !Array.isArray(contentSchema) && hasApplicationJsonContent ? (
-                          <APIRequestSchemaCard schema={contentSchema} />
+                          <>
+                            <Heading as="h3" size="4" mb="1">
+                              Body
+                            </Heading>
+                            <APIRequestSchemaCard schema={contentSchema} />
+                          </>
                         ) : null}
 
                         {hasHeaders && (
                           <Flex direction="column" gap="2">
-                            <Heading as="h3" size="4" mb="1" mt="6">
-                              Headers
-                            </Heading>
+                            <Box>
+                              <Heading as="h3" size="4" mb="1" mt="6">
+                                Headers
+                              </Heading>
+                              <Text size="3" color="gray">
+                                After a successful request, the following headers will be set.
+                              </Text>
+                            </Box>
                             <APIRequestParametersCard parameters={response.headers} />
                           </Flex>
                         )}
                       </Box>
                     </Accordion.Content>
                   </Accordion.Item>
-                </Box>
-                {index + 1 < statusCodes.length ? <Separator size="4" mt="3" mb="3" /> : null}
-              </>
-            );
-          })}
-        </Accordion.Root>
-      </Card>
-    </Box>
+                </>
+              );
+            })}
+          </Accordion.Root>
+        </Card>
+      </Box>
+    </>
   );
 }
