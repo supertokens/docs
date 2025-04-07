@@ -297,7 +297,7 @@ export const handler = middy(
 ```
 
 <img src="/img/integration-lambda/add-auth-middleware-node.png" alt="Add SuperTokens auth middleware UI"/>
-
+<br/>
 :::important
 Since, we are using `esm` imports, we will need to set `NODE_OPTIONS="--experimental-specifier-resolution=node"` flag in the lambda environment variables. See the [Node.js](https://nodejs.org/docs/latest-v16.x/api/esm.html#customizing-esm-specifier-resolution-algorithm) documentation for more information.
 
@@ -348,3 +348,63 @@ handler = Mangum(app)
 
 </BackendTabs.TabItem>
 </BackendTabs>
+
+#### 3.5 Filter additional plugins or extensions {{optional}}
+
+If you are using AWS Lambda plugins, extensions, or anything that adds events to the lambda function (e.g. `serverless-plugin-warmup`), then you may need to prevent calling SuperTokens with them.
+
+These kind of events lack request details that SuperTokens expects, thus might lead to un-intended errors.
+
+Here's an example of how you can filter them out:
+
+
+```tsx title="index.mjs"
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/awsLambda";
+// @ts-ignore
+import { getBackendConfig } from "./config.mjs";
+import middy from "@middy/core";
+import cors from "@middy/http-cors";
+
+supertokens.init(getBackendConfig());
+
+const httpHandler = middy(
+    // @ts-ignore
+    middleware((event) => {
+      // SuperTokens middleware didn't handle the route, return your custom response
+      return {
+        body: JSON.stringify({
+            msg: "Hello!",
+        }),
+        statusCode: 200,
+      };
+    })
+)
+    .use(
+        cors({
+            origin: getBackendConfig().appInfo.websiteDomain,
+            credentials: true,
+            headers: ["Content-Type", ...supertokens.getAllCORSHeaders()].join(", "),
+            methods: "OPTIONS,POST,GET,PUT,DELETE",
+        })
+    )
+    .onError((request) => {
+        throw request.error;
+    });
+
+// @ts-expect-error
+const postAuth = async (event, context) => {
+  // Plugins generally inject a `source` property in the event object.
+  if (event.source === 'serverless-plugin-warmup') {
+    console.info('postAuth 010: warming up lambda. Bypassing authMiddleware.');
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Warm-up successful' }),
+    };
+  }
+
+  return httpHandler(event, context);
+};
+
+export const handler = postAuth;
+```
