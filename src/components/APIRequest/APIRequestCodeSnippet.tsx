@@ -1,9 +1,11 @@
 import { Text, SegmentedControl, Flex, Select } from "@radix-ui/themes";
 import { useDocPageData } from "@site/src/hooks";
-import { DocPageState, docPageStore, generateCodeSnippetFromAPIRequest } from "@site/src/lib";
+import { DocPageState, docPageStore, getExampleFromSchema } from "@site/src/lib";
 import CodeBlock from "@site/src/theme/CodeBlock";
 import { useContext, useMemo } from "react";
 import { APIRequestContext } from "./APIRequest";
+import { snippetz } from "@scalar/snippetz";
+import { convertToHarRequest } from "@site/src/lib/convertToHarRequest";
 
 export function APIRequestCodeSnippetSegmentedControl() {
   const language = useDocPageData("apiRequestExampleLanguage");
@@ -31,7 +33,7 @@ export function APIRequestCodeSnippetSegmentedControl() {
 }
 
 function CodeSnippetSection({ language }: { language: DocPageState["apiRequestExampleLanguage"] }) {
-  const { schema } = useContext(APIRequestContext);
+  const { operation, method, path } = useContext(APIRequestContext);
   const tenantType = useDocPageData("tenantType");
   const apiRequestExampleLanguage = useDocPageData("apiRequestExampleLanguage");
 
@@ -50,11 +52,32 @@ function CodeSnippetSection({ language }: { language: DocPageState["apiRequestEx
   }, [language]);
 
   const snippet = useMemo(() => {
-    if (!schema) return null;
-    return generateCodeSnippetFromAPIRequest("<API_DOMAIN>", schema, language);
-  }, [schema, language]);
+    if (!operation) return null;
+    const target =
+      language === "shell" ? "shell" : language === "nodejs" ? "node" : language === "python" ? "python" : "go";
+    const client =
+      language === "shell" ? "curl" : language === "nodejs" ? "fetch" : language === "python" ? "requests" : "native";
 
-  if (!schema) return null;
+    const value = convertToHarRequest({
+      baseUrl: `https://API-DOMAIN/`,
+      method,
+      path,
+      body: getExampleFromSchema(operation.requestBody),
+      cookies: [],
+      headers: [
+        {
+          key: "Content-Type",
+          value: "application/json",
+          enabled: true,
+        },
+      ],
+      query: [],
+    });
+
+    return snippetz().print(target, client, value);
+  }, [operation, method, path, language]);
+
+  if (!operation) return null;
   if (language !== apiRequestExampleLanguage) return null;
 
   return (

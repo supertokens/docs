@@ -8,6 +8,7 @@ import { createContext, useContext, useMemo } from "react";
 import { APIRequestParametersCard } from "./APIRequestParametersCard";
 import * as Accordion from "@radix-ui/react-accordion";
 import { APIRequestSchemaCard } from "./APIRequestSchemaCard";
+import type { OpenAPIV3 } from "@scalar/openapi-types";
 
 import "./APIRequest.scss";
 
@@ -16,7 +17,7 @@ type APIRequestContextType = {
   formattedPath: string;
   method: APIRequestMethod;
   title: string;
-  schema: APIRequest | null;
+  operation: OpenAPIV3.OperationObject | null;
   apiName: "fdi" | "cdi";
 };
 
@@ -38,60 +39,27 @@ export function APIRequestProvider({
   const { appInfo } = useContext(DocItemContext);
   const tenantType = useDocPageData("tenantType");
   const apiBasePath = appInfo.apiBasePath || "/auth";
-  const openApiRequestPath = useMemo(() => {
-    if (apiName === "fdi") return buildFDIOpenAPIPath(path, method);
-    return path;
-  }, [path, method, apiName]);
 
-  const schema = useLoadOpenApiSchema(apiName, openApiRequestPath, method);
+  const schema = useLoadOpenApiSchema(apiName, path, method);
   const formattedPath = useMemo(() => {
     if (apiName === "fdi") return buildFDIFormattedPath(path, apiBasePath, tenantType);
     return path;
   }, [path, appInfo, tenantType, apiName]);
 
-  const formattedRequestPath = useMemo(() => {
-    const apiBasePath = appInfo.apiBasePath || "/auth";
-    return tenantType === "multi-tenant"
-      ? `${apiBasePath}/<TENANT_ID>${normalizePath(path)}`
-      : `${apiBasePath}${normalizePath(path)}`;
-  }, [appInfo, tenantType]);
-
   return (
     <APIRequestContext.Provider
       value={{
-        path: formattedRequestPath,
+        path,
         formattedPath,
         method,
         title,
-        schema,
+        operation: schema,
         apiName,
       }}
     >
       {children}
     </APIRequestContext.Provider>
   );
-}
-
-function buildFDIOpenAPIPath(path: string, method: string) {
-  const FDIPathsWithoutTenantId = [
-    { path: "/totp/device", method: "post" },
-    { path: "/totp/device/remove", method: "post" },
-    { path: "/totp/device/verify", method: "post" },
-    { path: "/totp/verify", method: "post" },
-    { path: "/mfa/info", method: "put" },
-    { path: "/callback/apple", method: "post" },
-    { path: "/session/refresh", method: "post" },
-    { path: "/signout", method: "post" },
-    { path: "/jwt/jwks.json", method: "get" },
-    { path: "/totp/device/list", method: "get" },
-    { path: "/user/email/verify", method: "get" },
-    { path: "/.well-known/openid-configuration", method: "get" },
-  ];
-
-  const normalizedPath = normalizePath(path);
-  const pathWithoutTenantId = FDIPathsWithoutTenantId.find((path) => path.path === normalizedPath);
-  if (pathWithoutTenantId && pathWithoutTenantId.method === method) return `{apiBasePath}${normalizedPath}`;
-  return `{apiBasePath}/<tenantId>${normalizedPath}`;
 }
 
 function buildFDIFormattedPath(path: string, apiBasePath: string, tenantType: "single-tenant" | "multi-tenant") {
@@ -147,43 +115,66 @@ export function APIRequestTitle() {
 }
 
 export function APIRequestDescription() {
-  const { schema } = useContext(APIRequestContext);
+  const { operation } = useContext(APIRequestContext);
 
-  if (!schema) return null;
-  if (!schema.description) return null;
+  if (!operation) return null;
+  if (!operation.description) return null;
 
   return (
     <Text size="3" color="gray">
-      {schema.description}
+      {operation.description}
     </Text>
   );
 }
 
-export function APIRequestPath() {
-  const { formattedPath, method } = useContext(APIRequestContext);
+const MethodToColorMap: Record<APIRequestMethod, "green" | "red" | "blue" | "orange" | "yellow" | "gray"> = {
+  get: "green",
+  delete: "red",
+  post: "blue",
+  put: "orange",
+  patch: "yellow",
+  options: "gray",
+  head: "gray",
+  trace: "gray",
+};
+
+export function APIRequestMethodBadge({ size = "3" }: Pick<React.ComponentProps<typeof Badge>, "size">) {
+  const { method } = useContext(APIRequestContext);
+
   return (
-    <div>
-      <Code weight="bold" variant="soft" color="gray" size="6">
-        {`${method.toUpperCase()} ${formattedPath}`}
-      </Code>
-    </div>
+    <Badge variant="soft" color={MethodToColorMap[method]} size={size} radius="full">
+      {method.toUpperCase()}
+    </Badge>
+  );
+}
+
+export function APIRequestPath() {
+  const { path, method } = useContext(APIRequestContext);
+  return (
+    <Flex gap="5">
+      <Flex gap="4" align="center" asChild>
+        <Heading as="h1" size="8">
+          <Text color={MethodToColorMap[method]} align="center">
+            {method.toUpperCase()}
+          </Text>
+          <Text color="gray" highContrast align="center">
+            {path}
+          </Text>
+        </Heading>
+      </Flex>
+    </Flex>
   );
 }
 
 export function APIRequestPathParameters() {
-  const { schema } = useContext(APIRequestContext);
+  const { operation: schema } = useContext(APIRequestContext);
 
   const pathParameters = useMemo(() => {
     if (!schema || !schema.parameters) return null;
-    return Object.keys(schema.parameters).reduce((acc, param) => {
-      if (schema.parameters[param].in === "path") {
-        acc[param] = schema.parameters[param];
-      }
-      return acc;
-    }, {});
+    return schema.parameters.filter((param) => param.in === "path") as OpenAPIV3.ParameterObject[];
   }, [schema]);
 
-  if (!pathParameters || Object.keys(pathParameters).length === 0) return null;
+  if (!pathParameters || pathParameters.length === 0) return null;
 
   return (
     <Flex direction="column" gap="2" mt="5">
@@ -196,19 +187,14 @@ export function APIRequestPathParameters() {
 }
 
 export function APIRequestQueryParameters() {
-  const { schema } = useContext(APIRequestContext);
+  const { operation: schema } = useContext(APIRequestContext);
 
   const queryParameters = useMemo(() => {
     if (!schema || !schema.parameters) return null;
-    return Object.keys(schema.parameters).reduce((acc, param) => {
-      if (schema.parameters[param].in === "query") {
-        acc[param] = schema.parameters[param];
-      }
-      return acc;
-    }, {});
+    return schema.parameters.filter((param) => param.in === "query") as OpenAPIV3.ParameterObject[];
   }, [schema]);
 
-  if (!queryParameters || Object.keys(queryParameters).length === 0) return null;
+  if (!queryParameters || queryParameters.length === 0) return null;
 
   return (
     <Flex direction="column" gap="2" mt="5">
@@ -221,19 +207,14 @@ export function APIRequestQueryParameters() {
 }
 
 export function APIRequestHeaderParameters() {
-  const { schema } = useContext(APIRequestContext);
+  const { operation: schema } = useContext(APIRequestContext);
 
   const headerParameters = useMemo(() => {
     if (!schema || !schema.parameters) return null;
-    return Object.keys(schema.parameters).reduce((acc, param) => {
-      if (schema.parameters[param].in === "header") {
-        acc[param] = schema.parameters[param];
-      }
-      return acc;
-    }, {});
+    return schema.parameters.filter((param) => param.in === "header") as OpenAPIV3.ParameterObject[];
   }, [schema]);
 
-  if (!headerParameters || Object.keys(headerParameters).length === 0) return null;
+  if (!headerParameters || headerParameters.length === 0) return null;
 
   return (
     <Flex direction="column" gap="2" mt="5">
@@ -246,15 +227,18 @@ export function APIRequestHeaderParameters() {
 }
 
 export function APIRequestBody() {
-  const { schema } = useContext(APIRequestContext);
+  const { operation, method } = useContext(APIRequestContext);
 
-  if (!schema || !schema.body) return null;
-  if (!schema.body.schema || Object.keys(schema.body.schema).length === 0) return null;
+  if (!operation || !operation.requestBody) return null;
+  const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject;
+  if (!requestBody.content || Object.keys(requestBody.content).length === 0) return null;
 
-  const jsonSchema = schema.body.schema["application/json"];
-  if (!jsonSchema) return null;
+  const mediaTypeObject = requestBody.content["application/json"];
+  if (!mediaTypeObject) return null;
 
-  if (Array.isArray(jsonSchema)) {
+  const bodySchema = mediaTypeObject.schema as OpenAPIV3.SchemaObject;
+
+  if (bodySchema.type === "array") {
     return (
       <Flex direction="column" gap="2" mt="5">
         <Heading as="h3" size="3" mb="1">
@@ -264,44 +248,47 @@ export function APIRequestBody() {
           Use one of the following schemas:
         </Text>
         <Flex direction="column" gap="2">
-          {jsonSchema.map((schemaOption, index) => (
-            <>
-              <APIRequestSchemaCard key={index} schema={schemaOption} />
-              {index !== jsonSchema.length - 1 && (
-                <Flex gap="2" mb="2" mt="3" align="center">
-                  <Separator size="4" />
-                  <Text size="2" color="gray">
-                    OR
-                  </Text>
-                  <Separator size="4" />
-                </Flex>
-              )}
-            </>
-          ))}
+          {bodySchema.items.map((schemaOption, index) => {
+            const itemSchema = schemaOption as OpenAPIV3.SchemaObject;
+            return (
+              <>
+                <APIRequestSchemaCard key={index} schema={itemSchema} />
+                {index !== bodySchema.length - 1 && (
+                  <Flex gap="2" mb="2" mt="3" align="center">
+                    <Separator size="4" />
+                    <Text size="2" color="gray">
+                      OR
+                    </Text>
+                    <Separator size="4" />
+                  </Flex>
+                )}
+              </>
+            );
+          })}
         </Flex>
       </Flex>
     );
   }
-
-  if (!jsonSchema.properties) return null;
 
   return (
     <Flex direction="column" gap="2" mt="5">
       <Heading as="h3" size="4" mb="1">
         Body
       </Heading>
-      <APIRequestSchemaCard schema={jsonSchema} />
+      <APIRequestSchemaCard schema={bodySchema} />
     </Flex>
   );
 }
 
 export function APIRequestResponse() {
-  const { schema } = useContext(APIRequestContext);
+  const { operation } = useContext(APIRequestContext);
 
-  if (!schema) return null;
-  if (!schema.responses) return null;
-  const statusCodes = Object.keys(schema.responses);
+  if (!operation) return null;
+  if (!operation.responses) return null;
+  const statusCodes = Object.keys(operation.responses);
   if (!statusCodes.length) return null;
+
+  console.log(operation.responses);
 
   return (
     <>
@@ -309,14 +296,14 @@ export function APIRequestResponse() {
         <Card asChild>
           <Accordion.Root type="multiple" defaultValue={[statusCodes[0]]} className="api-request-accordion">
             {statusCodes.map((statusCode, index) => {
-              const response = schema.responses[statusCode];
+              const response = operation.responses[statusCode] as OpenAPIV3.ResponseObject;
 
               const hasContent = response.content && Object.keys(response.content).length > 0;
               const hasHeaders = response?.headers && Object.keys(response.headers).length > 0;
               const firstContentType = hasContent ? Object.keys(response.content)[0] : null;
               const hasApplicationJsonContent = firstContentType === "application/json";
               const content = hasContent ? response.content[firstContentType] : null;
-              const contentSchema = content?.schema;
+              const contentSchema = content?.schema as OpenAPIV3.SchemaObject;
 
               let statusCodeColor: "green" | "red" = "green";
               if (statusCode.startsWith("4") || statusCode.startsWith("5")) statusCodeColor = "red";
@@ -348,44 +335,7 @@ export function APIRequestResponse() {
 
                     <Accordion.Content className="api-request-accordion__content">
                       <Box pb="4" px="4" mt="3">
-                        {contentSchema && Array.isArray(contentSchema) && hasApplicationJsonContent ? (
-                          <>
-                            <Box mb="2">
-                              <Heading as="h3" size="4" mb="1">
-                                Body
-                              </Heading>
-                              <Text size="3" color="gray">
-                                One of the following body schemas will be returned:
-                              </Text>
-                            </Box>
-                            <Flex direction="column" gap="2">
-                              {contentSchema.map((schemaOption, index) => (
-                                <Box>
-                                  <APIRequestSchemaCard key={index} schema={schemaOption} />
-                                  {index !== contentSchema.length - 1 && (
-                                    <Flex gap="2" mb="2" mt="3" align="center">
-                                      <Separator size="4" />
-                                      <Text size="2" color="gray">
-                                        OR
-                                      </Text>
-                                      <Separator size="4" />
-                                    </Flex>
-                                  )}
-                                </Box>
-                              ))}
-                            </Flex>
-                          </>
-                        ) : null}
-
-                        {contentSchema && !Array.isArray(contentSchema) && hasApplicationJsonContent ? (
-                          <>
-                            <Heading as="h3" size="4" mb="1">
-                              Body
-                            </Heading>
-                            <APIRequestSchemaCard schema={contentSchema} />
-                          </>
-                        ) : null}
-
+                        <APIRequestResponseBody mediaTypeObject={content} mediaType={firstContentType} />
                         {hasHeaders && (
                           <Flex direction="column" gap="2">
                             <Box>
@@ -396,7 +346,9 @@ export function APIRequestResponse() {
                                 After a successful request, the following headers will be set.
                               </Text>
                             </Box>
-                            <APIRequestParametersCard parameters={response.headers} />
+                            <APIRequestParametersCard
+                              parameters={Object.values(response.headers) as OpenAPIV3.ParameterObject[]}
+                            />
                           </Flex>
                         )}
                       </Box>
@@ -408,6 +360,96 @@ export function APIRequestResponse() {
           </Accordion.Root>
         </Card>
       </Box>
+    </>
+  );
+}
+
+function APIRequestResponseBody({
+  mediaTypeObject,
+  mediaType,
+}: {
+  mediaTypeObject: OpenAPIV3.MediaTypeObject;
+  mediaType: string;
+}) {
+  const bodySchema = mediaTypeObject.schema as OpenAPIV3.SchemaObject;
+
+  if (!bodySchema) return null;
+  if (mediaType !== "application/json") return null;
+
+  if (bodySchema.oneOf) {
+    return (
+      <>
+        <Box mb="2">
+          <Heading as="h3" size="4" mb="1">
+            Body
+          </Heading>
+          <Text size="3" color="gray">
+            One of the following body schemas will be returned:
+          </Text>
+        </Box>
+        <Flex direction="column" gap="2">
+          {bodySchema.oneOf.map((schema, index) => {
+            const typedSchema = schema as OpenAPIV3.SchemaObject;
+            return (
+              <Box>
+                <APIRequestSchemaCard key={index} schema={typedSchema} />
+                {index !== bodySchema.oneOf.length - 1 && (
+                  <Flex gap="2" mb="2" mt="3" align="center">
+                    <Separator size="4" />
+                    <Text size="2" color="gray">
+                      OR
+                    </Text>
+                    <Separator size="4" />
+                  </Flex>
+                )}
+              </Box>
+            );
+          })}
+        </Flex>
+      </>
+    );
+  }
+
+  if (bodySchema.type === "array") {
+    return (
+      <>
+        <Box mb="2">
+          <Heading as="h3" size="4" mb="1">
+            Body
+          </Heading>
+          <Text size="3" color="gray">
+            One of the following body schemas will be returned:
+          </Text>
+        </Box>
+        <Flex direction="column" gap="2">
+          {bodySchema.items.map((schema, index) => {
+            const typedSchema = schema as OpenAPIV3.SchemaObject;
+            return (
+              <Box>
+                <APIRequestSchemaCard key={index} schema={typedSchema} />
+                {index !== bodySchema.items.length - 1 && (
+                  <Flex gap="2" mb="2" mt="3" align="center">
+                    <Separator size="4" />
+                    <Text size="2" color="gray">
+                      OR
+                    </Text>
+                    <Separator size="4" />
+                  </Flex>
+                )}
+              </Box>
+            );
+          })}
+        </Flex>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Heading as="h3" size="4" mb="1">
+        Body
+      </Heading>
+      <APIRequestSchemaCard schema={bodySchema} />
     </>
   );
 }

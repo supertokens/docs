@@ -1,4 +1,4 @@
-import React from "react";
+import React, { JSX } from "react";
 import clsx from "clsx";
 import { useWindowSize } from "@docusaurus/theme-common";
 import { useDoc } from "@docusaurus/plugin-content-docs/client";
@@ -15,6 +15,7 @@ import type { Props } from "@theme/DocItem/Layout";
 
 import styles from "./styles.module.css";
 import { Flex, Grid } from "@radix-ui/themes";
+import { API_REFERENCE_PAGE_TITLE_ID } from "@site/src/components";
 
 /**
  * Decide if the toc should be rendered, on mobile or desktop viewports
@@ -44,6 +45,7 @@ export default function DocItemLayout({ children }: Props): JSX.Element {
   if (frontMatter["page_type"] === "api-reference") {
     return (
       <DocItemContent>
+        <div id={API_REFERENCE_PAGE_TITLE_ID} />
         <Flex direction={{ initial: "column", md: "row" }} gap="8" width="100%">
           {children}
         </Flex>

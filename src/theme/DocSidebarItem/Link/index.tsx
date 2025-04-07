@@ -9,6 +9,7 @@ import type { Props } from "@theme/DocSidebarItem/Link";
 
 import styles from "./styles.module.scss";
 import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
+import { Badge } from "@radix-ui/themes";
 
 export default function DocSidebarItemLink({
   item,
@@ -19,6 +20,7 @@ export default function DocSidebarItemLink({
   ...props
 }: Props): JSX.Element {
   const { href, label, className, autoAddBaseUrl } = item;
+
   const isActive = isActiveSidebarItem(item, activePath);
   const isInternalLink = isInternalUrl(href);
   const onClick = useCallback(() => {
@@ -59,6 +61,10 @@ export default function DocSidebarItemLink({
       >
         {label}
         {!isInternalLink && <IconExternalLink />}
+
+        <Badge radius="full" color="blue">
+          POST
+        </Badge>
       </Link>
     </li>
   );

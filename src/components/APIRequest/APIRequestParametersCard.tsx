@@ -1,36 +1,34 @@
-import { Box, Text, Card, Flex, Separator } from "@radix-ui/themes";
-import { APIRequest } from "@site/src/types";
+import { Box, Text, Card, Flex, Code } from "@radix-ui/themes";
+import { OpenAPIV3 } from "@scalar/openapi-types";
 
-export function APIRequestParametersCard({ parameters }: { parameters: APIRequest["parameters"] }) {
-  const propertiesNames = Object.keys(parameters);
-
+export function APIRequestParametersCard({ parameters }: { parameters: OpenAPIV3.ParameterObject[] }) {
   return (
     <Box p="0" asChild>
-      <Card>
-        {propertiesNames.map((propName, index) => (
-          <>
-            <Box px="4" py="3">
+      <Card className="api-request-parameters-card">
+        {parameters.map((param, index) => {
+          const propName = param.name;
+          return (
+            <Box px="4" py="3" className="api-request-parameters-card__parameter">
               <Flex direction="column" gap="2">
                 <Flex gap="1" align="center">
                   <Text size="3" weight="bold">
                     {propName}
                   </Text>
-                  {parameters[propName].required && (
-                    <Text size="2" color="red">
+                  {param.required && (
+                    <Code size="2" color="red">
                       required
-                    </Text>
+                    </Code>
                   )}
                 </Flex>
-                {parameters[propName].description && (
+                {param.description && (
                   <Text size="3" color="gray">
-                    {parameters[propName].description}
+                    {param.description}
                   </Text>
                 )}
               </Flex>
             </Box>
-            {index + 1 < propertiesNames.length ? <Separator size="4" /> : null}
-          </>
-        ))}
+          );
+        })}
       </Card>
     </Box>
   );

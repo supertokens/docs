@@ -1,14 +1,14 @@
 import { Box, Text, Flex, Code, Separator, Select, TextField, Card, Heading } from "@radix-ui/themes";
 import * as RadixAccordion from "@radix-ui/react-accordion";
 import ChevronDownIcon from "/img/icons/chevron-down.svg";
-import { APIRequestSchema } from "@site/src/types";
+import type { OpenAPIV3 } from "@scalar/openapi-types";
 
 export function APIRequestSchemaCard({
   schema,
   name = "",
   nestingLevel = 0,
 }: {
-  schema: APIRequestSchema;
+  schema: OpenAPIV3.SchemaObject;
   name?: string;
   nestingLevel?: number;
 }) {
@@ -55,8 +55,9 @@ export function APIRequestSchemaCard({
   );
 }
 
-function SchemaPropertiesList({ schema, nestingLevel }: { schema: APIRequestSchema; nestingLevel: number }) {
-  const properties = schema.properties;
+function SchemaPropertiesList({ schema, nestingLevel }: { schema: OpenAPIV3.SchemaObject; nestingLevel: number }) {
+  const properties = schema.properties as { [name: string]: OpenAPIV3.SchemaObject };
+
   const propertiesNames = Object.keys(schema.properties);
 
   return (
@@ -75,9 +76,9 @@ function SchemaPropertiesList({ schema, nestingLevel }: { schema: APIRequestSche
                       {properties[propName].type}
                     </Code>
                     {isRequired(schema, propName) ? (
-                      <Text size="2" color="red">
+                      <Code size="2" color="red">
                         required
-                      </Text>
+                      </Code>
                     ) : null}
                   </Flex>
                   <PropertyExample schema={schema} propName={propName} />
@@ -111,9 +112,9 @@ function SchemaPropertiesList({ schema, nestingLevel }: { schema: APIRequestSche
   );
 }
 
-function PropertyExample({ schema, propName }: { schema: APIRequestSchema; propName: string }) {
+function PropertyExample({ schema, propName }: { schema: OpenAPIV3.SchemaObject; propName: string }) {
   if (!schema.properties) return null;
-  const propertySchema = schema.properties[propName];
+  const propertySchema = schema.properties[propName] as OpenAPIV3.SchemaObject;
   if (propertySchema.type === "object" || propertySchema.type === "array") return null;
 
   if (propertySchema.enum && propertySchema.enum.length > 1) {
@@ -138,7 +139,7 @@ function PropertyExample({ schema, propName }: { schema: APIRequestSchema; propN
   return <TextField.Root defaultValue={value} disabled />;
 }
 
-function isRequired(schema: APIRequestSchema, propName: string) {
+function isRequired(schema: OpenAPIV3.SchemaObject, propName: string) {
   if (schema.required && schema.required.includes(propName)) return true;
   return schema.properties[propName].required;
 }

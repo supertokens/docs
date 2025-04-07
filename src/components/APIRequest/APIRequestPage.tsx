@@ -1,7 +1,9 @@
 import { Box, Flex, Grid, Heading, Separator } from "@radix-ui/themes";
 import { APIRequestMethod } from "@site/src/types";
+import ReactDOM from "react-dom";
 import {
   APIRequestBody,
+  APIRequestContext,
   APIRequestDescription,
   APIRequestHeaderParameters,
   APIRequestPath,
@@ -12,7 +14,9 @@ import {
   APIRequestTitle,
 } from "./APIRequest";
 import { APIRequestResponsePreview } from "./APIRequestResponsePreview";
+import { APIRequestApiTypeCallout } from "./ApiRequestApiTypeCallout";
 import { APIRequestCodeSnippetSegmentedControl } from "./APIRequestCodeSnippet";
+import { useContext, useRef } from "react";
 
 export function APIRequestPage({
   method,
@@ -27,14 +31,14 @@ export function APIRequestPage({
 }) {
   return (
     <APIRequestProvider apiName={apiName} path={path} method={method} title={title}>
+      <APIReferencePageTitle />
       <Flex direction="column" flexGrow="1" gap="2">
         <APIRequestDescription />
-        {/* <APIRequestAPINameCallout /> */}
+        <APIRequestApiTypeCallout />
         <Separator size="4" mb="4" mt="2" />
         <Heading as="h2" size="8">
           Request
         </Heading>
-        <APIRequestPath />
         <APIRequestPathParameters />
         <APIRequestQueryParameters />
         <APIRequestHeaderParameters />
@@ -54,3 +58,20 @@ export function APIRequestPage({
     </APIRequestProvider>
   );
 }
+
+function APIReferencePageTitle() {
+  // Access a value from the context to force a re-render
+  const { operation } = useContext(APIRequestContext);
+  const root = document.getElementById(API_REFERENCE_PAGE_TITLE_ID);
+
+  if (!root) return null;
+
+  return ReactDOM.createPortal(
+    <Box mb="4">
+      <APIRequestPath />
+    </Box>,
+    root,
+  );
+}
+
+export const API_REFERENCE_PAGE_TITLE_ID = "api-reference-page-title";

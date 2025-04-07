@@ -6,3 +6,4 @@ export * from "./generateCodeSnippetFromAPIRequest";
 export * from "./normalizePath";
 export * from "./generateJSONSnippetFromAPIRequestResponse";
 export * from "./generateExampleFromAPIRequestSchema";
+export * from "./getExampleFromSchema";
