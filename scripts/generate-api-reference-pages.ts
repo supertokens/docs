@@ -65,7 +65,7 @@ async function writePageMapping(apiType: "cdi" | "fdi") {
       mapping[operation.operationId] = {
         frontmatter: {
           sidebar_position: 1,
-          title: `${method} ${operation.summary || route}`,
+          title: `${method} ${operation.summary || route}${operation.deprecated ? " (deprecated)" : ""}`,
           description: operation.description || `${apiType.toUpperCase()} API specification for the ${route} endpoint`,
         },
         path: route,

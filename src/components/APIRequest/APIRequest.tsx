@@ -130,15 +130,18 @@ export function APIRequestTitle() {
   );
 }
 
+import Markdown from "react-markdown";
+
 export function APIRequestDescription() {
   const { operation } = useContext(APIRequestContext);
 
   if (!operation) return null;
   if (!operation.description) return null;
 
+  // TODO: This is a temp solution. Need to figure out how to use mdx-js
   return (
-    <Text size="3" color="gray">
-      {operation.description}
+    <Text color="gray">
+      <Markdown>{operation.description}</Markdown>
     </Text>
   );
 }
