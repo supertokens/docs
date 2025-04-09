@@ -133,6 +133,17 @@ const config: Config = {
   ],
   plugins: [
     "docusaurus-plugin-sass",
+    [
+      "@scalar/docusaurus",
+      {
+        label: "Scalar",
+        route: "/scalar",
+        showNavLink: true, // optional, default is true
+        configuration: {
+          url: "https://raw.githubusercontent.com/supertokens/frontend-driver-interface/refs/heads/master/api_spec.yaml",
+        },
+      },
+    ],
     process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
     [
       // loads the supertokens.com react bundle for footer and analytics etc..

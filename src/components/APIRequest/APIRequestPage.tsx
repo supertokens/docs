@@ -20,6 +20,7 @@ import { APIRequestResponsePreview } from "./APIRequestResponsePreview";
 import { APIRequestApiTypeCallout } from "./ApiRequestApiTypeCallout";
 import { APIRequestCodeSnippetSegmentedControl } from "./APIRequestCodeSnippet";
 import { useContext, useRef } from "react";
+import BrowserOnly from "@docusaurus/BrowserOnly";
 
 export function APIRequestPage({
   method,
@@ -34,7 +35,7 @@ export function APIRequestPage({
 }) {
   return (
     <APIRequestProvider apiName={apiName} path={path} method={method} title={title}>
-      <APIReferencePageTitle />
+      <BrowserOnly>{() => <APIReferencePageTitle />}</BrowserOnly>
       <Flex direction="column" flexGrow="1" gap="2">
         <APIRequestDeprecatedCallout />
         <APIRequestDescription />

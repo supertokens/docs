@@ -1,7 +1,7 @@
 import { dereference, load } from "@scalar/openapi-parser";
 import { file, write, $ } from "bun";
 import type { OpenAPIV3 } from "@scalar/openapi-types";
-import { mkdir, exists } from "node:fs/promises";
+import { mkdir, exists, readdir } from "node:fs/promises";
 import path from "path";
 
 type APIPageMapping = Record<
@@ -15,7 +15,7 @@ type APIPageMapping = Record<
 >;
 
 async function generateAPIReferencePages(apiType: "cdi" | "fdi") {
-  // await writeSchema(apiType);
+  await writeSchema(apiType);
   await writePageMapping(apiType);
   const schema = (await file(`./static/${apiType}.json`).json()) as OpenAPIV3.Document;
   const pageMapping = (await file(`./static/${apiType}-mapping.json`).json()) as APIPageMapping;
@@ -30,6 +30,8 @@ async function generateAPIReferencePages(apiType: "cdi" | "fdi") {
       await writePage(operationId, apiType, mapping);
     }
   }
+
+  await reorderCategories(apiType);
 }
 
 async function writeSchema(apiType: "cdi" | "fdi") {
@@ -75,6 +77,10 @@ async function writePageMapping(apiType: "cdi" | "fdi") {
 
   const pageOrderingMap: Record<string, Array<{ method: string; path: string; operationId: string }>> = {};
   for (const operationId in mapping) {
+    if (!mapping[operationId].filePath) {
+      console.error(`File path not found for ${operationId}`);
+      continue;
+    }
     const folderName = path.dirname(mapping[operationId].filePath);
     if (!pageOrderingMap[folderName]) {
       pageOrderingMap[folderName] = [];
@@ -143,6 +149,34 @@ hide_title: true
 `;
 
   await write(`./docs/references/${mapping.filePath}`, fileContent);
+}
+
+async function reorderCategories(apiType: "cdi" | "fdi") {
+  const filePaths = await readdir(`./docs/references/${apiType}`, { recursive: true, withFileTypes: true });
+  const categoryFiles = filePaths.filter(
+    (categoryFile) =>
+      categoryFile.isFile() &&
+      categoryFile.name.endsWith("_category_.json") &&
+      categoryFile.parentPath !== `docs/references/${apiType}`,
+  );
+
+  const categories = await Promise.all(
+    categoryFiles.map(async (categoryFile) => {
+      const category = await file(`${categoryFile.parentPath}/${categoryFile.name}`).json();
+      return {
+        mapping: category,
+        file: categoryFile,
+      };
+    }),
+  );
+  categories.sort((a, b) => a.mapping.label.localeCompare(b.mapping.label));
+
+  await Promise.all(
+    categories.map(async (category, index) => {
+      category.mapping.position = index + 1;
+      await write(`${category.file.parentPath}/${category.file.name}`, JSON.stringify(category.mapping, null, 2));
+    }),
+  );
 }
 
 (async () => {

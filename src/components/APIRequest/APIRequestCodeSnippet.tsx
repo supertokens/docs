@@ -4,8 +4,8 @@ import { DocPageState, docPageStore, getExampleFromSchema } from "@site/src/lib"
 import CodeBlock from "@site/src/theme/CodeBlock";
 import { useContext, useMemo } from "react";
 import { APIRequestContext } from "./APIRequest";
-import { snippetz } from "@scalar/snippetz";
-import { convertToHarRequest } from "@site/src/lib/convertToHarRequest";
+// import { snippetz } from "@scalar/snippetz";
+// import { convertToHarRequest } from "@site/src/lib/convertToHarRequest";
 
 export function APIRequestCodeSnippetSegmentedControl() {
   const language = useDocPageData("apiRequestExampleLanguage");
@@ -58,23 +58,24 @@ function CodeSnippetSection({ language }: { language: DocPageState["apiRequestEx
     const client =
       language === "shell" ? "curl" : language === "nodejs" ? "fetch" : language === "python" ? "requests" : "native";
 
-    const value = convertToHarRequest({
-      baseUrl: `https://API-DOMAIN/`,
-      method,
-      path,
-      body: getExampleFromSchema(operation.requestBody),
-      cookies: [],
-      headers: [
-        {
-          key: "Content-Type",
-          value: "application/json",
-          enabled: true,
-        },
-      ],
-      query: [],
-    });
+    // const value = convertToHarRequest({
+    //   baseUrl: `https://API-DOMAIN/`,
+    //   method,
+    //   path,
+    //   body: getExampleFromSchema(operation.requestBody),
+    //   cookies: [],
+    //   headers: [
+    //     {
+    //       key: "Content-Type",
+    //       value: "application/json",
+    //       enabled: true,
+    //     },
+    //   ],
+    //   query: [],
+    // });
 
-    return snippetz().print(target, client, value);
+    // return snippetz().print(target, client, value);
+    return "";
   }, [operation, method, path, language]);
 
   if (!operation) return null;
