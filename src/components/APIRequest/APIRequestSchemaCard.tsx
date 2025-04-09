@@ -1,7 +1,10 @@
-import { Box, Text, Flex, Code, Separator, Select, TextField, Card, Heading } from "@radix-ui/themes";
+import { Box, HoverCard, Text, Flex, Code, Separator, Select, TextField, Card, Heading } from "@radix-ui/themes";
 import * as RadixAccordion from "@radix-ui/react-accordion";
 import ChevronDownIcon from "/img/icons/chevron-down.svg";
+import CodeBlock from "@site/src/theme/CodeBlock";
 import type { OpenAPIV3 } from "@scalar/openapi-types";
+import { useEffect, useRef, useState } from "react";
+import { getExampleFromSchema } from "@site/src/lib";
 
 export function APIRequestSchemaCard({
   schema,
@@ -14,6 +17,42 @@ export function APIRequestSchemaCard({
 }) {
   if (nestingLevel > 4) {
     throw new Error("Nesting level too deep. Use a different UI element for this.");
+  }
+
+  if (schema.oneOf) {
+    return (
+      <>
+        <Text size="3" color="gray">
+          One of the following schemas can be used:
+        </Text>
+
+        <Flex direction="column" gap="2">
+          {schema.oneOf.map((itemSchema, index) => {
+            const typedSchema = itemSchema as OpenAPIV3.SchemaObject;
+            return (
+              <Box key={`${itemSchema.type}-${index}`}>
+                <APIRequestSchemaCard key={index} schema={typedSchema} />
+                {index !== schema.oneOf.length - 1 && (
+                  <Flex gap="2" mb="2" mt="3" align="center">
+                    <Separator size="4" />
+                    <Text size="2" color="gray">
+                      OR
+                    </Text>
+                    <Separator size="4" />
+                  </Flex>
+                )}
+              </Box>
+            );
+          })}
+        </Flex>
+
+        {/* <Box p="0" asChild> */}
+        {/*   <Card> */}
+        {/*     <SchemaPropertiesList schema={schema} nestingLevel={nestingLevel} /> */}
+        {/*   </Card> */}
+        {/* </Box> */}
+      </>
+    );
   }
 
   if (name && nestingLevel > 0) {
@@ -56,6 +95,7 @@ export function APIRequestSchemaCard({
 }
 
 function SchemaPropertiesList({ schema, nestingLevel }: { schema: OpenAPIV3.SchemaObject; nestingLevel: number }) {
+  if (!schema.properties) return null;
   const properties = schema.properties as { [name: string]: OpenAPIV3.SchemaObject };
 
   const propertiesNames = Object.keys(schema.properties);
@@ -113,30 +153,64 @@ function SchemaPropertiesList({ schema, nestingLevel }: { schema: OpenAPIV3.Sche
 }
 
 function PropertyExample({ schema, propName }: { schema: OpenAPIV3.SchemaObject; propName: string }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [hoverCardIsActive, setHoverCardIsActive] = useState(false);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      setHoverCardIsActive(inputRef.current.scrollWidth > inputRef.current.clientWidth);
+    }
+  }, []);
   if (!schema.properties) return null;
+
   const propertySchema = schema.properties[propName] as OpenAPIV3.SchemaObject;
-  if (propertySchema.type === "object" || propertySchema.type === "array") return null;
 
   if (propertySchema.enum && propertySchema.enum.length > 1) {
     return (
-      <Select.Root defaultValue={propertySchema.enum[0]}>
-        <Select.Trigger variant="ghost" color="gray" mr="xs" />
-        <Select.Content>
-          {propertySchema.enum.map((value, index) => (
-            <Select.Item key={index} value={value}>
-              {value}
-            </Select.Item>
-          ))}
-        </Select.Content>
-      </Select.Root>
+      <Box asChild>
+        <Select.Root defaultValue={propertySchema.enum[0]}>
+          <Select.Trigger variant="ghost" color="gray" mr="xs" />
+          <Select.Content>
+            {propertySchema.enum.map((value, index) => (
+              <Select.Item key={index} value={value}>
+                {value}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Root>
+      </Box>
     );
   }
 
   let value = propertySchema.example || propertySchema.default || "";
-  if (propertySchema.enum) value = propertySchema.enum[0];
+  let formattedValue = propertySchema.example || propertySchema.default || "";
+  if (propertySchema.type === "object" || propertySchema.type === "array") {
+    value = JSON.stringify(getExampleFromSchema(propertySchema));
+    formattedValue = JSON.stringify(getExampleFromSchema(propertySchema), null, 2);
+  }
+
+  if (propertySchema.enum) {
+    value = propertySchema.enum[0];
+    formattedValue = propertySchema.enum[0];
+  }
 
   if (!value) return null;
-  return <TextField.Root defaultValue={value} disabled />;
+
+  if (hoverCardIsActive) {
+    return (
+      <HoverCard.Root>
+        <HoverCard.Trigger>
+          <TextField.Root ref={inputRef} className="api-request-property-example" defaultValue={value} disabled />
+        </HoverCard.Trigger>
+        <Box p="0" className="api-request-property-example__hover-card" asChild>
+          <HoverCard.Content maxWidth="400px">
+            <CodeBlock language="json">{formattedValue}</CodeBlock>
+          </HoverCard.Content>
+        </Box>
+      </HoverCard.Root>
+    );
+  }
+  return <TextField.Root ref={inputRef} className="api-request-property-example" defaultValue={value} disabled />;
 }
 
 function isRequired(schema: OpenAPIV3.SchemaObject, propName: string) {

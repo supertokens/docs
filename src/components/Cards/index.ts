@@ -12,4 +12,3 @@ export * from "./CodeSampleCard";
 export * from "./PasswordlessConfigCard";
 export * from "./HTTPRequestCard";
 export * from "./AccountTypeCard";
-export * from "./OpenAPIRequestCard";

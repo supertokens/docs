@@ -8,7 +8,7 @@ export function APIRequestParametersCard({ parameters }: { parameters: OpenAPIV3
         {parameters.map((param, index) => {
           const propName = param.name;
           return (
-            <Box px="4" py="3" className="api-request-parameters-card__parameter">
+            <Box key={`${propName}-${index}`} px="4" py="3" className="api-request-parameters-card__parameter">
               <Flex direction="column" gap="2">
                 <Flex gap="1" align="center">
                   <Text size="3" weight="bold">

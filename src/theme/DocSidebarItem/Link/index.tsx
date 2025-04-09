@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { JSX, useCallback } from "react";
 import clsx from "clsx";
 import { ThemeClassNames } from "@docusaurus/theme-common";
 import { isActiveSidebarItem } from "@docusaurus/plugin-content-docs/client";
@@ -10,6 +10,8 @@ import type { Props } from "@theme/DocSidebarItem/Link";
 import styles from "./styles.module.scss";
 import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
 import { Badge } from "@radix-ui/themes";
+import { APIRequestMethodBadge } from "@site/src/components/APIRequest/APIRequest";
+import { APIRequestMethod } from "@site/src/types";
 
 export default function DocSidebarItemLink({
   item,
@@ -33,6 +35,10 @@ export default function DocSidebarItemLink({
       onItemClick(item);
     }
   }, [onItemClick, item, isInternalLink]);
+  const isAPIReferenceLink = href.includes("/cdi/") || href.includes("/fdi/");
+  const [method, ...rest] = label.split(" ");
+  const isDeprecated = label.includes("(deprecated)");
+
   return (
     <li
       className={clsx(
@@ -49,6 +55,7 @@ export default function DocSidebarItemLink({
           styles.menuLinkCustom,
           !isInternalLink && styles.menuExternalLink,
           isActive && styles.menuLinkActive,
+          isDeprecated && styles.menuLinkDeprecated,
           {
             "menu__link--active": isActive,
           },
@@ -59,12 +66,13 @@ export default function DocSidebarItemLink({
         to={href}
         {...props}
       >
-        {label}
+        {isAPIReferenceLink ? rest.join(" ") : label}
         {!isInternalLink && <IconExternalLink />}
-
-        <Badge radius="full" color="blue">
-          POST
-        </Badge>
+        {isAPIReferenceLink && method ? (
+          <span style={{ marginLeft: "auto" }}>
+            <APIRequestMethodBadge method={method as APIRequestMethod} size="1" />
+          </span>
+        ) : null}
       </Link>
     </li>
   );

@@ -2,8 +2,10 @@ import { Box, Flex, Grid, Heading, Separator } from "@radix-ui/themes";
 import { APIRequestMethod } from "@site/src/types";
 import ReactDOM from "react-dom";
 import {
+  APIRequestApiTypeBadge,
   APIRequestBody,
   APIRequestContext,
+  APIRequestDeprecatedCallout,
   APIRequestDescription,
   APIRequestHeaderParameters,
   APIRequestPath,
@@ -11,6 +13,7 @@ import {
   APIRequestProvider,
   APIRequestQueryParameters,
   APIRequestResponse,
+  APIRequestSecuritySection,
   APIRequestTitle,
 } from "./APIRequest";
 import { APIRequestResponsePreview } from "./APIRequestResponsePreview";
@@ -33,8 +36,9 @@ export function APIRequestPage({
     <APIRequestProvider apiName={apiName} path={path} method={method} title={title}>
       <APIReferencePageTitle />
       <Flex direction="column" flexGrow="1" gap="2">
+        <APIRequestDeprecatedCallout />
         <APIRequestDescription />
-        <APIRequestApiTypeCallout />
+        <APIRequestSecuritySection />
         <Separator size="4" mb="4" mt="2" />
         <Heading as="h2" size="8">
           Request
@@ -67,9 +71,12 @@ function APIReferencePageTitle() {
   if (!root) return null;
 
   return ReactDOM.createPortal(
-    <Box mb="4">
+    <Flex mb="4">
       <APIRequestPath />
-    </Box>,
+      <Box ml="auto">
+        <APIRequestApiTypeBadge />
+      </Box>
+    </Flex>,
     root,
   );
 }

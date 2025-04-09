@@ -16,7 +16,7 @@ type APIPageMapping = Record<
 
 async function generateAPIReferencePages(apiType: "cdi" | "fdi") {
   // await writeSchema(apiType);
-  // await writePageMapping(apiType);
+  await writePageMapping(apiType);
   const schema = (await file(`./static/${apiType}.json`).json()) as OpenAPIV3.Document;
   const pageMapping = (await file(`./static/${apiType}-mapping.json`).json()) as APIPageMapping;
 
@@ -63,7 +63,7 @@ async function writePageMapping(apiType: "cdi" | "fdi") {
       mapping[operation.operationId] = {
         frontmatter: {
           sidebar_position: 1,
-          title: operation.title || operation.summary || route,
+          title: `${method} ${operation.summary || route}`,
           description: operation.description || `${apiType.toUpperCase()} API specification for the ${route} endpoint`,
         },
         path: route,
@@ -146,5 +146,8 @@ hide_title: true
 }
 
 (async () => {
-  await Promise.all([generateAPIReferencePages("cdi"), generateAPIReferencePages("fdi")]);
+  await Promise.all([
+    // generateAPIReferencePages("fdi"),
+    generateAPIReferencePages("cdi"),
+  ]);
 })();

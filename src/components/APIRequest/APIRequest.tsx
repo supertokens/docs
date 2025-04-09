@@ -1,7 +1,10 @@
-import { Badge, Card, Text, Code, Flex, Heading, HoverCard, Box, Separator } from "@radix-ui/themes";
+import { Badge, Card, Text, Code, Flex, Heading, HoverCard, Box, Separator, Callout } from "@radix-ui/themes";
 import { DocItemContext } from "@site/src/context";
-import { useDocPageData, useLoadOpenApiSchema } from "@site/src/hooks";
+import InfoCircledIcon from "/img/icons/info-circled.svg";
+import ExclamationTriangleIcon from "/img/icons/exclamation-triangle.svg";
+import { useDocPageData, useLoadOpenApiDocument } from "@site/src/hooks";
 import { normalizePath } from "@site/src/lib";
+import Link from "@docusaurus/Link";
 import { APIRequestMethod, APIRequest } from "@site/src/types";
 import ChevronDownIcon from "/img/icons/chevron-down.svg";
 import { createContext, useContext, useMemo } from "react";
@@ -16,6 +19,7 @@ type APIRequestContextType = {
   path: string;
   formattedPath: string;
   method: APIRequestMethod;
+  security: OpenAPIV3.Document["components"]["securitySchemes"] | null;
   title: string;
   operation: OpenAPIV3.OperationObject | null;
   apiName: "fdi" | "cdi";
@@ -40,7 +44,18 @@ export function APIRequestProvider({
   const tenantType = useDocPageData("tenantType");
   const apiBasePath = appInfo.apiBasePath || "/auth";
 
-  const schema = useLoadOpenApiSchema(apiName, path, method);
+  const document = useLoadOpenApiDocument(apiName);
+
+  const operation = useMemo(() => {
+    if (!document) return null;
+    return document.paths[path][method] as OpenAPIV3.OperationObject;
+  }, [document, path, method]);
+
+  const securitySchemes = useMemo(() => {
+    if (!document) return null;
+    return document.components?.securitySchemes;
+  }, [document]);
+
   const formattedPath = useMemo(() => {
     if (apiName === "fdi") return buildFDIFormattedPath(path, apiBasePath, tenantType);
     return path;
@@ -50,10 +65,11 @@ export function APIRequestProvider({
     <APIRequestContext.Provider
       value={{
         path,
+        security: securitySchemes,
         formattedPath,
         method,
         title,
-        operation: schema,
+        operation,
         apiName,
       }}
     >
@@ -138,9 +154,10 @@ const MethodToColorMap: Record<APIRequestMethod, "green" | "red" | "blue" | "ora
   trace: "gray",
 };
 
-export function APIRequestMethodBadge({ size = "3" }: Pick<React.ComponentProps<typeof Badge>, "size">) {
-  const { method } = useContext(APIRequestContext);
-
+export function APIRequestMethodBadge({
+  size = "3",
+  method,
+}: Pick<React.ComponentProps<typeof Badge>, "size"> & { method: APIRequestMethod }) {
   return (
     <Badge variant="soft" color={MethodToColorMap[method]} size={size} radius="full">
       {method.toUpperCase()}
@@ -150,6 +167,13 @@ export function APIRequestMethodBadge({ size = "3" }: Pick<React.ComponentProps<
 
 export function APIRequestPath() {
   const { path, method } = useContext(APIRequestContext);
+  const parsedPath = useMemo(() => {
+    const params = { apiBasePath: ":apiBasePath", tenantId: ":tenantId" };
+    return path.replace(/\{([^}]+)\}/g, (_, key) => {
+      return params[key] || key;
+    });
+  }, [path]);
+
   return (
     <Flex gap="5">
       <Flex gap="4" align="center" asChild>
@@ -158,7 +182,7 @@ export function APIRequestPath() {
             {method.toUpperCase()}
           </Text>
           <Text color="gray" highContrast align="center">
-            {path}
+            {parsedPath}
           </Text>
         </Heading>
       </Flex>
@@ -177,7 +201,7 @@ export function APIRequestPathParameters() {
   if (!pathParameters || pathParameters.length === 0) return null;
 
   return (
-    <Flex direction="column" gap="2" mt="5">
+    <Flex direction="column" gap="2">
       <Heading as="h3" size="4" mb="1">
         Path Parameters
       </Heading>
@@ -227,7 +251,7 @@ export function APIRequestHeaderParameters() {
 }
 
 export function APIRequestBody() {
-  const { operation, method } = useContext(APIRequestContext);
+  const { operation } = useContext(APIRequestContext);
 
   if (!operation || !operation.requestBody) return null;
   const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject;
@@ -270,6 +294,10 @@ export function APIRequestBody() {
     );
   }
 
+  if (bodySchema.type === "object" && !bodySchema.properties) {
+    return null;
+  }
+
   return (
     <Flex direction="column" gap="2" mt="5">
       <Heading as="h3" size="4" mb="1">
@@ -288,8 +316,6 @@ export function APIRequestResponse() {
   const statusCodes = Object.keys(operation.responses);
   if (!statusCodes.length) return null;
 
-  console.log(operation.responses);
-
   return (
     <>
       <Box p="0" asChild>
@@ -300,10 +326,9 @@ export function APIRequestResponse() {
 
               const hasContent = response.content && Object.keys(response.content).length > 0;
               const hasHeaders = response?.headers && Object.keys(response.headers).length > 0;
+
               const firstContentType = hasContent ? Object.keys(response.content)[0] : null;
-              const hasApplicationJsonContent = firstContentType === "application/json";
               const content = hasContent ? response.content[firstContentType] : null;
-              const contentSchema = content?.schema as OpenAPIV3.SchemaObject;
 
               let statusCodeColor: "green" | "red" = "green";
               if (statusCode.startsWith("4") || statusCode.startsWith("5")) statusCodeColor = "red";
@@ -327,19 +352,21 @@ export function APIRequestResponse() {
                         </Flex>
 
                         <Code size="3" color="gray" ml="auto">
-                          {firstContentType}
+                          {firstContentType || "application/json"}
                         </Code>
                         <ChevronDownIcon className="api-request-accordion__icon" aria-hidden />
                       </Accordion.Trigger>
                     </Flex>
 
                     <Accordion.Content className="api-request-accordion__content">
-                      <Box pb="4" px="4" mt="3">
-                        <APIRequestResponseBody mediaTypeObject={content} mediaType={firstContentType} />
+                      <Flex direction="column" gap="3" pb="4" px="4" mt="3">
+                        {hasContent && (
+                          <APIRequestResponseBody mediaTypeObject={content} mediaType={firstContentType} />
+                        )}
                         {hasHeaders && (
                           <Flex direction="column" gap="2">
                             <Box>
-                              <Heading as="h3" size="4" mb="1" mt="6">
+                              <Heading as="h5" size="4" mb="1" mt="0">
                                 Headers
                               </Heading>
                               <Text size="3" color="gray">
@@ -347,11 +374,16 @@ export function APIRequestResponse() {
                               </Text>
                             </Box>
                             <APIRequestParametersCard
-                              parameters={Object.values(response.headers) as OpenAPIV3.ParameterObject[]}
+                              parameters={
+                                Object.keys(response.headers).map((key) => ({
+                                  name: key,
+                                  ...response.headers[key],
+                                })) as OpenAPIV3.ParameterObject[]
+                              }
                             />
                           </Flex>
                         )}
-                      </Box>
+                      </Flex>
                     </Accordion.Content>
                   </Accordion.Item>
                 </>
@@ -374,7 +406,21 @@ function APIRequestResponseBody({
   const bodySchema = mediaTypeObject.schema as OpenAPIV3.SchemaObject;
 
   if (!bodySchema) return null;
-  if (mediaType !== "application/json") return null;
+
+  if (mediaType !== "application/json") {
+    return (
+      <>
+        <Box mb="2">
+          <Heading as="h3" size="4" mb="1">
+            Body
+          </Heading>
+        </Box>
+        <Flex direction="column" gap="2">
+          {bodySchema.enum[0]}
+        </Flex>
+      </>
+    );
+  }
 
   if (bodySchema.oneOf) {
     return (
@@ -391,7 +437,7 @@ function APIRequestResponseBody({
           {bodySchema.oneOf.map((schema, index) => {
             const typedSchema = schema as OpenAPIV3.SchemaObject;
             return (
-              <Box>
+              <Box key={`${schema.type}-${index}`}>
                 <APIRequestSchemaCard key={index} schema={typedSchema} />
                 {index !== bodySchema.oneOf.length - 1 && (
                   <Flex gap="2" mb="2" mt="3" align="center">
@@ -451,5 +497,103 @@ function APIRequestResponseBody({
       </Heading>
       <APIRequestSchemaCard schema={bodySchema} />
     </>
+  );
+}
+
+export function APIRequestApiTypeBadge() {
+  const { apiName } = useContext(APIRequestContext);
+
+  return (
+    <HoverCard.Root>
+      <HoverCard.Trigger>
+        <Box style={{ cursor: "pointer" }} asChild>
+          <Code color="blue" size="7" weight="bold">
+            {apiName.toUpperCase()}
+          </Code>
+        </Box>
+      </HoverCard.Trigger>
+      <Box p="0" asChild>
+        <HoverCard.Content>
+          <Callout.Root color="blue">
+            <Flex gap="2">
+              <Callout.Icon>
+                <InfoCircledIcon width="20px" height="20px" />
+              </Callout.Icon>
+              <Flex direction="column">
+                <Heading as="h3" size="4" mb="2">
+                  {apiName.toUpperCase()} Endpoint
+                </Heading>
+                <Text>
+                  {apiName === "cdi" ? (
+                    <>
+                      The endpoint is part of the{" "}
+                      <Link href="/docs/references/cdi/introduction.mdx">
+                        <b>Core Driver Interface</b>
+                      </Link>{" "}
+                      API. It's exposed by the SuperTokens Core service and you should only use it from your backend
+                      applications.
+                    </>
+                  ) : (
+                    <>
+                      This endpoint is part of the{" "}
+                      <Link href="/docs/references/fdi/introduction.mdx">
+                        <b>Frontend Driver Interface</b>
+                      </Link>{" "}
+                      API. It's exposed by the SuperTokens Backend SDKs and you should only use it from your frontend
+                      applications.
+                    </>
+                  )}
+                </Text>
+              </Flex>
+            </Flex>
+          </Callout.Root>
+        </HoverCard.Content>
+      </Box>
+    </HoverCard.Root>
+  );
+}
+
+export function APIRequestDeprecatedCallout() {
+  const { operation } = useContext(APIRequestContext);
+
+  if (!operation) return null;
+  if (!operation.deprecated) return null;
+
+  return (
+    <Callout.Root color="red">
+      <Flex gap="3">
+        <Box mt="1" asChild>
+          <Callout.Icon>
+            <ExclamationTriangleIcon width="20px" height="20px" />
+          </Callout.Icon>
+        </Box>
+        <Flex direction="column">
+          <Heading as="h3" size="4" mb="2">
+            Deprecated
+          </Heading>
+          <Text>This endpoint is deprecated. Please use the newer version.</Text>
+        </Flex>
+      </Flex>
+    </Callout.Root>
+  );
+}
+
+export function APIRequestSecuritySection() {
+  const { operation, security } = useContext(APIRequestContext);
+
+  if (!operation) return null;
+  if (!operation.security) return null;
+  if (!security) return null;
+
+  console.log(operation.security);
+  console.log(security);
+
+  return (
+    <Flex direction="column" gap="2" mt="5">
+      <Heading as="h3" size="6" mb="1">
+        Authorization
+      </Heading>
+      <Text></Text>
+    </Flex>
   );
 }
