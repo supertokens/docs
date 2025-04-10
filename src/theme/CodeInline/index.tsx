@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import type { Props } from "@theme/CodeInline";
+import { Code } from "@radix-ui/themes";
 
 import { DocItemContext, getContextValue } from "@site/src/context";
 import { DOC_STORE_DEFAULT_VALUES } from "@site/src/lib/constants";
@@ -7,7 +7,7 @@ import { DOC_STORE_DEFAULT_VALUES } from "@site/src/lib/constants";
 // Simple component used to render inline code blocks
 // its purpose is to be swizzled and customized
 // MDX 1 used to have a inlineCode comp, see https://mdxjs.com/migrating/v2/
-export default function CodeInline(props: Props): JSX.Element {
+export default function CodeInline(props: React.ComponentProps<typeof Code>) {
   const { children, ...rest } = props;
 
   const context = useContext(DocItemContext);
@@ -21,5 +21,10 @@ export default function CodeInline(props: Props): JSX.Element {
     });
   }
 
-  return <code {...rest}>{parsedChildren}</code>;
+  // Use a span because docusaurus default code styles conflict with radix-ui styles
+  return (
+    <Code {...rest} asChild>
+      <span>{parsedChildren}</span>
+    </Code>
+  );
 }

@@ -1,27 +1,32 @@
 import { APIRequest, APIRequestSchema } from "../types";
 import { generateExampleFromAPIRequestSchema } from "./generateExampleFromAPIRequestSchema";
+import { getExampleFromSchema } from "./getExampleFromSchema";
+import type { OpenAPIV3 } from "@scalar/openapi-types";
 
 type Environment = "shell" | "nodejs" | "go" | "python";
 
-export function generateCodeSnippetFromAPIRequest(
-  apiDomain: string,
-  request: APIRequest,
-  environment: Environment,
-): string {
+export function generateCodeSnippetFromAPIRequest(params: {
+  host: string;
+  operation: OpenAPIV3.OperationObject;
+  environment: Environment;
+  method: string;
+  path: string;
+}): string {
+  const { host, operation, environment, method, path } = params;
   let apiCodeSnippet: APICodeSnippet;
 
   switch (environment) {
     case "shell":
-      apiCodeSnippet = new ShellAPICodeSnippet(apiDomain, request, environment);
+      apiCodeSnippet = new ShellAPICodeSnippet(host, operation, environment, method, path);
       break;
     case "nodejs":
-      apiCodeSnippet = new NodeJSAPICodeSnippet(apiDomain, request, environment);
+      apiCodeSnippet = new NodeJSAPICodeSnippet(host, operation, environment, method, path);
       break;
     case "go":
-      apiCodeSnippet = new GoAPICodeSnippet(apiDomain, request, environment);
+      apiCodeSnippet = new GoAPICodeSnippet(host, operation, environment, method, path);
       break;
     case "python":
-      apiCodeSnippet = new PythonAPICodeSnippet(apiDomain, request, environment);
+      apiCodeSnippet = new PythonAPICodeSnippet(host, operation, environment, method, path);
       break;
     default:
       throw new Error(`Invalid environment ${environment}`);
@@ -33,40 +38,45 @@ export function generateCodeSnippetFromAPIRequest(
 abstract class APICodeSnippet {
   constructor(
     public apiDomain: string,
-    public request: APIRequest,
+    public request: OpenAPIV3.OperationObject,
     public environment: string,
+    public method: string,
+    public path: string,
   ) {}
 
   get queryParams(): string {
     if (!this.request.parameters) return "";
-    const queryParams = Object.keys(this.request.parameters).filter(
-      (key) => this.request.parameters[key].in === "query" && this.request.parameters[key].required,
-    );
+
+    const queryParams = this.request.parameters.filter((param) => param.in === "query" && param.required);
     if (!queryParams.length) return "";
     return queryParams
-      .map((paramName) => {
-        const parameter = this.request.parameters[paramName];
-        const example = generateExampleFromAPIRequestSchema(parameter.schema);
-        return `${paramName}=${example}`;
+      .map((parameter) => {
+        const example = getExampleFromSchema(parameter.schema);
+        return `${parameter.name}=${example}`;
       })
       .join("&");
   }
 
   get pathWithQueryParams() {
     const queryParams = this.queryParams;
-    return queryParams ? `${this.request.path}?${queryParams}` : this.request.path;
+    return queryParams ? `${this.path}?${queryParams}` : this.path;
   }
 
   get body(): Record<string, unknown> | null {
-    const requestBody = this.request.body;
-    if (!requestBody || !requestBody.schema || !requestBody.schema["application/json"]) {
+    const requestBody = this.request.requestBody as OpenAPIV3.RequestBodyObject;
+    if (!requestBody || !requestBody.content || !requestBody.content["application/json"]) {
       return null;
     }
-    const bodySchema = requestBody.schema["application/json"];
+    const bodySchema = requestBody.content["application/json"];
 
     const example: Record<string, unknown> = {};
-    if ("oneOf" in bodySchema) {
-      const firstOption = bodySchema.oneOf[0];
+
+    if (bodySchema.examples) {
+      return bodySchema.examples;
+    }
+
+    if ("oneOf" in bodySchema.schema) {
+      const firstOption = bodySchema.schema.oneOf[0];
 
       if (firstOption.example) return firstOption.example;
       for (const [key, propSchema] of Object.entries(firstOption.properties)) {
@@ -79,22 +89,14 @@ abstract class APICodeSnippet {
       return bodySchema.example;
     }
 
-    if (bodySchema.default) {
-      return bodySchema.default;
-    }
-
-    if (!bodySchema.properties) {
-      return null;
-    }
-
-    for (const [key, propSchema] of Object.entries(bodySchema.properties)) {
-      example[key] = this.extractSchemaExample(propSchema);
-    }
-
-    return example;
+    return this.extractSchemaExample(bodySchema.schema) as Record<string, unknown>;
   }
 
-  private extractSchemaExample(schema: APIRequestSchema): unknown {
+  private extractSchemaExample(schema: OpenAPIV3.SchemaObject): unknown {
+    if (schema.oneOf) {
+      return this.extractSchemaExample(schema.oneOf[0]);
+    }
+
     if (schema.example) {
       return schema.example;
     }
@@ -103,43 +105,27 @@ abstract class APICodeSnippet {
       return schema.default;
     }
 
-    if (schema.type === "object" && !schema.properties) {
-      console.log(schema);
-    }
-
-    switch (schema.type) {
-      case "string":
-        return schema.enum ? schema.enum[0] : "string";
-      case "number":
-      case "integer":
-        return 0;
-      case "boolean":
-        return false;
-      case "array":
-        return [this.extractSchemaExample(schema.items)];
-      case "object":
-        return Object.keys(schema.properties).reduce((acc, key) => {
-          return { ...acc, [key]: this.extractSchemaExample(schema.properties[key]) };
-        }, {});
-    }
+    return getExampleFromSchema(schema);
   }
 
   abstract render(): string;
 }
 
 class ShellAPICodeSnippet extends APICodeSnippet {
-  private get method() {
-    return this.request.method.toUpperCase();
+  private get formattedMethod() {
+    return this.method.toUpperCase();
   }
 
   render() {
-    let snippet = `curl --location --request ${this.method} '${this.apiDomain}${this.pathWithQueryParams}' \\
-     --header 'Content-Type: application/json; charset=utf-8'`;
+    let snippet = `curl -L \\
+    --request ${this.formattedMethod} \\
+    --url '${this.apiDomain}${this.pathWithQueryParams}' \\
+    --header 'Content-Type: application/json; charset=utf-8'`;
 
     const body = this.body;
     if (body) {
       snippet += ` \\
-    --data-raw '${JSON.stringify(body, null, 2)}'
+    --data '${JSON.stringify(body, null, 6)}'
 `;
     }
     return snippet;
@@ -147,8 +133,8 @@ class ShellAPICodeSnippet extends APICodeSnippet {
 }
 
 class NodeJSAPICodeSnippet extends APICodeSnippet {
-  private get method() {
-    return this.request.method.toUpperCase();
+  private get formattedMethod() {
+    return this.method.toUpperCase();
   }
 
   render() {
@@ -159,7 +145,7 @@ class NodeJSAPICodeSnippet extends APICodeSnippet {
 
 const url = \`\$\{BASE_URL\}${this.pathWithQueryParams}\`;
 const options = {
-  method: '${this.method}',
+  method: '${this.formattedMethod}',
   headers: {
     'Content-Type': 'application/json; charset=utf-8',
   },${bodyString ? "\n  " + bodyString : ""}
@@ -174,8 +160,8 @@ fetch(url, options)
 }
 
 class GoAPICodeSnippet extends APICodeSnippet {
-  private get method() {
-    return this.request.method.toUpperCase();
+  private get formattedMethod() {
+    return this.method.toUpperCase();
   }
 
   render() {
@@ -186,7 +172,7 @@ class GoAPICodeSnippet extends APICodeSnippet {
     let bodyCode = "";
     if (body) {
       bodyCode = `payload := \`${stringifiedBody}\`
-  req, _ := http.NewRequest("${this.method}", url, payload);
+  req, _ := http.NewRequest("${this.formattedMethod}", url, payload);
 `;
     } else {
       bodyCode = `req, _ := http.NewRequest("${this.method}", url, nil)`;
@@ -215,8 +201,8 @@ func main() {
 }
 
 class PythonAPICodeSnippet extends APICodeSnippet {
-  private get method() {
-    return this.request.method.toLowerCase();
+  private get formattedMethod() {
+    return this.method.toLowerCase();
   }
 
   render() {
@@ -247,7 +233,7 @@ ${bodyCode ? bodyCode + "\n\n" : ""}headers = {
     "Content-Type": "application/json",
 }
 
-response = requests.${this.method}(url${body ? ", json=payload" : ""}, headers=headers)
+response = requests.${this.formattedMethod}(url${body ? ", json=payload" : ""}, headers=headers)
 
 print(response.json())`;
   }

@@ -1,6 +1,6 @@
-import { Text, SegmentedControl, Flex, Select } from "@radix-ui/themes";
+import { Text, SegmentedControl, Flex, Select, Card, Separator, Button, Box } from "@radix-ui/themes";
 import { useDocPageData } from "@site/src/hooks";
-import { DocPageState, docPageStore, getExampleFromSchema } from "@site/src/lib";
+import { DocPageState, docPageStore, generateCodeSnippetFromAPIRequest, getExampleFromSchema } from "@site/src/lib";
 import CodeBlock from "@site/src/theme/CodeBlock";
 import { useContext, useMemo } from "react";
 import { APIRequestContext } from "./APIRequest";
@@ -10,24 +10,50 @@ import { APIRequestContext } from "./APIRequest";
 export function APIRequestCodeSnippetSegmentedControl() {
   const language = useDocPageData("apiRequestExampleLanguage");
 
+  const title = useMemo(() => {
+    if (language === "shell") return "Curl Example";
+    if (language === "nodejs") return "Fetch Example";
+    if (language === "python") return "Requests Example";
+    if (language === "go") return "HTTP Example";
+  }, [language]);
+
   return (
-    <Flex direction="column" gap="4">
-      <SegmentedControl.Root
-        defaultValue="shell"
-        value={language}
-        onValueChange={(value) =>
-          docPageStore.updateValue("apiRequestExampleLanguage", value as DocPageState["apiRequestExampleLanguage"])
-        }
-      >
-        <SegmentedControl.Item value="shell">Shell</SegmentedControl.Item>
-        <SegmentedControl.Item value="nodejs">NodeJS</SegmentedControl.Item>
-        <SegmentedControl.Item value="python">Python</SegmentedControl.Item>
-        <SegmentedControl.Item value="go">Go</SegmentedControl.Item>
-      </SegmentedControl.Root>
-      <CodeSnippetSection language="shell" />
-      <CodeSnippetSection language="nodejs" />
-      <CodeSnippetSection language="python" />
-      <CodeSnippetSection language="go" />
+    <Flex direction="column" gap="4" p="0" asChild>
+      <Card className="api-request-code-snippet">
+        <Flex direction="row" justify="between" align="center" px="3" py="2">
+          <Text color="gray" size="3" weight="bold">
+            {title}
+          </Text>
+
+          <Select.Root
+            value={language}
+            onValueChange={(value) =>
+              docPageStore.updateValue("apiRequestExampleLanguage", value as DocPageState["apiRequestExampleLanguage"])
+            }
+          >
+            <Select.Trigger variant="ghost" color="gray" mr="xs" />
+            <Select.Content>
+              <Select.Item value="shell">Shell</Select.Item>
+              <Select.Item value="nodejs">Javascript</Select.Item>
+              <Select.Item value="python">Python</Select.Item>
+              <Select.Item value="go">Go</Select.Item>
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+        <Separator size="4" />
+        <CodeSnippetSection language="shell" />
+        <CodeSnippetSection language="nodejs" />
+        <CodeSnippetSection language="python" />
+        <CodeSnippetSection language="go" />
+        <Separator size="4" />
+        <Flex direction="row" px="3" py="2">
+          <Box ml="auto" asChild>
+            <Button variant="outline" color="gray">
+              Edit
+            </Button>
+          </Box>
+        </Flex>
+      </Card>
     </Flex>
   );
 }
@@ -36,14 +62,6 @@ function CodeSnippetSection({ language }: { language: DocPageState["apiRequestEx
   const { operation, method, path } = useContext(APIRequestContext);
   const tenantType = useDocPageData("tenantType");
   const apiRequestExampleLanguage = useDocPageData("apiRequestExampleLanguage");
-
-  const title = useMemo(() => {
-    if (language === "shell") return "Curl Example";
-    if (language === "nodejs") return "Fetch Example";
-    if (language === "python") return "Requests Example";
-    if (language === "go") return "HTTP Example";
-  }, [language]);
-
   const codeBlockLanguage = useMemo(() => {
     if (language === "shell") return "bash";
     if (language === "nodejs") return "typescript";
@@ -75,30 +93,17 @@ function CodeSnippetSection({ language }: { language: DocPageState["apiRequestEx
     // });
 
     // return snippetz().print(target, client, value);
-    return "";
+    return generateCodeSnippetFromAPIRequest({
+      host: "https://API-DOMAIN",
+      operation,
+      environment: language,
+      method,
+      path,
+    });
   }, [operation, method, path, language]);
 
   if (!operation) return null;
   if (language !== apiRequestExampleLanguage) return null;
 
-  return (
-    <Flex direction="column" gap="2">
-      <Flex direction="row" justify="between" align="center">
-        <Text color="gray" size="3" weight="bold">
-          {title}
-        </Text>
-        <Select.Root
-          value={tenantType}
-          onValueChange={(value) => docPageStore.updateValue("tenantType", value as "single-tenant" | "multi-tenant")}
-        >
-          <Select.Trigger variant="ghost" color="gray" mr="xs" />
-          <Select.Content>
-            <Select.Item value="single-tenant">Single Tenant</Select.Item>
-            <Select.Item value="multi-tenant">Multi Tenant</Select.Item>
-          </Select.Content>
-        </Select.Root>
-      </Flex>
-      <CodeBlock language={codeBlockLanguage}>{snippet}</CodeBlock>
-    </Flex>
-  );
+  return <CodeBlock language={codeBlockLanguage}>{snippet}</CodeBlock>;
 }

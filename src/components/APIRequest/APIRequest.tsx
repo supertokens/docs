@@ -1,4 +1,4 @@
-import { Badge, Card, Text, Code, Flex, Heading, HoverCard, Box, Separator, Callout } from "@radix-ui/themes";
+import { Badge, Card, Tabs, Text, Code, Flex, Heading, HoverCard, Box, Separator, Callout } from "@radix-ui/themes";
 import { DocItemContext } from "@site/src/context";
 import InfoCircledIcon from "/img/icons/info-circled.svg";
 import ExclamationTriangleIcon from "/img/icons/exclamation-triangle.svg";
@@ -204,12 +204,13 @@ export function APIRequestPathParameters() {
   if (!pathParameters || pathParameters.length === 0) return null;
 
   return (
-    <Flex direction="column" gap="2">
+    <Box mt="6">
       <Heading as="h3" size="4" mb="1">
-        Path Parameters
+        Path parameters
       </Heading>
+      <Separator size="4" mt="3" mb="0" />
       <APIRequestParametersCard parameters={pathParameters} />
-    </Flex>
+    </Box>
   );
 }
 
@@ -224,12 +225,13 @@ export function APIRequestQueryParameters() {
   if (!queryParameters || queryParameters.length === 0) return null;
 
   return (
-    <Flex direction="column" gap="2" mt="5">
+    <Box mt="6">
       <Heading as="h3" size="4" mb="1">
-        Query Parameters
+        Query parameters
       </Heading>
+      <Separator size="4" mt="3" mb="0" />
       <APIRequestParametersCard parameters={queryParameters} />
-    </Flex>
+    </Box>
   );
 }
 
@@ -244,12 +246,13 @@ export function APIRequestHeaderParameters() {
   if (!headerParameters || headerParameters.length === 0) return null;
 
   return (
-    <Flex direction="column" gap="2" mt="5">
-      <Heading as="h3" size="4" mb="1">
+    <Box mt="6">
+      <Heading as="h3" size="5" mb="1">
         Headers
       </Heading>
+      <Separator size="4" mt="3" mb="0" />
       <APIRequestParametersCard parameters={headerParameters} />
-    </Flex>
+    </Box>
   );
 }
 
@@ -267,13 +270,15 @@ export function APIRequestBody() {
 
   if (bodySchema.type === "array") {
     return (
-      <Flex direction="column" gap="2" mt="5">
-        <Heading as="h3" size="3" mb="1">
-          Body Schema
+      <Box mt="6">
+        <Heading as="h2" size="6" mb="1">
+          Body
         </Heading>
+        <Separator size="4" mt="3" mb="0" />
         <Text size="3" color="gray" mb="2" mt="2">
           Use one of the following schemas:
         </Text>
+
         <Flex direction="column" gap="2">
           {bodySchema.items.map((schemaOption, index) => {
             const itemSchema = schemaOption as OpenAPIV3.SchemaObject;
@@ -293,7 +298,7 @@ export function APIRequestBody() {
             );
           })}
         </Flex>
-      </Flex>
+      </Box>
     );
   }
 
@@ -302,12 +307,13 @@ export function APIRequestBody() {
   }
 
   return (
-    <Flex direction="column" gap="2" mt="5">
-      <Heading as="h3" size="4" mb="1">
+    <Box mt="6">
+      <Heading as="h3" size="5" mb="1">
         Body
       </Heading>
+      <Separator size="4" mt="3" mb="0" />
       <APIRequestSchemaCard schema={bodySchema} />
-    </Flex>
+    </Box>
   );
 }
 
@@ -320,82 +326,87 @@ export function APIRequestResponse() {
   if (!statusCodes.length) return null;
 
   return (
-    <>
-      <Box p="0" asChild>
-        <Card asChild>
-          <Accordion.Root type="multiple" defaultValue={[statusCodes[0]]} className="api-request-accordion">
-            {statusCodes.map((statusCode, index) => {
-              const response = operation.responses[statusCode] as OpenAPIV3.ResponseObject;
+    <Box mt="6">
+      <Heading as="h2" size="5" mb="1">
+        Responses
+      </Heading>
+      <Separator size="4" mt="3" mb="0" />
+      <Accordion.Root type="multiple" className="api-request-accordion">
+        {statusCodes.map((statusCode, index) => {
+          const response = operation.responses[statusCode] as OpenAPIV3.ResponseObject;
 
-              const hasContent = response.content && Object.keys(response.content).length > 0;
-              const hasHeaders = response?.headers && Object.keys(response.headers).length > 0;
+          const hasContent = response.content && Object.keys(response.content).length > 0;
+          const hasHeaders = response?.headers && Object.keys(response.headers).length > 0;
 
-              const firstContentType = hasContent ? Object.keys(response.content)[0] : null;
-              const content = hasContent ? response.content[firstContentType] : null;
+          const firstContentType = hasContent ? Object.keys(response.content)[0] : null;
+          const content = hasContent ? response.content[firstContentType] : null;
 
-              let statusCodeColor: "green" | "red" = "green";
-              if (statusCode.startsWith("4") || statusCode.startsWith("5")) statusCodeColor = "red";
+          let statusCodeColor: "green" | "red" = "green";
+          if (statusCode.startsWith("4") || statusCode.startsWith("5")) statusCodeColor = "red";
 
-              return (
-                <>
-                  <Accordion.Item value={statusCode} className="api-request-accordion__item" defaultChecked>
-                    <Flex direction="row" align="center" gap="2" width="100%" asChild>
-                      <Accordion.Trigger className="api-request-accordion__trigger">
-                        <Flex direction="row" gap="2" align="center" mb="0" asChild>
-                          <Accordion.Header>
-                            <Code size="4" color={statusCodeColor}>
-                              {statusCode}
-                            </Code>
-                            <Box mb="0" asChild>
-                              <Heading as="h4" size="4">
-                                {response.description}
-                              </Heading>
-                            </Box>
-                          </Accordion.Header>
-                        </Flex>
+          return (
+            <Accordion.Item
+              value={statusCode}
+              data-border="true"
+              className="api-request-accordion__item"
+              key={`${statusCode}-${index}`}
+            >
+              <Flex direction="row" align="center" gap="2" width="100%" asChild>
+                <Accordion.Trigger className="api-request-accordion__trigger" data-border="false">
+                  <ChevronDownIcon className="api-request-accordion__icon" aria-hidden />
+                  <Flex direction="row" gap="2" align="center" mb="0" asChild>
+                    <Accordion.Header>
+                      <Code size="4" color={statusCodeColor}>
+                        {statusCode}
+                      </Code>
+                      <Box mb="0" asChild>
+                        <Heading as="h4" size="4">
+                          {response.description}
+                        </Heading>
+                      </Box>
+                    </Accordion.Header>
+                  </Flex>
 
-                        <Code size="3" color="gray" ml="auto">
-                          {firstContentType || "application/json"}
-                        </Code>
-                        <ChevronDownIcon className="api-request-accordion__icon" aria-hidden />
-                      </Accordion.Trigger>
+                  <Code size="3" color="gray" ml="auto">
+                    {firstContentType || "application/json"}
+                  </Code>
+                </Accordion.Trigger>
+              </Flex>
+
+              <Accordion.Content className="api-request-accordion__content">
+                <Flex direction="column" gap="3" pb="4" mt="3">
+                  {hasContent && <APIRequestResponseBody mediaTypeObject={content} mediaType={firstContentType} />}
+                  {hasHeaders && (
+                    <Flex direction="column" gap="2" mt="2">
+                      <Box>
+                        <Heading as="h5" size="3" mb="1">
+                          Headers
+                        </Heading>
+                        <Text size="3" color="gray">
+                          After a successful request, the following headers will be set.
+                        </Text>
+                      </Box>
+                      <Box py="0" asChild>
+                        <Card>
+                          <APIRequestParametersCard
+                            parameters={
+                              Object.keys(response.headers).map((key) => ({
+                                name: key,
+                                ...response.headers[key],
+                              })) as OpenAPIV3.ParameterObject[]
+                            }
+                          />
+                        </Card>
+                      </Box>
                     </Flex>
-
-                    <Accordion.Content className="api-request-accordion__content">
-                      <Flex direction="column" gap="3" pb="4" px="4" mt="3">
-                        {hasContent && (
-                          <APIRequestResponseBody mediaTypeObject={content} mediaType={firstContentType} />
-                        )}
-                        {hasHeaders && (
-                          <Flex direction="column" gap="2">
-                            <Box>
-                              <Heading as="h5" size="4" mb="1" mt="0">
-                                Headers
-                              </Heading>
-                              <Text size="3" color="gray">
-                                After a successful request, the following headers will be set.
-                              </Text>
-                            </Box>
-                            <APIRequestParametersCard
-                              parameters={
-                                Object.keys(response.headers).map((key) => ({
-                                  name: key,
-                                  ...response.headers[key],
-                                })) as OpenAPIV3.ParameterObject[]
-                              }
-                            />
-                          </Flex>
-                        )}
-                      </Flex>
-                    </Accordion.Content>
-                  </Accordion.Item>
-                </>
-              );
-            })}
-          </Accordion.Root>
-        </Card>
-      </Box>
-    </>
+                  )}
+                </Flex>
+              </Accordion.Content>
+            </Accordion.Item>
+          );
+        })}
+      </Accordion.Root>
+    </Box>
   );
 }
 
@@ -412,16 +423,9 @@ function APIRequestResponseBody({
 
   if (mediaType !== "application/json") {
     return (
-      <>
-        <Box mb="2">
-          <Heading as="h3" size="4" mb="1">
-            Body
-          </Heading>
-        </Box>
-        <Flex direction="column" gap="2">
-          {bodySchema.enum[0]}
-        </Flex>
-      </>
+      <Flex direction="column" gap="2">
+        {bodySchema.enum[0]}
+      </Flex>
     );
   }
 
@@ -429,9 +433,6 @@ function APIRequestResponseBody({
     return (
       <>
         <Box mb="2">
-          <Heading as="h3" size="4" mb="1">
-            Body
-          </Heading>
           <Text size="3" color="gray">
             One of the following body schemas will be returned:
           </Text>
@@ -441,7 +442,11 @@ function APIRequestResponseBody({
             const typedSchema = schema as OpenAPIV3.SchemaObject;
             return (
               <Box key={`${schema.type}-${index}`}>
-                <APIRequestSchemaCard key={index} schema={typedSchema} />
+                <Box py="0" asChild>
+                  <Card>
+                    <APIRequestSchemaCard key={index} schema={typedSchema} />
+                  </Card>
+                </Box>
                 {index !== bodySchema.oneOf.length - 1 && (
                   <Flex gap="2" mb="2" mt="3" align="center">
                     <Separator size="4" />
@@ -463,9 +468,6 @@ function APIRequestResponseBody({
     return (
       <>
         <Box mb="2">
-          <Heading as="h3" size="4" mb="1">
-            Body
-          </Heading>
           <Text size="3" color="gray">
             One of the following body schemas will be returned:
           </Text>
@@ -475,7 +477,11 @@ function APIRequestResponseBody({
             const typedSchema = schema as OpenAPIV3.SchemaObject;
             return (
               <Box>
-                <APIRequestSchemaCard key={index} schema={typedSchema} />
+                <Box py="0" asChild>
+                  <Card>
+                    <APIRequestSchemaCard key={index} schema={typedSchema} />
+                  </Card>
+                </Box>
                 {index !== bodySchema.items.length - 1 && (
                   <Flex gap="2" mb="2" mt="3" align="center">
                     <Separator size="4" />
@@ -498,7 +504,12 @@ function APIRequestResponseBody({
       <Heading as="h3" size="4" mb="1">
         Body
       </Heading>
-      <APIRequestSchemaCard schema={bodySchema} />
+
+      <Box py="0" asChild>
+        <Card>
+          <APIRequestSchemaCard schema={bodySchema} />
+        </Card>
+      </Box>
     </>
   );
 }
@@ -584,19 +595,100 @@ export function APIRequestDeprecatedCallout() {
 export function APIRequestSecuritySection() {
   const { operation, security } = useContext(APIRequestContext);
 
-  if (!operation) return null;
-  if (!operation.security) return null;
-  if (!security) return null;
+  const securityRequirements = useMemo(() => {
+    if (!operation) return [];
+    if (!operation.security) return [];
+    if (!security) return [];
 
-  console.log(operation.security);
-  console.log(security);
+    return operation.security
+      .map((securityRequirement) => {
+        const requirementName = Object.keys(securityRequirement)[0];
+        const req = security[requirementName] as OpenAPIV3.SecuritySchemeObject | null;
+        if (!req) return null;
+        return { ...req, name: requirementName } as OpenAPIV3.SecuritySchemeObject & { name: string };
+      })
+      .filter((v) => v);
+  }, [security]);
 
   return (
-    <Flex direction="column" gap="2" mt="5">
-      <Heading as="h3" size="6" mb="1">
-        Authorization
-      </Heading>
-      <Text></Text>
-    </Flex>
+    <Box p="0" asChild>
+      <Accordion.Root type="multiple" className="api-request-accordion">
+        <Accordion.Item value="authorization" className="api-request-accordion__item">
+          <Flex direction="row" align="center" gap="2" width="100%" asChild>
+            <Accordion.Trigger className="api-request-accordion__trigger" disabled={securityRequirements.length === 0}>
+              {securityRequirements.length > 0 && (
+                <ChevronDownIcon className="api-request-accordion__icon" aria-hidden />
+              )}
+              <Flex direction="row" gap="2" align="center" mb="0" asChild>
+                <Accordion.Header>
+                  <Heading as="h3" size="5" mb="0">
+                    Authorization
+                  </Heading>
+                </Accordion.Header>
+              </Flex>
+
+              <Code size="3" color={securityRequirements.length ? "red" : "gray"} ml="auto">
+                {securityRequirements.length ? "Required" : "None"}
+              </Code>
+            </Accordion.Trigger>
+          </Flex>
+
+          <Accordion.Content className="api-request-accordion__content">
+            <Flex direction="column" gap="3" mt="3">
+              {securityRequirements.map((securityRequirement, index) => {
+                const requirementName = securityRequirement.name;
+
+                return <APISecuritySchemeItem scheme={securityRequirement} />;
+              })}
+            </Flex>
+          </Accordion.Content>
+        </Accordion.Item>
+      </Accordion.Root>
+    </Box>
   );
+}
+
+function APISecuritySchemeItem({ scheme }: { scheme: OpenAPIV3.SecuritySchemeObject }) {
+  if (scheme.type === "http") {
+    return (
+      <Box px="0" py="2" className="api-request-parameters-card__parameter">
+        <Flex direction="column" gap="1">
+          <Flex gap="1" align="center">
+            <Code size="4" variant="ghost" asChild>
+              <span>{scheme.scheme}</span>
+            </Code>
+
+            <Code size="2" color="gray">
+              {scheme.type}
+            </Code>
+          </Flex>
+          <Text size="3" color="gray">
+            {scheme.description}
+          </Text>
+        </Flex>
+      </Box>
+    );
+  }
+
+  if (scheme.type === "apiKey") {
+    return (
+      <Box px="0" py="2" className="api-request-parameters-card__parameter">
+        <Flex direction="column" gap="1">
+          <Flex gap="1" align="center">
+            <Code size="4" variant="ghost" asChild>
+              <span>{scheme.name}</span>
+            </Code>
+
+            <Code size="2" color="gray">
+              {scheme.in}
+            </Code>
+          </Flex>
+          <Text size="3" color="gray">
+            {scheme.description}
+          </Text>
+        </Flex>
+      </Box>
+    );
+  }
+  return null;
 }

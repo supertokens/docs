@@ -181,7 +181,7 @@ async function reorderCategories(apiType: "cdi" | "fdi") {
 
 (async () => {
   await Promise.all([
-    // generateAPIReferencePages("fdi"),
-    generateAPIReferencePages("cdi"),
+    generateAPIReferencePages("fdi"),
+    // generateAPIReferencePages("cdi"),
   ]);
 })();

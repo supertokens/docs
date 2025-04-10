@@ -58,17 +58,17 @@ export function APIRequestSchemaCard({
   if (name && nestingLevel > 0) {
     return (
       <Box p="0" asChild>
-        <Card asChild>
+        <Card variant="classic" asChild>
           <Flex p="0" direction="column" gap="0" align="stretch" asChild>
             <RadixAccordion.Root type="multiple" className="api-request-accordion">
               <RadixAccordion.Item value={name} className="api-request-accordion__item">
                 <Flex asChild>
                   <Heading size="2" as="h4" mb="0" asChild>
                     <RadixAccordion.Header>
-                      <Flex justify="between" align="center" px="3" py="2" asChild flexGrow="1">
+                      <Flex gap="2" align="center" px="3" py="2" asChild flexGrow="1">
                         <RadixAccordion.Trigger className="api-request-accordion__trigger">
-                          {name}
                           <ChevronDownIcon className="api-request-accordion__icon" aria-hidden />
+                          {name}
                         </RadixAccordion.Trigger>
                       </Flex>
                     </RadixAccordion.Header>
@@ -85,13 +85,7 @@ export function APIRequestSchemaCard({
     );
   }
 
-  return (
-    <Box p="0" asChild>
-      <Card>
-        <SchemaPropertiesList schema={schema} nestingLevel={nestingLevel} />
-      </Card>
-    </Box>
-  );
+  return <SchemaPropertiesList schema={schema} nestingLevel={nestingLevel} />;
 }
 
 function SchemaPropertiesList({ schema, nestingLevel }: { schema: OpenAPIV3.SchemaObject; nestingLevel: number }) {
@@ -105,13 +99,13 @@ function SchemaPropertiesList({ schema, nestingLevel }: { schema: OpenAPIV3.Sche
       {propertiesNames.map((propName, index) => {
         return (
           <>
-            <Box px="4" py="3">
-              <Flex direction="column" gap="2">
+            <Box py="3">
+              <Flex direction="column" px={nestingLevel > 0 ? "3" : "0"} gap="1">
                 <Flex align="center" justify="between">
                   <Flex align="center" gap="1">
-                    <Text size="3" weight="bold">
-                      {propName}
-                    </Text>
+                    <Code size="3" weight="bold" variant="ghost" asChild>
+                      <span>{propName}</span>
+                    </Code>
                     <Code size="2" color="gray">
                       {properties[propName].type}
                     </Code>
@@ -132,14 +126,14 @@ function SchemaPropertiesList({ schema, nestingLevel }: { schema: OpenAPIV3.Sche
                   <APIRequestSchemaCard
                     schema={properties[propName]}
                     nestingLevel={nestingLevel + 1}
-                    name={properties[propName].title || propName}
+                    name="Properties"
                   />
                 ) : null}
                 {properties[propName].type === "array" && properties[propName].items.type === "object" ? (
                   <APIRequestSchemaCard
                     schema={properties[propName].items}
                     nestingLevel={nestingLevel + 1}
-                    name={`${propName} Items`}
+                    name="Array item properties"
                   />
                 ) : null}
               </Flex>

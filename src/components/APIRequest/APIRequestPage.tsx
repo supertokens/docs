@@ -40,25 +40,17 @@ export function APIRequestPage({
         <APIRequestDeprecatedCallout />
         <APIRequestDescription />
         <APIRequestSecuritySection />
-        <Separator size="4" mb="4" mt="2" />
-        <Heading as="h2" size="8">
-          Request
-        </Heading>
         <APIRequestPathParameters />
         <APIRequestQueryParameters />
         <APIRequestHeaderParameters />
         <APIRequestBody />
-        <Separator size="4" mt="6" mb="4" />
-        <Heading as="h2" size="8">
-          Response
-        </Heading>
         <APIRequestResponse />
       </Flex>
       <Flex direction="column" gap="2" width={{ initial: "100%", md: "40%" }}>
-        <Box style={{ position: "sticky", top: "140px" }}>
+        <Flex style={{ position: "sticky", top: "140px" }} gap="5" direction="column">
           <APIRequestCodeSnippetSegmentedControl />
           <APIRequestResponsePreview />
-        </Box>
+        </Flex>
       </Flex>
     </APIRequestProvider>
   );

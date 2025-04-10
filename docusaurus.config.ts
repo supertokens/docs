@@ -56,7 +56,7 @@ const config: Config = {
         blog: false,
         pages: false,
         theme: {
-          customCss: ["./src/css/custom.scss", "./src/css/radix.css"],
+          customCss: ["./src/css/custom.scss", "./src/css/fonts.css", "./src/css/radix.css"],
         },
       } satisfies Preset.Options,
     ],
