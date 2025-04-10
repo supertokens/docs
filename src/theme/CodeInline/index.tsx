@@ -8,7 +8,7 @@ import { DOC_STORE_DEFAULT_VALUES } from "@site/src/lib/constants";
 // its purpose is to be swizzled and customized
 // MDX 1 used to have a inlineCode comp, see https://mdxjs.com/migrating/v2/
 export default function CodeInline(props: React.ComponentProps<typeof Code>) {
-  const { children, ...rest } = props;
+  const { children, color = "gray", ...rest } = props;
 
   const context = useContext(DocItemContext);
   const dynamicValuesRegex = /\^\{([^}]+)\}/g;
@@ -23,7 +23,7 @@ export default function CodeInline(props: React.ComponentProps<typeof Code>) {
 
   // Use a span because docusaurus default code styles conflict with radix-ui styles
   return (
-    <Code {...rest} asChild>
+    <Code {...rest} color={color} asChild>
       <span>{parsedChildren}</span>
     </Code>
   );

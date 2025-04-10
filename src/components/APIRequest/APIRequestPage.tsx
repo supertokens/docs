@@ -60,16 +60,22 @@ function APIReferencePageTitle() {
   // Access a value from the context to force a re-render
   const { operation } = useContext(APIRequestContext);
   const root = document.getElementById(API_REFERENCE_PAGE_TITLE_ID);
+  const operationSummary = operation?.summary;
 
   if (!root) return null;
 
   return ReactDOM.createPortal(
-    <Flex mb="4">
-      <APIRequestPath />
-      <Box ml="auto">
-        <APIRequestApiTypeBadge />
-      </Box>
-    </Flex>,
+    <Box mb="4">
+      <Heading as="h1" size="8">
+        {operationSummary}
+      </Heading>
+      <Flex align="center">
+        <APIRequestPath />
+        <Box ml="auto">
+          <APIRequestApiTypeBadge />
+        </Box>
+      </Flex>{" "}
+    </Box>,
     root,
   );
 }

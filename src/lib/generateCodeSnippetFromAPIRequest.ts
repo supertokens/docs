@@ -1,9 +1,14 @@
-import { APIRequest, APIRequestSchema } from "../types";
-import { generateExampleFromAPIRequestSchema } from "./generateExampleFromAPIRequestSchema";
 import { getExampleFromSchema } from "./getExampleFromSchema";
 import type { OpenAPIV3 } from "@scalar/openapi-types";
 
 type Environment = "shell" | "nodejs" | "go" | "python";
+
+export enum AuthType {
+  None = "none",
+  Bearer = "bearer",
+  ApiKey = "apiKey",
+  Cookie = "cookie",
+}
 
 export function generateCodeSnippetFromAPIRequest(params: {
   host: string;
@@ -11,6 +16,7 @@ export function generateCodeSnippetFromAPIRequest(params: {
   security: OpenAPIV3.Document["components"]["securitySchemes"];
   environment: Environment;
   method: string;
+  preferredAuthType?: AuthType;
   path: string;
 }): string {
   const { environment } = params;
@@ -42,18 +48,21 @@ abstract class APICodeSnippet {
   public security: OpenAPIV3.Document["components"]["securitySchemes"];
   public method: string;
   public path: string;
+  public preferredAuthType?: AuthType;
   constructor(params: {
     host: string;
     operation: OpenAPIV3.OperationObject;
     security: OpenAPIV3.Document["components"]["securitySchemes"];
     method: string;
     path: string;
+    preferredAuthType?: AuthType;
   }) {
     this.apiDomain = params.host;
     this.request = params.operation;
     this.method = params.method;
     this.path = params.path;
     this.security = params.security;
+    this.preferredAuthType = params.preferredAuthType;
   }
 
   get queryParams(): string {
@@ -104,6 +113,53 @@ abstract class APICodeSnippet {
     return this.extractSchemaExample(bodySchema.schema) as Record<string, unknown>;
   }
 
+  get securityRequirements() {
+    const operation = this.request;
+    const security = this.security;
+
+    if (!operation) return [];
+    if (!operation.security) return [];
+    if (!security) return [];
+
+    return operation.security
+      .map((securityRequirement) => {
+        const requirementName = Object.keys(securityRequirement)[0];
+        const req = security[requirementName] as OpenAPIV3.SecuritySchemeObject | null;
+        return req as OpenAPIV3.SecuritySchemeObject;
+      })
+      .filter((v) => v);
+  }
+
+  get headers(): Record<string, string> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json; charset=utf-8",
+    };
+
+    if (this.request.parameters) {
+      const headerParams = this.request.parameters.filter((param) => param.in === "header" && param.required);
+      headerParams.forEach((param) => {
+        headers[param.name] = getExampleFromSchema(param.schema) as string;
+      });
+    }
+
+    const securityRequirements = this.securityRequirements;
+
+    if (securityRequirements.length > 0) {
+      for (const securityRequirement of securityRequirements) {
+        if (this.preferredAuthType && this.preferredAuthType !== securityRequirement.type) continue;
+        if (securityRequirement.type === "http") {
+          headers["Authorization"] = "Bearer {{token}}";
+        } else if (securityRequirement.type === "apiKey" && securityRequirement.in === "cookie") {
+          headers["Cookie"] = `${securityRequirement.name}={{token}}`;
+        } else if (securityRequirement.type === "apiKey" && securityRequirement.in === "header") {
+          headers[securityRequirement.name] = "{{api_key}}";
+        }
+      }
+    }
+
+    return headers;
+  }
+
   private extractSchemaExample(schema: OpenAPIV3.SchemaObject): unknown {
     if (schema.oneOf) {
       return this.extractSchemaExample(schema.oneOf[0]);
@@ -131,14 +187,21 @@ class ShellAPICodeSnippet extends APICodeSnippet {
   render() {
     let snippet = `curl -L \\
     --request ${this.formattedMethod} \\
-    --url '${this.apiDomain}${this.pathWithQueryParams}' \\
-    --header 'Content-Type: application/json; charset=utf-8'`;
+    --url '${this.apiDomain}${this.pathWithQueryParams}'`;
+
+    const headers = this.headers;
+    for (const [headerName, headerValue] of Object.entries(headers)) {
+      snippet += ` \\
+    --header '${headerName}: ${headerValue}'`;
+    }
 
     const body = this.body;
     if (body) {
       snippet += ` \\
     --data '${JSON.stringify(body, null, 6)}'
 `;
+    } else {
+      snippet += `\n`;
     }
     return snippet;
   }
@@ -153,13 +216,19 @@ class NodeJSAPICodeSnippet extends APICodeSnippet {
     const body = this.body;
     const bodyString = body ? `body: JSON.stringify(${JSON.stringify(body, null, 2)})` : "";
 
+    // Format headers for Node.js
+    const headers = this.headers;
+    const headersString = Object.entries(headers)
+      .map(([name, value]) => `    '${name}': '${value}'`)
+      .join(",\n");
+
     return `const BASE_URL = "${this.apiDomain}"
 
 const url = \`\$\{BASE_URL\}${this.pathWithQueryParams}\`;
 const options = {
   method: '${this.formattedMethod}',
   headers: {
-    'Content-Type': 'application/json; charset=utf-8',
+${headersString}
   },${bodyString ? "\n  " + bodyString : ""}
 }
 
@@ -187,8 +256,13 @@ class GoAPICodeSnippet extends APICodeSnippet {
   req, _ := http.NewRequest("${this.formattedMethod}", url, payload);
 `;
     } else {
-      bodyCode = `req, _ := http.NewRequest("${this.method}", url, nil)`;
+      bodyCode = `req, _ := http.NewRequest("${this.formattedMethod}", url, nil)`;
     }
+
+    const headers = this.headers;
+    const headersCode = Object.entries(headers)
+      .map(([name, value]) => `  req.Header.Add("${name}", "${value}")`)
+      .join("\n");
 
     return `import (
   ${imports}
@@ -199,8 +273,7 @@ func main() {
   url := fmt.Sprintf("%s${this.pathWithQueryParams}", baseUrl)
   ${bodyCode}
 
-  req.Header.Add("accept", "application/json")
-  req.Header.Add("content-type", "application/json")
+${headersCode}
 
   res, _ := http.DefaultClient.Do(req)
 
@@ -235,6 +308,11 @@ from typing import Dict, Any`;
       bodyCode = `payload: Dict[str, Any] = ${pythonDict}`;
     }
 
+    const headers = this.headers;
+    const headersDict = Object.entries(headers)
+      .map(([name, value]) => `    "${name}": "${value}"`)
+      .join(",\n");
+
     return `${imports}
 
 BASE_URL = "${this.apiDomain}"
@@ -242,7 +320,7 @@ BASE_URL = "${this.apiDomain}"
 url = f"{BASE_URL}${this.pathWithQueryParams}"
 
 ${bodyCode ? bodyCode + "\n\n" : ""}headers = {
-    "Content-Type": "application/json",
+${headersDict}
 }
 
 response = requests.${this.formattedMethod}(url${body ? ", json=payload" : ""}, headers=headers)

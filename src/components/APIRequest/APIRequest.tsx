@@ -1,13 +1,15 @@
-import { Badge, Card, Tabs, Text, Code, Flex, Heading, HoverCard, Box, Separator, Callout } from "@radix-ui/themes";
+import { Badge, Card, Text, Code, Flex, Heading, HoverCard, Box, Separator, Callout } from "@radix-ui/themes";
 import { DocItemContext } from "@site/src/context";
 import InfoCircledIcon from "/img/icons/info-circled.svg";
+import CopyIcon from "/img/icons/copy.svg";
+import CheckIcon from "/img/icons/check.svg";
 import ExclamationTriangleIcon from "/img/icons/exclamation-triangle.svg";
 import { useDocPageData, useLoadOpenApiDocument } from "@site/src/hooks";
 import { normalizePath } from "@site/src/lib";
 import Link from "@docusaurus/Link";
-import { APIRequestMethod, APIRequest } from "@site/src/types";
+import { APIRequestMethod } from "@site/src/types";
 import ChevronDownIcon from "/img/icons/chevron-down.svg";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { APIRequestParametersCard } from "./APIRequestParametersCard";
 import * as Accordion from "@radix-ui/react-accordion";
 import { APIRequestSchemaCard } from "./APIRequestSchemaCard";
@@ -170,23 +172,34 @@ export function APIRequestMethodBadge({
 
 export function APIRequestPath() {
   const { path, method } = useContext(APIRequestContext);
-  const parsedPath = useMemo(() => {
-    const params = { apiBasePath: ":apiBasePath", tenantId: ":tenantId" };
-    return path.replace(/\{([^}]+)\}/g, (_, key) => {
-      return params[key] || key;
-    });
+  const [hasCopied, setHasCopied] = useState(false);
+
+  const IconComponent = hasCopied ? CheckIcon : CopyIcon;
+
+  const copyToClipboard = useCallback(() => {
+    navigator.clipboard.writeText(path);
+    setHasCopied(true);
   }, [path]);
 
   return (
     <Flex gap="5">
       <Flex gap="4" align="center" asChild>
-        <Heading as="h1" size="8">
+        <Heading as="h2" size="6" mb="0">
           <Text color={MethodToColorMap[method]} align="center">
             {method.toUpperCase()}
           </Text>
-          <Text color="gray" highContrast align="center">
-            {parsedPath}
-          </Text>
+          <Flex
+            gap="2"
+            align="center"
+            onMouseLeave={() => setHasCopied(false)}
+            onClick={copyToClipboard}
+            className="api-request-path-title"
+          >
+            <Code color="gray" highContrast>
+              {path}
+            </Code>
+            <IconComponent className="api-request-path-title__icon" />
+          </Flex>
         </Heading>
       </Flex>
     </Flex>
@@ -284,7 +297,9 @@ export function APIRequestBody() {
             const itemSchema = schemaOption as OpenAPIV3.SchemaObject;
             return (
               <>
-                <APIRequestSchemaCard key={index} schema={itemSchema} />
+                <Card>
+                  <APIRequestSchemaCard key={index} schema={itemSchema} />
+                </Card>
                 {index !== bodySchema.length - 1 && (
                   <Flex gap="2" mb="2" mt="3" align="center">
                     <Separator size="4" />
@@ -304,6 +319,47 @@ export function APIRequestBody() {
 
   if (bodySchema.type === "object" && !bodySchema.properties) {
     return null;
+  }
+
+  if (bodySchema.oneOf) {
+    return (
+      <Box mt="6">
+        <Heading as="h3" size="5" mb="1">
+          Body
+        </Heading>
+        <Separator size="4" mt="3" mb="0" />
+        <Box mb="2" mt="3">
+          <Text size="3" color="gray">
+            One of the following schemas can be used:
+          </Text>
+        </Box>
+
+        <Flex direction="column" gap="2">
+          {bodySchema.oneOf.map((schema, index) => {
+            const typedSchema = schema as OpenAPIV3.SchemaObject;
+            return (
+              <Box key={`${schema.type}-${index}`}>
+                <Box py="0" asChild>
+                  <Card>
+                    <APIRequestSchemaCard key={index} schema={typedSchema} />
+                  </Card>
+                </Box>
+
+                {index !== bodySchema.oneOf.length - 1 && (
+                  <Flex gap="2" mb="2" mt="3" align="center">
+                    <Separator size="4" />
+                    <Text size="2" color="gray">
+                      OR
+                    </Text>
+                    <Separator size="4" />
+                  </Flex>
+                )}
+              </Box>
+            );
+          })}
+        </Flex>
+      </Box>
+    );
   }
 
   return (
@@ -604,8 +660,7 @@ export function APIRequestSecuritySection() {
       .map((securityRequirement) => {
         const requirementName = Object.keys(securityRequirement)[0];
         const req = security[requirementName] as OpenAPIV3.SecuritySchemeObject | null;
-        if (!req) return null;
-        return { ...req, name: requirementName } as OpenAPIV3.SecuritySchemeObject & { name: string };
+        return req;
       })
       .filter((v) => v);
   }, [security]);
@@ -636,8 +691,6 @@ export function APIRequestSecuritySection() {
           <Accordion.Content className="api-request-accordion__content">
             <Flex direction="column" gap="3" mt="3">
               {securityRequirements.map((securityRequirement, index) => {
-                const requirementName = securityRequirement.name;
-
                 return <APISecuritySchemeItem scheme={securityRequirement} />;
               })}
             </Flex>

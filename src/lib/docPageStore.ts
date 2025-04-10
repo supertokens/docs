@@ -23,13 +23,13 @@ class DocPageStore {
   }
 
   private persistToLocalStorage() {
-    if (localStorage) {
+    if (typeof window !== "undefined" && localStorage) {
       localStorage.setItem("docPageState", JSON.stringify(this.state));
     }
   }
 
   private initState(): DocPageState {
-    if (localStorage) {
+    if (typeof window !== "undefined" && localStorage) {
       try {
         const state = JSON.parse(localStorage.getItem("docPageState"));
         if (state) return state;

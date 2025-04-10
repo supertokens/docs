@@ -35,7 +35,7 @@ export default function DocSidebarItemLink({
       onItemClick(item);
     }
   }, [onItemClick, item, isInternalLink]);
-  const isAPIReferenceLink = href.includes("/cdi/") || href.includes("/fdi/");
+  const isAPIReferenceLink = (href.includes("/cdi/") || href.includes("/fdi/")) && !href.includes("introduction");
   const [method, ...rest] = label.split(" ");
   const isDeprecated = label.includes("(deprecated)");
 
