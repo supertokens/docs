@@ -8,25 +8,26 @@ type Environment = "shell" | "nodejs" | "go" | "python";
 export function generateCodeSnippetFromAPIRequest(params: {
   host: string;
   operation: OpenAPIV3.OperationObject;
+  security: OpenAPIV3.Document["components"]["securitySchemes"];
   environment: Environment;
   method: string;
   path: string;
 }): string {
-  const { host, operation, environment, method, path } = params;
+  const { environment } = params;
   let apiCodeSnippet: APICodeSnippet;
 
   switch (environment) {
     case "shell":
-      apiCodeSnippet = new ShellAPICodeSnippet(host, operation, environment, method, path);
+      apiCodeSnippet = new ShellAPICodeSnippet(params);
       break;
     case "nodejs":
-      apiCodeSnippet = new NodeJSAPICodeSnippet(host, operation, environment, method, path);
+      apiCodeSnippet = new NodeJSAPICodeSnippet(params);
       break;
     case "go":
-      apiCodeSnippet = new GoAPICodeSnippet(host, operation, environment, method, path);
+      apiCodeSnippet = new GoAPICodeSnippet(params);
       break;
     case "python":
-      apiCodeSnippet = new PythonAPICodeSnippet(host, operation, environment, method, path);
+      apiCodeSnippet = new PythonAPICodeSnippet(params);
       break;
     default:
       throw new Error(`Invalid environment ${environment}`);
@@ -36,13 +37,24 @@ export function generateCodeSnippetFromAPIRequest(params: {
 }
 
 abstract class APICodeSnippet {
-  constructor(
-    public apiDomain: string,
-    public request: OpenAPIV3.OperationObject,
-    public environment: string,
-    public method: string,
-    public path: string,
-  ) {}
+  public apiDomain: string;
+  public request: OpenAPIV3.OperationObject;
+  public security: OpenAPIV3.Document["components"]["securitySchemes"];
+  public method: string;
+  public path: string;
+  constructor(params: {
+    host: string;
+    operation: OpenAPIV3.OperationObject;
+    security: OpenAPIV3.Document["components"]["securitySchemes"];
+    method: string;
+    path: string;
+  }) {
+    this.apiDomain = params.host;
+    this.request = params.operation;
+    this.method = params.method;
+    this.path = params.path;
+    this.security = params.security;
+  }
 
   get queryParams(): string {
     if (!this.request.parameters) return "";
