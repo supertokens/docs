@@ -743,5 +743,6 @@ function APISecuritySchemeItem({ scheme }: { scheme: OpenAPIV3.SecuritySchemeObj
       </Box>
     );
   }
+
   return null;
 }
