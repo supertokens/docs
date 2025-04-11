@@ -9,6 +9,7 @@ import remarkRemoveWebJsScriptImports from "./src/plugins/remarkRemoveWebJsScrip
 import remarkDocItemDescription from "./src/plugins/remarkDocItemDescription";
 import remarkAddBadgesInHeadings from "./src/plugins/remarkAddBadgesInHeadings";
 import generateLllmsTxt from "./src/plugins/generateLllmsTxt";
+import generateLllmsFullTxt from "./src/plugins/generateLllmsFullTxt";
 
 const config: Config = {
   title: "SuperTokens Docs",
@@ -136,6 +137,7 @@ const config: Config = {
     "docusaurus-plugin-sass",
     process.env.NODE_ENV === "production" && "@docusaurus/plugin-debug",
     generateLllmsTxt,
+    generateLllmsFullTxt,
     [
       // loads the supertokens.com react bundle for footer and analytics etc..
       "./src/plugins/reactBundle",
