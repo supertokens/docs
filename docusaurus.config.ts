@@ -41,7 +41,7 @@ const config: Config = {
           sidebarPath: "./sidebars.ts",
           exclude: ["**/_*", "**/_*/**"],
           breadcrumbs: false,
-          editUrl: "https://github.com/supertokens/docs/tree/master/v3/",
+          editUrl: "https://github.com/supertokens/docs/tree/master/",
           beforeDefaultRemarkPlugins: [
             remarkDocItemContextValues,
             remarkRemoveCodeTypeCheckingCommentsAndRows,

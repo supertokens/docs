@@ -181,8 +181,8 @@ async function parseMdxContent(filePath: string): Promise<string> {
     "TokensCallout",
   ];
   const componentsToReplace: Record<string, string> = {
-    "UIType.CustomUIContent": "CustomUIContent",
-    "UIType.PrebuiltUIContent": "PrebuiltUIContent",
+    "UIType.CustomUIContent": "CustomUIInstructions",
+    "UIType.PrebuiltUIContent": "PrebuiltUIInstructions",
     FrontendCustomUITabs: "Tabs",
     FrontendPrebuiltUITabs: "Tabs",
     BackendTabs: "Tabs",
@@ -208,7 +208,7 @@ async function parseMdxContent(filePath: string): Promise<string> {
   processedContent = processedContent.replaceAll("Tabs.TabItem", "Tab");
   processedContent = processedContent.replaceAll("Tabs.Content", "Tab");
 
-  for (const component in componentsToRemove) {
+  for (const component of componentsToRemove) {
     processedContent = processedContent.replaceAll(`<${component} />`, "");
     processedContent = processedContent.replaceAll(`<${component}/>`, "");
   }
@@ -222,7 +222,8 @@ async function parseMdxContent(filePath: string): Promise<string> {
 
   const { title, content: contentWithoutTitle } = extractMainTitle(processedContent);
   const filePathWithoutExtension = filePath.replace(/\.[^/.]+$/, "");
-  const url = `https://supertokens.com/${filePathWithoutExtension}`;
+  const [, relativePath] = filePathWithoutExtension.split("/docs").filter(Boolean);
+  const url = `https://supertokens.com/docs/${relativePath}`;
   const parsedTitle = buildTitle(title, filePath);
   processedContent = `
 # ${parsedTitle}
