@@ -3,7 +3,7 @@ import supertokens from "supertokens-website";
 import { v1 as uuidv1 } from "uuid";
 import Cookies from "js-cookie";
 
-import { trackEvent } from "./amplitude";
+import { initAmplitude, trackEvent } from "./amplitude";
 
 const COOKIE_CONSENT = "cookieconsent_status";
 const ANTCS_ENDPOINT_URL = "https://api.supertokens.com/0/antcs/ents";
@@ -99,15 +99,7 @@ class Analytics {
 
   get hasCookieConsent() {
     if (window.location.hostname === "localhost") return true;
-    const consentCookie = Cookies.get(COOKIE_CONSENT);
-    if (consentCookie) {
-      if (consentCookie === "deny") {
-        return false;
-      } else {
-        return true;
-      }
-    }
-    return false;
+    return getCookieConsent() === "allow";
   }
 
   get canSendEvents() {
@@ -121,6 +113,11 @@ class Analytics {
       return true;
     }
     return false;
+  }
+
+  init() {
+    if (!this.canSendEvents) return;
+    initAmplitude();
   }
 
   async sendEvent(
@@ -237,6 +234,12 @@ export function trackPageExit(
   }
 }
 
+export function init() {
+  const analyticsInstance = getAnalyticsInstance();
+
+  return analyticsInstance.init();
+}
+
 export function trackButtonClick(eventName: string, version = "v1", options?: Object) {
   getAnalyticsInstance().sendEvent(eventName, {
     data: {
@@ -265,6 +268,21 @@ export function trackLinkClick(eventName: string, version = "v5", options?: Obje
     },
     version,
   });
+}
+
+export function getCookieConsent(): "allow" | "deny" | "unset" {
+  const consentCookie = Cookies.get(COOKIE_CONSENT);
+  if (consentCookie && consentCookie === "deny") {
+    return "deny";
+  }
+  if (consentCookie && consentCookie === "allow") {
+    return "allow";
+  }
+  return "unset";
+}
+
+export function setCookieConsent(consent: "allow" | "deny") {
+  Cookies.set(COOKIE_CONSENT, consent);
 }
 
 async function getSessionUserId() {
