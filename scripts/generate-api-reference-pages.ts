@@ -15,8 +15,8 @@ type APIPageMapping = Record<
 >;
 
 async function generateAPIReferencePages(apiType: "cdi" | "fdi") {
-  // await writeSchema(apiType);
-  // await writePageMapping(apiType);
+  await writeSchema(apiType);
+  await writePageMapping(apiType);
   const schema = (await file(`./static/${apiType}.json`).json()) as OpenAPIV3.Document;
   const pageMapping = (await file(`./static/${apiType}-mapping.json`).json()) as APIPageMapping;
 
@@ -65,7 +65,8 @@ async function writePageMapping(apiType: "cdi" | "fdi") {
       mapping[operation.operationId] = {
         frontmatter: {
           sidebar_position: 1,
-          title: `${method} ${operation.summary || route}${operation.deprecated ? " (deprecated)" : ""}`,
+          sidebar_label: `${method} ${operation.summary || route}${operation.deprecated ? " (deprecated)" : ""}`,
+          title: operation.summary || route,
           description: operation.description || `${apiType.toUpperCase()} API specification for the ${route} endpoint`,
         },
         path: route,
@@ -92,7 +93,7 @@ async function writePageMapping(apiType: "cdi" | "fdi") {
     });
   }
 
-  const methodPriority = { get: 1, post: 2, put: 3, pathc: 4, delete: 5 };
+  const methodPriority = { get: 1, post: 2, put: 3, patch: 4, delete: 5 };
   for (const folderName in pageOrderingMap) {
     pageOrderingMap[folderName].sort((a, b) => {
       const priorityA = methodPriority[a.method as keyof typeof methodPriority];
@@ -134,7 +135,8 @@ async function writePage(operationId: string, apiType: "cdi" | "fdi", mapping: A
 
   const fileContent = `---
 title: ${mapping.frontmatter.title}
-sidebar_position: 1
+sidebar_label: ${mapping.frontmatter.sidebar_label}
+sidebar_position: ${mapping.frontmatter.sidebar_position}
 description: >-
 ${description
   .trim()
