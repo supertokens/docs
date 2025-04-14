@@ -66,12 +66,18 @@ function APIReferencePageTitle() {
 
   return ReactDOM.createPortal(
     <Box mb="4">
-      <Heading as="h1" size="8">
+      <Heading
+        as="h1"
+        size={{
+          initial: "7",
+          md: "8",
+        }}
+      >
         {operationSummary}
       </Heading>
       <Flex align="center">
         <APIRequestPath />
-        <Box ml="auto">
+        <Box ml="auto" display={{ initial: "none", md: "block" }}>
           <APIRequestApiTypeBadge />
         </Box>
       </Flex>{" "}

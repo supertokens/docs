@@ -86,42 +86,6 @@ function buildFDIFormattedPath(path: string, apiBasePath: string, tenantType: "s
     : `${apiBasePath}${normalizePath(path)}`;
 }
 
-function APIRequestAPINameBadge() {
-  const { apiName } = useContext(APIRequestContext);
-
-  const apiNameTitle = useMemo(() => {
-    if (apiName === "fdi") return "Frontend Driver Interface";
-    if (apiName === "cdi") return "Core Driver Interface";
-  }, [apiName]);
-
-  const apiNameDescription = useMemo(() => {
-    if (apiName === "fdi") return "The API exposed by the backend SDK. It is used by your frontend.";
-
-    if (apiName === "cdi")
-      return "The API exposed by the SuperTokens Core Service. The backend SDK used it to persist the authentication state.";
-  }, [apiName]);
-
-  return (
-    <HoverCard.Root>
-      <HoverCard.Trigger>
-        <Badge variant="soft" color="orange" size="2" radius="medium">
-          {apiName.toUpperCase()}
-        </Badge>
-      </HoverCard.Trigger>
-      <HoverCard.Content maxWidth="300px">
-        <Flex gap="4">
-          <Heading as="h3" size="3">
-            {apiNameTitle}
-          </Heading>
-          <Text size="3" color="gray">
-            {apiNameDescription}
-          </Text>
-        </Flex>
-      </HoverCard.Content>
-    </HoverCard.Root>
-  );
-}
-
 export function APIRequestTitle() {
   const { title } = useContext(APIRequestContext);
 
@@ -182,9 +146,16 @@ export function APIRequestPath() {
   }, [path]);
 
   return (
-    <Flex gap="5">
-      <Flex gap="4" align="center" asChild>
-        <Heading as="h2" size="6" mb="0">
+    <Flex gap="5" style={{ maxWidth: "100%" }}>
+      <Flex gap="4" align="center" style={{ maxWidth: "100%" }} asChild>
+        <Heading
+          as="h2"
+          size={{
+            initial: "4",
+            md: "6",
+          }}
+          mb="0"
+        >
           <Text color={MethodToColorMap[method]} align="center">
             {method.toUpperCase()}
           </Text>
@@ -477,7 +448,7 @@ function APIRequestResponseBody({
 
   if (!bodySchema) return null;
 
-  if (mediaType !== "application/json") {
+  if (mediaType !== "application/json" && bodySchema.enum) {
     return (
       <Flex direction="column" gap="2">
         {bodySchema.enum[0]}
@@ -583,7 +554,7 @@ export function APIRequestApiTypeBadge() {
         </Box>
       </HoverCard.Trigger>
       <Box p="0" asChild>
-        <HoverCard.Content>
+        <HoverCard.Content align="end">
           <Callout.Root color="blue">
             <Flex gap="2">
               <Callout.Icon>
@@ -689,7 +660,7 @@ export function APIRequestSecuritySection() {
           </Flex>
 
           <Accordion.Content className="api-request-accordion__content">
-            <Flex direction="column" gap="3" mt="3">
+            <Flex direction="column">
               {securityRequirements.map((securityRequirement, index) => {
                 return <APISecuritySchemeItem scheme={securityRequirement} />;
               })}

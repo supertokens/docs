@@ -1,9 +1,11 @@
 import { Box, HoverCard, Text, Flex, Code, Separator, Select, TextField, Card, Heading } from "@radix-ui/themes";
 import * as RadixAccordion from "@radix-ui/react-accordion";
 import ChevronDownIcon from "/img/icons/chevron-down.svg";
+import CopyIcon from "/img/icons/copy.svg";
+import CheckIcon from "/img/icons/check.svg";
 import CodeBlock from "@site/src/theme/CodeBlock";
 import type { OpenAPIV3 } from "@scalar/openapi-types";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getExampleFromSchema } from "@site/src/lib";
 
 export function APIRequestSchemaCard({
@@ -57,7 +59,7 @@ export function APIRequestSchemaCard({
 
   if (name && nestingLevel > 0) {
     return (
-      <Box p="0" asChild>
+      <Box p="0" mt="1" asChild>
         <Card variant="classic" asChild>
           <Flex p="0" direction="column" gap="0" align="stretch" asChild>
             <RadixAccordion.Root type="multiple" className="api-request-accordion">
@@ -148,25 +150,71 @@ function SchemaPropertiesList({ schema, nestingLevel }: { schema: OpenAPIV3.Sche
 
 function PropertyExample({ schema, propName }: { schema: OpenAPIV3.SchemaObject; propName: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [hoverCardIsActive, setHoverCardIsActive] = useState(false);
+  const [hoverCardIsEnabled, setHoverCardIsEnabled] = useState(false);
+  const [hoverCardIsVisible, setHoverCardIsVisible] = useState(false);
+  const [hasCopied, setHasCopied] = useState(false);
+
+  const IconComponent = hasCopied ? CheckIcon : CopyIcon;
+
+  const parsedPropertySchema = useMemo<{ value: string; formattedValue: string; options: string[] }>(() => {
+    if (!schema.properties) return null;
+
+    const propertySchema = schema.properties[propName] as OpenAPIV3.SchemaObject;
+
+    if (propertySchema.enum && propertySchema.enum.length > 1) {
+      return { value: propertySchema.enum[0], formattedValue: propertySchema.enum[0], options: propertySchema.enum };
+    }
+
+    let value = propertySchema.example || propertySchema.default || "";
+    let formattedValue = propertySchema.example || propertySchema.default || "";
+    if (propertySchema.type === "object" || propertySchema.type === "array") {
+      value = JSON.stringify(getExampleFromSchema(propertySchema));
+      formattedValue = JSON.stringify(getExampleFromSchema(propertySchema), null, 2);
+    }
+
+    if (propertySchema.enum) {
+      value = propertySchema.enum[0];
+      formattedValue = propertySchema.enum[0];
+    }
+
+    return { value, formattedValue, options: [] };
+  }, [schema, propName]);
+
+  const onOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (!hoverCardIsEnabled) return;
+      setHoverCardIsVisible(isOpen);
+    },
+    [hoverCardIsEnabled],
+  );
+
+  const copyToClipboard = useCallback(() => {
+    if (!parsedPropertySchema) return;
+    navigator.clipboard.writeText(parsedPropertySchema.value);
+    setHasCopied(true);
+  }, [parsedPropertySchema]);
+
+  const onSelect = useCallback((selectedValue) => {
+    if (!selectedValue) return;
+    navigator.clipboard.writeText(selectedValue);
+  }, []);
 
   useEffect(() => {
     if (inputRef.current) {
-      setHoverCardIsActive(inputRef.current.scrollWidth > inputRef.current.clientWidth);
+      setHoverCardIsEnabled(inputRef.current.scrollWidth > inputRef.current.clientWidth);
     }
   }, []);
-  if (!schema.properties) return null;
 
-  const propertySchema = schema.properties[propName] as OpenAPIV3.SchemaObject;
+  if (!parsedPropertySchema || !parsedPropertySchema.value) return null;
 
-  if (propertySchema.enum && propertySchema.enum.length > 1) {
+  if (parsedPropertySchema.options.length > 1) {
     return (
-      <Box asChild>
-        <Select.Root defaultValue={propertySchema.enum[0]}>
-          <Select.Trigger variant="ghost" color="gray" mr="xs" />
+      <Box className="api-request-property-example">
+        <Select.Root defaultValue={parsedPropertySchema.value} onValueChange={onSelect}>
+          <Select.Trigger className="api-request-property-example__input" variant="surface" color="gray" mr="xs" />
           <Select.Content>
-            {propertySchema.enum.map((value, index) => (
-              <Select.Item key={index} value={value}>
+            {parsedPropertySchema.options.map((value, index) => (
+              <Select.Item key={index} value={value} onClick={copyToClipboard}>
                 {value}
               </Select.Item>
             ))}
@@ -176,35 +224,28 @@ function PropertyExample({ schema, propName }: { schema: OpenAPIV3.SchemaObject;
     );
   }
 
-  let value = propertySchema.example || propertySchema.default || "";
-  let formattedValue = propertySchema.example || propertySchema.default || "";
-  if (propertySchema.type === "object" || propertySchema.type === "array") {
-    value = JSON.stringify(getExampleFromSchema(propertySchema));
-    formattedValue = JSON.stringify(getExampleFromSchema(propertySchema), null, 2);
-  }
-
-  if (propertySchema.enum) {
-    value = propertySchema.enum[0];
-    formattedValue = propertySchema.enum[0];
-  }
-
-  if (!value) return null;
-
-  if (hoverCardIsActive) {
-    return (
-      <HoverCard.Root>
+  return (
+    <Box position="relative" className="api-request-property-example">
+      <HoverCard.Root open={hoverCardIsVisible} onOpenChange={onOpenChange}>
         <HoverCard.Trigger>
-          <TextField.Root ref={inputRef} className="api-request-property-example" defaultValue={value} disabled />
+          <TextField.Root
+            ref={inputRef}
+            onMouseLeave={() => setHasCopied(false)}
+            onClick={copyToClipboard}
+            readOnly
+            defaultValue={parsedPropertySchema.value}
+            className="api-request-property-example__input"
+          />
         </HoverCard.Trigger>
         <Box p="0" className="api-request-property-example__hover-card" asChild>
           <HoverCard.Content maxWidth="400px">
-            <CodeBlock language="json">{formattedValue}</CodeBlock>
+            <CodeBlock language="json">{parsedPropertySchema.formattedValue}</CodeBlock>
           </HoverCard.Content>
         </Box>
       </HoverCard.Root>
-    );
-  }
-  return <TextField.Root ref={inputRef} className="api-request-property-example" defaultValue={value} disabled />;
+      <IconComponent className="api-request-property-example__icon" />
+    </Box>
+  );
 }
 
 function isRequired(schema: OpenAPIV3.SchemaObject, propName: string) {
