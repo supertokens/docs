@@ -147,7 +147,7 @@ page_type: api-reference
 hide_title: true
 ---
 
-<APIRequestPage apiName="${apiType}" method="${mapping.method}" path="${mapping.path}" title="${mapping.path}" />
+<APIRequestPage apiName="${apiType}" method="${mapping.method}" path="${mapping.path}" title="${mapping.frontmatter.title}" />
 `;
 
   await write(`./docs/references/${mapping.filePath}`, fileContent);

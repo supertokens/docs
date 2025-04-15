@@ -14,6 +14,7 @@ import {
   APIRequestQueryParameters,
   APIRequestResponse,
   APIRequestSecuritySection,
+  APIRequestSkeleton,
   APIRequestTitle,
 } from "./APIRequest";
 import { APIRequestResponsePreview } from "./APIRequestResponsePreview";
@@ -35,32 +36,34 @@ export function APIRequestPage({
 }) {
   return (
     <APIRequestProvider apiName={apiName} path={path} method={method} title={title}>
-      <BrowserOnly>{() => <APIReferencePageTitle />}</BrowserOnly>
-      <Flex direction="column" flexGrow="1" gap="2">
-        <APIRequestDeprecatedCallout />
-        <APIRequestDescription />
-        <APIRequestSecuritySection />
-        <APIRequestPathParameters />
-        <APIRequestQueryParameters />
-        <APIRequestHeaderParameters />
-        <APIRequestBody />
-        <APIRequestResponse />
-      </Flex>
-      <Flex direction="column" gap="2" width={{ initial: "100%", md: "40%" }}>
-        <Flex style={{ position: "sticky", top: "140px" }} gap="5" direction="column">
-          <APIRequestCodeSnippetSegmentedControl />
-          <APIRequestResponsePreview />
+      <APIRequestSkeleton>
+        <BrowserOnly>{() => <APIReferencePageTitle title={title} />}</BrowserOnly>
+        <Flex direction="column" flexGrow="1" gap="2">
+          <APIRequestDeprecatedCallout />
+          <APIRequestDescription />
+          <APIRequestSecuritySection />
+          <APIRequestPathParameters />
+          <APIRequestQueryParameters />
+          <APIRequestHeaderParameters />
+          <APIRequestBody />
+          <APIRequestResponse />
+          <APIRequestSkeleton />
         </Flex>
-      </Flex>
+        <Flex direction="column" gap="2" width={{ initial: "100%", md: "40%" }}>
+          <Flex style={{ position: "sticky", top: "140px" }} gap="5" direction="column">
+            <APIRequestCodeSnippetSegmentedControl />
+            <APIRequestResponsePreview />
+          </Flex>
+        </Flex>
+      </APIRequestSkeleton>
     </APIRequestProvider>
   );
 }
 
-function APIReferencePageTitle() {
+function APIReferencePageTitle({ title }: { title: string }) {
   // Access a value from the context to force a re-render
   const { operation } = useContext(APIRequestContext);
   const root = document.getElementById(API_REFERENCE_PAGE_TITLE_ID);
-  const operationSummary = operation?.summary;
 
   if (!root) return null;
 
@@ -73,7 +76,7 @@ function APIReferencePageTitle() {
           md: "8",
         }}
       >
-        {operationSummary}
+        {title}
       </Heading>
       <Flex align="center">
         <APIRequestPath />

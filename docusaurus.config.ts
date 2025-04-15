@@ -52,6 +52,7 @@ const config: Config = {
           remarkPlugins: [remarkDocItemDescription],
           async sidebarItemsGenerator({ defaultSidebarItemsGenerator, ...args }) {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
+
             return sidebarItems;
           },
         },
@@ -101,6 +102,7 @@ const config: Config = {
       apiKey: "ce04a158637d345fc094ebbfa9a5156a",
       indexName: "supertokens",
       appId: "SBR5UR2Z16",
+      insights: true,
     },
     prism: {
       theme: prismThemes.vsDark,

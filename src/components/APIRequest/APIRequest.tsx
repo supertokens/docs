@@ -1,4 +1,4 @@
-import { Badge, Card, Text, Code, Flex, Heading, HoverCard, Box, Separator, Callout } from "@radix-ui/themes";
+import { Badge, Card, Text, Code, Skeleton, Flex, Heading, HoverCard, Box, Separator, Callout } from "@radix-ui/themes";
 import { DocItemContext } from "@site/src/context";
 import InfoCircledIcon from "/img/icons/info-circled.svg";
 import CopyIcon from "/img/icons/copy.svg";
@@ -716,4 +716,35 @@ function APISecuritySchemeItem({ scheme }: { scheme: OpenAPIV3.SecuritySchemeObj
   }
 
   return null;
+}
+
+export function APIRequestSkeleton({ children }: { children?: React.ReactNode }) {
+  const { operation, title } = useContext(APIRequestContext);
+
+  if (operation) return children;
+
+  return (
+    <Flex direction="column" width="100%" gap="9">
+      <Box mb="4">
+        <Heading
+          as="h1"
+          size={{
+            initial: "7",
+            md: "8",
+          }}
+        >
+          {title}
+        </Heading>
+        <Flex align="center">
+          <APIRequestPath />
+          <Box ml="auto" display={{ initial: "none", md: "block" }}>
+            <APIRequestApiTypeBadge />
+          </Box>
+        </Flex>{" "}
+      </Box>
+      <Box>
+        <Skeleton height="600px" />
+      </Box>
+    </Flex>
+  );
 }
