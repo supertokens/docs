@@ -47,7 +47,6 @@ export function APIRequestPage({
           <APIRequestHeaderParameters />
           <APIRequestBody />
           <APIRequestResponse />
-          <APIRequestSkeleton />
         </Flex>
         <Flex direction="column" gap="2" width={{ initial: "100%", md: "40%" }}>
           <Flex style={{ position: "sticky", top: "140px" }} gap="5" direction="column">
