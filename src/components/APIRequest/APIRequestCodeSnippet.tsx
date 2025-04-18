@@ -1,22 +1,9 @@
-import {
-  Text,
-  Flex,
-  Select,
-  Card,
-  Dialog,
-  Separator,
-  Button,
-  Box,
-  Grid,
-  TextField,
-  VisuallyHidden,
-} from "@radix-ui/themes";
+import { Text, Flex, Select, Card, Separator } from "@radix-ui/themes";
 import { useDocPageData } from "@site/src/hooks";
 import { DocPageState, docPageStore, generateCodeSnippetFromAPIRequest } from "@site/src/lib";
 import CodeBlock from "@site/src/theme/CodeBlock";
 import { useContext, useMemo } from "react";
 import { APIRequestContext } from "./APIRequest";
-import * as Form from "@radix-ui/react-form";
 
 export function APIRequestCodeSnippetSegmentedControl() {
   const language = useDocPageData("apiRequestExampleLanguage");
