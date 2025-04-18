@@ -52,13 +52,14 @@ const config: Config = {
           remarkPlugins: [remarkDocItemDescription],
           async sidebarItemsGenerator({ defaultSidebarItemsGenerator, ...args }) {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
+
             return sidebarItems;
           },
         },
         blog: false,
         pages: false,
         theme: {
-          customCss: ["./src/css/custom.scss", "./src/css/radix.css"],
+          customCss: ["./src/css/custom.scss", "./src/css/fonts.css", "./src/css/radix.css"],
         },
       } satisfies Preset.Options,
     ],
@@ -101,6 +102,7 @@ const config: Config = {
       apiKey: "ce04a158637d345fc094ebbfa9a5156a",
       indexName: "supertokens",
       appId: "SBR5UR2Z16",
+      insights: true,
     },
     prism: {
       theme: prismThemes.vsDark,

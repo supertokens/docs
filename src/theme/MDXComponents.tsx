@@ -11,6 +11,7 @@ import {
   TokensCallout,
   Steps,
   Accordion,
+  APIRequestPage,
 } from "@site/src/components";
 import { Separator, Heading } from "@radix-ui/themes";
 
@@ -83,6 +84,7 @@ export default {
   TabItem,
   PaidFeatureCallout,
   TokensCallout,
+  APIRequestPage,
   Steps: ({ children, ...rest }) => (
     <Steps mode="mdx" {...rest}>
       {children}

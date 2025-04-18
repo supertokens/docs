@@ -4,9 +4,15 @@ import { useDocsSidebar } from "@docusaurus/plugin-content-docs/client";
 import type { Props } from "@theme/DocRoot/Layout/Main";
 
 import styles from "./styles.module.css";
+import { useLocation } from "@docusaurus/router";
 
 export default function DocRootLayoutMain({ hiddenSidebarContainer, children }: Props): JSX.Element {
   const sidebar = useDocsSidebar();
+  const { pathname } = useLocation();
+
+  const isApiReferencePath =
+    pathname.includes("/references/fdi") ||
+    (pathname.includes("/references/cdi") && !pathname.includes("introduction"));
 
   return (
     <main
@@ -18,6 +24,7 @@ export default function DocRootLayoutMain({ hiddenSidebarContainer, children }: 
           styles.docItemWrapper,
           hiddenSidebarContainer && styles.docItemWrapperEnhanced,
         )}
+        data-page-type={isApiReferencePath ? "api-reference" : ""}
       >
         {children}
       </div>

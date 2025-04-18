@@ -19,7 +19,6 @@ import { createContext, useContext, useMemo, useState } from "react";
 import { SideModal } from "../Modal";
 
 import InfoIcon from "/img/icons/info.svg";
-import { OpenAPIDocument } from "@site/src/lib/types";
 
 import "./HTTPRequestCard.scss";
 
@@ -106,10 +105,6 @@ function HTTPRequestCardRoot({
                 <SegmentedControl.Item value="go">Go</SegmentedControl.Item>
               </SegmentedControl.Root>
               {children}
-              {/* <ShellExample /> */}
-              {/* <NodeJSExample /> */}
-              {/* <PythonExample /> */}
-              {/* <GoExample /> */}
             </Flex>
           </Card>
         </Box>
