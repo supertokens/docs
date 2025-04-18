@@ -1,9 +1,8 @@
 import { Tabs, Badge, Box, Card, Flex, Heading, Text, Select } from "@radix-ui/themes";
-import { generateExampleFromAPIRequestSchema, getExampleFromSchema } from "@site/src/lib";
+import { getExampleFromSchema } from "@site/src/lib";
 import CodeBlock from "@site/src/theme/CodeBlock";
 import { useContext, useMemo, useState } from "react";
 import { APIRequestContext } from "./APIRequest";
-import { APIRequestSchema } from "@site/src/types";
 import type { OpenAPIV3 } from "@scalar/openapi-types";
 
 export function APIRequestResponsePreview() {

@@ -177,5 +177,5 @@ async function reorderCategories(apiType: "cdi" | "fdi") {
 }
 
 (async () => {
-  await Promise.all([generateAPIReferencePages("fdi"), generateAPIReferencePages("cdi")]);
+  await Promise.all([generateAPIReferencePages("cdi")]);
 })();

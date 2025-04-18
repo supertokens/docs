@@ -7,6 +7,7 @@ import CodeBlock from "@site/src/theme/CodeBlock";
 import type { OpenAPIV3 } from "@scalar/openapi-types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getExampleFromSchema } from "@site/src/lib";
+import { normalizeOpenAPIObject } from "@site/src/lib/normalizeOpenAPIObject";
 
 export function APIRequestSchemaCard({
   schema,
@@ -17,24 +18,99 @@ export function APIRequestSchemaCard({
   name?: string;
   nestingLevel?: number;
 }) {
-  if (nestingLevel > 4) {
+  if (nestingLevel > 9) {
     throw new Error("Nesting level too deep. Use a different UI element for this.");
   }
 
-  if (schema.oneOf) {
+  const parsedSchema = useMemo(() => {
+    return normalizeOpenAPIObject(schema);
+  }, [schema]);
+
+  if (parsedSchema.oneOf || parsedSchema.anyOf) {
+    const oneOfSchemas = parsedSchema.oneOf || parsedSchema.anyOf;
+
+    const label = parsedSchema.oneOf
+      ? "One of the following schemas can be used:"
+      : "Any of the following schemas can be used:";
+
+    if (parsedSchema.name) {
+      return (
+        <Box p="0" mt="1" asChild>
+          <Card variant="classic" asChild>
+            <Flex p="0" direction="column" gap="0" align="stretch" asChild>
+              <RadixAccordion.Root type="multiple" className="api-request-accordion">
+                <RadixAccordion.Item value={parsedSchema.name} className="api-request-accordion__item">
+                  <Flex asChild>
+                    <Heading size="2" as="h4" mb="0" asChild>
+                      <RadixAccordion.Header>
+                        <Flex gap="2" align="center" px="3" py="2" asChild flexGrow="1">
+                          <RadixAccordion.Trigger className="api-request-accordion__trigger">
+                            <ChevronDownIcon className="api-request-accordion__icon" aria-hidden />
+                            {parsedSchema.name}
+                          </RadixAccordion.Trigger>
+                        </Flex>
+                      </RadixAccordion.Header>
+                    </Heading>
+                  </Flex>
+                  <RadixAccordion.Content className="api-request-accordion__content">
+                    <Box px="3" py="2">
+                      <Text size="3" color="gray">
+                        {label}
+                      </Text>
+                    </Box>
+                    <Separator size="4" />
+
+                    <Flex direction="column" gap="2" px="2">
+                      {oneOfSchemas.map((itemSchema, index) => {
+                        const typedSchema = itemSchema as OpenAPIV3.SchemaObject;
+                        return (
+                          <Box key={`${itemSchema.type}-${index}`}>
+                            <APIRequestSchemaCard
+                              key={index}
+                              name={itemSchema.name || ""}
+                              nestingLevel={nestingLevel + 1}
+                              schema={typedSchema}
+                            />
+                            {index !== oneOfSchemas.length - 1 && (
+                              <Flex gap="2" mb="2" mt="3" align="center">
+                                <Separator size="4" />
+                                <Text size="2" color="gray">
+                                  OR
+                                </Text>
+                                <Separator size="4" />
+                              </Flex>
+                            )}
+                          </Box>
+                        );
+                      })}
+                    </Flex>
+                  </RadixAccordion.Content>
+                </RadixAccordion.Item>
+              </RadixAccordion.Root>
+            </Flex>
+          </Card>
+        </Box>
+      );
+    }
+
     return (
       <>
         <Text size="3" color="gray">
-          One of the following schemas can be used:
+          {label}
         </Text>
 
-        <Flex direction="column" gap="2">
-          {schema.oneOf.map((itemSchema, index) => {
+        <Flex direction="column" gap="2" px="2">
+          {oneOfSchemas.map((itemSchema, index) => {
             const typedSchema = itemSchema as OpenAPIV3.SchemaObject;
             return (
               <Box key={`${itemSchema.type}-${index}`}>
-                <APIRequestSchemaCard key={index} schema={typedSchema} />
-                {index !== schema.oneOf.length - 1 && (
+                <APIRequestSchemaCard
+                  key={index}
+                  name={itemSchema.name || ""}
+                  nestingLevel={nestingLevel + 1}
+                  schema={typedSchema}
+                />
+                {index !== oneOfSchemas.length - 1 && (
                   <Flex gap="2" mb="2" mt="3" align="center">
                     <Separator size="4" />
                     <Text size="2" color="gray">
@@ -47,12 +123,6 @@ export function APIRequestSchemaCard({
             );
           })}
         </Flex>
-
-        {/* <Box p="0" asChild> */}
-        {/*   <Card> */}
-        {/*     <SchemaPropertiesList schema={schema} nestingLevel={nestingLevel} /> */}
-        {/*   </Card> */}
-        {/* </Box> */}
       </>
     );
   }
@@ -77,7 +147,7 @@ export function APIRequestSchemaCard({
                   </Heading>
                 </Flex>
                 <RadixAccordion.Content className="api-request-accordion__content">
-                  <SchemaPropertiesList schema={schema} nestingLevel={nestingLevel} />
+                  <SchemaPropertiesList schema={parsedSchema} nestingLevel={nestingLevel} />
                 </RadixAccordion.Content>
               </RadixAccordion.Item>
             </RadixAccordion.Root>
@@ -131,7 +201,23 @@ function SchemaPropertiesList({ schema, nestingLevel }: { schema: OpenAPIV3.Sche
                     name="Properties"
                   />
                 ) : null}
-                {properties[propName].type === "array" && properties[propName].items.type === "object" ? (
+                {properties[propName].type === "array" &&
+                properties[propName].items.type === "object" &&
+                properties[propName].items.properties ? (
+                  <APIRequestSchemaCard
+                    schema={properties[propName].items}
+                    nestingLevel={nestingLevel + 1}
+                    name="Array item properties"
+                  />
+                ) : null}
+                {properties[propName].type === "array" && properties[propName].items.anyOf ? (
+                  <APIRequestSchemaCard
+                    schema={properties[propName].items}
+                    nestingLevel={nestingLevel + 1}
+                    name="Array item properties"
+                  />
+                ) : null}
+                {properties[propName].type === "array" && properties[propName].items.oneOf ? (
                   <APIRequestSchemaCard
                     schema={properties[propName].items}
                     nestingLevel={nestingLevel + 1}
