@@ -131,18 +131,13 @@ async function writePage(operationId: string, apiType: "cdi" | "fdi", mapping: A
     );
   }
 
-  const description = (mapping.frontmatter.description as string) || "";
+  // const description = (mapping.frontmatter.description as string) || "";
 
   const fileContent = `---
 title: ${mapping.frontmatter.title}
 sidebar_label: ${mapping.frontmatter.sidebar_label}
 sidebar_position: ${mapping.frontmatter.sidebar_position}
-description: >-
-${description
-  .trim()
-  .split("\n")
-  .map((line) => `   ${line.trim()}`)
-  .join("\n")}
+description: ${mapping.method.toUpperCase()} ${mapping.path} endpoint exposed by the ${apiType.toUpperCase()} API
 page_type: api-reference
 hide_title: true
 ---

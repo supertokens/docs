@@ -1,4 +1,4 @@
-import { Box, Flex, Grid, Heading, Separator } from "@radix-ui/themes";
+import { Box, Flex, Heading } from "@radix-ui/themes";
 import { APIRequestMethod } from "@site/src/types";
 import ReactDOM from "react-dom";
 import {
@@ -15,12 +15,10 @@ import {
   APIRequestResponse,
   APIRequestSecuritySection,
   APIRequestSkeleton,
-  APIRequestTitle,
 } from "./APIRequest";
 import { APIRequestResponsePreview } from "./APIRequestResponsePreview";
-import { APIRequestApiTypeCallout } from "./ApiRequestApiTypeCallout";
 import { APIRequestCodeSnippetSegmentedControl } from "./APIRequestCodeSnippet";
-import { useContext, useRef } from "react";
+import { useContext } from "react";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 
 export function APIRequestPage({
