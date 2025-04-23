@@ -157,7 +157,6 @@ ${buildContent(content.files.filter((file) => file.path.includes("/platform-conf
 ${buildContent(content.files.filter((file) => file.path.includes("/references")))}
 
 
-
 `;
 
       fs.writeFileSync(path.join(outDir, "llms.txt"), llmsTxt);
