@@ -79,19 +79,21 @@ function AnalyticsConsentBanner() {
         initial: "16px",
         sm: "auto",
       }}
-      width={{ initial: "auto", sm: "500px" }}
-      style={{ boxShadow: "var(--shadow-4)" }}
+      width={{ initial: "auto", sm: "370px" }}
+      style={{
+        boxShadow: "var(--shadow-4)",
+        // @ts-ignore
+        "--card-background-color": "var(--gray-2)",
+      }}
       asChild
     >
-      <Card size="2">
+      <Card size="2" variant="classic">
         <Flex direction="column">
           <Text as="p" size="3">
-            We use cookies and similar technologies to help personalize content, analyze site usage, and provide a
-            better experience. By clicking "Accept" you consent to our use of cookies. Visit our{" "}
+            This website uses cookies to improve your experience. Please click decline to disable tracking cookies{" "}
             <a href="https://supertokens.com/legal/privacy-policy" target="_blank">
               Privacy Policy
-            </a>{" "}
-            for more information.
+            </a>
           </Text>
           <Flex gap="3" justify="end">
             <Button variant="soft" onClick={onDecline}>
