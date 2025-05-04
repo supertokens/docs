@@ -15,17 +15,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (localStorage.getItem("analytics-consent") === "true") {
-      trackPageView();
-    }
+    trackPageView();
   }, [pathname]);
 
   useEffect(() => {
     const controller = new AbortController();
     const handleBeforeUnload = () => {
-      if (localStorage.getItem("analytics-consent") === "true") {
-        trackPageExit("app-close");
-      }
+      trackPageExit("app-close");
     };
     window.addEventListener("beforeunload", handleBeforeUnload, { signal: controller.signal });
     return () => controller.abort();
@@ -34,9 +30,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const controller = new AbortController();
     const handleVisibilityChange = () => {
-      if (localStorage.getItem("analytics-consent") === "true") {
-        trackPageExit("visibility-change", document.visibilityState);
-      }
+      trackPageExit("visibility-change", document.visibilityState);
     };
     document.addEventListener("visibilitychange", handleVisibilityChange, { signal: controller.signal });
     return () => controller.abort();
