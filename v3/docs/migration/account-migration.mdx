@@ -1,0 +1,734 @@
+---
+title: Account Migration
+hide_title: true
+sidebar_position: 2
+toc_max_heading_level: 4
+description: Migrate your users from a legacy authentication provider to SuperTokens.
+---
+
+import { Separator } from "/src/components/Separator";
+import { DescriptionText } from "/src/components/DescriptionText";
+import { HTTPRequestCard } from "/src/components/Cards";
+import { H2, H3 } from "/src/components/Typography";
+import { BackendTabs } from "/src/components/Tabs";
+import { Accordion } from "/src/components/Accordion";
+
+import BulkImportUserRequest from "./_blocks/bulk-import-user-request.mdx"
+import BulkImportUsersCountRequest from "./_blocks/count-staged-users-request.mdx"
+import BulkImportUsersGetRequest from "./_blocks/get-staged-users-request.mdx"
+import BulkImportUsersAddRequest from "./_blocks/add-users-for-bulk-import-request.mdx"
+
+# Account Migration
+
+<DescriptionText>
+  The following guide will show you how to move your users from your current authentication solution to **SuperTokens**
+</DescriptionText>
+
+<Separator />
+
+## Overview
+
+The process of migrating your accounts can be broken down into two parts:
+
+### Creating new users on the fly
+
+In order to ensure a smooth migration process, with no downtime, you need to be able to directly create new users from the legacy sign up flow.
+This is necessary since there will be a time gap between when you export all your data for bulk import and when you go live with **SuperTokens**. 
+
+New users might get created in that interval through your legacy authentication provider. 
+Hence, you will also need to create them in **SuperTokens** to keep the data in sync.  
+
+### Adding most of your users through a bulk import
+
+After you have set in place the lazy migration process you can move on to adding most of your users.
+This will happened through the bulk import API.
+The process is asynchronous and can work with large amounts of data.
+
+
+
+## Before You Start
+
+This guide assumes that you have already integrated **SuperTokens** with your existing stack.
+If you have not, please check the [Quickstart Guide](/docs/quickstart/introduction) and explore all the supported [authentication methods](/docs/authentication/overview).
+
+
+## Steps
+
+### 1. Update the legacy sign up flow 
+
+Modify the legacy sign up flow logic to also create new users in **SuperTokens**.
+This can be done through the `Import User` endpoint that allows you to directly create accounts.
+Call the endpoint from the authentication flow used by your legacy provider.
+
+After you have added the new sign up logic you can deploy the changes and move to the next step.
+
+:::info
+If your application does not have a sign up process or if new users are created manually you can skip this step
+:::
+
+<HTTPRequestCard path="/bulk-import/import" method="post" title="Import User">
+  <HTTPRequestCard.ShellExample>
+
+```bash
+curl --location --request POST '^{coreInfo.uri}/bulk-import/import' \
+     --header 'api-key: ^{coreInfo.key}' \
+     --header 'Content-Type: application/json; charset=utf-8' \
+     --data '
+    {
+      "externalUserId": "user_12345",
+      "userMetadata": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "department": "Engineering"
+      },
+      "userRoles": [{ "role": "admin", "tenantIds": [] }],
+      "totpDevices": [
+        {
+          "secretKey": "JBSWY3DPEHPK3PXP",
+          "period": 30,
+          "skew": 1,
+          "deviceName": "Main Device"
+        }
+      ],
+      "loginMethods": [
+        {
+          "isVerified": true,
+          "isPrimary": true,
+          "timeJoinedInMSSinceEpoch": 1672531199000,
+          "recipeId": "emailpassword",
+          "email": "jane.doe@example.com",
+          "passwordHash": "$2b$12$KIXQeFz...",
+          "hashingAlgorithm": "bcrypt"
+        }
+      ]
+    }
+'
+```
+
+  </HTTPRequestCard.ShellExample>
+  <HTTPRequestCard.NodeJSExample>
+
+    ```tsx
+    const BASE_URL = '^{coreInfo.uri}';
+    const API_KEY = '^{coreInfo.key}';
+
+    const url = `${BASE_URL}/bulk-import/import`;
+    const options = {
+      method: 'POST',
+      headers: {
+        'api-key': API_KEY,
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify({
+          externalUserId: "user_12345",
+          userRoles: [{ role: "admin", tenantIds: [] }],
+          userMetadata: {
+            firstName: "Jane",
+            lastName: "Doe",
+            department: "Engineering"
+          },
+          totpDevices: [
+            {
+              secretKey: "JBSWY3DPEHPK3PXP",
+              period: 30,
+              skew: 1,
+              deviceName: "Main Device"
+            }
+          ],
+          loginMethods: [
+            {
+              isVerified: true,
+              isPrimary: true,
+              timeJoinedInMSSinceEpoch: 1672531199000,
+              recipeId: "emailpassword",
+              email: "jane.doe@example.com",
+              passwordHash: "$2b$12$KIXQeFz...",
+              hashingAlgorithm: "bcrypt"
+            }
+          ]
+      })
+    }
+
+    fetch(url, options)
+      .then(response => response.json())
+      .then(json => console.log(json))
+      .catch(err => console.error(err));
+    ```
+
+  </HTTPRequestCard.NodeJSExample>
+  <HTTPRequestCard.GoExample>
+
+    ```go
+
+    import (
+      "fmt"
+      "net/http"
+      "strings"
+      "io"
+    )
+
+    func main() {
+      baseUrl := "^{coreInfo.uri}"
+      apiKey := "^{coreInfo.key}"
+      url := fmt.Sprintf("%s/bulk-import/import", baseUrl)
+      payload := `{
+          "externalUserId": "user_12345",
+          "userMetadata": {
+            "firstName": "Jane",
+            "lastName": "Doe",
+            "department": "Engineering"
+          },
+          "userRoles": [{ "role": "admin", "tenantIds": [] }],
+          "totpDevices": [
+            {
+              "secretKey": "JBSWY3DPEHPK3PXP",
+              "period": 30,
+              "skew": 1,
+              "deviceName": "Main Device"
+            }
+          ],
+          "loginMethods": [
+            {
+              "isVerified": true,
+              "isPrimary": true,
+              "timeJoinedInMSSinceEpoch": 1672531199000,
+              "recipeId": "emailpassword",
+              "email": "jane.doe@example.com",
+              "passwordHash": "$2b$12$KIXQeFz...",
+              "hashingAlgorithm": "bcrypt"
+            }
+        ]
+      }`
+
+      req, _ := http.NewRequest("POST", url, strings.NewReader(payload))
+
+      req.Header.Add("accept", "application/json")
+      req.Header.Add("api-key", apiKey)
+      req.Header.Add("content-type", "application/json")
+
+      res, _ := http.DefaultClient.Do(req)
+
+      defer res.Body.Close()
+      body, _ := io.ReadAll(res.Body)
+
+      fmt.Println(string(body))
+    }
+    ```
+
+  </HTTPRequestCard.GoExample>
+  <HTTPRequestCard.PythonExample>
+
+    ```python
+    import requests
+    from typing import Dict, Any
+
+    BASE_URL = "^{coreInfo.uri}"
+    API_KEY = "^{coreInfo.key}"
+
+    url = f"{BASE_URL}/bulk-import/import"
+
+    payload: Dict[str, Any] = {
+        "externalUserId": "user_12345",
+        "userMetadata": {
+            "firstName": "Jane",
+            "lastName": "Doe",
+            "department": "Engineering"
+        },
+        "userRoles": [{ "role": "admin", "tenantIds": [] }],
+        "totpDevices": [
+            {
+                "secretKey": "JBSWY3DPEHPK3PXP",
+                "period": 30,
+                "skew": 1,
+                "deviceName": "Main Device"
+            }
+        ],
+        "loginMethods": [
+            {
+                "isVerified": True,
+                "isPrimary": True,
+                "timeJoinedInMSSinceEpoch": 1672531199000,
+                "recipeId": "emailpassword",
+                "email": "jane.doe@example.com",
+                "passwordHash": "$2b$12$KIXQeFz...",
+                "hashingAlgorithm": "bcrypt"
+            }
+        ]
+    }
+
+    headers = {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    print(response.json())
+    ```
+
+  </HTTPRequestCard.PythonExample>
+  <HTTPRequestCard.DetailsModal>
+<BulkImportUserRequest />
+  </HTTPRequestCard.DetailsModal>
+</HTTPRequestCard>
+
+:::info
+If your current authentication logic includes a password change flow, you will also have to update it, to keep the user data in sync.
+:::
+
+:::info Email Verification During Import
+When importing users, the `isVerified` field in each login method determines whether the email/phone will be marked as verified. Make sure to set this field correctly based on the verification status in your legacy system.
+:::
+
+### 2. Export the accounts from your legacy provider
+
+Export the users from your legacy authentication provider and adjust the data to match the request body schema used in the [**`Add Users for Bulk Import`**](#add-users-for-bulk-import-http-request) endpoint. 
+
+### 3. Perform the bulk migration process
+
+:::warning
+
+If your application has a sign up process please make sure that you have completed the [**first step**](#1-update-the-legacy-sign-up-flow).
+Otherwise, new accounts that get created after you have exported your users will not be available in **SuperTokens**. 
+
+:::
+
+
+#### 3.1 Add the accounts that should be imported
+
+Using the data that you have generated in the previous step, call the `Add Users for Bulk Import` endpoint.
+This step stages the data that will be imported later on by the background job.
+
+Keep in mind that the endpoint has a limit of **10000 users** per request.
+
+
+<HTTPRequestCard path="/bulk-import/users" method="post" title="Add Users for Bulk Import">
+  <HTTPRequestCard.ShellExample>
+
+```bash
+curl --location --request POST '^{coreInfo.uri}/bulk-import/users' \
+     --header 'api-key: ^{coreInfo.key}' \
+     --header 'Content-Type: application/json; charset=utf-8' \
+     --data-raw '{
+    users: [
+    {
+      "externalUserId": "user_2",
+      "userMetadata": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "department": "Marketing"
+      },
+      "userRoles": [{ "role": "editor", "tenantIds": [] }],
+      "loginMethods": [
+        {
+          "isVerified": true,
+          "isPrimary": true,
+          "timeJoinedInMSSinceEpoch": 1672617599000,
+          "recipeId": "thirdparty",
+          "email": "john.doe@gmail.com",
+          "thirdPartyId": "google",
+          "thirdPartyUserId": "google_987654321"
+        }
+      ]
+  }
+    ]
+}
+```
+
+  </HTTPRequestCard.ShellExample>
+  <HTTPRequestCard.NodeJSExample>
+
+    ```tsx
+    const BASE_URL = '^{coreInfo.uri}';
+    const API_KEY = '^{coreInfo.key}';
+
+    const url = `${BASE_URL}/bulk-import/users`;
+    const options = {
+      method: 'POST',
+      headers: {
+        'api-key': API_KEY,
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify({
+        users: [
+          {
+            externalUserId: "user_2",
+            userMetadata: {
+              firstName: "John",
+              lastName: "Doe",
+              department: "Marketing"
+            },
+            userRoles: [{ role: "editor", tenantIds: [] }],
+            loginMethods: [
+              {
+                isVerified: true,
+                isPrimary: true,
+                timeJoinedInMSSinceEpoch: 1672617599000,
+                recipeId: "thirdparty",
+                email: "john.doe@gmail.com",
+                thirdPartyId: "google",
+                thirdPartyUserId: "google_987654321"
+              }
+            ]
+          }
+        ]
+      })
+    }
+
+    fetch(url, options)
+      .then(response => response.json())
+      .then(json => console.log(json))
+      .catch(err => console.error(err));
+    ```
+
+  </HTTPRequestCard.NodeJSExample>
+  <HTTPRequestCard.GoExample>
+
+    ```go
+    import (
+      "fmt"
+      "net/http"
+      "strings"
+      "io"
+    )
+
+    func main() {
+      baseUrl := "^{coreInfo.uri}"
+      apiKey := "^{coreInfo.key}"
+      url := fmt.Sprintf("%s/bulk-import/users", baseUrl)
+      payload := `{
+          "users": [
+            {
+              "externalUserId": "user_2",
+              "userMetadata": {
+                "firstName": "John",
+                "lastName": "Doe",
+                "department": "Marketing"
+              },
+              "userRoles": [{ "role": "editor", "tenantIds": [] }],
+              "loginMethods": [
+                {
+                  "isVerified": true,
+                  "isPrimary": true,
+                  "timeJoinedInMSSinceEpoch": 1672617599000,
+                  "recipeId": "thirdparty",
+                  "email": "john.doe@gmail.com",
+                  "thirdPartyId": "google",
+                  "thirdPartyUserId": "google_987654321"
+                }
+              ]
+            }
+          ]
+        }`
+
+      req, _ := http.NewRequest("POST", url, strings.NewReader(payload))
+      req.Header.Add("accept", "application/json")
+      req.Header.Add("api-key", apiKey)
+      req.Header.Add("content-type", "application/json")
+
+      res, _ := http.DefaultClient.Do(req)
+
+      defer res.Body.Close()
+      body, _ := io.ReadAll(res.Body)
+
+      fmt.Println(string(body))
+    }
+    ```
+
+  </HTTPRequestCard.GoExample>
+  <HTTPRequestCard.PythonExample>
+
+    ```python
+    import requests
+    from typing import Dict, Any
+
+    BASE_URL = "^{coreInfo.uri}"
+    API_KEY = "^{coreInfo.key}"
+
+    url = f"{BASE_URL}/bulk-import/users"
+
+    payload: Dict[str, Any] = {
+        "users": [
+            {
+                "externalUserId": "user_2",
+                "userMetadata": {
+                    "firstName": "John",
+                    "lastName": "Doe",
+                    "department": "Marketing"
+                },
+                "userRoles": [{ "role": "editor", "tenantIds": [] }],
+                "loginMethods": [
+                    {
+                        "isVerified": True,
+                        "isPrimary": True,
+                        "timeJoinedInMSSinceEpoch": 1672617599000,
+                        "recipeId": "thirdparty",
+                        "email": "john.doe@gmail.com",
+                        "thirdPartyId": "google",
+                        "thirdPartyUserId": "google_987654321"
+                    }
+                ]
+            }
+        ]
+    }
+
+    headers = {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    print(response.json())
+    ```
+
+  </HTTPRequestCard.PythonExample>
+  <HTTPRequestCard.DetailsModal>
+    <BulkImportUsersAddRequest />
+  </HTTPRequestCard.DetailsModal>
+</HTTPRequestCard>
+
+:::info The Bulk Import Cron Job
+
+Every 5 minutes the **SuperTokens** core service will run a cron job that goes through the staged users and tries to import them.
+If a user gets imported successfully it will get removed from the staged list.
+
+:::
+
+
+#### 3.2 Monitor the progress of the job
+
+In order to determine if all the users have been processed by the import flow call the [`Count Staged Users`](#count-staged-users-http-request) API.
+
+Before doing that, let's first understand the different states in which a staged user can be.
+During the import process, the user can have one of the following statuses:
+- **NEW**: The user has not yet been picked up by the import process.
+- **PROCESSING**: The import process has selected the user for import.
+- **FAILED**: The import process has failed for that user.
+
+If a user gets imported successfully it will then be removed from the staged list. Hence, no status is needed for that state.
+
+With this new information let's get back to the `count users` endpoint.
+The request counts the users that are staged for import.
+Pass a status filter as a query parameter (e.g. `status=NEW`) to count only the users with that status.
+
+Given that information, to check if your import is finalized do the following:
+1. Call the `count users` API once without any filters. If the count is 0, then the import process is done.
+2. If the count is not 0, then check if you still have rows that are getting processed (`status=PROCESSING`) or if there are rows that have not yet been picked up by the import job (`status=NEW`)
+3. If the only rows that are left are the ones with the `FAILED` status, then proceed to step `3.3`. There you will see how to debug those issues.
+
+
+<HTTPRequestCard path="/bulk-import/users/count" method="get" title="Count Staged Users">
+  <HTTPRequestCard.ShellExample>
+
+```bash
+  curl --location --request GET '^{coreInfo.uri}/bulk-import/users/count?status=PROCESSING' \
+     --header 'api-key: ^{coreInfo.key}' \
+     --header 'Content-Type: application/json; charset=utf-8' \
+```
+
+  </HTTPRequestCard.ShellExample>
+  <HTTPRequestCard.NodeJSExample>
+
+  ```tsx
+    const BASE_URL = '^{coreInfo.uri}';
+    const API_KEY = '^{coreInfo.key}';
+
+    const url = `${BASE_URL}/bulk-import/users/count?status=PROCESSING`;
+    const options = {
+      method: 'GET',
+      headers: {
+        'api-key': API_KEY,
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+    }
+
+    fetch(url, options)
+      .then(response => response.json())
+      .then(json => console.log(json))
+      .catch(err => console.error(err));
+  ```
+
+  </HTTPRequestCard.NodeJSExample>
+  <HTTPRequestCard.GoExample>
+
+    ```go
+    import (
+      "fmt"
+      "net/http"
+      "io"
+    )
+
+    func main() {
+      baseUrl := "^{coreInfo.uri}"
+      apiKey := "^{coreInfo.key}"
+      url := fmt.Sprintf("%s/bulk-import/users/count?status=PROCESSING", baseUrl)
+
+      req, _ := http.NewRequest("GET", url, nil)
+
+      req.Header.Add("accept", "application/json")
+      req.Header.Add("api-key", apiKey)
+      req.Header.Add("content-type", "application/json")
+
+      res, _ := http.DefaultClient.Do(req)
+
+      defer res.Body.Close()
+      body, _ := io.ReadAll(res.Body)
+
+      fmt.Println(string(body))
+    }
+    ```
+
+  </HTTPRequestCard.GoExample>
+  <HTTPRequestCard.PythonExample>
+
+    ```python
+    import requests
+
+    BASE_URL = "^{coreInfo.uri}"
+    API_KEY = "^{coreInfo.key}"
+
+    url = f"{BASE_URL}/bulk-import/users/count?status=PROCESSING"
+
+    headers = {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, headers=headers)
+
+    print(response.json())
+    ```
+
+  </HTTPRequestCard.PythonExample>
+
+  <HTTPRequestCard.DetailsModal>
+    <BulkImportUsersCountRequest />
+  </HTTPRequestCard.DetailsModal>
+</HTTPRequestCard>
+
+
+#### 3.3 Handle staged users that failed to import
+
+Go through this step only if you have staged users that failed to import.
+This can happen for a number of reasons. Some of the most common ones:
+- `Email` / `phoneNumber` already exists
+- `externalUserId` is being already used by other user
+- A primary user already exists for the email but with a different login method
+
+If at the end of the previous step you have determined that you have staged users that failed to import debug the issues with the `get users` API.
+
+<HTTPRequestCard path="/bulk-import/users" method="get" title="Get Staged Users">
+  <HTTPRequestCard.ShellExample>
+
+    ```bash
+    curl --location --request GET '^{coreInfo.uri}/bulk-import/users?status=FAILED' \
+        --header 'api-key: ^{coreInfo.key}' \
+        --header 'Content-Type: application/json; charset=utf-8' \
+    ```
+
+  </HTTPRequestCard.ShellExample>
+  <HTTPRequestCard.NodeJSExample>
+
+    ```tsx
+    const BASE_URL = '^{coreInfo.uri}';
+    const API_KEY = '^{coreInfo.key}';
+
+    const url = `${BASE_URL}/bulk-import/users?status=FAILED`;
+    const options = {
+      method: 'GET',
+      headers: {
+        'api-key': API_KEY,
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+    }
+
+    fetch(url, options)
+      .then(response => response.json())
+      .then(json => console.log(json))
+      .catch(err => console.error(err));
+    ```
+
+  </HTTPRequestCard.NodeJSExample>
+  <HTTPRequestCard.GoExample>
+
+    ```go
+    import (
+      "fmt"
+      "net/http"
+      "io"
+    )
+
+    func main() {
+      baseUrl := "^{coreInfo.uri}"
+      apiKey := "^{coreInfo.key}"
+      url := fmt.Sprintf("%s/bulk-import/users?status=FAILED", baseUrl)
+
+      req, _ := http.NewRequest("GET", url, nil)
+
+      req.Header.Add("accept", "application/json")
+      req.Header.Add("api-key", apiKey)
+      req.Header.Add("content-type", "application/json")
+
+      res, _ := http.DefaultClient.Do(req)
+
+      defer res.Body.Close()
+      body, _ := io.ReadAll(res.Body)
+
+      fmt.Println(string(body))
+    }
+    ```
+
+  </HTTPRequestCard.GoExample>
+  <HTTPRequestCard.PythonExample>
+
+    ```python
+    import requests
+
+    BASE_URL = "^{coreInfo.uri}"
+    API_KEY = "^{coreInfo.key}"
+
+    url = f"{BASE_URL}/bulk-import/users?status=FAILED"
+
+    headers = {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, headers=headers)
+
+    print(response.json())
+    ```
+
+  </HTTPRequestCard.PythonExample>
+  <HTTPRequestCard.DetailsModal>
+    <BulkImportUsersGetRequest />
+  </HTTPRequestCard.DetailsModal>
+</HTTPRequestCard>
+
+
+
+The response will include the import error messages for each specific user.
+Use them to determine what needs to be corrected in your import data.
+After you have fixed the issues, run the process again, from step `3.1`, only for the corrected data.
+
+
+
+:::success You have successfully migrated your accounts
+
+
+If you all your data has been imported then you can now consider the account migration process as done.
+Go on to the [session migration](/docs/migration/session-migration) step to complete the entire migration flow.
+
+:::
+
+
+## See also
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/migration/session-migration" label="Session migration" />
+  <ReferenceCard href="/docs/migration/legacy/about" label="Legacy migration" />
+  <ReferenceCard href="/docs/post-authentication/user-management/introduction" label="User management" />
+  <ReferenceCard href="/docs/post-authentication/account-linking/introduction" label="Account linking" />
+</ReferenceCard.Grid>
+
