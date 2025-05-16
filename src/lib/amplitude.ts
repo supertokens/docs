@@ -9,7 +9,7 @@ export const initAmplitude = () => {
     return;
   }
   const sessionReplayTracking = sessionReplayPlugin({
-    sampleRate: 1,
+    sampleRate: 0.3,
   });
   amplitude.add(sessionReplayTracking);
   amplitude.init("b61f581fe0775f56038a6264af879aa9", {

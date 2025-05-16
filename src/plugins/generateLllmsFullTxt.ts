@@ -1,4 +1,5 @@
 import fs from "fs";
+import type { OpenAPIV3 } from "@scalar/openapi-types";
 import path from "path";
 import matter from "gray-matter";
 import { getAllMdxFiles } from "./utils/getAllMdxFiles";
@@ -153,7 +154,7 @@ function removeReferences(content: string): string {
   return lines.join("\n").trim();
 }
 
-async function parseMdxContent(filePath: string): Promise<string> {
+async function parseMdxContent(filePath: string, usePageTitle = false): Promise<string> {
   const mdxContent = await fs.promises.readFile(filePath, "utf8");
   const { content } = matter(mdxContent);
   const imports: Array<{ name: string; module: string }> = await extractImportStatements(content);
@@ -223,8 +224,8 @@ async function parseMdxContent(filePath: string): Promise<string> {
   const { title, content: contentWithoutTitle } = extractMainTitle(processedContent);
   const filePathWithoutExtension = filePath.replace(/\.[^/.]+$/, "");
   const [, relativePath] = filePathWithoutExtension.split("/docs").filter(Boolean);
-  const url = `https://supertokens.com/docs/${relativePath}`;
-  const parsedTitle = buildTitle(title, filePath);
+  const url = `https://supertokens.com/docs${relativePath}`;
+  const parsedTitle = usePageTitle ? title : buildTitle(title, filePath);
   processedContent = `
 # ${parsedTitle}
 Source: ${url}
@@ -275,6 +276,28 @@ function buildTitle(currentTitle: string, filePath: string): string {
   return `${title} ${currentTitle}`;
 }
 
+async function generateApiReferenceText(apiName: "cdi" | "fdi") {
+  const apiReference = JSON.parse(await fs.promises.readFile(`./static/${apiName}.json`, "utf8")) as OpenAPIV3.Document;
+  const apiReferenceMapping = JSON.parse(
+    await fs.promises.readFile(`./static/${apiName}-mapping.json`, "utf8"),
+  ) as OpenAPIV3.Document;
+
+  let text = ``;
+  for (const route in apiReference.paths) {
+    for (const method in apiReference.paths[route]) {
+      const operation = apiReference.paths[route][method];
+      const mapping = apiReferenceMapping[operation.operationId];
+      if (operation.deprecated) continue;
+      if (!mapping) continue;
+      const title = operation.summary || route;
+      const pathWithoutExtension = mapping.filePath.replace(/\.[^/.]+$/, "");
+      const url = `https://supertokens.com/docs/references${pathWithoutExtension}`;
+      text = `${text}\n\n## ${title}\nSource: ${url}\nEndpoint: ${method.toUpperCase()} ${route}`;
+    }
+  }
+  return text;
+}
+
 export default function createLLMFullFile(context) {
   return {
     name: "generate-llms-full-txt",
@@ -314,10 +337,22 @@ export default function createLLMFullFile(context) {
       return { files: filesWithoutReferences };
     },
     postBuild: async ({ content, outDir, routes }) => {
-      const llmsFullTxt = (await Promise.all(content.files.map((file) => parseMdxContent(file.path)))).join("\n\n");
+      let llmsFullTxt = (await Promise.all(content.files.map((file) => parseMdxContent(file.path)))).join("\n\n");
+
+      const fdiIntro = await parseMdxContent("./docs/references/fdi/introduction.mdx", true);
+      const cdiIntro = await parseMdxContent("./docs/references/cdi/introduction.mdx", true);
+      const fdiReferenceFullTxt = await generateApiReferenceText("fdi");
+      const cdiReferenceFullTxt = await generateApiReferenceText("cdi");
+
+      llmsFullTxt = `${llmsFullTxt}
+${fdiIntro}
+${fdiReferenceFullTxt}
+\n\n
+${cdiIntro}
+${cdiReferenceFullTxt}
+`;
 
       fs.writeFileSync(path.join(outDir, "llms-full.txt"), llmsFullTxt);
     },
   };
 }
-

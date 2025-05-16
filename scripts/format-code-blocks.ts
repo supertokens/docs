@@ -47,7 +47,7 @@ type CodeBlock = {
       console.log(`Writing file`);
       await writeCodeBlocks(fullFilePath, codeBlocks);
     }
-    // await stopContainer();
+    await stopContainer();
   } catch (error) {
     console.error(error);
   }
@@ -59,22 +59,27 @@ async function formatCodeBlock(codeBlocks: CodeBlock[]) {
   const snippetLocalPath = "./tmp/code-snippet";
   const snippetContainerPath = "/tmp/code-snippet";
   for (const codeBlock of codeBlocks) {
-    const parsedCodeBlockValue = codeBlock.language === "go" ? `package main\n\n${codeBlock.value}` : codeBlock.value;
-    await write(snippetLocalPath, parsedCodeBlockValue);
-    execSync(`docker cp ${snippetLocalPath} ${DOCKER_CONTAINER_NAME}:${snippetContainerPath}`);
-    if (codeBlock.language === "go") {
-      execSync(`docker exec ${DOCKER_CONTAINER_NAME} gofmt ${snippetContainerPath}`);
-    } else if (codeBlock.language === "python") {
-      execSync(`docker exec ${DOCKER_CONTAINER_NAME} black ${snippetContainerPath} > /dev/null`);
-    } else if (codeBlock.language === "typescript") {
-      execSync(`docker exec ${DOCKER_CONTAINER_NAME} prettier --parser typescript --write ${snippetContainerPath}`);
-    }
+    try {
+      const parsedCodeBlockValue = codeBlock.language === "go" ? `package main\n\n${codeBlock.value}` : codeBlock.value;
+      await write(snippetLocalPath, parsedCodeBlockValue);
+      execSync(`docker cp ${snippetLocalPath} ${DOCKER_CONTAINER_NAME}:${snippetContainerPath}`);
+      if (codeBlock.language === "go") {
+        execSync(`docker exec ${DOCKER_CONTAINER_NAME} gofmt ${snippetContainerPath}`);
+      } else if (codeBlock.language === "python") {
+        execSync(`docker exec ${DOCKER_CONTAINER_NAME} black ${snippetContainerPath} > /dev/null`);
+      } else if (codeBlock.language === "typescript") {
+        execSync(`docker exec ${DOCKER_CONTAINER_NAME} prettier --parser typescript --write ${snippetContainerPath}`);
+      }
 
-    execSync(`docker cp ${DOCKER_CONTAINER_NAME}:${snippetContainerPath} ${snippetLocalPath}`);
-    let formattedCodeBlock = await file(snippetLocalPath).text();
-    formattedCodeBlock =
-      codeBlock.language === "go" ? formattedCodeBlock.replace("package main\n\n", "") : formattedCodeBlock;
-    codeBlock.value = formattedCodeBlock;
+      execSync(`docker cp ${DOCKER_CONTAINER_NAME}:${snippetContainerPath} ${snippetLocalPath}`);
+      let formattedCodeBlock = await file(snippetLocalPath).text();
+      formattedCodeBlock =
+        codeBlock.language === "go" ? formattedCodeBlock.replace("package main\n\n", "") : formattedCodeBlock;
+      codeBlock.value = formattedCodeBlock;
+    } catch (error) {
+      console.error(`Error formatting code block in ${codeBlock.filePath} ${codeBlock.language}`);
+      console.error(error);
+    }
   }
 }
 
