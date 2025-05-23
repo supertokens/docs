@@ -57,7 +57,7 @@ function buildContent(files: { path: string; description?: string; title: string
       const regex = /.*\/docs\/(.+)\.mdx$/;
       const match = file.path.match(regex);
 
-      const src = `https://supertokens.com/docs/${match[1]}`;
+      const src = `https://supertokens.com/docs/${match[1]}.md`;
       const parsedDescription = file.description ? `: ${file.description}` : "";
       return `- [${file.title}](${src})${parsedDescription}`;
     })
