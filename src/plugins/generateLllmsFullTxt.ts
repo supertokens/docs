@@ -355,7 +355,6 @@ export default function createLLMFullFile(context) {
         (item, index, self) => index === self.findIndex((t) => t.module === item.module),
       );
       const importsWithoutBlocks = uniqueImports.filter((item) => !item.module.includes("_blocks"));
-      console.log(JSON.stringify(importsWithoutBlocks, null, 2));
 
       const fdiIntro = await parseMdxContent("./docs/references/fdi/introduction.mdx", true);
       const cdiIntro = await parseMdxContent("./docs/references/cdi/introduction.mdx", true);
@@ -375,7 +374,7 @@ ${cdiReferenceFullTxt}
       for (const file of parsedFiles) {
         const regex = /.*\/docs\/(.+)\.mdx$/;
         const match = file.path.match(regex);
-        const outputPath = path.join(outDir, `md/${match[1]}`);
+        const outputPath = path.join(outDir, `md/${match[1]}.md`);
         const directoryPath = path.dirname(outputPath);
         const normalizedPath = path.normalize(directoryPath);
 
