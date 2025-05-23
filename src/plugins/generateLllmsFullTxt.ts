@@ -154,10 +154,13 @@ function removeReferences(content: string): string {
   return lines.join("\n").trim();
 }
 
+const AllImports: Array<{ name: string; module: string }> = [];
+
 async function parseMdxContent(filePath: string, usePageTitle = false): Promise<string> {
   const mdxContent = await fs.promises.readFile(filePath, "utf8");
   const { content } = matter(mdxContent);
   const imports: Array<{ name: string; module: string }> = await extractImportStatements(content);
+  AllImports.push(...imports);
 
   const mdxBlocks = imports.filter((item) => item.module.includes("_blocks"));
   let processedContent = removeImportStatements(content);
@@ -220,6 +223,9 @@ async function parseMdxContent(filePath: string, usePageTitle = false): Promise<
   if (filePath.includes("_blocks")) {
     return processedContent.trim();
   }
+
+  const llmsRegex = /<RemoveForLLMs>[\s\S]*?<\/RemoveForLLMs>/g;
+  return processedContent.replaceAll(llmsRegex, "");
 
   const { title, content: contentWithoutTitle } = extractMainTitle(processedContent);
   const filePathWithoutExtension = filePath.replace(/\.[^/.]+$/, "");
@@ -337,7 +343,19 @@ export default function createLLMFullFile(context) {
       return { files: filesWithoutReferences };
     },
     postBuild: async ({ content, outDir, routes }) => {
-      let llmsFullTxt = (await Promise.all(content.files.map((file) => parseMdxContent(file.path)))).join("\n\n");
+      const parsedFiles = await Promise.all(
+        content.files.map(async (file) => {
+          const content = await parseMdxContent(file.path);
+          return { ...file, content };
+        }),
+      );
+      let llmsFullTxt = parsedFiles.map((file) => file.content).join("\n\n");
+
+      const uniqueImports = AllImports.filter(
+        (item, index, self) => index === self.findIndex((t) => t.module === item.module),
+      );
+      const importsWithoutBlocks = uniqueImports.filter((item) => !item.module.includes("_blocks"));
+      console.log(JSON.stringify(importsWithoutBlocks, null, 2));
 
       const fdiIntro = await parseMdxContent("./docs/references/fdi/introduction.mdx", true);
       const cdiIntro = await parseMdxContent("./docs/references/cdi/introduction.mdx", true);
@@ -353,6 +371,17 @@ ${cdiReferenceFullTxt}
 `;
 
       fs.writeFileSync(path.join(outDir, "llms-full.txt"), llmsFullTxt);
+
+      for (const file of parsedFiles) {
+        const regex = /.*\/docs\/(.+)\.mdx$/;
+        const match = file.path.match(regex);
+        const outputPath = path.join(outDir, `md/${match[1]}`);
+        const directoryPath = path.dirname(outputPath);
+        const normalizedPath = path.normalize(directoryPath);
+
+        fs.mkdirSync(normalizedPath, { recursive: true });
+        fs.writeFileSync(outputPath, file.content);
+      }
     },
   };
 }

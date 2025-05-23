@@ -103,7 +103,7 @@ function StepsRoot({ children, mode = "jsx" }: React.PropsWithChildren<{ mode?: 
 
   for (const child of childrenArray) {
     // @ts-expect-error The array should always include elements as children
-    if (child.type.name === "h2") {
+    if (["h2", "h3", "h4", "h5", "h6"].includes(child.type.name)) {
       if (currentStep) {
         steps.push(currentStep);
       }
