@@ -3,6 +3,8 @@ import {
   OSTabs,
   DocItemContextValue,
   UIType,
+  ContextCondition,
+  OAuthFrontendVerificationCallout,
   NextjsRouterTypeSelect,
   DescriptionText,
   ConditionalContent,
@@ -12,16 +14,65 @@ import {
   Steps,
   Accordion,
   APIRequestPage,
+  RemoveForLLMs,
+  PythonSyncAsyncCard,
+  FrontendPrebuiltUITabs,
+  FrontendCustomUITabs,
+  BackendTabs,
+  AppInfoForm,
+  SelfHostingTabs,
+  NpmOrScriptsCard,
+  MobileFrameworksCard,
+  Question,
+  Answer,
+  TenantType,
+  SDKCompatibilityTable,
+  NodePackageManagerCard,
+  NodeFrameworksCard,
+  PythonFrameworksCard,
+  GoFrameworksCard,
+  JavascriptHttpLibraryCard,
+  ThirdPartyBuiltinProvidersCard,
+  CodeSampleCard,
+  PasswordlessConfigCard,
+  HTTPRequestCard,
+  AccountTypeCard,
+  NpmOrScriptsSelect,
+  NodePackageManagerSelect,
+  MobileFrameworksSelect,
+  NodeFrameworksSelect,
+  GoFrameworksSelect,
+  PythonFrameworksSelect,
+  JavascriptHttpLibrarySelect,
+  PythonSyncAsyncSelect,
+  ThirdPartyBuiltinProvidersSelect,
+  AppTypeSelect,
+  PasswordlessFlowTypeSelect,
+  PasswordlessContactMethodSelect,
+  AccountTypeSelect,
+  SelfHostedDeploymentTypeSelect,
+  TenantTypeSelect,
+  FrontendTabs,
+  ReactRouterVersionTabs,
+  DatabaseTabs,
+  PasswordlessRecipeForm,
+  ExampleAppForm,
+  H1,
+  H2,
+  H3,
+  H4,
+  H5,
+  H6,
+  OAuthVerifyTokensCallout,
+  ReactRouterCallout,
 } from "@site/src/components";
-import { Separator, Heading } from "@radix-ui/themes";
+import { Separator as RadixSeparator, Table, Flex, Box, Heading, Badge } from "@radix-ui/themes";
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
-import { Table } from "@radix-ui/themes";
-
 function HR() {
-  return <Separator size="4" mt="5" mb="3" />;
+  return <RadixSeparator size="4" mt="5" mb="3" />;
 }
 
 const TableRoot = ({ children }) => {
@@ -32,7 +83,7 @@ const TableRoot = ({ children }) => {
   );
 };
 
-const H1 = ({ children, ...props }) => {
+const h1 = ({ children, ...props }) => {
   return (
     <Heading as="h1" size="8" mb="4" {...props}>
       {children}
@@ -40,7 +91,7 @@ const H1 = ({ children, ...props }) => {
   );
 };
 
-const H2 = ({ children, ...props }) => {
+const h2 = ({ children, ...props }) => {
   return (
     <Heading as="h2" size="7" mb="4" {...props}>
       {children}
@@ -48,7 +99,7 @@ const H2 = ({ children, ...props }) => {
   );
 };
 
-const H3 = ({ children, ...props }) => {
+const h3 = ({ children, ...props }) => {
   return (
     <Heading as="h3" size="6" mb="4" {...props}>
       {children}
@@ -56,9 +107,9 @@ const H3 = ({ children, ...props }) => {
   );
 };
 
-const H4 = ({ children, ...props }) => {
+const h4 = ({ children, ...props }) => {
   return (
-    <Heading as="h4" size="6" mb="4" {...props}>
+    <Heading as="h4" size="5" mb="4" {...props}>
       {children}
     </Heading>
   );
@@ -66,7 +117,10 @@ const H4 = ({ children, ...props }) => {
 
 export default {
   ...MDXComponents,
-  h1: H1,
+  h1,
+  h2,
+  h3,
+  h4,
   table: TableRoot,
   thead: Table.Header,
   tbody: Table.Body,
@@ -85,6 +139,7 @@ export default {
   PaidFeatureCallout,
   TokensCallout,
   APIRequestPage,
+  RemoveForLLMs,
   Steps: ({ children, ...rest }) => (
     <Steps mode="mdx" {...rest}>
       {children}
@@ -96,4 +151,62 @@ export default {
     </Accordion>
   ),
   ReferenceCard,
+  PythonSyncAsyncCard,
+  FrontendPrebuiltUITabs,
+  FrontendCustomUITabs,
+  BackendTabs,
+  AppInfoForm,
+  SelfHostingTabs,
+  NpmOrScriptsCard,
+  MobileFrameworksCard,
+  Question,
+  Answer,
+  TenantType,
+  SDKCompatibilityTable,
+  NodePackageManagerCard,
+  NodeFrameworksCard,
+  PythonFrameworksCard,
+  GoFrameworksCard,
+  JavascriptHttpLibraryCard,
+  ThirdPartyBuiltinProvidersCard,
+  CodeSampleCard,
+  PasswordlessConfigCard,
+  HTTPRequestCard,
+  AccountTypeCard,
+  NpmOrScriptsSelect,
+  NodePackageManagerSelect,
+  MobileFrameworksSelect,
+  NodeFrameworksSelect,
+  GoFrameworksSelect,
+  PythonFrameworksSelect,
+  JavascriptHttpLibrarySelect,
+  PythonSyncAsyncSelect,
+  AppTypeSelect,
+  PasswordlessFlowTypeSelect,
+  PasswordlessContactMethodSelect,
+  AccountTypeSelect,
+  TenantTypeSelect,
+  FrontendTabs,
+  DatabaseTabs,
+  PasswordlessRecipeForm,
+  ExampleAppForm,
+  ThirdPartyBuiltinProvidersSelect,
+  ReactRouterVersionTabs,
+  SelfHostedDeploymentTypeSelect,
+  ContextCondition,
+  OAuthFrontendVerificationCallout,
+  OAuthVerifyTokensCallout,
+  H1,
+  H2,
+  H3,
+  H4,
+  H5,
+  H6,
+
+  // Plain Radix componets
+  Flex,
+  Separator: RadixSeparator,
+  Box,
+
+  Badge,
 };
