@@ -54,10 +54,10 @@ async function getAllMdxFiles(dir: string) {
 function buildContent(files: { path: string; description?: string; title: string }[]) {
   return files
     .map((file) => {
-      const regex = /\/docs\/(.+)\.mdx$/;
+      const regex = /.*\/docs\/(.+)\.mdx$/;
       const match = file.path.match(regex);
 
-      const src = `https://supertokens.com/${match[1]}`;
+      const src = `https://supertokens.com/docs/${match[1]}.md`;
       const parsedDescription = file.description ? `: ${file.description}` : "";
       return `- [${file.title}](${src})${parsedDescription}`;
     })
@@ -151,10 +151,12 @@ ${buildContent(content.files.filter((file) => file.path.includes("/post-authenti
 ### Migration
 ${buildContent(content.files.filter((file) => file.path.includes("/migration") && !file.path.includes("/mfa")))}
 
-### References
+### Deploy and configure SuperTokens Core
 ${buildContent(content.files.filter((file) => file.path.includes("/deployment")))}
 ${buildContent(content.files.filter((file) => file.path.includes("/platform-configuration")))}
-${buildContent(content.files.filter((file) => file.path.includes("/references")))}
+
+### References
+${buildContent(content.files.filter((file) => file.path.includes("/references") && !file.path.includes("/fdi") && !file.path.includes("/cdi")))}
 
 
 `;
