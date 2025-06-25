@@ -21,10 +21,9 @@ const config: Config = {
   onBrokenLinks: process.env.DEPLOYMENT_TYPE === "preview" ? "warn" : "throw",
   onBrokenMarkdownLinks: process.env.DEPLOYMENT_TYPE === "preview" ? "warn" : "throw",
   future: {
-    // Use rspack only during the build phase for faster CI times
-    // In dev mode it crashes often while hot reloading
-    experimental_faster: process.env.NODE_ENV === "production" ? true : false,
-    v4: process.env.NODE_ENV === "production" ? true : false,
+    // Faster mode breaks the css styles in the latest version of docusaurus
+    experimental_faster: false,
+    v4: false,
   },
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
