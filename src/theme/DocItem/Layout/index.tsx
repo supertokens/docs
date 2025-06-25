@@ -1,4 +1,4 @@
-import React, { JSX } from "react";
+import React, { JSX, useMemo } from "react";
 import clsx from "clsx";
 import { useWindowSize } from "@docusaurus/theme-common";
 import { useDoc } from "@docusaurus/plugin-content-docs/client";
@@ -6,6 +6,7 @@ import DocItemPaginator from "@theme/DocItem/Paginator";
 import DocVersionBanner from "@theme/DocVersionBanner";
 import DocVersionBadge from "@theme/DocVersionBadge";
 import DocItemFooter from "@theme/DocItem/Footer";
+import Head from "@docusaurus/Head";
 import DocItemTOCMobile from "@theme/DocItem/TOC/Mobile";
 import DocItemTOCDesktop from "@theme/DocItem/TOC/Desktop";
 import DocItemContent from "@theme/DocItem/Content";
@@ -41,10 +42,18 @@ function useDocTOC() {
 export default function DocItemLayout({ children }: Props): JSX.Element {
   const docTOC = useDocTOC();
   const { metadata, frontMatter } = useDoc();
+  const keywords = useMemo(() => {
+    let baseTags = `${frontMatter["page_type"]}, ${frontMatter["category"]}, authentication, SuperTokens, open source`;
+    const recipe = frontMatter["recipe"];
+    return recipe ? `${baseTags}, ${recipe}` : baseTags;
+  }, [frontMatter]);
 
   if (frontMatter["page_type"] === "api-reference") {
     return (
       <DocItemContent>
+        <Head>
+          <meta name="keywords" content={keywords} />
+        </Head>
         <div id={API_REFERENCE_PAGE_TITLE_ID} />
         <Flex direction={{ initial: "column", md: "row" }} gap="8" width="100%">
           {children}
@@ -55,6 +64,9 @@ export default function DocItemLayout({ children }: Props): JSX.Element {
 
   return (
     <div className="row">
+      <Head>
+        <meta name="keywords" content={keywords} />
+      </Head>
       <div className={clsx("col", !docTOC.hidden && styles.docItemCol)}>
         <ContentVisibility metadata={metadata} />
         <DocVersionBanner />

@@ -94,48 +94,55 @@ function extractMainTitle(mdxContent: string): {
 }
 
 function removeImportStatements(content: string): string {
-  const lines = content.split(/\r?\n/);
-  let targetIndex = -1;
-  const importRegex = /^import\s+.+from\s+['"].+['"];?$/;
+  const lines = content.split("\n");
+  const cleanedLines: string[] = [];
 
-  let insideMultilineImport = false;
-  for (let i = 0; i < lines.length; i++) {
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i].trim();
 
-    if (!line) {
+    if (line.startsWith("import ")) {
+      if (line.includes(";") || line.includes(" from ")) {
+        i++;
+        continue;
+      }
+
+      let importComplete = false;
+      while (i < lines.length && !importComplete) {
+        const currentLine = lines[i];
+        if (currentLine.includes(";") || currentLine.includes(" from ")) {
+          importComplete = true;
+        }
+        i++;
+      }
       continue;
     }
 
-    if (line.startsWith("import") && !line.includes(";")) {
-      insideMultilineImport = true;
+    if (line.startsWith("export ") && line.includes(" from ")) {
+      if (line.includes(";")) {
+        i++;
+        continue;
+      }
+
+      let exportComplete = false;
+      while (i < lines.length && !exportComplete) {
+        const currentLine = lines[i];
+        if (currentLine.includes(";")) {
+          exportComplete = true;
+        }
+        i++;
+      }
       continue;
     }
 
-    if (insideMultilineImport && line.includes(";")) {
-      insideMultilineImport = false;
-      continue;
-    }
-
-    if (insideMultilineImport) {
-      continue;
-    }
-
-    if (importRegex.test(line)) {
-      continue;
-    }
-
-    targetIndex = i;
-    break;
+    cleanedLines.push(lines[i]);
+    i++;
   }
 
-  let contentLines = [...lines];
-  if (targetIndex >= 0) {
-    contentLines.splice(0, targetIndex);
-  } else {
-    console.warn("No import statements found in the MDX file. Returning the original content.");
-  }
-
-  return contentLines.join("\n").trim();
+  let result = cleanedLines.join("\n");
+  result = result.replace(/^\n+/, "");
+  result = result.replace(/\n{3,}/g, "\n\n");
+  return result;
 }
 
 function removeReferences(content: string): string {
@@ -163,8 +170,8 @@ async function parseMdxContent(filePath: string, usePageTitle = false): Promise<
   AllImports.push(...imports);
 
   const mdxBlocks = imports.filter((item) => item.module.includes("_blocks"));
+  let index = 0;
   let processedContent = removeImportStatements(content);
-
   const dirPath = path.dirname(filePath);
 
   for (const block of mdxBlocks) {
@@ -225,7 +232,7 @@ async function parseMdxContent(filePath: string, usePageTitle = false): Promise<
   }
 
   const llmsRegex = /<RemoveForLLMs>[\s\S]*?<\/RemoveForLLMs>/g;
-  return processedContent.replaceAll(llmsRegex, "");
+  processedContent = processedContent.replaceAll(llmsRegex, "");
 
   const { title, content: contentWithoutTitle } = extractMainTitle(processedContent);
   const filePathWithoutExtension = filePath.replace(/\.[^/.]+$/, "");
