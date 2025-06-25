@@ -24,6 +24,7 @@ const config: Config = {
     // Use rspack only during the build phase for faster CI times
     // In dev mode it crashes often while hot reloading
     experimental_faster: process.env.NODE_ENV === "production" ? true : false,
+    v4: process.env.NODE_ENV === "production" ? true : false,
   },
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you

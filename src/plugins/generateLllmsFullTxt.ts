@@ -169,16 +169,9 @@ async function parseMdxContent(filePath: string, usePageTitle = false): Promise<
   const imports: Array<{ name: string; module: string }> = await extractImportStatements(content);
   AllImports.push(...imports);
 
-  if (filePath.includes("passwordless/initial-setup")) {
-    fs.writeFileSync(`original-passwordless.mdx`, content);
-  }
   const mdxBlocks = imports.filter((item) => item.module.includes("_blocks"));
   let index = 0;
   let processedContent = removeImportStatements(content);
-
-  if (filePath.includes("passwordless/initial-setup")) {
-    fs.writeFileSync(`passwordless.mdx`, processedContent);
-  }
   const dirPath = path.dirname(filePath);
 
   for (const block of mdxBlocks) {
@@ -221,10 +214,6 @@ async function parseMdxContent(filePath: string, usePageTitle = false): Promise<
 
   for (const component in componentsToReplace) {
     processedContent = processedContent.replaceAll(component, componentsToReplace[component]);
-    if (filePath.includes("passwordless/initial-setup")) {
-      fs.writeFileSync(`passwordless-${component}-${index}.mdx`, processedContent);
-      index++;
-    }
   }
 
   processedContent = processedContent.replaceAll("Tabs.TabItem", "Tab");

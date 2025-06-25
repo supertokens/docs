@@ -42,12 +42,10 @@ function useDocTOC() {
 export default function DocItemLayout({ children }: Props): JSX.Element {
   const docTOC = useDocTOC();
   const { metadata, frontMatter } = useDoc();
-
-  console.log(metadata);
-  console.log(frontMatter);
-
   const keywords = useMemo(() => {
-    return `${frontMatter["page_type"]}, ${frontMatter["recipe"]}, ${frontMatter["category"]}, authentication, SuperTokens, open source`;
+    let baseTags = `${frontMatter["page_type"]}, ${frontMatter["category"]}, authentication, SuperTokens, open source`;
+    const recipe = frontMatter["recipe"];
+    return recipe ? `${baseTags}, ${recipe}` : baseTags;
   }, [frontMatter]);
 
   if (frontMatter["page_type"] === "api-reference") {
