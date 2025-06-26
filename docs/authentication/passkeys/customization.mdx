@@ -87,11 +87,45 @@ At the moment there is no support for using passkeys authentication in the Go SD
 
 <BackendTabs.TabItem value="python">
 
-:::caution
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import webauthn, session
 
-At the moment there is no support for using passkeys authentication in the Python SDK.
+def get_origin(tenant_id: str, request, user_context):
+    return "https://example.com"
 
-:::
+def get_relying_party_id(tenant_id: str, request, user_context):
+    return "example.com"
+
+def get_relying_party_name(tenant_id: str, request, user_context):
+    return "example"
+
+init(
+    app_info=InputAppInfo(
+        app_name="<YOUR_APP_NAME>",
+        api_domain="<YOUR_API_DOMAIN>",
+        website_domain="<YOUR_WEBSITE_DOMAIN>",
+        api_base_path="/auth",
+        website_base_path="/auth"
+    ),
+    supertokens_config=SupertokensConfig(
+        # https://try.supertokens.com is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.
+        connection_uri="https://try.supertokens.com",
+        # api_key="<API_KEY(if configured)>"
+    ),
+    framework='flask',  # Replace this with the framework you are using
+    recipe_list=[
+        webauthn.init(
+            config=webauthn.WebauthnConfig(
+                get_origin=get_origin,
+                get_relying_party_id=get_relying_party_id,
+                get_relying_party_name=get_relying_party_name,
+            )
+        ),
+        session.init()  # initializes session features
+    ]
+)
+```
 
 </BackendTabs.TabItem>
 
@@ -190,11 +224,84 @@ At the moment there is no support for using passkeys authentication in the Go SD
 
 <BackendTabs.TabItem value="python">
 
-:::caution
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import webauthn, session
+from typing import Dict, Any, List, Optional, Union
+from typing_extensions import Unpack
 
-At the moment there is no support for using passkeys authentication in the Python SDK.
+def override_webauthn_functions(original_implementation: webauthn.RecipeInterface):
+    original_register_options = original_implementation.register_options
 
-:::
+    async def register_options(
+        email: Optional[str],
+        recover_account_token: Optional[str],
+        tenant_id: str,
+        user_context: Dict[str, Any],
+        **kwargs: Unpack[webauthn.RegisterOptionsKwargsInput]
+    ):
+        return await original_register_options(
+            email=email,
+            recover_account_token=recover_account_token,
+            tenant_id=tenant_id,
+            user_context=user_context,
+            attestation="direct",
+            resident_key="required",
+            timeout=10 * 1000,
+            user_verification="required",
+            display_name="John Doe",
+            supported_algorithms=[-257],
+            relying_party_id='example.com',
+            relying_party_name='example',
+            origin='https://example.com',
+        )
+
+    original_implementation.register_options = register_options
+    return original_implementation
+
+init(
+    app_info=InputAppInfo(
+        app_name="<YOUR_APP_NAME>",
+        api_domain="<YOUR_API_DOMAIN>",
+        website_domain="<YOUR_WEBSITE_DOMAIN>",
+        api_base_path="/auth",
+        website_base_path="/auth"
+    ),
+    supertokens_config=SupertokensConfig(
+        # https://try.supertokens.com is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.
+        connection_uri="https://try.supertokens.com",
+        # api_key="<API_KEY(if configured)>"
+    ),
+    framework='flask',  # Replace this with the framework you are using
+    recipe_list=[
+        webauthn.init(
+            config=webauthn.WebauthnConfig(
+                override=webauthn.OverrideConfig(
+                    functions=override_webauthn_functions
+                )
+            )
+        ),
+        session.init()  # initializes session features
+    ]
+)
+```
+
+<br />
+
+#### Input properties
+
+| Name | Type | Description | Default Value |
+|----------|----------|-------------|---------------|
+| `relying_party_id` | `str` | The domain name of your application that the system uses for validating the credential. | Uses `get_relying_party_id` from the recipe configuration which defaults to the `api_domain` |
+| `relying_party_name` | `str` | The human-readable name of your application. | Uses `get_relying_party_name` from the recipe configuration which defaults to the `app_name` |
+| `origin` | `str` | The origin URL where the credential is generated. | Uses `get_origin` from the recipe configuration which defaults to the origin of the request |
+| `timeout` | `int` | The time in milliseconds that the user has to complete the credential generation process. | `6000` |
+| `attestation` | `"none" \| "indirect" \| "direct" \| "enterprise"`  | The amount of information about the authenticator that gets included in the attestation statement. This controls what authenticators support. | `none` |
+| `supported_algorithms` | `List[int]` | The cryptographic algorithms that can generate credentials. Different authenticators support different algorithms. | `[-8, -7, -257]` |
+| `resident_key` | `"discouraged" \| "preferred" \| "required"` | Whether the credential gest stored on the authenticator device. | `required` |
+| `user_verification` | `"discouraged" \| "preferred" \| "required"` | Whether user verification (like `PIN` or biometrics) is necessary. | `preferred` |
+| `display_name` | `str` | The display name of the user. | The user's `email` property |
+
 
 </BackendTabs.TabItem>
 
@@ -283,11 +390,68 @@ At the moment there is no support for using passkeys authentication in the Go SD
 
 <BackendTabs.TabItem value="python">
 
-:::caution
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import webauthn, session
+from typing import Dict, Any, Optional
+from typing_extensions import Unpack
 
-At the moment there is no support for using passkeys authentication in the Python SDK.
+def override_webauthn_functions(original_implementation: webauthn.RecipeInterface):
+    original_sign_in_options = original_implementation.sign_in_options
 
-:::
+    async def sign_in_options(
+        tenant_id: str,
+        user_context: Dict[str, Any],
+        **kwargs: Unpack[webauthn.SignInOptionsKwargsInput]
+    ):
+        return await original_sign_in_options(
+            tenant_id=tenant_id,
+            user_context=user_context,
+            timeout=10 * 1000,
+            user_verification="required",
+            relying_party_id='example.com',
+            origin='https://example.com',
+        )
+
+    original_implementation.sign_in_options = sign_in_options
+    return original_implementation
+
+init(
+    app_info=InputAppInfo(
+        app_name="<YOUR_APP_NAME>",
+        api_domain="<YOUR_API_DOMAIN>",
+        website_domain="<YOUR_WEBSITE_DOMAIN>",
+        api_base_path="/auth",
+        website_base_path="/auth"
+    ),
+    supertokens_config=SupertokensConfig(
+        # https://try.supertokens.com is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.
+        connection_uri="https://try.supertokens.com",
+        # api_key="<API_KEY(if configured)>"
+    ),
+    framework='flask',  # Replace this with the framework you are using
+    recipe_list=[
+        webauthn.init(
+            config=webauthn.WebauthnConfig(
+                override=webauthn.OverrideConfig(
+                    functions=override_webauthn_functions
+                )
+            )
+        ),
+        session.init()  # initializes session features
+    ]
+)
+```
+
+#### Input properties
+
+| Name | Type | Description | Default |
+|----------|----------|-------------|---------|
+| `relying_party_id` | `str` | The domain name of your application that the system uses for validating the credential. | Uses `get_relying_party_id` from the recipe configuration which defaults to the `api_domain` |
+| `relying_party_name` | `str` | The human-readable name of your application. | Uses `get_relying_party_name` from the recipe configuration which defaults to the `app_name` |
+| `origin` | `str` | The origin URL where the credential is generated. | Uses `get_origin` from the recipe configuration which defaults to the origin of the request |
+| `timeout` | `int` | The time in milliseconds that the user has to complete the credential validation process. | `6000` |
+| `user_verification` | `"discouraged" \| "preferred" \| "required"` | The parameter controls whether user verification (like `PIN` or biometrics) is necessary. | `preferred` |
 
 </BackendTabs.TabItem>
 
