@@ -8,15 +8,9 @@ import ChatGPTIcon from "/img/logos/chatgpt.svg";
 import AnthropicIcon from "/img/logos/anthropic.svg";
 import GitHubIcon from "/img/logos/github.svg";
 
-function openInNewTab(url: string) {
-  window.open(url, "_blank", "noopener,noreferrer");
-}
-
 export function PageOptionsDropdownMenu() {
-  const [isOpen, setIsOpen] = useState(false);
   const { metadata } = useDoc();
   const { editUrl } = metadata;
-  const currentUrl = window.location.href;
 
   const searchQuery = useMemo(() => {
     const currentUrl = window.location.href;
@@ -52,7 +46,7 @@ export function PageOptionsDropdownMenu() {
           </a>
         </DropdownMenu.Item>
         <DropdownMenu.Item asChild>
-          <a href={editUrl} className="reset-link" target="_blank">
+          <a href={chatGPTUrl} className="reset-link" target="_blank">
             <ChatGPTIcon width="15px" />
             Open in ChatGPT
             <Flex ml="auto">
@@ -61,7 +55,7 @@ export function PageOptionsDropdownMenu() {
           </a>
         </DropdownMenu.Item>
         <DropdownMenu.Item asChild>
-          <a href={editUrl} className="reset-link" target="_blank">
+          <a href={claudeUrl} className="reset-link" target="_blank">
             <AnthropicIcon width="15px" />
             Open in Claude
             <Flex ml="auto">
@@ -70,7 +64,7 @@ export function PageOptionsDropdownMenu() {
           </a>
         </DropdownMenu.Item>
         <DropdownMenu.Item asChild>
-          <a href={editUrl} className="reset-link" target="_blank">
+          <a href={t3ChatUrl} className="reset-link" target="_blank">
             <T3ChatIcon width="15px" />
             Open in T3 Chat
             <Flex ml="auto">
