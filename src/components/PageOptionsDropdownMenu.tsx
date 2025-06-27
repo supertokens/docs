@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Flex, DropdownMenu, Button } from "@radix-ui/themes";
+import { useDoc } from "@docusaurus/plugin-content-docs/client";
 
 import ExternalLinkIcon from "/img/icons/external-link.svg";
 import T3ChatIcon from "/img/logos/t3-chat.svg";
@@ -13,6 +14,8 @@ function openInNewTab(url: string) {
 
 export function PageOptionsDropdownMenu() {
   const [isOpen, setIsOpen] = useState(false);
+  const { metadata } = useDoc();
+  const { editUrl } = metadata;
   const currentUrl = window.location.href;
 
   const searchQuery = useMemo(() => {
@@ -20,18 +23,14 @@ export function PageOptionsDropdownMenu() {
     return `Read the following documentation page "${currentUrl}.md". I want to ask questions about it.`;
   }, []);
 
-  const onClickGithub = useCallback(() => {}, [searchQuery]);
-
-  const onClickChatGPT = useCallback(() => {
-    openInNewTab(`https://chatgpt.com/?hints=search&q=${encodeURIComponent(searchQuery)}`);
+  const chatGPTUrl = useMemo(() => {
+    return `https://chatgpt.com/?hints=search&q=${encodeURIComponent(searchQuery)}`;
   }, [searchQuery]);
-
-  const onClickClaude = useCallback(() => {
-    openInNewTab(`https://claude.ai/new?q=${encodeURIComponent(searchQuery)}`);
+  const claudeUrl = useMemo(() => {
+    return `https://claude.ai/new?q=${encodeURIComponent(searchQuery)}`;
   }, [searchQuery]);
-
-  const onClickT3Chat = useCallback(() => {
-    openInNewTab(`https://t3.chat/new?q=${encodeURIComponent(searchQuery)}`);
+  const t3ChatUrl = useMemo(() => {
+    return `https://t3.chat/new?q=${encodeURIComponent(searchQuery)}`;
   }, [searchQuery]);
 
   return (
@@ -43,33 +42,41 @@ export function PageOptionsDropdownMenu() {
         </Button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Content>
-        <DropdownMenu.Item onClick={onClickGithub}>
-          <GitHubIcon width="15px" />
-          Open in Github
-          <Flex ml="auto" style={{ minWidth: "60px" }} justify="end">
-            <ExternalLinkIcon width="15px" />
-          </Flex>
+        <DropdownMenu.Item asChild>
+          <a href={editUrl} className="reset-link" target="_blank">
+            <GitHubIcon width="15px" />
+            Open in Github
+            <Flex ml="auto" style={{ minWidth: "60px" }} justify="end">
+              <ExternalLinkIcon width="15px" />
+            </Flex>
+          </a>
         </DropdownMenu.Item>
-        <DropdownMenu.Item onClick={onClickChatGPT}>
-          <ChatGPTIcon width="15px" />
-          Open in ChatGPT
-          <Flex ml="auto">
-            <ExternalLinkIcon width="15px" />
-          </Flex>
+        <DropdownMenu.Item asChild>
+          <a href={editUrl} className="reset-link" target="_blank">
+            <ChatGPTIcon width="15px" />
+            Open in ChatGPT
+            <Flex ml="auto">
+              <ExternalLinkIcon width="15px" />
+            </Flex>
+          </a>
         </DropdownMenu.Item>
-        <DropdownMenu.Item onClick={onClickClaude}>
-          <AnthropicIcon width="15px" />
-          Open in Claude
-          <Flex ml="auto">
-            <ExternalLinkIcon width="15px" />
-          </Flex>
+        <DropdownMenu.Item asChild>
+          <a href={editUrl} className="reset-link" target="_blank">
+            <AnthropicIcon width="15px" />
+            Open in Claude
+            <Flex ml="auto">
+              <ExternalLinkIcon width="15px" />
+            </Flex>
+          </a>
         </DropdownMenu.Item>
-        <DropdownMenu.Item onClick={onClickT3Chat}>
-          <T3ChatIcon width="15px" />
-          Open in T3 Chat
-          <Flex ml="auto">
-            <ExternalLinkIcon width="15px" />
-          </Flex>
+        <DropdownMenu.Item asChild>
+          <a href={editUrl} className="reset-link" target="_blank">
+            <T3ChatIcon width="15px" />
+            Open in T3 Chat
+            <Flex ml="auto">
+              <ExternalLinkIcon width="15px" />
+            </Flex>
+          </a>
         </DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu.Root>
