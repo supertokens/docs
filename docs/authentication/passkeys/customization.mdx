@@ -87,20 +87,22 @@ At the moment there is no support for using passkeys authentication in the Go SD
 <BackendTabs.TabItem value="python">
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.framework import BaseRequest
-from supertokens_python.recipe import webauthn, session
-from supertokens_python.recipe.webauthn import WebauthnConfig
-from supertokens_python.types.base import UserContext
 from typing import Optional
 
-def get_origin(*, tenant_id: str, request: Optional[BaseRequest], user_context: UserContext):
+from supertokens_python import InputAppInfo, SupertokensConfig, init
+from supertokens_python.framework import BaseRequest
+from supertokens_python.recipe import session, webauthn
+from supertokens_python.recipe.webauthn import WebauthnConfig
+from supertokens_python.types.base import UserContext
+
+
+async def get_origin(*, tenant_id: str, request: Optional[BaseRequest], user_context: UserContext):
     return "https://example.com"
 
-def get_relying_party_id(*, tenant_id: str, request: Optional[BaseRequest], user_context: UserContext):
+async def get_relying_party_id(*, tenant_id: str, request: Optional[BaseRequest], user_context: UserContext):
     return "example.com"
 
-def get_relying_party_name(*, tenant_id: str, request: Optional[BaseRequest], user_context: UserContext):
+async def get_relying_party_name(*, tenant_id: str, user_context: UserContext):
     return "example"
 
 init(
@@ -240,42 +242,60 @@ At the moment there is no support for using passkeys authentication in the Go SD
 <BackendTabs.TabItem value="python">
 
 ```python
-from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import webauthn, session
-from supertokens_python.recipe.webauthn import WebauthnConfig, RecipeInterface
+from typing import Any, List, Optional, cast
+
+from typing_extensions import Unpack
+
+from supertokens_python import InputAppInfo, SupertokensConfig, init
+from supertokens_python.recipe import session, webauthn
+from supertokens_python.recipe.webauthn import RecipeInterface, WebauthnConfig
+from supertokens_python.recipe.webauthn.interfaces.recipe import (
+    Attestation,
+    RegisterOptionsKwargsInput,
+    ResidentKey,
+    UserVerification,
+)
 from supertokens_python.recipe.webauthn.types.config import OverrideConfig
 from supertokens_python.types.base import UserContext
-from typing import Any, List, Optional, Union
+
 
 def override_webauthn_functions(original_implementation: RecipeInterface):
     original_register_options = original_implementation.register_options
 
     async def register_options(
         *,
-        email: Optional[str],
-        recover_account_token: Optional[str],
+        relying_party_id: str,
+        relying_party_name: str,
+        origin: str,
+        resident_key: Optional[ResidentKey] = None,
+        user_verification: Optional[UserVerification] = None,
+        user_presence: Optional[bool] = None,
+        attestation: Optional[Attestation] = None,
+        supported_algorithm_ids: Optional[List[int]] = None,
+        timeout: Optional[int] = None,
         tenant_id: str,
         user_context: UserContext,
-        **kwargs: Any,
+        **kwargs: Unpack[RegisterOptionsKwargsInput],
     ):
         return await original_register_options(
-            email=email,
-            recover_account_token=recover_account_token,
+            relying_party_id="example.com",
+            relying_party_name="example",
+            origin="https://example.com",
+            resident_key="required",
+            user_verification="required",
+            user_presence=True,
+            attestation="direct",
+            timeout=10 * 1000,
             tenant_id=tenant_id,
             user_context=user_context,
-            attestation="direct",
-            resident_key="required",
-            timeout=10 * 1000,
-            user_verification="required",
+            email=cast(str, kwargs.get("email")),
+            recover_account_token=cast(str, kwargs.get("recover_account_token")),
             display_name="John Doe",
-            supported_algorithms=[-257],
-            relying_party_id='example.com',
-            relying_party_name='example',
-            origin='https://example.com',
         )
 
     original_implementation.register_options = register_options
     return original_implementation
+
 
 init(
     app_info=InputAppInfo(
@@ -283,25 +303,24 @@ init(
         api_domain="<YOUR_API_DOMAIN>",
         website_domain="<YOUR_WEBSITE_DOMAIN>",
         api_base_path="/auth",
-        website_base_path="/auth"
+        website_base_path="/auth",
     ),
     supertokens_config=SupertokensConfig(
         # https://try.supertokens.com is for demo purposes. Replace this with the address of your core instance (sign up on supertokens.com), or self host a core.
         connection_uri="https://try.supertokens.com",
         # api_key="<API_KEY(if configured)>"
     ),
-    framework='flask',  # Replace this with the framework you are using
+    framework="flask",  # Replace this with the framework you are using
     recipe_list=[
         webauthn.init(
             config=WebauthnConfig(
-                override=OverrideConfig(
-                    functions=override_webauthn_functions
-                )
+                override=OverrideConfig(functions=override_webauthn_functions)
             )
         ),
-        session.init()  # initializes session features
-    ]
+        session.init(),  # initializes session features
+    ],
 )
+
 ```
 
 <br />
