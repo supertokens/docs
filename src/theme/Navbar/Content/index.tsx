@@ -8,7 +8,10 @@ import NavbarMobileSidebarToggle from "@theme/Navbar/MobileSidebar/Toggle";
 import NavbarLogo from "@theme/Navbar/Logo";
 import supertokens from "supertokens-website";
 import NavbarSearch from "@theme/Navbar/Search";
-import { Button } from "@radix-ui/themes";
+import { Button, Flex } from "@radix-ui/themes";
+import GitHubLogo from "/img/logos/github.svg";
+
+import { Search } from "@site/src/components";
 
 import styles from "./styles.module.css";
 import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
@@ -73,14 +76,26 @@ export default function NavbarContent(): JSX.Element {
         // TODO stop hardcoding items?
         // Ask the user to add the respective navbar items => more flexible
         <>
-          <NavbarItems items={rightItems} />
-          <NavbarColorModeToggle className={styles.colorModeToggle} />
+          <Flex gap="4" mr="3" align="center">
+            <Search.Button />
+            <Button variant="ghost" size="4" color="gray" asChild>
+              <a href="https://github.com/supertokens/supertokens-core" target="_blank" className="reset-link">
+                <GitHubLogo />
+                GitHub
+              </a>
+            </Button>
+            <Button variant="ghost" size="4" color="gray" asChild>
+              <a href="/blog" target="_blank" className="reset-link">
+                Blog
+              </a>
+            </Button>
+            <Button variant="ghost" size="4" color="gray" asChild>
+              <a href="https://supertokens.com/discord" target="_blank" className="reset-link">
+                Discord
+              </a>
+            </Button>
+          </Flex>
 
-          {!searchBarItem && (
-            <NavbarSearch>
-              <SearchBar />
-            </NavbarSearch>
-          )}
           <SignUpButton />
         </>
       }
