@@ -8,7 +8,7 @@ import NavbarMobileSidebarToggle from "@theme/Navbar/MobileSidebar/Toggle";
 import NavbarLogo from "@theme/Navbar/Logo";
 import supertokens from "supertokens-website";
 import NavbarSearch from "@theme/Navbar/Search";
-import { Button, Flex } from "@radix-ui/themes";
+import { Button, Text, Card, Flex } from "@radix-ui/themes";
 import GitHubLogo from "/img/logos/github.svg";
 
 import { Search } from "@site/src/components";
@@ -76,24 +76,26 @@ export default function NavbarContent(): JSX.Element {
         // TODO stop hardcoding items?
         // Ask the user to add the respective navbar items => more flexible
         <>
-          <Flex gap="4" mr="3" align="center">
+          <Flex gap="4" mr={{ initial: "0", md: "5" }} align="center">
             <Search.Button />
-            <Button variant="ghost" size="4" color="gray" asChild>
-              <a href="https://github.com/supertokens/supertokens-core" target="_blank" className="reset-link">
-                <GitHubLogo />
-                GitHub
-              </a>
-            </Button>
-            <Button variant="ghost" size="4" color="gray" asChild>
+            <Flex className={styles.navbarActionItem} gap="2" asChild>
+              <Text color="gray" size="4" asChild>
+                <a href="https://github.com/supertokens/supertokens-core" target="_blank" className="reset-link">
+                  <GitHubLogo width="18px" />
+                  GitHub
+                </a>
+              </Text>
+            </Flex>
+            <Text className={styles.navbarActionItem} color="gray" size="4" asChild>
               <a href="/blog" target="_blank" className="reset-link">
                 Blog
               </a>
-            </Button>
-            <Button variant="ghost" size="4" color="gray" asChild>
+            </Text>
+            <Text className={styles.navbarActionItem} color="gray" size="4" asChild>
               <a href="https://supertokens.com/discord" target="_blank" className="reset-link">
                 Discord
               </a>
-            </Button>
+            </Text>
           </Flex>
 
           <SignUpButton />
@@ -123,7 +125,7 @@ function SignUpButton() {
   }, []);
 
   return (
-    <Button asChild color="orange">
+    <Button className={styles.navbarActionItem} asChild color="orange">
       <a
         style={{ paddingRight: "var(--space-3)" }}
         onClick={onClick}
