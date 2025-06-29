@@ -9,14 +9,15 @@ import DocItemFooter from "@theme/DocItem/Footer";
 import Head from "@docusaurus/Head";
 import DocItemTOCMobile from "@theme/DocItem/TOC/Mobile";
 import DocItemTOCDesktop from "@theme/DocItem/TOC/Desktop";
+import BrowserOnly from "@docusaurus/BrowserOnly";
 import DocItemContent from "@theme/DocItem/Content";
 import DocBreadcrumbs from "@theme/DocBreadcrumbs";
 import ContentVisibility from "@theme/ContentVisibility";
 import type { Props } from "@theme/DocItem/Layout";
 
 import styles from "./styles.module.css";
-import { Flex, Grid } from "@radix-ui/themes";
-import { API_REFERENCE_PAGE_TITLE_ID } from "@site/src/components";
+import { Flex, Grid, Box, Text } from "@radix-ui/themes";
+import { API_REFERENCE_PAGE_TITLE_ID, CopyPageContentButton, PageOptionsDropdownMenu } from "@site/src/components";
 
 /**
  * Decide if the toc should be rendered, on mobile or desktop viewports
@@ -47,6 +48,15 @@ export default function DocItemLayout({ children }: Props): JSX.Element {
     const recipe = frontMatter["recipe"];
     return recipe ? `${baseTags}, ${recipe}` : baseTags;
   }, [frontMatter]);
+  const pageType = frontMatter["page_type"] || "";
+  const category = frontMatter["category"] || "";
+
+  const parsedPageType = useMemo(() => {
+    return formatLabel(pageType);
+  }, [pageType]);
+  const parsedCategory = useMemo(() => {
+    return formatLabel(category);
+  }, [category]);
 
   if (frontMatter["page_type"] === "api-reference") {
     return (
@@ -75,6 +85,29 @@ export default function DocItemLayout({ children }: Props): JSX.Element {
             <DocBreadcrumbs />
             <DocVersionBadge />
             {docTOC.mobile}
+            <BrowserOnly>
+              {() => (
+                <Flex
+                  align={{
+                    initial: "start",
+                    xs: "center",
+                  }}
+                  justify="between"
+                  mb="4"
+                  direction={{ initial: "column", xs: "row" }}
+                >
+                  <Text size="4" weight="bold" color="orange" mb="2" mt="2">
+                    {parsedCategory}
+                  </Text>
+                  {pageType !== "overview" && (
+                    <Flex gap="2" ml={{ initial: "0", xs: "auto" }}>
+                      <CopyPageContentButton />
+                      <PageOptionsDropdownMenu />
+                    </Flex>
+                  )}
+                </Flex>
+              )}
+            </BrowserOnly>
             <DocItemContent>{children}</DocItemContent>
             <DocItemFooter />
           </article>
@@ -84,4 +117,14 @@ export default function DocItemLayout({ children }: Props): JSX.Element {
       {docTOC.desktop && <div className="col col--3">{docTOC.desktop}</div>}
     </div>
   );
+}
+
+function formatLabel(label: string) {
+  return label
+    .split("-")
+    .map((word) => {
+      if (word === "sdk") return "SDK";
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 }
