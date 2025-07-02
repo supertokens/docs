@@ -1,15 +1,30 @@
 import { Badge, Inset, Box, Button, Dialog, Flex, Separator, Tabs, Text, TextField } from "@radix-ui/themes";
 import { searchClient, SearchResponse } from "@algolia/client-search";
-import type { Hit, SnippetResultItem } from "@algolia/client-search";
+import type { Hit } from "@algolia/client-search";
 import Link from "@docusaurus/Link";
 import SearchIcon from "/img/icons/search.svg";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import "./Search.scss";
 
+type DocumentationSearchResultHit = Hit<{
+  anchor: string;
+  category: string;
+  content: string;
+  hierarchy: {
+    lvl0: string | null;
+    lvl1: string | null;
+    lvl2: string | null;
+    lvl3: string | null;
+    lvl4: string | null;
+    lvl5: string | null;
+    lvl6: string | null;
+  };
+  url: string;
+}>;
+
 const client = searchClient("SBR5UR2Z16", "d87c41f893c301f365d5bfc62e6631df");
 
-// Debounce function to limit API calls
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -34,7 +49,7 @@ async function searchAlgolia(query: string, type?: TabType): Promise<SearchRespo
       facets: ["type", "category"],
       facetFilters: type !== "all" ? [`type:${type}`] : undefined,
       offset: 0,
-      length: 10,
+      length: 50,
       highlightPreTag: "<mark>",
       highlightPostTag: "</mark>",
       snippetEllipsisText: "…",
@@ -86,29 +101,12 @@ const SearchButton = () => {
   );
 };
 
-type SearchResultHit = Hit<{
-  url: string;
-  content: string;
-  hierarchy: {
-    lvl0: string | null;
-    lvl1: string | null;
-    lvl2: string | null;
-    lvl3: string | null;
-    lvl4: string | null;
-    lvl5: string | null;
-    lvl6: string | null;
-  };
-  _snippetResult?: {
-    content?: SnippetResultItem;
-  };
-}>;
-
 function SearchResultItem({
   hit,
   interactionMode,
   setInteractionMode,
 }: {
-  hit: SearchResultHit;
+  hit: DocumentationSearchResultHit;
   interactionMode: "keyboard" | "mouse" | "none";
   setInteractionMode: (mode: "keyboard" | "mouse" | "none") => void;
 }) {
@@ -116,20 +114,28 @@ function SearchResultItem({
   const breadcrumbs = useMemo(() => {
     if (!hit.hierarchy) return undefined;
     const items = Object.values(hit.hierarchy);
-    return items.filter(Boolean).slice(0, -1).join(" > ");
+    return items.filter(Boolean).slice(0, -1).join(" › ");
   }, [hit]);
 
   const highlight = useMemo(() => {
     if (!hit._highlightResult || !hit._highlightResult.hierarchy) return undefined;
     const items = Object.values(hit._highlightResult.hierarchy);
-    const match = items.find((item) => item.matchLevel === "full");
-    if (!match) return items[0]?.value;
-    return match?.value;
+    const lastItem = items[items.length - 1];
+    if (!lastItem || lastItem.matchLevel === "none") {
+      const levels = Object.values(hit.hierarchy).filter(Boolean);
+      return levels[levels.length - 1];
+    }
+    return lastItem.value;
   }, [hit]);
 
   const content = useMemo(() => {
-    if (!hit.content) return undefined;
-    return `${hit.content.slice(0, 100)}...`;
+    let content = hit.content;
+    if (hit._highlightResult?.content) {
+      // @ts-expect-error
+      content = hit._highlightResult.content?.value;
+    }
+    if (!content) return undefined;
+    return `${content.slice(0, 100)}...`;
   }, [hit]);
 
   const onMouseEnter = useCallback(() => {
@@ -184,60 +190,13 @@ function SearchResultItem({
 }
 
 function SearchModal() {
-  const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<TabType>("all");
-  const [results, setResults] = useState<Record<TabType, SearchResponse | null>>({
-    all: null,
-    tutorial: null,
-    guide: null,
-    "sdk-reference": null,
-    "api-reference": null,
-  });
-  const [searchState, setSearchState] = useState<"idle" | "loading" | "error" | "fetched">("idle");
+  const { results, query, changeQuery, pageType, changePageType, searchState, resetSearchState } = useSearch();
   const [interactionMode, setInteractionMode] = useState<"keyboard" | "mouse" | "none">("none");
   const inputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
 
-  const performSearch = useCallback(
-    async (searchQuery: string) => {
-      if (!searchQuery) {
-        setResults({ all: null, tutorial: null, guide: null, "sdk-reference": null, "api-reference": null });
-        return;
-      }
-
-      if (searchState !== "fetched") setSearchState("loading");
-      try {
-        const searchPromises = TABS.map((tab) => searchAlgolia(searchQuery, tab));
-        const searchResults = await Promise.all(searchPromises);
-
-        const newResults = TABS.reduce(
-          (acc, tab, index) => {
-            acc[tab] = searchResults[index];
-            return acc;
-          },
-          {} as Record<TabType, SearchResponse>,
-        );
-
-        setResults(newResults);
-        setSearchState("fetched");
-      } catch (e) {
-        setSearchState("error");
-        console.error(e);
-      }
-    },
-    [searchState],
-  );
-
-  const debouncedSearch = useCallback(debounce(performSearch, 300), [performSearch]);
-  const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newQuery = event.target.value;
-    setQuery(newQuery);
-    debouncedSearch(newQuery);
-  };
-
   const onNavigateToNextItem = useCallback(() => {
     if (!searchResultsRef.current) return;
-    console.log("keydown");
     setInteractionMode("keyboard");
     const searchResultItems = searchResultsRef.current.querySelectorAll("li");
     const searchResultItemsArray = Array.from(searchResultItems);
@@ -281,9 +240,8 @@ function SearchModal() {
     const link = activeItem.querySelector("a");
     if (!link) return;
     link.click();
-    setSearchState("idle");
     setInteractionMode("none");
-    setQuery("");
+    resetSearchState();
   }, []);
 
   useEffect(() => {
@@ -306,10 +264,19 @@ function SearchModal() {
     };
   }, []);
 
-  const currentHits = (results[activeTab]?.hits as SearchResultHit[]) || [];
-
   return (
-    <Dialog.Content align="start" maxWidth="700px" maxHeight="60vh" className="search-modal">
+    <Dialog.Content
+      align="start"
+      maxWidth={{
+        initial: "100%",
+        sm: "700px",
+      }}
+      maxHeight={{
+        initial: "100vh",
+        sm: "60vh",
+      }}
+      className="search-modal"
+    >
       <Box p="2">
         <TextField.Root
           ref={inputRef}
@@ -318,7 +285,7 @@ function SearchModal() {
           autoFocus
           placeholder="Search for anything..."
           value={query}
-          onChange={handleQueryChange}
+          onChange={(e) => changeQuery(e.target.value)}
           size="3"
         >
           <TextField.Slot>
@@ -326,76 +293,50 @@ function SearchModal() {
           </TextField.Slot>
         </TextField.Root>
       </Box>
-      {searchState === "idle" || searchState === "loading" ? null : (
-        <Tabs.Root value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)}>
-          <Tabs.List>
+      {searchState === "idle" || (searchState === "loading" && !results) ? null : (
+        <Tabs.Root value={pageType} onValueChange={(value: DocumentationPageType) => changePageType(value)}>
+          <Tabs.List wrap="wrap" className="search-modal__tabs-list">
             <Tabs.Trigger key="all" value="all">
               All
-              {results["all"] && (
-                <Badge ml="2" color="gray" variant="solid" radius="full">
-                  {results["all"]!.nbHits}
-                </Badge>
-              )}
+              {/* {results && ( */}
+              {/*   <Badge ml="2" color="gray" variant="solid" radius="full"> */}
+              {/*     {resultsCountByPageType["all"]} */}
+              {/*   </Badge> */}
+              {/* )} */}
             </Tabs.Trigger>
             <Tabs.Trigger key="tutorial" value="tutorial">
               Tutorials
-              {results["tutorial"] && (
-                <Badge ml="2" color="gray" variant="solid" radius="full">
-                  {results["tutorial"]!.nbHits}
-                </Badge>
-              )}
             </Tabs.Trigger>
             <Tabs.Trigger key="guide" value="guide">
               Guides
-              {results["guide"] && (
-                <Badge ml="2" color="gray" variant="solid" radius="full">
-                  {results["guide"]!.nbHits}
-                </Badge>
-              )}
             </Tabs.Trigger>
             <Tabs.Trigger key="sdk-reference" value="sdk-reference">
               SDK References
-              {results["sdk-reference"] && (
-                <Badge ml="2" color="gray" variant="solid" radius="full">
-                  {results["sdk-reference"]!.nbHits}
-                </Badge>
-              )}
             </Tabs.Trigger>
             <Tabs.Trigger key="api-reference" value="api-reference">
               API References
-              {results["api-reference"] && (
-                <Badge ml="2" color="gray" variant="solid" radius="full">
-                  {results["api-reference"]!.nbHits}
-                </Badge>
-              )}
             </Tabs.Trigger>
           </Tabs.List>
 
-          <Box
-            ref={searchResultsRef}
-            className="search-modal__results"
-            style={{ minHeight: "200px", maxHeight: "50vh", overflowY: "auto" }}
-          >
-            {searchState === "fetched" && results[activeTab]?.hits?.length === 0 && (
+          <Box ref={searchResultsRef} className="search-modal__results">
+            {searchState === "fetched" && results?.length === 0 && (
               <Box className="search-modal__no-results">
                 <Text size="7" color="gray">
                   No results found
                 </Text>
               </Box>
             )}
-            {searchState === "fetched" && results[activeTab]?.hits?.length > 0 && (
-              <>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {currentHits.map((hit, index) => (
-                    <SearchResultItem
-                      key={hit.objectID}
-                      hit={hit}
-                      interactionMode={interactionMode}
-                      setInteractionMode={setInteractionMode}
-                    />
-                  ))}
-                </ul>
-              </>
+            {searchState === "fetched" && results?.length > 0 && (
+              <ul className="search-modal__results-list">
+                {results.map((hit, index) => (
+                  <SearchResultItem
+                    key={hit.objectID}
+                    hit={hit}
+                    interactionMode={interactionMode}
+                    setInteractionMode={setInteractionMode}
+                  />
+                ))}
+              </ul>
             )}
           </Box>
         </Tabs.Root>
@@ -404,6 +345,109 @@ function SearchModal() {
   );
 }
 
+const AllPageTypes: Array<DocumentationPageType> = ["all", "tutorial", "guide", "sdk-reference", "api-reference"];
+
+function useSearch() {
+  const [query, setQuery] = useState("");
+  const [pageType, setPageType] = useState<DocumentationPageType>("all");
+  const [results, setResults] = useState<Array<Hit<DocumentationSearchResultHit>> | null>(null);
+  const [searchState, setSearchState] = useState<"idle" | "loading" | "error" | "fetched">("idle");
+  const indexName = "supertokens_documentation";
+
+  const doSearch = useCallback(async (query: string, pageType: DocumentationPageType | null) => {
+    if (!query) return;
+    setSearchState("loading");
+    const response = await searchAlgoliaIndex(indexName, query, pageType);
+    setResults(response?.hits || null);
+    setSearchState("fetched");
+    return Promise.resolve().then(async () => {
+      const additionalRequests = AllPageTypes.filter((type) => pageType !== type).map((type) => {
+        return searchAlgoliaIndex(indexName, query, type);
+      });
+      await Promise.all(additionalRequests);
+    });
+  }, []);
+  const debouncedSearch = useCallback(debounce(doSearch, 300), [doSearch]);
+
+  const changeQuery = useCallback((query: string) => {
+    setQuery(query);
+    debouncedSearch(query, pageType);
+  }, []);
+
+  const changePageType = useCallback(
+    async (type: DocumentationPageType | null) => {
+      setPageType(type);
+      const response = await searchAlgoliaIndex(indexName, query, type);
+      setResults(response?.hits || null);
+    },
+    [query],
+  );
+
+  const resetSearchState = useCallback(() => {
+    setQuery("");
+    setPageType(null);
+  }, []);
+
+  return {
+    results,
+    query,
+    changeQuery,
+    pageType,
+    changePageType,
+    searchState,
+    resetSearchState,
+  };
+}
+
 export const Search = {
   Button: SearchButton,
 };
+
+type DocumentationPageType = "all" | "guide" | "tutorial" | "sdk-reference" | "api-reference";
+
+const SearchCache: Record<string, { response: SearchResponse<DocumentationSearchResultHit> | null; timestamp: Date }> =
+  {};
+const CacheTTL = 1000 * 60 * 5;
+
+async function searchAlgoliaIndex(
+  index: string,
+  query: string,
+  pageType: DocumentationPageType,
+): Promise<SearchResponse<DocumentationSearchResultHit> | null> {
+  const cacheKey = `${index}-${query}-${pageType}`;
+  const facetFilters = pageType !== "all" ? [`type:${pageType}`] : undefined;
+  if (SearchCache[cacheKey] && SearchCache[cacheKey].timestamp > new Date(Date.now() - CacheTTL)) {
+    return SearchCache[cacheKey].response;
+  }
+
+  try {
+    const response = await client.searchSingleIndex<DocumentationSearchResultHit>({
+      indexName: index,
+      searchParams: {
+        query,
+        facets: ["type", "category"],
+        facetFilters,
+        offset: 0,
+        length: 50,
+        highlightPreTag: "<mark>",
+        highlightPostTag: "</mark>",
+        snippetEllipsisText: "…",
+        attributesToSnippet: ["content:20"],
+      },
+    });
+    SearchCache[cacheKey] = { response, timestamp: new Date() };
+    return response;
+  } catch (e) {
+    SearchCache[cacheKey] = { response: null, timestamp: new Date() };
+    return null;
+  } finally {
+    queueMicrotask(() => {
+      for (const key in SearchCache) {
+        const cacheEntry = SearchCache[key];
+        if (cacheEntry.timestamp.getTime() + CacheTTL < new Date().getTime()) {
+          delete SearchCache[key];
+        }
+      }
+    });
+  }
+}
