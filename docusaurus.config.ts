@@ -78,25 +78,7 @@ const config: Config = {
         href: "/",
         target: "_blank",
       },
-      items: [
-        {
-          href: "/blog",
-          label: "Blog",
-          position: "right",
-          target: "_blank",
-        },
-        {
-          href: "https://supertokens.com/discord",
-          label: "Ask Questions",
-          position: "right",
-          className: "navbar__item_discord",
-        },
-        {
-          href: "https://github.com/supertokens/supertokens-core",
-          label: "GitHub",
-          position: "right",
-        },
-      ],
+      items: [],
     },
     algolia: {
       apiKey: "ce04a158637d345fc094ebbfa9a5156a",

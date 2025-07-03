@@ -1,5 +1,6 @@
 import React from "react";
 import clsx from "clsx";
+import { useDoc } from "@docusaurus/plugin-content-docs/client";
 import ErrorBoundary from "@docusaurus/ErrorBoundary";
 import { PageMetadata, SkipToContentFallbackId, ThemeClassNames } from "@docusaurus/theme-common";
 import { useKeyboardNavigation } from "@docusaurus/theme-common/internal";
