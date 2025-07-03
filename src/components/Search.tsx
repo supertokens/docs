@@ -3,6 +3,7 @@ import { searchClient, SearchResponse } from "@algolia/client-search";
 import type { Hit } from "@algolia/client-search";
 import Link from "@docusaurus/Link";
 import SearchIcon from "/img/icons/search.svg";
+import CloseIcon from "/img/icons/x.svg";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import "./Search.scss";
@@ -96,7 +97,7 @@ const SearchButton = () => {
           </Button>
         </Flex>
       </Dialog.Trigger>
-      <SearchModal />
+      <SearchModal changeModalVisibility={setIsModalOpen} />
     </Dialog.Root>
   );
 };
@@ -105,10 +106,12 @@ function SearchResultItem({
   hit,
   interactionMode,
   setInteractionMode,
+  resetSearchState,
 }: {
   hit: DocumentationSearchResultHit;
   interactionMode: "keyboard" | "mouse" | "none";
   setInteractionMode: (mode: "keyboard" | "mouse" | "none") => void;
+  resetSearchState: () => void;
 }) {
   const ref = useRef<HTMLLIElement>(null);
   const breadcrumbs = useMemo(() => {
@@ -166,6 +169,14 @@ function SearchResultItem({
     ref.current.setAttribute("data-active", "false");
   }, []);
 
+  const urlOrPath = useMemo(() => {
+    const url = new URL(hit.url);
+    if (url.hostname.includes("supertokens")) {
+      return url.pathname;
+    }
+    return hit.url;
+  }, [hit]);
+
   if (!highlight) return null;
 
   return (
@@ -176,7 +187,7 @@ function SearchResultItem({
       onMouseLeave={onMouseLeave}
       onMouseMove={onMouseMove}
     >
-      <Link href={hit.url} className="reset-link">
+      <Link href={urlOrPath} onClick={resetSearchState} className="reset-link">
         <Flex direction="column" gap="1" p="2" className="search-result-item">
           {highlight && <Text as="div" size="3" mt="1" dangerouslySetInnerHTML={{ __html: highlight }} />}
           <Text as="div" size="2" color="gray" trim="both">
@@ -189,7 +200,7 @@ function SearchResultItem({
   );
 }
 
-function SearchModal() {
+function SearchModal({ changeModalVisibility }: { changeModalVisibility: (value: boolean) => void }) {
   const { results, query, changeQuery, pageType, changePageType, searchState, resetSearchState } = useSearch();
   const [interactionMode, setInteractionMode] = useState<"keyboard" | "mouse" | "none">("none");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -204,7 +215,7 @@ function SearchModal() {
     let nextItemIndex = activeItemIndex === -1 ? 0 : activeItemIndex + 1;
     if (nextItemIndex >= searchResultItemsArray.length) nextItemIndex = 0;
 
-    if (activeItemIndex !== -1) {
+    if (activeItemIndex !== -1 && searchResultItemsArray[activeItemIndex]) {
       searchResultItemsArray[activeItemIndex].setAttribute("data-active", "false");
     }
     searchResultItemsArray[nextItemIndex].setAttribute("data-active", "true");
@@ -223,7 +234,7 @@ function SearchModal() {
     let nextItemIndex = activeItemIndex === -1 ? searchResultItemsArray.length - 1 : activeItemIndex - 1;
     if (nextItemIndex === -1) nextItemIndex = searchResultItemsArray.length - 1;
 
-    if (activeItemIndex !== -1) {
+    if (activeItemIndex !== -1 && searchResultItemsArray[activeItemIndex]) {
       searchResultItemsArray[activeItemIndex].setAttribute("data-active", "false");
     }
     searchResultItemsArray[nextItemIndex].setAttribute("data-active", "true");
@@ -233,6 +244,12 @@ function SearchModal() {
     });
   }, []);
 
+  const resetSearch = useCallback(() => {
+    changeModalVisibility(false);
+    resetSearchState();
+    setInteractionMode("none");
+  }, []);
+
   const onSelectItem = useCallback(() => {
     if (!searchResultsRef.current) return;
     const activeItem = searchResultsRef.current.querySelector("li[data-active='true']");
@@ -240,6 +257,7 @@ function SearchModal() {
     const link = activeItem.querySelector("a");
     if (!link) return;
     link.click();
+    changeModalVisibility(false);
     setInteractionMode("none");
     resetSearchState();
   }, []);
@@ -291,8 +309,20 @@ function SearchModal() {
           <TextField.Slot>
             <SearchIcon height="16" width="16" />
           </TextField.Slot>
+
+          <Flex ml="auto" align="center" gap="2" asChild>
+            <TextField.Slot>
+              <Dialog.Close>
+                <Badge className="search-modal__close-button">
+                  <span>ESC</span>
+                  <CloseIcon width="16px" height="16px" />
+                </Badge>
+              </Dialog.Close>
+            </TextField.Slot>
+          </Flex>
         </TextField.Root>
       </Box>
+      <Box></Box>
       {searchState === "idle" || (searchState === "loading" && !results) ? null : (
         <Tabs.Root value={pageType} onValueChange={(value: DocumentationPageType) => changePageType(value)}>
           <Tabs.List wrap="wrap" className="search-modal__tabs-list">
@@ -326,7 +356,7 @@ function SearchModal() {
                 </Text>
               </Box>
             )}
-            {searchState === "fetched" && results?.length > 0 && (
+            {(searchState === "fetched" || searchState === "loading") && results?.length > 0 && (
               <ul className="search-modal__results-list">
                 {results.map((hit, index) => (
                   <SearchResultItem
@@ -334,6 +364,7 @@ function SearchModal() {
                     hit={hit}
                     interactionMode={interactionMode}
                     setInteractionMode={setInteractionMode}
+                    resetSearchState={resetSearch}
                   />
                 ))}
               </ul>
@@ -355,7 +386,11 @@ function useSearch() {
   const indexName = "supertokens_documentation";
 
   const doSearch = useCallback(async (query: string, pageType: DocumentationPageType | null) => {
-    if (!query) return;
+    if (!query) {
+      setResults(null);
+      setSearchState("idle");
+      return;
+    }
     setSearchState("loading");
     const response = await searchAlgoliaIndex(indexName, query, pageType);
     setResults(response?.hits || null);
@@ -385,7 +420,9 @@ function useSearch() {
 
   const resetSearchState = useCallback(() => {
     setQuery("");
+    setResults(null);
     setPageType(null);
+    setSearchState("idle");
   }, []);
 
   return {
