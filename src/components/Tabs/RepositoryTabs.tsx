@@ -7,7 +7,7 @@ const RepositoryTabOptions = [
     { label: "Python", value: "supertokens-python" },
     { label: "Core", value: "supertokens-core" },
     { label: "React", value: "supertokens-auth-react" },
-    { label: "JS", value: "supertokens-website" },
+    { label: "Website", value: "supertokens-website" },
     { label: "Backend SDK Testing", value: "backend-sdk-testing" },
 ];
 
