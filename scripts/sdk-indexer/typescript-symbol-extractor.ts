@@ -2,7 +2,7 @@ import Parser from "tree-sitter";
 import TypeScript from "tree-sitter-typescript";
 
 import { BaseSymbolExtractor } from "./symbol-extractor";
-import { Symbol, VariableSymbol, FunctionSymbol, ClassSymbol, TypeSymbol, MethodSymbol } from "./types";
+import { Symbol, VariableSymbol, FunctionSymbol, ClassSymbol, TypeSymbol } from "./types";
 import { writeFileSync } from "fs";
 
 export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
@@ -27,20 +27,14 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
   private traverse(node: Parser.SyntaxNode, symbols: Symbol[], file: string, content: string): void {
     let symbol: Symbol | null = null;
     switch (node.type) {
-      // case "function_declaration":
-      //   symbol = this.extractFunctionSymbol(node, file, content);
-      //   break;
       case "class_declaration":
         symbol = this.extractClassSymbol(node, file, content);
         break;
-      // case "variable_declarator":
-      //   console.log(node.text);
-      //   console.log(this.isExported(node));
-      //   break;
-      // case "interface_declaration":
-      // case "type_alias_declaration":
-      //   symbol = this.extractTypeSymbol(node, file, content);
-      //   break;
+      case "interface_declaration":
+      case "type_alias_declaration":
+      case "enum_declaration":
+        symbol = this.extractTypeSymbol(node, file, content);
+        break;
     }
 
     if (symbol) symbols.push(symbol);
@@ -52,36 +46,15 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
     }
   }
 
-  private extractFunctionSymbol(node: Parser.SyntaxNode, file: string, content: string): FunctionSymbol | null {
-    const nameNode = node.childForFieldName("name");
-    if (!nameNode) return null;
-
-    const parameters = this.extractParameters(node.childForFieldName("parameters"));
-    const returnType = this.extractReturnType(node.childForFieldName("return_type"));
-
-    return {
-      name: nameNode.text,
-      type: "function",
-      file,
-      line: node.startPosition.row,
-      content: this.getNodeContent(node, content),
-      comments: this.extractComments(node),
-      meta: {
-        parameters,
-        returnType,
-        isAsync: this.isAsync(node),
-        isStatic: this.isStatic(node),
-      },
-    };
-  }
-
   private extractClassSymbol(node: Parser.SyntaxNode, file: string, content: string): ClassSymbol | null {
+    const isExported = this.isExported(node);
+    if (!isExported) return null;
     const nameNode = node.childForFieldName("name");
     if (!nameNode) return null;
 
     const methods: ClassSymbol["meta"]["methods"] = [];
     const properties: ClassSymbol["meta"]["properties"] = [];
-    let constructorArgs: Array<{ name: string; type: string }> = [];
+    let constructorArgs: Array<{ name: string; type: string; optional: boolean }> = [];
 
     const body = node.childForFieldName("body");
     if (body) {
@@ -100,15 +73,18 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
                 parameters: this.extractParameters(member),
                 returnType: this.extractReturnType(member),
                 isAsync: this.isAsync(member),
-                visibility: member.childForFieldName("accessibility_modifier")
-                  ?.text as (typeof methods)[0]["visibility"],
+                isStatic: this.isStatic(member),
+                visibility: this.extractClassPropertyVisibility(member),
+                line: member.startPosition.row,
               });
             }
           } else if (member.type === "public_field_definition") {
             properties.push({
               name: member.childForFieldName("name")?.text as string,
               visibility: this.extractClassPropertyVisibility(member),
+              isStatic: this.isStatic(member),
               type: this.extractType(member),
+              line: member.startPosition.row,
             });
           }
         }
@@ -130,43 +106,8 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
     };
   }
 
-  // private extractVariableSymbols(
-  //   node: Parser.SyntaxNode,
-  //   file: string,
-  //   content: string,
-  // ): VariableSymbol[] {
-  //   const symbols: VariableSymbol[] = [];
-  //
-  //   for (let i = 0; i < node.childCount; i++) {
-  //     const child = node.child(i);
-  //     if(!child) continue;
-  //     if (child.type === "variable_declarator") {
-  //       const nameNode = child.childForFieldName("name");
-  //       const valueNode = child.childForFieldName("value");
-  //       const typeNode = child.childForFieldName("type");
-  //
-  //       if (nameNode) {
-  //         symbols.push({
-  //           name: nameNode.text,
-  //           type: "variable",
-  //           file,
-  //           content: this.getNodeContent(child, content),
-  //           comments: this.extractComments(child),
-  //           meta: {
-  //             dataType: typeNode?.text || "any",
-  //             isExported: this.isExported(node),
-  //             isConst: this.isConst(node),
-  //             initialValue: valueNode?.text,
-  //           },
-  //         });
-  //       }
-  //     }
-  //   }
-  //
-  //   return symbols;
-  // }
-
   private extractTypeSymbol(node: Parser.SyntaxNode, file: string, content: string): TypeSymbol | null {
+    if (!this.isExported(node)) return null;
     const nameNode = node.childForFieldName("name");
     if (!nameNode) return null;
 
@@ -184,20 +125,17 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
       comments: this.extractComments(node),
       meta: {
         definition: this.getNodeContent(node, content),
-        isExported: this.isExported(node),
         kind,
       },
     };
   }
 
-  private extractParameters(
-    functionNode: Parser.SyntaxNode,
-  ): Array<{ name: string; type: string; optional?: boolean }> {
+  private extractParameters(functionNode: Parser.SyntaxNode): Array<{ name: string; type: string; optional: boolean }> {
     const parametersNode =
       functionNode.childForFieldName("parameters") || functionNode.childForFieldName("formal_parameters");
     if (!parametersNode) return [];
 
-    const params: Array<{ name: string; type: string; optional?: boolean }> = [];
+    const params: Array<{ name: string; type: string; optional: boolean }> = [];
     for (let i = 0; i < parametersNode.childCount; i++) {
       const child = parametersNode.child(i);
       if (!child) continue;
@@ -206,7 +144,7 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
         const typeNode = child.childForFieldName("type");
         params.push({
           name: nameNode?.text || "unknown",
-          type: typeNode?.text || "any",
+          type: this.extractType(child) as string,
           optional: child.type === "optional_parameter",
         });
       }
@@ -216,16 +154,13 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
 
   private extractReturnType(functionNode: Parser.SyntaxNode): string {
     const node = functionNode.childForFieldName("return_type");
-    return node?.text || "unknown";
+    if (!node) return "void";
+    const predefinedTypeNode = node.children.find((child) => child.type === "predefined_type");
+    return predefinedTypeNode?.text || "void";
   }
 
   private isExported(node: Parser.SyntaxNode): boolean {
-    let current: Parser.SyntaxNode | null = node.parent;
-    while (current) {
-      if (current.type === "export_statement") return true;
-      current = current.parent;
-    }
-    return false;
+    return node.parent?.type === "export_statement";
   }
 
   private isAsync(node: Parser.SyntaxNode): boolean {
@@ -238,21 +173,8 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
   }
 
   private isStatic(node: Parser.SyntaxNode): boolean {
-    for (let i = 0; i < node.childCount; i++) {
-      const child = node.child(i);
-      if (!child) continue;
-      if (child.type === "static") return true;
-    }
-    return false;
-  }
-
-  private isConst(node: Parser.SyntaxNode): boolean {
-    for (let i = 0; i < node.childCount; i++) {
-      const child = node.child(i);
-      if (!child) continue;
-      if (child.type === "const") return true;
-    }
-    return false;
+    const staticNode = node.children.find((child) => child.type === "static");
+    return staticNode !== undefined;
   }
 
   private extractType(node: Parser.SyntaxNode): string | undefined {

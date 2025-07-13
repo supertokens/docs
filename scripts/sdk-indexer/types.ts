@@ -42,15 +42,19 @@ export interface ClassSymbol extends Symbol {
       parameters: Array<{ name: string; type: string; optional?: boolean }>;
       visibility: "public" | "private" | "protected";
       returnType: string;
+      isStatic: boolean;
       isAsync: boolean;
+      line: number;
     }[];
     properties: {
       name: string;
       visibility: "public" | "private" | "protected";
       type?: string;
+      isStatic: boolean;
       initialValue?: string;
+      line: number;
     }[];
-    constructorArgs: Array<{ name: string; type: string }>;
+    constructorArgs: Array<{ name: string; type: string; optional: boolean }>;
   };
 }
 
@@ -58,7 +62,6 @@ export interface TypeSymbol extends Symbol {
   type: "type";
   meta: {
     definition: string;
-    isExported: boolean;
     kind: "interface" | "type" | "enum" | "alias";
   };
 }
