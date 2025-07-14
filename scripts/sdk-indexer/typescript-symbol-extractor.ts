@@ -68,7 +68,7 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
             if (memberName.text === "constructor") {
               constructorArgs = this.extractParameters(member);
             } else {
-              const returnType = methods.push({
+              methods.push({
                 name: memberName.text,
                 parameters: this.extractParameters(member),
                 returnType: this.extractReturnType(member),
@@ -141,7 +141,6 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
       if (!child) continue;
       if (child.type === "required_parameter" || child.type === "optional_parameter") {
         const nameNode = child.childForFieldName("pattern");
-        const typeNode = child.childForFieldName("type");
         params.push({
           name: nameNode?.text || "unknown",
           type: this.extractType(child) as string,
