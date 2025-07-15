@@ -14,7 +14,7 @@ export function PageOptionsDropdownMenu() {
 
   const searchQuery = useMemo(() => {
     const currentUrl = window.location.href;
-    return `Read the following documentation page "${currentUrl}.md". I want to ask questions about it. If the content is too long use the \`offset\` and \`limit\` query parameters. With them you can paginate the fetched number of charaters returned by the server.`;
+    return `Read the following documentation page "${currentUrl}.md". I want to ask questions about it. If the content is too long use the \`offset\` and \`limit\` query parameters. With them you can paginate the number of characters returned by the server.`;
   }, []);
 
   const chatGPTUrl = useMemo(() => {
