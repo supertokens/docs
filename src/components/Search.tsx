@@ -68,12 +68,54 @@ const SearchModalContext = createContext<SearchModalContextType>({} as SearchMod
 
 function SearchModal() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { setIsModalOpen } = useContext(SearchButtonContext);
+  const { isModalOpen, setIsModalOpen } = useContext(SearchButtonContext);
+  const [selectedTab, setSelectedTab] = useState("all");
+  const tabsRef = useRef<HTMLElement[]>(new Array(5).fill(null));
+
+  const onKeyDown = useCallback((event: KeyboardEvent) => {
+    if (!event.ctrlKey) return;
+
+    if (["1", "2", "3", "4", "5"].includes(event.key)) {
+      const tabElement = tabsRef.current[Number(event.key) - 1];
+      if (!tabElement) return;
+      const tabValue = tabElement.getAttribute("data-value");
+      if (!tabValue) return;
+      setSelectedTab(tabValue);
+    }
+
+    if (event.key === "]") {
+      const activeTabElementIndex = tabsRef.current.findIndex((el) => el.getAttribute("data-state") === "active");
+      if (activeTabElementIndex === -1) return;
+      const nextTabElement = tabsRef.current[(activeTabElementIndex + 1) % tabsRef.current.length];
+      if (!nextTabElement) return;
+      const nextTabValue = nextTabElement.getAttribute("data-value");
+      if (!nextTabValue) return;
+      setSelectedTab(nextTabValue);
+    }
+
+    if (event.key === "[") {
+      const activeTabElementIndex = tabsRef.current.findIndex((el) => el.getAttribute("data-state") === "active");
+      if (activeTabElementIndex === -1) return;
+      const previousTabElement =
+        tabsRef.current[(activeTabElementIndex + tabsRef.current.length - 1) % tabsRef.current.length];
+      if (!previousTabElement) return;
+      const previousTabValue = previousTabElement.getAttribute("data-value");
+      if (!previousTabValue) return;
+      setSelectedTab(previousTabValue);
+    }
+  }, []);
 
   const onCloseModal = useCallback(() => {
     setSearchQuery("");
     setIsModalOpen(false);
   }, []);
+
+  useEffect(() => {
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onKeyDown]);
 
   return (
     <SearchModalContext.Provider value={{ onCloseModal, query: searchQuery }}>
@@ -117,21 +159,56 @@ function SearchModal() {
             </Flex>
           </TextField.Root>
         </Box>
-        <Tabs.Root defaultValue="all">
+        <Tabs.Root value={selectedTab} onValueChange={setSelectedTab}>
           <Tabs.List wrap="wrap" className="search-modal__tabs-list">
-            <Tabs.Trigger key="all" value="all">
+            <Tabs.Trigger
+              key="all"
+              value="all"
+              data-value="all"
+              ref={(el) => {
+                tabsRef.current[0] = el;
+              }}
+            >
               All
             </Tabs.Trigger>
-            <Tabs.Trigger key="tutorial" value="tutorial">
+            <Tabs.Trigger
+              key="tutorial"
+              value="tutorial"
+              data-value="tutorial"
+              ref={(el) => {
+                tabsRef.current[1] = el;
+              }}
+            >
               Tutorials
             </Tabs.Trigger>
-            <Tabs.Trigger key="guide" value="guide">
+            <Tabs.Trigger
+              key="guide"
+              value="guide"
+              data-value="guide"
+              ref={(el) => {
+                tabsRef.current[2] = el;
+              }}
+            >
               Guides
             </Tabs.Trigger>
-            <Tabs.Trigger key="sdk-reference" value="sdk-reference">
+            <Tabs.Trigger
+              key="sdk-reference"
+              value="sdk-reference"
+              data-value="sdk-reference"
+              ref={(el) => {
+                tabsRef.current[3] = el;
+              }}
+            >
               SDK References
             </Tabs.Trigger>
-            <Tabs.Trigger key="api-reference" value="api-reference">
+            <Tabs.Trigger
+              key="api-reference"
+              value="api-reference"
+              data-value="api-reference"
+              ref={(el) => {
+                tabsRef.current[4] = el;
+              }}
+            >
               API References
             </Tabs.Trigger>
           </Tabs.List>
@@ -290,7 +367,6 @@ function SearchResultsList() {
   const { searchResults, searchState } = useContext(SearchContext);
   const { onCloseModal } = useContext(SearchModalContext);
   const [interactionMode, setInteractionMode] = useState<"keyboard" | "mouse" | "none">("none");
-  console.log(searchState);
 
   const onNavigateToNextItem = useCallback(() => {
     if (!ref.current) return;
@@ -361,14 +437,10 @@ function SearchResultsList() {
     };
   }, []);
 
-  console.log(searchResults);
-  if (searchState === "idle") {
-    console.log("idle state");
-  }
   return (
     <SearchResultListContext.Provider value={{ interactionMode, setInteractionMode }}>
       <Box ref={ref} className="search-modal__results">
-        {searchState === "idle" && (
+        {(searchState === "idle" || (searchState === "loading" && !searchResults)) && (
           <Box className="search-modal__no-results">
             <Text size="5" color="gray">
               Start typing to search
@@ -461,15 +533,6 @@ function SearchResultListItem({ result }: { result: SearchResult }) {
             m="0"
             dangerouslySetInnerHTML={{ __html: result.highlight }}
           />
-          {result.content && (
-            <Text
-              className="search-modal__item-content"
-              as="div"
-              size="3"
-              m="0"
-              dangerouslySetInnerHTML={{ __html: result.content }}
-            />
-          )}
           <Text className="search-result__item-breadcrumbs" as="div" size="2" color="gray" trim="both">
             {breadcrumbs}
           </Text>

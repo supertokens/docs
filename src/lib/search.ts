@@ -99,25 +99,12 @@ function parseResponse(response: SearchResponses<SearchResultHit>): SearchResult
           console.warn("No highlight result found for hit", hit);
           return undefined;
         }
-        let highlight: string | undefined = undefined;
-        const items = Object.values(hit._highlightResult.hierarchy);
-        const lastItem = items[items.length - 1];
-        if (!lastItem || lastItem.matchLevel === "none") {
-          const levels = Object.values(hit.hierarchy).filter(Boolean);
-          highlight = levels[levels.length - 1];
-        } else {
-          highlight = lastItem.value;
-        }
+
+        const highlight = extractHighlight(hit);
         if (!highlight) {
           console.warn("No highlight found for hit", hit);
+          console.log(Object.values(hit._snippetResult.hierarchy));
         }
-
-        let content = hit.content;
-        if (hit._highlightResult?.content) {
-          // @ts-expect-error
-          content = hit._highlightResult.content?.value;
-        }
-
         let hierarchy: string[] = [];
         if (hit.hierarchy) {
           hierarchy = Object.values(hit.hierarchy).filter(Boolean);
@@ -125,7 +112,7 @@ function parseResponse(response: SearchResponses<SearchResultHit>): SearchResult
         return {
           id: hit.objectID,
           highlight,
-          content,
+          content: "",
           url: hit.url,
           type: hit.type,
           hierarchy,
@@ -137,4 +124,56 @@ function parseResponse(response: SearchResponses<SearchResultHit>): SearchResult
     })
     .flat()
     .filter(Boolean);
+}
+
+function extractHighlight(hit: Hit<SearchResultHit>): string | undefined {
+  if (!hit._snippetResult) {
+    return undefined;
+  }
+
+  const snippetResult = hit._snippetResult;
+
+  // @ts-ignore
+  if (snippetResult.content && snippetResult.content?.matchLevel !== "none") {
+    // @ts-ignore
+    return snippetResult.content.value;
+  }
+
+  // @ts-ignore
+  if (snippetResult.category && snippetResult.category.matchLevel !== "none") {
+    const hierarchyItems = Object.values(snippetResult.hierarchy);
+    const lastHierarchyItem = hierarchyItems[hierarchyItems.length - 1];
+    // @ts-ignore
+    return `${formatCategory(snippetResult.category.value)} - ${lastHierarchyItem.value}`;
+  }
+
+  // If the match is based on headings get two values to prevent multiple rows with the same value
+  const hierarchyItems = Object.values(snippetResult.hierarchy);
+  const matchedHierarchyItemIndex = hierarchyItems.findIndex((item) => item?.matchLevel !== "none");
+  if (matchedHierarchyItemIndex === -1) {
+    console.warn("No match level found for hierarchy items", hierarchyItems);
+    return undefined;
+  }
+
+  const matchedHierarchyItem = hierarchyItems[matchedHierarchyItemIndex];
+  const nextIndex = matchedHierarchyItemIndex + 1;
+  if (nextIndex >= hierarchyItems.length) {
+    return matchedHierarchyItem.value;
+  } else {
+    const nextHierarchyItem = hierarchyItems[nextIndex];
+    return `${matchedHierarchyItem.value} - ${nextHierarchyItem?.value}`;
+  }
+}
+
+function formatCategory(label: string): string {
+  return label
+    .split(" ")
+    .map((word) => {
+      if (word === "sdk") return "SDK";
+      if (word === "cdi") return "CDI";
+      if (word === "fdi") return "FDI";
+      if (word === "ai") return "AI";
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 }
