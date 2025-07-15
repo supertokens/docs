@@ -3,6 +3,8 @@ import { Button } from "@radix-ui/themes";
 import CopyIcon from "/img/icons/copy.svg";
 import CheckIcon from "/img/icons/check.svg";
 
+import "./CopyPageContentButton.scss";
+
 export function CopyPageContentButton() {
   const [markdownContent, setMarkdownContent] = useState<string>("");
   const [isCopied, setIsCopied] = useState(false);
@@ -64,8 +66,19 @@ export function CopyPageContentButton() {
   }, [onKeyDown]);
 
   return (
-    <Button onClick={handleCopyToClipboard} disabled={!markdownContent} size="2" color="gray" variant="soft">
-      {isCopied ? <CheckIcon width="14px" /> : <CopyIcon width="14px" />}
+    <Button
+      className="copy-page-content-button"
+      onClick={handleCopyToClipboard}
+      disabled={!markdownContent}
+      data-state={isCopied ? "copied" : "idle"}
+      size="2"
+      color="gray"
+      variant="soft"
+    >
+      <span className="copy-page-content-button__icon">
+        <CheckIcon className="copy-page-content-button__icon-check" width="14px" />
+        <CopyIcon className="copy-page-content-button__icon-copy" width="14px" />
+      </span>
       Copy Markdown
     </Button>
   );
