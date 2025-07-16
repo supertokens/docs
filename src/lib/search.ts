@@ -35,14 +35,17 @@ const SearchCache: Record<string, { results: SearchResult[]; timestamp: Date; cl
 const CacheTTL = 1000 * 60 * 5;
 type IndexName = "supertokens_documentation" | "supertokens_api_reference" | "supertokens_github";
 
-export async function search(
-  query: string,
-  indexes?: IndexName[],
-  type?: SearchResultType,
-): Promise<SearchResult[] | null> {
-  const indexNames = indexes || ["supertokens_documentation"];
-  const facetFilters = type ? [`type:${type}`] : undefined;
-  const cacheKey = `${indexNames.join(":")}-${query}-${facetFilters?.join(":")}`;
+type DocumentationIndexPageType = "guide" | "tutorial" | "sdk-reference" | "api-reference";
+type DocumentationIndexTypeFacetFilter = `type:${DocumentationIndexPageType}`;
+
+type QueryParameters = {
+  indexName: "supertokens_documentation";
+  facetFilters?: DocumentationIndexTypeFacetFilter[] | DocumentationIndexTypeFacetFilter[][];
+};
+
+export async function search(query: string, _parameters?: QueryParameters[]): Promise<SearchResult[] | null> {
+  const parameters = _parameters || [{ indexName: "supertokens_documentation" }];
+  const cacheKey = parameters.map((p) => `${p.indexName}-${query}-${p.facetFilters?.join(":")}`).join(";");
 
   if (SearchCache[cacheKey] && SearchCache[cacheKey].timestamp > new Date(Date.now() - CacheTTL)) {
     return SearchCache[cacheKey].results;
@@ -50,10 +53,10 @@ export async function search(
 
   try {
     const response = await client.search<SearchResultHit>({
-      requests: indexNames.map((indexName) => ({
-        indexName,
+      requests: parameters.map((param) => ({
+        indexName: param.indexName,
         query,
-        facetFilters,
+        facetFilters: param.facetFilters,
         offset: 0,
         length: 50,
         highlightPreTag: "<mark>",
