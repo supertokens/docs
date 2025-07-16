@@ -4,6 +4,11 @@ import type { Hit } from "@algolia/client-search";
 import Link from "@docusaurus/Link";
 import SearchIcon from "/img/icons/search.svg";
 import CloseIcon from "/img/icons/x.svg";
+import HashIcon from "/img/icons/hash.svg";
+import GithubIcon from "/img/icons/github.svg";
+import FileIcon from "/img/icons/file.svg";
+import TerminalIcon from "/img/icons/terminal.svg";
+import CodeIcon from "/img/icons/code.svg";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { search, SearchResult } from "../lib";
 
@@ -70,17 +75,20 @@ function SearchModal() {
   const [searchQuery, setSearchQuery] = useState("");
   const { isModalOpen, setIsModalOpen } = useContext(SearchButtonContext);
   const [selectedTab, setSelectedTab] = useState("all");
-  const tabsRef = useRef<HTMLElement[]>(new Array(5).fill(null));
+  const tabsRef = useRef<HTMLElement[]>([]);
 
   const onKeyDown = useCallback((event: KeyboardEvent) => {
+    if (!tabsRef.current) return;
     if (!event.ctrlKey) return;
 
-    if (["1", "2", "3", "4", "5"].includes(event.key)) {
+    const numericKeys = tabsRef.current.map((_, index) => `${index + 1}`);
+    if (numericKeys.includes(event.key)) {
       const tabElement = tabsRef.current[Number(event.key) - 1];
       if (!tabElement) return;
       const tabValue = tabElement.getAttribute("data-value");
       if (!tabValue) return;
       setSelectedTab(tabValue);
+      return;
     }
 
     if (event.key === "]") {
@@ -91,6 +99,7 @@ function SearchModal() {
       const nextTabValue = nextTabElement.getAttribute("data-value");
       if (!nextTabValue) return;
       setSelectedTab(nextTabValue);
+      return;
     }
 
     if (event.key === "[") {
@@ -102,6 +111,7 @@ function SearchModal() {
       const previousTabValue = previousTabElement.getAttribute("data-value");
       if (!previousTabValue) return;
       setSelectedTab(previousTabValue);
+      return;
     }
   }, []);
 
@@ -161,60 +171,26 @@ function SearchModal() {
         </Box>
         <Tabs.Root value={selectedTab} onValueChange={setSelectedTab}>
           <Tabs.List wrap="wrap" className="search-modal__tabs-list">
-            <Tabs.Trigger
-              key="all"
-              value="all"
-              data-value="all"
-              ref={(el) => {
-                tabsRef.current[0] = el;
-              }}
-            >
-              All
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              key="tutorial"
-              value="tutorial"
-              data-value="tutorial"
-              ref={(el) => {
-                tabsRef.current[1] = el;
-              }}
-            >
-              Tutorials
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              key="guide"
-              value="guide"
-              data-value="guide"
-              ref={(el) => {
-                tabsRef.current[2] = el;
-              }}
-            >
-              Guides
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              key="sdk-reference"
-              value="sdk-reference"
-              data-value="sdk-reference"
-              ref={(el) => {
-                tabsRef.current[3] = el;
-              }}
-            >
-              SDK References
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              key="api-reference"
-              value="api-reference"
-              data-value="api-reference"
-              ref={(el) => {
-                tabsRef.current[4] = el;
-              }}
-            >
-              API References
-            </Tabs.Trigger>
+            {[
+              { name: "all", label: "All" },
+              { name: "documentation", label: "Documentation" },
+              { name: "sdk-reference", label: "SDK References" },
+              { name: "api-reference", label: "API References" },
+            ].map((tab, index) => (
+              <Tabs.Trigger
+                key={tab.name}
+                value={tab.name}
+                data-value={tab.name}
+                ref={(el) => {
+                  tabsRef.current[index] = el;
+                }}
+              >
+                {tab.label}
+              </Tabs.Trigger>
+            ))}
           </Tabs.List>
           <AllSearchResultsTabContent />
-          <GuidesSearchResultsTabContent />
-          <TutorialsSearchResultsTabContent />
+          <DocumentationSearchResultsTabContent />
           <SDKReferencesSearchResultsTabContent />
           <APIReferencesSearchResultsTabContent />
         </Tabs.Root>
@@ -224,7 +200,6 @@ function SearchModal() {
 }
 
 function AllSearchResultsTabContent() {
-  const { query } = useContext(SearchModalContext);
   const searchFn = useCallback(async (searchQuery: string) => {
     return search(searchQuery);
   }, []);
@@ -238,30 +213,16 @@ function AllSearchResultsTabContent() {
   );
 }
 
-function GuidesSearchResultsTabContent() {
-  const { query } = useContext(SearchModalContext);
+function DocumentationSearchResultsTabContent() {
   const searchFn = useCallback(async (searchQuery: string) => {
-    return search(searchQuery, ["supertokens_documentation"], "guide");
+    return search(searchQuery, [
+      { indexName: "supertokens_documentation", facetFilters: [["type:guide", "type:tutorial"]] },
+    ]);
   }, []);
 
   return (
     <SearchProvider searchFn={searchFn}>
-      <Tabs.Content value="guide">
-        <SearchResultsList />
-      </Tabs.Content>
-    </SearchProvider>
-  );
-}
-
-function TutorialsSearchResultsTabContent() {
-  const { query } = useContext(SearchModalContext);
-  const searchFn = useCallback(async (searchQuery: string) => {
-    return search(searchQuery, ["supertokens_documentation"], "tutorial");
-  }, []);
-
-  return (
-    <SearchProvider searchFn={searchFn}>
-      <Tabs.Content value="tutorial">
+      <Tabs.Content value="documentation">
         <SearchResultsList />
       </Tabs.Content>
     </SearchProvider>
@@ -269,9 +230,8 @@ function TutorialsSearchResultsTabContent() {
 }
 
 function SDKReferencesSearchResultsTabContent() {
-  const { query } = useContext(SearchModalContext);
   const searchFn = useCallback(async (searchQuery: string) => {
-    return search(searchQuery, ["supertokens_documentation"], "sdk-reference");
+    return search(searchQuery, [{ indexName: "supertokens_documentation", facetFilters: ["type:sdk-reference"] }]);
   }, []);
 
   return (
@@ -284,9 +244,8 @@ function SDKReferencesSearchResultsTabContent() {
 }
 
 function APIReferencesSearchResultsTabContent() {
-  const { query } = useContext(SearchModalContext);
   const searchFn = useCallback(async (searchQuery: string) => {
-    return search(searchQuery, ["supertokens_documentation"], "api-reference");
+    return search(searchQuery, [{ indexName: "supertokens_documentation", facetFilters: ["type:api-reference"] }]);
   }, []);
 
   return (
@@ -295,16 +254,6 @@ function APIReferencesSearchResultsTabContent() {
         <SearchResultsList />
       </Tabs.Content>
     </SearchProvider>
-  );
-}
-
-function NoResultsTabContent() {
-  return (
-    <Box className="search-modal__no-results">
-      <Text size="7" color="gray">
-        No results found
-      </Text>
-    </Box>
   );
 }
 
@@ -466,10 +415,27 @@ function SearchResultsList() {
   );
 }
 
+type SearchResultItemType = "page-title" | "page-heading" | "api-reference" | "sdk-reference" | "github-page";
+
+TerminalIcon;
+const SearchResultItemTypeIcons: Record<SearchResultItemType, React.ComponentType<React.SVGProps<SVGElement>>> = {
+  "page-title": FileIcon,
+  "page-heading": HashIcon,
+  "api-reference": TerminalIcon,
+  "sdk-reference": CodeIcon,
+  "github-page": GithubIcon,
+};
+
 function SearchResultListItem({ result }: { result: SearchResult }) {
   const ref = useRef<HTMLLIElement>(null);
   const { interactionMode, setInteractionMode } = useContext(SearchResultListContext);
   const { onCloseModal } = useContext(SearchModalContext);
+  const searchResultItemType = useMemo(() => {
+    if (result.type === "sdk-reference") return "sdk-reference";
+    if (result.type === "api-reference") return "api-reference";
+    if (result.hierarchy.length === 1) return "page-title";
+    return "page-heading";
+  }, [result]);
   const breadcrumbs = useMemo(() => {
     if (!result.hierarchy) return undefined;
     return result.hierarchy.join(" › ");
@@ -516,6 +482,8 @@ function SearchResultListItem({ result }: { result: SearchResult }) {
     return result.url;
   }, [result]);
 
+  const Icon = SearchResultItemTypeIcons[searchResultItemType];
+
   return (
     <li
       className="search-modal__item"
@@ -525,17 +493,22 @@ function SearchResultListItem({ result }: { result: SearchResult }) {
       onMouseMove={onMouseMove}
     >
       <Link href={urlOrPath} onClick={onClick} className="reset-link">
-        <Flex direction="column" gap="2" p="2" className="search-result-item">
-          <Text
-            className="search-modal__item-highlight"
-            as="div"
-            size="3"
-            m="0"
-            dangerouslySetInnerHTML={{ __html: result.highlight }}
-          />
-          <Text className="search-result__item-breadcrumbs" as="div" size="2" color="gray" trim="both">
-            {breadcrumbs}
-          </Text>
+        <Flex direction="row" gap="1">
+          <Flex align="center" className="search-modal__item-icon">
+            <Icon width="20px" height="20px" />
+          </Flex>
+          <Flex direction="column" gap="2" p="2" className="search-modal__item-content">
+            <Text
+              className="search-modal__item-highlight"
+              as="div"
+              size="3"
+              m="0"
+              dangerouslySetInnerHTML={{ __html: result.highlight }}
+            />
+            <Text className="search-modal__item-breadcrumbs" as="div" size="2" color="gray" trim="both">
+              {breadcrumbs}
+            </Text>
+          </Flex>
         </Flex>
       </Link>
     </li>
