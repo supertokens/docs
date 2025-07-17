@@ -9,7 +9,7 @@ export class GoSymbolExtractor extends BaseSymbolExtractor {
   include = ["**/*.go"];
   exclude = ["**/vendor/**", "**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"];
 
-  constructor() {
+  constructor(public files: string[]) {
     super();
     this.parser.setLanguage(Go);
   }

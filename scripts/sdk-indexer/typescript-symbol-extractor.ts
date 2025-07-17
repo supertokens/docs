@@ -2,15 +2,14 @@ import Parser from "tree-sitter";
 import TypeScript from "tree-sitter-typescript";
 
 import { BaseSymbolExtractor } from "./symbol-extractor";
-import { Symbol, VariableSymbol, FunctionSymbol, ClassSymbol, TypeSymbol } from "./types";
-import { writeFileSync } from "fs";
+import { Symbol, VariableSymbol, FunctionSymbol, ClassSymbol, TypeSymbol, SymbolExtractor } from "./types";
 
-export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
+export class TypeScriptSymbolExtractor extends BaseSymbolExtractor implements SymbolExtractor {
   language: "typescript" = "typescript";
   include = ["**/*.ts", "**/*.tsx"];
   exclude = ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"];
 
-  constructor() {
+  constructor(public files: string[]) {
     super();
     this.parser.setLanguage(TypeScript.typescript);
   }

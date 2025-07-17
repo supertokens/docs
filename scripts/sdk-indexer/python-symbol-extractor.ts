@@ -17,7 +17,7 @@ export class PythonSymbolExtractor extends BaseSymbolExtractor {
     "**/.git/**",
   ];
 
-  constructor() {
+  constructor(public files: string[]) {
     super();
     this.parser.setLanguage(Python);
   }

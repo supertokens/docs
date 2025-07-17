@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { GoSymbolExtractor } from "./go-symbol-extractor";
 import { FunctionSymbol, TypeSymbol } from "./types";
 
-const extractor = new GoSymbolExtractor();
+const extractor = new GoSymbolExtractor(["test.go"]);
 
 function extractFunctionSymbols(code: string): FunctionSymbol[] {
   const symbols = extractor["extractFromFile"]("test.go", code);
@@ -288,10 +288,10 @@ type UserRepo interface {
       const allSymbols = extractor["extractFromFile"]("test.go", code);
       const functions = allSymbols.filter((s) => s.type === "function");
       const types = allSymbols.filter((s) => s.type === "type");
-      
+
       expect(functions).toHaveLength(2);
       expect(types).toHaveLength(2);
-      
+
       expect(functions[0]?.name).toBe("NewUser");
       expect(functions[1]?.name).toBe("GetName");
       expect(types[0]?.name).toBe("User");
@@ -299,3 +299,4 @@ type UserRepo interface {
     });
   });
 });
+

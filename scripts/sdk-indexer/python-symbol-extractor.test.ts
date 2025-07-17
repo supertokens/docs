@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { PythonSymbolExtractor } from "./python-symbol-extractor";
 import { FunctionSymbol, TypeSymbol } from "./types";
 
-const extractor = new PythonSymbolExtractor();
+const extractor = new PythonSymbolExtractor(["test.py"]);
 
 function extractFunctionSymbols(code: string): FunctionSymbol[] {
   const symbols = extractor["extractFromFile"]("test.py", code);
@@ -345,19 +345,20 @@ class UserRepository:
       const allSymbols = extractor["extractFromFile"]("test.py", code);
       const functions = allSymbols.filter((s) => s.type === "function");
       const types = allSymbols.filter((s) => s.type === "type");
-      
+
       expect(functions).toHaveLength(5);
       expect(types).toHaveLength(2);
-      
+
       expect(functions[0]?.name).toBe("__init__");
       expect(functions[1]?.name).toBe("get_name");
       expect(functions[2]?.name).toBe("create_user");
       expect(functions[3]?.name).toBe("save_user");
       expect(functions[3]?.meta.isAsync).toBe(true);
       expect(functions[4]?.name).toBe("find_by_name");
-      
+
       expect(types[0]?.name).toBe("User");
       expect(types[1]?.name).toBe("UserRepository");
     });
   });
 });
+
