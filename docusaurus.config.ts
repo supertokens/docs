@@ -68,6 +68,7 @@ const config: Config = {
     colorMode: {
       defaultMode: "dark",
       disableSwitch: true,
+      respectPrefersColorScheme: true,
     },
     image: "https://supertokens.com/static/assets/home-meta.png",
     navbar: {
@@ -75,6 +76,7 @@ const config: Config = {
       logo: {
         alt: "SuperTokens Logo",
         src: "img/logoWithNameLight.svg",
+        srcDark: "img/logoWithNameLight.svg",
         href: "/",
         target: "_blank",
       },

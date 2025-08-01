@@ -22,3 +22,4 @@ export * from "./Typography";
 export * from "./CopyPageContentButton";
 export * from "./PageOptionsDropdownMenu";
 export * from "./Search";
+export * from "./ColorModeToggle";

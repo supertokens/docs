@@ -5,6 +5,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import { useThemeConfig, type NavbarLogo } from "@docusaurus/theme-common";
 import ThemedImage from "@theme/ThemedImage";
 import type { Props } from "@theme/Logo";
+import { useTheme } from "@site/src/lib";
 
 function LogoThemedImage({ logo, alt, imageClassName }: { logo: NavbarLogo; alt: string; imageClassName?: string }) {
   const sources = {
@@ -28,27 +29,13 @@ function LogoThemedImage({ logo, alt, imageClassName }: { logo: NavbarLogo; alt:
 }
 
 export default function Logo(props: Props): JSX.Element {
-  const {
-    siteConfig: { title },
-  } = useDocusaurusContext();
-  const {
-    navbar: { title: navbarTitle, logo },
-  } = useThemeConfig();
+  const { theme } = useTheme();
 
-  const { imageClassName, titleClassName, ...propsRest } = props;
-  const logoLink = useBaseUrl(logo?.href || "/");
-
-  // If visible title is shown, fallback alt text should be
-  // an empty string to mark the logo as decorative.
-  const fallbackAlt = navbarTitle ? "" : title;
-
-  // Use logo alt text if provided (including empty string),
-  // and provide a sensible fallback otherwise.
-  const alt = logo?.alt ?? fallbackAlt;
+  const src = theme === "dark" ? "/img/logos/supertokens-light.svg" : "/img/logos/supertokens-dark.svg";
 
   return (
-    <Link to={logoLink} {...propsRest} {...(logo?.target && { target: logo.target })}>
-      {logo && <LogoThemedImage logo={logo} alt={alt} imageClassName={imageClassName} />}
+    <Link to="https://supertokens.com" target="_blank" className="navbar__brand">
+      <img src={src} className="navbar__logo" alt="SuperTokens" />
     </Link>
   );
 }
