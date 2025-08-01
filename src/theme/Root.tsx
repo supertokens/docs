@@ -6,6 +6,7 @@ import { init, getCookieConsent, setCookieConsent, trackPageExit, trackPageView 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "@docusaurus/router";
 import { useTheme } from "../lib";
+import useLayoutEffect from "@docusaurus/useIsomorphicLayoutEffect";
 
 export default function Root({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
@@ -16,6 +17,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
     // regardless if the user interacts with the page or not
     init();
   }, []);
+
+  useLayoutEffect(() => {}, []);
 
   useEffect(() => {
     trackPageView();

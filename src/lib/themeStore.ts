@@ -22,7 +22,7 @@ function subscribeToSystemColorModeChange(onChange: (newSystemColorMode: ColorMo
   return subscribeToMedia("(prefers-color-scheme: dark)", () => onChange(getSystemColorMode()));
 }
 
-const ColorModeStorageKey = "theme";
+const ColorModeStorageKey = "supertokens-theme";
 
 const storage = {
   get: (): string | null => {
@@ -60,12 +60,9 @@ const storage = {
 };
 
 const DefaultColorMode: ColorMode = "dark";
-// We use data-theme-choice="system", not an absent attribute
 const SystemAttribute = "system";
 
-// Ensure to always return a valid colorMode even if input is invalid
 const coerceToColorMode = (colorMode: string | null): ColorMode => (colorMode === "dark" ? "dark" : "light");
-
 const coerceToColorModeChoice = (colorMode: string | null): ColorModeChoice =>
   colorMode === null || colorMode === SystemAttribute ? null : coerceToColorMode(colorMode);
 
@@ -95,7 +92,8 @@ const persistColorModeChoice = (newColorMode: ColorModeChoice) => {
   if (newColorMode === null) {
     storage.del();
   } else {
-    storage.set(coerceToColorMode(newColorMode));
+    const coercedValue = coerceToColorMode(newColorMode);
+    storage.set(coercedValue);
   }
 };
 
@@ -116,20 +114,34 @@ class ThemeStore {
       colorMode: DefaultColorMode,
       colorModeChoice: null,
     };
-
-    if (typeof window !== "undefined") {
-      this.initialize();
-    }
   }
 
   private initialize() {
     if (this.initialized) return;
     this.initialized = true;
 
+    const storedValue = storage.get();
+    const storedChoice = coerceToColorModeChoice(storedValue);
+
+    let colorModeChoice: ColorModeChoice;
+    let colorMode: ColorMode;
+
+    if (storedChoice !== null) {
+      colorModeChoice = storedChoice;
+      colorMode = storedChoice;
+    } else {
+      colorModeChoice = ColorModeChoiceAttribute.get();
+      colorMode = colorModeChoice !== null ? colorModeChoice : getSystemColorMode();
+    }
+
     this.state = {
-      colorMode: ColorModeAttribute.get(),
-      colorModeChoice: ColorModeChoiceAttribute.get(),
+      colorMode,
+      colorModeChoice,
     };
+
+    // Update DOM attributes to match the restored state
+    ColorModeAttribute.set(colorMode);
+    ColorModeChoiceAttribute.set(colorModeChoice);
 
     this.systemChangeUnsubscribe = subscribeToSystemColorModeChange((newSystemColorMode) => {
       if (this.state.colorModeChoice === null) {
@@ -140,7 +152,10 @@ class ThemeStore {
     // Subscribe to storage changes (for cross-tab synchronization)
     this.storageUnsubscribe = storage.listen((e) => {
       const newChoice = coerceToColorModeChoice(e.newValue);
-      this.setColorMode(newChoice, false);
+
+      if (newChoice !== this.state.colorModeChoice) {
+        this.setColorMode(newChoice, false);
+      }
     });
   }
 
@@ -193,7 +208,7 @@ class ThemeStore {
 
 const themeStore = new ThemeStore();
 
-export type ThemeOption = 'system' | 'light' | 'dark';
+export type ThemeOption = "system" | "light" | "dark";
 
 export function useTheme() {
   const state = useSyncExternalStore(themeStore.subscribe, themeStore.getSnapshot, () => ({
@@ -201,31 +216,15 @@ export function useTheme() {
     colorModeChoice: null,
   }));
 
-  // Convert internal state to external API
-  const currentTheme: ThemeOption = state.colorModeChoice === null ? 'system' : state.colorModeChoice;
-  
   const setTheme = (theme: ThemeOption) => {
-    const colorModeChoice = theme === 'system' ? null : theme;
+    const colorModeChoice = theme === "system" ? null : theme;
     themeStore.setColorMode(colorModeChoice);
-  };
-
-  const getNextTheme = (): ThemeOption => {
-    if (currentTheme === 'system') {
-      // If system, next should be opposite of current system preference
-      const systemTheme = getSystemColorMode();
-      return systemTheme === 'light' ? 'dark' : 'light';
-    }
-    if (currentTheme === 'light') return 'dark';
-    return 'system'; // dark -> system
   };
 
   return {
     theme: state.colorMode,
-    currentTheme,
     setTheme,
-    getNextTheme,
   };
 }
 
 export { themeStore };
-

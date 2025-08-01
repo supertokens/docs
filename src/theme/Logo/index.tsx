@@ -34,7 +34,7 @@ export default function Logo(props: Props): JSX.Element {
   const src = theme === "dark" ? "/img/logos/supertokens-light.svg" : "/img/logos/supertokens-dark.svg";
 
   return (
-    <Link to="https://supertokens.com" target="_blank" className="navbar__brand">
+    <Link to="https://supertokens.com" className="navbar__brand">
       <img src={src} className="navbar__logo" alt="SuperTokens" />
     </Link>
   );
