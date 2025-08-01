@@ -45,6 +45,7 @@ export default function DocSidebarDesktopContent({ path, sidebar, className }: P
         <ul className={clsx(ThemeClassNames.docs.docSidebarMenu, "menu__list")}>
           <DocSidebarItems items={sidebar} activePath={path} level={1} />
         </ul>
+
         <AdditionalLinks />
       </div>
     </nav>
