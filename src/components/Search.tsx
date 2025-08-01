@@ -52,7 +52,7 @@ const SearchButton = () => {
             <Button variant="soft" color="gray" highContrast size="3">
               <SearchIcon width="18px" />
               <Text>Search</Text>
-              <Flex ml="auto" gap="1">
+              <Flex className="search-button__shortcut-indicator" ml="auto" gap="1">
                 <Badge>/</Badge>
               </Flex>
             </Button>

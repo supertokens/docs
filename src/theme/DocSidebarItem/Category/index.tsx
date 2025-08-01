@@ -15,6 +15,7 @@ import type { Props } from "@theme/DocSidebarItem/Category";
 
 import "./styles.scss";
 import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
+import { MenuItemIcon } from "@site/src/components/MenuItemIcon";
 
 // If we navigate to a category and it becomes active, it should automatically
 // expand itself
@@ -167,7 +168,10 @@ export default function DocSidebarItemCategory({
           })}
         ></div>
         <div className="menu__main-category" onClick={() => updateCollapsed()}>
-          <div className="menu__main-category-title">{label}</div>
+          <div className="menu__main-category-title">
+            <MenuItemIcon label={label} className="menu__main-category-icon" />
+            {label}
+          </div>
           <CollapseButton
             collapsed={collapsed}
             categoryLabel={label}
@@ -235,6 +239,7 @@ export default function DocSidebarItemCategory({
           href={collapsible ? (hrefWithSSRFallback ?? "#") : hrefWithSSRFallback}
           {...props}
         >
+          <MenuItemIcon label={label} href={href} className="menu__category-icon" />
           {label}
         </Link>
         {href && collapsible && (
