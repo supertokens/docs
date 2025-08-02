@@ -12,6 +12,7 @@ import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
 import { Badge } from "@radix-ui/themes";
 import { APIRequestMethodBadge } from "@site/src/components/APIRequest/APIRequest";
 import { APIRequestMethod } from "@site/src/types";
+import { MenuItemIcon } from "@site/src/components/MenuItemIcon";
 
 export default function DocSidebarItemLink({
   item,
@@ -66,6 +67,7 @@ export default function DocSidebarItemLink({
         to={href}
         {...props}
       >
+        <MenuItemIcon href={href} className={styles.menuItemIcon} />
         {isAPIReferenceLink ? rest.join(" ") : label}
         {!isInternalLink && <IconExternalLink />}
         {isAPIReferenceLink && method ? (

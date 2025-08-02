@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useThemeConfig, ErrorCauseBoundary } from "@docusaurus/theme-common";
+import clsx from "clsx";
 import { splitNavbarItems, useNavbarMobileSidebar } from "@docusaurus/theme-common/internal";
 import NavbarItem, { type Props as NavbarItemConfig } from "@theme/NavbarItem";
 import NavbarColorModeToggle from "@theme/Navbar/ColorModeToggle";
@@ -10,8 +11,9 @@ import supertokens from "supertokens-website";
 import NavbarSearch from "@theme/Navbar/Search";
 import { Button, Text, Card, Flex } from "@radix-ui/themes";
 import GitHubLogo from "/img/logos/github.svg";
+import DiscordLogo from "/img/logos/discord.svg";
 
-import { Search } from "@site/src/components";
+import { Search, ColorModeToggle } from "@site/src/components";
 
 import styles from "./styles.module.css";
 import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
@@ -73,29 +75,21 @@ export default function NavbarContent(): JSX.Element {
         </>
       }
       right={
-        // TODO stop hardcoding items?
-        // Ask the user to add the respective navbar items => more flexible
         <>
-          <Flex gap="4" mr={{ initial: "0", md: "5" }} align="center">
-            <Search.Button />
-            <Flex className={styles.navbarActionItem} gap="2" asChild>
+          <Flex gap="3" mr={{ initial: "0", md: "5" }} align="center">
+            <div className={styles.navbarActionItem}>
+              <Search.Button />
+            </div>
+            <div className={styles.navbarActionItem}>
+              <ColorModeToggle />
+            </div>
+            <Flex className={clsx(styles.navbarActionItem, styles.navbarActionItemHoverable)} gap="2" asChild>
               <Text color="gray" size="4" asChild>
                 <a href="https://github.com/supertokens/supertokens-core" target="_blank" className="reset-link">
-                  <GitHubLogo width="18px" />
-                  GitHub
+                  <GitHubLogo width="1.2rem" />
                 </a>
               </Text>
             </Flex>
-            <Text className={styles.navbarActionItem} color="gray" size="4" asChild>
-              <a href="/blog" target="_blank" className="reset-link">
-                Blog
-              </a>
-            </Text>
-            <Text className={styles.navbarActionItem} color="gray" size="4" asChild>
-              <a href="https://supertokens.com/discord" target="_blank" className="reset-link">
-                Discord
-              </a>
-            </Text>
           </Flex>
 
           <SignUpButton />
@@ -125,7 +119,7 @@ function SignUpButton() {
   }, []);
 
   return (
-    <Button className={styles.navbarActionItem} asChild color="orange">
+    <Button asChild color="orange">
       <a
         style={{ paddingRight: "var(--space-3)" }}
         onClick={onClick}

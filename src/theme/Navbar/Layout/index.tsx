@@ -6,7 +6,7 @@ import { translate } from "@docusaurus/Translate";
 import NavbarMobileSidebar from "@theme/Navbar/MobileSidebar";
 import type { Props } from "@theme/Navbar/Layout";
 import { useLocation } from "@docusaurus/router";
-import { TabNav, Box } from "@radix-ui/themes";
+import { Flex, TabNav, Box } from "@radix-ui/themes";
 import Link from "@docusaurus/Link";
 
 import styles from "./styles.module.scss";
