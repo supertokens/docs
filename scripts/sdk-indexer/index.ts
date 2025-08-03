@@ -1,6 +1,7 @@
 import { mkdir, exists } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { $, file, write } from "bun";
+import { algoliasearch } from "algoliasearch";
 import { TypeScriptSymbolExtractor } from "./typescript-symbol-extractor";
 import { GoSymbolExtractor } from "./go-symbol-extractor";
 import { PythonSymbolExtractor } from "./python-symbol-extractor";
@@ -52,7 +53,7 @@ type IndexDocument = {
 
     await write("index.json", JSON.stringify(documents, null, 2));
 
-    // await updateIndex(documents);
+    await updateIndex(documents);
   } catch (e) {
     console.error("Indexing failed");
     console.error(e);
@@ -119,5 +120,80 @@ function transformSymbolsToDocuments(symbols: Symbol[], repository: Repository):
 }
 
 async function updateIndex(documents: IndexDocument[]): Promise<void> {
-  // TODO: Implement index update logic
+  // Get Algolia configuration from environment variables
+  const algoliaAppId = process.env.ALGOLIA_APP_ID || "SBR5UR2Z16";
+  const algoliaApiKey = process.env.ALGOLIA_API_KEY || "3b419fe5e51516cc416f08dac7b9b253";
+  const indexName = process.env.ALGOLIA_SDK_INDEX_NAME || "supertokens_sdk_reference";
+
+  if (!algoliaAppId || !algoliaApiKey) {
+    throw new Error("Algolia credentials not found. Please set ALGOLIA_APP_ID and ALGOLIA_API_KEY environment variables.");
+  }
+
+  console.log(`Updating Algolia index "${indexName}" with ${documents.length} documents...`);
+
+  try {
+    // Initialize Algolia client
+    const client = algoliasearch(algoliaAppId, algoliaApiKey).initIngestion({ region: "us" });
+
+    // Transform documents to Algolia records with objectID
+    const records = documents.map((doc, index) => ({
+      ...doc,
+      objectID: `${doc.file.replace(/[^a-zA-Z0-9]/g, "_")}_${doc.name}_${doc.line}_${index}`,
+      // Add additional searchable fields
+      searchableContent: `${doc.name} ${doc.type} ${doc.content}`,
+      repository: doc.file.split('/')[0] || 'unknown',
+      language: getLanguageFromFile(doc.file),
+    }));
+
+    // Clear existing index content first (optional - remove if you want to append)
+    console.log("Clearing existing index content...");
+    await client.push({
+      indexName,
+      pushTaskPayload: {
+        action: "clear",
+      },
+    });
+
+    // Add new records in batches to avoid hitting API limits
+    const batchSize = 100;
+    const batches = [];
+    
+    for (let i = 0; i < records.length; i += batchSize) {
+      batches.push(records.slice(i, i + batchSize));
+    }
+
+    console.log(`Uploading ${records.length} records in ${batches.length} batches...`);
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      console.log(`Uploading batch ${i + 1}/${batches.length} (${batch.length} records)...`);
+      
+      const response = await client.push({
+        indexName,
+        pushTaskPayload: {
+          action: "addObject",
+          records: batch,
+        },
+      });
+
+      console.log(`Batch ${i + 1} uploaded successfully. Task ID: ${response.taskID}`);
+    }
+
+    console.log(`✅ Successfully updated Algolia index "${indexName}" with ${records.length} SDK symbols`);
+  } catch (error) {
+    console.error("❌ Failed to update Algolia index:", error);
+    throw error;
+  }
+}
+
+// Helper function to determine language from file path
+function getLanguageFromFile(filePath: string): string {
+  if (filePath.endsWith('.ts') || filePath.endsWith('.tsx') || filePath.endsWith('.js') || filePath.endsWith('.jsx')) {
+    return 'typescript';
+  } else if (filePath.endsWith('.go')) {
+    return 'go';
+  } else if (filePath.endsWith('.py')) {
+    return 'python';
+  }
+  return 'unknown';
 }
