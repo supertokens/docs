@@ -14,13 +14,14 @@ const NodeFrameworksCardContext = createContext<NodeFrameworksCardContextType>({
 function NodeFrameworksCardRoot({
   children,
   showAppTypeSelect = false,
-}: React.PropsWithChildren<{ showAppTypeSelect?: boolean }>) {
+  exclude = [],
+}: React.PropsWithChildren<{ showAppTypeSelect?: boolean; exclude?: string[] }>) {
   const cardHeaderPortalRightSideContentRef = useRef<HTMLDivElement>(null);
   return (
     <NodeFrameworksCardContext.Provider value={{ cardHeaderPortalRightSideContentRef }}>
       <CodeSampleCard>
         <CodeSampleCard.Header>
-          <NodeFrameworksSelect />
+          <NodeFrameworksSelect exclude={exclude} />
           <Flex gap="1" ref={cardHeaderPortalRightSideContentRef}>
             {showAppTypeSelect && <AppTypeSelect />}
           </Flex>
