@@ -4,6 +4,11 @@ import {
   Book,
   Zap,
   HousePlus,
+  IdCard,
+  MonitorSmartphone,
+  UserSearch,
+  ShieldPlus,
+  BadgeCheck,
   ShieldUser,
   Braces,
   Key,
@@ -130,6 +135,13 @@ const categoryIcons = {
   "/docs/quickstart/introduction": Book,
   "/docs/quickstart/next-steps": NotebookTabs,
   "/docs/quickstart/example-applications": Play,
+
+  // Other
+  "Session Verification": BadgeCheck,
+  "Attack Protection Suite": ShieldPlus,
+  "Multi Factor Authentication": MonitorSmartphone,
+  "User Management": UserSearch,
+  "Session Management": IdCard,
 };
 
 // Brand logo mappings for integration platforms
