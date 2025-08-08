@@ -345,7 +345,9 @@ export default function createLLMFullFile(context) {
         allFiles.push(...mdxFiles);
       }
 
-      const filesWithoutReferences = allFiles.filter((file) => !file.path.includes("references"));
+      const filesWithoutReferences = allFiles.filter(
+        (file) => !file.path.includes("cdi") && !file.path.includes("fdi"),
+      );
 
       return { files: filesWithoutReferences };
     },

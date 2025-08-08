@@ -13,6 +13,7 @@ import ErrorPageContent from "@theme/ErrorPageContent";
 import supertokens from "supertokens-website";
 import type { Props } from "@theme/Layout";
 import styles from "./styles.module.css";
+import ScrollOffsetFix from "@site/src/components/ScrollOffsetFix";
 
 if (typeof window !== "undefined") {
   const isProdEnv =
@@ -51,6 +52,7 @@ export default function Layout(props: Props): JSX.Element {
   return (
     <LayoutProvider>
       <PageMetadata title={title} description={description} />
+      <ScrollOffsetFix />
 
       <SkipToContent />
 

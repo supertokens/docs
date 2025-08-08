@@ -1,12 +1,16 @@
 import { Theme, Card, Text, Flex, Button, Box } from "@radix-ui/themes";
 
+import { useColorMode, useThemeConfig } from "@docusaurus/theme-common";
 import { DocItemContextProvider } from "@site/src/context";
 import { init, getCookieConsent, setCookieConsent, trackPageExit, trackPageView } from "@site/src/lib/analytics";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "@docusaurus/router";
+import { useTheme } from "../lib";
+import useLayoutEffect from "@docusaurus/useIsomorphicLayoutEffect";
 
 export default function Root({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
+  const { theme } = useTheme();
 
   useEffect(() => {
     // This just initializes amplitude in order to start session recording
@@ -37,7 +41,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <Theme accentColor="orange" grayColor="gray" appearance="dark" className="theme-root">
+    <Theme accentColor="orange" grayColor="gray" appearance={theme} className="theme-root">
       <DocItemContextProvider>{children}</DocItemContextProvider>
       <AnalyticsConsentBanner />
     </Theme>

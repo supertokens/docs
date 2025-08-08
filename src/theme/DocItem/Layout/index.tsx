@@ -124,6 +124,9 @@ function formatLabel(label: string) {
     .split("-")
     .map((word) => {
       if (word === "sdk") return "SDK";
+      if (word === "cdi") return "CDI";
+      if (word === "fdi") return "FDI";
+      if (word === "ai") return "AI";
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
     .join(" ");

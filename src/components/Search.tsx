@@ -4,76 +4,379 @@ import type { Hit } from "@algolia/client-search";
 import Link from "@docusaurus/Link";
 import SearchIcon from "/img/icons/search.svg";
 import CloseIcon from "/img/icons/x.svg";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import HashIcon from "/img/icons/hash.svg";
+import GithubIcon from "/img/icons/github.svg";
+import FileIcon from "/img/icons/file.svg";
+import TerminalIcon from "/img/icons/terminal.svg";
+import CodeIcon from "/img/icons/code.svg";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { search, SearchResult } from "../lib";
 
 import "./Search.scss";
 
-type DocumentationSearchResultHit = Hit<{
-  anchor: string;
-  category: string;
-  content: string;
-  hierarchy: {
-    lvl0: string | null;
-    lvl1: string | null;
-    lvl2: string | null;
-    lvl3: string | null;
-    lvl4: string | null;
-    lvl5: string | null;
-    lvl6: string | null;
-  };
-  url: string;
-}>;
+type SearchButtonContextType = {
+  isModalOpen: boolean;
+  setIsModalOpen: (open: boolean) => void;
+};
 
-const client = searchClient("SBR5UR2Z16", "d87c41f893c301f365d5bfc62e6631df");
-
-function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  const debounced = (...args: Parameters<F>) => {
-    if (timeout !== null) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(() => func(...args), waitFor);
-  };
-
-  return debounced;
-}
-
-const TABS = ["all", "tutorial", "guide", "sdk-reference", "api-reference"] as const;
-type TabType = (typeof TABS)[number];
-
-async function searchAlgolia(query: string, type?: TabType): Promise<SearchResponse> {
-  const response = await client.searchSingleIndex({
-    indexName: "supertokens_documentation",
-    searchParams: {
-      query,
-      facets: ["type", "category"],
-      facetFilters: type !== "all" ? [`type:${type}`] : undefined,
-      offset: 0,
-      length: 50,
-      highlightPreTag: "<mark>",
-      highlightPostTag: "</mark>",
-      snippetEllipsisText: "…",
-      attributesToSnippet: ["content:20"],
-    },
-  });
-  return response;
-}
+const SearchButtonContext = createContext<SearchButtonContextType>({
+  isModalOpen: false,
+  setIsModalOpen: () => {},
+});
 
 const SearchButton = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modifierKey, setModifierKey] = useState("⌘");
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isMac = window.navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-      setModifierKey(isMac ? "⌘" : "Ctrl");
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+  const onKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "/" && !isModalOpen) {
         event.preventDefault();
         setIsModalOpen((open) => !open);
+      }
+    },
+    [isModalOpen],
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onKeyDown]);
+
+  return (
+    <SearchButtonContext.Provider value={{ isModalOpen, setIsModalOpen }}>
+      <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <Dialog.Trigger>
+          <Flex asChild className="search-button" gap="2">
+            <Button variant="soft" color="gray" highContrast size="3">
+              <SearchIcon width="18px" />
+              <Text>Search</Text>
+              <Flex className="search-button__shortcut-indicator" ml="auto" gap="1">
+                <Badge>/</Badge>
+              </Flex>
+            </Button>
+          </Flex>
+        </Dialog.Trigger>
+        <SearchModal />
+      </Dialog.Root>
+    </SearchButtonContext.Provider>
+  );
+};
+
+type SearchModalContextType = {
+  onCloseModal: () => void;
+  query: string;
+};
+
+const SearchModalContext = createContext<SearchModalContextType>({} as SearchModalContextType);
+
+function SearchModal() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const { isModalOpen, setIsModalOpen } = useContext(SearchButtonContext);
+  const [selectedTab, setSelectedTab] = useState("all");
+  const tabsRef = useRef<HTMLElement[]>([]);
+
+  const onKeyDown = useCallback((event: KeyboardEvent) => {
+    if (!tabsRef.current) return;
+    if (!event.ctrlKey) return;
+
+    const numericKeys = tabsRef.current.map((_, index) => `${index + 1}`);
+    if (numericKeys.includes(event.key)) {
+      const tabElement = tabsRef.current[Number(event.key) - 1];
+      if (!tabElement) return;
+      const tabValue = tabElement.getAttribute("data-value");
+      if (!tabValue) return;
+      setSelectedTab(tabValue);
+      return;
+    }
+
+    if (event.key === "]") {
+      const activeTabElementIndex = tabsRef.current.findIndex((el) => el.getAttribute("data-state") === "active");
+      if (activeTabElementIndex === -1) return;
+      const nextTabElement = tabsRef.current[(activeTabElementIndex + 1) % tabsRef.current.length];
+      if (!nextTabElement) return;
+      const nextTabValue = nextTabElement.getAttribute("data-value");
+      if (!nextTabValue) return;
+      setSelectedTab(nextTabValue);
+      return;
+    }
+
+    if (event.key === "[") {
+      const activeTabElementIndex = tabsRef.current.findIndex((el) => el.getAttribute("data-state") === "active");
+      if (activeTabElementIndex === -1) return;
+      const previousTabElement =
+        tabsRef.current[(activeTabElementIndex + tabsRef.current.length - 1) % tabsRef.current.length];
+      if (!previousTabElement) return;
+      const previousTabValue = previousTabElement.getAttribute("data-value");
+      if (!previousTabValue) return;
+      setSelectedTab(previousTabValue);
+      return;
+    }
+  }, []);
+
+  const onCloseModal = useCallback(() => {
+    setSearchQuery("");
+    setIsModalOpen(false);
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onKeyDown]);
+
+  return (
+    <SearchModalContext.Provider value={{ onCloseModal, query: searchQuery }}>
+      <Dialog.Content
+        align="start"
+        maxWidth={{
+          initial: "100%",
+          sm: "700px",
+        }}
+        maxHeight={{
+          initial: "100vh",
+          sm: "60vh",
+        }}
+        className="search-modal"
+      >
+        <Box p="2">
+          <TextField.Root
+            type="text"
+            className="search-modal__input"
+            autoFocus
+            placeholder="Search for anything..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+            }}
+            size="3"
+          >
+            <TextField.Slot>
+              <SearchIcon height="16" width="16" />
+            </TextField.Slot>
+
+            <Flex ml="auto" align="center" gap="2" asChild>
+              <TextField.Slot>
+                <Dialog.Close>
+                  <Badge className="search-modal__close-button">
+                    <span>ESC</span>
+                    <CloseIcon width="16px" height="16px" />
+                  </Badge>
+                </Dialog.Close>
+              </TextField.Slot>
+            </Flex>
+          </TextField.Root>
+        </Box>
+        <Tabs.Root value={selectedTab} onValueChange={setSelectedTab}>
+          <Tabs.List wrap="wrap" className="search-modal__tabs-list">
+            {[
+              { name: "all", label: "All" },
+              { name: "documentation", label: "Documentation" },
+              { name: "sdk-reference", label: "SDK References" },
+              { name: "api-reference", label: "API References" },
+            ].map((tab, index) => (
+              <Tabs.Trigger
+                key={tab.name}
+                value={tab.name}
+                data-value={tab.name}
+                ref={(el) => {
+                  tabsRef.current[index] = el;
+                }}
+              >
+                {tab.label}
+              </Tabs.Trigger>
+            ))}
+          </Tabs.List>
+          <AllSearchResultsTabContent />
+          <DocumentationSearchResultsTabContent />
+          <SDKReferencesSearchResultsTabContent />
+          <APIReferencesSearchResultsTabContent />
+        </Tabs.Root>
+      </Dialog.Content>
+    </SearchModalContext.Provider>
+  );
+}
+
+function AllSearchResultsTabContent() {
+  const searchFn = useCallback(async (searchQuery: string) => {
+    return search(searchQuery);
+  }, []);
+
+  return (
+    <SearchProvider searchFn={searchFn}>
+      <Tabs.Content value="all">
+        <SearchResultsList />
+      </Tabs.Content>
+    </SearchProvider>
+  );
+}
+
+function DocumentationSearchResultsTabContent() {
+  const searchFn = useCallback(async (searchQuery: string) => {
+    return search(searchQuery, [
+      { indexName: "supertokens_documentation", facetFilters: [["type:guide", "type:tutorial"]] },
+    ]);
+  }, []);
+
+  return (
+    <SearchProvider searchFn={searchFn}>
+      <Tabs.Content value="documentation">
+        <SearchResultsList />
+      </Tabs.Content>
+    </SearchProvider>
+  );
+}
+
+function SDKReferencesSearchResultsTabContent() {
+  const searchFn = useCallback(async (searchQuery: string) => {
+    return search(searchQuery, [{ indexName: "supertokens_documentation", facetFilters: ["type:sdk-reference"] }]);
+  }, []);
+
+  return (
+    <SearchProvider searchFn={searchFn}>
+      <Tabs.Content value="sdk-reference">
+        <SearchResultsList />
+      </Tabs.Content>
+    </SearchProvider>
+  );
+}
+
+function APIReferencesSearchResultsTabContent() {
+  const searchFn = useCallback(async (searchQuery: string) => {
+    return search(searchQuery, [{ indexName: "supertokens_documentation", facetFilters: ["type:api-reference"] }]);
+  }, []);
+
+  return (
+    <SearchProvider searchFn={searchFn}>
+      <Tabs.Content value="api-reference">
+        <SearchResultsList />
+      </Tabs.Content>
+    </SearchProvider>
+  );
+}
+
+type SearchContextType = {
+  searchResults: SearchResult[] | null;
+  searchState: "idle" | "loading" | "error" | "fetched";
+};
+
+const SearchContext = createContext<SearchContextType>({} as SearchContextType);
+
+function SearchProvider({
+  searchFn,
+  children,
+}: {
+  searchFn: (query: string) => Promise<SearchResult[] | null>;
+  children: React.ReactNode;
+}) {
+  const { query } = useContext(SearchModalContext);
+  const [results, setResults] = useState<SearchResult[] | null>(null);
+  const [searchState, setSearchState] = useState<"idle" | "loading" | "error" | "fetched">("idle");
+
+  const performSearch = useCallback(
+    async (searchQuery: string) => {
+      if (!searchQuery) {
+        setResults(null);
+        setSearchState("idle");
+        return;
+      }
+
+      setSearchState("loading");
+      const searchResults = await searchFn(searchQuery);
+      setResults(searchResults);
+      setSearchState("fetched");
+    },
+    [searchFn],
+  );
+
+  const debouncedSearch = useCallback(debounce(performSearch, 200), [performSearch]);
+
+  useEffect(() => {
+    performSearch(query);
+  }, [query, performSearch]);
+
+  return <SearchContext.Provider value={{ searchResults: results, searchState }}>{children}</SearchContext.Provider>;
+}
+
+export const Search = {
+  Button: SearchButton,
+};
+
+type SearchResultListContextType = {
+  interactionMode: "keyboard" | "mouse" | "none";
+  setInteractionMode: (mode: "keyboard" | "mouse" | "none") => void;
+};
+
+const SearchResultListContext = createContext<SearchResultListContextType>({} as SearchResultListContextType);
+
+function SearchResultsList() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { searchResults, searchState } = useContext(SearchContext);
+  const { onCloseModal } = useContext(SearchModalContext);
+  const [interactionMode, setInteractionMode] = useState<"keyboard" | "mouse" | "none">("none");
+
+  const onNavigateToNextItem = useCallback(() => {
+    if (!ref.current) return;
+    setInteractionMode("keyboard");
+    const searchResultItems = ref.current.querySelectorAll("li");
+    const searchResultItemsArray = Array.from(searchResultItems);
+    const activeItemIndex = searchResultItemsArray.findIndex((item) => item.getAttribute("data-active") === "true");
+    let nextItemIndex = activeItemIndex === -1 ? 0 : activeItemIndex + 1;
+    if (nextItemIndex >= searchResultItemsArray.length) nextItemIndex = 0;
+
+    if (activeItemIndex !== -1 && searchResultItemsArray[activeItemIndex]) {
+      searchResultItemsArray[activeItemIndex].setAttribute("data-active", "false");
+    }
+    searchResultItemsArray[nextItemIndex].setAttribute("data-active", "true");
+    searchResultItemsArray[nextItemIndex].scrollIntoView({
+      behavior: "instant",
+      block: "nearest",
+    });
+  }, []);
+
+  const onNavigateToPrevItem = useCallback(() => {
+    if (!ref.current) return;
+    setInteractionMode("keyboard");
+    const searchResultItems = ref.current.querySelectorAll("li");
+    const searchResultItemsArray = Array.from(searchResultItems);
+    const activeItemIndex = searchResultItemsArray.findIndex((item) => item.getAttribute("data-active") === "true");
+    let nextItemIndex = activeItemIndex === -1 ? searchResultItemsArray.length - 1 : activeItemIndex - 1;
+    if (nextItemIndex === -1) nextItemIndex = searchResultItemsArray.length - 1;
+
+    if (activeItemIndex !== -1 && searchResultItemsArray[activeItemIndex]) {
+      searchResultItemsArray[activeItemIndex].setAttribute("data-active", "false");
+    }
+    searchResultItemsArray[nextItemIndex].setAttribute("data-active", "true");
+    searchResultItemsArray[nextItemIndex].scrollIntoView({
+      behavior: "instant",
+      block: "nearest",
+    });
+  }, []);
+
+  const onSelectItem = useCallback(() => {
+    if (!ref.current) return;
+    const activeItem = ref.current.querySelector("li[data-active='true']");
+    if (!activeItem) return;
+    const link = activeItem.querySelector("a");
+    if (!link) return;
+    link.click();
+    setInteractionMode("none");
+    onCloseModal();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        onNavigateToNextItem();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        onNavigateToPrevItem();
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        onSelectItem();
       }
     };
 
@@ -84,62 +387,59 @@ const SearchButton = () => {
   }, []);
 
   return (
-    <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
-      <Dialog.Trigger>
-        <Flex asChild className="search-button" gap="2">
-          <Button variant="soft" color="gray" highContrast size="3">
-            <SearchIcon width="18px" />
-            <Text>Search</Text>
-            <Flex ml="auto" gap="1">
-              <Badge>{modifierKey}</Badge>
-              <Badge>K</Badge>
-            </Flex>
-          </Button>
-        </Flex>
-      </Dialog.Trigger>
-      <SearchModal changeModalVisibility={setIsModalOpen} />
-    </Dialog.Root>
+    <SearchResultListContext.Provider value={{ interactionMode, setInteractionMode }}>
+      <Box ref={ref} className="search-modal__results">
+        {(searchState === "idle" || (searchState === "loading" && !searchResults)) && (
+          <Box className="search-modal__no-results">
+            <Text size="5" color="gray">
+              Start typing to search
+            </Text>
+          </Box>
+        )}
+        {searchState === "fetched" && searchResults?.length === 0 && (
+          <Box className="search-modal__no-results">
+            <Text size="7" color="gray">
+              No results found
+            </Text>
+          </Box>
+        )}
+        {(searchState === "fetched" || searchState === "loading") && searchResults?.length > 0 && (
+          <ul className="search-modal__results-list">
+            {searchResults.map((result, index) => (
+              <SearchResultListItem key={result.id} result={result} />
+            ))}
+          </ul>
+        )}
+      </Box>
+    </SearchResultListContext.Provider>
   );
+}
+
+type SearchResultItemType = "page-title" | "page-heading" | "api-reference" | "sdk-reference" | "github-page";
+
+TerminalIcon;
+const SearchResultItemTypeIcons: Record<SearchResultItemType, React.ComponentType<React.SVGProps<SVGElement>>> = {
+  "page-title": FileIcon,
+  "page-heading": HashIcon,
+  "api-reference": TerminalIcon,
+  "sdk-reference": CodeIcon,
+  "github-page": GithubIcon,
 };
 
-function SearchResultItem({
-  hit,
-  interactionMode,
-  setInteractionMode,
-  resetSearchState,
-}: {
-  hit: DocumentationSearchResultHit;
-  interactionMode: "keyboard" | "mouse" | "none";
-  setInteractionMode: (mode: "keyboard" | "mouse" | "none") => void;
-  resetSearchState: () => void;
-}) {
+function SearchResultListItem({ result }: { result: SearchResult }) {
   const ref = useRef<HTMLLIElement>(null);
+  const { interactionMode, setInteractionMode } = useContext(SearchResultListContext);
+  const { onCloseModal } = useContext(SearchModalContext);
+  const searchResultItemType = useMemo(() => {
+    if (result.type === "sdk-reference") return "sdk-reference";
+    if (result.type === "api-reference") return "api-reference";
+    if (result.hierarchy.length === 1) return "page-title";
+    return "page-heading";
+  }, [result]);
   const breadcrumbs = useMemo(() => {
-    if (!hit.hierarchy) return undefined;
-    const items = Object.values(hit.hierarchy);
-    return items.filter(Boolean).slice(0, -1).join(" › ");
-  }, [hit]);
-
-  const highlight = useMemo(() => {
-    if (!hit._highlightResult || !hit._highlightResult.hierarchy) return undefined;
-    const items = Object.values(hit._highlightResult.hierarchy);
-    const lastItem = items[items.length - 1];
-    if (!lastItem || lastItem.matchLevel === "none") {
-      const levels = Object.values(hit.hierarchy).filter(Boolean);
-      return levels[levels.length - 1];
-    }
-    return lastItem.value;
-  }, [hit]);
-
-  const content = useMemo(() => {
-    let content = hit.content;
-    if (hit._highlightResult?.content) {
-      // @ts-expect-error
-      content = hit._highlightResult.content?.value;
-    }
-    if (!content) return undefined;
-    return `${content.slice(0, 100)}...`;
-  }, [hit]);
+    if (!result.hierarchy) return undefined;
+    return result.hierarchy.join(" › ");
+  }, [result]);
 
   const onMouseEnter = useCallback(() => {
     if (!ref.current) return;
@@ -169,15 +469,20 @@ function SearchResultItem({
     ref.current.setAttribute("data-active", "false");
   }, []);
 
+  const onClick = useCallback(() => {
+    onCloseModal();
+    setInteractionMode("none");
+  }, []);
+
   const urlOrPath = useMemo(() => {
-    const url = new URL(hit.url);
+    const url = new URL(result.url);
     if (url.hostname.includes("supertokens")) {
       return url.pathname;
     }
-    return hit.url;
-  }, [hit]);
+    return result.url;
+  }, [result]);
 
-  if (!highlight) return null;
+  const Icon = SearchResultItemTypeIcons[searchResultItemType];
 
   return (
     <li
@@ -187,304 +492,38 @@ function SearchResultItem({
       onMouseLeave={onMouseLeave}
       onMouseMove={onMouseMove}
     >
-      <Link href={urlOrPath} onClick={resetSearchState} className="reset-link">
-        <Flex direction="column" gap="1" p="2" className="search-result-item">
-          {highlight && <Text as="div" size="3" mt="1" dangerouslySetInnerHTML={{ __html: highlight }} />}
-          <Text as="div" size="2" color="gray" trim="both">
-            {breadcrumbs}
-          </Text>
-          {content && <Text as="div" color="gray" size="2" mt="1" dangerouslySetInnerHTML={{ __html: content }} />}
+      <Link href={urlOrPath} onClick={onClick} className="reset-link">
+        <Flex direction="row" gap="1">
+          <Flex align="center" className="search-modal__item-icon">
+            <Icon width="20px" height="20px" />
+          </Flex>
+          <Flex direction="column" gap="2" p="2" className="search-modal__item-content">
+            <Text
+              className="search-modal__item-highlight"
+              as="div"
+              size="3"
+              m="0"
+              dangerouslySetInnerHTML={{ __html: result.highlight }}
+            />
+            <Text className="search-modal__item-breadcrumbs" as="div" size="2" color="gray" trim="both">
+              {breadcrumbs}
+            </Text>
+          </Flex>
         </Flex>
       </Link>
     </li>
   );
 }
 
-function SearchModal({ changeModalVisibility }: { changeModalVisibility: (value: boolean) => void }) {
-  const { results, query, changeQuery, pageType, changePageType, searchState, resetSearchState } = useSearch();
-  const [interactionMode, setInteractionMode] = useState<"keyboard" | "mouse" | "none">("none");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const searchResultsRef = useRef<HTMLDivElement>(null);
+function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
 
-  const onNavigateToNextItem = useCallback(() => {
-    if (!searchResultsRef.current) return;
-    setInteractionMode("keyboard");
-    const searchResultItems = searchResultsRef.current.querySelectorAll("li");
-    const searchResultItemsArray = Array.from(searchResultItems);
-    const activeItemIndex = searchResultItemsArray.findIndex((item) => item.getAttribute("data-active") === "true");
-    let nextItemIndex = activeItemIndex === -1 ? 0 : activeItemIndex + 1;
-    if (nextItemIndex >= searchResultItemsArray.length) nextItemIndex = 0;
-
-    if (activeItemIndex !== -1 && searchResultItemsArray[activeItemIndex]) {
-      searchResultItemsArray[activeItemIndex].setAttribute("data-active", "false");
+  const debounced = (...args: Parameters<F>) => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
     }
-    searchResultItemsArray[nextItemIndex].setAttribute("data-active", "true");
-    searchResultItemsArray[nextItemIndex].scrollIntoView({
-      behavior: "instant",
-      block: "nearest",
-    });
-  }, []);
-
-  const onNavigateToPrevItem = useCallback(() => {
-    if (!searchResultsRef.current) return;
-    setInteractionMode("keyboard");
-    const searchResultItems = searchResultsRef.current.querySelectorAll("li");
-    const searchResultItemsArray = Array.from(searchResultItems);
-    const activeItemIndex = searchResultItemsArray.findIndex((item) => item.getAttribute("data-active") === "true");
-    let nextItemIndex = activeItemIndex === -1 ? searchResultItemsArray.length - 1 : activeItemIndex - 1;
-    if (nextItemIndex === -1) nextItemIndex = searchResultItemsArray.length - 1;
-
-    if (activeItemIndex !== -1 && searchResultItemsArray[activeItemIndex]) {
-      searchResultItemsArray[activeItemIndex].setAttribute("data-active", "false");
-    }
-    searchResultItemsArray[nextItemIndex].setAttribute("data-active", "true");
-    searchResultItemsArray[nextItemIndex].scrollIntoView({
-      behavior: "instant",
-      block: "nearest",
-    });
-  }, []);
-
-  const resetSearch = useCallback(() => {
-    changeModalVisibility(false);
-    resetSearchState();
-    setInteractionMode("none");
-  }, []);
-
-  const onSelectItem = useCallback(() => {
-    if (!searchResultsRef.current) return;
-    const activeItem = searchResultsRef.current.querySelector("li[data-active='true']");
-    if (!activeItem) return;
-    const link = activeItem.querySelector("a");
-    if (!link) return;
-    link.click();
-    changeModalVisibility(false);
-    setInteractionMode("none");
-    resetSearchState();
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        onNavigateToNextItem();
-      } else if (event.key === "ArrowUp") {
-        event.preventDefault();
-        onNavigateToPrevItem();
-      } else if (event.key === "Enter") {
-        event.preventDefault();
-        onSelectItem();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  return (
-    <Dialog.Content
-      align="start"
-      maxWidth={{
-        initial: "100%",
-        sm: "700px",
-      }}
-      maxHeight={{
-        initial: "100vh",
-        sm: "60vh",
-      }}
-      className="search-modal"
-    >
-      <Box p="2">
-        <TextField.Root
-          ref={inputRef}
-          type="text"
-          className="search-modal__input"
-          autoFocus
-          placeholder="Search for anything..."
-          value={query}
-          onChange={(e) => changeQuery(e.target.value)}
-          size="3"
-        >
-          <TextField.Slot>
-            <SearchIcon height="16" width="16" />
-          </TextField.Slot>
-
-          <Flex ml="auto" align="center" gap="2" asChild>
-            <TextField.Slot>
-              <Dialog.Close>
-                <Badge className="search-modal__close-button">
-                  <span>ESC</span>
-                  <CloseIcon width="16px" height="16px" />
-                </Badge>
-              </Dialog.Close>
-            </TextField.Slot>
-          </Flex>
-        </TextField.Root>
-      </Box>
-      <Box></Box>
-      {searchState === "idle" || (searchState === "loading" && !results) ? null : (
-        <Tabs.Root value={pageType} onValueChange={(value: DocumentationPageType) => changePageType(value)}>
-          <Tabs.List wrap="wrap" className="search-modal__tabs-list">
-            <Tabs.Trigger key="all" value="all">
-              All
-              {/* {results && ( */}
-              {/*   <Badge ml="2" color="gray" variant="solid" radius="full"> */}
-              {/*     {resultsCountByPageType["all"]} */}
-              {/*   </Badge> */}
-              {/* )} */}
-            </Tabs.Trigger>
-            <Tabs.Trigger key="tutorial" value="tutorial">
-              Tutorials
-            </Tabs.Trigger>
-            <Tabs.Trigger key="guide" value="guide">
-              Guides
-            </Tabs.Trigger>
-            <Tabs.Trigger key="sdk-reference" value="sdk-reference">
-              SDK References
-            </Tabs.Trigger>
-            <Tabs.Trigger key="api-reference" value="api-reference">
-              API References
-            </Tabs.Trigger>
-          </Tabs.List>
-
-          <Box ref={searchResultsRef} className="search-modal__results">
-            {searchState === "fetched" && results?.length === 0 && (
-              <Box className="search-modal__no-results">
-                <Text size="7" color="gray">
-                  No results found
-                </Text>
-              </Box>
-            )}
-            {(searchState === "fetched" || searchState === "loading") && results?.length > 0 && (
-              <ul className="search-modal__results-list">
-                {results.map((hit, index) => (
-                  <SearchResultItem
-                    key={hit.objectID}
-                    hit={hit}
-                    interactionMode={interactionMode}
-                    setInteractionMode={setInteractionMode}
-                    resetSearchState={resetSearch}
-                  />
-                ))}
-              </ul>
-            )}
-          </Box>
-        </Tabs.Root>
-      )}
-    </Dialog.Content>
-  );
-}
-
-const AllPageTypes: Array<DocumentationPageType> = ["all", "tutorial", "guide", "sdk-reference", "api-reference"];
-
-function useSearch() {
-  const [query, setQuery] = useState("");
-  const [pageType, setPageType] = useState<DocumentationPageType>("all");
-  const [results, setResults] = useState<Array<Hit<DocumentationSearchResultHit>> | null>(null);
-  const [searchState, setSearchState] = useState<"idle" | "loading" | "error" | "fetched">("idle");
-  const indexName = "supertokens_documentation";
-
-  const doSearch = useCallback(async (query: string, pageType: DocumentationPageType | null) => {
-    if (!query) {
-      setResults(null);
-      setSearchState("idle");
-      return;
-    }
-    setSearchState("loading");
-    const response = await searchAlgoliaIndex(indexName, query, pageType);
-    setResults(response?.hits || null);
-    setSearchState("fetched");
-    return Promise.resolve().then(async () => {
-      const additionalRequests = AllPageTypes.filter((type) => pageType !== type).map((type) => {
-        return searchAlgoliaIndex(indexName, query, type);
-      });
-      await Promise.all(additionalRequests);
-    });
-  }, []);
-  const debouncedSearch = useCallback(debounce(doSearch, 300), [doSearch]);
-
-  const changeQuery = useCallback((query: string) => {
-    setQuery(query);
-    debouncedSearch(query, pageType);
-  }, []);
-
-  const changePageType = useCallback(
-    async (type: DocumentationPageType | null) => {
-      setPageType(type);
-      const response = await searchAlgoliaIndex(indexName, query, type);
-      setResults(response?.hits || null);
-    },
-    [query],
-  );
-
-  const resetSearchState = useCallback(() => {
-    setQuery("");
-    setResults(null);
-    setPageType(null);
-    setSearchState("idle");
-  }, []);
-
-  return {
-    results,
-    query,
-    changeQuery,
-    pageType,
-    changePageType,
-    searchState,
-    resetSearchState,
+    timeout = setTimeout(() => func(...args), waitFor);
   };
-}
 
-export const Search = {
-  Button: SearchButton,
-};
-
-type DocumentationPageType = "all" | "guide" | "tutorial" | "sdk-reference" | "api-reference";
-
-const SearchCache: Record<string, { response: SearchResponse<DocumentationSearchResultHit> | null; timestamp: Date }> =
-  {};
-const CacheTTL = 1000 * 60 * 5;
-
-async function searchAlgoliaIndex(
-  index: string,
-  query: string,
-  pageType: DocumentationPageType,
-): Promise<SearchResponse<DocumentationSearchResultHit> | null> {
-  const cacheKey = `${index}-${query}-${pageType}`;
-  const facetFilters = pageType !== "all" ? [`type:${pageType}`] : undefined;
-  if (SearchCache[cacheKey] && SearchCache[cacheKey].timestamp > new Date(Date.now() - CacheTTL)) {
-    return SearchCache[cacheKey].response;
-  }
-
-  try {
-    const response = await client.searchSingleIndex<DocumentationSearchResultHit>({
-      indexName: index,
-      searchParams: {
-        query,
-        facets: ["type", "category"],
-        facetFilters,
-        offset: 0,
-        length: 50,
-        highlightPreTag: "<mark>",
-        highlightPostTag: "</mark>",
-        snippetEllipsisText: "…",
-        attributesToSnippet: ["content:20"],
-      },
-    });
-    SearchCache[cacheKey] = { response, timestamp: new Date() };
-    return response;
-  } catch (e) {
-    SearchCache[cacheKey] = { response: null, timestamp: new Date() };
-    return null;
-  } finally {
-    queueMicrotask(() => {
-      for (const key in SearchCache) {
-        const cacheEntry = SearchCache[key];
-        if (cacheEntry.timestamp.getTime() + CacheTTL < new Date().getTime()) {
-          delete SearchCache[key];
-        }
-      }
-    });
-  }
+  return debounced;
 }

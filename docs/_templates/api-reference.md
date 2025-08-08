@@ -1,4 +1,4 @@
-# API Reference template
+# API reference template
 
 > The following template is taken from [The Good Docs Project](https://www.thegooddocsproject.dev/template/api-reference)
 > Some adjustments/clarifications have been made in the context of the **SuperTokens** docs.
@@ -32,7 +32,7 @@ Authentication and authorization {is | is not} required for requests to these AP
 
 {This section is optional.}
 
-Due to the potentially very large result sets from API calls, responses {are | can be} returned as shorter pages.
+Due to the large result sets from API calls, responses {are | can be} returned as shorter pages.
 
 Pagination can be customized using {pagination settings}. If not specified, the default values are {values}.
 
@@ -64,7 +64,7 @@ The {product} APIs use the following error types:
 |                                         |                  |
 |                                         |                  |
 
-#### ExampleErrorType
+#### Example error type
 
 | Field            | Type       | Description                                                            |
 | ---------------- | ---------- | ---------------------------------------------------------------------- |

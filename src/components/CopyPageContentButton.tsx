@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@radix-ui/themes";
 import CopyIcon from "/img/icons/copy.svg";
 import CheckIcon from "/img/icons/check.svg";
+
+import "./CopyPageContentButton.scss";
 
 export function CopyPageContentButton() {
   const [markdownContent, setMarkdownContent] = useState<string>("");
@@ -27,7 +29,7 @@ export function CopyPageContentButton() {
     fetchMarkdownContent();
   }, []);
 
-  const handleCopyToClipboard = async () => {
+  const handleCopyToClipboard = useCallback(async () => {
     if (!markdownContent) return;
 
     try {
@@ -39,11 +41,44 @@ export function CopyPageContentButton() {
     } catch (err) {
       console.error("Failed to copy to clipboard:", err);
     }
-  };
+  }, [markdownContent]);
+
+  const onKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const isApple =
+        navigator.platform.startsWith("Mac") || navigator.platform === "iPhone" || navigator.platform === "iPad";
+
+      const isKeyComboPressed = isApple
+        ? event.metaKey && event.altKey && event.code === "KeyC"
+        : event.ctrlKey && event.altKey && event.code === "KeyC";
+      if (isKeyComboPressed) {
+        handleCopyToClipboard();
+      }
+    },
+    [handleCopyToClipboard],
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onKeyDown]);
 
   return (
-    <Button onClick={handleCopyToClipboard} disabled={!markdownContent} size="2" color="gray" variant="soft">
-      {isCopied ? <CheckIcon width="14px" /> : <CopyIcon width="14px" />}
+    <Button
+      className="copy-page-content-button"
+      onClick={handleCopyToClipboard}
+      disabled={!markdownContent}
+      data-state={isCopied ? "copied" : "idle"}
+      size="2"
+      color="gray"
+      variant="soft"
+    >
+      <span className="copy-page-content-button__icon">
+        <CheckIcon className="copy-page-content-button__icon-check" width="14px" />
+        <CopyIcon className="copy-page-content-button__icon-copy" width="14px" />
+      </span>
       Copy Markdown
     </Button>
   );
