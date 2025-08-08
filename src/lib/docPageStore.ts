@@ -1,6 +1,6 @@
+import { DOC_PAGE_STORE_DEFAULT_VALUES } from "./constants";
 import { InferDotNotationKeys, InferDotNotationValue } from "./types";
 
-// TODO: Move all external store values to this store
 export interface DocPageState {
   nextjsRouterType: "app-router" | "pages-router";
   accountType: "managed" | "self-hosted";
@@ -9,8 +9,12 @@ export interface DocPageState {
   apiRequestExampleLanguage: "shell" | "nodejs" | "python" | "go";
   apiDomain: string;
   apiBasePath: string;
+  websiteDomain: string;
+  websiteBasePath: string;
   tenantId: string;
+  appId: string;
   tokenTransferMethod: "cookie" | "header";
+  coreDomain: string;
 }
 
 class DocPageStore {
@@ -43,9 +47,13 @@ class DocPageStore {
       accountType: "managed",
       selfHostedDeploymentType: "with-docker",
       apiRequestExampleLanguage: "shell",
-      apiDomain: "{apiDomain}",
-      apiBasePath: "{apiBasePath}",
-      tenantId: "{tenantId}",
+      apiDomain: DOC_PAGE_STORE_DEFAULT_VALUES.apiDomain,
+      apiBasePath: DOC_PAGE_STORE_DEFAULT_VALUES.apiBasePath,
+      websiteDomain: "{websiteDomain}",
+      websiteBasePath: "/auth",
+      tenantId: DOC_PAGE_STORE_DEFAULT_VALUES.tenantId,
+      appId: DOC_PAGE_STORE_DEFAULT_VALUES.appId,
+      coreDomain: DOC_PAGE_STORE_DEFAULT_VALUES.coreDomain,
       tokenTransferMethod: "cookie",
     };
   }

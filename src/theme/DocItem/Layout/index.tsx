@@ -65,7 +65,7 @@ export default function DocItemLayout({ children }: Props): JSX.Element {
           <meta name="keywords" content={keywords} />
         </Head>
         <div id={API_REFERENCE_PAGE_TITLE_ID} />
-        <Flex direction={{ initial: "column", md: "row" }} gap="8" width="100%">
+        <Flex direction={{ initial: "column", md: "row" }} width="100%">
           {children}
         </Flex>
       </DocItemContent>

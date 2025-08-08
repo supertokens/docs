@@ -1,4 +1,4 @@
-import { useCallback, useContext, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { DocItemContext } from "@site/src/context";
 import * as Form from "@radix-ui/react-form";
 import { Grid, Text, Heading, Flex, Card, TextField, VisuallyHidden, Separator } from "@radix-ui/themes";
@@ -22,13 +22,16 @@ export function AppInfoForm() {
     [onChangeAppInfoField],
   );
 
-  const onBlur = useCallback((e) => {
-    // TODO: Do validation
+  const onKeyDown = useCallback((e) => {
+    if (e.key === "/") {
+      // Prevent triggering the search modal
+      e.stopPropagation();
+    }
   }, []);
 
   return (
     <Card style={{ padding: "0" }} mb="4">
-      <Form.Root asChild>
+      <Form.Root onKeyDown={onKeyDown} asChild>
         <Flex gap="2" direction="column" py="5" px="4">
           <Heading as="h3" size="5">
             App Info
@@ -58,7 +61,6 @@ export function AppInfoForm() {
                     placeholder="e.g. My awsome app"
                     defaultValue={appInfo.appName}
                     onChange={onChangeInputValue}
-                    onBlur={onBlur}
                   />
                 </Form.Control>
               </Flex>
@@ -86,7 +88,6 @@ export function AppInfoForm() {
                     placeholder="e.g. http://localhost:8080"
                     defaultValue={appInfo.apiDomain}
                     onChange={onChangeInputValue}
-                    onBlur={onBlur}
                   />
                 </Form.Control>
               </Flex>
@@ -100,12 +101,7 @@ export function AppInfoForm() {
                   <Text as="span">SuperTokens will expose it's APIs scoped by this base API path.</Text>
                 </VisuallyHidden>
                 <Form.Control asChild>
-                  <TextField.Root
-                    name="apiBasePath"
-                    defaultValue={appInfo.apiBasePath}
-                    onChange={onChangeInputValue}
-                    onBlur={onBlur}
-                  />
+                  <TextField.Root name="apiBasePath" defaultValue={appInfo.apiBasePath} onChange={onChangeInputValue} />
                 </Form.Control>
               </Flex>
             </Form.Field>
@@ -123,7 +119,6 @@ export function AppInfoForm() {
                     placeholder="e.g. http://localhost:3000"
                     defaultValue={appInfo.websiteDomain}
                     onChange={onChangeInputValue}
-                    onBlur={onBlur}
                   />
                 </Form.Control>
               </Flex>
@@ -141,7 +136,6 @@ export function AppInfoForm() {
                     name="websiteBasePath"
                     defaultValue={appInfo.websiteBasePath}
                     onChange={onChangeInputValue}
-                    onBlur={onBlur}
                   />
                 </Form.Control>
               </Flex>

@@ -44,6 +44,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
     <Theme accentColor="orange" grayColor="gray" appearance={theme} className="theme-root">
       <DocItemContextProvider>{children}</DocItemContextProvider>
       <AnalyticsConsentBanner />
+      <div id="docusaurus-scalar-root" />
     </Theme>
   );
 }

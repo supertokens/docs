@@ -36,20 +36,22 @@ export function APIRequestPage({
     <APIRequestProvider apiName={apiName} path={path} method={method} title={title}>
       <APIRequestSkeleton>
         <BrowserOnly>{() => <APIReferencePageTitle title={title} />}</BrowserOnly>
-        <Flex direction="column" flexGrow="1" gap="2">
-          <APIRequestDeprecatedCallout />
-          <APIRequestDescription />
-          <APIRequestSecuritySection />
-          <APIRequestPathParameters />
-          <APIRequestQueryParameters />
-          <APIRequestHeaderParameters />
-          <APIRequestBody />
-          <APIRequestResponse />
-        </Flex>
-        <Flex direction="column" gap="2" width={{ initial: "100%", md: "40%" }}>
-          <Flex style={{ position: "sticky", top: "140px" }} gap="5" direction="column">
-            <APIRequestCodeSnippetSegmentedControl />
-            <APIRequestResponsePreview />
+        <Flex direction={{ initial: "column", md: "row" }} gap="8" width="100%">
+          <Flex direction="column" flexGrow="1" gap="2">
+            <APIRequestDeprecatedCallout />
+            <APIRequestDescription />
+            <APIRequestSecuritySection />
+            <APIRequestPathParameters />
+            <APIRequestQueryParameters />
+            <APIRequestHeaderParameters />
+            <APIRequestBody />
+            <APIRequestResponse />
+          </Flex>
+          <Flex direction="column" gap="2" width={{ initial: "100%", md: "40%" }}>
+            <Flex style={{ position: "sticky", top: "140px" }} gap="5" direction="column">
+              <APIRequestCodeSnippetSegmentedControl />
+              <APIRequestResponsePreview />
+            </Flex>
           </Flex>
         </Flex>
       </APIRequestSkeleton>

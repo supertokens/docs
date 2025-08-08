@@ -9,6 +9,14 @@ export const DOC_STORE_DEFAULT_VALUES = {
   "coreInfo.key": "<YOUR_API_KEY>",
 };
 
+export const DOC_PAGE_STORE_DEFAULT_VALUES = {
+  apiDomain: "<YOUR_API_DOMAIN>",
+  apiBasePath: "/auth",
+  coreDomain: "<CORE_DOMAIN>",
+  tenantId: "public",
+  appId: "public",
+} as const;
+
 let API_URL = "https://dev.api.supertokens.com/0";
 let API_DOMAIN = "https://dev.api.supertokens.com";
 let API_BASE_PATH = "/0/auth";

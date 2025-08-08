@@ -1,5 +1,6 @@
 import { Badge, Card, Text, Code, Skeleton, Flex, Heading, HoverCard, Box, Separator, Callout } from "@radix-ui/themes";
 import { DocItemContext } from "@site/src/context";
+import { ApiClientModalProvider, useApiClientModal } from "@scalar/api-client-react";
 import InfoCircledIcon from "/img/icons/info-circled.svg";
 import CopyIcon from "/img/icons/copy.svg";
 import CheckIcon from "/img/icons/check.svg";
@@ -14,6 +15,7 @@ import { APIRequestParametersCard } from "./APIRequestParametersCard";
 import * as Accordion from "@radix-ui/react-accordion";
 import { APIRequestSchemaCard } from "./APIRequestSchemaCard";
 import type { OpenAPIV3 } from "@scalar/openapi-types";
+import "@scalar/api-client-react/style.css";
 
 import "./APIRequest.scss";
 
@@ -75,7 +77,7 @@ export function APIRequestProvider({
         apiName,
       }}
     >
-      {children}
+      <APIRequestClient.Provider>{children}</APIRequestClient.Provider>
     </APIRequestContext.Provider>
   );
 }
@@ -97,6 +99,7 @@ export function APIRequestTitle() {
 }
 
 import Markdown from "react-markdown";
+import { APIRequestClient } from "./APIRequestClient";
 
 export function APIRequestDescription() {
   const { operation } = useContext(APIRequestContext);
