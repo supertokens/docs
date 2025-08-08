@@ -16,6 +16,7 @@ import {
   Shield,
   CircleUserRound,
   UserPlus,
+  Brain,
   FileTerminal,
   FileCode,
   HardDrive,
@@ -57,6 +58,7 @@ import AwsLambdaLogo from "/img/logos/aws-lambda.svg";
 import GraphqlLogo from "/img/logos/graphql.svg";
 import CdiLogo from "/img/logos/cdi.svg";
 import FdiLogo from "/img/logos/fdi.svg";
+import MCPLogo from "/img/logos/mcp.svg";
 
 const categoryIcons = {
   // Main categories
@@ -135,6 +137,9 @@ const categoryIcons = {
   "/docs/quickstart/introduction": Book,
   "/docs/quickstart/next-steps": NotebookTabs,
   "/docs/quickstart/example-applications": Play,
+  "/docs/quickstart/build-with-ai-tools": Brain,
+
+  "/docs/authentication/ai-authentication": MCPLogo,
 
   // Other
   "Session Verification": BadgeCheck,
