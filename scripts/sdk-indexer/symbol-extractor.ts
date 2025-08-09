@@ -14,8 +14,8 @@ export abstract class BaseSymbolExtractor implements SymbolExtractor {
     this.parser = new Parser();
   }
 
-  extract(rootPath: string) {
-    const files = this.findFiles(rootPath);
+  extract(rootPath: string, _files?: string[]) {
+    const files = this.findFiles(rootPath, _files);
     const symbols: Symbol[] = [];
 
     for (const file of files) {
@@ -30,7 +30,9 @@ export abstract class BaseSymbolExtractor implements SymbolExtractor {
     return symbols;
   }
 
-  private findFiles(rootPath: string): string[] {
+  private findFiles(rootPath: string, _files?: string[]): string[] {
+    if (_files) return _files.map((f) => join(rootPath, f));
+
     const files: string[] = [];
 
     for (const pattern of this.include) {
