@@ -1,0 +1,154 @@
+---
+title: MCP Authentication
+hide_title: true
+sidebar_position: 8
+pagination_next: null
+pagination_prev: null
+description: >-
+  Authenticate MCP server actions using the SuperTokens MCP plugin.
+category: authentication
+recipe: oauth2
+page_type: tutorial 
+---
+
+# Authenticate MCP Servers
+
+## Overview
+
+This guide explains how to authenticate Model Context Protocol (MCP) Servers using **SuperTokens**.
+The instructions make use of the `plugins` functionality.
+It is a new way to abstract common functionalities into a reusable package.
+
+## Before you start
+
+<PaidFeatureCallout />
+
+The [MCP authentication flow](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization) complies with the OAuth2 specifications.
+This means that you will have to use the `OAuth2` recipe in your configuration which is a paid feature.
+
+The functionality is only available alongside the `node` SDK at the moment.
+Keep in mind that the feature is currently in beta and might be subject to breaking changes.
+
+## Steps
+
+### 1. Install the plugin
+
+Add the `supertokens-mcp-plugin` package to your project.
+
+<Tabs>
+  <Tab value="npm" label="npm">
+    ```bash 
+    npm i -s supertokens-mcp-plugin
+    ```
+  </Tab>
+  <Tab value="yarn" label="yarn">
+    ```bash 
+    yarn add supertokens-mcp-plugin
+    ```
+  </Tab>
+  <Tab value="pnpm" label="pnpm">
+    ```bash
+    pnpm add supertokens-auth-react supertokens-web-js
+    ```
+  </Tab>
+</Tabs>
+
+
+### 2. Add the MCP server
+
+Use the `SuperTokensMcpServer` class when in your implementation.
+The class extends the base MCP server exposed by the `@modelcontextprotocol/sdk`, and adds custom authentication logic on top of it.
+
+You can authorize the client requests in two different ways. 
+By using the standard [claim validators](/docs/additional-verification/session-verification/claim-validation).
+Or you can write your own custom validation logic in the `validateTokenPayload` function. 
+
+The authentication state can be accessed inside a tool call through the second function argument, `extra.authInfo`.
+
+```ts
+import UserRoles, { UserRoleClaim } from "supertokens-node/recipe/userroles";
+import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
+import type { TypeInput } from "supertokens-node/types";
+import { z } from "zod";
+import SuperTokensMcpPlugin, {
+  SuperTokensMcpServer,
+} from "supertokens-mcp-plugin";
+import SuperTokens from "supertokens-node";
+
+const server = new SuperTokensMcpServer({
+  name: "example-mcp",
+  version: "1.0.0",
+  path: "/mcp",
+  validateTokenPayload: async (_accessTokenPayload, _userContext) => {
+    // You can check the acccess token payload for any specific values
+    return {
+      status: "OK",
+    };
+  },
+  // By default, you can use calim validators to determine who can access the MCP server
+  claimValidators: [UserRoleClaim.validators.includes("admin")],
+});
+
+
+server.registerTool(
+  "session-info",
+  {
+    inputSchema: {},
+    description: "Get session information",
+  },
+  async (_args, extra) => {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(extra.authInfo),
+        },
+      ],
+    };
+  }
+);
+
+```
+
+### 3. Update the SDK initialization code
+
+Now that you have created your server include it in the SuperTokens SDK configuration.
+This way, the SDK middleware will expose your new endpoint and authenticate each request.
+
+```ts
+import supertokens from "supertokens-node";
+import SuperTokensMcpPlugin, {
+  SuperTokensMcpServer,
+} from "supertokens-mcp-plugin";
+
+// The server that you have previously created
+const server = new SuperTokensMcpServer({});
+
+supertokens.init({
+  supertokens: {
+    connectionURI: "<SUPERTOKENS_CONNECTION_URI>",
+    apiKey: "<SUPERTOKENS_API_KEY>",
+  },
+  appInfo: {
+    appName: "<APP_NAME>",
+    apiDomain: "<API_DOMAIN>",
+    websiteDomain: "<WEBSITE_DOMAIN>",
+    apiBasePath: "<API_BASE_PATH>",
+    websiteBasePath: "<WEBSITE_BASE_PATH>",
+  },
+  recipeList: [
+    // Include your existing recipes here
+    // The OAuth2Provider recipe is required for the MCP authorization process
+    OAuth2Provider.init(),
+  ],
+  experimental: {
+    plugins: [
+      SuperTokensMcpPlugin.init({
+        mcpServers: [server],
+      }),
+    ],
+  },
+});
+```
+
+
