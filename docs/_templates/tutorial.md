@@ -22,7 +22,7 @@ By the end of this tutorial, you'll be able to:
 ## Background
 
 {This section is optional. Feel free to use some of the text below to help you get started.}
-{Use this section to give more context to the user about what they are about to implement. E.g. explain what OAuth is, how ThirdParty providers work, etc}
+{Use this section to give more context to the user about what they are about to implement. For example, explain what OAuth is, how ThirdParty providers work, etc}
 
 ## Before you start
 

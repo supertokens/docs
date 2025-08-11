@@ -59,27 +59,29 @@ export function PaidFeatureCallout(): JSX.Element {
                         <Link href="https://supertokens.com/dashboard-saas" target="_blank">
                           SaaS dashboard
                         </Link>
+                        .
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Click on the <em>Enable Paid Features</em> button{" "}
+                        Select the <em>Managed</em> tab and click on the <em>Core</em> that you are working with.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Click on the <em>Managed Service</em> card
+                        After the page loads click on the <em>Features</em> tab.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Check the features you want to enable and click on the <em>Save</em> button
+                        Click <em>Edit</em> and check the features you want to enable. When you're done, click the{" "}
+                        <em>Save</em> button to submit the changes.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
@@ -96,35 +98,29 @@ export function PaidFeatureCallout(): JSX.Element {
                         <Link href="https://supertokens.com/dashboard-saas" target="_blank">
                           SaaS dashboard
                         </Link>
+                        .
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Click on the <em>Enable Paid Features</em> button{" "}
+                        Select the <em>Self-Hosted</em> tab and create a new license key.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Click on the <em>Self Hosted</em> card
+                        Check the features you want to use, fill in the rest of the fields and submit the form.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Check the features you want to enable and click on the <em>Send license key</em> button
-                      </Text>
-                    </Steps.StepHeader>
-                  </Steps.Step>
-                  <Steps.Step>
-                    <Steps.StepHeader>
-                      <Text>
-                        Add the license keys that you have received by{" "}
-                        <Link href="/docs/deployment/self-hosting/license-keys#license-keys">calling the Core API</Link>
+                        Add the newly created license key to{" "}
+                        <Link href="/docs/deployment/self-hosting/license-keys#license-keys">your Core Service</Link>.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>

@@ -11,7 +11,7 @@ function Step({
 }: React.PropsWithChildren<{ isLast?: boolean; position?: number }>) {
   return (
     <StepContext.Provider value={{ position, isLast }}>
-      <Flex position="relative" direction="column" minHeight="50px">
+      <Flex position="relative" direction="column">
         {children}
         <StepSeparator />
       </Flex>

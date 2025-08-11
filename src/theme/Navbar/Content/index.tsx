@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useThemeConfig, ErrorCauseBoundary } from "@docusaurus/theme-common";
+import clsx from "clsx";
 import { splitNavbarItems, useNavbarMobileSidebar } from "@docusaurus/theme-common/internal";
 import NavbarItem, { type Props as NavbarItemConfig } from "@theme/NavbarItem";
 import NavbarColorModeToggle from "@theme/Navbar/ColorModeToggle";
@@ -8,7 +9,11 @@ import NavbarMobileSidebarToggle from "@theme/Navbar/MobileSidebar/Toggle";
 import NavbarLogo from "@theme/Navbar/Logo";
 import supertokens from "supertokens-website";
 import NavbarSearch from "@theme/Navbar/Search";
-import { Button } from "@radix-ui/themes";
+import { Button, Text, Card, Flex } from "@radix-ui/themes";
+import GitHubLogo from "/img/logos/github.svg";
+import DiscordLogo from "/img/logos/discord.svg";
+
+import { Search, ColorModeToggle } from "@site/src/components";
 
 import styles from "./styles.module.css";
 import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
@@ -70,17 +75,23 @@ export default function NavbarContent(): JSX.Element {
         </>
       }
       right={
-        // TODO stop hardcoding items?
-        // Ask the user to add the respective navbar items => more flexible
         <>
-          <NavbarItems items={rightItems} />
-          <NavbarColorModeToggle className={styles.colorModeToggle} />
+          <Flex gap="3" mr={{ initial: "0", md: "5" }} align="center">
+            <div className={styles.navbarActionItem}>
+              <Search.Button />
+            </div>
+            <div className={styles.navbarActionItem}>
+              <ColorModeToggle />
+            </div>
+            <Flex className={clsx(styles.navbarActionItem, styles.navbarActionItemHoverable)} gap="2" asChild>
+              <Text color="gray" size="4" asChild>
+                <a href="https://github.com/supertokens/supertokens-core" target="_blank" className="reset-link">
+                  <GitHubLogo width="1.2rem" />
+                </a>
+              </Text>
+            </Flex>
+          </Flex>
 
-          {!searchBarItem && (
-            <NavbarSearch>
-              <SearchBar />
-            </NavbarSearch>
-          )}
           <SignUpButton />
         </>
       }

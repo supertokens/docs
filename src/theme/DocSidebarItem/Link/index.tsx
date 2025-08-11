@@ -12,6 +12,7 @@ import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
 import { Badge } from "@radix-ui/themes";
 import { APIRequestMethodBadge } from "@site/src/components/APIRequest/APIRequest";
 import { APIRequestMethod } from "@site/src/types";
+import { MenuItemIcon } from "@site/src/components/MenuItemIcon";
 
 export default function DocSidebarItemLink({
   item,
@@ -66,6 +67,7 @@ export default function DocSidebarItemLink({
         to={href}
         {...props}
       >
+        <MenuItemIcon href={href} className={styles.menuItemIcon} />
         {isAPIReferenceLink ? rest.join(" ") : label}
         {!isInternalLink && <IconExternalLink />}
         {isAPIReferenceLink && method ? (
@@ -73,7 +75,37 @@ export default function DocSidebarItemLink({
             <APIRequestMethodBadge method={method as APIRequestMethod} size="1" />
           </span>
         ) : null}
+        <NewBadge href={href} />
+        <BetaBadge href={href} />
       </Link>
     </li>
+  );
+}
+
+const NewPages = ["/docs/quickstart/build-with-ai-tools"];
+
+function NewBadge({ href }: { href: string }) {
+  if (!NewPages.includes(href)) return null;
+
+  return (
+    <span style={{ marginLeft: "auto" }}>
+      <Badge variant="outline" color={"orange"} size="1" radius="small">
+        New
+      </Badge>
+    </span>
+  );
+}
+
+const BetaPages = ["/docs/authentication/ai-authentication"];
+
+function BetaBadge({ href }: { href: string }) {
+  if (!BetaPages.includes(href)) return null;
+
+  return (
+    <span style={{ marginLeft: "auto" }}>
+      <Badge variant="outline" color="blue" size="1" radius="small">
+        Beta
+      </Badge>
+    </span>
   );
 }
