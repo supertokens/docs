@@ -7,3 +7,5 @@ export * from "./generateExampleFromAPIRequestSchema";
 export * from "./getExampleFromSchema";
 export * from "./search";
 export * from "./themeStore";
+export * from "./replaceVariablesForScalar";
+export * from "./replaceVariablesInApiPath";
