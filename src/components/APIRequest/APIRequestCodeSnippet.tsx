@@ -39,8 +39,9 @@ export function APIRequestCodeSnippetSegmentedControl() {
   }, [apiName, apiDomain, coreDomain]);
 
   const onEditConfigurationSuccess = useCallback(
-    (data) => {
-      apiClient.updateConfig({
+    async (data) => {
+      if (!apiClient) return;
+      await apiClient.updateConfig({
         content: replaceVariablesForScalar(apiDocument, apiName, data),
       });
       if (!shouldConfigureServer) return;

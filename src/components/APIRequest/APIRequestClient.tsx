@@ -64,9 +64,7 @@ const APIRequestClientTrigger = forwardRef<HTMLElement, { children: ReactNode }>
 
     useEffect(() => {
       if (!client) return;
-      console.log("mounting scalar");
       const mountingEl = document.getElementById("docusaurus-scalar-root");
-      console.log("mountingEl", mountingEl);
       client.mount(mountingEl);
     }, [client]);
 

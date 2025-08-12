@@ -1,4 +1,4 @@
-import { useState, useCallback, useContext, useMemo, forwardRef, ReactNode } from "react";
+import { useState, useCallback, useContext, useMemo, forwardRef, ReactNode, createContext } from "react";
 import { Button, Flex, Text, Heading, TextField, Separator, Dialog, Slot } from "@radix-ui/themes";
 import * as Form from "@radix-ui/react-form";
 import { useDocPageData } from "@site/src/hooks";
@@ -14,8 +14,18 @@ type FormData = {
   appId: string;
 };
 
+type APIRequestEditParametersModalContextType = {
+  isOpen: boolean;
+  setIsOpen: (value: boolean) => void;
+};
+
+const APIRequestEditParametersModalContext = createContext<APIRequestEditParametersModalContextType>(
+  {} as APIRequestEditParametersModalContextType,
+);
+
 function APIRequestEditParametersModalContent({ onSuccess }: { onSuccess: (data: FormData) => void }) {
   const { apiName } = useContext(APIRequestContext);
+  const { setIsOpen } = useContext(APIRequestEditParametersModalContext);
 
   const apiDomain = useDocPageData("apiDomain");
   const apiBasePath = useDocPageData("apiBasePath");
@@ -45,16 +55,20 @@ function APIRequestEditParametersModalContent({ onSuccess }: { onSuccess: (data:
     onSuccess(formValues);
   }, [formValues, onSuccess]);
 
-  const onKeyDown = useCallback((e) => {
-    if (e.key === "/") {
-      // Prevent triggering the search modal
-      e.stopPropagation();
-    }
+  const onKeyDown = useCallback(
+    (e) => {
+      if (e.key === "/") {
+        // Prevent triggering the search modal
+        e.stopPropagation();
+      }
 
-    if (e.key === "Enter") {
-      handleSave();
-    }
-  }, []);
+      if (e.key === "Enter") {
+        handleSave();
+        setIsOpen(false);
+      }
+    },
+    [handleSave],
+  );
 
   const handleCancel = useCallback(() => {
     setFormValues({
@@ -210,18 +224,22 @@ const APIRequestEditParametersModalRoot = ({
   children: ReactNode;
   onSuccess: (data: FormData) => void;
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
   return (
-    <Dialog.Root>
-      {children}
-      <APIRequestEditParametersModalContent onSuccess={onSuccess} />
-    </Dialog.Root>
+    <APIRequestEditParametersModalContext.Provider value={{ isOpen, setIsOpen }}>
+      <Dialog.Root onOpenChange={setIsOpen} open={isOpen}>
+        {children}
+        <APIRequestEditParametersModalContent onSuccess={onSuccess} />
+      </Dialog.Root>
+    </APIRequestEditParametersModalContext.Provider>
   );
 };
 
 const APIRequestEditParametersModalTrigger = function APIRequestEditParametersModalTrigger(props) {
   const { children } = props;
+  const { setIsOpen } = useContext(APIRequestEditParametersModalContext);
 
-  return <Dialog.Trigger>{children}</Dialog.Trigger>;
+  return <Slot onClick={() => setIsOpen(true)}>{children}</Slot>;
 };
 
 export const APIRequestEditParametersModal = {
