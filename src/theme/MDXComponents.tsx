@@ -134,6 +134,7 @@ export default {
   DescriptionText: DescriptionText,
   DocItemContextValue,
   Tabs,
+  Tab: TabItem,
   TabItem,
   PaidFeatureCallout,
   TokensCallout,
