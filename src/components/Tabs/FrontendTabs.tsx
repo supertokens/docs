@@ -2,6 +2,7 @@ import Tabs, { Props as TabsProps } from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 import { useContext, useMemo } from "react";
 import { DocItemContext } from "@site/src/context";
+import { useUIType } from "@site/src/hooks";
 
 // TODO: Rename values to items
 const PrebuiltUITabValues = [
@@ -25,7 +26,7 @@ type FrontendTabsProps = Omit<TabsProps, "values" | "groupId"> & {
 
 function FrontendTabsRoot(props: FrontendTabsProps) {
   const { children, exclude, uiType: propsUiType, ...rest } = props;
-  const { uiType: contextUiType } = useContext(DocItemContext);
+  const { uiType: contextUiType } = useUIType();
   const uiType = propsUiType || contextUiType;
   const groupId = useMemo(() => {
     return `${FrontendTabsGroupIdPrefix}-${uiType}`;

@@ -1,6 +1,7 @@
 import { useContext, useState, useLayoutEffect } from "react";
 import { DocItemContext } from "@site/src/context";
 import type { Props } from "@theme/TOC";
+import { useUIType } from "./useUIType";
 
 /**
  * The TOC component does not support dynamic headings.
@@ -11,7 +12,8 @@ import type { Props } from "@theme/TOC";
  * to allow dynamic headings based on tab selection.
  */
 export default function useFilteredTocItems(toc: Props["toc"]) {
-  const { uiType, tenantType } = useContext(DocItemContext);
+  const { tenantType } = useContext(DocItemContext);
+  const { uiType } = useUIType();
 
   const [filteredTocItems, setFilteredTocItems] = useState<Props["toc"]>([]);
 

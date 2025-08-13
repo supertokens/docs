@@ -6,7 +6,6 @@ type DocItemContextType = DocsItemStateType & {
   derived: Record<string, unknown>;
   webJsVersions: Record<string, string>;
   prebuiltUIVersion: string;
-  onChangeUIType: (type: DocsItemStateType["uiType"]) => void;
   onChangeTenantType: (type: DocsItemStateType["tenantType"]) => void;
   onChangeAppType: (type: DocsItemStateType["tenantType"]) => void;
   onChangeRecipeProperty: (
@@ -38,16 +37,6 @@ export function DocItemContextProvider({ children }: { children: React.ReactNode
     onLoadWebJsVersions();
     onLoadPrebuiltUIVersion();
   }, []);
-
-  const onChangeUIType = useCallback(
-    (type: DocsItemStateType["uiType"]) => {
-      setState({
-        ...state,
-        uiType: type,
-      });
-    },
-    [state],
-  );
 
   const onChangeTenantType = useCallback(
     (type: DocsItemStateType["tenantType"]) => {
@@ -135,7 +124,6 @@ export function DocItemContextProvider({ children }: { children: React.ReactNode
         },
         derived: derivedState,
         onChangeAppType,
-        onChangeUIType,
         onChangeTenantType,
         onChangeRecipeProperty,
         onChangeAppInfoField,
