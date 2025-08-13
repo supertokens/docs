@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { TypeScriptSymbolExtractor } from "./typescript-symbol-extractor";
 import { ClassSymbol, TypeSymbol } from "./types";
 
-const extractor = new TypeScriptSymbolExtractor();
+const extractor = new TypeScriptSymbolExtractor(["test.ts"]);
 
 function extractClassSymbols(code: string): ClassSymbol[] {
   const symbols = extractor["extractFromFile"]("test.ts", code);
