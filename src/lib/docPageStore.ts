@@ -7,6 +7,7 @@ export interface DocPageState {
   selfHostedDeploymentType: "with-docker" | "without-docker";
   tenantType: "single-tenant" | "multi-tenant";
   apiRequestExampleLanguage: "shell" | "nodejs" | "python" | "go";
+  uiType: "prebuilt" | "custom";
   apiDomain: string;
   apiBasePath: string;
   websiteDomain: string;
@@ -45,6 +46,7 @@ class DocPageStore {
       tenantType: "single-tenant",
       nextjsRouterType: "app-router",
       accountType: "managed",
+      uiType: "prebuilt",
       selfHostedDeploymentType: "with-docker",
       apiRequestExampleLanguage: "shell",
       apiDomain: DOC_PAGE_STORE_DEFAULT_VALUES.apiDomain,

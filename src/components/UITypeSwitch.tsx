@@ -5,12 +5,12 @@ import { Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 import { AnimatePresence, motion } from "motion/react";
 import { TOC_UI_TYPE_SWITCH_ID } from "../lib";
-import { useIsVisible } from "../hooks";
+import { useIsVisible, useUIType } from "../hooks";
 
 import "./RadioCard.scss";
 
 function UITypeSwitch({}) {
-  const { uiType, onChangeUIType } = useContext(DocItemContext);
+  const { uiType, onChangeUIType } = useUIType();
   const { visibilityRef, isVisible } = useIsVisible();
 
   return (
@@ -42,7 +42,7 @@ function UITypeSwitch({}) {
 }
 
 function TOCSwitch({ isParentVisible }: { isParentVisible: boolean }) {
-  const { uiType, onChangeUIType } = useContext(DocItemContext);
+  const { uiType, onChangeUIType } = useUIType();
   const root = document.getElementById(TOC_UI_TYPE_SWITCH_ID);
   const elementRef = useRef<HTMLDivElement>(null);
   if (!root) return null;
@@ -90,15 +90,15 @@ function HeadingFilter({ children, name }: React.PropsWithChildren<{ name: strin
 }
 
 function PrebuiltUIContent({ children }: React.PropsWithChildren<{}>) {
-  const state = useContext(DocItemContext);
+  const { uiType } = useUIType();
 
-  return <HeadingFilter name="prebuilt">{state.uiType === "prebuilt" ? children : null}</HeadingFilter>;
+  return <HeadingFilter name="prebuilt">{uiType === "prebuilt" ? children : null}</HeadingFilter>;
 }
 
 function CustomUIContent({ children }: React.PropsWithChildren<{}>) {
-  const state = useContext(DocItemContext);
+  const { uiType } = useUIType();
 
-  return <HeadingFilter name="custom">{state.uiType === "custom" ? children : null}</HeadingFilter>;
+  return <HeadingFilter name="custom">{uiType === "custom" ? children : null}</HeadingFilter>;
 }
 
 export const UIType = {

@@ -9,7 +9,6 @@ export type DocsItemStateType = {
     };
     thirdparty: {};
   };
-  uiType: "prebuilt" | "custom";
   appInfo: {
     appName: string;
     apiDomain: string;
@@ -35,7 +34,6 @@ const DefaultState: DocsItemStateType = {
     },
     thirdparty: {},
   },
-  uiType: "prebuilt",
   tenantType: "single",
   appType: "single",
   appInfo: {
