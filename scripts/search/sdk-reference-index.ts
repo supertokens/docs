@@ -1,23 +1,184 @@
-/**
- * This file is used to create and update the Algolia SDK reference index.
- * Make sure to create an index that can work efficiently with SDK reference type documents.
- * Look into the sdk-indexer/types.ts file to get an idea of how the documents will look like.
- */
-
 import fs from "fs-extra";
 import path from "path";
+import { mkdir, exists } from "node:fs/promises";
+import { resolve, join } from "node:path";
 import { algoliasearch } from "algoliasearch";
-import { Symbol, SymbolExtractor } from "../sdk-indexer/types";
+import { $, file, write } from "bun";
 
-const APPLICATION_ID = process.env.ALGOLIA_APP_ID || "SBR5UR2Z16";
-const API_KEY = process.env.ALGOLIA_ADMIN_API_KEY || "";
-const INDEX_NAME = "supertokens-sdk-reference";
+import { SearchIndex } from "./search-index";
 
-interface SDKReferenceDocument {
+import { TypeScriptSymbolExtractor } from "../search/typescript-symbol-extractor";
+import { GoSymbolExtractor } from "../search/go-symbol-extractor";
+import { PythonSymbolExtractor } from "../search/python-symbol-extractor";
+import { SymbolExtractor, Symbol, FunctionSymbol, ClassSymbol } from "../search/types";
+import { BaseSymbolExtractor } from "../search/symbol-extractor";
+
+const TMP_DIR_PATH = "./tmp";
+
+type Repository = {
+  url: string;
+  files: { path: string; namespace: string; extract?: string[] }[];
+  name: string;
+  language: "typescript" | "go" | "python";
+};
+
+const SymbolExtractorsMap = {
+  typescript: TypeScriptSymbolExtractor,
+  go: GoSymbolExtractor,
+  python: PythonSymbolExtractor,
+} as const;
+
+export class SdkReferenceIndex extends SearchIndex {
+  indexName = "supertokens_sdk_references";
+  repositories: Repository[] = [
+    {
+      url: "https://github.com/supertokens/supertokens-node",
+      files: [
+        { path: "./lib/ts/index.ts", namespace: "SuperTokens" },
+        { path: "./lib/ts/recipe/accountlinking/index.ts", namespace: "AccountLinking" },
+        { path: "./lib/ts/recipe/dashboard/index.ts", namespace: "Dashboard" },
+        { path: "./lib/ts/recipe/emailpassword/index.ts", namespace: "EmailPassword" },
+        { path: "./lib/ts/recipe/emailverification/index.ts", namespace: "EmailVerification" },
+        { path: "./lib/ts/recipe/jwt/index.ts", namespace: "JWT" },
+        { path: "./lib/ts/recipe/multifactorauth/index.ts", namespace: "MultiFactorAuth" },
+        { path: "./lib/ts/recipe/multitenancy/index.ts", namespace: "MultiTenancy" },
+        { path: "./lib/ts/recipe/oauth2provider/index.ts", namespace: "OAuth2Provider" },
+        { path: "./lib/ts/recipe/openid/index.ts", namespace: "OpenID" },
+        { path: "./lib/ts/recipe/passwordless/index.ts", namespace: "Passwordless" },
+        { path: "./lib/ts/recipe/session/index.ts", namespace: "Session" },
+        { path: "./lib/ts/recipe/thirdparty/index.ts", namespace: "ThirdParty" },
+        { path: "./lib/ts/recipe/totp/index.ts", namespace: "TOTP" },
+        { path: "./lib/ts/recipe/usermetadata/index.ts", namespace: "UserMetadata" },
+        { path: "./lib/ts/recipe/userroles/index.ts", namespace: "UserRoles" },
+        { path: "./lib/ts/recipe/webauthn/index.ts", namespace: "WebAuthn" },
+      ],
+      name: "supertokens-node",
+      language: "typescript",
+    },
+  ];
+
+  async updateDocuments(): Promise<void> {
+    const documents: SDKReferenceDocument[] = [];
+
+    console.log("Initializing SDK indexer");
+    const tmpDirPath = "./tmp";
+    const tmpDirExists = await exists(tmpDirPath);
+    if (!tmpDirExists) {
+      mkdir(tmpDirPath);
+    }
+
+    for (const repository of this.repositories) {
+      console.log(`Extracting symbols from ${repository.name}`);
+      await this.cloneRepository(repository);
+      const symbols = this.extractSymbols(repository);
+      console.log(symbols);
+      const repositoryDocuments = this.transformSymbolsToDocuments(symbols, repository);
+      console.log(repositoryDocuments);
+      documents.push(...repositoryDocuments);
+    }
+
+    await write("index.json", JSON.stringify(documents, null, 2));
+
+    // await this.client.clearObjects({ indexName: this.indexName });
+    // const responses = await this.client.saveObjects({
+    //   indexName: this.indexName,
+    //   objects: documents,
+    // });
+  }
+
+  updateConfiguration(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  private async cloneRepository(repository: Repository): Promise<void> {
+    const repositoryDirectoryPath = `./tmp/${repository.name}`;
+    const repositoryDirectoryExists = await exists(repositoryDirectoryPath);
+    if (repositoryDirectoryExists) {
+      return;
+    }
+    console.log(`Cloning ${repository.url}`);
+    await $`git clone ${repository.url} ${repository.name} --depth 1`.cwd("./tmp");
+  }
+
+  private extractSymbols(repository: Repository): Symbol[] {
+    const ExtractorClass = SymbolExtractorsMap[repository.language];
+    if (!ExtractorClass) throw new Error(`No extractor found for language ${repository.language}`);
+    const extractor = new ExtractorClass(
+      repository.files.map((f) => ({
+        namespace: f.namespace,
+        path: resolve(`${TMP_DIR_PATH}/${repository.name}/${f.path}`),
+      })),
+    );
+    return extractor.extract();
+  }
+
+  private transformSymbolsToDocuments(symbols: Symbol[], repository: Repository): SDKReferenceDocument[] {
+    return repository.files
+      .map((file) => {
+        const absolutePath = resolve(`${TMP_DIR_PATH}/${repository.name}/${file.path}`);
+        const symbolsInFile = symbols.filter((symbol) => symbol.file === absolutePath);
+        const relativePath = file.path.replace(`${TMP_DIR_PATH}/${repository.name}/`, "");
+
+        return symbolsInFile
+          .map((symbol) => {
+            const meta: Record<string, unknown> = symbol.meta || {};
+            const docs: SDKReferenceDocument[] = [];
+
+            switch (symbol.type) {
+              case "function":
+                const funcSymbol = symbol as FunctionSymbol;
+                docs.push({
+                  objectID: `${repository.language}-${symbol.name}-${relativePath}-${symbol.line}`,
+                  name: symbol.name,
+                  type: symbol.type,
+                  language: repository.language,
+                  repository: repository.name,
+                  content: symbol.content,
+                  file: relativePath,
+                  line: symbol.line,
+                  comments: symbol.comments || undefined,
+                  namespace: symbol.namespace,
+                  tags: [],
+                  signature: funcSymbol.meta?.parameters
+                    ?.map((p) => `${p.name}: ${p.type}${p.optional ? "?" : ""}`)
+                    .join(", "),
+                  parameters: funcSymbol.meta?.parameters,
+                });
+                break;
+              case "class":
+                const classSymbol = symbol as ClassSymbol;
+                docs.push(
+                  ...classSymbol.meta.methods.map((method) => ({
+                    objectID: `${repository.language}-${method.name}-${relativePath}-${method.line}`,
+                    name: method.name,
+                    type: "method" as SDKReferenceDocument["type"],
+                    language: repository.language,
+                    repository: repository.name,
+                    content: method.content,
+                    signature: method.parameters?.map((p) => `${p.name}: ${p.type}${p.optional ? "?" : ""}`).join(", "),
+                    parameters: method.parameters,
+                    file: relativePath,
+                    line: method.line,
+                    comments: method.comments || undefined,
+                    tags: [],
+                  })),
+                );
+                break;
+            }
+            return docs;
+          })
+          .flat();
+      })
+      .flat();
+  }
+}
+
+interface SDKReferenceDocument extends Record<string, unknown> {
   objectID: string;
   name: string;
   type: "variable" | "function" | "class" | "type" | "method";
   language: "typescript" | "go" | "python";
+  repository: string;
   file: string;
   line: number;
   content: string;
@@ -32,142 +193,29 @@ interface SDKReferenceDocument {
   version?: string;
 }
 
-const client = algoliasearch(APPLICATION_ID, API_KEY);
-
-async function extractSDKDocuments(): Promise<SDKReferenceDocument[]> {
-  const documents: SDKReferenceDocument[] = [];
-  const sdkIndexerPath = path.join(process.cwd(), "scripts", "sdk-indexer");
-
-  // Dynamically import symbol extractors for different languages
-  const extractors: SymbolExtractor[] = [
-    {
-      language: "typescript",
-      include: ["src/**/*.ts", "src/**/*.tsx"],
-      exclude: ["**/*.test.ts", "**/*.spec.ts"],
-      extract: () => {}, // Placeholder, actual implementation would be in the extractor
-    },
-    {
-      language: "go",
-      include: ["go/**/*.go"],
-      exclude: ["**/*_test.go"],
-      extract: () => {}, // Placeholder
-    },
-    {
-      language: "python",
-      include: ["python/**/*.py"],
-      exclude: ["**/*_test.py", "**/*_spec.py"],
-      extract: () => {}, // Placeholder
-    },
-  ];
-
-  for (const extractor of extractors) {
-    try {
-      // In a real implementation, this would call the actual symbol extraction logic
-      const symbols: Symbol[] = await extractSymbols(extractor);
-
-      const languageDocuments = symbols.map((symbol) => {
-        const baseDoc: SDKReferenceDocument = {
-          objectID: `${extractor.language}-${symbol.name}-${symbol.file}-${symbol.line}`,
-          name: symbol.name,
-          type: symbol.type,
-          language: extractor.language,
-          file: symbol.file,
-          line: symbol.line,
-          content: symbol.content,
-          comments: symbol.comments || undefined,
-          tags: [], // Would be populated based on context or comments
-        };
-
-        // Add type-specific details
-        switch (symbol.type) {
-          case "function":
-            const funcSymbol = symbol as any; // Cast to function symbol type
-            baseDoc.signature = funcSymbol.meta?.parameters
-              ?.map((p) => `${p.name}: ${p.type}${p.optional ? "?" : ""}`)
-              .join(", ");
-            baseDoc.returnType = funcSymbol.meta?.returnType;
-            baseDoc.parameters = funcSymbol.meta?.parameters;
-            break;
-          case "class":
-            const classSymbol = symbol as any; // Cast to class symbol type
-            baseDoc.className = symbol.name;
-            baseDoc.parameters = classSymbol.meta?.constructorArgs;
-            break;
-          case "method":
-            const methodSymbol = symbol as any; // Cast to method symbol type
-            baseDoc.className = methodSymbol.meta?.className;
-            baseDoc.signature = methodSymbol.meta?.parameters
-              ?.map((p) => `${p.name}: ${p.type}${p.optional ? "?" : ""}`)
-              .join(", ");
-            baseDoc.returnType = methodSymbol.meta?.returnType;
-            break;
-        }
-
-        return baseDoc;
-      });
-
-      documents.push(...languageDocuments);
-    } catch (error) {
-      console.warn(`Could not extract symbols for ${extractor.language}:`, error);
-    }
-  }
-
-  return documents;
-}
-
-// Placeholder for symbol extraction - would be replaced with actual implementation
-async function extractSymbols(extractor: SymbolExtractor): Promise<Symbol[]> {
-  // This would be implemented in the actual SDK indexer
-  return [];
-}
-
 // Creates an index that will be used to search the SDK references.
-async function createIndex() {
-  try {
-    await client.setSettings({
-      indexName: INDEX_NAME,
-      settings: {
-        searchableAttributes: ["name", "comments", "signature", "content"],
-        attributesForFaceting: ["type", "language", "className", "namespace", "tags", "deprecated"],
-        customRanking: ["desc(usage_frequency)", "asc(name)"],
-        distinct: true,
-        attributeForDistinct: "name",
-        highlightPreTag: "<mark>",
-        highlightPostTag: "</mark>",
-        snippetEllipsisText: "…",
-      },
-    });
-
-    console.log(`✅ SDK reference index "${INDEX_NAME}" created successfully`);
-    return true;
-  } catch (error) {
-    console.error("❌ Error creating SDK reference index:", error);
-    throw error;
-  }
-}
-
+// async function createIndex() {
+//   try {
+//     await client.setSettings({
+//       indexName: INDEX_NAME,
+//       settings: {
+//         searchableAttributes: ["name", "comments", "signature", "content"],
+//         attributesForFaceting: ["type", "language", "className", "namespace", "tags", "deprecated"],
+//         customRanking: ["desc(usage_frequency)", "asc(name)"],
+//         distinct: true,
+//         attributeForDistinct: "name",
+//         highlightPreTag: "<mark>",
+//         highlightPostTag: "</mark>",
+//         snippetEllipsisText: "…",
+//       },
+//     });
+//
+//     console.log(`✅ SDK reference index "${INDEX_NAME}" created successfully`);
+//     return true;
+//   } catch (error) {
+//     console.error("❌ Error creating SDK reference index:", error);
+//     throw error;
+//   }
+// }
+//
 // Updates the index with the latest documents.
-async function updateIndex() {
-  try {
-    const documents = await extractSDKDocuments();
-
-    if (documents.length === 0) {
-      console.log("⚠️ No SDK documents found to index");
-      return;
-    }
-
-    await client.clearObjects({ indexName: INDEX_NAME });
-    const { objectIDs } = await client.saveObjects({
-      indexName: INDEX_NAME,
-      objects: documents,
-    });
-
-    console.log(`✅ Updated SDK reference index with ${objectIDs.length} documents`);
-    return objectIDs;
-  } catch (error) {
-    console.error("❌ Error updating SDK reference index:", error);
-    throw error;
-  }
-}
-
-export { createIndex, updateIndex, extractSDKDocuments };

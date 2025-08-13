@@ -2,7 +2,7 @@ export interface SymbolExtractor {
   language: "typescript" | "go" | "python";
   include: string[];
   exclude: string[];
-  extract(rootPath: string, files?: string[]): void;
+  extract(): Symbol[];
 }
 
 export interface Symbol {
@@ -12,6 +12,8 @@ export interface Symbol {
   line: number;
   content: string;
   comments: string | null;
+  namespace: string;
+  deprecated: boolean;
   meta: Record<string, unknown>;
 }
 
@@ -46,6 +48,7 @@ export interface ClassSymbol extends Symbol {
       isAsync: boolean;
       line: number;
       content: string;
+      comments: string | null;
     }[];
     properties: {
       name: string;

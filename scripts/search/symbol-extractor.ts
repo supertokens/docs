@@ -1,27 +1,31 @@
 import Parser from "tree-sitter";
 import { readFileSync } from "fs";
-import { glob } from "glob";
-import { join } from "path";
 import { SymbolExtractor, Symbol } from "./types";
+
+export interface FileWithNamespace {
+  path: string;
+  namespace: string;
+}
 
 export abstract class BaseSymbolExtractor implements SymbolExtractor {
   abstract language: "typescript" | "go" | "python";
   abstract include: string[];
   abstract exclude: string[];
   protected parser: Parser;
+  protected files: FileWithNamespace[];
 
-  constructor() {
+  constructor(files: FileWithNamespace[]) {
     this.parser = new Parser();
+    this.files = files;
   }
 
-  extract(rootPath: string, _files?: string[]) {
-    const files = this.findFiles(rootPath, _files);
+  extract() {
     const symbols: Symbol[] = [];
 
-    for (const file of files) {
+    for (const { path: file, namespace } of this.files) {
       try {
         const content = readFileSync(file, "utf8");
-        symbols.push(...this.extractFromFile(file, content));
+        symbols.push(...this.extractFromFile(file, content, namespace));
       } catch (error) {
         console.error(`Error processing file ${file}:`, error);
       }
@@ -30,21 +34,7 @@ export abstract class BaseSymbolExtractor implements SymbolExtractor {
     return symbols;
   }
 
-  private findFiles(rootPath: string, _files?: string[]): string[] {
-    if (_files) return _files.map((f) => join(rootPath, f));
-
-    const files: string[] = [];
-
-    for (const pattern of this.include) {
-      const fullPattern = join(rootPath, pattern);
-      const matches = glob.sync(fullPattern, { ignore: this.exclude });
-      files.push(...matches);
-    }
-
-    return Array.from(new Set(files));
-  }
-
-  protected abstract extractFromFile(file: string, content: string): Symbol[];
+  protected abstract extractFromFile(file: string, content: string, namespace: string): Symbol[];
 
   protected extractComments(node: Parser.SyntaxNode): string | null {
     let current = node.previousSibling;
@@ -56,6 +46,12 @@ export abstract class BaseSymbolExtractor implements SymbolExtractor {
     }
 
     return comments.length > 0 ? comments.join("\n") : null;
+  }
+
+  protected isDeprecated(comments: string | null): boolean {
+    if (!comments) return false;
+    const lowerComments = comments.toLowerCase();
+    return lowerComments.includes("@deprecated") || lowerComments.includes("deprecated:");
   }
 
   protected getNodeContent(node: Parser.SyntaxNode, content: string): string {

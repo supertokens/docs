@@ -1,7 +1,7 @@
 import Parser from "tree-sitter";
 import Go from "tree-sitter-go";
 
-import { BaseSymbolExtractor } from "./symbol-extractor";
+import { BaseSymbolExtractor, FileWithNamespace } from "./symbol-extractor";
 import { Symbol, FunctionSymbol, TypeSymbol } from "./types";
 
 export class GoSymbolExtractor extends BaseSymbolExtractor {
@@ -9,29 +9,29 @@ export class GoSymbolExtractor extends BaseSymbolExtractor {
   include = ["**/*.go"];
   exclude = ["**/vendor/**", "**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"];
 
-  constructor(public files: string[]) {
-    super();
+  constructor(files: FileWithNamespace[]) {
+    super(files);
     this.parser.setLanguage(Go);
   }
 
-  protected extractFromFile(file: string, content: string): Symbol[] {
+  protected extractFromFile(file: string, content: string, namespace: string): Symbol[] {
     const tree = this.parser.parse(content);
 
     const symbols: Symbol[] = [];
-    this.traverse(tree.rootNode, symbols, file, content);
+    this.traverse(tree.rootNode, symbols, file, content, namespace);
 
     return symbols;
   }
 
-  private traverse(node: Parser.SyntaxNode, symbols: Symbol[], file: string, content: string): void {
+  private traverse(node: Parser.SyntaxNode, symbols: Symbol[], file: string, content: string, namespace: string): void {
     let symbol: Symbol | null = null;
     switch (node.type) {
       case "function_declaration":
       case "method_declaration":
-        symbol = this.extractFunctionSymbol(node, file, content);
+        symbol = this.extractFunctionSymbol(node, file, content, namespace);
         break;
       case "type_declaration":
-        symbol = this.extractTypeSymbol(node, file, content);
+        symbol = this.extractTypeSymbol(node, file, content, namespace);
         break;
     }
 
@@ -40,11 +40,16 @@ export class GoSymbolExtractor extends BaseSymbolExtractor {
     for (let i = 0; i < node.childCount; i++) {
       const child = node.child(i);
       if (!child) continue;
-      this.traverse(child, symbols, file, content);
+      this.traverse(child, symbols, file, content, namespace);
     }
   }
 
-  private extractFunctionSymbol(node: Parser.SyntaxNode, file: string, content: string): FunctionSymbol | null {
+  private extractFunctionSymbol(
+    node: Parser.SyntaxNode,
+    file: string,
+    content: string,
+    namespace: string,
+  ): FunctionSymbol | null {
     let nameNode: Parser.SyntaxNode | null = null;
     for (let i = 0; i < node.childCount; i++) {
       const child = node.child(i);
@@ -66,13 +71,16 @@ export class GoSymbolExtractor extends BaseSymbolExtractor {
     const parameters = this.extractParameters(node);
     const returnType = this.extractReturnType(node);
 
+    const comments = this.extractComments(node);
     return {
       name,
       type: "function",
       file,
       line: node.startPosition.row,
       content: this.getNodeContent(node, content),
-      comments: this.extractComments(node),
+      comments,
+      namespace,
+      deprecated: this.isDeprecated(comments),
       meta: {
         parameters,
         returnType,
@@ -82,7 +90,12 @@ export class GoSymbolExtractor extends BaseSymbolExtractor {
     };
   }
 
-  private extractTypeSymbol(node: Parser.SyntaxNode, file: string, content: string): TypeSymbol | null {
+  private extractTypeSymbol(
+    node: Parser.SyntaxNode,
+    file: string,
+    content: string,
+    namespace: string,
+  ): TypeSymbol | null {
     let typeSpec: Parser.SyntaxNode | null = null;
     for (let i = 0; i < node.childCount; i++) {
       const child = node.child(i);
@@ -119,13 +132,16 @@ export class GoSymbolExtractor extends BaseSymbolExtractor {
       }
     }
 
+    const comments = this.extractComments(node);
     return {
       name,
       type: "type",
       file,
       line: node.startPosition.row,
       content: this.getNodeContent(node, content),
-      comments: this.extractComments(node),
+      comments,
+      namespace,
+      deprecated: this.isDeprecated(comments),
       meta: {
         definition: this.getNodeContent(node, content),
         kind,
@@ -240,4 +256,3 @@ export class GoSymbolExtractor extends BaseSymbolExtractor {
     return "void";
   }
 }
-

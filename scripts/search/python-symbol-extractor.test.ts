@@ -2,15 +2,16 @@ import { describe, it, expect } from "vitest";
 import { PythonSymbolExtractor } from "./python-symbol-extractor";
 import { FunctionSymbol, TypeSymbol } from "./types";
 
-const extractor = new PythonSymbolExtractor(["test.py"]);
+const testNamespace = "test-namespace";
+const extractor = new PythonSymbolExtractor([{ path: "test.py", namespace: testNamespace }]);
 
 function extractFunctionSymbols(code: string): FunctionSymbol[] {
-  const symbols = extractor["extractFromFile"]("test.py", code);
+  const symbols = extractor["extractFromFile"]("test.py", code, testNamespace);
   return symbols.filter((s) => s.type === "function") as FunctionSymbol[];
 }
 
 function extractTypeSymbols(code: string): TypeSymbol[] {
-  const symbols = extractor["extractFromFile"]("test.py", code);
+  const symbols = extractor["extractFromFile"]("test.py", code, testNamespace);
   return symbols.filter((s) => s.type === "type") as TypeSymbol[];
 }
 
@@ -25,6 +26,8 @@ def hello():
       expect(symbol).toBeDefined();
       expect(symbol?.name).toBe("hello");
       expect(symbol?.type).toBe("function");
+      expect(symbol?.namespace).toBe(testNamespace);
+      expect(symbol?.deprecated).toBe(false);
       expect(symbol?.meta.returnType).toBe("None");
       expect(symbol?.meta.parameters).toHaveLength(0);
       expect(symbol?.meta.isAsync).toBe(false);
@@ -200,6 +203,21 @@ def third():
       expect(symbols[1]?.name).toBe("second");
       expect(symbols[2]?.name).toBe("third");
     });
+
+    it("should extract a deprecated function", () => {
+      const code = `
+# @deprecated This function is deprecated, use new_hello instead
+def hello():
+    pass
+`;
+      const [symbol] = extractFunctionSymbols(code);
+      expect(symbol).toBeDefined();
+      expect(symbol?.name).toBe("hello");
+      expect(symbol?.type).toBe("function");
+      expect(symbol?.namespace).toBe(testNamespace);
+      expect(symbol?.deprecated).toBe(true);
+      expect(symbol?.comments).toContain("@deprecated");
+    });
   });
 
   describe("TypeSymbol", () => {
@@ -213,6 +231,8 @@ class User:
       expect(symbol).toBeDefined();
       expect(symbol?.name).toBe("User");
       expect(symbol?.type).toBe("type");
+      expect(symbol?.namespace).toBe(testNamespace);
+      expect(symbol?.deprecated).toBe(false);
       expect(symbol?.meta.kind).toBe("type");
     });
 
@@ -316,8 +336,24 @@ class DataClass:
       expect(symbol).toBeDefined();
       expect(symbol?.name).toBe("DataClass");
       expect(symbol?.type).toBe("type");
+      expect(symbol?.deprecated).toBe(false);
       expect(symbol?.meta.kind).toBe("type");
       expect(symbol?.meta.definition).toContain("class DataClass:");
+    });
+
+    it("should extract a deprecated class", () => {
+      const code = `
+# @deprecated This class is deprecated, use NewUser instead
+class User:
+    pass
+`;
+      const [symbol] = extractTypeSymbols(code);
+      expect(symbol).toBeDefined();
+      expect(symbol?.name).toBe("User");
+      expect(symbol?.type).toBe("type");
+      expect(symbol?.namespace).toBe(testNamespace);
+      expect(symbol?.deprecated).toBe(true);
+      expect(symbol?.comments).toContain("@deprecated");
     });
   });
 
@@ -342,7 +378,7 @@ class UserRepository:
     def find_by_name(self, name: str) -> Optional[User]:
         return None
 `;
-      const allSymbols = extractor["extractFromFile"]("test.py", code);
+      const allSymbols = extractor["extractFromFile"]("test.py", code, testNamespace);
       const functions = allSymbols.filter((s) => s.type === "function");
       const types = allSymbols.filter((s) => s.type === "type");
 
@@ -361,4 +397,3 @@ class UserRepository:
     });
   });
 });
-

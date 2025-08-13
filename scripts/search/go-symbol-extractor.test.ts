@@ -2,15 +2,16 @@ import { describe, it, expect } from "vitest";
 import { GoSymbolExtractor } from "./go-symbol-extractor";
 import { FunctionSymbol, TypeSymbol } from "./types";
 
-const extractor = new GoSymbolExtractor(["test.go"]);
+const testNamespace = "test-namespace";
+const extractor = new GoSymbolExtractor([{ path: "test.go", namespace: testNamespace }]);
 
 function extractFunctionSymbols(code: string): FunctionSymbol[] {
-  const symbols = extractor["extractFromFile"]("test.go", code);
+  const symbols = extractor["extractFromFile"]("test.go", code, testNamespace);
   return symbols.filter((s) => s.type === "function") as FunctionSymbol[];
 }
 
 function extractTypeSymbols(code: string): TypeSymbol[] {
-  const symbols = extractor["extractFromFile"]("test.go", code);
+  const symbols = extractor["extractFromFile"]("test.go", code, testNamespace);
   return symbols.filter((s) => s.type === "type") as TypeSymbol[];
 }
 
@@ -27,6 +28,8 @@ func Hello() {
       expect(symbol).toBeDefined();
       expect(symbol?.name).toBe("Hello");
       expect(symbol?.type).toBe("function");
+      expect(symbol?.namespace).toBe(testNamespace);
+      expect(symbol?.deprecated).toBe(false);
       expect(symbol?.meta.returnType).toBe("void");
       expect(symbol?.meta.parameters).toHaveLength(0);
       expect(symbol?.meta.isAsync).toBe(false);
@@ -155,6 +158,23 @@ func Third() {
       expect(symbols[1]?.name).toBe("Second");
       expect(symbols[2]?.name).toBe("Third");
     });
+
+    it("should extract a deprecated function", () => {
+      const code = `
+package main
+
+// Deprecated: Use NewHello instead
+func Hello() {
+}
+`;
+      const [symbol] = extractFunctionSymbols(code);
+      expect(symbol).toBeDefined();
+      expect(symbol?.name).toBe("Hello");
+      expect(symbol?.type).toBe("function");
+      expect(symbol?.namespace).toBe(testNamespace);
+      expect(symbol?.deprecated).toBe(true);
+      expect(symbol?.comments).toContain("Deprecated:");
+    });
   });
 
   describe("TypeSymbol", () => {
@@ -168,6 +188,8 @@ type UserID string
       expect(symbol).toBeDefined();
       expect(symbol?.name).toBe("UserID");
       expect(symbol?.type).toBe("type");
+      expect(symbol?.namespace).toBe(testNamespace);
+      expect(symbol?.deprecated).toBe(false);
       expect(symbol?.meta.kind).toBe("alias");
     });
 
@@ -258,8 +280,25 @@ const (
       expect(symbol).toBeDefined();
       expect(symbol?.name).toBe("Status");
       expect(symbol?.type).toBe("type");
+      expect(symbol?.deprecated).toBe(false);
       expect(symbol?.meta.kind).toBe("alias");
       expect(symbol?.meta.definition).toContain("type Status int");
+    });
+
+    it("should extract a deprecated type", () => {
+      const code = `
+package main
+
+// Deprecated: Use NewUserID instead  
+type UserID string
+`;
+      const [symbol] = extractTypeSymbols(code);
+      expect(symbol).toBeDefined();
+      expect(symbol?.name).toBe("UserID");
+      expect(symbol?.type).toBe("type");
+      expect(symbol?.namespace).toBe(testNamespace);
+      expect(symbol?.deprecated).toBe(true);
+      expect(symbol?.comments).toContain("Deprecated:");
     });
   });
 
@@ -285,7 +324,7 @@ type UserRepo interface {
     GetUser(id int) (*User, error)
 }
 `;
-      const allSymbols = extractor["extractFromFile"]("test.go", code);
+      const allSymbols = extractor["extractFromFile"]("test.go", code, testNamespace);
       const functions = allSymbols.filter((s) => s.type === "function");
       const types = allSymbols.filter((s) => s.type === "type");
 
@@ -299,4 +338,3 @@ type UserRepo interface {
     });
   });
 });
-
