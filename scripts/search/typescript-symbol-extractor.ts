@@ -113,6 +113,7 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor implements Sy
                 line: member.startPosition.row,
                 content: this.getNodeContent(member, content),
                 comments: methodComments,
+                deprecated: this.isDeprecated(methodComments),
               });
             }
           } else if (member.type === "public_field_definition") {
@@ -231,9 +232,8 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor implements Sy
     if (predefinedTypeNode) return predefinedTypeNode.text;
     // the first child is ":"
     let typeText = typeNode.children[1].text;
-    // keep at least one space between
-    const unformattedTypeText = typeText.replace(/\s+/g, " ");
-    return unformattedTypeText;
+    // remove formatting
+    return typeText.replace(/\s+/g, " ");
   }
 
   private extractClassPropertyVisibility(node: Parser.SyntaxNode): "public" | "private" | "protected" {

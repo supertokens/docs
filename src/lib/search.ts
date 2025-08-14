@@ -3,17 +3,22 @@ import type { Hit } from "@algolia/client-search";
 
 type SearchResultType = "guide" | "tutorial" | "sdk-reference" | "api-reference";
 
-export type SearchResult = {
+export type ParsedSearchResult = {
+  index: "supertokens_documentation";
   id: string;
   url: string;
-  content?: string;
-  highlight: string;
-  type: SearchResultType;
-  hierarchy: string[];
-  meta: Record<string, unknown>;
+  highlight: {
+    content: string;
+    attribute: string;
+  };
+  meta: {
+    category: string;
+    hierarchy: string[];
+    type: SearchResultType;
+  };
 };
 
-type SearchResultHit = Hit<{
+type DocumentationSearchResult = {
   anchor: string;
   category: string;
   content: string;
@@ -28,23 +33,59 @@ type SearchResultHit = Hit<{
     lvl6: string | null;
   };
   url: string;
-}>;
+};
 
-const client = searchClient("SBR5UR2Z16", "d87c41f893c301f365d5bfc62e6631df");
+type ApiReferenceSearchResult = {
+  endpoint: {
+    path: string;
+    method: string;
+    summary: string;
+    description?: string;
+    operationId?: string;
+    tags: string[];
+    deprecated: boolean;
+    path_depth: number;
+  };
+  apiType: string;
+  version?: string;
+};
+
+type SdkReferenceSearchResult = {
+  name: string;
+  type: "variable" | "function" | "class" | "type" | "method";
+  language: "typescript" | "go" | "python";
+  repository: string;
+  file: string;
+  line: number;
+  content: string;
+  comments?: string;
+  signature?: string;
+  returnType?: string;
+  namespace: string;
+  deprecated: boolean;
+};
+
+type SearchResultHit = Hit<DocumentationSearchResult> | Hit<ApiReferenceSearchResult> | Hit<SdkReferenceSearchResult>;
+
+const client = searchClient("HQ5R0VRJGG", "b6f38b3627dcd0642b67f24fe2e1a8eb");
 const SearchCache: Record<string, { results: SearchResult[]; timestamp: Date; cleanupFn: NodeJS.Timeout }> = {};
 const CacheTTL = 1000 * 60 * 5;
-type IndexName = "supertokens_documentation" | "supertokens_api_reference" | "supertokens_github";
+type IndexName = "supertokens_documentation" | "supertokens_api_references" | "supertokens_sdk_references";
 
 type DocumentationIndexPageType = "guide" | "tutorial" | "sdk-reference" | "api-reference";
 type DocumentationIndexTypeFacetFilter = `type:${DocumentationIndexPageType}`;
 
 type QueryParameters = {
-  indexName: "supertokens_documentation";
+  indexName: IndexName;
   facetFilters?: DocumentationIndexTypeFacetFilter[] | DocumentationIndexTypeFacetFilter[][];
 };
 
 export async function search(query: string, _parameters?: QueryParameters[]): Promise<SearchResult[] | null> {
-  const parameters = _parameters || [{ indexName: "supertokens_documentation" }];
+  const parameters = _parameters || [
+    { indexName: "supertokens_documentation" },
+    { indexName: "supertokens_api_references" },
+    { indexName: "supertokens_sdk_references" },
+  ];
   const cacheKey = parameters.map((p) => `${p.indexName}-${query}-${p.facetFilters?.join(":")}`).join(";");
 
   if (SearchCache[cacheKey] && SearchCache[cacheKey].timestamp > new Date(Date.now() - CacheTTL)) {
@@ -72,10 +113,14 @@ export async function search(query: string, _parameters?: QueryParameters[]): Pr
         ],
       })),
     });
+    console.log("search");
+    console.log(SearchCache[cacheKey]);
     if (SearchCache[cacheKey]) {
       clearTimeout(SearchCache[cacheKey].cleanupFn);
     }
+    console.log(response);
     const results = parseResponse(response);
+    console.log(results);
     SearchCache[cacheKey] = {
       results,
       timestamp: new Date(),
@@ -98,35 +143,72 @@ function parseResponse(response: SearchResponses<SearchResultHit>): SearchResult
         return [];
       }
       return indexResponse.hits.map((hit) => {
-        if (!hit._highlightResult || !hit._highlightResult.hierarchy) {
-          console.warn("No highlight result found for hit", hit);
-          return undefined;
+        if (indexResponse.index === "supertokens_sdk_references") {
+          console.log(hit);
+          return null;
+        } else if (indexResponse.index === "supertokens_api_references") {
+          console.log(hit);
+          return null;
         }
 
-        const highlight = extractHighlight(hit);
-        if (!highlight) {
-          console.warn("No highlight found for hit", hit);
-          console.log(Object.values(hit._snippetResult.hierarchy));
-        }
-        let hierarchy: string[] = [];
-        if (hit.hierarchy) {
-          hierarchy = Object.values(hit.hierarchy).filter(Boolean);
-        }
-        return {
-          id: hit.objectID,
-          highlight,
-          content: "",
-          url: hit.url,
-          type: hit.type,
-          hierarchy,
-          meta: {
-            category: hit.category,
-          },
-        };
+        return parseDocumentationSearchResult(hit as Hit<DocumentationSearchResult>);
       });
     })
     .flat()
     .filter(Boolean);
+}
+
+function parseDocumentationSearchResult(hit: Hit<DocumentationSearchResult>): SearchResult {
+  if (!hit._highlightResult || !hit._highlightResult.hierarchy) {
+    console.warn("No highlight result found for hit", hit);
+    return undefined;
+  }
+
+  const highlight = extractHighlight(hit);
+  if (!highlight) {
+    console.warn("No highlight found for hit", hit);
+  }
+  let hierarchy: string[] = [];
+  if (hit.hierarchy) {
+    hierarchy = Object.values(hit.hierarchy).filter(Boolean);
+  }
+
+  return {
+    id: hit.objectID,
+    highlight,
+    content: "",
+    url: hit.url,
+    type: hit.type,
+    hierarchy,
+    meta: {
+      category: hit.category,
+    },
+  };
+}
+
+function parseApiReferenceSearchResult(hit: Hit<SearchResultHit>): SearchResult {
+  if (!hit._highlightResult || !hit._highlightResult.hierarchy) {
+    console.warn("No highlight result found for hit", hit);
+    return undefined;
+  }
+
+  const highlight = extractHighlight(hit);
+  if (!highlight) {
+    console.warn("No highlight found for hit", hit);
+  }
+
+  const url = "";
+
+  return {
+    id: hit.objectID,
+    highlight,
+    url,
+    type: "api-reference",
+    hierarchy,
+    meta: {
+      category: hit.category,
+    },
+  };
 }
 
 function extractHighlight(hit: Hit<SearchResultHit>): string | undefined {

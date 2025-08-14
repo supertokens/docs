@@ -294,8 +294,8 @@ function SearchProvider({
   const debouncedSearch = useCallback(debounce(performSearch, 200), [performSearch]);
 
   useEffect(() => {
-    performSearch(query);
-  }, [query, performSearch]);
+    debouncedSearch(query);
+  }, [query, debouncedSearch]);
 
   return <SearchContext.Provider value={{ searchResults: results, searchState }}>{children}</SearchContext.Provider>;
 }

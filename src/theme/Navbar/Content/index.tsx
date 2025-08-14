@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useThemeConfig, ErrorCauseBoundary } from "@docusaurus/theme-common";
 import clsx from "clsx";
+import { User } from "lucide-react";
 import { splitNavbarItems, useNavbarMobileSidebar } from "@docusaurus/theme-common/internal";
 import NavbarItem, { type Props as NavbarItemConfig } from "@theme/NavbarItem";
 import NavbarColorModeToggle from "@theme/Navbar/ColorModeToggle";
@@ -121,12 +122,14 @@ function SignUpButton() {
   return (
     <Button asChild color="orange">
       <a
-        style={{ paddingRight: "var(--space-3)" }}
+        // prevent content realignment after the navbar renders and the session state gets fetched
+        style={{ paddingRight: "var(--space-3)", width: "110px" }}
         onClick={onClick}
         href="/auth"
         target="_blank"
         className={styles.signUpButtonLink}
       >
+        <User width="20px" />
         {label}
       </a>
     </Button>

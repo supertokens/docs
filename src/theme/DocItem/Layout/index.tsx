@@ -85,29 +85,31 @@ export default function DocItemLayout({ children }: Props): JSX.Element {
             <DocBreadcrumbs />
             <DocVersionBadge />
             {docTOC.mobile}
-            <BrowserOnly>
-              {() => (
-                <Flex
-                  align={{
-                    initial: "start",
-                    xs: "center",
-                  }}
-                  justify="between"
-                  mb="4"
-                  direction={{ initial: "column", xs: "row" }}
-                >
-                  <Text size="4" weight="bold" color="orange" mb="2" mt="2">
-                    {parsedCategory}
-                  </Text>
-                  {pageType !== "overview" && (
-                    <Flex gap="2" ml={{ initial: "0", xs: "auto" }}>
-                      <CopyPageContentButton />
-                      <PageOptionsDropdownMenu />
-                    </Flex>
-                  )}
-                </Flex>
-              )}
-            </BrowserOnly>
+            <Flex
+              align={{
+                initial: "start",
+                xs: "center",
+              }}
+              justify="between"
+              mb="4"
+              direction={{ initial: "column", xs: "row" }}
+            >
+              <Text size="4" weight="bold" color="orange" mb="2" mt="2">
+                {parsedCategory}
+              </Text>
+              <BrowserOnly>
+                {() => (
+                  <>
+                    {pageType !== "overview" && (
+                      <Flex gap="2" ml={{ initial: "0", xs: "auto" }}>
+                        <CopyPageContentButton />
+                        <PageOptionsDropdownMenu />
+                      </Flex>
+                    )}
+                  </>
+                )}
+              </BrowserOnly>
+            </Flex>
             <DocItemContent>{children}</DocItemContent>
             <DocItemFooter />
           </article>

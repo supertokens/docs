@@ -25,7 +25,8 @@ async function main() {
   }
 
   try {
-    await searchIndex.updateDocuments();
+    // await searchIndex.updateDocuments();
+    await searchIndex.updateConfiguration();
   } catch (error) {
     console.error("❌ Error updating API reference index:", error);
     throw error;

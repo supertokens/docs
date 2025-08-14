@@ -49,6 +49,7 @@ export interface ClassSymbol extends Symbol {
       line: number;
       content: string;
       comments: string | null;
+      deprecated: boolean;
     }[];
     properties: {
       name: string;

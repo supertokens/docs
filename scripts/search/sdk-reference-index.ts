@@ -1,4 +1,5 @@
 import fs from "fs-extra";
+import { SetSettingsProps, SynonymHit } from "algoliasearch";
 import path from "path";
 import { mkdir, exists } from "node:fs/promises";
 import { resolve, join } from "node:path";
@@ -55,6 +56,44 @@ export class SdkReferenceIndex extends SearchIndex {
       name: "supertokens-node",
       language: "typescript",
     },
+    {
+      url: "https://github.com/supertokens/supertokens-auth-react",
+      files: [
+        { path: "./lib/ts/index.ts", namespace: "SuperTokens" },
+        { path: "./lib/ts/recipe/emailpassword/index.ts", namespace: "EmailPassword" },
+        { path: "./lib/ts/recipe/emailverification/index.ts", namespace: "EmailVerification" },
+        { path: "./lib/ts/recipe/multifactorauth/index.ts", namespace: "MultiFactorAuth" },
+        { path: "./lib/ts/recipe/multitenancy/index.ts", namespace: "MultiTenancy" },
+        { path: "./lib/ts/recipe/oauth2provider/index.ts", namespace: "OAuth2Provider" },
+        { path: "./lib/ts/recipe/passwordless/index.ts", namespace: "Passwordless" },
+        { path: "./lib/ts/recipe/session/index.ts", namespace: "Session" },
+        { path: "./lib/ts/recipe/thirdparty/index.ts", namespace: "ThirdParty" },
+        { path: "./lib/ts/recipe/totp/index.ts", namespace: "TOTP" },
+        { path: "./lib/ts/recipe/userroles/index.ts", namespace: "UserRoles" },
+        { path: "./lib/ts/recipe/webauthn/index.ts", namespace: "WebAuthn" },
+      ],
+      name: "supertokens-node",
+      language: "typescript",
+    },
+    {
+      url: "https://github.com/supertokens/supertokens-web-js",
+      files: [
+        { path: "./lib/ts/index.ts", namespace: "SuperTokens" },
+        { path: "./lib/ts/recipe/emailpassword/index.ts", namespace: "EmailPassword" },
+        { path: "./lib/ts/recipe/emailverification/index.ts", namespace: "EmailVerification" },
+        { path: "./lib/ts/recipe/multifactorauth/index.ts", namespace: "MultiFactorAuth" },
+        { path: "./lib/ts/recipe/multitenancy/index.ts", namespace: "MultiTenancy" },
+        { path: "./lib/ts/recipe/oauth2provider/index.ts", namespace: "OAuth2Provider" },
+        { path: "./lib/ts/recipe/passwordless/index.ts", namespace: "Passwordless" },
+        { path: "./lib/ts/recipe/session/index.ts", namespace: "Session" },
+        { path: "./lib/ts/recipe/thirdparty/index.ts", namespace: "ThirdParty" },
+        { path: "./lib/ts/recipe/totp/index.ts", namespace: "TOTP" },
+        { path: "./lib/ts/recipe/userroles/index.ts", namespace: "UserRoles" },
+        { path: "./lib/ts/recipe/webauthn/index.ts", namespace: "WebAuthn" },
+      ],
+      name: "supertokens-node",
+      language: "typescript",
+    },
   ];
 
   async updateDocuments(): Promise<void> {
@@ -71,23 +110,31 @@ export class SdkReferenceIndex extends SearchIndex {
       console.log(`Extracting symbols from ${repository.name}`);
       await this.cloneRepository(repository);
       const symbols = this.extractSymbols(repository);
-      console.log(symbols);
+      console.log(`Transforming documents`);
       const repositoryDocuments = this.transformSymbolsToDocuments(symbols, repository);
-      console.log(repositoryDocuments);
       documents.push(...repositoryDocuments);
     }
 
-    await write("index.json", JSON.stringify(documents, null, 2));
-
-    // await this.client.clearObjects({ indexName: this.indexName });
-    // const responses = await this.client.saveObjects({
-    //   indexName: this.indexName,
-    //   objects: documents,
-    // });
+    console.log(`Updating index`);
+    await this.client.clearObjects({ indexName: this.indexName });
+    const responses = await this.client.saveObjects({
+      indexName: this.indexName,
+      objects: documents,
+    });
   }
 
-  updateConfiguration(): Promise<void> {
-    return Promise.resolve();
+  async updateConfiguration(): Promise<void> {
+    await this.client.setSettings({
+      indexName: this.indexName,
+      indexSettings: IndexSettings,
+      forwardToReplicas: true,
+    });
+    await this.client.saveSynonyms({
+      indexName: this.indexName,
+      synonymHit: IndexSynonyms,
+      forwardToReplicas: true,
+      replaceExistingSynonyms: true,
+    });
   }
 
   private async cloneRepository(repository: Repository): Promise<void> {
@@ -138,11 +185,13 @@ export class SdkReferenceIndex extends SearchIndex {
                   line: symbol.line,
                   comments: symbol.comments || undefined,
                   namespace: symbol.namespace,
+                  returnType: funcSymbol.meta?.returnType,
                   tags: [],
                   signature: funcSymbol.meta?.parameters
-                    ?.map((p) => `${p.name}: ${p.type}${p.optional ? "?" : ""}`)
+                    ?.map((p) => `${p.name}: ${p.optional ? "?" : ""}${p.type}`)
                     .join(", "),
                   parameters: funcSymbol.meta?.parameters,
+                  deprecated: symbol.deprecated,
                 });
                 break;
               case "class":
@@ -160,6 +209,9 @@ export class SdkReferenceIndex extends SearchIndex {
                     file: relativePath,
                     line: method.line,
                     comments: method.comments || undefined,
+                    returnType: method.returnType,
+                    deprecated: method.deprecated,
+                    namespace: classSymbol.namespace,
                     tags: [],
                   })),
                 );
@@ -187,35 +239,54 @@ interface SDKReferenceDocument extends Record<string, unknown> {
   returnType?: string;
   parameters?: Array<{ name: string; type: string; optional?: boolean }>;
   className?: string;
-  namespace?: string;
+  namespace: string;
   tags: string[];
-  deprecated?: boolean;
+  deprecated: boolean;
   version?: string;
 }
 
-// Creates an index that will be used to search the SDK references.
-// async function createIndex() {
-//   try {
-//     await client.setSettings({
-//       indexName: INDEX_NAME,
-//       settings: {
-//         searchableAttributes: ["name", "comments", "signature", "content"],
-//         attributesForFaceting: ["type", "language", "className", "namespace", "tags", "deprecated"],
-//         customRanking: ["desc(usage_frequency)", "asc(name)"],
-//         distinct: true,
-//         attributeForDistinct: "name",
-//         highlightPreTag: "<mark>",
-//         highlightPostTag: "</mark>",
-//         snippetEllipsisText: "…",
-//       },
-//     });
-//
-//     console.log(`✅ SDK reference index "${INDEX_NAME}" created successfully`);
-//     return true;
-//   } catch (error) {
-//     console.error("❌ Error creating SDK reference index:", error);
-//     throw error;
-//   }
-// }
-//
-// Updates the index with the latest documents.
+const IndexSettings: SetSettingsProps["indexSettings"] = {
+  searchableAttributes: ["name", "namespace"],
+  attributesForFaceting: ["type", "language", "className", "namespace", "tags", "deprecated"],
+  customRanking: ["asc(name)"],
+  ranking: ["typo", "geo", "words", "filters", "proximity", "attribute", "exact", "custom"],
+  attributesToRetrieve: [
+    "objectID",
+    "name",
+    "signature",
+    "returnType",
+    "namespace",
+    "line",
+    "file",
+    "deprecated",
+    "language",
+    "type",
+    "repository",
+  ],
+  attributesToHighlight: ["name", "namespace"],
+  attributesToSnippet: ["signature:50"],
+  disableTypoToleranceOnAttributes: ["name", "namespace"],
+  highlightPreTag: "<mark>",
+  highlightPostTag: "</mark>",
+  snippetEllipsisText: "…",
+  queryLanguages: ["en"],
+  indexLanguages: ["en"],
+  userData: {
+    indexType: "sdk_reference",
+    version: "1.0.0",
+    lastUpdated: new Date().toISOString(),
+  },
+};
+
+const IndexSynonyms: SynonymHit[] = [
+  {
+    objectID: "sdk-synonyms-1",
+    type: "synonym",
+    synonyms: ["multifactorauth", "mfa", "multi-factor authentication", "multifactor authentication"],
+  },
+  {
+    objectID: "api-synonyms-2",
+    type: "synonym",
+    synonyms: ["multi-tenant", "multitenant"],
+  },
+];
