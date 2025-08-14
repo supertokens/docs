@@ -138,7 +138,7 @@ class Analytics {
     };
 
     if (!this.canSendEvents) {
-      console.log(eventName, eventData);
+      // console.log(eventName, eventData);
       return;
     }
 

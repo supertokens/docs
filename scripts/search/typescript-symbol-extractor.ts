@@ -1,39 +1,41 @@
 import Parser from "tree-sitter";
 import TypeScript from "tree-sitter-typescript";
 
-import { BaseSymbolExtractor } from "./symbol-extractor";
-import { Symbol, VariableSymbol, FunctionSymbol, ClassSymbol, TypeSymbol } from "./types";
-import { writeFileSync } from "fs";
+import { BaseSymbolExtractor, FileWithNamespace } from "./symbol-extractor";
+import { Symbol, ClassSymbol, TypeSymbol, SymbolExtractor, FunctionSymbol } from "./types";
 
-export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
+export class TypeScriptSymbolExtractor extends BaseSymbolExtractor implements SymbolExtractor {
   language: "typescript" = "typescript";
   include = ["**/*.ts", "**/*.tsx"];
   exclude = ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"];
 
-  constructor() {
-    super();
+  constructor(files: FileWithNamespace[]) {
+    super(files);
     this.parser.setLanguage(TypeScript.typescript);
   }
 
-  protected extractFromFile(file: string, content: string): Symbol[] {
+  protected extractFromFile(file: string, content: string, namespace: string): Symbol[] {
     const tree = this.parser.parse(content);
 
     const symbols: Symbol[] = [];
-    this.traverse(tree.rootNode, symbols, file, content);
+    this.traverse(tree.rootNode, symbols, file, content, namespace);
 
     return symbols;
   }
 
-  private traverse(node: Parser.SyntaxNode, symbols: Symbol[], file: string, content: string): void {
+  private traverse(node: Parser.SyntaxNode, symbols: Symbol[], file: string, content: string, namespace: string): void {
     let symbol: Symbol | null = null;
     switch (node.type) {
       case "class_declaration":
-        symbol = this.extractClassSymbol(node, file, content);
+        symbol = this.extractClassSymbol(node, file, content, namespace);
+        break;
+      case "function_declaration":
+        symbol = this.extractFunctionSymbol(node, file, content, namespace);
         break;
       case "interface_declaration":
       case "type_alias_declaration":
       case "enum_declaration":
-        symbol = this.extractTypeSymbol(node, file, content);
+        symbol = this.extractTypeSymbol(node, file, content, namespace);
         break;
     }
 
@@ -42,11 +44,43 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
     for (let i = 0; i < node.childCount; i++) {
       const child = node.child(i);
       if (!child) continue;
-      this.traverse(child, symbols, file, content);
+      this.traverse(child, symbols, file, content, namespace);
     }
   }
 
-  private extractClassSymbol(node: Parser.SyntaxNode, file: string, content: string): ClassSymbol | null {
+  private extractFunctionSymbol(
+    node: Parser.SyntaxNode,
+    file: string,
+    content: string,
+    namespace: string,
+  ): FunctionSymbol | null {
+    const comments = this.extractComments(node);
+    const nodeName = node.childForFieldName("name");
+    if (!nodeName) return null;
+    return {
+      name: nodeName.text,
+      file,
+      type: "function",
+      line: node.startPosition.row,
+      content: this.getNodeContent(node, content),
+      comments,
+      namespace,
+      deprecated: this.isDeprecated(comments),
+      meta: {
+        parameters: this.extractParameters(node),
+        returnType: this.extractReturnType(node),
+        isAsync: this.isAsync(node),
+        isStatic: this.isStatic(node),
+      },
+    };
+  }
+
+  private extractClassSymbol(
+    node: Parser.SyntaxNode,
+    file: string,
+    content: string,
+    namespace: string,
+  ): ClassSymbol | null {
     const isExported = this.isExported(node);
     if (!isExported) return null;
     const nameNode = node.childForFieldName("name");
@@ -68,6 +102,7 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
             if (memberName.text === "constructor") {
               constructorArgs = this.extractParameters(member);
             } else {
+              const methodComments = this.extractComments(member);
               methods.push({
                 name: memberName.text,
                 parameters: this.extractParameters(member),
@@ -76,6 +111,9 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
                 isStatic: this.isStatic(member),
                 visibility: this.extractClassPropertyVisibility(member),
                 line: member.startPosition.row,
+                content: this.getNodeContent(member, content),
+                comments: methodComments,
+                deprecated: this.isDeprecated(methodComments),
               });
             }
           } else if (member.type === "public_field_definition") {
@@ -91,13 +129,16 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
       }
     }
 
+    const comments = this.extractComments(node);
     return {
       name: nameNode.text,
       type: "class",
       file,
       line: node.startPosition.row,
       content: this.getNodeContent(node, content),
-      comments: this.extractComments(node),
+      comments,
+      namespace,
+      deprecated: this.isDeprecated(comments),
       meta: {
         methods,
         properties,
@@ -106,7 +147,12 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
     };
   }
 
-  private extractTypeSymbol(node: Parser.SyntaxNode, file: string, content: string): TypeSymbol | null {
+  private extractTypeSymbol(
+    node: Parser.SyntaxNode,
+    file: string,
+    content: string,
+    namespace: string,
+  ): TypeSymbol | null {
     if (!this.isExported(node)) return null;
     const nameNode = node.childForFieldName("name");
     if (!nameNode) return null;
@@ -116,13 +162,16 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
     else if (node.type === "type_alias_declaration") kind = "type";
     else if (node.type === "enum_declaration") kind = "enum";
 
+    const comments = this.extractComments(node);
     return {
       name: nameNode.text,
       type: "type",
       file,
       line: node.startPosition.row,
       content: this.getNodeContent(node, content),
-      comments: this.extractComments(node),
+      comments,
+      namespace,
+      deprecated: this.isDeprecated(comments),
       meta: {
         definition: this.getNodeContent(node, content),
         kind,
@@ -180,12 +229,41 @@ export class TypeScriptSymbolExtractor extends BaseSymbolExtractor {
     const typeNode = node.childForFieldName("type");
     if (!typeNode) return undefined;
     const predefinedTypeNode = typeNode.children.find((child) => child.type === "predefined_type");
-    return predefinedTypeNode?.text;
+    if (predefinedTypeNode) return predefinedTypeNode.text;
+    // the first child is ":"
+    let typeText = typeNode.children[1].text;
+    // remove formatting
+    return typeText.replace(/\s+/g, " ");
   }
 
   private extractClassPropertyVisibility(node: Parser.SyntaxNode): "public" | "private" | "protected" {
     const accessibilityModifierNode = node.children.find((child) => child.type === "accessibility_modifier");
     if (!accessibilityModifierNode) return "public";
     return accessibilityModifierNode.text as "public" | "private" | "protected";
+  }
+
+  protected extractComments(node: Parser.SyntaxNode): string | null {
+    // For exported declarations, check the parent's (export_statement) previous siblings
+    let searchNode = node;
+    if (node.parent?.type === "export_statement") {
+      searchNode = node.parent;
+    }
+
+    let current = searchNode.previousSibling;
+    const comments: string[] = [];
+
+    while (current) {
+      if (current.type === "comment") {
+        comments.unshift(current.text);
+        current = current.previousSibling;
+      } else if (current.text.trim() === "") {
+        // Skip whitespace
+        current = current.previousSibling;
+      } else {
+        break;
+      }
+    }
+
+    return comments.length > 0 ? comments.join("\n") : null;
   }
 }
