@@ -1,22 +1,46 @@
 import { searchClient, SearchResponses } from "@algolia/client-search";
 import type { Hit } from "@algolia/client-search";
 
+import fdiPathsMapping from "/fdi-mapping.json";
+import cdiPathsMapping from "/cdi-mapping.json";
+
 type SearchResultType = "guide" | "tutorial" | "sdk-reference" | "api-reference";
 
-export type ParsedSearchResult = {
-  index: "supertokens_documentation";
-  id: string;
-  url: string;
-  highlight: {
-    content: string;
-    attribute: string;
-  };
-  meta: {
-    category: string;
-    hierarchy: string[];
-    type: SearchResultType;
-  };
-};
+export type ParsedSearchResult =
+  | {
+      index: "supertokens_documentation";
+      id: string;
+      url: string;
+      meta: {
+        highlight: string;
+        category: string;
+        hierarchy: string[];
+        type: SearchResultType;
+      };
+    }
+  | {
+      index: "supertokens_api_references";
+      id: string;
+      url: string;
+      meta: {
+        summary: string;
+        method: string;
+        path: string;
+        apiType: "fdi" | "cdi";
+      };
+    }
+  | {
+      index: "supertokens_sdk_references";
+      id: string;
+      url: string;
+      meta: {
+        name: string;
+        signature: string;
+        language: "typescript" | "go" | "python";
+        type: "variable" | "function" | "class" | "type" | "method";
+        namespace: string;
+      };
+    };
 
 type DocumentationSearchResult = {
   anchor: string;
@@ -46,7 +70,7 @@ type ApiReferenceSearchResult = {
     deprecated: boolean;
     path_depth: number;
   };
-  apiType: string;
+  apiType: "cdi" | "fdi";
   version?: string;
 };
 
@@ -68,7 +92,7 @@ type SdkReferenceSearchResult = {
 type SearchResultHit = Hit<DocumentationSearchResult> | Hit<ApiReferenceSearchResult> | Hit<SdkReferenceSearchResult>;
 
 const client = searchClient("HQ5R0VRJGG", "b6f38b3627dcd0642b67f24fe2e1a8eb");
-const SearchCache: Record<string, { results: SearchResult[]; timestamp: Date; cleanupFn: NodeJS.Timeout }> = {};
+const SearchCache: Record<string, { results: ParsedSearchResult[]; timestamp: Date; cleanupFn: NodeJS.Timeout }> = {};
 const CacheTTL = 1000 * 60 * 5;
 type IndexName = "supertokens_documentation" | "supertokens_api_references" | "supertokens_sdk_references";
 
@@ -80,7 +104,7 @@ type QueryParameters = {
   facetFilters?: DocumentationIndexTypeFacetFilter[] | DocumentationIndexTypeFacetFilter[][];
 };
 
-export async function search(query: string, _parameters?: QueryParameters[]): Promise<SearchResult[] | null> {
+export async function search(query: string, _parameters?: QueryParameters[]): Promise<ParsedSearchResult[] | null> {
   const parameters = _parameters || [
     { indexName: "supertokens_documentation" },
     { indexName: "supertokens_api_references" },
@@ -113,14 +137,10 @@ export async function search(query: string, _parameters?: QueryParameters[]): Pr
         ],
       })),
     });
-    console.log("search");
-    console.log(SearchCache[cacheKey]);
     if (SearchCache[cacheKey]) {
       clearTimeout(SearchCache[cacheKey].cleanupFn);
     }
-    console.log(response);
     const results = parseResponse(response);
-    console.log(results);
     SearchCache[cacheKey] = {
       results,
       timestamp: new Date(),
@@ -135,7 +155,7 @@ export async function search(query: string, _parameters?: QueryParameters[]): Pr
   }
 }
 
-function parseResponse(response: SearchResponses<SearchResultHit>): SearchResult[] {
+function parseResponse(response: SearchResponses<SearchResultHit>): ParsedSearchResult[] {
   return response.results
     .map((indexResponse) => {
       if (!("hits" in indexResponse)) {
@@ -144,11 +164,9 @@ function parseResponse(response: SearchResponses<SearchResultHit>): SearchResult
       }
       return indexResponse.hits.map((hit) => {
         if (indexResponse.index === "supertokens_sdk_references") {
-          console.log(hit);
-          return null;
+          return parseSdkReferenceSearchResult(hit as Hit<SdkReferenceSearchResult>);
         } else if (indexResponse.index === "supertokens_api_references") {
-          console.log(hit);
-          return null;
+          return parseApiReferenceSearchResult(hit as Hit<ApiReferenceSearchResult>);
         }
 
         return parseDocumentationSearchResult(hit as Hit<DocumentationSearchResult>);
@@ -158,7 +176,7 @@ function parseResponse(response: SearchResponses<SearchResultHit>): SearchResult
     .filter(Boolean);
 }
 
-function parseDocumentationSearchResult(hit: Hit<DocumentationSearchResult>): SearchResult {
+function parseDocumentationSearchResult(hit: Hit<DocumentationSearchResult>): ParsedSearchResult {
   if (!hit._highlightResult || !hit._highlightResult.hierarchy) {
     console.warn("No highlight result found for hit", hit);
     return undefined;
@@ -175,60 +193,76 @@ function parseDocumentationSearchResult(hit: Hit<DocumentationSearchResult>): Se
 
   return {
     id: hit.objectID,
-    highlight,
-    content: "",
+    index: "supertokens_documentation",
     url: hit.url,
-    type: hit.type,
-    hierarchy,
     meta: {
+      type: hit.type,
+      hierarchy,
+      highlight,
       category: hit.category,
     },
   };
 }
 
-function parseApiReferenceSearchResult(hit: Hit<SearchResultHit>): SearchResult {
-  if (!hit._highlightResult || !hit._highlightResult.hierarchy) {
-    console.warn("No highlight result found for hit", hit);
-    return undefined;
+function parseApiReferenceSearchResult(hit: Hit<ApiReferenceSearchResult>): ParsedSearchResult {
+  const pathsMapping = hit.apiType.toLowerCase() === "cdi" ? cdiPathsMapping : fdiPathsMapping;
+  const mapping = pathsMapping[hit.endpoint.operationId];
+  let url = `https://supertokens.com/docs/references`;
+  if (mapping) {
+    url = `${url}${mapping.filePath.replace(/\.mdx$/, "")}`;
+  } else {
+    url = `${url}/${hit.apiType.toLowerCase()}`;
   }
-
-  const highlight = extractHighlight(hit);
-  if (!highlight) {
-    console.warn("No highlight found for hit", hit);
-  }
-
-  const url = "";
 
   return {
     id: hit.objectID,
-    highlight,
+    index: "supertokens_api_references",
     url,
-    type: "api-reference",
-    hierarchy,
     meta: {
-      category: hit.category,
+      method: hit.endpoint.method,
+      path: hit.endpoint.path,
+      summary: hit.endpoint.summary,
+      apiType: hit.apiType,
     },
   };
 }
 
-function extractHighlight(hit: Hit<SearchResultHit>): string | undefined {
+function parseSdkReferenceSearchResult(hit: Hit<SdkReferenceSearchResult>): ParsedSearchResult {
+  const filePathWithoutPrefix = hit.file.replace("./", "");
+  const url = `https://github.com/supertokens/${hit.repository}/blob/master/${filePathWithoutPrefix}#L${hit.line}`;
+
+  return {
+    id: hit.objectID,
+    index: "supertokens_sdk_references",
+    url,
+    meta: {
+      name: hit.name,
+      signature: hit.signature,
+      language: hit.language,
+      namespace: hit.namespace,
+      type: hit.type,
+    },
+  };
+}
+
+function extractHighlight(hit: SearchResultHit): string | undefined {
   if (!hit._snippetResult) {
     return undefined;
   }
 
   const snippetResult = hit._snippetResult;
 
-  // @ts-ignore
+  // @ts-expect-error
   if (snippetResult.content && snippetResult.content?.matchLevel !== "none") {
-    // @ts-ignore
+    // @ts-expect-error
     return snippetResult.content.value;
   }
 
-  // @ts-ignore
+  // @ts-expect-error
   if (snippetResult.category && snippetResult.category.matchLevel !== "none") {
     const hierarchyItems = Object.values(snippetResult.hierarchy);
     const lastHierarchyItem = hierarchyItems[hierarchyItems.length - 1];
-    // @ts-ignore
+    // @ts-expect-error
     return `${formatCategory(snippetResult.category.value)} - ${lastHierarchyItem.value}`;
   }
 

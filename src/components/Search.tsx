@@ -1,6 +1,4 @@
-import { Badge, Inset, Box, Button, Dialog, Flex, Separator, Tabs, Text, TextField } from "@radix-ui/themes";
-import { searchClient, SearchResponse } from "@algolia/client-search";
-import type { Hit } from "@algolia/client-search";
+import { Badge, Box, Button, Dialog, VisuallyHidden, Flex, Tabs, Text, TextField } from "@radix-ui/themes";
 import Link from "@docusaurus/Link";
 import SearchIcon from "/img/icons/search.svg";
 import CloseIcon from "/img/icons/x.svg";
@@ -9,10 +7,14 @@ import GithubIcon from "/img/icons/github.svg";
 import FileIcon from "/img/icons/file.svg";
 import TerminalIcon from "/img/icons/terminal.svg";
 import CodeIcon from "/img/icons/code.svg";
+import PythonIcon from "/img/icons/python.svg";
+import GoIcon from "/img/icons/go.svg";
+import TypeScriptIcon from "/img/icons/typescript.svg";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { search, SearchResult } from "../lib";
+import { search, ParsedSearchResult } from "../lib";
 
 import "./Search.scss";
+import { APIRequestMethodBadge } from "./APIRequest/APIRequest";
 
 type SearchButtonContextType = {
   isModalOpen: boolean;
@@ -73,7 +75,7 @@ const SearchModalContext = createContext<SearchModalContextType>({} as SearchMod
 
 function SearchModal() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { isModalOpen, setIsModalOpen } = useContext(SearchButtonContext);
+  const { setIsModalOpen } = useContext(SearchButtonContext);
   const [selectedTab, setSelectedTab] = useState("all");
   const tabsRef = useRef<HTMLElement[]>([]);
 
@@ -129,6 +131,9 @@ function SearchModal() {
 
   return (
     <SearchModalContext.Provider value={{ onCloseModal, query: searchQuery }}>
+      <VisuallyHidden>
+        <Dialog.Title>Search</Dialog.Title>
+      </VisuallyHidden>
       <Dialog.Content
         align="start"
         maxWidth={{
@@ -231,7 +236,12 @@ function DocumentationSearchResultsTabContent() {
 
 function SDKReferencesSearchResultsTabContent() {
   const searchFn = useCallback(async (searchQuery: string) => {
-    return search(searchQuery, [{ indexName: "supertokens_documentation", facetFilters: ["type:sdk-reference"] }]);
+    return search(searchQuery, [
+      {
+        indexName: "supertokens_sdk_references",
+      },
+      { indexName: "supertokens_documentation", facetFilters: ["type:sdk-reference"] },
+    ]);
   }, []);
 
   return (
@@ -245,7 +255,12 @@ function SDKReferencesSearchResultsTabContent() {
 
 function APIReferencesSearchResultsTabContent() {
   const searchFn = useCallback(async (searchQuery: string) => {
-    return search(searchQuery, [{ indexName: "supertokens_documentation", facetFilters: ["type:api-reference"] }]);
+    return search(searchQuery, [
+      {
+        indexName: "supertokens_api_references",
+      },
+      { indexName: "supertokens_documentation", facetFilters: ["type:api-reference"] },
+    ]);
   }, []);
 
   return (
@@ -258,7 +273,7 @@ function APIReferencesSearchResultsTabContent() {
 }
 
 type SearchContextType = {
-  searchResults: SearchResult[] | null;
+  searchResults: ParsedSearchResult[] | null;
   searchState: "idle" | "loading" | "error" | "fetched";
 };
 
@@ -268,11 +283,11 @@ function SearchProvider({
   searchFn,
   children,
 }: {
-  searchFn: (query: string) => Promise<SearchResult[] | null>;
+  searchFn: (query: string) => Promise<ParsedSearchResult[] | null>;
   children: React.ReactNode;
 }) {
   const { query } = useContext(SearchModalContext);
-  const [results, setResults] = useState<SearchResult[] | null>(null);
+  const [results, setResults] = useState<ParsedSearchResult[] | null>(null);
   const [searchState, setSearchState] = useState<"idle" | "loading" | "error" | "fetched">("idle");
 
   const performSearch = useCallback(
@@ -405,7 +420,7 @@ function SearchResultsList() {
         )}
         {(searchState === "fetched" || searchState === "loading") && searchResults?.length > 0 && (
           <ul className="search-modal__results-list">
-            {searchResults.map((result, index) => (
+            {searchResults.map((result) => (
               <SearchResultListItem key={result.id} result={result} />
             ))}
           </ul>
@@ -417,7 +432,6 @@ function SearchResultsList() {
 
 type SearchResultItemType = "page-title" | "page-heading" | "api-reference" | "sdk-reference" | "github-page";
 
-TerminalIcon;
 const SearchResultItemTypeIcons: Record<SearchResultItemType, React.ComponentType<React.SVGProps<SVGElement>>> = {
   "page-title": FileIcon,
   "page-heading": HashIcon,
@@ -426,19 +440,45 @@ const SearchResultItemTypeIcons: Record<SearchResultItemType, React.ComponentTyp
   "github-page": GithubIcon,
 };
 
-function SearchResultListItem({ result }: { result: SearchResult }) {
+const LanguageIcons: Record<"typescript" | "go" | "python", React.ComponentType<React.SVGProps<SVGElement>>> = {
+  typescript: TypeScriptIcon,
+  go: GoIcon,
+  python: PythonIcon,
+};
+
+function isDocumentationResult(
+  result: ParsedSearchResult,
+): result is ParsedSearchResult & { index: "supertokens_documentation" } {
+  return result.index === "supertokens_documentation";
+}
+
+function isApiResult(
+  result: ParsedSearchResult,
+): result is ParsedSearchResult & { index: "supertokens_api_references" } {
+  return result.index === "supertokens_api_references";
+}
+
+function isSdkResult(
+  result: ParsedSearchResult,
+): result is ParsedSearchResult & { index: "supertokens_sdk_references" } {
+  return result.index === "supertokens_sdk_references";
+}
+
+function SearchResultListItem({ result }: { result: ParsedSearchResult }) {
   const ref = useRef<HTMLLIElement>(null);
   const { interactionMode, setInteractionMode } = useContext(SearchResultListContext);
   const { onCloseModal } = useContext(SearchModalContext);
   const searchResultItemType = useMemo(() => {
-    if (result.type === "sdk-reference") return "sdk-reference";
-    if (result.type === "api-reference") return "api-reference";
-    if (result.hierarchy.length === 1) return "page-title";
+    if (isSdkResult(result)) return "sdk-reference";
+    if (isApiResult(result)) return "api-reference";
+    if (isDocumentationResult(result) && result.meta.hierarchy?.length === 1) return "page-title";
     return "page-heading";
   }, [result]);
   const breadcrumbs = useMemo(() => {
-    if (!result.hierarchy) return undefined;
-    return result.hierarchy.join(" › ");
+    if (isDocumentationResult(result)) {
+      return result.meta.hierarchy.join(" › ");
+    }
+    return undefined;
   }, [result]);
 
   const onMouseEnter = useCallback(() => {
@@ -484,6 +524,63 @@ function SearchResultListItem({ result }: { result: SearchResult }) {
 
   const Icon = SearchResultItemTypeIcons[searchResultItemType];
 
+  const renderContent = () => {
+    if (isDocumentationResult(result)) {
+      return (
+        <>
+          <Text
+            className="search-modal__item-highlight"
+            as="div"
+            size="3"
+            m="0"
+            dangerouslySetInnerHTML={{ __html: result.meta.highlight }}
+          />
+          <Text className="search-modal__item-breadcrumbs" as="div" size="2" color="gray" trim="both">
+            {breadcrumbs}
+          </Text>
+        </>
+      );
+    }
+
+    if (isApiResult(result)) {
+      return (
+        <>
+          <Flex gap="2" align="center">
+            <Badge color="blue" size="1">
+              {result.meta.apiType.toUpperCase()}
+            </Badge>
+            <APIRequestMethodBadge method={result.meta.method.toLowerCase()} size="1" />
+            <Text size="3" weight="medium">
+              {result.meta.path}
+            </Text>
+          </Flex>
+          <Text as="div" size="2" color="gray" trim="both">
+            {result.meta.summary}
+          </Text>
+        </>
+      );
+    }
+
+    if (isSdkResult(result)) {
+      const LanguageIcon = LanguageIcons[result.meta.language];
+      return (
+        <>
+          <Flex gap="2" align="center">
+            <LanguageIcon width="16px" height="16px" />
+            <Text size="3" weight="medium">
+              {result.meta.name}
+            </Text>
+          </Flex>
+          <Text as="div" size="2" color="gray" trim="both">
+            {result.meta.namespace} • {result.meta.type}
+          </Text>
+        </>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <li
       className="search-modal__item"
@@ -498,16 +595,7 @@ function SearchResultListItem({ result }: { result: SearchResult }) {
             <Icon width="20px" height="20px" />
           </Flex>
           <Flex direction="column" gap="2" p="2" className="search-modal__item-content">
-            <Text
-              className="search-modal__item-highlight"
-              as="div"
-              size="3"
-              m="0"
-              dangerouslySetInnerHTML={{ __html: result.highlight }}
-            />
-            <Text className="search-modal__item-breadcrumbs" as="div" size="2" color="gray" trim="both">
-              {breadcrumbs}
-            </Text>
+            {renderContent()}
           </Flex>
         </Flex>
       </Link>
