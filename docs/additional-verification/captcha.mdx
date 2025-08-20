@@ -1,0 +1,248 @@
+---
+sidebar_position: 6
+title: CAPTCHA
+hide_title: true
+description: Use the plugin to add CAPTCHA to your authentication flow.
+page_type: tutorial
+---
+
+
+# CAPTCHA validation
+
+## Overview
+
+This following tutorial shows you how to add CAPTCHA validation to your authentication flows.
+The guide makes use of the plugins functionality.
+A new abstraction layer aimed to simplify how you can add new features in your **SuperTokens** integration.
+
+## Before you start
+
+The plugin supports only the `React` and `NodeJS` SDKs. 
+Support for other platforms is under active development.
+
+The implementation is in early stages and APIs might change.
+For more information on how plugins work refer to the [references page](/docs/references/plugins/introduction).
+
+## Steps
+
+### 1. Initialize the frontend plugin
+
+#### 1.1 Install the plugin
+
+```bash
+npm install @supertokens-plugins/captcha-react
+```
+
+#### 1.2 Update your frontend SDK configuration
+
+```typescript
+import SuperTokens from 'supertokens-auth-react';
+import CaptchaPlugin from '@supertokens-plugins/captcha-react';
+
+SuperTokens.init({
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  plugins: [
+    CaptchaPlugin.init({
+      type: 'reCAPTCHAv3', // or "reCAPTCHAv2" or "turnstile"
+      captcha: {
+        sitekey: 'your-site-key',
+        // Additional configuration based on the captcha provider
+      },
+    }),
+  ],
+});
+```
+
+### 2. Initialize the backend plugin
+
+#### 2.1 Install the plugin
+
+```bash
+npm install @supertokens-plugins/captcha-nodejs
+```
+
+#### 2.2 Update your backend SDK configuration
+
+
+```typescript
+import SuperTokens from 'supertokens-node';
+import CaptchaPlugin from '@supertokens-plugins/captcha-nodejs';
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: '...',
+  },
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  plugins: [
+    CaptchaPlugin.init({
+      type: 'reCAPTCHAv3', // or "reCAPTCHAv2" or "turnstile"
+      captcha: {
+        secretKey: 'your-secret-key',
+      },
+    }),
+  ],
+});
+```
+
+### 3. Customize the plugin
+
+By default, the plugin performs CAPTCHA validation on the following authentication flows:
+
+| Recipe          | Authentication Flow        | Forms                                                                                  | Pre-API Hook Action         | API Function                     |
+| --------------- | -------------------------- | -------------------------------------------------------------------------------------- | --------------------------- | -------------------------------- |
+| `EmailPassword` | User sign in               | `EmailPasswordSignInForm`                                                              | `EMAIL_PASSWORD_SIGN_IN`    | `signInPOST`                     |
+| `EmailPassword` | User registration          | `EmailPasswordSignUpForm`                                                              | `EMAIL_PASSWORD_SIGN_UP`    | `signUpPOST`                     |
+| `EmailPassword` | Password reset request     | `EmailPasswordResetPasswordEmail`                                                      | `SEND_RESET_PASSWORD_EMAIL` | `generatePasswordResetTokenPOST` |
+| `EmailPassword` | Password reset submission  | `EmailPasswordSubmitNewPassword`                                                       | `SUBMIT_NEW_PASSWORD`       | `passwordResetPOST`              |
+| `Passwordless`  | Generate verification code | `PasswordlessEmailForm` and `PasswordlessPhoneForm` and `PasswordlessEmailOrPhoneForm` | `PASSWORDLESS_CREATE_CODE`  | `createCodePOST`                 |
+| `Passwordless`  | Verify code and sign in    | `PasswordlessUserInputForm`                                                            | `PASSWORDLESS_CONSUME_CODE` | `consumeCodePOST`                |
+
+To limit which actions require additional validation, pass additional configuration parameters to the frontend and backend setup steps.
+
+#### Frontend conditional validation
+
+On the frontend create a custom component that conditionally loads the CAPTCHA provider based on the name of the form. 
+
+```typescript
+import { forwardRef, useCallback, useEffect } from 'react';
+import SuperTokens from 'supertokens-auth-react';
+import CaptchaPlugin, {
+  CaptchInputContainerProps,
+  captchaStore,
+  useCaptcha,
+} from '@supertokens-plugins/captcha-react';
+
+const CaptchaInputContainer = forwardRef<
+  HTMLDivElement,
+  CaptchInputContainerProps
+>((props, ref) => {
+  const { form, ...rest } = props;
+  const { loadAndRender, containerId } = useCaptcha();
+
+  useEffect(() => {
+    // CAPTCHA applies/renders only for the EmailPasswordSignUpForm
+    // and the EmailPasswordResetPasswordEmail
+    if (
+      form === 'EmailPasswordSignUpForm' ||
+      form === 'EmailPasswordResetPasswordEmail'
+    ) {
+      loadAndRender();
+    }
+  }, [form]);
+
+  return (
+    <div ref={ref} id={containerId} className="CAPTCHA-container" {...rest} />
+  );
+});
+
+SuperTokens.init({
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  plugins: [
+    CaptchaPlugin.init({
+      type: 'reCAPTCHAv3', // or "reCAPTCHAv2" or "turnstile"
+      captcha: {
+        sitekey: 'your-site-key',
+      },
+      InputContainer: CaptchaInputContainer,
+    }),
+  ],
+});
+
+```
+
+#### Backend conditional validation
+
+On the backend pass a custom validation function that tells the plugin which actions should require extra validation.
+
+```typescript
+import SuperTokens from 'supertokens-node';
+import CaptchaPlugin, { ShouldValidate } from '@supertokens-plugins/captcha-nodejs';
+
+const shouldValidate: ShouldValidate = (api, input) => {
+  // Only require CAPTCHA for sign up
+  if (api === 'signUpPOST') {
+    return true;
+  }
+
+  // Check request headers for suspicious activity
+  if (api === 'signInPOST') {
+    const userAgent = input.options.req.getHeaderValue('user-agent');
+    return !userAgent || userAgent.includes('bot');
+  }
+
+  return false;
+};
+
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: '...',
+  },
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  plugins: [
+    CaptchaPlugin.init({
+      type: 'reCAPTCHAv3', // or "reCAPTCHAv2" or "turnstile"
+      captcha: {
+        secretKey: 'your-secret-key',
+      },
+      shouldValidate,
+    }),
+  ],
+});
+
+```
+
+## Next steps
+
+Besides CAPTCHA validation you can also look into the **Attack Protection Suite** feature which provides prevention against suspicious authentication attempts.
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/additional-verification/attack-protection-suite/introduction">
+    <ReferenceCard.Title>
+      Attack Protection Suite
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+      Prevent suspicious authentication attempts.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+
+  <ReferenceCard href="/docs/additional-verification/mfa/introduction">
+    <ReferenceCard.Title>
+      Multi-factor Authentication
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+      Add multi-factor authentication to your authentication flows.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+
+  <ReferenceCard href="/docs/references/plugins/introduction">
+    <ReferenceCard.Title>
+     Plugins Reference 
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+     General information on how plugins work.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+</ReferenceCard.Grid>
+
+
