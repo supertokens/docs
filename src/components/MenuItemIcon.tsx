@@ -3,6 +3,7 @@ import useBaseUrl from "@docusaurus/useBaseUrl";
 import {
   Book,
   Zap,
+  Plug,
   HousePlus,
   IdCard,
   MonitorSmartphone,
@@ -32,6 +33,7 @@ import {
   Building,
   RectangleEllipsis,
   Bot,
+  RotateCw,
   Fingerprint,
   ShieldCheck,
   Clock,
@@ -100,6 +102,7 @@ const categoryIcons = {
   "Core Driver Interface": FileTerminal,
   "Testing and Debugging": Bug,
   "SuperTokens Core": Cpu,
+  Plugins: Plug,
 
   // Authentication reference subcategories
   "Email/Password": RectangleEllipsis,
@@ -141,6 +144,9 @@ const categoryIcons = {
   "/docs/quickstart/build-with-ai-tools": Brain,
 
   "/docs/authentication/ai-authentication": MCPLogo,
+
+  "/docs/additional-verification/captcha": RotateCw,
+  "/docs/references/plugins/captcha-reference": RotateCw,
 
   // Other
   "Session Verification": BadgeCheck,

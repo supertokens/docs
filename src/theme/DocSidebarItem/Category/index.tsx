@@ -16,6 +16,8 @@ import type { Props } from "@theme/DocSidebarItem/Category";
 import "./styles.scss";
 import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
 import { MenuItemIcon } from "@site/src/components/MenuItemIcon";
+import { NewBadge } from "@site/src/components/NewBadge";
+import { BetaBadge } from "@site/src/components/BetaBadge";
 
 // If we navigate to a category and it becomes active, it should automatically
 // expand itself
@@ -171,6 +173,8 @@ export default function DocSidebarItemCategory({
           <div className="menu__main-category-title">
             <MenuItemIcon label={label} className="menu__main-category-icon" />
             {label}
+            <NewBadge label={label} href={href} />
+            <BetaBadge label={label} href={href} />
           </div>
           <CollapseButton
             collapsed={collapsed}
@@ -241,6 +245,8 @@ export default function DocSidebarItemCategory({
         >
           <MenuItemIcon label={label} href={href} className="menu__category-icon" />
           {label}
+          <NewBadge label={label} href={href} />
+          <BetaBadge label={label} href={href} />
         </Link>
         {href && collapsible && (
           <CollapseButton

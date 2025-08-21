@@ -100,7 +100,7 @@ export default function DocItemLayout({ children }: Props): JSX.Element {
               <BrowserOnly>
                 {() => (
                   <>
-                    {pageType !== "overview" && (
+                    {pageType !== "overview" && pageType !== "plugin-reference" && (
                       <Flex gap="2" ml={{ initial: "0", xs: "auto" }}>
                         <CopyPageContentButton />
                         <PageOptionsDropdownMenu />
