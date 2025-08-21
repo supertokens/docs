@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext } from "react";
 import { Card, Flex, Avatar, Grid, Box, Text } from "@radix-ui/themes";
+import * as Icon from "lucide-react";
 import Link from "@docusaurus/Link";
 
 import "./styles.scss";
@@ -8,7 +9,7 @@ import { AnalyticsEventNames, trackButtonClick } from "@site/src/lib/analytics";
 function ReferenceCardRoot({ children, href, label }: React.PropsWithChildren<{ href: string; label?: string }>) {
   const hasAvatarInChildren = React.Children.toArray(children).some((child) => {
     if (React.isValidElement(child)) {
-      return child.type === ReferenceCardAvatar;
+      return child.type === ReferenceCardAvatar || child.type === ReferenceCardIcon;
     }
     return false;
   });
@@ -79,6 +80,19 @@ function ReferenceCardAvatar({
   );
 }
 
+function ReferenceCardIcon({ icon }: { icon: string }) {
+  const IconCompoent = Icon[icon];
+  if (!IconCompoent) {
+    throw new Error(`Invalid icon name: ${icon}`);
+  }
+
+  return (
+    <Flex align="center" className="reference-card__icon">
+      <IconCompoent width="26px" />
+    </Flex>
+  );
+}
+
 function ReferenceCardTitle({ children }: React.PropsWithChildren<{}>) {
   const asChild = typeof children === "string" ? false : true;
 
@@ -139,4 +153,5 @@ export const ReferenceCard = Object.assign(ReferenceCardRoot, {
   Description: ReferenceCardDescription,
   Grid: ReferenceCardGrid,
   GridHelper: ReferenceCardGridHelper,
+  Icon: ReferenceCardIcon,
 });

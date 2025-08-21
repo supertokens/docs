@@ -2,6 +2,7 @@ import MDXComponents from "@theme-original/MDXComponents";
 import {
   OSTabs,
   DocItemContextValue,
+  SDKReference,
   UIType,
   ContextCondition,
   OAuthFrontendVerificationCallout,
@@ -202,6 +203,7 @@ export default {
   H4,
   H5,
   H6,
+  SDKReference,
 
   // Plain Radix componets
   Flex,

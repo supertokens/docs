@@ -146,6 +146,7 @@ const categoryIcons = {
   "/docs/authentication/ai-authentication": MCPLogo,
 
   "/docs/additional-verification/captcha": RotateCw,
+  "/docs/references/plugins/captcha-reference": RotateCw,
 
   // Other
   "Session Verification": BadgeCheck,
