@@ -1,0 +1,462 @@
+---
+id: embed
+title: Embed WebAuthn MFA UI
+hide_title: true
+sidebar_position: 3
+description: >-
+  Learn how to embed SuperTokens WebAuthn MFA UI components in custom pages or modal dialogs for a seamless user experience.
+page_type: guide
+recipe: mfa
+category: multi-factor-authentication
+---
+
+import MFAPaidFeatureCallout from "/docs/additional-verification/mfa/_blocks/paid-feature-callout.mdx"
+
+# Embed WebAuthn MFA UI
+
+## Overview
+
+This guide shows you how to embed the SuperTokens WebAuthn MFA UI components in your own custom pages or modal dialogs, giving you more control over the user experience while still leveraging the pre-built authentication logic.
+
+<MFAPaidFeatureCallout />
+
+## Prerequisites
+
+Before following this guide, make sure you have:
+- Completed the [WebAuthn MFA setup](/docs/additional-verification/mfa/webauthn/webauthn-for-all-users)
+- Configured your routing to handle the MFA flow
+
+## Embedding in a custom page
+
+### Step 1: Configure the recipes
+
+First, configure your recipes to disable the default UI and set up custom redirection:
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```tsx
+import SuperTokens from "supertokens-auth-react";
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth";
+import WebAuthn from "supertokens-auth-react/recipe/webauthn";
+import Session from "supertokens-auth-react/recipe/session";
+
+SuperTokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        // highlight-start
+        WebAuthn.init({
+            // Disable the default UI for WebAuthn MFA
+            mfaFeature: {
+                disableDefaultUI: true
+            },
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getRedirectionURL: async (context) => {
+                            if (context.action === "FACTOR_CHOOSER") {
+                                // Redirect to your custom MFA page
+                                return "/custom-mfa";
+                            }
+                            return originalImplementation.getRedirectionURL(context);
+                        }
+                    }
+                }
+            }
+        }),
+        MultiFactorAuth.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getRedirectionURL: async (context) => {
+                            if (context.action === "FACTOR_CHOOSER") {
+                                return "/custom-mfa";
+                            }
+                            return originalImplementation.getRedirectionURL(context);
+                        }
+                    }
+                }
+            }
+        }),
+        // highlight-end
+        Session.init()
+    ]
+});
+```
+
+</TabItem>
+</FrontendSDKTabs>
+
+### Step 2: Create the custom MFA page
+
+Create a custom page that renders the WebAuthn MFA component:
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```tsx
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { WebauthnMFASignIn } from "supertokens-auth-react/recipe/webauthn/prebuiltui";
+import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifactorauth/prebuiltui";
+import { SessionAuth } from "supertokens-auth-react/recipe/session";
+
+function CustomMFAPage() {
+    const navigate = useNavigate();
+
+    return (
+        <SessionAuth>
+            <div className="custom-mfa-container">
+                <h1>Additional Security Required</h1>
+                <p>Please complete the additional authentication step to continue.</p>
+                
+                {/* Render the WebAuthn MFA component */}
+                <div className="mfa-component">
+                    <WebauthnMFASignIn
+                        factorId="webauthn"
+                        onSuccess={() => {
+                            // Redirect after successful authentication
+                            navigate("/dashboard");
+                        }}
+                        onError={(error) => {
+                            console.error("WebAuthn MFA error:", error);
+                        }}
+                    />
+                </div>
+                
+                {/* Optional: Show factor chooser if multiple factors are available */}
+                <div className="factor-chooser">
+                    <MultiFactorAuthPreBuiltUI.FactorChooserTheme />
+                </div>
+            </div>
+        </SessionAuth>
+    );
+}
+
+export default CustomMFAPage;
+```
+
+</TabItem>
+</FrontendSDKTabs>
+
+### Step 3: Add routing
+
+Add the custom MFA page to your routing configuration:
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```tsx
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import CustomMFAPage from "./CustomMFAPage";
+
+function App() {
+    return (
+        <BrowserRouter>
+            <Routes>
+                <Route path="/custom-mfa" element={<CustomMFAPage />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                {/* Other routes */}
+            </Routes>
+        </BrowserRouter>
+    );
+}
+```
+
+</TabItem>
+</FrontendSDKTabs>
+
+## Embedding in a modal
+
+You can also embed the WebAuthn MFA UI in a modal dialog for a more seamless experience:
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```tsx
+import React, { useState, useEffect } from "react";
+import Modal from "react-modal"; // or your preferred modal library
+import { WebauthnMFASignIn } from "supertokens-auth-react/recipe/webauthn/prebuiltui";
+import { redirectToFactor } from "supertokens-auth-react/recipe/multifactorauth";
+import { useSessionContext } from "supertokens-auth-react/recipe/session";
+
+function MFAModal() {
+    const [isOpen, setIsOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const sessionContext = useSessionContext();
+
+    useEffect(() => {
+        async function checkMFAStatus() {
+            if (sessionContext.loading) {
+                return;
+            }
+
+            if (sessionContext.doesSessionExist) {
+                // Check if MFA is required
+                const mfaInfo = await MultiFactorAuth.resyncSessionAndFetchMFAInfo();
+                
+                if (mfaInfo.factors.next.length > 0) {
+                    // MFA is required, show modal
+                    setIsOpen(true);
+                }
+            }
+            setLoading(false);
+        }
+
+        checkMFAStatus();
+    }, [sessionContext]);
+
+    const handleMFASuccess = () => {
+        setIsOpen(false);
+        // Optionally refresh the page or update app state
+        window.location.reload();
+    };
+
+    const handleMFAError = (error) => {
+        console.error("MFA Error:", error);
+        // Handle error (show notification, etc.)
+    };
+
+    if (loading) {
+        return <div>Loading...</div>;
+    }
+
+    return (
+        <>
+            <Modal
+                isOpen={isOpen}
+                onRequestClose={() => {}} // Prevent closing without completing MFA
+                className="mfa-modal"
+                overlayClassName="mfa-modal-overlay"
+                ariaHideApp={false}
+            >
+                <div className="mfa-modal-content">
+                    <h2>Security Verification Required</h2>
+                    <p>Please authenticate with your passkey to continue.</p>
+                    
+                    <WebauthnMFASignIn
+                        factorId="webauthn"
+                        onSuccess={handleMFASuccess}
+                        onError={handleMFAError}
+                    />
+                </div>
+            </Modal>
+            
+            {/* Your main app content */}
+            <div className="main-content">
+                {/* This will be blurred/disabled when modal is open */}
+            </div>
+        </>
+    );
+}
+
+export default MFAModal;
+```
+
+</TabItem>
+</FrontendSDKTabs>
+
+## Styling the embedded components
+
+You can style the embedded WebAuthn MFA components using CSS:
+
+```css
+.custom-mfa-container {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 2rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+}
+
+.mfa-component {
+    margin: 1rem 0;
+}
+
+.mfa-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.mfa-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.mfa-modal-content h2 {
+    margin-top: 0;
+    color: #333;
+}
+
+/* Style the WebAuthn component */
+[data-supertokens~="webauthn-mfa"] {
+    border: none;
+    box-shadow: none;
+}
+
+[data-supertokens~="webauthn-mfa"] [data-supertokens~="button"] {
+    background: #007bff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 500;
+}
+
+[data-supertokens~="webauthn-mfa"] [data-supertokens~="button"]:hover {
+    background: #0056b3;
+}
+```
+
+## Handling step-up authentication
+
+For step-up authentication scenarios, you can trigger the WebAuthn MFA flow programmatically:
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```tsx
+import { redirectToFactor } from "supertokens-auth-react/recipe/multifactorauth";
+
+function SensitiveAction() {
+    const handleSensitiveAction = async () => {
+        try {
+            // Trigger step-up authentication
+            await redirectToFactor({
+                factorId: "webauthn",
+                forceSetup: false,
+                redirectBack: true,
+                stepUp: true
+            });
+        } catch (error) {
+            console.error("Step-up authentication failed:", error);
+        }
+    };
+
+    return (
+        <button onClick={handleSensitiveAction}>
+            Perform Sensitive Action
+        </button>
+    );
+}
+```
+
+</TabItem>
+</FrontendSDKTabs>
+
+## Advanced customization
+
+### Custom WebAuthn component
+
+You can create a completely custom WebAuthn component using the underlying SDK functions:
+
+<FrontendSDKTabs>
+<TabItem value="reactjs">
+
+```tsx
+import React, { useState } from "react";
+import WebAuthn from "supertokens-web-js/recipe/webauthn";
+
+function CustomWebAuthnMFA() {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const handleWebAuthnAuth = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            // Authenticate with WebAuthn
+            const response = await WebAuthn.authenticateCredentialWithSignIn({
+                shouldTryLinkingWithSessionUser: true
+            });
+
+            if (response.status === "OK") {
+                // Success - redirect or update UI
+                window.location.href = "/dashboard";
+            } else {
+                setError("Authentication failed. Please try again.");
+            }
+        } catch (err) {
+            setError("WebAuthn authentication error: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="custom-webauthn-mfa">
+            <h3>Authenticate with Passkey</h3>
+            <p>Click the button below to authenticate with your registered passkey.</p>
+            
+            <button 
+                onClick={handleWebAuthnAuth}
+                disabled={loading}
+                className="webauthn-button"
+            >
+                {loading ? "Authenticating..." : "🔐 Use Passkey"}
+            </button>
+            
+            {error && (
+                <div className="error-message">
+                    {error}
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default CustomWebAuthnMFA;
+```
+
+</TabItem>
+</FrontendSDKTabs>
+
+## Next steps
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/additional-verification/mfa/step-up-auth">
+    <ReferenceCard.Title>
+      Step-up Authentication
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+      Learn how to implement step-up authentication with WebAuthn.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+  <ReferenceCard href="/docs/references/frontend-sdks/prebuilt-ui/changing-style">
+    <ReferenceCard.Title>
+      Styling Components
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+      Customize the appearance of SuperTokens UI components.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+  <ReferenceCard href="/docs/additional-verification/mfa/protect-routes">
+    <ReferenceCard.Title>
+      Protect Routes
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+      Learn how to protect routes with MFA requirements.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+</ReferenceCard.Grid>
