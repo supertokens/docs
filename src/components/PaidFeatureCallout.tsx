@@ -34,7 +34,7 @@ export function PaidFeatureCallout(): JSX.Element {
                 <Separator size="4" mb="5" />
 
                 <Text mt="2">
-                  This feature is only available to paid users. Enabel it using the provided instructions.
+                  This feature is only available to paid users. Enable it using the provided instructions.
                 </Text>
                 <Callout.Root color="blue" variant="surface" size="2" mt="4">
                   <Callout.Icon>
