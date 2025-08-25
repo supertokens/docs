@@ -19,11 +19,6 @@ By the end of this tutorial, you'll be able to:
 
 {Most of our tutorials will probably have one main objective so you don't need to use a list all the time.}
 
-## Background
-
-{This section is optional. Feel free to use some of the text below to help you get started.}
-{Use this section to give more context to the user about what they are about to implement. For example, explain what OAuth is, how ThirdParty providers work, etc}
-
 ## Before you start
 
 {Use this section to tell users about any prerequisites needed before they start the tutorial, such as:
@@ -39,23 +34,21 @@ Before you start the tutorial, you should:
 - Prerequisite 2
 - Prerequisite 3...
 
-## {Task name}
+## Steps
+
+### {Step 1}. {Step summary - use a verb}
 
 To get started, {the first thing your user should do}.
 
-1. {Write the step here. Use a verb to start.}
+#### {Step 1.1}. {Step 1.1 summary}
 
-   {Explanatory text}
+{Explanatory text}
 
-   {Optional: Code sample or screenshot that helps your users complete this step}
+{Optional: Code sample or screenshot that helps your users complete this step}
 
-   {Optional: Result}
+{Optional: Result}
 
-2. {Write the step here. Use a verb to start.}
-
-   a. {Substep 1}
-
-   b. {Substep 1}
+#### {Step 1.2}. {Step 1.2 summary}
 
 ## Summary
 
