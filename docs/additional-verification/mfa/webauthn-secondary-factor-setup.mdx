@@ -1,0 +1,903 @@
+---
+id: webauthn-setup
+title: Passkeys/WebAuthn 
+hide_title: true
+sidebar_position: 6.2
+description: >-
+  Implement WebAuthn/Passkey multi-factor authentication that requires all users to complete passkey authentication before accessing the application.
+page_type: guide
+recipe: mfa
+category: multi-factor-authentication
+---
+
+# Implement WebAuthn as a secondary factor
+
+
+## Overview
+
+This guide shows how to implement an MFA policy that requires all users to use WebAuthn before they get access to your application.
+
+## Before you start
+
+The tutorial assumes that the first factor is email password or social login, but the same set of steps are applicable for other first factor types.
+
+<PaidFeatureCallout />
+
+## Steps
+
+<TenantType.Switch />
+
+### 1. Configure the backend
+
+<TenantType.SingleTenantContent>
+
+To start with, we configure the backend in the following way:
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import webauthn from "supertokens-node/recipe/webauthn"
+import Session from "supertokens-node/recipe/session"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init(),
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
+            //...
+        }),
+        // highlight-next-line
+        webauthn.init(),
+        MultiFactorAuth.init({
+            firstFactors: [
+                MultiFactorAuth.FactorIds.EMAILPASSWORD,
+                MultiFactorAuth.FactorIds.THIRDPARTY
+            ],
+            // highlight-start
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getMFARequirementsForAuth: async function (input) {
+			    // Change this implementation if you want to require webauthn only for specific users
+                            return [MultiFactorAuth.FactorIds.WEBAUTHN]
+                        }
+                    }
+                }
+            }
+            // highlight-end
+        })
+    ]
+})
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+:::note
+At the moment this feature is not supported through the Go SDK.
+:::
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth, webauthn
+from supertokens_python.recipe.multifactorauth.types import (
+    FactorIds,
+    OverrideConfig,
+    MFARequirementList,
+)
+from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
+from supertokens_python.types import User
+from typing import Dict, Any, Callable, Awaitable, List
+
+
+def override_functions(original_implementation: RecipeInterface):
+    async def get_mfa_requirements_for_auth(
+        tenant_id: str,
+        access_token_payload: Dict[str, Any],
+        completed_factors: Dict[str, int],
+        user: Callable[[], Awaitable[User]],
+        factors_set_up_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_user: Callable[[], Awaitable[List[str]]],
+        required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
+        user_context: Dict[str, Any],
+    ) -> MFARequirementList:
+	# Change this implementation if you want to require webauthn only for specific users
+        return [FactorIds.WEBAUTHN]
+
+    original_implementation.get_mfa_requirements_for_auth = (
+        get_mfa_requirements_for_auth
+    )
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        webauthn.init(),
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            override=OverrideConfig(functions=override_functions),
+        ),
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+The MFA recipe override is required to indicate that `webauthn` must be completed before the user can access the app.
+
+Once the user finishes the first factor (for example, with `emailpassword`), their session access token payload will look like this:
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+        },
+        "v": false
+    }
+}
+```
+
+The `v` being `false` indicates that there are still factors that are pending. After the user has finished `webauthn`, the payload will look like:
+
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+            "webauthn": 1702877999
+        },
+        "v": true
+    }
+}
+```
+
+Indicating that the user has finished all required factors, and should be allowed to access the app.
+
+</TenantType.SingleTenantContent>
+
+
+<TenantType.MultiTenantContent>
+
+In a multi tenancy setup, you may want to enable WebAuthn for all users, across all tenants, or for all users within specific tenants. For enabling for all users across all tenants, it's the same steps as in the [single tenant setup](#single-tenant-setup) section above, so in this section, we will focus on enabling WebAuthn for all users within specific tenants.
+
+To start, we will initialise the WebAuthn and the MultiFactorAuth recipes in the following way:
+
+<BackendTabs>
+<BackendTabs.TabItem value="nodejs">
+
+```ts
+import supertokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty"
+import EmailPassword from "supertokens-node/recipe/emailpassword"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import webauthn from "supertokens-node/recipe/webauthn"
+import Session from "supertokens-node/recipe/session"
+
+supertokens.init({
+    supertokens: {
+        connectionURI: "..."
+    },
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "..."
+    },
+    recipeList: [
+        Session.init(),
+        ThirdParty.init({
+            //...
+        }),
+        EmailPassword.init({
+            //...
+        }),
+        // highlight-start
+        webauthn.init(),
+        MultiFactorAuth.init()
+        // highlight-end
+    ]
+})
+```
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+:::note
+At the moment this feature is not supported through the Go SDK.
+:::
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+```python
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import multifactorauth, webauthn
+
+
+init(
+    app_info=InputAppInfo(
+        app_name="...",
+        api_domain="...",
+        website_domain="...",
+    ),
+    supertokens_config=SupertokensConfig(
+        connection_uri="...",
+    ),
+    framework="...",  # type: ignore
+    recipe_list=[
+        webauthn.init(),
+        multifactorauth.init(),
+    ],
+)
+```
+
+</BackendTabs.TabItem>
+</BackendTabs>
+
+Unlike the single tenant setup, we do not provide any config to the `MultiFactorAuth` recipe cause all the necessary configuration will be done on a tenant level.
+
+<BackendTabs>
+
+<BackendTabs.TabItem value="nodejs">
+
+To configure WebAuthn requirement for a tenant, we can call the following API:
+
+```tsx
+import Multitenancy from "supertokens-node/recipe/multitenancy";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+
+async function createNewTenant() {
+    let resp = await Multitenancy.createOrUpdateTenant("customer1", {
+        firstFactors: [
+            MultiFactorAuth.FactorIds.EMAILPASSWORD,
+            MultiFactorAuth.FactorIds.THIRDPARTY
+        ],
+        requiredSecondaryFactors: [MultiFactorAuth.FactorIds.WEBAUTHN]
+    });
+
+    if (resp.createdNew) {
+        // Tenant created successfully
+    } else {
+        // Existing tenant's config was modified.
+    }
+}
+```
+
+- In the above, we set the `firstFactors` to `["emailpassword", "thirdparty"]` to indicate that the first factor can be either `emailpassword` or `thirdparty`.
+- We set the `requiredSecondaryFactors` to `["webauthn"]` to indicate that WebAuthn is required for all users in this tenant. The default implementation of `getMFARequirementsForAuth` in the `MultiFactorAuth` takes this into account.
+
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="go">
+
+:::note
+At the moment this feature is not supported through the Go SDK.
+:::
+
+</BackendTabs.TabItem>
+<BackendTabs.TabItem value="python">
+
+<PythonSyncAsyncCard>
+<PythonSyncAsyncCard.Content value="asyncio">
+
+```python
+from supertokens_python.recipe.multitenancy.asyncio import create_or_update_tenant
+from supertokens_python.recipe.multitenancy.interfaces import TenantConfigCreateOrUpdate
+from supertokens_python.recipe.multifactorauth.types import FactorIds
+
+
+async def create_new_tenant():
+    resp = await create_or_update_tenant(
+        "customer1", TenantConfigCreateOrUpdate(
+            first_factors=[FactorIds.EMAILPASSWORD],
+            required_secondary_factors=[FactorIds.WEBAUTHN],
+        )
+    )
+
+    if resp.created_new:
+        # Tenant created successfully
+        pass
+    else:
+        # Existing tenant's config was modified
+        pass
+```
+
+</PythonSyncAsyncCard.Content>
+<PythonSyncAsyncCard.Content value="syncio">
+
+```python
+from supertokens_python.recipe.multitenancy.syncio import create_or_update_tenant
+from supertokens_python.recipe.multitenancy.interfaces import TenantConfigCreateOrUpdate
+from supertokens_python.recipe.multifactorauth.types import FactorIds
+
+
+def create_new_tenant():
+    resp = create_or_update_tenant(
+        "customer1", TenantConfigCreateOrUpdate(
+            first_factors=[FactorIds.EMAILPASSWORD],
+            required_secondary_factors=[FactorIds.WEBAUTHN],
+        )
+    )
+
+    if resp.created_new:
+        # Tenant created successfully
+        pass
+    else:
+        # Existing tenant's config was modified
+        pass
+```
+
+</PythonSyncAsyncCard.Content>
+</PythonSyncAsyncCard>
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+Once the user finishes the first factor (for example, with `emailpassword`), their session access token payload will look like this:
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+        },
+        "v": false
+    }
+}
+```
+
+The `v` being `false` indicates that there are still factors that are pending. After the user has finished `webauthn`, the payload will look like:
+
+```json
+{
+    "st-mfa": {
+        "c": {
+            "emailpassword": 1702877939,
+            "webauthn": 1702877999
+        },
+        "v": true
+    }
+}
+```
+
+Indicating that the user has finished all required factors, and should be allowed to access the app.
+
+</TenantType.MultiTenantContent>
+
+### 2. Configure the frontend
+
+<UIType.Switch />
+
+<UIType.PrebuiltUIContent>
+
+We start by modifying the `init` function call on the frontend like so:
+
+<TenantType.MultiTenantContent>
+
+<FrontendPrebuiltUITabs>
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+```tsx
+import supertokens from "supertokens-auth-react"
+import Multitenancy from "supertokens-auth-react/recipe/multitenancy"
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
+import webauthn from "supertokens-auth-react/recipe/webauthn"
+
+supertokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        // other recipes..
+        // highlight-start
+        webauthn.init(),
+        MultiFactorAuth.init(),
+        Multitenancy.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getTenantId: async (context) => {
+                            return "TODO"
+                        }
+                    }
+                }
+            }
+        })
+        // highlight-end
+    ]
+})
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+You will have to make changes to the auth route config, as well as to the `supertokens-web-js` SDK config at the root of your application:
+
+This change is in your auth route config.
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
+import supertokensUIWebAuthn from "supertokens-auth-react-script/recipe/webauthn"
+import supertokensUIMultitenancy from "supertokens-auth-react-script/recipe/multitenancy"
+
+supertokensUIInit({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        // other recipes..
+        // highlight-start
+        supertokensUIWebAuthn.init(),
+        supertokensUIMultiFactorAuth.init(),
+        supertokensUIMultitenancy.init({
+            override: {
+                functions: (originalImplementation) => {
+                    return {
+                        ...originalImplementation,
+                        getTenantId: async (context) => {
+                            return "TODO"
+                        }
+                    }
+                }
+            }
+        })
+        // highlight-end
+    ]
+})
+```
+
+This change goes in the `supertokens-web-js` SDK config at the root of your application:
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import WebAuthn from "supertokens-web-js/recipe/webauthn";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        // highlight-start
+        MultiFactorAuth.init(),
+        WebAuthn.init()
+        // highlight-end
+    ],
+});
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+</TenantType.MultiTenantContent>
+
+<TenantType.SingleTenantContent>
+
+<FrontendPrebuiltUITabs>
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+```tsx
+import supertokens from "supertokens-auth-react"
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
+import webauthn from "supertokens-auth-react/recipe/webauthn"
+
+supertokens.init({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        // other recipes..
+        // highlight-start
+        webauthn.init(),
+        MultiFactorAuth.init({
+            firstFactors: [
+                MultiFactorAuth.FactorIds.EMAILPASSWORD,
+                MultiFactorAuth.FactorIds.THIRDPARTY
+            ]
+        })
+        // highlight-end
+    ]
+})
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+You will have to make changes to the auth route config, as well as to the `supertokens-web-js` SDK config at the root of your application:
+
+This change is in your auth route config.
+
+```tsx
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
+import {init as supertokensUIInit} from "supertokens-auth-react-script";
+import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
+import supertokensUIWebAuthn from "supertokens-auth-react-script/recipe/webauthn"
+supertokensUIInit({
+    appInfo: {
+        appName: "...",
+        apiDomain: "...",
+        websiteDomain: "...",
+    },
+    recipeList: [
+        // other recipes..
+        // highlight-start
+        supertokensUIWebAuthn.init(),
+        supertokensUIMultiFactorAuth.init({
+            firstFactors: [
+                supertokensUIMultiFactorAuth.FactorIds.EMAILPASSWORD,
+                supertokensUIMultiFactorAuth.FactorIds.THIRDPARTY
+            ]
+        })
+        // highlight-end
+    ]
+})
+```
+
+This change goes in the `supertokens-web-js` SDK config at the root of your application:
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import WebAuthn from "supertokens-web-js/recipe/webauthn";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        // highlight-start
+        MultiFactorAuth.init(),
+        WebAuthn.init()
+        // highlight-end
+    ],
+});
+```
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+</TenantType.SingleTenantContent>
+
+
+On the frontend, the `MultiFactorAuth` recipe intialization only requires the first factors to be configured.
+The secondary factors will be determined based on a requiest to the backend.
+
+Add the WebAuthn pre-built UI to render the SuperTokens component:
+
+<FrontendPrebuiltUITabs>
+
+<FrontendPrebuiltUITabs.TabItem value="reactjs">
+
+<Question
+    question="Do you use react-router-dom?">
+<Answer title="Yes">
+
+```tsx
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
+import { WebauthnPreBuiltUI } from "supertokens-auth-react/recipe/webauthn/prebuiltui";
+import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifactorauth/prebuiltui";
+import reactRouterDOM, { Routes, BrowserRouter as Router, Route } from "react-router-dom";
+
+function App() {
+  return (
+    <SuperTokensWrapper>
+      <div className="App">
+        <Router>
+          <div className="fill">
+            <Routes>
+              // highlight-start 
+              {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [/* ... */ WebauthnPreBuiltUI, MultiFactorAuthPreBuiltUI])}
+              // highlight-end 
+              // ... other routes
+            </Routes>
+          </div>
+        </Router>
+      </div>
+    </SuperTokensWrapper>
+  );
+}
+```
+
+</Answer>
+
+<Answer title="No">
+
+```tsx
+import { SuperTokensWrapper } from "supertokens-auth-react";
+import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
+import { WebauthnPreBuiltUI } from "supertokens-auth-react/recipe/webauthn/prebuiltui";
+import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifactorauth/prebuiltui";
+
+function App() {
+  // highlight-start
+  if (canHandleRoute([/* ... */ WebauthnPreBuiltUI, MultiFactorAuthPreBuiltUI])) {
+      return getRoutingComponent([/* ... */ WebauthnPreBuiltUI, MultiFactorAuthPreBuiltUI])
+  }
+  // highlight-end
+  return (
+    <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>
+  );
+}
+```
+
+</Answer>
+
+</Question>
+
+</FrontendPrebuiltUITabs.TabItem>
+
+<FrontendPrebuiltUITabs.TabItem value="angular">
+
+:::success
+This step is not required for non React apps, since all the pre-built UI components are already added into the bundle.
+:::
+
+</FrontendPrebuiltUITabs.TabItem>
+
+</FrontendPrebuiltUITabs>
+
+</UIType.PrebuiltUIContent>
+
+<UIType.CustomUIContent>
+
+We start by initialising the MFA and WebAuthn recipe on the frontend like so:
+
+<FrontendCustomUITabs>
+
+<FrontendCustomUITabs.TabItem value="web">
+
+<NpmOrScriptsCard>
+
+<NpmOrScriptsCard.Content value="npm">
+
+```tsx
+import SuperTokens from 'supertokens-web-js';
+import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import WebAuthn from "supertokens-web-js/recipe/webauthn";
+
+SuperTokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        // highlight-start
+        MultiFactorAuth.init(),
+        WebAuthn.init()
+        // highlight-end
+    ],
+});
+```
+
+</NpmOrScriptsCard.Content>
+
+<NpmOrScriptsCard.Content value="scripts">
+
+```tsx
+import supertokens from "supertokens-web-js-script";
+import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
+import supertokensWebAuthn from "supertokens-web-js-script/recipe/webauthn";
+supertokens.init({
+    appInfo: {
+        apiDomain: "...",
+        apiBasePath: "...",
+        appName: "...",
+    },
+    recipeList: [
+        // other recipes...
+        // highlight-start
+        supertokensMultiFactorAuth.init(),
+        supertokensWebAuthn.init()
+        // highlight-end
+    ],
+});
+```
+
+</NpmOrScriptsCard.Content>
+
+
+</NpmOrScriptsCard>
+
+</FrontendCustomUITabs.TabItem>
+
+<FrontendCustomUITabs.TabItem value="mobile">
+
+:::success
+This step is not applicable for mobile apps. Please continue reading.
+:::
+
+</FrontendCustomUITabs.TabItem>
+
+</FrontendCustomUITabs>
+
+After the first factor login, you should start by checking the access token payload and see if the MFA claim's `v` boolean is `false`.
+'If it's not, then you can redirect the user to the application page.
+
+If it's `false`, the frontend then needs to [call the MFA endpoint](/docs/references/fdi/mfa/put-mfa-info) to get information about which factor the user should be asked to complete next.
+Based on the initial backend configuration, the `next` array will contain `["webauthn"]`.
+
+To complete the secondary factor you need to take into account if the users has previously configured a passkey or not.
+You can determine this by checking if the `alreadySetup` array contains `"webauthn"`.
+
+
+#### Sign up flow
+
+<FrontendCustomUITabs>
+
+<FrontendCustomUITabs.TabItem value="web">
+
+<NpmOrScriptsCard>
+
+<NpmOrScriptsCard.Content value="npm">
+
+```ts
+import Webauthn from "supertokens-web-js/recipe/webauthn"
+import Session from "supertokens-web-js/recipe/session"
+
+async function secondFactorSignUp(email: string, userContext: Record<string, any>) {
+  const response = await Webauthn.registerCredentialWithSignUp({
+      email,
+      shouldTryLinkingWithSessionUser: true,
+      userContext,
+  });
+
+  return response.status === "OK";
+}
+```
+
+</NpmOrScriptsCard.Content>
+
+<NpmOrScriptsCard.Content value="scripts">
+
+```ts
+import supertokensWebauthn from "supertokens-web-js-script/recipe/webauthn"
+import supertokensSession from "supertokens-web-js-script/recipe/session"
+
+async function secondFactorSignUp(email: string, userContext: Record<string, any>) {
+  const response = await recipeImplementation.registerCredentialWithSignUp({
+      email,
+      shouldTryLinkingWithSessionUser: true,
+      userContext,
+  });
+
+  return response.status === "OK";
+}
+```
+
+</NpmOrScriptsCard.Content>
+
+</NpmOrScriptsCard>
+
+</FrontendCustomUITabs.TabItem>
+
+<FrontendCustomUITabs.TabItem value="mobile">
+
+Support for this flow is not available in the mobile SDK.
+You will have to call the [backend API](/docs/references/fdi/introduction) directly.
+
+First, call the [**Register WebAuthn Credential**](/docs/references/fdi/webauthn/post-webauthn-credential) endpoint to register the passkey.
+Afterwards call the [**Sign Up with WebAuthn**](/docs/references/fdi/webauthn/post-webauthn-signup) to complete the second factor sign up process.
+
+</FrontendCustomUITabs.TabItem>
+
+</FrontendCustomUITabs>
+
+#### Sign in flow
+
+<FrontendCustomUITabs>
+
+<FrontendCustomUITabs.TabItem value="web">
+
+<NpmOrScriptsCard>
+
+<NpmOrScriptsCard.Content value="npm">
+```ts
+import Webauthn from "supertokens-web-js/recipe/webauthn"
+import Session from "supertokens-web-js/recipe/session"
+
+async function secondFactorSignUp(userContext: Record<string, any>) {
+  const response = await recipeImplementation.authenticateCredentialWithSignIn({
+      shouldTryLinkingWithSessionUser: true,
+      userContext,
+  });
+
+  return response.status === "OK";
+}
+```
+</NpmOrScriptsCard.Content>
+
+<NpmOrScriptsCard.Content value="scripts">
+```ts
+import supertokensWebauthn from "supertokens-web-js-script/recipe/webauthn"
+import supertokensSession from "supertokens-web-js-script/recipe/session"
+
+async function secondFactorSignUp(userContext: Record<string, any>) {
+  const response = await recipeImplementation.authenticateCredentialWithSignIn({
+      shouldTryLinkingWithSessionUser: true,
+      userContext,
+  });
+
+  return response.status === "OK";
+}
+```
+</NpmOrScriptsCard.Content>
+
+
+
+</NpmOrScriptsCard>
+
+</FrontendCustomUITabs.TabItem>
+
+<FrontendCustomUITabs.TabItem value="mobile">
+
+Support for this flow is not available in the mobile SDK.
+You will have to call the [backend API](/docs/references/fdi/introduction) directly.
+
+Call the [**Sign in with WebAuthn**](/docs/references/fdi/webauthn/post-webauthn-signin) endpoint to complete the secondary factor flow.
+
+
+</FrontendCustomUITabs.TabItem>
+
+</FrontendCustomUITabs>
+
+
+
+</UIType.CustomUIContent>
+
+
+That's it! :tada:
+
+Based on this configuration, users first access the authentication form which shows the `emailpassword` and `thirdparty` options.
+After first factor completion, they access the WebAuthn form to finalize the authentication attempt.

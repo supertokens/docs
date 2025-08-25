@@ -108,6 +108,7 @@ const categoryIcons = {
   "Email/Password": RectangleEllipsis,
   ThirdParty: Share2,
   WebAuthn: Fingerprint,
+  "Passkeys/WebAuthn": Fingerprint,
   OAuth: Key,
   MFA: ShieldCheck,
   Session: Clock,
@@ -147,6 +148,7 @@ const categoryIcons = {
 
   "/docs/additional-verification/captcha": RotateCw,
   "/docs/references/plugins/captcha-reference": RotateCw,
+  "/docs/additional-verification/mfa/webauthn-setup": Fingerprint,
 
   // Other
   "Session Verification": BadgeCheck,
