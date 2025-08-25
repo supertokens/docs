@@ -1,0 +1,223 @@
+# Migrate from MySQL to PostgreSQL
+
+## Overview
+
+This tutorial shows you how to migrate your **SuperTokens** database from **MySQL** to **PostgreSQL**.
+The migration involves exporting data from MySQL, setting up a PostgreSQL database with the same schema version, and importing the data with proper format conversions.
+
+## Before you start
+
+The tutorial assumes the following:
+
+- You have access to both your `MySQL` and `PostgreSQL` databases
+- Both databases are running on the same version of **SuperTokens Core**
+- You have administrative privileges on both databases
+
+## Steps
+
+### 1. Create a backup of your MySQL database
+
+Create a final backup of your MySQL database.
+The instructions for this step are specific to your database management system.
+
+### 2. Prepare the PostgreSQL database
+
+Start the same version of [`supertokens-postgresql`](https://hub.docker.com/r/supertokens/supertokens-postgresql) to initialize the schema in the database.
+
+:::warning
+Make sure to use the same version as the `supertokens-mysql` instance that you are currently running.
+:::
+
+### 3. Export data from MySQL
+
+#### 3.1 Export standard tables
+
+Run the following command to export most of your data:
+
+```bash
+mysqldump supertokens --fields-terminated-by ','  --fields-enclosed-by '"' --fields-escaped-by '\'  --no-create-info --tab /var/lib/mysql-files/
+```
+
+This creates CSV files for all tables in the `/var/lib/mysql-files/` directory.
+
+#### 3.2 Export the WebAuthn credentials table
+
+The `webauthn_credentials` table requires special handling because of the data type used to store the `public_key` field.
+
+```sql
+SELECT id, app_id, rp_id, user_id, counter, HEX(public_key) AS public_key, transports, created_at, updated_at 
+FROM webauthn_credentials 
+INTO OUTFILE '/var/lib/mysql-files/webauthn_credentials_hex.txt' 
+FIELDS TERMINATED BY ',' 
+OPTIONALLY ENCLOSED BY '"' 
+ESCAPED BY '\\' 
+LINES TERMINATED BY '\n';
+```
+
+This exports the `public_key` field as hexadecimal text for proper conversion to PostgreSQL's Binary Data (BYTEA) format.
+
+### 4. Transfer data files
+
+If necessary, copy the exported CSV files to a location where the `PostgreSQL` database can access them.
+
+### 5. Import data into the PostgreSQL database
+
+Next, you need to import the data into your PostgreSQL database.
+
+#### 5.1. Disable triggers
+
+Connect to your PostgreSQL database and disable triggers to prevent constraint violations during import.
+
+```sql
+SET session_replication_role = 'replica';
+```
+
+#### 5.2 Import the standard tables
+
+For most tables, you can import the data directly.
+
+<Tabs>
+<TabItem value="without-order" label="Without specifying column order">
+```sql
+COPY app_id_to_user_id FROM '/pg-data-host/app_id_to_user_id.txt' 
+CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
+```
+</TabItem>
+
+<TabItem value="with-order" label="With specifying column order">
+```sql
+COPY app_id_to_user_id(app_id, user_id, primary_or_recipe_user_id, is_linked_or_is_a_primary_user, recipe_id) 
+FROM '/pg-data-host/app_id_to_user_id.txt' 
+CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
+```
+</TabItem>
+
+</Tabs>
+
+
+#### 5.3 Handle the third-party provider clients table
+
+The `tenant_thirdparty_provider_clients` table requires special handling.
+You need to do this to differences between the `MySQL` `JSON` and `PostgreSQL` `text[]` formats.
+
+<Steps>
+
+## Create a staging table
+
+```sql
+CREATE TABLE tenant_thirdparty_provider_clients_raw (
+    connection_uri_domain VARCHAR(256) DEFAULT '' NOT NULL,
+    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
+    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
+    third_party_id VARCHAR(28) NOT NULL,
+    client_type VARCHAR(64) DEFAULT '' NOT NULL,
+    client_id VARCHAR(256) NOT NULL,
+    client_secret TEXT,
+    scope JSONB,
+    force_pkce BOOLEAN,
+    additional_config TEXT
+);
+```
+
+## Import data into the staging table:
+
+```sql
+COPY tenant_thirdparty_provider_clients_raw FROM '/host/tenant_thirdparty_provider_clients.txt' 
+CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
+```
+
+## Convert and insert into the final table:
+
+```sql
+INSERT INTO tenant_thirdparty_provider_clients (
+    connection_uri_domain, app_id, tenant_id, third_party_id, client_type,
+    client_id, client_secret, force_pkce, additional_config, scope
+)
+SELECT
+    connection_uri_domain, app_id, tenant_id, third_party_id, client_type,
+    client_id, client_secret, force_pkce, additional_config,
+    ARRAY(
+        SELECT jsonb_array_elements_text(scope->jsonb_object_keys(scope))
+    )
+FROM tenant_thirdparty_provider_clients_raw;
+```
+
+</Steps>
+
+#### 5.4 Handle the WebAuthn credentials table
+
+The `webauthn_credentials` table requires conversion from MySQL Binary Large Object, `BLOB`, to PostgreSQL Binary Data, `BYTEA` format.
+
+<Steps>
+
+## Create a staging table
+
+```sql
+CREATE TABLE IF NOT EXISTS webauthn_credentials_staging (
+   id VARCHAR(256) NOT NULL,
+   app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
+   rp_id VARCHAR(256) NOT NULL,
+   user_id CHAR(36),
+   counter BIGINT NOT NULL,
+   public_key TEXT NOT NULL,
+   transports TEXT NOT NULL,
+   created_at BIGINT NOT NULL,
+   updated_at BIGINT NOT NULL
+);
+```
+
+## Import the hexadecimal data
+
+```sql
+COPY webauthn_credentials_staging FROM '/host/webauthn_credentials_hex.txt' 
+CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
+```
+
+## Convert and insert into the final table
+
+```sql
+INSERT INTO webauthn_credentials (
+   id, app_id, rp_id, user_id, counter, public_key, transports, created_at, updated_at
+)
+SELECT 
+   id, app_id, rp_id, user_id, counter, 
+   decode(public_key, 'hex'), 
+   transports, created_at, updated_at 
+FROM webauthn_credentials_staging;
+```
+
+</Steps>
+
+
+#### 5.5 Delete the staging tables
+
+Delete the two temporary tables.
+
+```
+DROP TABLE webauthn_credentials_staging;
+DROP TABLE tenant_thirdparty_provider_clients_raw;
+```
+
+#### 5.6 Re-enable triggers
+
+After importing all data, re-enable the triggers:
+
+```sql
+SET session_replication_role = 'origin';
+```
+
+### 6. Verify the migration
+
+Verify that all data migrated successfully by comparing record counts between your MySQL and PostgreSQL databases:
+
+```sql
+-- Run on both databases
+SELECT COUNT(*) FROM users;
+SELECT COUNT(*) FROM sessions;
+-- Add other tables as needed
+```
+
+If the numbers match, you have successfully migrated your SuperTokens data from `MySQL` to `PostgreSQL` :tada:
+
+
+
