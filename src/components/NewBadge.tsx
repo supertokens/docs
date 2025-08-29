@@ -1,7 +1,11 @@
 import React from "react";
 import { Badge } from "@radix-ui/themes";
 
-const NewPages = ["/docs/quickstart/build-with-ai-tools", "/docs/additional-verification/captcha"];
+const NewPages = [
+  "/docs/quickstart/build-with-ai-tools",
+  "/docs/additional-verification/captcha",
+  "/docs/post-authentication/user-management/user-banning",
+];
 const NewCategories = ["Plugins"];
 
 type NewBadgeProps =
