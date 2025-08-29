@@ -60,4 +60,3 @@ export function initScrollOffset(): void {
   window.addEventListener("hashchange", handleHashNavigation);
   document.addEventListener("click", handleHashLinkClick);
 }
-

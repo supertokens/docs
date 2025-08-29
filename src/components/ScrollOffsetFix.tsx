@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { initScrollOffset } from '../lib/scrollOffset';
+import { useEffect } from "react";
+import { initScrollOffset } from "../lib/scrollOffset";
 
 export function ScrollOffsetFix() {
   useEffect(() => {
