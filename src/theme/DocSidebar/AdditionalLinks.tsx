@@ -56,13 +56,7 @@ export default function AdditionalLinks({ onLinkClick }: AdditionalLinksProps): 
     <div className="additional-sidebar-links">
       <ul className="additional-sidebar-links__list">
         {links.map((link) => (
-          <AdditionalLink
-            key={link.href}
-            href={link.href}
-            icon={link.icon}
-            label={link.label}
-            onClick={onLinkClick}
-          />
+          <AdditionalLink key={link.href} href={link.href} icon={link.icon} label={link.label} onClick={onLinkClick} />
         ))}
       </ul>
     </div>

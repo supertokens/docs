@@ -288,11 +288,15 @@ function formatCategory(label: string): string {
   return label
     .split(" ")
     .map((word) => {
-      if (word === "sdk") return "SDK";
-      if (word === "cdi") return "CDI";
-      if (word === "fdi") return "FDI";
-      if (word === "ai") return "AI";
-      return word.charAt(0).toUpperCase() + word.slice(1);
+      const regex = /<mark>(.*?)<\/mark>/g;
+      const matches = word.match(regex);
+      let extractedWord = !matches.length ? word : matches.map((match) => match.replace(/<\/?mark>/g, "")).join("");
+      if (extractedWord === "sdk") return "SDK";
+      if (extractedWord === "cdi") return "CDI";
+      if (extractedWord === "fdi") return "FDI";
+      if (extractedWord === "ai") return "AI";
+      extractedWord = extractedWord.charAt(0).toUpperCase() + extractedWord.slice(1);
+      return matches.length ? `<mark>${extractedWord}</mark>` : extractedWord;
     })
     .join(" ");
 }

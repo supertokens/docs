@@ -89,7 +89,7 @@ const config: Config = {
       insights: true,
     },
     prism: {
-      theme: prismThemes.vsDark,
+      theme: prismThemes.oneDark,
       additionalLanguages: ["kotlin", "java", "swift", "dart", "csharp", "php", "bash"],
     },
     metadata: [{ name: "keywords", content: "authentication" }],
