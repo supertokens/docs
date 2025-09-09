@@ -62,6 +62,9 @@ import CdiLogo from "/img/logos/cdi.svg";
 import FdiLogo from "/img/logos/fdi.svg";
 import SamlLogo from "/img/logos/saml.svg";
 import MCPLogo from "/img/logos/mcp.svg";
+import NodeSmallLogo from "/img/logos/nodejs-small.svg";
+import ReactLogo from "/img/logos/react.svg";
+import JavascriptLogo from "/img/logos/js.svg";
 
 const categoryIcons = {
   // Main categories
@@ -156,6 +159,11 @@ const categoryIcons = {
   "Multi Factor Authentication": MonitorSmartphone,
   "User Management": UserSearch,
   "Session Management": IdCard,
+
+  // References
+  "React SDK Reference": ReactLogo,
+  "Javascript SDK Reference": JavascriptLogo,
+  "Node.js SDK Reference": NodeSmallLogo,
 };
 
 // Brand logo mappings for integration platforms
@@ -176,6 +184,11 @@ export function MenuItemIcon(props: MenuItemIconProps) {
 
   if (!IconComponent) {
     return null;
+  }
+
+  // Handle SVG logos differently from Lucide icons
+  if (typeof IconComponent === "string") {
+    return <img src={IconComponent} className={props.className} width={16} height={16} alt="" />;
   }
 
   return <IconComponent className={props.className} size={16} />;

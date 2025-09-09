@@ -1,4 +1,5 @@
 import MDXComponents from "@theme-original/MDXComponents";
+import clsx from "clsx";
 import {
   OSTabs,
   DocItemContextValue,
@@ -85,7 +86,7 @@ const TableRoot = ({ children }) => {
 
 const h1 = ({ children, ...props }) => {
   return (
-    <Heading as="h1" size="8" mb="4" {...props}>
+    <Heading as="h1" size="8" mb="4" {...props} className={clsx("anchor", props.className)}>
       {children}
     </Heading>
   );
@@ -93,7 +94,7 @@ const h1 = ({ children, ...props }) => {
 
 const h2 = ({ children, ...props }) => {
   return (
-    <Heading as="h2" size="7" mb="4" {...props}>
+    <Heading as="h2" size="7" mb="4" {...props} className={clsx("anchor", props.className)}>
       {children}
     </Heading>
   );
@@ -101,7 +102,7 @@ const h2 = ({ children, ...props }) => {
 
 const h3 = ({ children, ...props }) => {
   return (
-    <Heading as="h3" size="6" mb="4" {...props}>
+    <Heading as="h3" size="6" mb="4" {...props} className={clsx("anchor", props.className)}>
       {children}
     </Heading>
   );
@@ -109,7 +110,7 @@ const h3 = ({ children, ...props }) => {
 
 const h4 = ({ children, ...props }) => {
   return (
-    <Heading as="h4" size="5" mb="4" {...props}>
+    <Heading as="h4" size="5" mb="4" {...props} className={clsx("anchor", props.className)}>
       {children}
     </Heading>
   );
