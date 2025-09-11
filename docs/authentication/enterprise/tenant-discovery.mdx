@@ -1,0 +1,218 @@
+---
+title: Tenant discovery
+hide_title: true
+sidebar_position: 5
+description: Automatically discover and route users to appropriate tenants based on their email domains
+page_type: tutorial
+---
+
+# Tenant discovery
+
+## Overview
+
+This tutorial shows you how to add tenant discovery functionality to your SuperTokens authentication flows.
+The guide makes use of the plugins functionality which automatically discovers and routes users to the appropriate tenants based on their email domains.
+
+## How it works
+
+The plugin extracts the domain from user email addresses and to infer the tenant ID.
+For example, `user@company.com` would be routed to the `company` tenant.
+The system includes built-in protection against popular email providers and falls back to the `public` tenant when appropriate.
+
+## Before you start
+
+The tenant discovery plugin supports only the `React` and `NodeJS` SDKs.
+Support for other platforms is under active development.
+Besides initializing the plugin, you also have to configure multi-tenancy in your SuperTokens setup.
+
+## Steps
+
+### 1. Initialize the backend plugin
+
+#### 1.1 Install the plugin
+
+```bash
+npm install @supertokens-plugins/tenant-discovery-nodejs
+```
+
+#### 1.2 Update your backend SDK configuration
+
+```typescript
+import SuperTokens from "supertokens-node";
+import TenantDiscoveryPlugin from "@supertokens-plugins/tenant-discovery-nodejs";
+
+SuperTokens.init({
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your other recipes
+  ],
+  experimental: {
+    plugins: [
+      TenantDiscoveryPlugin.init({
+        enableTenantListAPI: false, // Optional: defaults to false
+      }),
+    ],
+  }
+});
+```
+
+### 2. Initialize the frontend plugin
+
+#### 2.1 Install the plugin
+
+```bash
+npm install @supertokens-plugins/tenant-discovery-react
+```
+
+#### 2.2 Update your frontend SDK configuration
+
+```typescript
+import SuperTokens from "supertokens-auth-react";
+import TenantDiscoveryPlugin from "@supertokens-plugins/tenant-discovery-react";
+
+SuperTokens.init({
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  experimental: {
+    plugins: [
+      TenantDiscoveryPlugin.init({
+        showTenantSelector: true, // Optional: defaults to true
+        extractTenantIdFromDomain: true, // Optional: defaults to true
+      }),
+    ],
+  }
+});
+```
+
+### 3. Use tenant discovery
+
+With this configuration, when a user tries to sign in, the system automatically determines their tenant based on the email domain.
+Hence, you don't need to change anything else to make it work.
+
+<img
+	alt="Email authentication form"
+	width="700px"
+	src="/img/tenant-discovery-email-form.png"
+/>
+
+
+If you want to customize the user interface experience the plugin also provides other options.
+
+#### Tenant selection interface
+
+You can use the tenant selection interface accessible at `/tenant-discovery/select`.
+This page displays all available tenants and allows users to choose their organization before proceeding with authentication.
+
+:::info
+Keep in mind that you also need to enable the `tenant list` endpoint in your backend plugin configuration.
+:::
+
+####  
+
+
+## Customization
+
+### Block emails from specific tenants
+
+You can override the default tenant assignment logic to prevent certain emails from accessing specific tenants:
+
+```typescript
+import TenantDiscoveryPlugin from "@supertokens-plugins/tenant-discovery-nodejs";
+
+TenantDiscoveryPlugin.init({
+  enableTenantListAPI: false,
+  override: (originalImplementation) => ({
+    ...originalImplementation,
+    isTenantAllowedForEmail: (email: string, tenantId: string) => {
+      // Prevent routing to public tenant
+      return tenantId !== "public";
+    },
+  }),
+});
+```
+
+### Add custom domain restrictions
+
+Extend the list of restricted domains that should always use the `public` tenant:
+
+```typescript
+TenantDiscoveryPlugin.init({
+  override: (originalImplementation) => ({
+    ...originalImplementation,
+    isRestrictedEmailDomain: (emailDomain: string) => {
+      return originalImplementation.isRestrictedEmailDomain(emailDomain) || 
+             emailDomain === "example.com";
+    },
+  }),
+});
+```
+
+### Implement a custom user interface
+
+To create a custom tenant discovery interface, use the `usePluginContext` hook:
+
+```typescript
+import { usePluginContext } from "@supertokens-plugins/tenant-discovery-react";
+
+function CustomTenantDiscovery() {
+  const { api, functions } = usePluginContext();
+  const [email, setEmail] = useState("");
+  const [tenants, setTenants] = useState([]);
+
+  const handleEmailSubmit = async () => {
+    const result = await api.tenantIdFromEmail(email);
+    if (result.status === "OK") {
+      functions.setTenantId(result.tenant, email, true);
+    }
+  };
+
+  const loadTenants = async () => {
+    const response = await api.fetchTenants();
+    if (response.status === "OK") {
+      setTenants(response.tenants);
+    }
+  };
+
+  return (
+    <div>
+      <h2>Enter your email to find your organization</h2>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="user@company.com"
+      />
+      <button onClick={handleEmailSubmit}>Continue</button>
+      
+      <h3>Or choose from available organizations:</h3>
+      <button onClick={loadTenants}>Load Organizations</button>
+      {tenants.map((tenant) => (
+        <button
+          key={tenant.tenantId}
+          onClick={() => functions.setTenantId(tenant.tenantId, undefined, true)}
+        >
+          {tenant.tenantId === 'public' ? 'Personal Account' : tenant.tenantId}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+## Next steps
+
+Besides tenant discovery, you can also explore other enterprise authentication features:
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/authentication/enterprise/initial-setup" label="Initial setup" />
+  <ReferenceCard href="/docs/authentication/enterprise/saml/what-is-saml" label="SAML" />
+  <ReferenceCard href="/docs/authentication/enterprise/manage-tenants" label="Manage tenants" />
+  <ReferenceCard href="/docs/authentication/enterprise/manage-apps" label="Manage apps" />
+  <ReferenceCard href="/docs/references/plugins/introduction" label="Plugins References" />
+</ReferenceCard.Grid>
