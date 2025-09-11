@@ -1,0 +1,41 @@
+// @ts-check
+import { MarkdownPageEvent } from "typedoc-plugin-markdown";
+
+export function load(app) {
+  const textReplacements = [
+    {
+      pattern: /supertokens\/docs\/tmp\//g,
+      replace: "",
+    },
+    {
+      pattern: /# captcha-react/g,
+      replace: "# `@supertokens-plugins/captcha-react`",
+    },
+    {
+      pattern: /# captcha-nodejs/g,
+      replace: "# `@supertokens-plugins/captcha-nodejs`",
+    },
+    {
+      pattern: /# user-banning-react/g,
+      replace: "# `@supertokens-plugins/user-banning-react`",
+    },
+    {
+      pattern: /# user-banning-nodejs/g,
+      replace: "# `@supertokens-plugins/user-banning-nodejs`",
+    },
+    {
+      pattern: /# tenant-discovery-react/g,
+      replace: "# `@supertokens-plugins/tenant-discovery-react`",
+    },
+    {
+      pattern: /# tenant-discovery-nodejs/g,
+      replace: "# `@supertokens-plugins/tenant-discovery-nodejs`",
+    },
+  ];
+
+  app.renderer.on(MarkdownPageEvent.END, (page) => {
+    for (const replacement of textReplacements) {
+      page.contents = page.contents.replace(replacement.pattern, replacement.replace);
+    }
+  });
+}

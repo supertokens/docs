@@ -5,6 +5,7 @@ const NewPages = [
   "/docs/quickstart/build-with-ai-tools",
   "/docs/additional-verification/captcha",
   "/docs/post-authentication/user-management/user-banning",
+  "/docs/authentication/enterprise/tenant-discovery",
 ];
 const NewCategories = ["Plugins"];
 
