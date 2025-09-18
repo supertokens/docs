@@ -1,0 +1,254 @@
+---
+sidebar_position: 6
+title: OpenTelemetry Integration
+hide_title: true
+description: Add OpenTelemetry logging to all SuperTokens APIs and function calls using the plugin
+page_type: tutorial
+---
+
+# OpenTelemetry Integration
+
+## Overview
+
+This tutorial shows you how to add **OpenTelemetry** logging to all the **SuperTokens** APIs and function calls using the **OpenTelemetry plugin**. The guide makes use of the plugins functionality to automatically instrument your authentication flows with distributed tracing.
+
+## How it works
+
+The plugin manually adds traces to all overridable functions and APIs in SuperTokens. When you initialize the OpenTelemetry SDK alongside this plugin, you automatically get comprehensive tracing at the API level. The plugin provides built-in data protection by automatically removing sensitive fields from traces.
+
+## Before you start
+
+The OpenTelemetry plugin supports only the `NodeJS` SDK. Support for other platforms is under active development.
+
+Make sure you have the OpenTelemetry SDK installed and configured in your application. For detailed instructions, see the [OpenTelemetry Node.js Getting Started Guide](https://opentelemetry.io/docs/languages/js/getting-started/nodejs/#instrumentation).
+
+The implementation is in early stages and APIs might change. For more information on how plugins work, refer to the [references page](/docs/references/plugins/introduction).
+
+## Steps
+
+### 1. Install the plugin
+
+```bash
+npm install @supertokens-plugins/opentelemetry-nodejs
+```
+
+### 2. Configure OpenTelemetry SDK
+
+Set up the OpenTelemetry SDK in your application.
+Here's a basic configuration:
+
+```typescript
+/*instrumentation.ts*/
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import {
+  PeriodicExportingMetricReader,
+  ConsoleMetricExporter,
+} from '@opentelemetry/sdk-metrics';
+
+const sdk = new NodeSDK({
+  traceExporter: new ConsoleSpanExporter(),
+  metricReader: new PeriodicExportingMetricReader({
+    exporter: new ConsoleMetricExporter(),
+  }),
+  instrumentations: [getNodeAutoInstrumentations()],
+});
+
+sdk.start();
+```
+
+:::note no-title
+For a more thorough explanation on how to setup OpenTelemetry please refer to the [official documentation](https://opentelemetry.io/docs/languages/js/getting-started/nodejs).
+:::
+
+### 3. Update your backend SDK configuration
+
+Initialize the **SuperTokens** plugin inside your SDK configuration file.
+
+```typescript
+import SuperTokens from "supertokens-node";
+import OpenTelemetryPlugin from "@supertokens-plugins/opentelemetry-nodejs";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  experimental: {
+    plugins: [
+      OpenTelemetryPlugin.init(),
+    ],
+  }
+});
+```
+
+### 4. Test your setup
+
+Inspect your traces and look for **SuperTokens** specific spans.
+You should be able to identify them based on the following naming schemes:
+- `<recipe-name>.function.<function-name>`
+- `<recipe-name>.api.<api-name>`
+
+Examples: `emailpassword.function.signIn`, `thirdparty.api.signInUpPOST`, `multitenancy.function.getTenant`
+
+## Customization
+
+### Data protection
+
+By default, the plugin removes sensitive fields from traces to protect user data. The following fields are automatically filtered out:
+`password`, `email(s)`,`phoneNumber(s)`, `accessToken`,`refreshToken`.
+
+#### Adding custom sensitive fields
+
+You can extend the list of sensitive fields by overriding the `getSensitiveFields` function:
+
+```typescript
+import SuperTokens from "supertokens-node";
+import OpenTelemetryPlugin from "@supertokens-plugins/opentelemetry-nodejs";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  experimental: {
+    plugins: [
+      OpenTelemetryPlugin.init({
+	override: (oI) => ({
+	  ...oI,
+	  getSensitiveFields: (defaultSensitiveFields: string[]) => [
+	    ...defaultSensitiveFields, 
+	    "customSecretField",
+	    "userSecret",
+	  ],
+	}),
+      }),
+    ],
+  }
+});
+```
+
+#### Advanced data transformation
+
+For more granular control over data handling in traces, you can override the transformation functions:
+
+```typescript
+import SuperTokens from "supertokens-node";
+import OpenTelemetryPlugin from "@supertokens-plugins/opentelemetry-nodejs";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  plugins: [
+    OpenTelemetryPlugin.init({
+      override: (oI) => ({
+	...oI,
+        transformInputToAttributes: (input: any) => {
+          // Custom logic to transform input data for traces
+          return {
+            userId: input.userId,
+            action: input.action,
+            // Exclude other sensitive data
+          };
+        },
+        transformResultToAttributes: (result: any) => {
+          // Custom logic to transform result data for traces
+          return {
+	    userId: result.userId,
+            // Only include non-sensitive result data
+          };
+        },
+      }),
+    }),
+  ],
+});
+```
+
+#### Using OpenTelemetry data protection
+
+Alternatively, you can disable the built-in data filtering and use OpenTelemetry's own [data protection mechanisms](https://opentelemetry.io/docs/security/handling-sensitive-data/):
+
+```typescript
+import SuperTokens from "supertokens-node";
+import OpenTelemetryPlugin from "@supertokens-plugins/opentelemetry-nodejs";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  plugins: [
+    OpenTelemetryPlugin.init({
+      override: (oI) => ({
+	...oI,
+        getSensitiveFields: () => [], // Disable built-in filtering
+      }),
+    }),
+  ],
+});
+```
+
+## See also
+
+Besides OpenTelemetry integration, you can also look into other deployment and monitoring features:
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/deployment/rate-limits">
+    <ReferenceCard.Title>
+      Self-Hosting 
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+      Self-host SuperTokens in your own infrastructure.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+
+  <ReferenceCard href="/docs/deployment/rate-limits">
+    <ReferenceCard.Title>
+      Rate Limiting
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+      Configure rate limits to protect your authentication endpoints.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+
+  <ReferenceCard href="/docs/deployment/scalability">
+    <ReferenceCard.Title>
+      Scalability
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+      Scale SuperTokens for high-traffic applications.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+
+  <ReferenceCard href="/docs/references/plugins/introduction">
+    <ReferenceCard.Title>
+     Plugins Reference 
+    </ReferenceCard.Title>
+    <ReferenceCard.Description>
+     General information on how plugins work.
+    </ReferenceCard.Description>
+  </ReferenceCard>
+</ReferenceCard.Grid>

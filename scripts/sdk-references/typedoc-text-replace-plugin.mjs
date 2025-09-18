@@ -31,6 +31,10 @@ export function load(app) {
       pattern: /# tenant-discovery-nodejs/g,
       replace: "# `@supertokens-plugins/tenant-discovery-nodejs`",
     },
+    {
+      pattern: /# opentelemetry-nodejs/g,
+      replace: "# `@supertokens-plugins/opentelemetry-nodejs`",
+    },
   ];
 
   app.renderer.on(MarkdownPageEvent.END, (page) => {
