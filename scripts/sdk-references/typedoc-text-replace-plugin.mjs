@@ -35,6 +35,14 @@ export function load(app) {
       pattern: /# opentelemetry-nodejs/g,
       replace: "# `@supertokens-plugins/opentelemetry-nodejs`",
     },
+    {
+      pattern: /# progressive-profiling-nodejs/g,
+      replace: "# `@supertokens-plugins/progressive-profiling-nodejs`",
+    },
+    {
+      pattern: /# progressive-profiling-react/g,
+      replace: "# `@supertokens-plugins/progressive-profiling-react`",
+    },
   ];
 
   app.renderer.on(MarkdownPageEvent.END, (page) => {

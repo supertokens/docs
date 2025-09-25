@@ -7,6 +7,7 @@ const NewPages = [
   "/docs/post-authentication/user-management/user-banning",
   "/docs/authentication/enterprise/tenant-discovery",
   "/docs/deployment/telemetry",
+  "/docs/post-authentication/user-management/progressive-profiling",
 ];
 const NewCategories = ["Plugins"];
 
