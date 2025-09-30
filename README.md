@@ -29,4 +29,4 @@ Go ahead and create a [pull request](https://github.com/clerk/clerk-docs/pulls) 
 
 ## Contact us
 
-If you have other questions or if you want to discuss different aspects about our product, please join our [Discord](supertokens.com/discord) server or email us at <team@supertokens.com>.
+If you have other questions or if you want to discuss different aspects about our product, please join our [Discord](supertokens.com/discord) server or email us at <support@supertokens.com>.
