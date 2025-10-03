@@ -43,6 +43,18 @@ export function load(app) {
       pattern: /# progressive-profiling-react/g,
       replace: "# `@supertokens-plugins/progressive-profiling-react`",
     },
+    {
+      pattern: /# profile-base-react/g,
+      replace: "# `@supertokens-plugins/profile-base-react`",
+    },
+    {
+      pattern: /# profile-details-nodejs/g,
+      replace: "# `@supertokens-plugins/profile-details-nodejs`",
+    },
+    {
+      pattern: /# profile-details-react/g,
+      replace: "# `@supertokens-plugins/profile-details-react`",
+    },
   ];
 
   app.renderer.on(MarkdownPageEvent.END, (page) => {
