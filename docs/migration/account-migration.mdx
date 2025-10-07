@@ -61,13 +61,14 @@ Call the endpoint from the authentication flow used by your legacy provider.
 
 
 :::warning no-title
-Auth0 does not export password hashes by default. You will have to contact their support and request them.
+Auth0 does not expose password hashes or `TOTP` device information.
+You will have to contact their support separately if you need this type of data.
 :::
 
 ##### 1. Access the Auth0 Dashboard
 ##### 2. From the navigation menu go to *Actions* > *Library*
 ##### 3. Click *Create Action* > *Create custom action*
-##### 4. Specify a custom name for your action and then select **Login/Post Login** as the trigger
+##### 4. Specify a custom name for your action and then select *Login/Post Login* as the trigger
 ##### 5. After the action has been created, click the *Add Secret* button and save your `SUPERTOKENS_CORE_API_KEY` as a secret
 ##### 5. Paste the following code in the editor
 
@@ -75,70 +76,76 @@ Auth0 does not export password hashes by default. You will have to contact their
 exports.onExecutePostLogin = async (event, api) => {
   const SUPERTOKENS_CORE_URL = "<YOUR_SUPERTOKENS_CORE_URL>";
   const SUPERTOKENS_API_KEY = event.secrets.SUPERTOKENS_API_KEY;
+  const auth0User = event.user;
   
   try {
-    // Check if user already migrated
-    if (event.user.app_metadata?.migrated_to_supertokens) {
-      console.log(`User ${event.user.user_id} already migrated`);
+    if (auth0User.app_metadata?.migrated_to_supertokens) {
+      console.log(`User ${auth0User.user_id} already migrated`);
       return;
     }
     
-    const connectionStrategy = event.connection.strategy;
-    
     const userPayload = {
-      externalUserId: event.user.user_id,
+      externalUserId: auth0User.user_id,
       userMetadata: {
-        auth0_user_id: event.user.user_id,
-        auth0_connection: event.connection.name,
-        name: event.user.name,
-        nickname: event.user.nickname,
-        picture: event.user.picture
+        auth0_user_id: auth0User.user_id,
+        name: auth0User.name,
+        nickname: auth0User.nickname,
+        picture: auth0User.picture
+	auth0_user_metadata: auth0User.user_metadata,
+	auth0_app_metadata: auth0User.app_metadata
       },
+      roles: auth0User.app_metadata?.roles || [],
       loginMethods: []
     };
+
+    const ThirdPartyProviders = ['google-oauth2', 'facebook', 'github', 'apple'];
     
-    // Handle different login methods
-    if (connectionStrategy === 'google-oauth2' || connectionStrategy === 'facebook' || 
-        connectionStrategy === 'github' || connectionStrategy === 'apple' || 
-        connectionStrategy.includes('oauth')) {
-      const provider = mapProvider(connectionStrategy);
-      const thirdPartyUserId = event.user.user_id.split('|')[1];
-      
-      userPayload.loginMethods.push({
-        recipeId: "thirdparty",
-        thirdPartyId: provider,
-        thirdPartyUserId: thirdPartyUserId,
-        email: event.user.email,
-        isVerified: event.user.email_verified || false,
-        isPrimary: true,
-        timeJoinedInMSSinceEpoch: new Date(event.user.created_at).getTime()
-      });
-      
-    } else if (connectionStrategy === 'auth0' || connectionStrategy === 'Username-Password-Authentication') {
-      // Auth0 does not export passworded hashes by default
-      // You will have to contact their support and request them
-      userPayload.loginMethods.push({
-	recipeId: "emailpassword",
-	email: event.user.email,
-	passwordHash: getPasswordHash(event.user.email),
-	hashingAlgorithm: "bcrypt",
-	isVerified: event.user.email_verified || false,
-	isPrimary: true,
-	timeJoinedInMSSinceEpoch: new Date(event.user.created_at).getTime()
-      });
-    } else if (connectionStrategy === 'sms' || connectionStrategy === 'email') {
-      const isEmail = connectionStrategy === 'email';
-      userPayload.loginMethods.push({
-        recipeId: "passwordless",
-        email: isEmail ? event.user.email : undefined,
-        phoneNumber: !isEmail ? event.user.phone_number : undefined,
-        isVerified: true,
-        isPrimary: true,
-        timeJoinedInMSSinceEpoch: new Date(event.user.created_at).getTime()
-      });
-    }
+    auth0User.identities.forEach((identity, index) => {
+      if(ThirdPartyProviders.includes(identity.provider)) {
+	userPayload.loginMethods.push({
+	    recipeId: "thirdparty",
+	    thirdPartyId: mapProvider(identity.provider),
+	    thirdPartyUserId: identity.user_id,
+	    email: identity.profileData?.email ?? auth0User.email,
+	    isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
+	    isPrimary: index === 0,
+	    timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
+	  });
+	}
+      } else if (identity.provider === 'auth0' || identity.provider === 'Username-Password-Authentication') {
+	// Auth0 does not export passworded hashes by default
+	// You will have to contact their support and request them
+	userPayload.loginMethods.push({
+	  recipeId: "emailpassword",
+	  email: identity.profileData?.email ?? auth0User.email,
+	  // Request the password hash from Auth0 and then implement the function to retrieve the values 
+	  passwordHash: getPasswordHash(identity.profileData?.email),
+	  hashingAlgorithm: "bcrypt",
+	  isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
+	  isPrimary: index === 0,
+	  timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
+	});
+      } else if (identity.provider === 'sms') {
+	userPayload.loginMethods.push({
+	  recipeId: "passwordless",
+	  phoneNumber: identity.profileData?.phone_number ?? auth0User.phone_number,
+	  isVerified: identity.profileData?.phone_verified ?? auth0User.phone_verified ?? false,
+	  isPrimary: index === 0,
+	  timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
+	});
+      } else if (identity.provider === 'email') {
+	userPayload.loginMethods.push({
+	  recipeId: "passwordless",
+	  email: identity.profileData?.email || auth0User.email,
+	  isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
+	  isPrimary: index === 0,
+	  timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
+	});
+      } else {
+	throw new Error(`Uknown provider: ${identity.provider}`);
+      }
+    });
     
-    // Import user to SuperTokens
     const response = await fetch(`${SUPERTOKENS_CORE_URL}/bulk-import/import`, {
       method: 'POST',
       headers: {
@@ -169,8 +176,6 @@ function mapProvider(strategy) {
     'facebook': 'facebook',
     'github': 'github',
     'apple': 'apple',
-    'windowslive': 'microsoft',
-    'linkedin': 'linkedin'
   };
   return mapping[strategy] || strategy;
 }
@@ -484,59 +489,85 @@ cat auth0_users.json | jq -s '.' > auth0_users_array.json
 
 #### 6. Transform the data to the SuperTokens format
 
+:::warning no-title
+Auth0 does not expose password hashes or `TOTP` device information.
+You will have to contact their support separately if you need this type of data.
+:::
+
 ```typescript
 const fs = require('fs');
 
 const auth0Users = JSON.parse(fs.readFileSync('auth0_users_array.json', 'utf8'));
 
 const superTokensUsers = auth0Users.map(auth0User => {
-  const loginMethods = [];
+  if(auth0User.user_metadata?.migrated_to_supertokens) {
+    console.log(`User ${auth0User.user_id} already migrated`);
+    return;
+  }
 
-  auth0User.identities.forEach(identity => {
-    if (identity.provider === 'auth0') {
-      // Auth0 does not export passworded hashes by default
-      // You will have to contact their support and request them
-      loginMethods.push({
-        recipeId: "emailpassword",
-        email: auth0User.email,
-        passwordHash: getPasswordHash(auth0User.email),
-        hashingAlgorithm: "bcrypt",
-        isVerified: auth0User.email_verified || false,
-        isPrimary: true,
-        timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
-      });
-    } else if (['google-oauth2', 'facebook', 'github', 'apple'].includes(identity.provider)) {
-      loginMethods.push({
-        recipeId: "thirdparty",
-        thirdPartyId: mapProvider(identity.provider),
-        thirdPartyUserId: identity.user_id,
-        email: auth0User.email,
-        isVerified: auth0User.email_verified || false,
-        isPrimary: true,
-        timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
-      });
-    } else if (identity.provider === 'sms') {
-      loginMethods.push({
-        recipeId: "passwordless",
-        phoneNumber: auth0User.phone_number,
-        isVerified: auth0User.phone_verified || false,
-        isPrimary: true,
-        timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
-      });
-    }
-  });
-  
-  return {
-    externalUserId: auth0User.user_id,
+  const userPayload = {
+    externalUserId: event.user.user_id,
     userMetadata: {
       auth0_user_id: auth0User.user_id,
       name: auth0User.name,
       nickname: auth0User.nickname,
       picture: auth0User.picture,
-      ...auth0User.user_metadata
+      auth0_user_metadata: auth0User.user_metadata
+      auth0_app_metadata: auth0User.app_metadata
     },
-    loginMethods: loginMethods
+    roles: auth0User.app_metadata?.roles || [],
+    loginMethods: [],
   };
+
+  const ThirdPartyProviders = ['google-oauth2', 'facebook', 'github', 'apple'];
+  
+  auth0User.identities.forEach((identity, index) => {
+    if(ThirdPartyProviders.includes(identity.provider)) {
+      userPayload.loginMethods.push({
+	  recipeId: "thirdparty",
+	  thirdPartyId: mapProvider(identity.provider),
+	  thirdPartyUserId: identity.user_id,
+	  email: identity.profileData?.email ?? auth0User.email,
+	  isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
+	  isPrimary: index === 0,
+	  timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
+	});
+      }
+    } else if (identity.provider === 'auth0' || identity.provider === 'Username-Password-Authentication') {
+      // Auth0 does not export passworded hashes by default
+      // You will have to contact their support and request them
+      userPayload.loginMethods.push({
+        recipeId: "emailpassword",
+        email: identity.profileData?.email ?? auth0User.email,
+	// Request the password hash from Auth0 and then implement the function to retrieve the values 
+        passwordHash: getPasswordHash(identity.profileData?.email),
+        hashingAlgorithm: "bcrypt",
+        isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
+        isPrimary: index === 0,
+        timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
+      });
+    } else if (identity.provider === 'sms') {
+      userPayload.loginMethods.push({
+	recipeId: "passwordless",
+	phoneNumber: identity.profileData?.phone_number || auth0User.phone_number,
+	isVerified: identity.profileData?.phone_verified ?? auth0User.phone_verified ?? false,
+	isPrimary: index === 0,
+	timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
+      });
+    } else if (identity.provider === 'email') {
+      userPayload.loginMethods.push({
+	recipeId: "passwordless",
+	email: identity.profileData?.email || auth0User.email,
+	isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
+	isPrimary: index === 0,
+	timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
+      });
+    } else {
+      throw new Error(`Uknown provider: ${identity.provider}`);
+    }
+  });
+  
+  return userPayload;
 });
 
 fs.writeFileSync('supertokens_users.json', JSON.stringify({ users: superTokensUsers }, null, 2));
