@@ -163,6 +163,24 @@ function removeReferences(content: string): string {
 
 const AllImports: Array<{ name: string; module: string }> = [];
 
+const fdiReference = JSON.parse(fs.readFileSync("./static/fdi.json", "utf8")) as OpenAPIV3.Document;
+const cdiReference = JSON.parse(fs.readFileSync("./static/cdi.json", "utf8")) as OpenAPIV3.Document;
+
+async function parseApiReferenceContent(filePath: string, apiType: "fdi" | "cdi"): Promise<string> {
+  const mdxContent = await fs.promises.readFile(filePath, "utf8");
+  const regex = /path\s*=\s*"([^"]+)"/;
+  const match = mdxContent.match(regex);
+  const path = match[1];
+  const apiSpec = apiType === "fdi" ? fdiReference : cdiReference;
+
+  if (path) {
+    const value = apiSpec.paths[path];
+    if (value) return JSON.stringify(value, null, 2);
+  }
+
+  return "";
+}
+
 async function parseMdxContent(filePath: string, usePageTitle = false): Promise<string> {
   const mdxContent = await fs.promises.readFile(filePath, "utf8");
   const { content } = matter(mdxContent);
@@ -290,7 +308,7 @@ function buildTitle(currentTitle: string, filePath: string): string {
 }
 
 async function generateApiReferenceText(apiName: "cdi" | "fdi") {
-  const apiReference = JSON.parse(await fs.promises.readFile(`./static/${apiName}.json`, "utf8")) as OpenAPIV3.Document;
+  const apiReference = apiName === "fdi" ? fdiReference : cdiReference;
   const apiReferenceMapping = JSON.parse(
     await fs.promises.readFile(`./static/${apiName}-mapping.json`, "utf8"),
   ) as OpenAPIV3.Document;
@@ -319,14 +337,14 @@ export default function createLLMFullFile(context) {
       const contentDir = path.join(siteDir, "docs");
       const allFiles: { title: string; content: string; path: string; description: string }[] = [];
 
-      const skipFiles = [
-        "docs/index.mdx",
-        "docs/quickstart/example-apps/generate-example-app.mdx",
-        "docs/quickstart/next-steps.mdx",
-        "overview.mdx",
-        "introduction.mdx",
-        "compatibility-table.mdx",
-      ];
+      // const skipFiles = [
+      //   "docs/index.mdx",
+      //   "docs/quickstart/example-apps/generate-example-app.mdx",
+      //   "docs/quickstart/next-steps.mdx",
+      //   "overview.mdx",
+      //   "introduction.mdx",
+      //   "compatibility-table.mdx",
+      // ];
 
       const mainDirectories = [
         "/quickstart",
@@ -341,20 +359,22 @@ export default function createLLMFullFile(context) {
 
       for (const dir of mainDirectories) {
         const fullPath = path.join(contentDir, dir);
-        const mdxFiles = await getAllMdxFiles(fullPath, skipFiles);
+        // const mdxFiles = await getAllMdxFiles(fullPath, skipFiles);
+        const mdxFiles = await getAllMdxFiles(fullPath, []);
         allFiles.push(...mdxFiles);
       }
 
-      const filesWithoutReferences = allFiles.filter(
-        (file) => !file.path.includes("cdi") && !file.path.includes("fdi"),
-      );
-
-      return { files: filesWithoutReferences };
+      return { files: allFiles };
     },
     postBuild: async ({ content, outDir, routes }) => {
       const parsedFiles = await Promise.all(
         content.files.map(async (file) => {
-          const content = await parseMdxContent(file.path);
+          let content = "";
+          if ((file.path.includes("fdi") || file.path.includes("cdi")) && !file.path.includes("introduction")) {
+            content = await parseApiReferenceContent(file.path, file.path.includes("fdi") ? "fdi" : "cdi");
+          } else {
+            content = await parseMdxContent(file.path);
+          }
           return { ...file, content };
         }),
       );
