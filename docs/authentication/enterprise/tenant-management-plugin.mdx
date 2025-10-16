@@ -1,0 +1,278 @@
+---
+title: Tenant management
+hide_title: true
+sidebar_position: 6
+description: Use the tenant management plugin for an out-of-the-box admin experience
+page_type: tutorial
+---
+
+# Tenant management plugin
+
+## Overview
+
+This tutorial shows you how to add comprehensive tenant management functionality to your SuperTokens authentication flows.
+The guide makes use of the plugins functionality which provides complete multi-tenancy management including tenant creation, user roles, invitations, join requests, and seamless tenant switching.
+
+## Before you start
+
+The tenant management plugin supports only the `React` and `NodeJS` SDKs.
+Support for other platforms is under active development.
+
+## Steps
+
+### 1. Initialize the backend plugin
+
+#### 1.1 Install the plugin
+
+```bash
+npm install @supertokens-plugins/tenants-nodejs
+```
+
+#### 1.2 Update your backend SDK configuration
+
+```typescript
+import SuperTokens from "supertokens-node";
+import TenantsPlugin from "@supertokens-plugins/tenants-nodejs";
+
+SuperTokens.init({
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes
+  ],
+  experimental: {
+    plugins: [
+      TenantsPlugin.init(),
+    ],
+  },
+});
+```
+
+##### Configuration options
+
+The plugin supports the following configuration options:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `requireNonPublicTenantAssociation`    | `boolean` | `false` | Require users to associate with at least one non-public tenant |
+| `requireTenantCreationRequestApproval` | `boolean` | `true` | Whether tenant creation requires admin approval |
+| `enableTenantListAPI`                  | `boolean` | `false` | Enable API to list all tenants |
+| `createRolesOnInit` | `boolean` | `true` | Auto-create required roles on init |
+
+### 2. Initialize the frontend plugin
+
+#### 2.1 Install the plugin
+
+```bash
+npm install @supertokens-plugins/tenants-react
+```
+
+#### 2.2 Update your frontend SDK configuration
+
+```typescript
+import SuperTokens from "supertokens-auth-react";
+import ProfileBasePlugin from "@supertokens-plugins/profile-base-react";
+import TenantsPlugin from "@supertokens-plugins/tenants-react";
+
+SuperTokens.init({
+  appInfo: {
+    // your app info
+  },
+  recipeList: [
+    // your recipes 
+  ],
+  experimental: {
+    plugins: [
+      ProfileBasePlugin.init(),
+      TenantsPlugin.init(),
+    ],
+  },
+});
+```
+
+##### Configuration options
+
+The plugin supports the following configuration options:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `requireTenantCreation`    | `boolean` | `false` | Whether users must create a tenant before accessing the app |
+| `redirectToUrlOnJoiningTenant` | `string` | `/` | The path to which users are redirected after joining a tenant |
+
+### 3. Test the implementation
+
+With this configuration, users can access comprehensive tenant management features through the profile interface.
+Make sure that you have a user with the required permissions and then access`/user/tenants/create` to create a new tenant. 
+
+## Customization
+
+### Roles and permissions
+
+The plugin automatically creates the following roles and permissions:
+
+#### Default roles
+
+| Role | Description | Permissions |
+|------|-------------|-------------|
+| `tenant-admin` | Full administrative access within the tenant | All tenant permissions |
+| `tenant-member` | Basic member access within the tenant | `tenant-access` |
+| `app-admin` | Global application administrator | All permissions across all tenants |
+
+#### Available permissions
+
+| Permission | Description |
+|------------|-------------|
+| `tenant-access` | Basic access to tenant |
+| `list-users` | View list of users in tenant |
+| `manage-invitations` | Create and manage tenant invitations |
+| `manage-join-requests` | Approve or reject join requests |
+| `change-user-roles` | Modify user roles within tenant |
+| `remove-users` | Remove users from tenant |
+
+### Email delivery configuration
+
+Configure custom email delivery for tenant-related notifications:
+
+```typescript
+import { PluginSMTPService } from "@supertokens-plugins/tenants-nodejs";
+import TenantsPlugin from "@supertokens-plugins/tenants-nodejs";
+
+SuperTokens.init({
+  // ... other config
+  experimental: {
+    plugins: [
+      TenantsPlugin.init({
+        emailDelivery: {
+          service: new PluginSMTPService({
+            smtpSettings: {
+              host: "smtp.example.com",
+              port: 587,
+              from: {
+                name: "Your App",
+                email: "noreply@example.com",
+              },
+              secure: false,
+              authUsername: "username",
+              password: "password",
+            },
+          }),
+        },
+      }),
+    ],
+  },
+});
+```
+
+### Custom implementation override
+
+You can override default behaviors by providing custom implementations:
+
+```typescript
+TenantsPlugin.init({
+  override: {
+    functions: (originalImplementation) => ({
+      ...originalImplementation,
+      isAllowedToCreateTenant: async (session) => {
+        // Custom logic to determine if user can create tenant
+        const userId = session.getUserId();
+        // Add your custom logic here
+        return true;
+      },
+      canApproveJoinRequest: async (targetUser, tenantId, session) => {
+        // Custom logic for approving join requests
+        return true;
+      },
+    }),
+  },
+});
+```
+
+### Custom user interface
+
+To create your own UI you can use the `usePluginContext` hook.
+It exposes an interface which you can use to interface with the endpoints exposed by the backend plugin.
+
+```typescript
+import { usePluginContext } from "@supertokens-plugins/tenants-react";
+
+function CustomTenantComponent() {
+  const { api, t } = usePluginContext();
+  const [tenants, setTenants] = useState([]);
+
+  const handleFetchTenants = async () => {
+    const result = await api.fetchTenants();
+    if (result.status === "OK") {
+      setTenants(result.tenants);
+    }
+  };
+
+  const handleCreateTenant = async (name) => {
+    const result = await api.createTenant({ name });
+    if (result.status === "OK") {
+      console.log("Tenant created successfully");
+    }
+  };
+
+  const handleSwitchTenant = async (tenantId) => {
+    const result = await api.switchTenant(tenantId);
+    if (result.status === "OK") {
+      console.log("Switched to tenant successfully");
+    }
+  };
+
+  return (
+    <div>
+      <h2>{t("PL_TD_SELECT_TENANT_TITLE")}</h2>
+      <button onClick={handleFetchTenants}>Load Tenants</button>
+      {tenants.map((tenant) => (
+        <div key={tenant.id}>
+          <span>{tenant.name} ({tenant.role})</span>
+          <button onClick={() => handleSwitchTenant(tenant.id)}>
+            Switch
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Custom page components
+
+You can customize the default pages by providing your own components:
+
+```typescript
+import TenantsPlugin from "@supertokens-plugins/tenants-react";
+import { CustomSelectTenant, CustomTenantManagement } from "./your-custom-components";
+
+SuperTokens.init({
+  // ... other config
+  experimental: {
+    plugins: [
+      TenantsPlugin.init({
+        override: (oI) => ({
+          ...oI,
+          pages: (originalPages) => ({
+            ...originalPages,
+            selectTenant: CustomSelectTenant,
+            tenantManagement: CustomTenantManagement,
+          }),
+        }),
+      }),
+    ],
+  },
+});
+```
+
+## Next steps
+
+Besides tenant management, you can also explore other enterprise authentication features:
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/authentication/enterprise/tenant-discovery" label="Tenant discovery" />
+  <ReferenceCard href="/docs/authentication/enterprise/initial-setup" label="Initial setup" />
+  <ReferenceCard href="/docs/authentication/enterprise/manage-tenants" label="Manage tenants" />
+  <ReferenceCard href="/docs/additional-verification/user-roles/introduction" label="User roles" />
+  <ReferenceCard href="/docs/references/plugins/introduction" label="Plugins reference" />
+</ReferenceCard.Grid>

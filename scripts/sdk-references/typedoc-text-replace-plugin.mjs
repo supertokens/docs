@@ -55,6 +55,14 @@ export function load(app) {
       pattern: /# profile-details-react/g,
       replace: "# `@supertokens-plugins/profile-details-react`",
     },
+    {
+      pattern: /# tenants-nodejs/g,
+      replace: "# `@supertokens-plugins/tenants-nodejs`",
+    },
+    {
+      pattern: /# tenants-react/g,
+      replace: "# `@supertokens-plugins/tentants-react`",
+    },
   ];
 
   app.renderer.on(MarkdownPageEvent.END, (page) => {

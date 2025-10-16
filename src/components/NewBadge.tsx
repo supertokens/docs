@@ -6,9 +6,10 @@ const NewPages = [
   "/docs/additional-verification/captcha",
   "/docs/post-authentication/user-management/user-banning",
   "/docs/authentication/enterprise/tenant-discovery",
+  "/docs/authentication/enterprise/tenant-management-plugin",
   "/docs/deployment/telemetry",
   "/docs/post-authentication/user-management/progressive-profiling",
-  "/docs/post-authentication/user-management/user-profile",
+  "/docs/post-authentication/user-management/profiling",
 ];
 const NewCategories = ["Plugins"];
 
