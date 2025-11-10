@@ -38,6 +38,91 @@ Run the following command to export most of your data:
 mysqldump supertokens --fields-terminated-by ','  --fields-enclosed-by '"' --fields-escaped-by '\'  --no-create-info --tab /var/lib/mysql-files/
 ```
 
+:::info
+
+If you do not have permissions to write to the database filesystem you can use the following python script to export tables one by one:
+<Accordion>
+## Export script
+```python
+#!/usr/bin/env python3
+import subprocess
+import os
+import csv
+
+DB_HOST = "DB_HOST"
+DB_PORT = "3306"
+DB_USER = "DB_USER"
+DB_NAME = "DB_NAME"
+DB_PASS = "DB_PASS"
+
+def run_mysql_command(query):
+    """Run a mysql command and return the output"""
+    cmd = [
+        "mysql",
+        "-h", DB_HOST,
+        "-P", DB_PORT,
+        "-u", DB_USER,
+        f"-p{DB_PASS}",
+        "--batch",
+        "-e", query,
+        DB_NAME
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.stdout
+
+def main():
+    os.makedirs("./mysql", exist_ok=True)
+
+    print("Getting list of tables")
+    cmd = [
+        "mysql",
+        "-h", DB_HOST,
+        "-P", DB_PORT,
+        "-u", DB_USER,
+        f"-p{DB_PASS}",
+        "-N",
+        "-e", "SHOW TABLES",
+        DB_NAME
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"ERROR: Failed to get table list: {result.stderr}")
+        return
+
+    tables = [t.strip() for t in result.stdout.strip().split('\n') if t.strip()]
+    print(f"Found {len(tables)} tables")
+
+    for table in tables:
+        print(f"Exporting table: {table}")
+
+        query = f"SELECT * FROM {table}"
+        output = run_mysql_command(query)
+
+        if not output.strip():
+            print(f"  -> Table {table} is empty, skipping")
+            continue
+
+        lines = output.strip().split('\n')
+
+        output_file = f"./mysql/{table}.csv"
+        with open(output_file, 'w', newline='') as f:
+            csv_writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+
+            for line in lines:
+                fields = line.split('\t')
+                csv_writer.writerow(fields)
+
+        print(f"  -> Exported {len(lines)} rows")
+
+    print("Export complete!")
+
+if __name__ == "__main__":
+    main()
+```
+</Accordion>
+:::
+
 This creates CSV files for all tables in the `/var/lib/mysql-files/` directory.
 
 #### 3.2 Export the WebAuthn credentials table
@@ -72,6 +157,11 @@ Connect to your PostgreSQL database and disable triggers to prevent constraint v
 SET session_replication_role = 'replica';
 ```
 
+:::info
+If you cannot disable the triggers, use the order specified in the next step.
+The *With Order* shows you how to import everything one by one without triggering the constraints.
+:::
+
 #### 5.2 Import the standard tables
 
 For most tables, you can import the data directly.
@@ -79,16 +169,98 @@ For most tables, you can import the data directly.
 <Tabs>
 <TabItem value="without-order" label="Without specifying column order">
 ```sql
-COPY app_id_to_user_id FROM '/pg-data-host/app_id_to_user_id.txt' 
+COPY <table_name> FROM '/pg-data-host/<table_name>.csv' 
 CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
 ```
 </TabItem>
 
 <TabItem value="with-order" label="With specifying column order">
-```sql
-COPY app_id_to_user_id(app_id, user_id, primary_or_recipe_user_id, is_linked_or_is_a_primary_user, recipe_id) 
-FROM '/pg-data-host/app_id_to_user_id.txt' 
-CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
+```bash
+#!/bin/bash
+
+PG_HOST="PG_HOST"
+PG_PORT="5432"
+PG_USER="PG_USER"
+PG_DB="PG_DB"
+PG_PASS="PG_PASS"
+CSV_DIR="./mysql"
+
+import_table() {
+    local table=$1
+    local columns=$2
+    local csv_file="${CSV_DIR}/${table}.csv"
+
+    if [ ! -f "$csv_file" ]; then
+        echo "File not found: $csv_file, skipping"
+        return
+    fi
+
+    echo "Importing table: $table"
+
+    if [ -z "$columns" ] || [ "$columns" = "*" ]; then
+        PGPASSWORD=$PG_PASS psql -h $PG_HOST -p $PG_PORT -U $PG_USER -d $PG_DB -c \
+            "\\COPY $table FROM '$csv_file' WITH (FORMAT csv, HEADER true);"
+    else
+        PGPASSWORD=$PG_PASS psql -h $PG_HOST -p $PG_PORT -U $PG_USER -d $PG_DB -c \
+            "\\COPY $table ($columns) FROM '$csv_file' WITH (FORMAT csv, HEADER true);"
+    fi
+
+    if [ $? -eq 0 ]; then
+        echo "Successfully imported $table"
+    else
+        echo "ERROR importing $table"
+    fi
+}
+
+echo "Starting PostgreSQL import"
+
+import_table "apps" ""
+import_table "tenants" ""
+import_table "key_value" "app_id, tenant_id, name, value, created_at_time"
+import_table "all_auth_recipe_users" "app_id, tenant_id, user_id, primary_or_recipe_user_id, is_linked_or_is_a_primary_user, recipe_id, time_joined, primary_or_recipe_user_time_joined"
+import_table "app_id_to_user_id" "app_id, user_id, recipe_id, primary_or_recipe_user_id, is_linked_or_is_a_primary_user"
+import_table "bulk_import_users" "id, app_id, primary_user_id, raw_data, status, error_msg, created_at, updated_at"
+import_table "dashboard_user_sessions" "app_id, session_id, user_id, time_created, expiry"
+import_table "dashboard_users" "app_id, user_id, email, password_hash, time_joined"
+import_table "emailpassword_pswd_reset_tokens" "app_id, user_id, token, email, token_expiry"
+import_table "emailpassword_user_to_tenant" "app_id, tenant_id, user_id, email"
+import_table "emailpassword_users" "app_id, user_id, email, password_hash, time_joined"
+import_table "emailverification_tokens" "app_id, tenant_id, user_id, email, token, token_expiry"
+import_table "emailverification_verified_emails" "app_id, user_id, email"
+import_table "jwt_signing_keys" "app_id, key_id, key_string, algorithm, created_at"
+import_table "oauth_clients" "app_id, client_id, client_secret, enable_refresh_token_rotation, is_client_credentials_only"
+import_table "oauth_logout_challenges" "app_id, challenge, client_id, post_logout_redirect_uri, session_handle, state, time_created"
+import_table "oauth_m2m_tokens" "app_id, client_id, iat, exp"
+import_table "oauth_sessions" "gid, app_id, client_id, session_handle, external_refresh_token, internal_refresh_token, jti, exp"
+import_table "passwordless_codes" "app_id, tenant_id, code_id, device_id_hash, link_code_hash, created_at"
+import_table "passwordless_devices" "app_id, tenant_id, device_id_hash, email, phone_number, link_code_salt, failed_attempts"
+import_table "passwordless_user_to_tenant" "app_id, tenant_id, user_id, email, phone_number"
+import_table "passwordless_users" "app_id, user_id, email, phone_number, time_joined"
+import_table "role_permissions" "app_id, role, permission"
+import_table "roles" "app_id, role"
+import_table "session_access_token_signing_keys" "app_id, created_at_time, value"
+import_table "session_info" "app_id, tenant_id, session_handle, user_id, refresh_token_hash_2, session_data, expires_at, created_at_time, jwt_user_payload, use_static_key"
+import_table "tenant_first_factors" "connection_uri_domain, app_id, tenant_id, factor_id"
+import_table "tenant_required_secondary_factors" "connection_uri_domain, app_id, tenant_id, factor_id"
+import_table "tenant_thirdparty_providers" "connection_uri_domain, app_id, tenant_id, third_party_id, name, authorization_endpoint, authorization_endpoint_query_params, token_endpoint, token_endpoint_body_params, user_info_endpoint, user_info_endpoint_query_params, user_info_endpoint_headers, jwks_uri, oidc_discovery_endpoint, require_email, user_info_map_from_id_token_payload_user_id, user_info_map_from_id_token_payload_email, user_info_map_from_id_token_payload_email_verified, user_info_map_from_user_info_endpoint_user_id, user_info_map_from_user_info_endpoint_email, user_info_map_from_user_info_endpoint_email_verified"
+import_table "thirdparty_user_to_tenant" "app_id, tenant_id, user_id, third_party_id, third_party_user_id"
+import_table "thirdparty_users" "app_id, third_party_id, third_party_user_id, user_id, email, time_joined"
+import_table "totp_used_codes" "app_id, tenant_id, user_id, code, is_valid, expiry_time_ms, created_time_ms"
+import_table "tenant_configs" "connection_uri_domain, app_id, tenant_id, core_config, email_password_enabled, passwordless_enabled, third_party_enabled, is_first_factors_null"
+import_table "totp_user_devices" "app_id, user_id, device_name, secret_key, period, skew, verified, created_at"
+import_table "totp_users" "app_id, user_id"
+import_table "user_last_active" "app_id, user_id, last_active_time"
+import_table "user_metadata" "app_id, user_id, user_metadata"
+import_table "user_roles" "app_id, tenant_id, user_id, role"
+import_table "userid_mapping" "app_id, supertokens_user_id, external_user_id, external_user_id_info"
+import_table "webauthn_account_recovery_tokens" "app_id, tenant_id, user_id, email, token, expires_at"
+import_table "webauthn_generated_options" "app_id, tenant_id, id, challenge, email, rp_id, rp_name, origin, expires_at, created_at, user_presence_required, user_verification"
+import_table "webauthn_user_to_tenant" "app_id, tenant_id, user_id, email"
+import_table "webauthn_users" "app_id, user_id, email, rp_id, time_joined"
+
+echo ""
+echo "Import complete!"
+
 ```
 </TabItem>
 
@@ -210,11 +382,85 @@ SET session_replication_role = 'origin';
 
 Verify that all data migrated successfully by comparing record counts between your MySQL and PostgreSQL databases:
 
-```sql
--- Run on both databases
-SELECT COUNT(*) FROM users;
-SELECT COUNT(*) FROM sessions;
--- Add other tables as needed
+```bash
+#!/bin/bash
+
+MYSQL_HOST="DB_HOST"
+MYSQL_PORT="3306"
+MYSQL_USER="DB_USER"
+MYSQL_DB="DB_NAME"
+MYSQL_PASS="DB_PASS"
+
+PG_HOST="PG_HOST"
+PG_PORT="5432"
+PG_USER="PG_USER"
+PG_DB="PG_DB"
+PG_PASS="PG_PASS"
+
+echo "Comparing table row counts between MySQL and PostgreSQL"
+
+echo "Getting table list from MySQL"
+TABLES=$(mysql -h $MYSQL_HOST -P $MYSQL_PORT -u $MYSQL_USER -p$MYSQL_PASS \
+  -N -e "SHOW TABLES" $MYSQL_DB)
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to get table list from MySQL"
+    exit 1
+fi
+
+TOTAL_TABLES=$(echo "$TABLES" | wc -l)
+echo "Found $TOTAL_TABLES tables"
+echo ""
+
+MATCH_COUNT=0
+MISMATCH_COUNT=0
+ERROR_COUNT=0
+
+for TABLE in $TABLES; do
+    MYSQL_COUNT=$(mysql -h $MYSQL_HOST -P $MYSQL_PORT -u $MYSQL_USER -p$MYSQL_PASS \
+        -N -e "SELECT COUNT(*) FROM $TABLE" $MYSQL_DB 2>&1)
+
+    if [ $? -ne 0 ]; then
+        echo "$TABLE - MySQL: ERROR, PostgreSQL: -, Status: ERROR"
+        ERROR_COUNT=$((ERROR_COUNT + 1))
+        continue
+    fi
+
+    PG_COUNT=$(PGPASSWORD=$PG_PASS psql -h $PG_HOST -p $PG_PORT -U $PG_USER -d $PG_DB \
+        -t -c "SELECT COUNT(*) FROM $TABLE" 2>&1)
+
+    if [ $? -ne 0 ]; then
+        echo "$TABLE - MySQL: $MYSQL_COUNT, PostgreSQL: ERROR, Status: ERROR"
+        ERROR_COUNT=$((ERROR_COUNT + 1))
+        continue
+    fi
+
+    MYSQL_COUNT=$(echo $MYSQL_COUNT | xargs)
+    PG_COUNT=$(echo $PG_COUNT | xargs)
+
+    if [ "$MYSQL_COUNT" = "$PG_COUNT" ]; then
+        echo "$TABLE - MySQL: $MYSQL_COUNT, PostgreSQL: $PG_COUNT, Status: ✓ MATCH"
+        MATCH_COUNT=$((MATCH_COUNT + 1))
+    else
+        echo "$TABLE - MySQL: $MYSQL_COUNT, PostgreSQL: $PG_COUNT, Status: ✗ MISMATCH"
+        MISMATCH_COUNT=$((MISMATCH_COUNT + 1))
+    fi
+done
+
+echo "Summary:"
+echo "  Total tables:     $TOTAL_TABLES"
+echo "  Matching:         $MATCH_COUNT"
+echo "  Mismatched:       $MISMATCH_COUNT"
+echo "  Errors:           $ERROR_COUNT"
+echo ""
+
+if [ $MISMATCH_COUNT -eq 0 ] && [ $ERROR_COUNT -eq 0 ]; then
+    echo "✓ All tables match!"
+    exit 0
+else
+    echo "✗ Some tables have mismatches or errors"
+    exit 1
+fi
 ```
 
 If the numbers match, you have successfully migrated your SuperTokens data from `MySQL` to `PostgreSQL` :tada:
