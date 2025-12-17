@@ -8,6 +8,7 @@ const NewPages = [
   "/docs/authentication/enterprise/tenant-discovery",
   "/docs/authentication/enterprise/tenant-management-plugin",
   "/docs/deployment/telemetry",
+  "/docs/authentication/enterprise/saml",
   "/docs/post-authentication/user-management/progressive-profiling",
   "/docs/post-authentication/user-management/profiling",
 ];
