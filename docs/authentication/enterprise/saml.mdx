@@ -1,0 +1,190 @@
+---
+title: SAML
+hide_title: true
+sidebar_position: 10
+toc_max_heading_level: 4
+description: Add SAML authentication to your application
+page_type: tutorial
+recipe: thirdparty
+category: enterprise-login
+---
+
+# SAML Setup 
+
+## Overview
+
+The following guide shows you how to configure SAML with your SuperTokens integration.
+`SAML`, or Security Assertion Markup Language, is an open protocol that exchanges information between the authentication server and the client application.
+
+### How it works?
+
+Your `SAML` identity provider has a metadata file (`.xml`) that you or your end users need to upload to the `SAML` client.
+
+The `.xml` metadata file contains (amongst other things):
+- A unique entity ID that you must keep private. The `SAML` provider uses this to identify your application.
+- A public certificate that verifies the signature attached to the incoming `SAML` response.
+This ensures the response is coming from the expected Identity Provider.
+- Information about where to redirect the end user to when they click on the login button in your application. 
+This URL is to a website controlled by the `SAML` provider and asks the end user for their credentials.
+
+
+## Before you start
+
+<PaidFeatureCallout />
+
+These instructions assume that you already have gone through the main [quickstart guide](/docs/quickstart/introduction).
+If you have skipped that page please follow the tutorial and return here once you're done.
+
+
+:::warning no-title
+You need to use a SuperTokens core that is at least on version `11.3`.
+The feature is only available with the `Node.js` SDK.
+Support for `Python` and `Golang` is in active development.
+:::
+
+
+## Steps
+
+### 1. Get the SAML metadata from your Identity Provider
+
+Before configuring SuperTokens, you need to obtain the SAML metadata XML from your Identity Provider (IDP).
+This is typically available in your IDP's admin console as a downloadable XML file or a metadata URL.
+
+Common locations for metadata:
+- **Azure AD**: Enterprise Applications > Your App > Single sign-on > Federation Metadata XML
+- **Okta**: Applications > Your App > Sign On > SAML Metadata
+- **Google Workspace**: Apps > Web and mobile apps > Your App > Download metadata
+
+### 2. Initialize the SAML recipe in the backend SDK
+
+```typescript
+import { SuperTokens } from "supertokens-node";
+import Saml from "supertokens-node/recipe/saml";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "<SUPERTOKENS_CONNECTION_URI>",
+        apiKey: "<SUPERTOKENS_API_KEY>",
+    },
+    appInfo: {
+        appName: "App name",
+        apiDomain: "<API_DOMAIN>",
+        websiteDomain: "<WEBSITE_DOMAIN>",
+    },
+    recipeList: [
+        // other recipes
+        Saml.init(),
+    ]
+});
+
+```
+
+### 3. Create a new SAML client
+
+Use the metadata XML obtained in step 1 to create a SAML client.
+The `redirectURIs` should point to your application's callback URL where users will be redirected after authentication.
+
+:::info no-title
+This step assumes that you previously have created a SuperTokens tenant.
+If you have not, please follow the [initial setup guide](/docs/authentication/enterprise/initial-setup).
+:::
+
+```typescript
+import Saml from "supertokens-node/recipe/saml";
+
+async function createSamlClient() {
+  const result = await Saml.createOrUpdateClient({
+    tenantId: "<TENANT_ID>",
+    clientId: "<CLIENT_ID>",
+    clientSecret: "<CLIENT_SECRET>",
+    redirectURIs: ["https://your-app.com/auth/callback"],
+    defaultRedirectURI: "https://your-app.com/auth/callback",
+    metadataXML: "<METADATA_XML_FROM_IDP>",
+    allowIDPInitiatedLogin: true,
+    enableRequestSigning: true,
+  });
+
+  // Save the clientId for use in the ThirdParty provider configuration
+  console.log("Client ID:", result.clientId);
+}
+
+```
+
+
+| Name                   | Type                | Description                                                                                                            | Required |
+| ------------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------- |
+| `tenantId`               | `string`              | The unique identifier of the tenant for which the SAML client is being created or updated.                             | Yes      |
+| `clientId`               | `string`              | The unique identifier for the SAML client. If provided, updates the existing client; if omitted, creates a new client. | No       |
+| `clientSecret`           | `string`              | The secret key associated with the SAML client for authentication purposes.                                            | No       |
+| `redirectURIs`           | `string[]`            | An array of URIs where the user agent should be redirected after successful authentication.                            | Yes      |
+| `defaultRedirectURI`     | `string`              | The default URI to redirect to if no specific redirect URI is specified.                                               | Yes      |
+| `metadataXML`            | `string`              | The SAML metadata XML string containing configuration details for the Identity Provider.                               | Yes      |
+| `allowIDPInitiatedLogin` | `boolean`             | A flag indicating whether login requests initiated by the Identity Provider are allowed.                               | No       |
+| `enableRequestSigning`   | `boolean`             | A flag indicating whether SAML requests should be digitally signed for security.                                       | No       |
+| `userContext`            | `Record<string, any>` | An optional object containing additional context or metadata for the operation.                                        | No       |
+
+
+### 4. Configure your Identity Provider
+
+After creating the SAML client, you need to configure your Identity Provider with your application's Service Provider (SP) details.
+
+On the IDP side, configure the following properties:
+- **Entity ID**: Should match the `saml_sp_entity_id` value used in your [tenant configuration](/docs/authentication/enterprise/manage-tenants#update-a-tenant). The default value is `https://saml.supertokens.com`. 
+- **ACS URL** (Assertion Consumer Service URL): `<API_DOMAIN>/auth/<TENANT_ID>saml/callback`
+
+### 5. Add the ThirdParty provider
+
+Update your SuperTokens initialization to include the ThirdParty recipe with your SAML provider.
+The `thirdPartyId` must start with `saml-` followed by your custom identifier.
+
+```typescript
+import { SuperTokens } from "supertokens-node";
+import Saml from "supertokens-node/recipe/saml";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+SuperTokens.init({
+    supertokens: {
+        connectionURI: "<SUPERTOKENS_CONNECTION_URI>",
+        apiKey: "<SUPERTOKENS_API_KEY>",
+    },
+    appInfo: {
+        appName: "App name",
+        apiDomain: "<API_DOMAIN>",
+        websiteDomain: "<WEBSITE_DOMAIN>",
+    },
+    recipeList: [
+        Saml.init(),
+        ThirdParty.init({
+            signInAndUpFeature: {
+                providers: [
+                    {
+                        config: {
+                            // Name that will be shown on the login page
+                            name: "Azure SAML",
+                            // Must start with "saml-"
+                            thirdPartyId: "saml-azure",
+                            clients: [
+                                {
+                                    // The clientId from step 3
+                                    clientId: "<CLIENT_ID>",
+                                },
+                            ],
+                        },
+                    }
+                ],
+            },
+        }),
+    ]
+});
+
+```
+
+
+## See also
+
+<ReferenceCard.Grid>
+  <ReferenceCard href="/docs/authentication/enterprise/common-domain-login" label="Implement common domain login" />
+  <ReferenceCard href="/docs/authentication/enterprise/subdomain-login" label="Implement subdomain login" />
+  <ReferenceCard href="/docs/authentication/enterprise/manage-tenants" label="Manage tenants" />
+  <ReferenceCard href="/docs/authentication/enterprise/manage-apps" label="Manage apps" />
+</ReferenceCard.Grid>
