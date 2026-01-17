@@ -215,6 +215,7 @@ async function parseMdxContent(filePath: string, usePageTitle = false): Promise<
     FrontendCustomUITabs: "Tabs",
     FrontendPrebuiltUITabs: "Tabs",
     BackendTabs: "Tabs",
+    RepositoryTabs: "Tabs",
     NodePackageManagerCard: "Tabs",
     FrontendTabs: "Tabs",
     DatabaseTabs: "Tabs",
