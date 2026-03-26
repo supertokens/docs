@@ -120,7 +120,7 @@ export function PaidFeatureCallout(): JSX.Element {
                     <Steps.StepHeader>
                       <Text>
                         Add the newly created license key to{" "}
-                        <Link href="/docs/deployment/self-hosting/license-keys#license-keys">your Core Service</Link>.
+                        <Link href="/docs/deployment/self-host-supertokens#5-add-license-keys">your Core Service</Link>.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
