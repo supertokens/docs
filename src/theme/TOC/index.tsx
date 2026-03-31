@@ -19,7 +19,10 @@ export default function TOC({ className, toc, ...props }: Props): JSX.Element {
   // This should be updated to search for a value that is not that generic
   const parsedTocItems = filteredTocItems.map((tocItem) => ({
     ...tocItem,
-    value: tocItem.value.endsWith("Optional") ? tocItem.value.replace("Optional", "") : tocItem.value,
+    value:
+      typeof tocItem.value === "string" && tocItem.value.endsWith("Optional")
+        ? tocItem.value.replace("Optional", "")
+        : tocItem.value,
   }));
 
   return (
