@@ -73,12 +73,12 @@ function ExampleAppFormRoot() {
                   </Text>
                 </Form.Label>
                 <VisuallyHidden>
-                  <Text as="span">This is the URL of your app's API server.</Text>
+                  <Text as="span">This is the name of your application.</Text>
                 </VisuallyHidden>
                 <Form.Control asChild>
                   <TextField.Root
                     name="appName"
-                    placeholder="e.g. My awsome app"
+                    placeholder="e.g. My awesome app"
                     defaultValue={appInfo.appName}
                     onChange={onChangeInputValue}
                   />
@@ -99,7 +99,7 @@ function ExampleAppFormRoot() {
                       <Select.Item value="emailpassword">Email/Password</Select.Item>
                       <Select.Item value="passwordless">Passwordless</Select.Item>
                       <Select.Item value="thirdparty">Third Party</Select.Item>
-                      <Select.Item value="multifactorauth">Multi-Factory Authentication</Select.Item>
+                      <Select.Item value="multifactorauth">Multi-Factor Authentication</Select.Item>
                       <Select.Item value="multitenancy">Multi-Tenancy</Select.Item>
                     </Select.Content>
                   </Select.Root>

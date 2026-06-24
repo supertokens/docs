@@ -160,7 +160,7 @@ But there are exceptions to most rules.
 
 ## How to test your changes
 
-### Preqrequisites
+### Prerequisites
 
 Before running the actual checks you need to install some dependencies.
 
@@ -193,7 +193,7 @@ For install instructions check the [guide](https://docs.docker.com/get-docker/).
 Use the following commands to perform linting checks on the entire project:
 
 - `npm run lint:prettier`: Runs prettier on the `ts` files.
-- `npm run lint:vale`: Runs vale on the `MDX` files.
+- `npm run lint:vale`: Runs Vale on Markdown files and high-signal typo rules on TSX files.
 
 #### Validating code blocks
 

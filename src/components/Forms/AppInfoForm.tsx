@@ -53,12 +53,12 @@ export function AppInfoForm() {
                   <Text weight="bold">Application Name</Text>
                 </Form.Label>
                 <VisuallyHidden>
-                  <Text as="span">This is the URL of your app's API server.</Text>
+                  <Text as="span">This is the name of your application.</Text>
                 </VisuallyHidden>
                 <Form.Control asChild>
                   <TextField.Root
                     name="appName"
-                    placeholder="e.g. My awsome app"
+                    placeholder="e.g. My awesome app"
                     defaultValue={appInfo.appName}
                     onChange={onChangeInputValue}
                   />
@@ -98,7 +98,7 @@ export function AppInfoForm() {
                   <Text weight="bold">API Base Path</Text>
                 </Form.Label>
                 <VisuallyHidden>
-                  <Text as="span">SuperTokens will expose it's APIs scoped by this base API path.</Text>
+                  <Text as="span">SuperTokens will expose its APIs scoped by this base API path.</Text>
                 </VisuallyHidden>
                 <Form.Control asChild>
                   <TextField.Root name="apiBasePath" defaultValue={appInfo.apiBasePath} onChange={onChangeInputValue} />
