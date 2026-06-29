@@ -6,3 +6,4 @@ export * from "./FrontendPrebuiltUITabs";
 export * from "./ReactRouterVersionsTabs";
 export * from "./DatabaseTabs";
 export * from "./OSTabs";
+export * from "./RowndFrontendTabs";
