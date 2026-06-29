@@ -7,6 +7,7 @@ export * from "./NpmOrScriptsCard";
 export * from "./JavascriptHttpLibraryCard";
 export * from "./ReferenceCard/ReferenceCard";
 export * from "./PythonSyncAsyncCard";
+export * from "./PythonPackageManagerCard";
 export * from "./ThirdPartyBuiltinProvidersCard";
 export * from "./CodeSampleCard";
 export * from "./PasswordlessConfigCard";

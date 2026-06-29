@@ -19,6 +19,7 @@ export function NodePackageManagerSelect() {
         <Select.Item value="npm6">{`NPM6`}</Select.Item>
         <Select.Item value="yarn">yarn</Select.Item>
         <Select.Item value="pnpm">pnpm</Select.Item>
+        <Select.Item value="bun">bun</Select.Item>
       </Select.Content>
     </Select.Root>
   );

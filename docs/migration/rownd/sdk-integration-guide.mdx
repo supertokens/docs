@@ -1,0 +1,1095 @@
+---
+title: SDK Integration Guide
+hide_title: true
+sidebar_position: 2
+toc_max_heading_level: 3
+description: Configure the SuperTokens Rownd backend plugin and frontend SDKs.
+page_type: tutorial
+category: migration
+---
+
+# SDK integration guide
+
+<DescriptionText>
+  Configure the SuperTokens Rownd backend plugin and frontend SDKs to migrate users, create SuperTokens sessions, and keep using Rownd-style APIs.
+</DescriptionText>
+
+<Separator />
+
+## Overview
+
+This tutorial configures the backend and client SDKs used during the Rownd migration.
+By the end, your backend exposes Rownd-compatible plugin routes, your frontend or mobile app uses the SuperTokens Rownd-compatible Hub, and OAuth/OIDC clients can be migrated if your Rownd app uses them.
+
+## Before you start
+
+These instructions assume that you already have created an account in [the SuperTokens dashboard](https://supertokens.com/dashboard) and have deployed a SuperTokens Core service.
+After you have done that, enable the *Account Linking* feature in the created environment and copy the core connection information.
+
+
+:::info no-title
+
+The Rownd compatibility plugin is only available with NodeJS or Python at the moment.
+If your main backend uses another language or unsupported framework, deploy the NodeJS or Python backend as an authentication sidecar and route Rownd/SuperTokens auth traffic to it.
+Read [the complete guide](/docs/references/backend-sdks/other-frameworks) for more information on how to set it up.
+
+:::
+
+
+## Steps
+
+### 1. Configure the backend SDK
+
+<BackendTabs exclude={["go"]}>
+
+<BackendTabs.TabItem value="nodejs">
+
+#### 1.1 Install the SuperTokens SDK and Rownd plugin
+
+Install the base SuperTokens backend SDK together with the Rownd migration plugin. The SuperTokens SDK adds the auth middleware, recipe APIs, and session handling. The Rownd plugin adds the Rownd-compatible migration, Hub, profile, and OAuth compatibility routes.
+
+<NodePackageManagerCard>
+
+<NodePackageManagerCard.Content value="npm7+">
+
+```bash
+npm install supertokens-node @supertokens-plugins/rownd-nodejs
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="npm6">
+
+```bash
+npm install supertokens-node @supertokens-plugins/rownd-nodejs
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="yarn">
+
+```bash
+yarn add supertokens-node @supertokens-plugins/rownd-nodejs
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="pnpm">
+
+```bash
+pnpm add supertokens-node @supertokens-plugins/rownd-nodejs
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="bun">
+
+```bash
+bun add supertokens-node @supertokens-plugins/rownd-nodejs
+```
+
+</NodePackageManagerCard.Content>
+
+</NodePackageManagerCard>
+
+#### 1.2 Initialize SuperTokens
+
+Initialize the recipes that map to your Rownd auth methods, then add the Rownd plugin under `experimental.plugins`.
+
+:::info
+
+Contact the SuperTokens team before finalizing this setup for a complete plugin `appConfig` object based on your existing Rownd configuration.
+
+:::
+
+The setup has four parts:
+
+- `supertokens`: connects the backend SDK to SuperTokens Core.
+- `appInfo`: defines the public API and website domains used by SuperTokens and the Rownd Hub.
+- `recipeList`: enables the SuperTokens recipes used to replace Rownd auth behavior.
+- `experimental.plugins`: mounts the Rownd migration plugin routes under `apiBasePath`.
+
+```ts
+import SuperTokens from "supertokens-node";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
+import EmailVerification from "supertokens-node/recipe/emailverification";
+import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import Session from "supertokens-node/recipe/session";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import UserMetadata from "supertokens-node/recipe/usermetadata";
+import RowndMigrationPlugin from "@supertokens-plugins/rownd-nodejs";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: process.env.SUPERTOKENS_CONNECTION_URI!,
+    apiKey: process.env.SUPERTOKENS_API_KEY,
+  },
+  appInfo: {
+    appName: "My App",
+    apiDomain: "<API_DOMAIN>",
+    websiteDomain: process.env.WEBSITE_DOMAIN!,
+    apiBasePath: "<API_BASE_PATH>",
+  },
+  recipeList: [
+    AccountLinking.init({}),
+    Session.init(),
+    OAuth2Provider.init(),
+    UserMetadata.init(),
+    Passwordless.init({
+      contactMethod: "EMAIL_OR_PHONE",
+      flowType: "MAGIC_LINK",
+    }),
+    EmailVerification.init({ mode: "OPTIONAL" }),
+    ThirdParty.init({
+      signInAndUpFeature: {
+        providers: [
+          {
+            config: {
+              thirdPartyId: "google",
+              clients: [
+                {
+                  clientId: process.env.GOOGLE_CLIENT_ID!,
+                  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+                },
+              ],
+            },
+          },
+          {
+            config: {
+              thirdPartyId: "apple",
+              clients: [
+                {
+                  clientId: process.env.APPLE_CLIENT_ID!,
+                  clientSecret: process.env.APPLE_CLIENT_SECRET!,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    }),
+  ],
+  experimental: {
+    plugins: [
+      RowndMigrationPlugin.init({
+        rowndAppKey: process.env.ROWND_APP_KEY!,
+        rowndAppSecret: process.env.ROWND_APP_SECRET!,
+        enableDebugLogs: process.env.ROWND_ENABLE_DEBUG_LOGS === "true",
+        clientDomains: {
+          browser: process.env.WEBSITE_DOMAIN!,
+          browser_local: "http://localhost:3000",
+          mobile: "https://my-app.rownd-hub.supertokens.com",
+        },
+        appConfig: {
+          id: process.env.ROWND_APP_KEY!,
+          name: "My App",
+          signInMethods: [
+            { method: "email" },
+            { method: "phone" },
+            { method: "google", clientId: process.env.GOOGLE_CLIENT_ID },
+            { method: "apple", clientId: process.env.APPLE_CLIENT_ID },
+            { method: "anonymous", type: "guest", displayName: "Continue as guest" },
+          ],
+          profile: {
+            accountInformation: {
+              methods: {
+                email: { enabled: true },
+                phone: { enabled: true },
+                google: { enabled: true },
+                apple: { enabled: true },
+              },
+            },
+            personalInformation: { enabled: true },
+            preferences: { enabled: true },
+            signOutButton: { enabled: true },
+            deleteAccountButton: { enabled: true },
+          },
+        },
+      }),
+    ],
+  },
+});
+```
+
+#### 1.3 Add CORS and middleware
+
+Install SuperTokens middleware after CORS handling.
+
+:::important
+
+- Add the `middleware` BEFORE all your routes.
+- Add the `cors` middleware BEFORE the SuperTokens middleware as shown below.
+
+:::
+
+```ts
+import express from "express";
+import cors from "cors";
+import supertokens from "supertokens-node";
+import { middleware } from "supertokens-node/framework/express";
+
+const app = express();
+
+app.use(
+  cors({
+    origin: process.env.WEBSITE_DOMAIN,
+    allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+  }),
+);
+
+// IMPORTANT: CORS should be before this line.
+app.use(middleware());
+
+// ...your API routes
+```
+
+#### 1.4 Configure client domains
+
+By default, magic links are constructed using the `websiteDomain` that you pass in the SDK configuration.
+To test locally or to route the user to a mobile deep linked domain you can use the `clientDomains` plugin option.
+
+```ts
+RowndMigrationPlugin.init({
+  rowndAppKey: process.env.ROWND_APP_KEY!,
+  rowndAppSecret: process.env.ROWND_APP_SECRET!,
+  clientDomains: {
+    browser: "https://app.example.com",
+    browser_local: "http://localhost:3000",
+    mobile: "https://my-app.rownd-hub.supertokens.com",
+  },
+});
+```
+
+The client sends a `clientDomain` key, not a URL. The plugin looks up the key in `clientDomains` and rewrites links to that base URL.
+
+If no explicit key is sent:
+
+- Mobile Hub flows use `clientDomains.mobile`.
+- Browser Hub flows use `clientDomains.browser`.
+- If the selected key is missing, the plugin keeps the link on the Hub URL and only rewrites the path.
+
+</BackendTabs.TabItem>
+
+<BackendTabs.TabItem value="python">
+
+#### 1.1 Install the SuperTokens SDK and Rownd plugin
+
+Install the base SuperTokens Python SDK together with the Rownd migration plugin. Until the Rownd package is published to PyPI, install it from the `rownd-python` branch.
+
+<PythonPackageManagerCard>
+
+<PythonPackageManagerCard.Content value="pip">
+
+```bash
+pip install supertokens-python "supertokens-rownd @ git+https://github.com/supertokens/supertokens-plugins.git@rownd-python#subdirectory=packages/rownd-python"
+```
+
+</PythonPackageManagerCard.Content>
+
+<PythonPackageManagerCard.Content value="uv">
+
+```bash
+uv add supertokens-python "supertokens-rownd @ git+https://github.com/supertokens/supertokens-plugins.git@rownd-python#subdirectory=packages/rownd-python"
+```
+
+</PythonPackageManagerCard.Content>
+
+</PythonPackageManagerCard>
+
+#### 1.2 Initialize SuperTokens
+
+Python plugin configuration must include `api_base_path`, `api_domain`, `website_domain`, and `app_name` explicitly. Keep these values in sync with `InputAppInfo`.
+
+:::info no-title
+
+Contact the SuperTokens team before finalizing this setup for a complete plugin `app_config` object based on your existing Rownd configuration.
+
+:::
+
+The setup has four parts:
+
+- `supertokens_config`: connects the backend SDK to SuperTokens Core.
+- `app_info`: defines the public API and website domains used by SuperTokens and the Rownd Hub.
+- `recipe_list`: enables the SuperTokens recipes used to replace Rownd auth behavior.
+- `experimental.plugins`: mounts the Rownd migration plugin routes under `api_base_path`.
+
+```python
+from supertokens_python import (
+    InputAppInfo,
+    SupertokensConfig,
+    SupertokensExperimentalConfig,
+    init,
+)
+from supertokens_python.recipe import (
+    accountlinking,
+    emailverification,
+    oauth2provider,
+    passwordless,
+    session,
+    thirdparty,
+    usermetadata,
+)
+from supertokens_python.recipe.thirdparty import ProviderClientConfig, ProviderConfig, ProviderInput
+from supertokens_rownd import init as rownd_init
+from supertokens_rownd.types import RowndPluginConfig
+
+API_BASE_PATH = "<API_BASE_PATH>"
+API_DOMAIN = "<API_DOMAIN>"
+WEBSITE_DOMAIN = "https://app.example.com"
+
+init(
+    app_info=InputAppInfo(
+        app_name="My App",
+        api_domain=API_DOMAIN,
+        website_domain=WEBSITE_DOMAIN,
+        api_base_path=API_BASE_PATH,
+    ),
+    framework="fastapi",
+    mode="asgi",
+    supertokens_config=SupertokensConfig(
+        connection_uri="<SUPERTOKENS_CONNECTION_URI>",
+        api_key="<SUPERTOKENS_API_KEY>",
+    ),
+    recipe_list=[
+        accountlinking.init(),
+        session.init(),
+        oauth2provider.init(),
+        usermetadata.init(),
+        passwordless.init(
+            contact_config=passwordless.ContactEmailOrPhoneConfig(),
+            flow_type="MAGIC_LINK",
+        ),
+        emailverification.init(mode="OPTIONAL"),
+        thirdparty.init(
+            sign_in_and_up_feature=thirdparty.SignInAndUpFeature(
+                providers=[
+                    ProviderInput(
+                        config=ProviderConfig(
+                            third_party_id="google",
+                            clients=[
+                                ProviderClientConfig(
+                                    client_id="<GOOGLE_CLIENT_ID>",
+                                    client_secret="<GOOGLE_CLIENT_SECRET>",
+                                )
+                            ],
+                        )
+                    )
+                ]
+            )
+        ),
+    ],
+    experimental=SupertokensExperimentalConfig(
+        plugins=[
+            rownd_init(
+                RowndPluginConfig(
+                    rownd_app_key="<ROWND_APP_KEY>",
+                    rownd_app_secret="<ROWND_APP_SECRET>",
+                    api_base_path=API_BASE_PATH,
+                    api_domain=API_DOMAIN,
+                    website_domain=WEBSITE_DOMAIN,
+                    app_name="My App",
+                    client_domains={
+                        "browser": WEBSITE_DOMAIN,
+                        "browser_local": "http://localhost:3000",
+                        "mobile": "https://my-app.rownd-hub.supertokens.com",
+                    },
+                    app_config={
+                        "id": "<ROWND_APP_KEY>",
+                        "name": "My App",
+                        "signInMethods": [
+                            {"method": "email"},
+                            {"method": "phone"},
+                            {"method": "google", "clientId": "<GOOGLE_CLIENT_ID>"},
+                            {"method": "apple", "clientId": "<APPLE_CLIENT_ID>"},
+                            {"method": "anonymous", "type": "guest", "displayName": "Continue as guest"},
+                        ],
+                    },
+                )
+            )
+        ]
+    ),
+)
+```
+
+#### 1.3 Add CORS and middleware
+
+For FastAPI, use the `get_middleware()` and `get_all_cors_headers()` functions as shown below.
+
+```python
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+from supertokens_python import get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
+
+app = FastAPI()
+
+app.add_middleware(get_middleware())
+
+# TODO: Add APIs
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://app.example.com"
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type"] + get_all_cors_headers(),
+)
+
+# TODO: start server
+```
+
+#### 1.4 Configure client domains
+
+By default, magic links are constructed using the `website_domain` that you pass in the SDK configuration.
+To test locally or to route the user to a mobile deep linked domain you can use the `client_domains` plugin option.
+
+```python
+RowndPluginConfig(
+    rownd_app_key="<ROWND_APP_KEY>",
+    rownd_app_secret="<ROWND_APP_SECRET>",
+    client_domains={
+        "browser": "https://app.example.com",
+        "browser_local": "http://localhost:3000",
+        "mobile": "https://my-app.rownd-hub.supertokens.com",
+    },
+)
+```
+
+The client sends a `clientDomain` key, not a URL. The plugin looks up the key in `client_domains` and rewrites links to that base URL.
+
+If no explicit key is sent:
+
+- Mobile Hub flows use `client_domains["mobile"]`.
+- Browser Hub flows use `client_domains["browser"]`.
+- If the selected key is missing, the plugin keeps the link on the Hub URL and only rewrites the path.
+
+</BackendTabs.TabItem>
+
+</BackendTabs>
+
+### 2. Configure the frontend SDK
+
+After the backend plugin is deployed and reachable, configure each client application to use the SuperTokens Rownd-compatible Hub.
+
+Every client needs the same values configured on the backend:
+
+- `appKey`: the Rownd app key used by the backend plugin.
+- `apiDomain`: the public backend origin that hosts SuperTokens and the Rownd plugin routes.
+- `apiBasePath`: the SuperTokens API base path, for example `<API_BASE_PATH>`.
+- `clientDomain`: optional key from the backend `clientDomains` map.
+
+<RowndFrontendTabs>
+
+<RowndFrontendTabs.TabItem value="react">
+
+#### 2.1 Install the React SDK
+
+<NodePackageManagerCard>
+
+<NodePackageManagerCard.Content value="npm7+">
+
+```bash
+npm install @supertokens/rownd-react
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="npm6">
+
+```bash
+npm install @supertokens/rownd-react
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="yarn">
+
+```bash
+yarn add @supertokens/rownd-react
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="pnpm">
+
+```bash
+pnpm add @supertokens/rownd-react
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="bun">
+
+```bash
+bun add @supertokens/rownd-react
+```
+
+</NodePackageManagerCard.Content>
+
+</NodePackageManagerCard>
+
+#### 2.2 Add the provider
+
+Replace imports from `@rownd/react` with `@supertokens/rownd-react`, then add `RowndProvider` near the root of your application.
+
+```tsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { RowndProvider } from "@supertokens/rownd-react";
+import { App } from "./App";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <RowndProvider
+    appKey="<ROWND_APP_KEY>"
+    clientDomain="browser_local"
+    supertokens={{
+      appInfo: {
+        appName: "My App",
+        apiDomain: "<API_DOMAIN>",
+        apiBasePath: "<API_BASE_PATH>",
+      },
+    }}
+  >
+    <App />
+  </RowndProvider>,
+);
+```
+
+Do not manually include the Hub script in your HTML when using the React SDK. The provider injects the Hub script for you.
+
+#### 2.3 Use Rownd-compatible APIs
+
+```tsx
+import { RequireSignIn, SignedIn, SignedOut, useRownd } from "@supertokens/rownd-react";
+
+export function AuthControls() {
+  const { requestSignIn, signOut, user } = useRownd();
+
+  return (
+    <div>
+      <SignedOut>
+        <button onClick={() => requestSignIn({ method: "email" })}>Email</button>
+        <button onClick={() => requestSignIn({ method: "phone" })}>Phone</button>
+        <button onClick={() => requestSignIn({ method: "google" })}>Google</button>
+        <button onClick={() => requestSignIn({ method: "apple" })}>Apple</button>
+        <button onClick={() => requestSignIn({ method: "anonymous" })}>Guest</button>
+      </SignedOut>
+
+      <SignedIn>
+        <p>{user.data?.email || user.data?.phone_number || user.id}</p>
+        <button onClick={() => signOut()}>Sign out</button>
+      </SignedIn>
+
+      <RequireSignIn>
+        <p>Protected content</p>
+      </RequireSignIn>
+    </div>
+  );
+}
+```
+
+`requestSignIn()` supports Rownd-style options such as `identifier`, `auto_sign_in`, `init_data`, `post_login_redirect`, `include_user_data`, `redirect`, `intent`, `group_to_join`, `prevent_closing`, `method`, and `method_options`.
+
+</RowndFrontendTabs.TabItem>
+
+<RowndFrontendTabs.TabItem value="webjs">
+
+#### 2.1 Load the hosted Hub script
+
+Use this option when you do not use a package-based frontend framework.
+
+```html
+<script>
+  window._rphConfig = window._rphConfig || [];
+  window._rphConfig.push(["setClientDomain", "browser"]);
+</script>
+<script
+  async
+  src="https://rownd-hub.supertokens.com/static/scripts/rph.js?appKey=<ROWND_APP_KEY>&apiDomain=<API_DOMAIN>&apiBasePath=<API_BASE_PATH>"
+></script>
+<script
+  type="module"
+  async
+  src="https://rownd-hub.supertokens.com/static/scripts/rph.mjs?appKey=<ROWND_APP_KEY>&apiDomain=<API_DOMAIN>&apiBasePath=<API_BASE_PATH>"
+></script>
+```
+
+The script URL supports these query parameters:
+
+| Parameter | Required | Description |
+| --- | --- | --- |
+| `appKey` | Yes | Rownd app key used by the backend plugin. |
+| `apiDomain` | Yes | Public backend origin that hosts the plugin routes. |
+| `apiBasePath` | No | SuperTokens API base path. Defaults to `<API_BASE_PATH>`. |
+| `appVariantId` | No | Rownd app variant or sub-brand ID. |
+| `clientDomain` | No | Key from the backend plugin `clientDomains` map. |
+| `displayContext` | No | Usually `browser` for direct web integrations. |
+
+#### 2.2 Use runtime config
+
+Use `window._rphConfig` for optional settings that are easier to set in JavaScript than in the script URL.
+
+```html
+<script>
+  window._rphConfig = window._rphConfig || [];
+  window._rphConfig.push(["setPostLoginRedirect", "/profile"]);
+  window._rphConfig.push(["setPostSignOutRedirect", "/"]);
+  window._rphConfig.push(["setClientDomain", "browser_local"]);
+</script>
+```
+
+Add `_rphConfig` entries before the Hub script loads.
+
+</RowndFrontendTabs.TabItem>
+
+<RowndFrontendTabs.TabItem value="android">
+
+#### 2.1 Add the Android SDK
+
+The Android SDK is published through JitPack.
+
+```gradle
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://jitpack.io" }
+    }
+}
+```
+
+```gradle
+dependencies {
+    implementation 'com.github.supertokens:supertokens-rownd-android:v0.0.1-beta.4'
+}
+```
+
+The SDK requires `minSdk 26` or newer.
+
+#### 2.2 Add configuration values
+
+```gradle
+android {
+    defaultConfig {
+        manifestPlaceholders = [rowndDeepLinkScheme: "rowndsupertokens"]
+
+        buildConfigField "String", "ROWND_APP_KEY", '"<ROWND_APP_KEY>"'
+        buildConfigField "String", "ROWND_API_DOMAIN", '"<API_DOMAIN>"'
+        buildConfigField "String", "ROWND_API_BASE_PATH", '"<API_BASE_PATH>"'
+        buildConfigField "String", "ROWND_DEEP_LINK_SCHEME", '"rowndsupertokens"'
+    }
+}
+```
+
+#### 2.3 Configure deep links
+
+:::important
+
+Contact the SuperTokens team before configuring production deep links. We need to set up the link asset files for your Hub domain, including Android App Links metadata.
+
+:::
+
+Add one custom-scheme fallback filter and one verified HTTPS App Link filter.
+
+```xml
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="${rowndDeepLinkScheme}" />
+</intent-filter>
+
+<intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="https" android:host="my-app.rownd-hub.supertokens.com" />
+</intent-filter>
+```
+
+The HTTPS App Link domain should match `clientDomains.mobile` on the backend.
+
+#### 2.4 Initialize Rownd
+
+```kotlin
+import android.app.Application
+import io.rownd.android.Rownd
+import io.rownd.android.RowndConfigureOptions
+
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+
+        Rownd.configure(
+            this,
+            RowndConfigureOptions(
+                appKey = BuildConfig.ROWND_APP_KEY,
+                apiDomain = BuildConfig.ROWND_API_DOMAIN,
+                apiBasePath = BuildConfig.ROWND_API_BASE_PATH,
+                deepLinkScheme = BuildConfig.ROWND_DEEP_LINK_SCHEME,
+            )
+        )
+    }
+}
+```
+
+#### 2.5 Call protected APIs
+
+Rownd manages the SuperTokens session after sign-in. For `OkHttp`, add the SuperTokens interceptor to clients that call protected backend APIs.
+
+```kotlin
+import com.supertokens.session.SuperTokensInterceptor
+import okhttp3.OkHttpClient
+
+val client = OkHttpClient.Builder()
+    .addInterceptor(SuperTokensInterceptor())
+    .build()
+```
+
+</RowndFrontendTabs.TabItem>
+
+<RowndFrontendTabs.TabItem value="ios">
+
+#### 2.1 Add the iOS SDK
+
+In Xcode, add this Swift Package dependency:
+
+```text
+https://github.com/supertokens/supertokens-rownd-ios.git
+```
+
+Select the `SuperTokensRownd` package product and add it to your app target.
+
+#### 2.2 Configure Rownd
+
+```swift
+import SuperTokensRownd
+import UIKit
+
+func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
+) -> Bool {
+    Task {
+        await Rownd.configure(
+            launchOptions: launchOptions,
+            appKey: "<ROWND_APP_KEY>",
+            supertokens: RowndSuperTokensConfig(
+                appName: "My App",
+                apiDomain: "<API_DOMAIN>",
+                apiBasePath: "<API_BASE_PATH>"
+            )
+        )
+    }
+
+    return true
+}
+```
+
+#### 2.3 Configure links
+
+:::important
+
+Contact the SuperTokens team before configuring production Universal Links. We need to set up the link asset files for your Hub domain, including the Apple App Site Association file.
+
+:::
+
+Add an Associated Domains entitlement for the Hub domain used by the app.
+
+```xml
+<key>com.apple.developer.associated-domains</key>
+<array>
+    <string>applinks:my-app.rownd-hub.supertokens.com</string>
+</array>
+```
+
+Register the custom URL scheme fallback.
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>rowndsupertokens</string>
+        </array>
+    </dict>
+</array>
+```
+
+Forward custom URL scheme links and Universal Links to Rownd.
+
+```swift
+func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+    Rownd.handleSmartLink(url: url)
+}
+
+func application(
+    _ application: UIApplication,
+    continue userActivity: NSUserActivity,
+    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+) -> Bool {
+    guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+          let url = userActivity.webpageURL else {
+        return false
+    }
+
+    return Rownd.handleSmartLink(url: url)
+}
+```
+
+The Universal Link domain should match `clientDomains.mobile` on the backend.
+
+</RowndFrontendTabs.TabItem>
+
+<RowndFrontendTabs.TabItem value="react-native">
+
+#### 2.1 Install the React Native SDK
+
+<NodePackageManagerCard>
+
+<NodePackageManagerCard.Content value="npm7+">
+
+```bash
+npm install @supertokens/rownd-react-native
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="npm6">
+
+```bash
+npm install @supertokens/rownd-react-native
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="yarn">
+
+```bash
+yarn add @supertokens/rownd-react-native
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="pnpm">
+
+```bash
+pnpm add @supertokens/rownd-react-native
+```
+
+</NodePackageManagerCard.Content>
+
+<NodePackageManagerCard.Content value="bun">
+
+```bash
+bun add @supertokens/rownd-react-native
+```
+
+</NodePackageManagerCard.Content>
+
+</NodePackageManagerCard>
+
+React Native apps must use React Native `0.61` or newer.
+
+#### 2.2 Expo setup
+
+For Expo apps, add the plugin and a URL scheme to `app.json`.
+
+```json
+{
+  "expo": {
+    "scheme": "rowndsupertokens",
+    "plugins": ["@supertokens/rownd-react-native"]
+  }
+}
+```
+
+Use a development build or prebuild so native URL scheme configuration is generated.
+
+#### 2.3 Add the provider
+
+```tsx
+import { RowndProvider } from "@supertokens/rownd-react-native";
+
+export default function Root() {
+  return (
+    <RowndProvider
+      config={{
+        appKey: "<ROWND_APP_KEY>",
+        supertokens: {
+          appInfo: {
+            appName: "My App",
+            apiDomain: "<API_DOMAIN>",
+            apiBasePath: "<API_BASE_PATH>",
+          },
+        },
+        deepLinkScheme: "rowndsupertokens",
+      }}
+    >
+      <App />
+    </RowndProvider>
+  );
+}
+```
+
+#### 2.4 Register native links
+
+:::important
+
+Contact the SuperTokens team before configuring production deep links. We need to set up the link asset files for your Hub domain for the native platforms your React Native app supports.
+
+:::
+
+For iOS, register the same scheme in `Info.plist` and forward URL opens to React Native `Linking`.
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>rowndsupertokens</string>
+    </array>
+  </dict>
+</array>
+```
+
+For Android, register the scheme on the activity that hosts React Native and use `singleTask`.
+
+```xml
+<activity
+  android:name=".MainActivity"
+  android:exported="true"
+  android:launchMode="singleTask">
+  <intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="rowndsupertokens" />
+  </intent-filter>
+</activity>
+```
+
+#### 2.5 Use Rownd-compatible APIs
+
+```tsx
+import { Pressable, Text, View } from "react-native";
+import { useRownd } from "@supertokens/rownd-react-native";
+
+export function AuthControls() {
+  const { is_authenticated, requestSignIn, signOut, user, getAccessToken } = useRownd();
+
+  if (is_authenticated) {
+    return (
+      <View>
+        <Text>Welcome {user.data?.email ?? user.data?.first_name}</Text>
+        <Pressable onPress={() => getAccessToken()}>
+          <Text>Get access token</Text>
+        </Pressable>
+        <Pressable onPress={() => signOut()}>
+          <Text>Sign out</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <Pressable onPress={() => requestSignIn()}>
+      <Text>Sign in</Text>
+    </Pressable>
+  );
+}
+```
+
+</RowndFrontendTabs.TabItem>
+
+</RowndFrontendTabs>
+
+### 3. Validate client flows
+
+Test the following flows to validate your client integration:
+
+- Existing users can authenticate
+- User logins and sign ups are migrated to SuperTokens
+- Existing Rownd sessions migrate without forcing users to sign in again.
+- Deep links work as expected on mobile
+
+### 4. Migrate OAuth/OIDC clients {{optional}}
+
+If your Rownd application acts as an OAuth/OIDC provider, update clients to use SuperTokens discovery and endpoints after the SuperTokens team migrates your Rownd OAuth clients into SuperTokens Core.
+
+#### 4.1 Replace the discovery URL 
+
+Replace the Rownd discovery URL:
+
+```text
+https://api.rownd.io/oidc/{rowndAppId}/.well-known/openid-configuration
+```
+
+with your SuperTokens discovery URL:
+
+```text
+<API_DOMAIN>/<API_BASE_PATH>/.well-known/openid-configuration
+```
+
+#### 4.2 Replace hardcoded endpoints
+
+If a client hardcodes endpoints, update them like this:
+
+| Rownd endpoint | SuperTokens endpoint |
+| --- | --- |
+| `/oidc/{appId}/.well-known/openid-configuration` | `<API_BASE_PATH>/.well-known/openid-configuration` |
+| `/oidc/{appId}/auth` | `<API_BASE_PATH>/oauth/auth` |
+| `/oidc/{appId}/token` | `<API_BASE_PATH>/oauth/token` |
+| `/oidc/{appId}/me` | `<API_BASE_PATH>/oauth/userinfo` |
+| `/oidc/{appId}/jwks` | `<API_BASE_PATH>/jwt/jwks.json` |
+| `/oidc/{appId}/token/introspection` | `<API_BASE_PATH>/oauth/introspect` |
+| `/oidc/{appId}/token/revocation` | `<API_BASE_PATH>/oauth/revoke` |
+| `/oidc/{appId}/session/end` | `<API_BASE_PATH>/oauth/end_session` |
+
+Replace `<API_BASE_PATH>` with your configured backend API base path.
+
+#### 4.3 Confirm client IDs and tokens
+
+Continue using the OAuth credential `client_id` and `client_secret` that Rownd issued and the SuperTokens team migrated. Do not use the Rownd OIDC client configuration `id` as the OAuth `client_id`.
+
+Existing Rownd-issued OAuth tokens are not SuperTokens-issued tokens. After cutover, users should complete a new authorization flow against SuperTokens unless a separate token migration path is explicitly enabled for your project.
+
+#### 4.4 Validate OAuth
+
+Check discovery and JWKS:
+
+```bash
+curl <API_DOMAIN>/<API_BASE_PATH>/.well-known/openid-configuration
+curl <API_DOMAIN>/<API_BASE_PATH>/jwt/jwks.json
+```
+
+Start an authorization-code flow:
+
+```text
+<API_DOMAIN>/<API_BASE_PATH>/oauth/auth?client_id=CLIENT_ID&redirect_uri=REDIRECT_URI&response_type=code&scope=openid%20profile%20email%20phone%20offline_access
+```
+
+Exchange the code:
+
+```bash
+curl -X POST <API_DOMAIN>/<API_BASE_PATH>/oauth/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -u "CLIENT_ID:CLIENT_SECRET" \
+  -d "grant_type=authorization_code" \
+  -d "code=AUTH_CODE" \
+  -d "redirect_uri=REDIRECT_URI"
+```
+
+Fetch userinfo:
+
+```bash
+curl <API_DOMAIN>/<API_BASE_PATH>/oauth/userinfo \
+  -H "Authorization: Bearer ACCESS_TOKEN"
+```
