@@ -798,7 +798,7 @@ dependencyResolutionManagement {
 
 ```gradle
 dependencies {
-    implementation 'com.github.supertokens:supertokens-rownd-android:v0.0.1-beta.4'
+    implementation 'com.github.supertokens:supertokens-rownd-android:0.1.0'
 }
 ```
 
@@ -896,12 +896,14 @@ In Xcode, add this Swift Package dependency:
 https://github.com/supertokens/supertokens-rownd-ios.git
 ```
 
-Select the `SuperTokensRownd` package product and add it to your app target.
+Select the `Rownd` package product and add it to your app target.
+
+If you use CocoaPods instead, install the `RowndSupertokens` pod. The pod exposes the same Swift module, so app code still imports `Rownd`.
 
 #### 2.2 Configure Rownd
 
 ```swift
-import SuperTokensRownd
+import Rownd
 import UIKit
 
 func application(
@@ -959,7 +961,7 @@ Forward custom URL scheme links and Universal Links to Rownd.
 
 ```swift
 func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-    Rownd.handleSmartLink(url: url)
+    return Rownd.handleSmartLink(url: url)
 }
 
 func application(
@@ -1020,22 +1022,39 @@ bun add @supertokens/rownd-react-native
 
 </NodePackageManagerCard>
 
-React Native apps must use React Native `0.61` or newer.
+React Native apps must use React Native `0.61` or newer. Native builds also need Android `minSdkVersion` `26` or newer and iOS deployment target `14.0` or newer.
 
 #### 2.2 Expo setup
 
-For Expo apps, add the plugin and a URL scheme to `app.json`.
+For Expo apps, add the plugin, a URL scheme, and native platform versions to `app.json`. Use a development build or prebuild so native URL scheme and platform configuration is generated.
 
 ```json
 {
   "expo": {
     "scheme": "rowndsupertokens",
-    "plugins": ["@supertokens/rownd-react-native"]
+    "plugins": [
+      "@supertokens/rownd-react-native",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          },
+          "ios": {
+            "deploymentTarget": "14.0"
+          }
+        }
+      ]
+    ]
   }
 }
 ```
 
-Use a development build or prebuild so native URL scheme configuration is generated.
+Install the Expo build properties plugin before running prebuild:
+
+```bash
+npx expo install expo-build-properties
+```
 
 #### 2.3 Add the provider
 
@@ -1063,6 +1082,8 @@ export default function Root() {
 }
 ```
 
+The React Native provider accepts `appKey`, `supertokens.appInfo`, `deepLinkScheme`, and optional `hubUrlOverride`. Use `hubUrlOverride` only for staging or local Hub testing. React Native does not send a `clientDomain` prop; mobile Hub flows use the backend `clientDomains.mobile` default.
+
 #### 2.4 Register native links
 
 :::important
@@ -1071,7 +1092,13 @@ Contact the SuperTokens team before configuring production deep links. We need t
 
 :::
 
-For iOS, register the same scheme in `Info.plist` and forward URL opens to React Native `Linking`.
+For bare React Native iOS apps, install pods after adding the package:
+
+```bash
+cd ios && pod install
+```
+
+Register the same scheme in `Info.plist` and forward URL opens to React Native `Linking`. The React Native Rownd provider listens for `Linking` events and passes matching links to the native SDK.
 
 ```xml
 <key>CFBundleURLTypes</key>
@@ -1085,7 +1112,34 @@ For iOS, register the same scheme in `Info.plist` and forward URL opens to React
 </array>
 ```
 
-For Android, register the scheme on the activity that hosts React Native and use `singleTask`.
+Objective-C app delegate:
+
+```objc
+#import <React/RCTLinkingManager.h>
+
+- (BOOL)application:(UIApplication *)application
+            openURL:(NSURL *)url
+            options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
+{
+  return [RCTLinkingManager application:application openURL:url options:options];
+}
+```
+
+Swift app delegate:
+
+```swift
+import React
+
+override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+) -> Bool {
+    return RCTLinkingManager.application(app, open: url, options: options)
+}
+```
+
+For Android, register the scheme on the activity that hosts React Native and use `singleTask`. The scheme must match `config.deepLinkScheme`; `singleTask` is required so links opened while the app is running are delivered to the existing React Native activity.
 
 ```xml
 <activity
@@ -1101,6 +1155,21 @@ For Android, register the scheme on the activity that hosts React Native and use
 </activity>
 ```
 
+If your bare React Native Android app uses Google Sign-In, initialize the Rownd package from `MainActivity` before calling auth APIs:
+
+```kotlin
+import android.os.Bundle
+import com.facebook.react.ReactActivity
+import com.reactnativerowndplugin.RowndPluginPackage
+
+class MainActivity : ReactActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        RowndPluginPackage.preInit(this)
+    }
+}
+```
+
 #### 2.5 Use Rownd-compatible APIs
 
 ```tsx
@@ -1110,11 +1179,16 @@ import { useRownd } from "@supertokens/rownd-react-native";
 export function AuthControls() {
   const { is_authenticated, requestSignIn, signOut, user, getAccessToken } = useRownd();
 
+  async function callProtectedApi() {
+    const accessToken = await getAccessToken();
+    // Use accessToken in the Authorization header for your protected API call.
+  }
+
   if (is_authenticated) {
     return (
       <View>
         <Text>Welcome {user.data?.email ?? user.data?.first_name}</Text>
-        <Pressable onPress={() => getAccessToken()}>
+        <Pressable onPress={callProtectedApi}>
           <Text>Get access token</Text>
         </Pressable>
         <Pressable onPress={() => signOut()}>
@@ -1131,6 +1205,8 @@ export function AuthControls() {
   );
 }
 ```
+
+`requestSignIn()` accepts Rownd-style options such as `method`, `postSignInRedirect`, and `intent`. The `guest` method is treated as `anonymous`. On Android, forcing `email` or `phone` currently opens the Hub default flow rather than bypassing the method selector.
 
 </RowndFrontendTabs.TabItem>
 
