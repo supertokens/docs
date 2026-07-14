@@ -798,11 +798,11 @@ dependencyResolutionManagement {
 
 ```gradle
 dependencies {
-    implementation 'com.github.supertokens:supertokens-rownd-android:0.1.0'
+    implementation 'com.github.supertokens:supertokens-rownd-android:0.1.1'
 }
 ```
 
-The SDK requires `minSdk 26` or newer.
+The SDK requires `compileSdk 35` or newer, Kotlin Gradle plugin `2.1.0` or newer, and `minSdk 26` or newer.
 
 #### 2.2 Add configuration values
 
@@ -979,6 +979,190 @@ func application(
 ```
 
 The Universal Link domain should match `clientDomains.mobile` on the backend.
+
+</RowndFrontendTabs.TabItem>
+
+<RowndFrontendTabs.TabItem value="flutter">
+
+#### 2.1 Install the Flutter SDK
+
+Add the SuperTokens Rownd Flutter package to `pubspec.yaml`:
+
+```yaml
+dependencies:
+  supertokens_rownd_flutter: ^0.1.0
+  provider: ^6.1.2
+```
+
+Then fetch dependencies:
+
+```bash
+flutter pub get
+```
+
+#### 2.2 Configure Rownd
+
+Import the Flutter package and configure it before using any Rownd APIs.
+
+```dart
+import 'package:supertokens_rownd_flutter/rownd.dart';
+import 'package:supertokens_rownd_flutter/rownd_platform_interface.dart';
+
+final rowndPlugin = RowndPlugin();
+
+void configureRownd() {
+  rowndPlugin.configure(RowndConfig(
+    appKey: '<ROWND_APP_KEY>',
+    supertokens: RowndSuperTokensConfig(
+      appInfo: RowndSuperTokensAppInfo(
+        appName: 'My Flutter App',
+        apiDomain: '<API_DOMAIN>',
+        apiBasePath: '<API_BASE_PATH>',
+      ),
+    ),
+  ));
+}
+```
+
+The Flutter package is published as `supertokens_rownd_flutter`. Existing Rownd-style APIs remain available through `RowndPlugin`, but the package import and SuperTokens config are required for the migrated SDK.
+
+#### 2.3 Use Rownd-compatible APIs
+
+The SDK exposes Rownd state through a `ChangeNotifier`. Provide `rowndPlugin.state()` to your widget tree and use the plugin methods for sign-in, sign-out, account management, user profile calls, and access tokens.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:supertokens_rownd_flutter/rownd.dart';
+import 'package:supertokens_rownd_flutter/rownd_platform_interface.dart';
+import 'package:supertokens_rownd_flutter/state/global_state.dart';
+
+final rowndPlugin = RowndPlugin();
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  rowndPlugin.configure(RowndConfig(
+    appKey: '<ROWND_APP_KEY>',
+    supertokens: RowndSuperTokensConfig(
+      appInfo: RowndSuperTokensAppInfo(
+        appName: 'My Flutter App',
+        apiDomain: '<API_DOMAIN>',
+        apiBasePath: '<API_BASE_PATH>',
+      ),
+    ),
+  ));
+
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => rowndPlugin.state()),
+        Provider<RowndPlugin>.value(value: rowndPlugin),
+      ],
+      child: const MaterialApp(home: AuthControls()),
+    );
+  }
+}
+
+class AuthControls extends StatelessWidget {
+  const AuthControls({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<GlobalStateNotifier>(
+      builder: (_, rownd, __) {
+        final isAuthenticated = rownd.state.auth?.isAuthenticated ?? false;
+
+        return Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () {
+                final plugin = context.read<RowndPlugin>();
+                if (isAuthenticated) {
+                  plugin.signOut();
+                } else {
+                  plugin.requestSignIn();
+                }
+              },
+              child: Text(isAuthenticated ? 'Sign out' : 'Sign in'),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+```
+
+`requestSignIn()` accepts an optional `RowndSignInOptions` object. The migrated Flutter SDK currently exposes `postSignInRedirect` as the sign-in option.
+
+#### 2.4 Configure Android
+
+Flutter Android apps need JitPack because the native SuperTokens Rownd Android SDK is resolved from JitPack.
+
+```gradle
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://jitpack.io" }
+    }
+}
+```
+
+Set Android platform versions and Kotlin metadata support:
+
+```gradle
+android {
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 35
+    }
+}
+```
+
+Use Kotlin Gradle plugin `2.1.0` or newer. Also make your main activity extend `FlutterFragmentActivity` instead of `FlutterActivity`:
+
+```kotlin
+import io.flutter.embedding.android.FlutterFragmentActivity
+
+class MainActivity : FlutterFragmentActivity()
+```
+
+#### 2.5 Configure iOS
+
+The Flutter plugin depends on the `RowndSupertokens` CocoaPod. The pod exposes the Swift module as `Rownd`, so Flutter apps do not need app-level Swift import changes.
+
+Install pods after adding the package:
+
+```bash
+cd ios && pod install
+```
+
+If an existing lockfile pins an older `lottie-ios` version, update pods:
+
+```bash
+cd ios && pod update lottie-ios --repo-update
+```
+
+#### 2.6 Configure mobile links
+
+:::important
+
+Contact the SuperTokens team before configuring production deep links or Universal Links. We need to set up the link asset files for your Hub domain for the native platforms your Flutter app supports.
+
+:::
+
+Configure the same native link handling described in the Android and iOS tabs for Flutter's Android and iOS host apps. The HTTPS App Link or Universal Link domain should match `clientDomains.mobile` on the backend.
 
 </RowndFrontendTabs.TabItem>
 

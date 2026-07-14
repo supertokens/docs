@@ -6,6 +6,7 @@ const RowndFrontendTabOptions = [
   { label: "WebJS", value: "webjs" },
   { label: "Android", value: "android" },
   { label: "iOS", value: "ios" },
+  { label: "Flutter", value: "flutter" },
   { label: "React Native", value: "react-native" },
 ];
 
