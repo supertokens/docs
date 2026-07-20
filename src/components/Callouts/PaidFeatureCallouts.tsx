@@ -19,12 +19,12 @@ export function MFAPaidFeatureCallout() {
             only start charging you once you enable the feature in production using the provided production license key.
           </p>
           <p>
-            For managed service users, you can click on the "enable paid features" button on{" "}
-            <a href="https://supertokens.com/dashboard-saas" target="_blank">
-              our dashboard
+            For managed service users, open our{" "}
+            <a href="https://supertokens.com/dashboard" target="_blank">
+              SaaS Dashboard
             </a>
-            , and follow the steps from there on. Once enabled, this feature is free on the provided development
-            environment.
+            , select the relevant Managed deployment, and enable the feature from Features. Changes are saved
+            automatically. Once enabled, this feature is free on the provided development environment.
           </p>
         </div>
       </div>
@@ -75,12 +75,12 @@ export function AccountLinkingFeatureCallout() {
             only start charging you once you enable the feature in production using the provided production license key.
           </p>
           <p>
-            For managed service users, you can click on the "enable paid features" button on{" "}
-            <a href="https://supertokens.com/dashboard-saas" target="_blank">
-              our dashboard
+            For managed service users, open our{" "}
+            <a href="https://supertokens.com/dashboard" target="_blank">
+              SaaS Dashboard
             </a>
-            , and follow the steps from there on. Once enabled, this feature is free on the provided development
-            environment.
+            , select the relevant Managed deployment, and enable the feature from Features. Changes are saved
+            automatically. Once enabled, this feature is free on the provided development environment.
           </p>
         </div>
       </div>
