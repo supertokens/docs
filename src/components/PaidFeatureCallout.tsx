@@ -56,7 +56,7 @@ export function PaidFeatureCallout(): JSX.Element {
                     <Steps.StepHeader>
                       <Text>
                         Login into the{" "}
-                        <Link href="https://supertokens.com/dashboard-saas" target="_blank">
+                        <Link href="https://supertokens.com/dashboard" target="_blank">
                           SaaS dashboard
                         </Link>
                         .
@@ -66,7 +66,7 @@ export function PaidFeatureCallout(): JSX.Element {
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Select the <em>Managed</em> tab and click on the <em>Core</em> that you are working with.
+                        Select the <em>Managed</em> tab and open the deployment that you are working with.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
@@ -80,8 +80,8 @@ export function PaidFeatureCallout(): JSX.Element {
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Click <em>Edit</em> and check the features you want to enable. When you're done, click the{" "}
-                        <em>Save</em> button to submit the changes.
+                        Open <em>Features</em> and toggle the features you want to enable. Changes are saved
+                        automatically.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
@@ -95,7 +95,7 @@ export function PaidFeatureCallout(): JSX.Element {
                     <Steps.StepHeader>
                       <Text>
                         Login into the{" "}
-                        <Link href="https://supertokens.com/dashboard-saas" target="_blank">
+                        <Link href="https://supertokens.com/dashboard" target="_blank">
                           SaaS dashboard
                         </Link>
                         .
@@ -105,14 +105,14 @@ export function PaidFeatureCallout(): JSX.Element {
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Select the <em>Self-Hosted</em> tab and create a new license key.
+                        Select the <em>Self-hosted</em> tab and create a new license key.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
                   <Steps.Step>
                     <Steps.StepHeader>
                       <Text>
-                        Check the features you want to use, fill in the rest of the fields and submit the form.
+                        Open the license key and toggle the features you want to use. Changes are saved automatically.
                       </Text>
                     </Steps.StepHeader>
                   </Steps.Step>
