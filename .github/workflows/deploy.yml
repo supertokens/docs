@@ -1,13 +1,23 @@
-name: Deploy
-run-name: Deploy to ${{ github.ref_name == 'master' && 'the production website' || 'a preview website' }}
+name: Build
 
 on:
   pull_request:
     paths:
       - "docs/**"
-      - "static/**"
-      - "src/**"
+      - "components/**"
+      - "islands/**"
+      - "openapi/**"
+      - "public/**"
+      - "scripts/blume/**"
+      - "blume.config.ts"
+      - "components.ts"
+      - "microfrontends.jsonc"
+      - "theme.css"
+      - "tsconfig.json"
+      - "vercel.json"
+      - ".github/workflows/deploy.yml"
       - "package-lock.json"
+      - "package.json"
   push:
     branches:
       - master
@@ -21,50 +31,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22.12"
           cache: "npm"
           cache-dependency-path: "package-lock.json"
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build Docusaurus Site
+      - name: Build Blume site
         run: npm run build
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: docusaurus-build
-          path: build
+          name: blume-build
+          path: dist
           retention-days: 1
-
-  trigger:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set STAGE environment variable
-        shell: bash
-        run: |
-          if [[ "${{ github.ref_name }}" == "master" ]]; then
-            STAGE="production"
-          else
-            STAGE="preview"
-          fi
-
-          echo "STAGE=$STAGE" >> $GITHUB_ENV
-
-      - name: Trigger the backend website CI
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.BACKEND_WEBSITE_TOKEN }}
-          script: |
-            github.rest.actions.createWorkflowDispatch({
-                owner: 'supertokens',
-                repo: 'supertokens-backend-website',
-                workflow_id: 'release-documentation-changes.yml',
-                ref: 'master',
-                inputs: {
-                  "run-id": `${{ github.run_id }}`,
-                  "stage":  "${{ env.STAGE }}",
-                }
-              })

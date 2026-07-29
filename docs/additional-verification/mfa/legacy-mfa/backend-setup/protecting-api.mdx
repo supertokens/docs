@@ -1,18 +1,9 @@
 ---
-id: protecting-api
 title: Protecting API routes
-hide_title: true
-sidebar_position: 3
-description: >-
-  Protect API routes by enforcing 2FA using session claim validators in various
-  programming languages.
-page_type: guide
-recipe: mfa
-category: multi-factor-authentication
+description: Protect API routes by enforcing 2FA using session claim validators in various programming languages.
+sidebar:
+  order: 3
 ---
-
-
-# Protecting API routes
 
 In the previous steps, we saw the a session is created after the first factor, with `SecondFactorClaim` set to false, and then after the second factor is completed, we update that value to true.
 
@@ -20,13 +11,11 @@ In the previous steps, we saw the a session is created after the first factor, w
 
 We want to protect all the application APIs such that they are accessible only when `SecondFactorClaim` is `true` - indicating that the user has completed 2FA. We can do this by by overriding the `getGlobalClaimValidators` function in the Session recipe.
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<Tabs>
+<Tab title="Node.js">
 
 ```tsx
 import Session from "supertokens-node/recipe/session";
-import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // REMOVE_FROM_OUTPUT
-declare const SecondFactorClaim: BooleanClaim; // REMOVE_FROM_OUTPUT
 
 Session.init({
     override: {
@@ -44,10 +33,10 @@ Session.init({
 
 ```
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
+</Tab>
+<Tab title="Go">
 
-```go
+```go {10,11,12,18,19,20,21,22}
 import (
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/claims"
@@ -57,23 +46,19 @@ import (
 
 func main() {
 
-	// highlight-start
 	_, SecondFactorClaimValidator := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
-	// highlight-end
 
 	session.Init(&sessmodels.TypeInput{
 		Override: &sessmodels.OverrideStruct{
 			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
                 
-				// highlight-start
 				(*originalImplementation.GetGlobalClaimValidators) = func(userId string, claimValidatorsAddedByOtherRecipes []claims.SessionClaimValidator, tenantId string, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
 					claimValidatorsAddedByOtherRecipes = append(claimValidatorsAddedByOtherRecipes,
 						SecondFactorClaimValidator.HasValue(true, nil, nil))
 					return claimValidatorsAddedByOtherRecipes, nil
 				}
-				// highlight-end
 
 				return originalImplementation
 			},
@@ -82,10 +67,10 @@ func main() {
 }
 ```
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
+</Tab>
+<Tab title="Python">
 
-```python
+```python {17,18,19,20,21,22,23,24,25,26,27}
 from typing import List, Dict, Any
 from supertokens_python.recipe.session.claims import BooleanClaim
 from supertokens_python.recipe import session
@@ -102,7 +87,6 @@ SecondFactorClaim = BooleanClaim(
 
 def override_session_functions(original_implementation: RecipeInterface):
 
-    # highlight-start
     async def get_global_claim_validators(
         tenant_id: str,
         user_id: str,
@@ -114,7 +98,6 @@ def override_session_functions(original_implementation: RecipeInterface):
             SecondFactorClaim.validators.has_value(True)
         ]
 
-    # highlight-end
 
     original_implementation.get_global_claim_validators = get_global_claim_validators
     return original_implementation
@@ -123,41 +106,37 @@ def override_session_functions(original_implementation: RecipeInterface):
 session.init(override=session.InputOverrideConfig(override_session_functions))
 ```
 
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</Tabs>
 
 ## 2. Protecting specific API routes
 
 If instead, you want to enforce 2FA on certain API routes, you can add the validator only when calling the `verifySession` function:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<Tabs>
+<Tab title="Node.js">
 
-```tsx
+```tsx {8,9,10,11}
 import express from "express";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express";
-import { BooleanClaim } from "supertokens-node/recipe/session/claims"; // REMOVE_FROM_OUTPUT
-declare const SecondFactorClaim: BooleanClaim; // REMOVE_FROM_OUTPUT
 
 let app = express();
 
 app.post("/like-comment", verifySession({
-    // highlight-start
     overrideGlobalClaimValidators: (globalValidators) => [
         ...globalValidators, 
         SecondFactorClaim.validators.hasValue(true),
     ]
-    // highlight-end
 }), (req: SessionRequest, res) => {
     //....
 });
 ```
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
+</Tab>
+<Tab title="Go">
 
-```go
+```go {11,12,13,21,22,23,24,25}
 import (
 	"net/http"
 
@@ -168,11 +147,9 @@ import (
 )
 
 func main() {
-	// highlight-start
 	_, SecondFactorClaimValidator := claims.BooleanClaim("2fa-completed", func(userId, tenantId string, userContext supertokens.UserContext) (interface{}, error) {
 		return false, nil
 	}, nil)
-	// highlight-end
 
 	http.ListenAndServe("SERVER ADDRESS", corsMiddleware(
 		supertokens.Middleware(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -180,13 +157,11 @@ func main() {
 			if r.URL.Path == "/like-comment" {
 
 				session.VerifySession(&sessmodels.VerifySessionOptions{
-					// highlight-start
 					OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
 						globalClaimValidators = append(globalClaimValidators,
 							SecondFactorClaimValidator.HasValue(true, nil, nil))
 						return globalClaimValidators, nil
 					},
-					// highlight-end
 				}, likeCommentAPI).ServeHTTP(rw, r)
 				return
 			}
@@ -203,10 +178,10 @@ func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
 	// If it comes here, the user has completed 2fa.
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
+</Tab>
+<Tab title="Python">
 
-```python
+```python {15,16,17}
 from supertokens_python.recipe.session.framework.fastapi import verify_session
 from supertokens_python.recipe.session import SessionContainer
 from fastapi import Depends
@@ -217,15 +192,13 @@ SecondFactorClaim = BooleanClaim(
 )
 
 
-@app.post("/like_comment")  # type: ignore
+@app.post("/like_comment")  
 async def like_comment(
     session: SessionContainer = Depends(
         verify_session(
-            # highlight-start
             # We add the SecondFactorClaim's has_value(True) validator
             override_global_claim_validators=lambda global_validators, session, user_context: global_validators
             + [SecondFactorClaim.validators.has_value(True)]
-            # highlight-end
         )
     )
 ):
@@ -234,9 +207,9 @@ async def like_comment(
 
 ```
 
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</Tabs>
 
-:::info Important
+:::info[Important]
 If the `SecondFactorClaim` claim validator fails, then the SDK will send a `403` response.
 :::

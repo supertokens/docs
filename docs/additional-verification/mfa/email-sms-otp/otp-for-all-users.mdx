@@ -1,23 +1,13 @@
 ---
-id: otp-for-all-users
 title: OTP required for all users
-hide_title: true
-sidebar_position: 1
-description: >-
-  Implement a multi-factor authentication policy requiring all users to complete
-  an OTP challenge.
-page_type: guide
-recipe: mfa
-category: multi-factor-authentication
+description: Implement a multi-factor authentication policy requiring all users to complete an OTP challenge.
+sidebar:
+  order: 1
 ---
-
-
-# OTP required for all users
 
 This page shows how to implement an MFA policy that requires all users to complete an OTP challenge before accessing your application. The OTP can be sent via email or phone.
 
-:::note
-Assume that the first factor is email password or social login, but the same set of steps applies to other first factor types as well.
+:::note[Assume that the first factor is email password or social login, but the same set of steps applies to other first factor types as well.]
 :::
 
 ## Single tenant setup
@@ -25,10 +15,10 @@ Assume that the first factor is email password or social login, but the same set
 ### Backend setup
 To start with, configure the backend in the following way:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<Tabs>
+<Tab title="Node.js">
 
-```ts
+```ts {29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,61,62,63,64,65,66,67,68,69,70}
 import supertokens, { User, RecipeUserId, } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
 import ThirdParty from "supertokens-node/recipe/thirdparty"
@@ -57,7 +47,6 @@ supertokens.init({
         EmailPassword.init({
             //...
         }),
-        // highlight-start
         Passwordless.init({
             contactMethod: "EMAIL",
             flowType: "USER_INPUT_CODE"
@@ -85,13 +74,11 @@ supertokens.init({
                 };
             }
         }),
-        // highlight-end
         MultiFactorAuth.init({
             firstFactors: [
                 MultiFactorAuth.FactorIds.EMAILPASSWORD,
                 MultiFactorAuth.FactorIds.THIRDPARTY
             ],
-            // highlight-start
             override: {
                 functions: (originalImplementation) => {
                     return {
@@ -102,23 +89,21 @@ supertokens.init({
                     }
                 }
             }
-            // highlight-end
         })
     ]
 })
 ```
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
+</Tab>
+<Tab title="Go">
 
-:::note
-At the moment this feature is not supported through the Go SDK.
+:::note[At the moment this feature is not supported through the Go SDK.]
 :::
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
+</Tab>
+<Tab title="Python">
 
-```python
+```python {48}
 from supertokens_python import init, InputAppInfo, SupertokensConfig
 from supertokens_python.recipe import multifactorauth, accountlinking
 from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig, MFARequirementList
@@ -166,7 +151,6 @@ def override_functions(original_implementation: RecipeInterface):
         required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
         user_context: Dict[str, Any],
     ) -> MFARequirementList:
-        # highlight-next-line
         return [FactorIds.OTP_EMAIL]
 
     original_implementation.get_mfa_requirements_for_auth = (
@@ -184,7 +168,7 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
@@ -195,11 +179,11 @@ init(
 )
 ```
 
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</Tabs>
 
 - Notice that the Passwordless recipe initializes in the `recipeList`. In this example, only email-based OTP is enabled, with `contactMethod` set to `EMAIL` and `flowType` to `USER_INPUT_CODE` (that is, `otp`). If you want to use phone SMS-based OTP, set the contact method to `PHONE`. If you want to give users both options, or for some users use email, and for others use phone, set `contactMethod` to `EMAIL_OR_PHONE`.
-- We have also enabled the account linking feature since it's required for MFA to work. The above enables account linking for second factor only, but if you also want to enable it for first factor, see [this section](/docs/post-authentication/account-linking/automatic-account-linking).
+- We have also enabled the account linking feature since it's required for MFA to work. The above enables account linking for second factor only, but if you also want to enable it for first factor, see [this section](/post-authentication/account-linking/automatic-account-linking).
 - Notice that `shouldRequireVerification: false` configures account linking. It means that the second factor can link to the first factor even though the first factor is not verified. If you want to do email verification of the first factor before setting up the second factor (for example if the first factor is email password, and the second is phone OTP), then you can set this boolean to `true`, and also init the email verification recipe on the frontend and backend in `REQUIRED` mode.
 - The `getMFARequirementsForAuth` function is overridden to indicate that `otp-email` must be completed before the user can access the app. Notice that `userId` is not checked there, and `otp-email` is returned for all users. You can also return `otp-phone` instead if you want users to complete the OTP challenge via a phone SMS. Finally, if you want to give users an option for email or phone, you can return the following array from the function:
 
@@ -238,24 +222,23 @@ The `v` being `false` indicates that there are still factors that are pending. A
 
 Indicating that the user has finished all required factors, and should be allowed to access the app.
 
-:::caution
-If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` and `flowType` are set correctly.
+:::warning[If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` and `flowType` are set correctly.]
 :::
 
 
 ### Frontend setup
 
-<UIType.Switch />
+<UITypeSwitch />
 
-<UIType.PrebuiltUIContent>
+<VariantContent storageKey="ui-type" value="prebuilt">
 
 We start by modifying the `init` function call on the frontend like this:
 
-<FrontendPrebuiltUITabs>
+<Tabs>
 
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
+<Tab title="Reactjs">
 
-```tsx
+```tsx {16,17,18,19,20,21,22,23,24}
 import supertokens from "supertokens-auth-react"
 import ThirdParty from "supertokens-auth-react/recipe/thirdparty"
 import EmailPassword from "supertokens-auth-react/recipe/emailpassword"
@@ -271,7 +254,6 @@ supertokens.init({
     recipeList: [
         ThirdParty.init(/* ... */),
         EmailPassword.init( /* ... */),
-        // highlight-start
         Passwordless.init({
             contactMethod: "EMAIL"
         }),
@@ -281,26 +263,20 @@ supertokens.init({
                 MultiFactorAuth.FactorIds.THIRDPARTY
             ]
         })
-        // highlight-end
     ]
 })
 ```
 
-</FrontendPrebuiltUITabs.TabItem>
+</Tab>
 
-<FrontendPrebuiltUITabs.TabItem value="angular">
+<Tab title="Angular">
 
 You have to make changes to the auth route configuration, as well as to the `supertokens-web-js` SDK configuration at the root of your application:
 
 This change is in your auth route configuration.
 
-```tsx
+```tsx {12,13,14,15,16,17,18,19,20}
 // this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
-import {init as supertokensUIInit} from "supertokens-auth-react-script";
-import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty"
-import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword"
-import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless"
-import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
 
 supertokensUIInit({
     appInfo: {
@@ -311,7 +287,6 @@ supertokensUIInit({
     recipeList: [
         supertokensUIThirdParty.init(/* ... */),
         supertokensUIEmailPassword.init( /* ... */),
-        // highlight-start
         supertokensUIPasswordless.init({
             contactMethod: "EMAIL"
         }),
@@ -321,14 +296,13 @@ supertokensUIInit({
                 supertokensUIMultiFactorAuth.FactorIds.THIRDPARTY
             ]
         })
-        // highlight-end
     ]
 })
 ```
 
 This change goes in the `supertokens-web-js` SDK configuration at the root of your application:
 
-```tsx
+```tsx {13,14}
 import SuperTokens from 'supertokens-web-js';
 import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
 import Passwordless from "supertokens-web-js/recipe/passwordless";
@@ -341,32 +315,29 @@ SuperTokens.init({
     },
     recipeList: [
         // other recipes...
-        // highlight-start
         MultiFactorAuth.init(),
         Passwordless.init()
-        // highlight-end
     ],
 });
 ```
 
-</FrontendPrebuiltUITabs.TabItem>
+</Tab>
 
-</FrontendPrebuiltUITabs>
+</Tabs>
 
 - Like on the backend, the `passwordless` recipe initializes in the `recipeList`. The `contactMethod` needs to be consistent with the backend setting.
 - The `MultiFactorAuth` recipe is also initialized, and the first factors to use are included. In this case, that would be `emailpassword` and `thirdparty` - same as the backend.
 
 Next, add the Passwordless pre-built UI when rendering the SuperTokens component:
 
-<FrontendPrebuiltUITabs>
+<Tabs>
 
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
+<Tab title="Reactjs">
 
-<Question
-    question="Do you use react-router-dom?">
-<Answer title="Yes">
+<Tabs>
+<Tab title="Yes">
 
-```tsx
+```tsx {16}
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui"; 
@@ -382,9 +353,7 @@ function App() {
         <Router>
           <div className="fill">
             <Routes>
-              // highlight-start 
               {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])}
-              // highlight-end 
               // ... other routes
             </Routes>
           </div>
@@ -395,11 +364,11 @@ function App() {
 }
 ```
 
-</Answer>
+</Tab>
 
-<Answer title="No">
+<Tab title="No">
 
-```tsx
+```tsx {9,10,11}
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
 import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui"; 
@@ -408,56 +377,52 @@ import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifa
 import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
 
 function App() {
-  // highlight-start
   if (canHandleRoute([EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])) {
       return getRoutingComponent([EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])
   }
-  // highlight-end
   return (
     <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>
   );
 }
 ```
 
-</Answer>
+</Tab>
 
-</Question>
+</Tabs>
 
-</FrontendPrebuiltUITabs.TabItem>
+</Tab>
 
-<FrontendPrebuiltUITabs.TabItem value="angular">
+<Tab title="Angular">
 
-:::success
-This step is not required for non React apps, since all the pre-built UI components are already added into the bundle.
+:::success[This step is not required for non React apps, since all the pre-built UI components are already added into the bundle.]
 :::
 
-</FrontendPrebuiltUITabs.TabItem>
+</Tab>
 
-</FrontendPrebuiltUITabs>
+</Tabs>
 
 With the above configuration, users see `emailpassword` or social login UI when they visit the auth page. After completing that, users redirect to `/auth/mfa/otp-email` (assuming that the `websiteBasePath` is `/auth`) where they are asked to complete the OTP challenge. The UI for this screen looks like:
 - [Factor Setup UI](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/passwordless-mfa--setup-email) (This is in case the first factor doesn't provide an email for the user. In this example, the first factor does provide an email since it's email password or social login).
 - [Verification UI](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/passwordless-mfa--verification).
 
-:::caution
-If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` is set correctly.
+:::warning[If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` is set correctly.]
 :::
 
-</UIType.PrebuiltUIContent>
+</VariantContent>
 
-<UIType.CustomUIContent>
+<VariantContent storageKey="ui-type" value="custom">
 
 We start by initializing the MFA and Passwordless recipe on the frontend like this:
 
-<FrontendCustomUITabs>
+<Tabs>
 
-<FrontendCustomUITabs.TabItem value="web">
+<Tab title="Web">
 
-<NpmOrScriptsCard>
+<Tabs>
 
-<NpmOrScriptsCard.Content value="npm">
+<Tab title="npm">
 
-```tsx
+```tsx {13,14}
 import SuperTokens from 'supertokens-web-js';
 import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
 import Passwordless from "supertokens-web-js/recipe/passwordless";
@@ -470,22 +435,17 @@ SuperTokens.init({
     },
     recipeList: [
         // other recipes...
-        // highlight-start
         MultiFactorAuth.init(),
         Passwordless.init()
-        // highlight-end
     ],
 });
 ```
 
-</NpmOrScriptsCard.Content>
+</Tab>
 
-<NpmOrScriptsCard.Content value="scripts">
+<Tab title="Script tag">
 
-```tsx
-import supertokens from "supertokens-web-js-script";
-import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
-import supertokensPasswordless from "supertokens-web-js-script/recipe/passwordless";
+```tsx {9,10}
 supertokens.init({
     appInfo: {
         apiDomain: "...",
@@ -494,68 +454,64 @@ supertokens.init({
     },
     recipeList: [
         // other recipes...
-        // highlight-start
         supertokensMultiFactorAuth.init(),
         supertokensPasswordless.init()
-        // highlight-end
     ],
 });
 ```
 
-</NpmOrScriptsCard.Content>
+</Tab>
 
 
-</NpmOrScriptsCard>
+</Tabs>
 
-</FrontendCustomUITabs.TabItem>
+</Tab>
 
-<FrontendCustomUITabs.TabItem value="mobile">
+<Tab title="Mobile">
 
-:::success
-This step is not applicable for mobile apps. Please continue reading.
+:::success[This step is not applicable for mobile apps. Please continue reading.]
 :::
 
-</FrontendCustomUITabs.TabItem>
+</Tab>
 
-</FrontendCustomUITabs>
+</Tabs>
 
-After the first factor login, you should start by [checking the access token payload and see if the MFA claim's `v` boolean is `false`](../frontend-setup#step-2-checking-the---custv-boolean-value-in-the-mfa-claim--cust). If it's not, then the user can redirect to the application page.
+After the first factor login, you should start by [checking the access token payload and see if the MFA claim's `v` boolean is `false`](/additional-verification/mfa/initial-setup#12-add-the-mfa-flow). If it's not, then the user can redirect to the application page.
 
-If it's `false`, the frontend then needs to [call the MFA endpoint](../frontend-setup#mfa-info-endpoint) to get information about which factor the user should complete next. Based on the backend configuration in this page, the `next` array contains `["otp-email"]`.
+If it's `false`, the frontend then needs to [call the MFA endpoint](/additional-verification/mfa/initial-setup#the-mfa-info-endpoint) to get information about which factor the user should complete next. Based on the backend configuration in this page, the `next` array contains `["otp-email"]`.
 
 Two possibilities exist here:
 - Case 1: The user needs to set up an email to send the OTP to. This only happens if the first factor doesn't provide an email from the user (for example, if you used phone-based `otp` as the first factor). In this example on this doc, an email is always obtained from the first factor, so you do not need to build UI for this step (but this will still be discussed later on).
 - Case 2: The user already has an email associated with them and need to complete the OTP challenge.
 
-We can know which case it is by checking if the `emails` object returned from [MFA Info endpoint](../frontend-setup#mfa-info-endpoint) contains any emails associated with the `otp-email` key. If the `emails["otp-email"]` property of the response is `undefined` or an empty array, then it's case 1, else it's case 2.
+We can know which case it is by checking if the `emails` object returned from [MFA Info endpoint](/additional-verification/mfa/initial-setup#the-mfa-info-endpoint) contains any emails associated with the `otp-email` key. If the `emails["otp-email"]` property of the response is `undefined` or an empty array, then it's case 1, else it's case 2.
 
 
 #### Case 1 implementation: User needs to enter their email
-In this case, a form needs to be created wherein the user can enter their email. Once they submit the form, the [`createCode` API](/docs/passwordless/custom-ui/login-otp) needs to be called.
+In this case, a form needs to be created wherein the user can enter their email. Once they submit the form, the [`createCode` API](/authentication/passwordless/initial-setup#21-creating-and-sending-the-otp) needs to be called.
 
-After this API call, you can show the user the enter OTP screen, and call the [`consumeCode` API](/docs/passwordless/custom-ui/login-otp#step-3-verifying-the-input-otp). If the API call returns a `RESTART_FLOW_ERROR`, you can handle this by asking the user to enter their email once again and then call the `createCode` function.
+After this API call, you can show the user the enter OTP screen, and call the [`consumeCode` API](/authentication/passwordless/initial-setup#23-verifying-the-otp). If the API call returns a `RESTART_FLOW_ERROR`, you can handle this by asking the user to enter their email once again and then call the `createCode` function.
 
 #### Case 2 implementation: User needs to complete the OTP challenge
 
-This case is when the user already has an email associated with their account and you can directly send a code to that email. You can get the email to send the code to from the result of the [MFA Info endpoint](../frontend-setup#mfa-info-endpoint). Specifically, from the response, you can read the email from the `emails` property like this: `emails["otp-email"][0]`. The first item in the array of email is picked since the emails are ordered based on:
+This case is when the user already has an email associated with their account and you can directly send a code to that email. You can get the email to send the code to from the result of the [MFA Info endpoint](/additional-verification/mfa/initial-setup#the-mfa-info-endpoint). Specifically, from the response, you can read the email from the `emails` property like this: `emails["otp-email"][0]`. The first item in the array of email is picked since the emails are ordered based on:
 - Index 0 contains the email that belongs to the session's user. If the user's first factor was email password, the email in the 0th index of the array is that email.
 - The other emails in the array (if they exist), are from other login methods for this user ordered based on the oldest login method first.
 
-You can even show a UI here asking the user to pick an email from the array if you like. Either way, when you have an email, you can call the [`createCode` API](/docs/passwordless/custom-ui/login-otp) to send the code to that email.
+You can even show a UI here asking the user to pick an email from the array if you like. Either way, when you have an email, you can call the [`createCode` API](/authentication/passwordless/initial-setup#21-creating-and-sending-the-otp) to send the code to that email.
 
-After this API call, you can show the user the enter OTP screen, and call the [`consumeCode` API](/docs/passwordless/custom-ui/login-otp#step-3-verifying-the-input-otp). If the API call returns a `RESTART_FLOW_ERROR`, you can handle this by calling the `createCode` function once again in the background.
+After this API call, you can show the user the enter OTP screen, and call the [`consumeCode` API](/authentication/passwordless/initial-setup#23-verifying-the-otp). If the API call returns a `RESTART_FLOW_ERROR`, you can handle this by calling the `createCode` function once again in the background.
 
-:::note
-Notice that in Case 2, there is no UI for the user to enter an email. That happens. The user only sees the enter OTP screen.
+:::note[Notice that in Case 2, there is no UI for the user to enter an email. That happens. The user only sees the enter OTP screen.]
 :::
 
 We recommend that you add a sign out button when showing the second factor (case 1 or case 2) so that users can use this to escape out of the flow in case they are unable to complete the second factor. When the sign out button is clicked, you want to:
 - Call the `await clearLoginAttemptInfo()` function (if on web) to clear the state that's set in the browser storage when calling the `createCode` function.
 - Call the sign out function / API to clear the tokens.
 
-On successful verification of the code, the `otp-email` factor is marked as completed and the `v` value is updated in the session based on if there are any more factors that the user needs to complete. The next step would be to check this `v` value in the MFA claim and redirect the user to the application page, or get information about the next factor using the [MFA info endpoint](../frontend-setup#mfa-info-endpoint).
+On successful verification of the code, the `otp-email` factor is marked as completed and the `v` value is updated in the session based on if there are any more factors that the user needs to complete. The next step would be to check this `v` value in the MFA claim and redirect the user to the application page, or get information about the next factor using the [MFA info endpoint](/additional-verification/mfa/initial-setup#the-mfa-info-endpoint).
 
-</UIType.CustomUIContent>
+</VariantContent>
 
 ## Multi tenant setup
 
@@ -565,10 +521,10 @@ In a multi-tenancy setup, you may want to enable email / phone OTP for all users
 
 To start, initialize the Passwordless and the MultiFactorAuth recipes in the following way:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<Tabs>
+<Tab title="Node.js">
 
-```ts
+```ts {29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56}
 import supertokens, { User, RecipeUserId, } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
 import ThirdParty from "supertokens-node/recipe/thirdparty"
@@ -597,7 +553,6 @@ supertokens.init({
         EmailPassword.init({
             //...
         }),
-        // highlight-start
         Passwordless.init({
             contactMethod: "EMAIL",
             flowType: "USER_INPUT_CODE"
@@ -626,20 +581,18 @@ supertokens.init({
             }
         }),
         MultiFactorAuth.init()
-        // highlight-end
     ]
 })
 ```
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
+</Tab>
+<Tab title="Go">
 
-:::note
-At the moment this feature is not supported through the Go SDK.
+:::note[At the moment this feature is not supported through the Go SDK.]
 :::
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
+</Tab>
+<Tab title="Python">
 
 ```python
 from supertokens_python import init, InputAppInfo, SupertokensConfig
@@ -685,7 +638,7 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
         multifactorauth.init(),
         accountlinking.init(should_do_automatic_account_linking=should_do_automatic_account_linking)
@@ -693,14 +646,14 @@ init(
 )
 ```
 
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</Tabs>
 
 Unlike the single tenant setup, no configuration is provided to the `MultiFactorAuth` recipe because all the necessary configuration is done on a tenant level.
 
-<BackendTabs additionalValues={[{ value: "curl", label: "cURL" }, { value: "dashboard", label: "Dashboard" }]}>
+<Tabs>
 
-<BackendTabs.TabItem value="nodejs">
+<Tab title="Node.js">
 
 To configure otp-email requirement for a tenant, the following API can be called:
 
@@ -728,18 +681,17 @@ async function createNewTenant() {
 - In the above, the `firstFactors` are set to `["emailpassword", "thirdparty"]` to indicate that the first factor can be either `emailpassword` or `thirdparty`.
 - The `requiredSecondaryFactors` is set to `["otp-email"]` to indicate that OTP email is required for all users in this tenant. The default implementation of `getMFARequirementsForAuth` in the `MultiFactorAuth` takes this into account.
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
+</Tab>
+<Tab title="Go">
 
-:::note
-At the moment this feature is not supported through the Go SDK.
+:::note[At the moment this feature is not supported through the Go SDK.]
 :::
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
+</Tab>
+<Tab title="Python">
 
-<PythonSyncAsyncCard>
-<PythonSyncAsyncCard.Content value="asyncio">
+<Tabs>
+<Tab title="Asyncio">
 
 ```python
 from supertokens_python.recipe.multitenancy.asyncio import create_or_update_tenant
@@ -764,8 +716,8 @@ async def create_new_tenant():
         pass
 ```
 
-</PythonSyncAsyncCard.Content>
-<PythonSyncAsyncCard.Content value="syncio">
+</Tab>
+<Tab title="Syncio">
 
 ```python
 from supertokens_python.recipe.multitenancy.syncio import create_or_update_tenant
@@ -791,12 +743,12 @@ def create_new_tenant():
         pass
 ```
 
-</PythonSyncAsyncCard.Content>
-</PythonSyncAsyncCard>
+</Tab>
+</Tabs>
 
-</BackendTabs.TabItem>
+</Tab>
 
-<BackendTabs.TabItem value="curl">
+<Tab title="cURL">
 
 To configure otp-email requirement for a tenant, the following API can be called:
 
@@ -814,17 +766,17 @@ curl --location --request PUT 'http://localhost:3567/recipe/multitenancy/tenant/
 - In the above, the `firstFactors` are set to `["emailpassword", "thirdparty"]` to indicate that the first factor can be either `emailpassword` or `thirdparty`.
 - The `requiredSecondaryFactors` is set to `["otp-email"]` to indicate that OTP email is required for all users in this tenant. The default implementation of `getMFARequirementsForAuth` in the `MultiFactorAuth` takes this into account.
 
-</BackendTabs.TabItem>
+</Tab>
 
-<BackendTabs.TabItem value="dashboard" className="tab-with-background">
+<Tab title="Dashboard">
 
-<img src="/img/dashboard/tenant-management/enable-tp-ep-emailotp.png" alt="Enable EmailPassword and ThirdParty, OTP-Email"/>
+<img src="/docs/img/dashboard/tenant-management/enable-tp-ep-emailotp.png" alt="Enable EmailPassword and ThirdParty, OTP-Email"/>
 
 As shown above, enable **Email Password** and **Third Party** in the Login methods section and enable **OTP - Email** in the Secondary Factors Section.
 
-</BackendTabs.TabItem>
+</Tab>
 
-</BackendTabs>
+</Tabs>
 
 
 Once the user finishes the first factor (for example, with `emailpassword`), their session access token payload looks like this:
@@ -855,23 +807,22 @@ The `v` being `false` indicates that there are still factors that are pending. A
 
 Indicating that the user has finished all required factors, and should be allowed to access the app.
 
-:::caution
-If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` and `flowType` are set correctly.
+:::warning[If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` and `flowType` are set correctly.]
 :::
 
 
 ### Frontend setup
 
 
-<UIType.PrebuiltUIContent>
+<VariantContent storageKey="ui-type" value="prebuilt">
 
 We start by modifying the `init` function call on the frontend like this:
 
-<FrontendPrebuiltUITabs>
+<Tabs>
 
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
+<Tab title="Reactjs">
 
-```tsx
+```tsx {14,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37}
 import supertokens from "supertokens-auth-react"
 import ThirdParty from "supertokens-auth-react/recipe/thirdparty"
 import EmailPassword from "supertokens-auth-react/recipe/emailpassword"
@@ -885,7 +836,6 @@ supertokens.init({
         apiDomain: "...",
         websiteDomain: "...",
     },
-    // highlight-next-line
     usesDynamicLoginMethods: true,
     recipeList: [
         ThirdParty.init({
@@ -894,7 +844,6 @@ supertokens.init({
         EmailPassword.init({
             //...
         }),
-        // highlight-start
         Passwordless.init({
             contactMethod: "EMAIL"
         }),
@@ -911,27 +860,20 @@ supertokens.init({
                 }
             }
         })
-        // highlight-end
     ]
 })
 ```
 
-</FrontendPrebuiltUITabs.TabItem>
+</Tab>
 
-<FrontendPrebuiltUITabs.TabItem value="angular">
+<Tab title="Angular">
 
 You have to make changes to the auth route configuration, as well as to the `supertokens-web-js` SDK configuration at the root of your application:
 
 This change is in your auth route configuration.
 
-```tsx
+```tsx {9,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32}
 // this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
-import {init as supertokensUIInit} from "supertokens-auth-react-script";
-import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty"
-import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword"
-import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
-import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless"
-import supertokensUIMultitenancy from "supertokens-auth-react-script/recipe/multitenancy"
 
 supertokensUIInit({
     appInfo: {
@@ -939,7 +881,6 @@ supertokensUIInit({
         apiDomain: "...",
         websiteDomain: "...",
     },
-    // highlight-next-line
     usesDynamicLoginMethods: true,
     recipeList: [
         supertokensUIThirdParty.init({
@@ -948,7 +889,6 @@ supertokensUIInit({
         supertokensUIEmailPassword.init({
             //...
         }),
-        // highlight-start
         supertokensUIPasswordless.init({
             contactMethod: "EMAIL"
         }),
@@ -965,17 +905,13 @@ supertokensUIInit({
                 }
             }
         })
-        // highlight-end
     ]
 })
 ```
 
 This change goes in the `supertokens-web-js` SDK configuration at the root of your application:
 
-```tsx
-import supertokens from "supertokens-web-js-script";
-import MultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
-import Session from "supertokens-web-js-script/recipe/session";
+```tsx {9,10}
 
 supertokens.init({
     appInfo: {
@@ -984,17 +920,15 @@ supertokens.init({
         appName: "...",
     },
     recipeList: [
-        // highlight-start
         Session.init(),
         MultiFactorAuth.init(),
-        // highlight-end
     ],
 });
 ```
 
-</FrontendPrebuiltUITabs.TabItem>
+</Tab>
 
-</FrontendPrebuiltUITabs>
+</Tabs>
 
 - Like on the backend, the `Passwordless` recipe initializes in the `recipeList`. Make sure that the configuration for it is consistent with what's on the backend.
 - The `MultiFactorAuth` recipe is also initialized. Notice that unlike the single tenant setup, the `firstFactors` are not specified here. That information is fetched based on the `tenantId` you provide the SDK with.
@@ -1003,15 +937,14 @@ supertokens.init({
 
 Next, add the Passwordless pre-built UI when rendering the SuperTokens component:
 
-<FrontendPrebuiltUITabs>
+<Tabs>
 
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
+<Tab title="Reactjs">
 
-<Question
-    question="Do you use react-router-dom?">
-<Answer title="Yes">
+<Tabs>
+<Tab title="Yes">
 
-```tsx
+```tsx {16}
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
@@ -1027,9 +960,7 @@ function App() {
         <Router>
           <div className="fill">
             <Routes>
-              // highlight-start 
               {getSuperTokensRoutesForReactRouterDom(reactRouterDOM, [EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])}
-              // highlight-end 
               // ... other routes
             </Routes>
           </div>
@@ -1040,11 +971,11 @@ function App() {
 }
 ```
 
-</Answer>
+</Tab>
 
-<Answer title="No">
+<Tab title="No">
 
-```tsx
+```tsx {9,10,11}
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
 import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
@@ -1053,48 +984,44 @@ import { MultiFactorAuthPreBuiltUI } from "supertokens-auth-react/recipe/multifa
 import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
 
 function App() {
-  // highlight-start
   if (canHandleRoute([EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])) {
       return getRoutingComponent([EmailPasswordPreBuiltUI, ThirdPartyPreBuiltUI, PasswordlessPreBuiltUI, MultiFactorAuthPreBuiltUI])
   }
-  // highlight-end
   return (
     <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>
   );
 }
 ```
 
-</Answer>
+</Tab>
 
-</Question>
+</Tabs>
 
-</FrontendPrebuiltUITabs.TabItem>
+</Tab>
 
-<FrontendPrebuiltUITabs.TabItem value="angular">
+<Tab title="Angular">
 
-:::success
-This step is not required for non React apps, since all the pre-built UI components are already added into the bundle.
+:::success[This step is not required for non React apps, since all the pre-built UI components are already added into the bundle.]
 :::
 
-</FrontendPrebuiltUITabs.TabItem>
+</Tab>
 
-</FrontendPrebuiltUITabs>
+</Tabs>
 
 With the above configuration, users see the first and second factor based on the tenant configuration. For the tenant configured above, users see email password or social login first. After completing that, users redirect to `/auth/mfa/otp-email` (assuming that the `websiteBasePath` is `/auth`) where they are asked to complete the OTP challenge. The UI for this screen looks like:
 - [Factor Setup UI](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/passwordless-mfa--setup-email) (This is in case the first factor doesn't provide an email for the user. In this example, the first factor does provide an email since it's email password or social login).
 - [Verification UI](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/passwordless-mfa--verification).
 
-:::caution
-If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` is set correctly.
+:::warning[If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` is set correctly.]
 :::
 
-</UIType.PrebuiltUIContent>
+</VariantContent>
 
-<UIType.CustomUIContent>
+<VariantContent storageKey="ui-type" value="custom">
 
 The steps here are the same as in [the single tenant setup above](#frontend-setup).
 
-</UIType.CustomUIContent>
+</VariantContent>
 
 ## Protecting frontend and backend routes
 
@@ -1104,5 +1031,5 @@ See the section on [protecting frontend and backend routes](../protect-routes).
 By default, the email template used for otp-email login is [as shown here](https://github.com/SuperTokens/email-sms-templates?tab=readme-ov-file#otp-login), and the default SMS template is [as shown here](https://github.com/SuperTokens/email-sms-templates?tab=readme-ov-file#otp-login-1). The method for sending them is via an email and SMS sending service that is provided.
 
 If you would like to learn more about this, or change the content of the email, or the method by which they are sent, checkout the email / SMS delivery section in the recipe docs:
-- [Email delivery configuration](/docs/platform-configuration/email-delivery)
-- [SMS delivery configuration](/docs/platform-configuration/sms-delivery)
+- [Email delivery configuration](/platform-configuration/email-delivery)
+- [SMS delivery configuration](/platform-configuration/sms-delivery)

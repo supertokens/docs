@@ -5,10 +5,8 @@ This guide provides all the information needed to set up, build, and contribute 
 
 ## Overview
 
-The documentation project relies on the [Docusaurus](https://docusaurus.io/) framework to transform `MDX` files into an actual static website. MDX allows us to embed React components in the content, unlocking rich, interactive documentation experiences.
-
-That being said, there are several things that are added on top of the Docusaurus utilities in order to adjust the tooling to our needs.
-Those are presented throughout this document.
+The documentation site uses [Blume](https://useblume.dev/) to build Markdown and MDX into a static website.
+Blume provides file-based navigation, local search, OpenAPI references, and built-in documentation components.
 
 ## How to run the project
 
@@ -16,14 +14,14 @@ Those are presented throughout this document.
 
 To work with the documentation project locally, ensure you have the following tools installed:
 
-- [Node.js](https://nodejs.org/en/download/) (version 18 or higher)
+- [Node.js](https://nodejs.org/en/download/) 22.12 or newer
 
 ### Setup Steps
 
-1. Install the dependencies:
+1. Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 2. Start the development server:
@@ -32,39 +30,33 @@ npm install
 npm run start
 ```
 
+Vercel deploys previews and production from this repository. Production sets the public origin from Vercel's deployment environment; set `DOCS_PUBLIC_ORIGIN` only when a non-Vercel build needs canonical URLs and a sitemap.
+
 ## Project Structure
 
-The two main directories where you will work are:
+The main directories are:
 
-- `docs`: This is where the actual content sits. All the `.mdx` files are located here.
-- `src`: This is where you will find the React components and the custom logic used in the website's functionality.
+- `docs`: Documentation content and colocated `meta.ts` navigation files.
+- `components`: Astro components registered for use in MDX.
+- `islands`: Interactive React components.
+- `openapi`: CDI and FDI OpenAPI specifications.
+- `public`: Static assets.
 
 Below is a breakdown of the main directories and files in the project:
 
 ```
-├── docs                     # The actual documentation pages
-│   ├── _templates           # Templates that can be used as a starting point for new docs
-│   ├── _blocks              # Reusable MDX blocks
-│   └── [section-name]
-│       └── _category_.json  # Info about how the folder will be shown in the left sidebar
-├── src                      # The business logic of the website
-│   ├── components
-│   ├── context
-│   ├── css
-│   ├── hooks
-│   ├── lib
-│   ├── plugins              # Plugins used by docusaurus during the build process
-│   └── theme                # Docusaurus components that get adjusted by us
+├── docs                     # Documentation pages and meta.ts navigation
+├── components               # Astro MDX components
+├── islands                  # Interactive React components
+├── openapi                  # CDI and FDI specifications
+├── public                   # Static assets
 ├── scripts
-├── sidebars.ts
-└── docusaurus.config.ts
+└── blume.config.ts
 ```
 
 ### Routing
 
-The project uses file based routing so it's pretty straightforward to determine the actual path of a page.
-Each subfolder has a `_category_.json` file that specifies the name of the sidebar category and the order of the pages inside that category.
-Additionally, each MDX file has a `sidebar_position` property that specifies the order of the page inside the sidebar category.
+The project uses file-based routing. Use a folder's `meta.ts` to configure category navigation and `sidebar.order` in page frontmatter to order pages.
 
 #### Where to place a new page
 
@@ -192,8 +184,11 @@ For install instructions check the [guide](https://docs.docker.com/get-docker/).
 
 Use the following commands to perform linting checks on the entire project:
 
-- `npm run lint:prettier`: Runs prettier on the `ts` files.
+- `npm run lint:prettier`: Formats supported files with Prettier.
+- `npm run lint:prettier:check`: Checks formatting without changing files.
 - `npm run lint:vale`: Runs Vale on Markdown files and high-signal typo rules on TSX files.
+- `npm run validate`: Runs strict navigation and link validation.
+- `npm run build`: Regenerates the route manifest and builds the site.
 
 #### Validating code blocks
 

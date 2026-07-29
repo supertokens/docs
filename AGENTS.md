@@ -2,10 +2,11 @@
 
 ## Build/Test Commands
 
-- `npm run build` - Build the Docusaurus site
+- `npm run build` - Build the Blume site
 - `npm run start` - Start development server
-- `npm run typecheck` - Run TypeScript type checking
+- `npm run typecheck` - Check Blume config, components, islands, and content
 - `npm run lint:prettier` - Format code with Prettier
+- `npm run lint:prettier:check` - Check formatting without writing files
 - `npm run lint:vale` - Run Vale documentation linting
 - `npm test` - Run all tests with Vitest
 - `npm run test:watch` - Run tests in watch mode
@@ -23,7 +24,8 @@
 
 ## Project Structure
 
-- Components in `src/components/` with feature-based organization
-- Utilities in `src/lib/` and `src/hooks/`
+- Astro components in `components/`
+- React islands in `islands/`
 - Documentation content in `docs/` using MDX format
+- Navigation metadata in colocated `meta.ts` files
 - Scripts for automation in `scripts/` directory
