@@ -5,9 +5,16 @@ interface Props {
 }
 
 const { storageKey, value } = Astro.props;
+const defaults: Record<string, string> = {
+  "ui-type": "prebuilt",
+  "tenant-type": "single",
+  "nextjs-router-type": "app-router",
+  "passwordless-contact-method": "EMAIL",
+  "passwordless-flow-type": "MAGIC_LINK",
+};
 ---
 
-<div data-variant-content={storageKey} data-variant-value={value}>
+<div data-variant-content={storageKey} data-variant-value={value} hidden={value !== defaults[storageKey]}>
   <slot />
 </div>
 
@@ -20,9 +27,30 @@ const { storageKey, value } = Astro.props;
     "passwordless-flow-type": "MAGIC_LINK",
   };
 
+  const readStorage = (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeStorage = (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Variant controls still work for the current page when storage is unavailable.
+    }
+  };
+
   const applyVariant = (key: string, value?: string) => {
-    const selected = value || localStorage.getItem(`supertokens-docs:${key}`) || defaults[key];
-    for (const element of document.querySelectorAll<HTMLElement>(`[data-variant-content="${key}"]`)) {
+    const elements = [...document.querySelectorAll<HTMLElement>(`[data-variant-content="${key}"]`)];
+    const values = elements.map((element) => element.dataset.variantValue).filter(Boolean);
+    const candidate = value || readStorage(`supertokens-docs:${key}`);
+    const selected = candidate && values.includes(candidate) ? candidate : defaults[key] || values[0];
+    if (!selected) return;
+    if (candidate && candidate !== selected) writeStorage(`supertokens-docs:${key}`, selected);
+    for (const element of elements) {
       element.hidden = element.dataset.variantValue !== selected;
     }
   };

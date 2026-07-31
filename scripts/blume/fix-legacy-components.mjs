@@ -1,6 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { annotateTabGroups } from "./annotate-tab-groups.mjs";
+
 const root = path.resolve(import.meta.dirname, "../..");
 const docsRoot = path.join(root, "docs");
 
@@ -135,14 +137,16 @@ for (const file of await walk(docsRoot)) {
   let source = await fs.readFile(file, "utf8");
 
   for (const family of families) {
-    source = replaceOpening(source, family, () => `<Tabs dropdown param="${family.toLowerCase()}">`)
+    source = replaceOpening(source, family, () => "<Tabs dropdown hash={false} sync={false}>")
       .replace(new RegExp(`</${family}>`, "g"), "</Tabs>")
-      .replace(new RegExp(`<${family}\\.(?:Section|Content)(?:\\s+([^>]*?))?\\s*>`, "g"), (full, attributes) => {
+      .replace(new RegExp(`<${family}\\.Content(?:\\s+([^>]*?))?\\s*>`, "g"), (full, attributes) => {
         const value =
           attributes?.match(/value=["']([^"']+)["']/)?.[1] || attributes?.match(/name=["']([^"']+)["']/)?.[1];
         return `<Tab title="${labelFor(value)}">`;
       })
-      .replace(new RegExp(`</${family}\\.(?:Section|Content)>`, "g"), "</Tab>");
+      .replace(new RegExp(`</${family}\\.Content>`, "g"), "</Tab>")
+      .replace(new RegExp(`<${family}\\.Section(?:\\s+[^>]*?)?>`, "g"), "")
+      .replace(new RegExp(`</${family}\\.Section>`, "g"), "");
   }
 
   source = source
@@ -174,7 +178,14 @@ for (const file of await walk(docsRoot)) {
     .replace(/<\/UIType\.CustomUIContent>/g, "</VariantContent>")
     .replace(/<UIType\.PrebuiltUIContent(?:\s[^>]*)?>/g, '<VariantContent storageKey="ui-type" value="prebuilt">')
     .replace(/<\/UIType\.PrebuiltUIContent>/g, "</VariantContent>")
-    .replace(/<TokensCallout(?:\s[^>]*)?>/g, ":::info[Access token guidance]")
+    .replace(
+      /<TokensCallout(?:\s[^>]*)?\s*\/>/g,
+      ":::info[Access token guidance]\nThis guide applies to scenarios involving **SuperTokens Session Access Tokens**.\n:::",
+    )
+    .replace(
+      /<TokensCallout(?:\s[^>]*)?>/g,
+      ":::info[Access token guidance]\nThis guide applies to scenarios involving **SuperTokens Session Access Tokens**.",
+    )
     .replace(/<\/TokensCallout>/g, ":::")
     .replace(
       /<OAuthVerifyTokensCallout(?:\s[^>]*)?\s*\/>/g,
@@ -204,7 +215,7 @@ for (const file of await walk(docsRoot)) {
     );
   });
 
-  await fs.writeFile(file, source);
+  await fs.writeFile(file, annotateTabGroups(source));
 }
 
 console.log("Converted remaining legacy MDX components");

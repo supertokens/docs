@@ -13,6 +13,11 @@ const sdkReferenceRedirects = [
     to: "/references/frontend-sdks/supertokens-auth-react/package",
   },
 ] as const;
+const rowndRedirects = [
+  { from: "/migration/rownd/overview", to: "/migration/rownd/migration-steps" },
+  { from: "/migration/rownd/backend-setup", to: "/migration/rownd/sdk-integration-guide" },
+  { from: "/migration/rownd/frontend-setup", to: "/migration/rownd/sdk-integration-guide" },
+] as const;
 
 export default defineConfig({
   title: "SuperTokens Docs",
@@ -55,7 +60,7 @@ export default defineConfig({
   markdown: {
     codeBlocks: {
       theme: {
-        light: "one-dark-pro",
+        light: "github-light",
         dark: "one-dark-pro",
       },
     },
@@ -73,7 +78,7 @@ export default defineConfig({
       { label: "Frontend Driver Interface", route: "/references/fdi", spec: "./openapi/fdi.yml" },
     ],
   },
-  redirects: [...sdkReferenceRedirects, ...openApiRedirects],
+  redirects: [...sdkReferenceRedirects, ...rowndRedirects, ...openApiRedirects],
   deployment: {
     base: "/docs",
     output: "static",

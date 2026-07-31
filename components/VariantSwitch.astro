@@ -1,5 +1,9 @@
 ---
+import { Code2Icon, LayoutTemplateIcon } from "lucide-react";
+
 interface Option {
+  description?: string;
+  icon?: "code-2" | "layout-template";
   label: string;
   value: string;
 }
@@ -12,51 +16,193 @@ interface Props {
 }
 
 const { storageKey, options, defaultValue, label } = Astro.props;
+const switchId = crypto.randomUUID();
+const optionIcons = {
+  "code-2": Code2Icon,
+  "layout-template": LayoutTemplateIcon,
+};
 ---
 
-<label class="variant-switch">
-  <span>{label}</span>
-  <select data-variant-switch={storageKey} data-default-value={defaultValue}>
-    {options.map((option) => <option value={option.value}>{option.label}</option>)}
-  </select>
-</label>
+<fieldset class="variant-switch" data-variant-switch={storageKey} data-default-value={defaultValue}>
+  <legend>{label}</legend>
+  <div class="variant-options">
+    {
+      options.map((option) => {
+        const Icon = option.icon ? optionIcons[option.icon] : undefined;
+        return (
+          <label>
+            <input
+              type="radio"
+              name={`${storageKey}-${switchId}`}
+              value={option.value}
+              checked={option.value === defaultValue}
+            />
+            <span class="variant-option">
+              {Icon && (
+                <span class="variant-option-icon" aria-hidden="true">
+                  <Icon />
+                </span>
+              )}
+              <span class="variant-option-copy">
+                <span class="variant-option-label">{option.label}</span>
+                {option.description && <span class="variant-option-description">{option.description}</span>}
+              </span>
+            </span>
+          </label>
+        );
+      })
+    }
+  </div>
+</fieldset>
 
 <script>
+  const eventName = "supertokens-docs:variant";
+
+  const readStorage = (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeStorage = (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // The switch still works for the current page when storage is unavailable.
+    }
+  };
+
+  const setSwitchValue = (key: string, value: string) => {
+    for (const fieldset of document.querySelectorAll<HTMLFieldSetElement>(`[data-variant-switch="${key}"]`)) {
+      const input = fieldset.querySelector<HTMLInputElement>(`input[value="${CSS.escape(value)}"]`);
+      if (input) input.checked = true;
+    }
+  };
+
   const initializeVariantSwitches = () => {
-    for (const select of document.querySelectorAll<HTMLSelectElement>("select[data-variant-switch]")) {
-      if (select.dataset.initialized) continue;
-      select.dataset.initialized = "true";
-      const key = select.dataset.variantSwitch;
+    for (const fieldset of document.querySelectorAll<HTMLFieldSetElement>("[data-variant-switch]")) {
+      if (fieldset.dataset.initialized) continue;
+      fieldset.dataset.initialized = "true";
+      const key = fieldset.dataset.variantSwitch;
       if (!key) continue;
-      select.value = localStorage.getItem(`supertokens-docs:${key}`) || select.dataset.defaultValue || select.value;
-      select.addEventListener("change", () => {
-        localStorage.setItem(`supertokens-docs:${key}`, select.value);
-        window.dispatchEvent(new CustomEvent("supertokens-docs:variant", { detail: { key, value: select.value } }));
+
+      const values = [...fieldset.querySelectorAll<HTMLInputElement>('input[type="radio"]')].map((input) => input.value);
+      const storedValue = readStorage(`supertokens-docs:${key}`);
+      const fallback = fieldset.dataset.defaultValue || values[0];
+      const value = storedValue && values.includes(storedValue) ? storedValue : fallback;
+      if (!value) continue;
+
+      setSwitchValue(key, value);
+      if (storedValue && storedValue !== value) writeStorage(`supertokens-docs:${key}`, value);
+
+      fieldset.addEventListener("change", (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || input.type !== "radio") return;
+        writeStorage(`supertokens-docs:${key}`, input.value);
+        setSwitchValue(key, input.value);
+        window.dispatchEvent(new CustomEvent(eventName, { detail: { key, value: input.value } }));
       });
     }
   };
 
   initializeVariantSwitches();
   document.addEventListener("astro:page-load", initializeVariantSwitches);
+  window.addEventListener(eventName, (event) => {
+    const detail = (event as CustomEvent<{ key: string; value: string }>).detail;
+    if (detail) setSwitchValue(detail.key, detail.value);
+  });
 </script>
 
 <style>
   .variant-switch {
-    align-items: center;
-    display: flex;
-    gap: 0.75rem;
+    border: 0;
     margin-block: 1rem;
+    padding: 0;
   }
 
-  .variant-switch span {
+  .variant-switch legend {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .variant-options {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+
+  .variant-options label {
+    cursor: pointer;
+    position: relative;
+  }
+
+  .variant-options input {
+    height: 1px;
+    opacity: 0;
+    position: absolute;
+    width: 1px;
+  }
+
+  .variant-option {
+    align-items: center;
+    background: var(--blume-background);
+    border: 1px solid var(--blume-border);
+    border-radius: 0.5rem;
+    display: flex;
+    gap: 0.75rem;
+    height: 100%;
+    padding: 0.75rem 1rem;
+  }
+
+  .variant-option-icon {
+    align-items: center;
+    border: 1px solid var(--blume-border);
+    border-radius: 0.25rem;
+    display: flex;
+    flex: 0 0 1.75rem;
+    height: 1.75rem;
+    justify-content: center;
+    width: 1.75rem;
+  }
+
+  .variant-option-icon svg {
+    height: 1rem;
+    width: 1rem;
+  }
+
+  .variant-option-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .variant-option-label {
+    font-size: 0.875rem;
     font-weight: 600;
   }
 
-  .variant-switch select {
-    background: var(--background);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    color: inherit;
-    padding: 0.45rem 2rem 0.45rem 0.65rem;
+  .variant-option-description {
+    color: var(--blume-muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-top: 0.125rem;
+  }
+
+  .variant-options input:checked + .variant-option {
+    border-color: var(--blume-accent);
+    box-shadow: inset 0 0 0 1px var(--blume-accent);
+  }
+
+  .variant-options input:checked + .variant-option .variant-option-label,
+  .variant-options input:checked + .variant-option .variant-option-icon {
+    color: var(--blume-accent);
+  }
+
+  .variant-options input:focus-visible + .variant-option {
+    outline: 2px solid var(--blume-accent);
+    outline-offset: 2px;
   }
 </style>

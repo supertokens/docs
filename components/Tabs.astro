@@ -1,0 +1,102 @@
+---
+import type { TabsProps } from "blume/components";
+import BlumeTabs from "blume/components/content/Tabs.astro";
+
+import TabGroupSelect from "../islands/TabGroupSelect";
+import { tabGroupControl, tabGroupLabel, type TabGroup } from "./tab-groups";
+
+interface Props extends TabsProps {
+  group?: TabGroup;
+}
+
+const { group, hash = false, sync = false, ...props } = Astro.props as Props;
+const wrapperId = group ? `docs-tab-group-${crypto.randomUUID()}` : undefined;
+const renderAsSelect = group ? tabGroupControl(group) === "select" : false;
+---
+
+{
+  group ? (
+    <div id={wrapperId} data-docs-tab-group={group} data-docs-tab-control={renderAsSelect ? "select" : "tabs"}>
+      {renderAsSelect && wrapperId && <TabGroupSelect client:load group={group} label={tabGroupLabel(group)} wrapperId={wrapperId} />}
+      <BlumeTabs hash={hash} sync={sync} {...props} dropdown={false}>
+        <slot />
+      </BlumeTabs>
+    </div>
+  ) : (
+    <BlumeTabs hash={hash} sync={sync} {...props} dropdown={false}>
+      <slot />
+    </BlumeTabs>
+  )
+}
+
+<script>
+  import { tabGroupDefault, type TabGroup } from "./tab-groups";
+  import {
+    activateSelection,
+    directPanels,
+    dispatchSelection,
+    readStorage,
+    selectionEvent,
+    selectionStorageKey,
+    type SelectionDetail,
+    writeStorage,
+  } from "../lib/docs-selection";
+
+  const saveActiveSelection = (wrapper: HTMLElement, group: TabGroup) => {
+    const value = directPanels(wrapper).find((panel) => !panel.classList.contains("hidden"))?.dataset.tabId;
+    if (value) dispatchSelection(group, value);
+  };
+
+  const initializeGroupedTabs = async () => {
+    await customElements.whenDefined("blume-tabs");
+
+    for (const wrapper of document.querySelectorAll<HTMLElement>("[data-docs-tab-group]")) {
+      if (wrapper.dataset.selectionInitialized) continue;
+      wrapper.dataset.selectionInitialized = "true";
+
+      const group = wrapper.dataset.docsTabGroup as TabGroup | undefined;
+      if (!group) continue;
+
+      const values = new Set(directPanels(wrapper).map((panel) => panel.dataset.tabId).filter(Boolean));
+      const storedValue = readStorage(selectionStorageKey(group));
+      const legacyValue = readStorage(`docusaurus.tab.${group}`);
+      const preferredValue = [storedValue, legacyValue, tabGroupDefault(group), ...values].find(
+        (value): value is string => Boolean(value && values.has(value)),
+      );
+      if (!preferredValue) continue;
+
+      activateSelection(wrapper, preferredValue);
+      if (storedValue !== preferredValue) writeStorage(selectionStorageKey(group), preferredValue);
+
+      const persistSelection = (event: Event) => {
+        const trigger = event.target instanceof Element ? event.target.closest<HTMLElement>('[role="tab"]') : null;
+        const tabs = wrapper.querySelector(":scope > blume-tabs");
+        if (!trigger || !tabs || trigger.closest("blume-tabs") !== tabs) return;
+
+        if (
+          event instanceof KeyboardEvent &&
+          !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+        ) {
+          return;
+        }
+
+        queueMicrotask(() => saveActiveSelection(wrapper, group));
+      };
+
+      wrapper.addEventListener("click", persistSelection);
+      wrapper.addEventListener("keydown", persistSelection);
+    }
+  };
+
+  initializeGroupedTabs();
+  document.addEventListener("astro:page-load", initializeGroupedTabs);
+  window.addEventListener(selectionEvent, (event) => {
+    const detail = (event as CustomEvent<SelectionDetail>).detail;
+    if (!detail) return;
+    for (const wrapper of document.querySelectorAll<HTMLElement>(
+      `[data-docs-tab-group="${detail.group}"]`,
+    )) {
+      activateSelection(wrapper, detail.value);
+    }
+  });
+</script>

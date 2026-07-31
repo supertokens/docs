@@ -1,8 +1,31 @@
 import { useState } from "react";
 
-const recipes = ["emailpassword", "passwordless", "thirdparty", "multifactorauth", "multitenancy"];
-const frontends = ["react", "angular", "vue", "next"];
-const backends = ["node", "go-http", "python"];
+import { SelectField } from "@/components/ui/select-field";
+
+const recipes = [
+  { value: "emailpassword", label: "Email password" },
+  { value: "passwordless", label: "Passwordless" },
+  { value: "thirdparty", label: "Social login" },
+  { value: "multifactorauth", label: "Multi-factor authentication" },
+  { value: "multitenancy", label: "Multi-tenancy" },
+];
+const frontends = [
+  { value: "react", label: "React" },
+  { value: "angular", label: "Angular" },
+  { value: "vue", label: "Vue" },
+  { value: "next", label: "Next.js" },
+];
+const backends = [
+  { value: "node", label: "Node.js" },
+  { value: "go-http", label: "Go HTTP" },
+  { value: "python", label: "Python" },
+];
+const safeShellArgumentPattern = /^[A-Za-z0-9_@%+=:,./-]+$/;
+
+function shellQuote(argument: string): string {
+  if (safeShellArgumentPattern.test(argument)) return argument;
+  return `'${argument.replaceAll("'", `'"'"'`)}'`;
+}
 
 export default function ExampleAppForm() {
   const [appName, setAppName] = useState("");
@@ -11,10 +34,10 @@ export default function ExampleAppForm() {
   const [backend, setBackend] = useState("node");
   const command = [
     "npx create-supertokens-app",
-    appName && `--appname=${JSON.stringify(appName)}`,
-    `--recipe=${recipe}`,
-    `--frontend=${frontend}`,
-    frontend !== "next" && `--backend=${backend}`,
+    appName && shellQuote(`--appname=${appName}`),
+    shellQuote(`--recipe=${recipe}`),
+    shellQuote(`--frontend=${frontend}`),
+    frontend !== "next" && shellQuote(`--backend=${backend}`),
   ]
     .filter(Boolean)
     .join(" ");
@@ -26,28 +49,27 @@ export default function ExampleAppForm() {
       <div className="st-form-grid">
         <label>
           Application name
-          <input value={appName} onChange={(event) => setAppName(event.target.value)} placeholder="my-app" />
+          <input
+            name="application-name"
+            autoComplete="off"
+            value={appName}
+            onChange={(event) => setAppName(event.target.value)}
+            placeholder="Example: my-app"
+          />
         </label>
-        <label>
-          Authentication recipe
-          <select value={recipe} onChange={(event) => setRecipe(event.target.value)}>
-            {recipes.map((value) => <option key={value}>{value}</option>)}
-          </select>
-        </label>
-        <label>
-          Frontend framework
-          <select value={frontend} onChange={(event) => setFrontend(event.target.value)}>
-            {frontends.map((value) => <option key={value}>{value}</option>)}
-          </select>
-        </label>
-        <label>
-          Backend language
-          <select value={backend} onChange={(event) => setBackend(event.target.value)} disabled={frontend === "next"}>
-            {backends.map((value) => <option key={value}>{value}</option>)}
-          </select>
-        </label>
+        <SelectField label="Authentication recipe" options={recipes} value={recipe} onValueChange={setRecipe} />
+        <SelectField label="Frontend framework" options={frontends} value={frontend} onValueChange={setFrontend} />
+        <SelectField
+          label="Backend language"
+          options={backends}
+          value={backend}
+          onValueChange={setBackend}
+          disabled={frontend === "next"}
+        />
       </div>
-      <pre><code>{command}</code></pre>
+      <pre>
+        <code>{command}</code>
+      </pre>
     </section>
   );
 }

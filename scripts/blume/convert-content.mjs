@@ -3,6 +3,8 @@ import path from "node:path";
 
 import yaml from "js-yaml";
 
+import { annotateTabGroups } from "./annotate-tab-groups.mjs";
+
 const root = path.resolve(import.meta.dirname, "../..");
 const docsRoot = path.join(root, "docs");
 const manifest = JSON.parse(await fs.readFile(path.join(root, "scripts/blume/route-manifest.json"), "utf8"));
@@ -313,9 +315,18 @@ const transformReferenceCards = (source) => {
 };
 
 const transformTabs = (source) => {
+  source = source
+    .replace(/<Tabs(?:\s[^>]*)?>/g, "<Tabs hash={false} sync={false}>")
+    .replace(/<TabItem\s+([^>]*?)>/g, (full, attributes) => {
+      const value = attributes.match(/value=["']([^"']+)["']/)?.[1];
+      const label = attributes.match(/label=["']([^"']+)["']/)?.[1];
+      return `<Tab title="${escapeAttribute(label || tabLabel(value || "Option"))}">`;
+    })
+    .replace(/<\/TabItem>/g, "</Tab>");
+
   for (const family of tabFamilies) {
     source = source
-      .replace(new RegExp(`<${family}(?:\\s[^>]*)?>`, "g"), `<Tabs dropdown param="${family.toLowerCase()}">`)
+      .replace(new RegExp(`<${family}(?:\\s[^>]*)?>`, "g"), "<Tabs dropdown hash={false} sync={false}>")
       .replace(new RegExp(`</${family}>`, "g"), "</Tabs>")
       .replace(new RegExp(`<${family}\\.(?:TabItem|Tab|Content)\\s+([^>]*?)>`, "g"), (full, attributes) => {
         const value = attributes.match(/value=["']([^"']+)["']/)?.[1];
@@ -325,14 +336,6 @@ const transformTabs = (source) => {
       .replace(new RegExp(`</${family}\\.(?:TabItem|Tab|Content)>`, "g"), "</Tab>");
   }
 
-  source = source
-    .replace(/<Tabs(?:\s[^>]*)?>/g, "<Tabs>")
-    .replace(/<TabItem\s+([^>]*?)>/g, (full, attributes) => {
-      const value = attributes.match(/value=["']([^"']+)["']/)?.[1];
-      const label = attributes.match(/label=["']([^"']+)["']/)?.[1];
-      return `<Tab title="${escapeAttribute(label || tabLabel(value || "Option"))}">`;
-    })
-    .replace(/<\/TabItem>/g, "</Tab>");
   return source;
 };
 
@@ -348,7 +351,7 @@ const transformVariants = (source) =>
     .replace(/<\/TenantType\.SingleTenantContent>/g, "</VariantContent>")
     .replace(/<TenantType\.MultiTenantContent>/g, '<VariantContent storageKey="tenant-type" value="multi">')
     .replace(/<\/TenantType\.MultiTenantContent>/g, "</VariantContent>")
-    .replace(/<Question(?:\s[^>]*)?>/g, "<Tabs>")
+    .replace(/<Question(?:\s[^>]*)?>/g, "<Tabs hash={false} sync={false}>")
     .replace(/<\/Question>/g, "</Tabs>")
     .replace(/<Answer\s+[^>]*title=["']([^"']+)["'][^>]*>/g, '<Tab title="$1">')
     .replace(/<\/Answer>/g, "</Tab>");
@@ -467,6 +470,7 @@ for (const file of files) {
   body = transformReferenceCards(body);
   body = transformTabs(body);
   body = transformVariants(body);
+  body = annotateTabGroups(body);
   body = transformHeadingContainer(body, "Steps", "Step", "#{2,6}");
   body = transformHeadingContainer(body, "Accordion", "AccordionItem", "##");
   body = rewriteLinks(body);
