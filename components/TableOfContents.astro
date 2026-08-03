@@ -1,13 +1,83 @@
 ---
 import type { ComponentProps } from "astro/types";
-import BlumeTableOfContents from "blume/components/layout/TableOfContents.astro";
+import type { Heading } from "blume/core/types.ts";
 
 import DocsPreferences from "./DocsPreferences.astro";
 
-type Props = ComponentProps<typeof BlumeTableOfContents>;
+interface Props extends ComponentProps<"div"> {
+  headings: Heading[];
+  title: string;
+  variant: "desktop" | "mobile";
+}
 
 const props = Astro.props as Props;
 ---
 
 {props.variant === "desktop" && <DocsPreferences />}
-<BlumeTableOfContents {...props} />
+{
+  props.headings.length > 0 && props.variant === "mobile" && (
+    <details class="group mx-auto mb-6 max-w-content rounded-blume border border-border xl:hidden" data-st-toc>
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 font-medium text-foreground text-sm [&::-webkit-details-marker]:hidden">
+        <span>{props.title}</span>
+        <span aria-hidden="true" class="text-muted-foreground">⌄</span>
+      </summary>
+      <ul class="m-0 list-none border-border border-t p-2">
+        {props.headings.map((heading) => (
+          <li data-st-toc-item style={`padding-inline-start:${(heading.depth - 2) * 0.75}rem`}>
+            <a class="block rounded-md px-2 py-1.5 text-muted-foreground text-sm transition-colors hover:text-foreground aria-[current=location]:font-medium aria-[current=location]:text-foreground" href={`#${heading.slug}`}>
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}
+{
+  props.headings.length > 0 && props.variant === "desktop" && (
+    <section data-st-toc>
+      <p class="mb-3 font-semibold text-foreground text-sm">{props.title}</p>
+      <ul class="m-0 list-none p-0">
+        {props.headings.map((heading) => (
+          <li data-st-toc-item style={`padding-inline-start:${(heading.depth - 2) * 0.75}rem`}>
+            <a class="block py-1.5 text-muted-foreground transition-colors hover:text-foreground aria-[current=location]:font-medium aria-[current=location]:text-foreground" href={`#${heading.slug}`}>
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+<script>
+  const triggerOffset = 72;
+
+  const updateToc = (toc: HTMLElement) => {
+    const entries = [...toc.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')].flatMap((link) => {
+      const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+      const item = link.closest<HTMLElement>("[data-st-toc-item]");
+      if (!heading || !item) return [];
+      const visible = !heading.closest<HTMLElement>("[data-variant-content]")?.hidden;
+      item.hidden = !visible;
+      return visible ? [{ heading, link }] : [];
+    });
+    for (const link of toc.querySelectorAll("a[aria-current]")) link.removeAttribute("aria-current");
+    const active = entries.filter(({ heading }) => heading.getBoundingClientRect().top <= triggerOffset).at(-1) ?? entries[0];
+    active?.link.setAttribute("aria-current", "location");
+  };
+
+  const updateAllTocs = () => document.querySelectorAll<HTMLElement>("[data-st-toc]").forEach(updateToc);
+  const initializeTocs = () => {
+    updateAllTocs();
+    if (!document.documentElement.dataset.stTocScrollListener) {
+      document.documentElement.dataset.stTocScrollListener = "true";
+      window.addEventListener("scroll", updateAllTocs, { passive: true });
+      window.addEventListener("supertokens-docs:variant", () => requestAnimationFrame(updateAllTocs));
+      window.addEventListener("supertokens-docs:variant-content-updated", () => requestAnimationFrame(updateAllTocs));
+    }
+  };
+
+  initializeTocs();
+  document.addEventListener("astro:page-load", initializeTocs);
+</script>

@@ -290,7 +290,11 @@ const transformReferenceCards = (source) => {
     .replace(/<ReferenceCard\s+([^>]*?)\s*\/>/g, (full, attributes) => {
       const href = attributes.match(/href=["']([^"']+)["']/)?.[1];
       const label = attributes.match(/label=["']([^"']+)["']/)?.[1];
-      return href && label ? `<Card title="${escapeAttribute(label)}" href="${href}" />` : full;
+      const icon = attributes.match(/icon=["']([^"']+)["']/)?.[1];
+      const iconValue = icon ? icon.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase() : null;
+      return href && label
+        ? `<Card title="${escapeAttribute(label)}" href="${href}"${iconValue ? ` icon="${iconValue}"` : ""} />`
+        : full;
     });
 
   return source.replace(/<ReferenceCard\s+([^>]*?)>([\s\S]*?)<\/ReferenceCard>/g, (full, attributes, content) => {

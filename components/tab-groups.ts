@@ -95,6 +95,24 @@ export const tabGroups = {
       Django: "django",
     },
   },
+  "package-managers": {
+    control: "select",
+    defaultValue: "npm",
+    options: {
+      npm: "npm",
+      yarn: "yarn",
+      pnpm: "pnpm",
+    },
+  },
+  "package-manager-scripts": {
+    control: "select",
+    defaultValue: "npm",
+    options: {
+      "npm run": "npm",
+      "yarn run": "yarn",
+      "pnpm run": "pnpm",
+    },
+  },
 } as const;
 
 export type TabGroup = keyof typeof tabGroups;
@@ -125,6 +143,8 @@ export function tabGroupLabel(group: TabGroup): string {
     "node-frameworks": "Node.js framework",
     "go-frameworks": "Go framework",
     "python-frameworks": "Python framework",
+    "package-managers": "Package manager",
+    "package-manager-scripts": "Package manager",
   };
   return labels[group] || "Example";
 }

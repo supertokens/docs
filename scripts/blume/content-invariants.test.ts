@@ -107,6 +107,20 @@ function tabsWithoutTabChildren(): string[] {
 }
 
 describe("published documentation invariants", () => {
+  it("recognizes common package-manager tab groups", () => {
+    expect(
+      annotateTabGroups('<Tabs><Tab title="npm"></Tab><Tab title="yarn"></Tab><Tab title="pnpm"></Tab></Tabs>'),
+    ).toContain('<Tabs group="package-managers">');
+  });
+
+  it("recognizes package-manager script tab groups", () => {
+    expect(
+      annotateTabGroups(
+        '<Tabs><Tab title="npm run"></Tab><Tab title="yarn run"></Tab><Tab title="pnpm run"></Tab></Tabs>',
+      ),
+    ).toContain('<Tabs group="package-manager-scripts">');
+  });
+
   it('does not publish placeholder tabs titled "Option"', () => {
     expect(locationsMatching(/<Tab\s+title=(["'])Option\1\s*>/)).toEqual([]);
   });

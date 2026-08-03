@@ -2,6 +2,7 @@ import { defineComponents } from "blume";
 
 import ConditionalContent from "./components/ConditionalContent.astro";
 import ContextCondition from "./components/ContextCondition.astro";
+import Header from "./components/Header.astro";
 import NextjsRouterTypeSelect from "./components/NextjsRouterTypeSelect.astro";
 import PasswordlessRecipeForm from "./components/PasswordlessRecipeForm.astro";
 import Tab from "./components/Tab.astro";
@@ -13,6 +14,7 @@ import VariantContent from "./components/VariantContent.astro";
 
 export default defineComponents({
   layout: {
+    Header,
     TableOfContents,
   },
   mdx: {

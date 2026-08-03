@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { SelectField, type SelectOption } from "@/components/ui/select-field";
 import type { TabGroup } from "@/components/tab-groups";
@@ -26,6 +27,8 @@ function initialValue(wrapper: HTMLElement, group: TabGroup, options: SelectOpti
 
 export default function TabGroupSelect({ group, label, wrapperId }: TabGroupSelectProps) {
   const [options, setOptions] = useState<SelectOption[]>([]);
+  const [isActive, setIsActive] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement>();
   const [value, setValue] = useState<string>();
 
   useEffect(() => {
@@ -70,6 +73,36 @@ export default function TabGroupSelect({ group, label, wrapperId }: TabGroupSele
         });
       };
 
+      const parent = wrapper.parentElement;
+      const parentPanel = parent?.matches("[data-blume-tab-panel]")
+        ? parent
+        : parent?.closest<HTMLElement>("[data-blume-tab-panel]");
+      const parentTabs = parentPanel?.closest<HTMLElement>("[data-docs-tab-group]");
+      const parentHeader = parentTabs?.querySelector<HTMLElement>(":scope > blume-tabs > div");
+      const parentTablist = parentHeader?.querySelector<HTMLElement>("[data-blume-tablist]");
+
+      if (parentPanel && parentHeader && parentTablist) {
+        setPortalTarget(parentHeader);
+        const updateVisibility = () => setIsActive(!parentPanel.classList.contains("hidden"));
+        const observer = new MutationObserver(updateVisibility);
+        observer.observe(parentPanel, { attributes: true, attributeFilter: ["class"] });
+        updateVisibility();
+        cleanupSemantics = () => {
+          observer.disconnect();
+          delete wrapper.dataset.selectReady;
+          if (tablist) {
+            tablist.hidden = false;
+            tablist.removeAttribute("aria-hidden");
+          }
+          panels.forEach((panel, index) => {
+            const role = roles[index];
+            if (role) panel.setAttribute("role", role);
+            const labelId = labelledBy[index];
+            if (labelId) panel.setAttribute("aria-labelledby", labelId);
+          });
+        };
+      }
+
       setOptions(nextOptions);
       setValue(initialValue(wrapper, group, nextOptions));
     };
@@ -88,16 +121,17 @@ export default function TabGroupSelect({ group, label, wrapperId }: TabGroupSele
     };
   }, [group, wrapperId]);
 
-  if (options.length < 2 || !value) return null;
+  if (options.length < 2 || !value || !portalTarget || !isActive) return null;
 
-  return (
-    <div className="st-nested-select" data-nested-tab-select={group}>
+  return createPortal(
+    <div className="st-nested-select" data-nested-in-tab-bar="true" data-nested-tab-select={group}>
       <SelectField
         label={label}
         options={options}
         value={value}
         onValueChange={(nextValue) => dispatchSelection(group, nextValue)}
       />
-    </div>
+    </div>,
+    portalTarget,
   );
 }
