@@ -37,7 +37,10 @@ export default defineConfig({
     branch: "master",
   },
   theme: {
-    accent: "#ff9933",
+    accent: {
+      light: "#a84f00",
+      dark: "#ffad4d",
+    },
     mode: "system",
     fonts: {
       mono: "ibm-plex-mono",
@@ -51,10 +54,6 @@ export default defineConfig({
     tabs: [
       { label: "Documentation", path: "/" },
       { label: "References", path: "/references" },
-    ],
-    featured: [
-      { label: "Dashboard", href: "https://supertokens.com/dashboard", icon: "layout-dashboard" },
-      { label: "GitHub", href: "https://github.com/supertokens/supertokens-core", icon: "github" },
     ],
   },
   markdown: {

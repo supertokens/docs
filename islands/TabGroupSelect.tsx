@@ -101,6 +101,12 @@ export default function TabGroupSelect({ group, label, wrapperId }: TabGroupSele
             if (labelId) panel.setAttribute("aria-labelledby", labelId);
           });
         };
+      } else {
+        const header = wrapper.querySelector<HTMLElement>(":scope > blume-tabs > div");
+        if (header) {
+          setPortalTarget(header);
+          setIsActive(true);
+        }
       }
 
       setOptions(nextOptions);
