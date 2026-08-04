@@ -27,6 +27,12 @@ function shellQuote(argument: string): string {
   return `'${argument.replaceAll("'", `'"'"'`)}'`;
 }
 
+declare global {
+  interface Window {
+    posthog?: { capture: (event: string, properties?: Record<string, unknown>) => void };
+  }
+}
+
 export default function ExampleAppForm() {
   const [appName, setAppName] = useState("");
   const [recipe, setRecipe] = useState("emailpassword");
@@ -57,13 +63,32 @@ export default function ExampleAppForm() {
             placeholder="Example: my-app"
           />
         </label>
-        <SelectField label="Authentication recipe" options={recipes} value={recipe} onValueChange={setRecipe} />
-        <SelectField label="Frontend framework" options={frontends} value={frontend} onValueChange={setFrontend} />
+        <SelectField
+          label="Authentication recipe"
+          options={recipes}
+          value={recipe}
+          onValueChange={(value) => {
+            setRecipe(value);
+            window.posthog?.capture("example_app_config_selected", { field: "recipe", value, frontend, backend });
+          }}
+        />
+        <SelectField
+          label="Frontend framework"
+          options={frontends}
+          value={frontend}
+          onValueChange={(value) => {
+            setFrontend(value);
+            window.posthog?.capture("example_app_config_selected", { field: "frontend", value, recipe, backend });
+          }}
+        />
         <SelectField
           label="Backend language"
           options={backends}
           value={backend}
-          onValueChange={setBackend}
+          onValueChange={(value) => {
+            setBackend(value);
+            window.posthog?.capture("example_app_config_selected", { field: "backend", value, recipe, frontend });
+          }}
           disabled={frontend === "next"}
         />
       </div>

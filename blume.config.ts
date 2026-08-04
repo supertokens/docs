@@ -1,8 +1,11 @@
 import { defineConfig } from "blume";
 
+import { ASK_AI_MODEL } from "./lib/ask-ai-config";
 import { openApiRedirects } from "./scripts/blume/openapi-redirects";
 
 const publicOrigin = process.env.DOCS_PUBLIC_ORIGIN;
+const posthogToken = process.env.PUBLIC_POSTHOG_PROJECT_TOKEN ?? process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST;
 const sdkReferenceRedirects = [
   {
     from: "/references/backend-sdks/supertokens-nodejs",
@@ -72,7 +75,7 @@ export default defineConfig({
     ask: {
       enabled: true,
       provider: "gateway",
-      model: "openai/gpt-4.1-mini",
+      model: ASK_AI_MODEL,
       suggestions: [
         { label: "How do I add SuperTokens to my app?", icon: "rocket" },
         { label: "Which authentication recipe should I use?", icon: "key-round" },
@@ -105,4 +108,14 @@ export default defineConfig({
   seo: {
     agentReadability: true,
   },
+  ...(posthogToken
+    ? {
+        analytics: {
+          posthog: {
+            key: posthogToken,
+            ...(posthogHost ? { host: posthogHost } : {}),
+          },
+        },
+      }
+    : {}),
 });

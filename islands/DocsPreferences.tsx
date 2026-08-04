@@ -1,4 +1,10 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
+
+declare global {
+  interface Window {
+    posthog?: { capture: (event: string, properties?: Record<string, unknown>) => void };
+  }
+}
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -299,6 +305,7 @@ export default function DocsPreferences() {
   const selectPreference = (row: PreferenceRow, value: string) => {
     if (row.variantKey) dispatchVariant(row.variantKey, value);
     else if (row.group) dispatchSelection(row.group, value);
+    window.posthog?.capture("docs_preference_changed", { preference: row.key, value });
   };
 
   return (
