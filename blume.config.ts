@@ -84,7 +84,8 @@ export default defineConfig({
       enabled: true,
       route: "/mcp",
       name: "SuperTokens Documentation",
-      instructions: "Use these tools to answer questions about integrating and operating SuperTokens.",
+      instructions:
+        "Search with specific authentication or deployment terms, then read the relevant overview and setup pages. Distinguish standalone passkey authentication under Authentication from passkeys used as an MFA factor under Additional Verification.",
     },
   },
   openapi: {
