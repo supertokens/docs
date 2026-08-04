@@ -69,6 +69,23 @@ export default defineConfig({
   },
   ai: {
     llmsTxt: true,
+    ask: {
+      enabled: true,
+      provider: "gateway",
+      model: "openai/gpt-4.1-mini",
+      suggestions: [
+        { label: "How do I add SuperTokens to my app?", icon: "rocket" },
+        { label: "Which authentication recipe should I use?", icon: "key-round" },
+        { label: "How does session management work?", icon: "shield-check" },
+        { label: "How do I self-host SuperTokens?", icon: "server" },
+      ],
+    },
+    mcp: {
+      enabled: true,
+      route: "/mcp",
+      name: "SuperTokens Documentation",
+      instructions: "Use these tools to answer questions about integrating and operating SuperTokens.",
+    },
   },
   openapi: {
     enabled: true,
@@ -80,7 +97,11 @@ export default defineConfig({
   redirects: [...sdkReferenceRedirects, ...rowndRedirects, ...openApiRedirects],
   deployment: {
     base: "/docs",
-    output: "static",
+    output: "server",
+    adapter: "vercel",
     ...(publicOrigin ? { site: publicOrigin } : {}),
+  },
+  seo: {
+    agentReadability: true,
   },
 });
