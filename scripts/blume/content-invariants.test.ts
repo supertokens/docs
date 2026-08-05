@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -13,6 +13,7 @@ interface ContentFile {
 
 const repositoryRoot = resolve(import.meta.dirname, "../..");
 const docsRoot = resolve(repositoryRoot, "docs");
+const publicRoot = resolve(repositoryRoot, "public");
 
 function readContentFiles(directory: string): ContentFile[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -51,6 +52,46 @@ function sourceLocationsMatching(pattern: RegExp): string[] {
       const line = source.slice(0, match.index ?? 0).split(/\r?\n/).length;
       return `${relative(repositoryRoot, path)}:${line}`;
     });
+  });
+}
+
+function withoutFencedCode(source: string): string {
+  let fence: string | undefined;
+
+  return source
+    .split(/\r?\n/)
+    .map((line) => {
+      const marker = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
+      if (!fence && marker) {
+        fence = marker;
+        return "";
+      }
+      if (fence && marker?.[0] === fence[0] && marker.length >= fence.length) {
+        fence = undefined;
+        return "";
+      }
+      return fence ? "" : line;
+    })
+    .join("\n");
+}
+
+function contentImageReferences(): Array<{ location: string; url: string }> {
+  return contentFiles.flatMap(({ path, source }) => {
+    const searchableSource = withoutFencedCode(source);
+    const references: Array<{ location: string; url: string }> = [];
+    const patterns = [
+      /!\[[^\]]*\]\(<?([^\s)>]+)>?(?:\s+["'][^"']*["'])?\)/g,
+      /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi,
+    ];
+
+    for (const pattern of patterns) {
+      for (const match of searchableSource.matchAll(pattern)) {
+        const line = searchableSource.slice(0, match.index ?? 0).split(/\r?\n/).length;
+        references.push({ location: `${relative(repositoryRoot, path)}:${line}`, url: match[1] });
+      }
+    }
+
+    return references;
   });
 }
 
@@ -107,6 +148,10 @@ function tabsWithoutTabChildren(): string[] {
 }
 
 describe("published documentation invariants", () => {
+  it("does not end an outer code fence at a shorter nested fence", () => {
+    expect(withoutFencedCode("````md\n```md\n![Example](/img/missing.png)\n```\n````")).toBe("\n\n\n\n");
+  });
+
   it("recognizes common package-manager tab groups", () => {
     expect(
       annotateTabGroups('<Tabs><Tab title="npm"></Tab><Tab title="yarn"></Tab><Tab title="pnpm"></Tab></Tabs>'),
@@ -146,6 +191,32 @@ describe("published documentation invariants", () => {
         /<iframe\b(?=[^>]*\bsrc=["']https?:\/\/(?:www\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be)\/)[^>]*>/i,
       ),
     ).toEqual([]);
+  });
+
+  it("does not prefix public images with the documentation base path", () => {
+    expect(
+      contentImageReferences()
+        .filter(({ url }) => url.startsWith("/docs/img/"))
+        .map(({ location, url }) => `${location}: ${url}`),
+    ).toEqual([]);
+  });
+
+  it("only references public images that exist", () => {
+    const missing = contentImageReferences().flatMap(({ location, url }) => {
+      if (!url.startsWith("/") || url.startsWith("//")) return [];
+
+      let pathname: string;
+      try {
+        pathname = decodeURIComponent(new URL(url, "https://docs.example.com").pathname);
+      } catch {
+        return [`${location}: invalid URL ${url}`];
+      }
+
+      const assetPath = resolve(publicRoot, `.${pathname}`);
+      return assetPath.startsWith(`${publicRoot}/`) && existsSync(assetPath) ? [] : [`${location}: ${url}`];
+    });
+
+    expect(missing).toEqual([]);
   });
 
   it("does not leak typecheck-only source lines", () => {

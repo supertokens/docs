@@ -426,8 +426,6 @@ const rewriteLinks = (source) => {
       "/additional-verification/mfa/webauthn-setup",
     )
     .replace(/(["'(])\/docs(?=\/|["')#])/g, "$1")
-    .replace(/(\bsrc\s*=\s*["'])\/img\//g, "$1/docs/img/")
-    .replace(/(!\[[^\]]*\]\()\/img\//g, "$1/docs/img/")
     .replace(/\.mdx(?=([#?][^\s"')>]*)?["')>\s])/g, "")
     .replace(/\.md(?=([#?][^\s"')>]*)?["')>\s])/g, "");
 };
