@@ -25,6 +25,7 @@ const rowndRedirects = [
 export default defineConfig({
   title: "SuperTokens Docs",
   description: "Open Source User Authentication",
+  basePath: "/docs",
   logo: {
     image: {
       light: "/img/logos/supertokens-dark.svg",
@@ -100,7 +101,6 @@ export default defineConfig({
   },
   redirects: [...sdkReferenceRedirects, ...rowndRedirects, ...openApiRedirects],
   deployment: {
-    base: "/docs",
     output: "server",
     adapter: "vercel",
     ...(publicOrigin ? { site: publicOrigin } : {}),
