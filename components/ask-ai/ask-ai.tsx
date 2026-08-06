@@ -148,11 +148,14 @@ const Glyph = ({ path, size = 16 }: { path: string; size?: number }) => (
 const EMPTY_SUGGESTIONS: Suggestion[] = [];
 const IS_APPLE = typeof navigator !== "undefined" && /mac|iphone|ipad|ipod/iu.test(navigator.platform);
 const TRIGGER_CLASS =
-  "inline-flex size-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+  "inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:size-9";
 const ICON_BUTTON_CLASS =
-  "inline-flex size-8 cursor-pointer items-center justify-center rounded-blume text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground disabled:pointer-events-none disabled:opacity-40";
+  "inline-flex size-11 cursor-pointer items-center justify-center rounded-blume text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground disabled:pointer-events-none disabled:opacity-40 lg:size-8";
 const ANSWER_CLASS =
-  "prose prose-sm max-w-none text-foreground [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1 [&_a]:rounded-full [&_a]:bg-muted [&_a]:px-2 [&_a]:py-1 [&_a]:align-middle [&_a]:font-medium [&_a]:text-[0.7rem] [&_a]:leading-none [&_a]:text-muted-foreground! [&_a]:no-underline! [&_a:hover]:text-foreground!";
+  "prose prose-sm min-w-0 max-w-none break-words text-foreground [overflow-wrap:anywhere] [&_a]:inline-flex [&_a]:max-w-full [&_a]:items-center [&_a]:gap-1 [&_a]:rounded-full [&_a]:bg-muted [&_a]:px-2 [&_a]:py-1 [&_a]:align-middle [&_a]:font-medium [&_a]:text-[0.7rem] [&_a]:leading-none [&_a]:text-muted-foreground! [&_a]:no-underline! [&_a:hover]:text-foreground! [&_pre]:max-w-full [&_pre]:overflow-x-auto";
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const newId = (): string => crypto.randomUUID();
 
@@ -217,6 +220,7 @@ const AskAI = ({
   const t = { ...DEFAULT_ASK, ...strings };
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
+  const [mobileModal, setMobileModal] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -224,6 +228,7 @@ const AskAI = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const generationRef = useRef(0);
@@ -231,7 +236,14 @@ const AskAI = ({
   const shownFeedbackRef = useRef(new Set<string>());
   const feedbackSubmissionRef = useRef(new Set<string>());
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    const media = window.matchMedia("(max-width: 1023px)");
+    const syncModal = () => setMobileModal(media.matches);
+    syncModal();
+    media.addEventListener("change", syncModal);
+    return () => media.removeEventListener("change", syncModal);
+  }, []);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -252,15 +264,67 @@ const AskAI = ({
         setOpen((value) => !value);
       }
       if (event.key === "Escape" && open) {
+        if (event.defaultPrevented) return;
         const target = event.target as HTMLElement | null;
-        if (!target?.closest("dialog")) {
-          setOpen(false);
+        const nestedDialog = target?.closest("dialog, [role='dialog']");
+        if (nestedDialog && nestedDialog !== panelRef.current) return;
+        event.preventDefault();
+        setOpen(false);
+      }
+      if (event.key === "Tab" && open && mobileModal) {
+        const panel = panelRef.current;
+        if (!panel) {
+          return;
+        }
+        const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+          (element) => element.getClientRects().length > 0,
+        );
+        if (focusable.length === 0) {
+          event.preventDefault();
+          panel.focus();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable.at(-1)!;
+        if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
+          event.preventDefault();
+          first.focus();
         }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open]);
+  }, [mobileModal, open]);
+
+  useEffect(() => {
+    if (!(open && mobileModal && panelRef.current)) {
+      return;
+    }
+
+    const panel = panelRef.current;
+    const background = Array.from(document.body.children)
+      .filter((element): element is HTMLElement => element instanceof HTMLElement && element !== panel)
+      .map((element) => ({ element, inert: element.inert }));
+    const rootOverflow = document.documentElement.style.overflow;
+    const bodyOverflow = document.body.style.overflow;
+
+    for (const { element } of background) {
+      element.inert = true;
+    }
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      for (const { element, inert } of background) {
+        element.inert = inert;
+      }
+      document.documentElement.style.overflow = rootOverflow;
+      document.body.style.overflow = bodyOverflow;
+    };
+  }, [mobileModal, open]);
 
   useEffect(() => {
     if (open) {
@@ -641,10 +705,14 @@ const AskAI = ({
     <aside
       aria-hidden={open ? undefined : "true"}
       aria-label={t.title}
+      aria-modal={mobileModal ? "true" : undefined}
       className={`fixed inset-y-0 end-0 z-[60] flex w-[var(--blume-ask-width)] flex-col border-border border-s bg-background shadow-2xl transition-transform duration-200 ease-out ${open ? "translate-x-0" : "translate-x-full rtl:-translate-x-full"}`}
       data-blume-ask-panel
       id="blume-ask-panel"
       inert={!open}
+      ref={panelRef}
+      role={mobileModal ? "dialog" : undefined}
+      tabIndex={mobileModal ? -1 : undefined}
     >
       <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-border border-b px-4">
         <span className="font-semibold text-foreground">{t.title}</span>
@@ -688,18 +756,20 @@ const AskAI = ({
             {messages.map((message) =>
               message.role === "user" ? (
                 <div
-                  className="max-w-[85%] self-end whitespace-pre-wrap rounded-blume bg-muted px-3 py-2 text-foreground text-sm"
+                  className="max-w-[85%] self-end whitespace-pre-wrap break-words rounded-blume bg-muted px-3 py-2 text-foreground text-sm [overflow-wrap:anywhere]"
                   key={message.id}
                 >
+                  <span className="sr-only">{t.you}: </span>
                   {message.content}
                 </div>
               ) : (
                 <div key={message.id}>
                   <div className={ANSWER_CLASS}>
+                    <span className="sr-only">{t.ai}: </span>
                     {message.content ? (
                       <div dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }} />
                     ) : (
-                      <span className="animate-pulse text-muted-foreground">…</span>
+                      <span className="animate-pulse text-muted-foreground motion-reduce:animate-none">…</span>
                     )}
                   </div>
                   {feedbackControls(message)}
@@ -754,7 +824,7 @@ const AskAI = ({
         />
         <button
           aria-label={t.send}
-          className="absolute end-3 bottom-3 inline-flex size-8 cursor-pointer items-center justify-center rounded-blume bg-foreground text-background transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+          className="absolute end-3 bottom-3 inline-flex size-11 cursor-pointer items-center justify-center rounded-blume bg-foreground text-background transition-opacity disabled:cursor-not-allowed disabled:opacity-40 lg:size-8"
           disabled={busy || input.trim().length === 0}
           type="submit"
         >

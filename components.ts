@@ -1,7 +1,9 @@
 import { defineComponents } from "blume";
 
 import ConditionalContent from "./components/ConditionalContent.astro";
+import ContentOption from "./components/ContentOption.astro";
 import ContextCondition from "./components/ContextCondition.astro";
+import DependentContent from "./components/DependentContent.astro";
 import Header from "./components/Header.astro";
 import NextjsRouterTypeSelect from "./components/NextjsRouterTypeSelect.astro";
 import PasswordlessRecipeForm from "./components/PasswordlessRecipeForm.astro";
@@ -19,7 +21,9 @@ export default defineComponents({
   },
   mdx: {
     ConditionalContent,
+    ContentOption,
     ContextCondition,
+    DependentContent,
     NextjsRouterTypeSelect,
     PasswordlessRecipeForm,
     Tab,

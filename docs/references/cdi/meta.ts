@@ -3,5 +3,5 @@ import { defineMeta } from "blume";
 export default defineMeta({
   "title": "Core Driver Interface",
   "icon": "file-terminal",
-  "order": 5
+  "order": 70
 });

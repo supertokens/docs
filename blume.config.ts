@@ -29,7 +29,7 @@ export default defineConfig({
   logo: {
     image: {
       light: "/img/logos/supertokens-dark.svg",
-      dark: "/img/logos/supertokens-light.svg",
+      dark: "/img/logos/supertokens-dark.svg",
       alt: "SuperTokens",
     },
     text: "",

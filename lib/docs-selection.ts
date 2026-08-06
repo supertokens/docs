@@ -5,13 +5,21 @@ export const selectionEvent = "supertokens-docs:selection";
 export const variantEvent = "supertokens-docs:variant";
 
 export interface SelectionDetail {
-  group: TabGroup;
+  group: string;
   value: string;
 }
 
 export interface VariantDetail {
   key: string;
   value: string;
+}
+
+interface ResolveSelectionOptions {
+  availableValues: Iterable<string>;
+  defaultValue?: string | null;
+  legacyValue?: string | null;
+  migratedValue?: string | null;
+  storedValue?: string | null;
 }
 
 interface BlumeTabsElement extends HTMLElement {
@@ -30,7 +38,21 @@ const displayLabels: Record<string, string> = {
   webjs: "Web JS",
 };
 
-export const selectionStorageKey = (group: TabGroup) => `supertokens-docs:selection:${group}`;
+export const selectionStorageKey = (group: string) => `supertokens-docs:selection:${group}`;
+
+export function resolveSelection({
+  availableValues,
+  defaultValue,
+  legacyValue,
+  migratedValue,
+  storedValue,
+}: ResolveSelectionOptions): string | undefined {
+  const values = [...availableValues];
+  const validValues = new Set(values);
+  return [migratedValue, storedValue, legacyValue, defaultValue, values[0]].find((value): value is string =>
+    Boolean(value && validValues.has(value)),
+  );
+}
 
 export function readStorage(key: string): string | null {
   try {
@@ -45,6 +67,14 @@ export function writeStorage(key: string, value: string): void {
     localStorage.setItem(key, value);
   } catch {
     // Controls still work for the current page when storage is unavailable.
+  }
+}
+
+export function removeStorage(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Controls still work when storage is unavailable.
   }
 }
 
@@ -103,7 +133,7 @@ export function activateSelection(wrapper: HTMLElement, value: string): boolean 
   return index >= 0;
 }
 
-export function dispatchSelection(group: TabGroup, value: string): void {
+export function dispatchSelection(group: string, value: string): void {
   writeStorage(selectionStorageKey(group), value);
   window.dispatchEvent(new CustomEvent<SelectionDetail>(selectionEvent, { detail: { group, value } }));
 }

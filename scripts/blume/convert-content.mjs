@@ -4,6 +4,7 @@ import path from "node:path";
 import yaml from "js-yaml";
 
 import { annotateTabGroups } from "./annotate-tab-groups.mjs";
+import { migrateNestedTabs } from "./migrate-nested-tabs.ts";
 
 const root = path.resolve(import.meta.dirname, "../..");
 const docsRoot = path.join(root, "docs");
@@ -473,6 +474,7 @@ for (const file of files) {
   body = transformTabs(body);
   body = transformVariants(body);
   body = annotateTabGroups(body);
+  body = migrateNestedTabs(body, path.relative(docsRoot, file)).source;
   body = transformHeadingContainer(body, "Steps", "Step", "#{2,6}");
   body = transformHeadingContainer(body, "Accordion", "AccordionItem", "##");
   body = rewriteLinks(body);

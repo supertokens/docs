@@ -3,5 +3,5 @@ import { defineMeta } from "blume";
 export default defineMeta({
   "title": "Migration",
   "icon": "arrow-right",
-  "order": 9
+  "order": 120
 });

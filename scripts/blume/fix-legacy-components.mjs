@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { annotateTabGroups } from "./annotate-tab-groups.mjs";
+import { migrateNestedTabs } from "./migrate-nested-tabs.ts";
 
 const root = path.resolve(import.meta.dirname, "../..");
 const docsRoot = path.join(root, "docs");
@@ -215,7 +216,9 @@ for (const file of await walk(docsRoot)) {
     );
   });
 
-  await fs.writeFile(file, annotateTabGroups(source));
+  source = annotateTabGroups(source);
+  source = migrateNestedTabs(source, path.relative(docsRoot, file)).source;
+  await fs.writeFile(file, source);
 }
 
 console.log("Converted remaining legacy MDX components");

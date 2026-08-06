@@ -3,7 +3,9 @@ import { relative, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { anchorHeadingCollisions, explicitAnchorIds } from "../sdk-references/normalize-markdown-anchors";
 import { annotateTabGroups } from "./annotate-tab-groups.mjs";
+import { validateTabStructure } from "./migrate-nested-tabs";
 
 interface ContentFile {
   path: string;
@@ -170,12 +172,48 @@ describe("published documentation invariants", () => {
     expect(locationsMatching(/<Tab\s+title=(["'])Option\1\s*>/)).toEqual([]);
   });
 
+  it('does not publish dependent controls labeled "Example"', () => {
+    expect(locationsMatching(/<DependentContent\b[^>]*\blabel=(["'])Example\1/)).toEqual([]);
+  });
+
   it("does not use Tabs as a wrapper for a lone code fence", () => {
     expect(tabsDirectlyWrappingCode()).toEqual([]);
   });
 
   it("does not publish tab groups without Tab children", () => {
     expect(tabsWithoutTabChildren()).toEqual([]);
+  });
+
+  it("does not publish nested or unbalanced tab controls", () => {
+    const violations = contentFiles.flatMap(({ path, source }) => {
+      const validation = validateTabStructure(source);
+      return validation.nestedTabs || validation.unbalanced.length
+        ? [`${relative(repositoryRoot, path)}: ${validation.nestedTabs} nested, ${validation.unbalanced.join(", ")}`]
+        : [];
+    });
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps Web and Mobile as primary tabs", () => {
+    expect(locationsMatching(/<DependentContent\b[^>]*\bgroup=(["'])frontend-custom-ui\1/)).toEqual([]);
+    expect(locationsMatching(/<PlatformTypeSwitch\b|storageKey=(["'])platform-type\1/)).toEqual([]);
+  });
+
+  it("does not publish explicit anchors that collide with heading IDs", () => {
+    const collisions = contentFiles.flatMap(({ path, source }) =>
+      anchorHeadingCollisions(source).map((id) => `${relative(repositoryRoot, path)}: #${id}`),
+    );
+    expect(collisions).toEqual([]);
+  });
+
+  it("does not publish duplicate explicit anchors", () => {
+    const duplicates = contentFiles.flatMap(({ path, source }) => {
+      const ids = explicitAnchorIds(source);
+      return [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))].map(
+        (id) => `${relative(repositoryRoot, path)}: #${id}`,
+      );
+    });
+    expect(duplicates).toEqual([]);
   });
 
   it("does not publish recognizable selector tabs without semantic groups", () => {
@@ -217,6 +255,14 @@ describe("published documentation invariants", () => {
     });
 
     expect(missing).toEqual([]);
+  });
+
+  it("serves standalone SDK logos as valid SVG documents", () => {
+    for (const file of ["js.svg", "nodejs-small.svg"]) {
+      const source = readFileSync(resolve(publicRoot, "img/logos", file), "utf8");
+      expect(source, file).toMatch(/<svg\b[^>]*\bxmlns="http:\/\/www\.w3\.org\/2000\/svg"/u);
+      expect(source, file).toMatch(/<svg\b[^>]*\bwidth="\d+"[^>]*\bheight="\d+"/u);
+    }
   });
 
   it("does not leak typecheck-only source lines", () => {
