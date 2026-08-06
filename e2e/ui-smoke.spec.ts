@@ -93,15 +93,15 @@ test("search results distinguish documentation sections", async ({ page }) => {
   await page.getByRole("button", { name: "Search" }).click();
 
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("Overview", { exact: true })).toHaveCount(1);
+  await expect(dialog.getByText("Introduction", { exact: true })).toHaveCount(1);
   await expect(dialog.getByText("References", { exact: true })).toBeVisible();
 });
 
 test("backend language tabs expose the active framework as a compact select", async ({ page }) => {
-  await page.goto("/docs/quickstart/backend-setup");
+  await page.goto("/docs/quickstart#2-integrate-the-backend-sdk");
 
   const sectionHeading = page.getByRole("heading", {
-    name: /3\. Add the SuperTokens APIs and Configure CORS/,
+    name: /2\.3 Add the SuperTokens APIs and configure CORS/,
   });
   const languageGroup = sectionHeading
     .locator("~ div")
@@ -199,13 +199,13 @@ test("backend language tabs expose the active framework as a compact select", as
 
 test("custom frontend setup uses Web and Mobile tabs with dependent selects", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("supertokens-docs:platform-type", "mobile"));
-  await page.goto("/docs/quickstart/frontend-setup");
+  await page.goto("/docs/quickstart#1-integrate-the-frontend-sdk");
 
   const uiType = page.getByRole("group", { name: "UI type" });
   await uiType.getByRole("radio", { name: /^Custom UI/ }).click();
 
   const customFlow = page.locator('[data-variant-content="ui-type"][data-variant-value="custom"]');
-  const installHeading = customFlow.getByRole("heading", { name: /1\. Install the SDK/ });
+  const installHeading = customFlow.getByRole("heading", { name: /1\.1 Install the SDK/ });
   const platformGroup = installHeading
     .locator("~ .st-tab-group")
     .filter({ has: page.getByRole("tablist") })
