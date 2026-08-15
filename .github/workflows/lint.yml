@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "docs/**"
-      - "components/**"
-      - "islands/**"
-      - "*.md"
+      - "docs/**/*.md"
+      - "docs/**/*.mdx"
+      - "islands/**/*.tsx"
+      - "CONTRIBUTING.md"
       - ".vale.ini"
       - ".vale/**"
-      - "package-lock.json"
+      - ".github/workflows/lint.yml"
 
 jobs:
   vale-lint:
@@ -25,23 +25,35 @@ jobs:
         id: changed-doc-files
         uses: tj-actions/changed-files@v46.0.3
         with:
-          files: |
-            **/*.md
-            **/*.mdx
-            components/**/*.astro
-            islands/**/*.tsx
-            .vale.ini
-            .vale/**
+          files_yaml: |
+            content:
+              - "docs/**/*.md"
+              - "docs/**/*.mdx"
+              - "islands/**/*.tsx"
+              - "CONTRIBUTING.md"
+            config:
+              - ".vale.ini"
+              - ".vale/**"
+              - ".github/workflows/lint.yml"
+          matrix: true
 
-      - name: Run vale
+      - name: Run Vale on changed content
         uses: errata-ai/vale-action@v2.1.1
-        if: steps.changed-doc-files.outputs.any_changed == 'true'
+        if: >-
+          github.event_name != 'workflow_dispatch' &&
+          steps.changed-doc-files.outputs.content_any_changed == 'true' &&
+          steps.changed-doc-files.outputs.config_any_modified != 'true'
         with:
-          files: |
-            docs
-            components
-            islands
-            CONTRIBUTING.md
+          files: ${{ steps.changed-doc-files.outputs.content_all_changed_files }}
+          vale_flags: "--minAlertLevel=warning"
+
+      - name: Run full Vale validation
+        uses: errata-ai/vale-action@v2.1.1
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          steps.changed-doc-files.outputs.config_any_modified == 'true'
+        with:
+          files: '["docs", "components", "islands", "CONTRIBUTING.md"]'
 
   # format-code:
   #   runs-on: ubuntu-latest
