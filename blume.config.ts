@@ -12,8 +12,20 @@ const sdkReferenceRedirects = [
     to: "/references/backend-sdks/supertokens-nodejs/package",
   },
   {
+    from: "/references/backend-sdks/supertokens-nodejs/index",
+    to: "/references/backend-sdks/supertokens-nodejs/package",
+  },
+  {
     from: "/references/frontend-sdks/supertokens-auth-react",
     to: "/references/frontend-sdks/supertokens-auth-react/package",
+  },
+  {
+    from: "/references/frontend-sdks/supertokens-auth-react/index",
+    to: "/references/frontend-sdks/supertokens-auth-react/package",
+  },
+  {
+    from: "/references/frontend-sdks/supertokens-web-js/index",
+    to: "/references/frontend-sdks/supertokens-web-js/package",
   },
 ] as const;
 const rowndRedirects = [
@@ -22,7 +34,7 @@ const rowndRedirects = [
   { from: "/migration/rownd/frontend-setup", to: "/migration/rownd/sdk-integration-guide" },
 ] as const;
 const quickstartRedirects = [
-  { from: "/quickstart/introduction", to: "/" },
+  { from: "/quickstart/introduction", to: "/quickstart" },
   { from: "/quickstart/frontend-setup", to: "/quickstart#1-integrate-the-frontend-sdk" },
   { from: "/quickstart/backend-setup", to: "/quickstart#2-integrate-the-backend-sdk" },
   { from: "/quickstart/next-steps", to: "/quickstart#3-configure-the-core-service" },

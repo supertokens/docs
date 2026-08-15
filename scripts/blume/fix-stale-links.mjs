@@ -5,6 +5,71 @@ const docsRoot = path.resolve(import.meta.dirname, "../../docs");
 
 const replacements = [
   {
+    from: "https://supertokens.com/docs/session/appinfo",
+    to: "https://supertokens.com/docs/references/backend-sdks/reference#sdk-configuration",
+    expected: 18,
+  },
+  {
+    from: "https://supertokens.com/docs/thirdpartyemailpassword/appinfo",
+    to: "https://supertokens.com/docs/references/backend-sdks/reference#sdk-configuration",
+    expected: 6,
+  },
+  {
+    from: "https://supertokens.com/docs/guides",
+    to: "https://supertokens.com/docs/authentication/overview",
+    expected: 2,
+  },
+  {
+    from: "https://supertokens.com/docs/passwordless/introduction",
+    to: "https://supertokens.com/docs/authentication/passwordless/initial-setup",
+    expected: 3,
+  },
+  {
+    from: "https://supertokens.com/docs/passwordless/quick-setup/frontend",
+    to: "https://supertokens.com/docs/authentication/passwordless/initial-setup",
+    expected: 2,
+  },
+  {
+    from: "https://supertokens.com/docs/passwordless/quick-setup/backend",
+    to: "https://supertokens.com/docs/authentication/passwordless/initial-setup",
+    expected: 1,
+  },
+  {
+    from: "https://supertokens.com/docs/passwordless/advanced-customizations/frontend-functions-override/about",
+    to: "https://supertokens.com/docs/authentication/passwordless/hooks-and-overrides",
+    expected: 1,
+  },
+  {
+    from: "https://supertokens.com/docs/thirdpartyemailpassword/quick-setup/frontend",
+    to: "https://supertokens.com/docs/authentication/social/initial-setup",
+    expected: 1,
+  },
+  {
+    from: "https://supertokens.com/docs/auth-react/modules/recipe_thirdpartyemailpassword.html#RecipeInterface",
+    to: "https://supertokens.com/docs/references/frontend-sdks/function-overrides",
+    expected: 2,
+  },
+  {
+    from: "https://supertokens.com/docs/nodejs/modules/recipe_thirdparty.html#RecipeInterface",
+    to: "https://supertokens.com/docs/references/backend-sdks/function-overrides",
+    expected: 1,
+  },
+  {
+    from: "https://supertokens.com/docs/python/recipe/thirdparty/interfaces.html#supertokens_python.recipe.thirdparty.interfaces.RecipeInterface",
+    to: "https://supertokens.com/docs/references/backend-sdks/function-overrides",
+    expected: 1,
+  },
+  {
+    from: "https://supertokens.com/docs/session/common-customizations/sessions/session-verification-in-api/get-session",
+    to: "https://supertokens.com/docs/additional-verification/session-verification/protect-api-routes",
+    expected: 1,
+  },
+  {
+    from: "https://supertokens.com/docs/session/common-customizations/sessions/token-transfer-method#backend-configuration-optional",
+    to: "https://supertokens.com/docs/post-authentication/session-management/switch-between-cookies-and-header-authentication",
+    expected: 1,
+  },
+  {
     from: "../frontend-setup#step-2-checking-the---custv-boolean-value-in-the-mfa-claim--cust",
     to: "/additional-verification/mfa/initial-setup#12-add-the-mfa-flow",
     expected: 2,

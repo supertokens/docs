@@ -6,6 +6,10 @@ import yaml from "js-yaml";
 
 const root = path.resolve(import.meta.dirname, "../..");
 const docsRoot = path.join(root, "docs");
+const migrationBase = execFileSync("git", ["merge-base", "HEAD", "master"], {
+  cwd: root,
+  encoding: "utf8",
+}).trim();
 
 const split = (source) => {
   if (!source.startsWith("---\n")) return { data: {}, body: source };
@@ -44,7 +48,7 @@ const legacyDataFor = (file) => {
     relative = relative.replace("webauthn-setup.mdx", "webauthn-secondary-factor-setup.mdx");
   }
   try {
-    return split(execFileSync("git", ["show", `HEAD:${relative}`], { cwd: root, encoding: "utf8" })).data;
+    return split(execFileSync("git", ["show", `${migrationBase}:${relative}`], { cwd: root, encoding: "utf8" })).data;
   } catch {
     return {};
   }
