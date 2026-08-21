@@ -1,0 +1,64 @@
+---
+id: security
+title: Security model
+hide_title: true
+sidebar_position: 0
+description: >-
+  Understand the SuperTokens Core trust model, how to deploy it safely, which
+  behaviors are intentional by design, and how to report a vulnerability.
+page_type: guide
+category: platform-configuration
+---
+
+
+# Security model
+
+## Overview
+
+This page describes the security model of the **SuperTokens Core**: how it is meant to be deployed, which behaviors are intentional by design, and how to report a vulnerability. Read it alongside [Secure the core](/docs/deployment/self-host-supertokens#secure-the-core), which covers the deployment steps in detail.
+
+## Trust model
+
+The **SuperTokens Core** is a backend service. Your frontend never talks to it directly — all requests go to your own backend, and the backend SDKs communicate with the Core on your behalf.
+
+Because the Core mediates authentication for your application, it exposes administrative operations over its API: creating and updating users, issuing password-reset and passwordless codes, managing tenants, and more. These operations are available to whatever can reach the Core.
+
+:::caution
+Treat the Core like your database. Any caller that can reach it can perform administrative operations on your users' data. It must be reachable only by your backend — never exposed directly to the public internet, to your frontend, or to end users.
+:::
+
+## Deploy the core safely
+
+At a minimum:
+
+- **Isolate the network.** Run the Core on a private network or subnet reachable only by your backend. This is the primary protection and applies regardless of any other setting.
+- **Set an API key.** If the Core can be reached by anything beyond your backend, configure an [API key](/docs/platform-configuration/supertokens-core/api-keys). Within a single deployment all callers share the same key; an API key is therefore not a substitute for network isolation.
+- **Restrict by IP and use TLS.** Optionally limit access by [IP address](/docs/platform-configuration/supertokens-core/ip-allow-deny) and serve traffic over [TLS/SSL](/docs/platform-configuration/supertokens-core/add-ssl-via-nginx).
+
+See [Secure the core](/docs/deployment/self-host-supertokens#secure-the-core) for the full walkthrough.
+
+## Behaviors that are intentional by design
+
+The following are deliberate design decisions that follow from the trust model above. They are safe under the recommended deployment (the Core isolated on a private network and, where exposed, protected by an API key). If you believe one of them has exploitable impact under that deployment model, please report it using the process below.
+
+- **No API key by default.** The Core ships without an API key, which lets you run and test it locally. Whenever it is reachable by anything other than your backend, you must configure an [API key](/docs/platform-configuration/supertokens-core/api-keys) and/or isolate it on a private network.
+- **The Core returns codes and tokens to your backend.** Passwordless and OTP codes, magic-link codes, password-reset tokens, and device identifiers are returned in Core API responses. The Core has no channel to your frontend; delivering these values to end users (over email, SMS, and more) is the responsibility of your backend. Your backend must protect these values and deliver them only through your chosen channel.
+- **Session verification is app-scoped.** A session's tenant is stored in the access token as a cryptographically signed `tId` claim. Verifying a session confirms the token's signature and returns the tenant it belongs to; it does not infer the tenant from the request URL. Because the claim is signed by the Core, it cannot be forged — a token issued for one tenant always verifies as that tenant's session. When an action is restricted to a specific tenant, check the session's tenant in your backend using `session.getTenantId()` rather than relying on the URL the request arrived on.
+
+## Report a vulnerability
+
+**SuperTokens** follows a coordinated disclosure process and welcomes good-faith security reports.
+
+- **Preferred:** open a private report from the affected repository's **Security** tab → **Report a vulnerability** (GitHub Private Vulnerability Reporting).
+- **Email:** security@supertokens.com.
+
+Do not open public GitHub issues, pull requests, or discussions for security reports. See the full [security policy](https://github.com/supertokens/supertokens-core/security/policy) for what to include, response times, and safe-harbor terms.
+
+### Supported versions
+
+**SuperTokens** backports security fixes across the Core and its SDKs:
+
+- **All security fixes** are backported for at least one year of releases. For the Core this means **v11.0** and later.
+- **Critical security fixes** are backported further, to Core **v6.0** and later.
+
+Versions outside these windows are end-of-life. Please upgrade to a supported version.
