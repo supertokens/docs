@@ -30,6 +30,7 @@ This way you have full control over the authentication data and you can scale ba
 To deploy the Core Service you must configure two things: the actual API and the database.
 - The core service can be deployed using a **Docker** image or directly inside your VM.
 - The supported database is **PostgreSQL**. The minimum required version is `13.0`.
+- The core service is a **trusted backend component**. Deploy it on a private network reachable only by your backend, and never expose it directly to the public internet or to your frontend. When it must be reachable more widely, protect it with an [API key](/docs/platform-configuration/supertokens-core/api-keys). See [Secure the core](#secure-the-core) for details.
 
 :::info
 **SuperTokens Core** has dropped **MySQL** and **MongoDB** support with the `11.0.0` release.
@@ -216,9 +217,12 @@ init(
 </BackendTabs.TabItem>
 </BackendTabs>
 
-:::info Security
-No API key exists by default.
-Check [the API keys documentation](/docs/platform-configuration/supertokens-core/api-keys) to see how to add one.
+:::caution Security
+The SuperTokens Core is a backend service, meant to be accessed only by your own backend through the backend SDKs. It must **not** be exposed directly to the public internet, to your frontend, or to end users. Any caller that can reach the Core can perform administrative operations on your users' data.
+
+- **No API key exists by default.** Whenever the Core is reachable by anything other than your backend, protect it with an [API key](/docs/platform-configuration/supertokens-core/api-keys).
+- **Prefer network isolation.** Deploy the Core on a private network (for example a VPC or an internal subnet) reachable only by your backend.
+- **Add further controls as needed:** restrict access by [IP address](/docs/platform-configuration/supertokens-core/ip-allow-deny) and serve traffic over [TLS/SSL](/docs/platform-configuration/supertokens-core/add-ssl-via-nginx).
 :::
 
 ### 4. Set up the database
@@ -960,6 +964,17 @@ curl --location --request PUT ^{coreInfo.uri}/ee/license \
      --data-raw '{ "licenseKey": "<YOUR_LICENSE_KEY>" }'
 
 ```
+
+## Secure the core
+
+The SuperTokens Core exposes administrative operations over its API — creating and updating users, issuing password-reset and passwordless codes, managing tenants, and more. By design these are available to the connecting backend, because the Core has no direct channel to your frontend and relies on your backend to mediate every request and to deliver codes and tokens to end users.
+
+This trust model means the Core must be treated like your database: reachable only by your own backend, never by untrusted clients.
+
+- **Isolate the network.** Run the Core on a private network or subnet that only your backend can reach. This is the primary protection and applies regardless of any other setting.
+- **Set an API key.** If the Core can be reached by anything beyond your backend, configure an [API key](/docs/platform-configuration/supertokens-core/api-keys). Note that within a single deployment all callers share the same key; an API key is therefore not a substitute for network isolation between tenants.
+- **Restrict by IP and use TLS.** Optionally limit access by [IP address](/docs/platform-configuration/supertokens-core/ip-allow-deny) and terminate [TLS/SSL](/docs/platform-configuration/supertokens-core/add-ssl-via-nginx) in front of the Core.
+- **Enforce tenant scoping in your backend.** Sessions and other objects carry their tenant as a signed claim. When an action is restricted to a specific tenant, verify the tenant in your backend rather than relying on the URL the request arrived on.
 
 ## References
 
