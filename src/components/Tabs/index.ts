@@ -1,5 +1,6 @@
 export * from "./FrontendTabs";
 export * from "./BackendTabs";
+export * from "./RepositoryTabs";
 export * from "./SelfHostingTabs";
 export * from "./FrontendCustomUITabs";
 export * from "./FrontendPrebuiltUITabs";
