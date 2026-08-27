@@ -40,6 +40,10 @@ const quickstartRedirects = [
   { from: "/quickstart/next-steps", to: "/quickstart#3-configure-the-core-service" },
   { from: "/quickstart/build-with-ai-tools", to: "/integrate-with-ai" },
 ] as const;
+const referenceRedirects = [
+  { from: "/references/compatibility-table", to: "/references/updating-supertokens#sdk-compatibility-table" },
+  { from: "/references/how-supertokens-works", to: "/#how-supertokens-works" },
+] as const;
 const integrationRedirects = [
   { from: "/quickstart/integrations", to: "/integrations/overview" },
   { from: "/quickstart/integrations/overview", to: "/integrations/overview" },
@@ -144,11 +148,7 @@ export default defineConfig({
     text: "",
     href: "https://supertokens.com",
   },
-  github: {
-    owner: "supertokens",
-    repo: "docs",
-    branch: "master",
-  },
+  feedback: false,
   theme: {
     accent: {
       light: "#a84f00",
@@ -212,6 +212,7 @@ export default defineConfig({
     ...sdkReferenceRedirects,
     ...rowndRedirects,
     ...quickstartRedirects,
+    ...referenceRedirects,
     ...integrationRedirects,
     ...openApiRedirects,
   ],

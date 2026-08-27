@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
 
 declare global {
   interface Window {
@@ -198,12 +198,15 @@ function buildSummary(rows: PreferenceRow[]): SummaryRow[] {
 
 function OptionMark({ label, presentation }: { label: string; presentation?: OptionPresentation }) {
   const Icon = presentation?.icon;
+  const logoStyle = presentation?.logo
+    ? ({ "--preferences-option-logo": `url("${assetBase}${presentation.logo}")` } as CSSProperties)
+    : undefined;
   return (
     <span className="preferences-option-mark" aria-hidden="true">
       {Icon ? (
         <Icon />
       ) : presentation?.logo ? (
-        <img src={`${assetBase}${presentation.logo}`} alt="" />
+        <span className="preferences-option-logo" style={logoStyle} />
       ) : (
         <span>{label.slice(0, 2)}</span>
       )}
