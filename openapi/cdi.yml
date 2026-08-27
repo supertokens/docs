@@ -8409,6 +8409,8 @@ paths:
           $ref: "#/components/responses/500"
 
   /appid-{appId}/bulk-import/users:
+    parameters:
+      - $ref: "#/components/parameters/appId"
     get:
       summary: List bulk import users
       tags:
@@ -8464,6 +8466,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/cdi-version"
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -8471,10 +8474,29 @@ paths:
               properties:
                 users:
                   type: array
+                  maxItems: 10000
                   items:
                     $ref: "#/components/schemas/bulkImportUser"
               required:
                 - users
+            example:
+              users:
+                - externalUserId: "user_2"
+                  userMetadata:
+                    firstName: "John"
+                    lastName: "Doe"
+                    department: "Marketing"
+                  userRoles:
+                    - role: "editor"
+                      tenantIds: ["public"]
+                  loginMethods:
+                    - isVerified: true
+                      isPrimary: true
+                      timeJoinedInMSSinceEpoch: 1672617599000
+                      recipeId: "thirdparty"
+                      email: "john.doe@gmail.com"
+                      thirdPartyId: "google"
+                      thirdPartyUserId: "google_987654321"
       responses:
         "200":
           description: Bulk Import Users added successfully
@@ -8486,7 +8508,9 @@ paths:
                   status:
                     $ref: "#/components/schemas/statusOK"
                   users:
-                    $ref: "#/components/schemas/addBulkImportUserResponse"
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/addBulkImportUserResponse"
         "400":
           description: One or more users have invalid schema
           content:
@@ -8579,7 +8603,9 @@ paths:
         "500":
           $ref: "#/components/responses/500"
 
-  /appid-<appId>/bulk-import/users/count:
+  /appid-{appId}/bulk-import/users/count:
+    parameters:
+      - $ref: "#/components/parameters/appId"
     get:
       tags:
         - Bulk Import
@@ -8590,7 +8616,6 @@ paths:
       description: |
         Count users in the bulk import processing queue, by status or all of them (by passing `null` status).
       parameters:
-        - $ref: "#/components/parameters/api-key"
         - $ref: "#/components/parameters/cdi-version"
         - $ref: "#/components/parameters/bulkImportUserStatus"
       responses:
@@ -8619,7 +8644,9 @@ paths:
         "500":
           $ref: "#/components/responses/500"
 
-  /appid-<appId>/bulk-import/import:
+  /appid-{appId}/bulk-import/import:
+    parameters:
+      - $ref: "#/components/parameters/appId"
     post:
       tags:
         - Bulk Import
@@ -8630,14 +8657,35 @@ paths:
       description: |
         Import one user immediately with the Bulk Import functionality.
       parameters:
-        - $ref: "#/components/parameters/api-key"
         - $ref: "#/components/parameters/cdi-version"
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              type: object
               $ref: "#/components/schemas/bulkImportUser"
+            example:
+              externalUserId: "user_12345"
+              userMetadata:
+                firstName: "Jane"
+                lastName: "Doe"
+                department: "Engineering"
+              userRoles:
+                - role: "admin"
+                  tenantIds: ["public"]
+              totpDevices:
+                - secretKey: "JBSWY3DPEHPK3PXP"
+                  period: 30
+                  skew: 1
+                  deviceName: "Main Device"
+              loginMethods:
+                - isVerified: true
+                  isPrimary: true
+                  timeJoinedInMSSinceEpoch: 1672531199000
+                  recipeId: "emailpassword"
+                  email: "jane.doe@example.com"
+                  passwordHash: "$2b$10$Tix3Vpu93kiaZRLPPzD6QOIm62x0l5gRdvlyark5S.MLn/NY6t4gS"
+                  hashingAlgorithm: "bcrypt"
       responses:
         "200":
           description: User added successfully
@@ -9652,6 +9700,15 @@ paths:
 
 components:
   parameters:
+    appId:
+      name: appId
+      in: path
+      description: The application ID. Omit the entire `appid-{appId}` prefix to use `public`.
+      required: true
+      schema:
+        type: string
+        example: public
+
     tenantId:
       name: tenantId
       in: path
@@ -9779,6 +9836,13 @@ components:
       example: ZmE3YTA4NDEtY...MjM5MTgwMzIyMzE=
       schema:
         type: string
+
+    bulkImportUserStatus:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: "#/components/schemas/bulkImportUserStatus"
 
     limit:
       name: limit
@@ -10601,6 +10665,7 @@ components:
           properties:
             recipeId:
               type: string
+              enum: ["emailpassword"]
               example: "emailpassword"
             email:
               $ref: "#/components/schemas/email"
@@ -10612,9 +10677,14 @@ components:
             hashingAlgorithm:
               $ref: "#/components/schemas/hashingAlgorithm"
           required:
+            - recipeId
             - email
-            - passwordHash
-            - hashingAlgorithm
+          anyOf:
+            - required:
+                - passwordHash
+                - hashingAlgorithm
+            - required:
+                - plainTextPassword
 
     addBulkImportUserLoginMethodResponse:
       type: object
@@ -10650,12 +10720,17 @@ components:
           properties:
             recipeId:
               type: string
+              enum: ["thirdparty"]
               example: "thirdparty"
+            email:
+              $ref: "#/components/schemas/email"
             thirdPartyId:
               $ref: "#/components/schemas/thirdPartyId"
             thirdPartyUserId:
               $ref: "#/components/schemas/thirdPartyUserId"
           required:
+            - recipeId
+            - email
             - thirdPartyId
             - thirdPartyUserId
 
@@ -10667,10 +10742,19 @@ components:
           properties:
             recipeId:
               type: string
+              enum: ["passwordless"]
               example: "passwordless"
-      oneOf:
-        - $ref: "#/components/schemas/email"
-        - $ref: "#/components/schemas/phoneNumber"
+            email:
+              $ref: "#/components/schemas/email"
+            phoneNumber:
+              $ref: "#/components/schemas/phoneNumber"
+          required:
+            - recipeId
+          anyOf:
+            - required:
+                - email
+            - required:
+                - phoneNumber
 
     bulkImportUser:
       type: object
@@ -10678,9 +10762,7 @@ components:
         externalUserId:
           $ref: "#/components/schemas/userId"
         userMetadata:
-          type: array
-          items:
-            $ref: "#/components/schemas/userMetadata"
+          $ref: "#/components/schemas/userMetadata"
         userRoles:
           type: array
           items:
@@ -10691,11 +10773,14 @@ components:
             $ref: "#/components/schemas/bulkImportTotpDevice"
         loginMethods:
           type: array
+          minItems: 1
           items:
-            anyOf:
+            oneOf:
               - $ref: "#/components/schemas/bulkImportUserEmailPasswordLoginMethod"
               - $ref: "#/components/schemas/bulkImportUserThirdPartyLoginMethod"
               - $ref: "#/components/schemas/bulkImportUserPasswordlessLoginMethod"
+      required:
+        - loginMethods
 
     addBulkImportUserResponse:
       type: object
@@ -10713,6 +10798,12 @@ components:
           $ref: "#/components/schemas/bulkImportUserId"
         status:
           $ref: "#/components/schemas/bulkImportUserStatus"
+        primaryUserId:
+          type: string
+          description: The ID of the primary user created from this staged user, when available.
+        errorMessage:
+          type: string
+          description: The reason the staged user failed to import, when the status is FAILED.
         createdAt:
           $ref: "#/components/schemas/timeJoined"
         updatedAt:

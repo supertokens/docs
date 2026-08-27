@@ -1,5 +1,7 @@
 import { defineComponents } from "blume";
 
+import ApiRequestSnippet from "./components/ApiRequestSnippet.astro";
+import ApiReferenceDrawer from "./components/ApiReferenceDrawer.astro";
 import ConditionalContent from "./components/ConditionalContent.astro";
 import ContentOption from "./components/ContentOption.astro";
 import ContextCondition from "./components/ContextCondition.astro";
@@ -16,10 +18,12 @@ import VariantContent from "./components/VariantContent.astro";
 
 export default defineComponents({
   layout: {
+    Footer: ApiReferenceDrawer,
     Header,
     TableOfContents,
   },
   mdx: {
+    ApiRequestSnippet,
     ConditionalContent,
     ContentOption,
     ContextCondition,

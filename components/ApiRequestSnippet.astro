@@ -1,0 +1,402 @@
+---
+import specs from "blume:openapi";
+import CodeBlock from "blume/components/content/CodeBlock.astro";
+import {
+  mergeParameters,
+  type ParameterLike,
+  resolveComponentRef,
+  type SchemaLike,
+} from "blume/components/openapi/helpers.ts";
+import { operationModel } from "blume/components/openapi/operation-model.ts";
+import { buildRequest, defaultValues, paramKey } from "blume/components/openapi/request.ts";
+import {
+  effectiveSecurity,
+  resolveSecurity,
+  type SecurityRequirementLike,
+  type SecuritySchemeLike,
+} from "blume/components/openapi/security.ts";
+import { sampleLanguages, type RequestSample } from "blume/components/openapi/snippets.ts";
+import { withBase } from "blume/components/islands/base-path.ts";
+
+import type { ApiReferenceOperationId } from "../lib/api-reference-operations";
+
+interface Props {
+  operationId: ApiReferenceOperationId;
+  query?: Record<string, string>;
+  snippetId: string;
+}
+
+interface MediaTypeLike {
+  schema?: SchemaLike;
+  example?: unknown;
+  examples?: Record<string, { value?: unknown }>;
+}
+
+interface RequestBodyLike {
+  $ref?: string;
+  content?: Record<string, MediaTypeLike>;
+}
+
+interface OperationLike {
+  parameters?: ParameterLike[];
+  requestBody?: RequestBodyLike;
+  security?: SecurityRequirementLike[];
+}
+
+const { operationId, query = {}, snippetId } = Astro.props;
+if (snippetId.trim() === "") {
+  throw new Error(`[ApiRequestSnippet] "snippetId" must not be empty for operation "${operationId}".`);
+}
+const spec = specs["references-cdi"];
+if (!spec) {
+  throw new Error('[ApiRequestSnippet] OpenAPI source "references-cdi" was not found.');
+}
+const ref = Object.values(spec?.operations ?? {}).find((candidate) => candidate.operationId === operationId);
+if (!ref) {
+  throw new Error(`[ApiRequestSnippet] Operation "${operationId}" was not found in "references-cdi".`);
+}
+const doc = (spec?.document ?? {}) as {
+  paths?: Record<string, Record<string, unknown> & { parameters?: ParameterLike[] }>;
+  components?: {
+    schemas?: Record<string, SchemaLike>;
+    parameters?: Record<string, ParameterLike>;
+    requestBodies?: Record<string, RequestBodyLike>;
+    securitySchemes?: Record<string, SecuritySchemeLike>;
+  };
+  security?: SecurityRequirementLike[];
+};
+const pathItem = ref ? doc.paths?.[ref.path] : undefined;
+const operation = (pathItem && ref ? pathItem[ref.method] : undefined) as OperationLike | undefined;
+if (!operation) {
+  throw new Error(
+    `[ApiRequestSnippet] Operation "${operationId}" points to missing ${ref.method.toUpperCase()} ${ref.path}.`,
+  );
+}
+const components = doc.components ?? {};
+const parameters = mergeParameters(pathItem?.parameters, operation?.parameters, components);
+const resolvedRequestBody = operation.requestBody
+  ? resolveComponentRef(operation.requestBody, components, "requestBodies")
+  : undefined;
+const requestBody = resolvedRequestBody
+  ? {
+      ...resolvedRequestBody,
+      content: Object.fromEntries(
+        Object.entries(resolvedRequestBody.content ?? {}).map(([contentType, media]) => [
+          contentType,
+          {
+            ...media,
+            example: media.example ?? media.examples?.default?.value,
+          },
+        ]),
+      ),
+    }
+  : undefined;
+const security = resolveSecurity(
+  effectiveSecurity(operation?.security, doc.security),
+  doc.components?.securitySchemes,
+);
+const model = operationModel({
+  method: ref.method,
+  parameters,
+  path: ref.path,
+  requestBody,
+  schemas: doc.components?.schemas ?? {},
+  security,
+  servers: [{ url: "<CORE_API_ENDPOINT>" }],
+});
+const values = defaultValues(model);
+for (const [name, value] of Object.entries(query)) {
+  const parameter = model.params.find((candidate) => candidate.in === "query" && candidate.name === name);
+  if (!parameter) {
+    throw new Error(
+      `[ApiRequestSnippet] Query override "${name}" is not declared by operation "${operationId}".`,
+    );
+  }
+  values.params[paramKey(parameter)] = value;
+}
+const sample = buildRequest(model, values);
+
+const goSnippet = (request: RequestSample): string => {
+  const body = request.body ? `strings.NewReader(\`${request.body.replaceAll("`", "` + \"`\" + `")}\`)` : "nil";
+  const imports = request.body ? ['"net/http"', '"strings"'] : ['"net/http"'];
+  const headers = Object.entries(request.headers)
+    .map(([name, value]) => `req.Header.Set(${JSON.stringify(name)}, ${JSON.stringify(value)})`)
+    .join("\n");
+  return `package main
+
+import (
+${imports.map((entry) => `\t${entry}`).join("\n")}
+)
+
+func main() {
+\treq, err := http.NewRequest(${JSON.stringify(request.method)}, ${JSON.stringify(request.url)}, ${body})
+\tif err != nil {
+\t\tpanic(err)
+\t}
+${headers
+  .split("\n")
+  .filter(Boolean)
+  .map((line) => `\t${line}`)
+  .join("\n")}
+\tresponse, err := http.DefaultClient.Do(req)
+\tif err != nil {
+\t\tpanic(err)
+\t}
+\tdefer response.Body.Close()
+}`;
+};
+
+const builtInLanguages = sampleLanguages(["curl", "js", "python"]);
+const languages = [
+  builtInLanguages[0],
+  builtInLanguages[1] ? { ...builtInLanguages[1], label: "JavaScript / Node.js" } : undefined,
+  { build: goSnippet, id: "go", label: "Go", lang: "go" },
+  builtInLanguages[2],
+].filter((language) => language !== undefined);
+const idPart = (value: string): string => value.toLowerCase().replaceAll(/[^a-z0-9]+/gu, "-");
+const namespace = `api-request-${idPart(operationId)}-${idPart(snippetId)}`;
+const embedRoute = withBase(`/docs/api-reference-embed/${ref.key}`);
+---
+
+<div class="api-request-snippet not-prose my-6" data-api-request-tabs>
+  <div aria-label={`${ref.summary} request examples`} class="flex overflow-x-auto border-b" role="tablist">
+    {languages.map((language, index) => (
+      <button
+        aria-controls={`${namespace}-panel-${language.id}`}
+        aria-selected={index === 0 ? "true" : "false"}
+        class="border-b-2 border-transparent px-4 py-2 font-medium text-sm aria-selected:border-accent aria-selected:text-foreground"
+        id={`${namespace}-tab-${language.id}`}
+        role="tab"
+        tabindex={index === 0 ? 0 : -1}
+        type="button"
+      >
+        {language.label}
+      </button>
+    ))}
+  </div>
+  {languages.map((language, index) => (
+    <div
+      aria-labelledby={`${namespace}-tab-${language.id}`}
+      hidden={index !== 0}
+      id={`${namespace}-panel-${language.id}`}
+      role="tabpanel"
+      tabindex="0"
+    >
+      <CodeBlock code={language.build(sample)} icons={false} lang={language.lang} />
+    </div>
+  ))}
+  <p class="mt-3 text-muted-foreground text-sm">
+    <a
+      aria-controls="api-reference-drawer"
+      aria-haspopup="dialog"
+      class="font-medium text-accent underline underline-offset-4"
+      data-api-reference-embed-href={embedRoute}
+      data-api-reference-title={ref.summary}
+      data-api-reference-trigger
+      href={ref.route}
+    >
+      View the full API schema and response details
+    </a>
+  </p>
+</div>
+
+<script>
+  const initializeApiRequestTabs = () => {
+    for (const tabs of document.querySelectorAll<HTMLElement>("[data-api-request-tabs]")) {
+      if (tabs.dataset.initialized) continue;
+      tabs.dataset.initialized = "true";
+      const buttons = [...tabs.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+
+      const activate = (button: HTMLButtonElement) => {
+        for (const candidate of buttons) {
+          const active = candidate === button;
+          candidate.ariaSelected = String(active);
+          candidate.tabIndex = active ? 0 : -1;
+          const panel = tabs.querySelector<HTMLElement>(`#${candidate.getAttribute("aria-controls")}`);
+          if (panel) panel.hidden = !active;
+        }
+      };
+
+      for (const [index, button] of buttons.entries()) {
+        button.addEventListener("click", () => activate(button));
+        button.addEventListener("keydown", (event) => {
+          let next = index;
+          if (event.key === "ArrowRight") next = (index + 1) % buttons.length;
+          else if (event.key === "ArrowLeft") next = (index - 1 + buttons.length) % buttons.length;
+          else if (event.key === "Home") next = 0;
+          else if (event.key === "End") next = buttons.length - 1;
+          else return;
+          event.preventDefault();
+          activate(buttons[next]);
+          buttons[next].focus();
+        });
+      }
+    }
+  };
+
+  initializeApiRequestTabs();
+  document.addEventListener("astro:page-load", initializeApiRequestTabs);
+
+  let apiReferenceDrawerInitialized = false;
+  let apiReferencePreloadGeneration = 0;
+
+  const initializeApiReferenceDrawer = () => {
+    if (apiReferenceDrawerInitialized) return;
+    apiReferenceDrawerInitialized = true;
+
+    let trigger: HTMLAnchorElement | null = null;
+    let selectedEmbedUrl: string | null = null;
+    let openGeneration = 0;
+    const currentDrawer = () => document.querySelector<HTMLDialogElement>("[data-api-reference-drawer]");
+
+    const apiReferenceUrls = () =>
+      new Set(
+        [...document.querySelectorAll<HTMLAnchorElement>("[data-api-reference-embed-href]")]
+          .map((link) => new URL(link.dataset.apiReferenceEmbedHref || "", window.location.href))
+          .filter((url) => url.origin === window.location.origin)
+          .map((url) => url.href),
+      );
+
+    const ensureFrame = (drawer: HTMLDialogElement, url: URL) => {
+      const container = drawer.querySelector<HTMLElement>("[data-api-reference-frames]");
+      if (!container) return null;
+
+      const frames = [...container.querySelectorAll<HTMLIFrameElement>("[data-api-reference-frame]")];
+      const existing = frames.find(
+        (frame) => frame.dataset.apiReferenceUrl === url.href,
+      );
+      if (existing) return existing;
+      if (frames.length >= 4) return null;
+
+      const frame = document.createElement("iframe");
+      frame.className = "absolute inset-0 h-full w-full border-0 bg-background";
+      frame.dataset.apiReferenceFrame = "";
+      frame.dataset.apiReferenceUrl = url.href;
+      frame.fetchPriority = "low";
+      frame.hidden = true;
+      frame.setAttribute("aria-hidden", "true");
+      frame.addEventListener("load", () => {
+        frame.dataset.loaded = "true";
+      });
+      frame.src = url.href;
+      container.append(frame);
+      return frame;
+    };
+
+    const preloadApiReferenceFrames = () => {
+      const generation = ++apiReferencePreloadGeneration;
+      const preload = () => {
+        if (generation !== apiReferencePreloadGeneration) return;
+        const drawer = currentDrawer();
+        if (!drawer) return;
+
+        const urls = [...apiReferenceUrls()].slice(0, 4);
+
+        for (const href of urls) ensureFrame(drawer, new URL(href));
+      };
+
+      const schedule = () => {
+        if ("requestIdleCallback" in window) window.requestIdleCallback(preload, { timeout: 1500 });
+        else window.setTimeout(preload, 0);
+      };
+
+      if (document.readyState === "complete") schedule();
+      else window.addEventListener("load", schedule, { once: true });
+    };
+
+    document.addEventListener(
+      "click",
+      (event) => {
+        if (!(event.target instanceof Element)) return;
+
+        const close = event.target.closest<HTMLElement>("[data-api-reference-close]");
+        if (close) {
+          currentDrawer()?.close();
+          return;
+        }
+
+        const link = event.target.closest<HTMLAnchorElement>("[data-api-reference-trigger]");
+        if (
+          !link ||
+          event.defaultPrevented ||
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey ||
+          link.target ||
+          link.hasAttribute("download")
+        ) {
+          return;
+        }
+
+        const canonicalUrl = new URL(link.href, window.location.href);
+        const embedUrl = new URL(link.dataset.apiReferenceEmbedHref || link.href, window.location.href);
+        if (canonicalUrl.origin !== window.location.origin || !apiReferenceUrls().has(embedUrl.href)) return;
+
+        const drawer = currentDrawer();
+        const fullLink = drawer?.querySelector<HTMLAnchorElement>("[data-api-reference-full-link]");
+        const title = drawer?.querySelector<HTMLElement>("[data-api-reference-title]");
+        if (!drawer || !fullLink || !title) return;
+
+        const frame = ensureFrame(drawer, embedUrl);
+        if (!frame) return;
+
+        event.preventDefault();
+        trigger = link;
+        selectedEmbedUrl = embedUrl.href;
+        const currentOpenGeneration = ++openGeneration;
+        const operationTitle = link.dataset.apiReferenceTitle || "API schema and response details";
+        title.textContent = operationTitle;
+        fullLink.href = canonicalUrl.href;
+        frame.title = `API reference: ${operationTitle}`;
+
+        for (const candidate of drawer.querySelectorAll<HTMLIFrameElement>("[data-api-reference-frame]")) {
+          const active = candidate === frame;
+          candidate.hidden = !active;
+          if (active) candidate.removeAttribute("aria-hidden");
+          else candidate.setAttribute("aria-hidden", "true");
+        }
+
+        const openDrawer = () => {
+          if (currentOpenGeneration !== openGeneration || selectedEmbedUrl !== embedUrl.href) return;
+          if (!drawer.open) drawer.showModal();
+          drawer.querySelector<HTMLButtonElement>("[data-api-reference-close]")?.focus();
+        };
+
+        if (frame.dataset.loaded) openDrawer();
+        else frame.addEventListener("load", openDrawer, { once: true });
+      },
+      true,
+    );
+
+    document.addEventListener("click", (event) => {
+      const drawer = currentDrawer();
+      if (event.target === drawer) drawer.close();
+    });
+
+    document.addEventListener(
+      "close",
+      (event) => {
+        if (event.target !== currentDrawer()) return;
+        if (trigger?.isConnected) trigger.focus();
+        trigger = null;
+        selectedEmbedUrl = null;
+      },
+      true,
+    );
+
+    document.addEventListener("astro:page-load", preloadApiReferenceFrames);
+    document.addEventListener("astro:before-swap", () => {
+      apiReferencePreloadGeneration++;
+      openGeneration++;
+      selectedEmbedUrl = null;
+      trigger = null;
+      currentDrawer()?.close();
+    });
+    preloadApiReferenceFrames();
+  };
+
+  initializeApiReferenceDrawer();
+  document.addEventListener("astro:page-load", initializeApiReferenceDrawer);
+</script>

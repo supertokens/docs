@@ -1,4 +1,78 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { expect, test as base } from "@playwright/test";
+import { load } from "js-yaml";
+
+interface OpenApiOperation {
+  requestBody?: {
+    content?: Record<
+      string,
+      {
+        example?: unknown;
+        examples?: Record<string, { value?: unknown }>;
+      }
+    >;
+  };
+}
+
+interface OpenApiDocument {
+  paths: Record<string, Record<string, OpenApiOperation>>;
+}
+
+const cdiSpec = load(readFileSync(resolve("openapi/cdi.yml"), "utf8")) as OpenApiDocument;
+
+const apiRequestCases = [
+  {
+    canonicalPath: "/docs/references/cdi/bulk-import/importoneuserwithbulkimport",
+    method: "POST",
+    operationId: "importOneUserWithBulkImport",
+    path: "/appid-{appId}/bulk-import/import",
+    snippetId: "migration-import-one-user",
+    url: "<CORE_API_ENDPOINT>/appid-public/bulk-import/import",
+  },
+  {
+    canonicalPath: "/docs/references/cdi/bulk-import/addbulkimportusers",
+    method: "POST",
+    operationId: "addBulkImportUsers",
+    path: "/appid-{appId}/bulk-import/users",
+    snippetId: "migration-add-bulk-users",
+    url: "<CORE_API_ENDPOINT>/appid-public/bulk-import/users",
+  },
+  {
+    canonicalPath: "/docs/references/cdi/bulk-import/countbulkimportusers",
+    method: "GET",
+    operationId: "countBulkImportUsers",
+    path: "/appid-{appId}/bulk-import/users/count",
+    snippetId: "migration-count-processing-users",
+    url: "<CORE_API_ENDPOINT>/appid-public/bulk-import/users/count?status=PROCESSING",
+  },
+  {
+    canonicalPath: "/docs/references/cdi/bulk-import/getbulkimportusers",
+    method: "GET",
+    operationId: "getBulkImportUsers",
+    path: "/appid-{appId}/bulk-import/users",
+    snippetId: "migration-get-failed-users",
+    url: "<CORE_API_ENDPOINT>/appid-public/bulk-import/users?status=FAILED",
+  },
+] as const;
+
+const snippetNamespace = (operationId: string, snippetId: string) =>
+  `api-request-${operationId.toLowerCase()}-${snippetId}`;
+
+const requestExample = (path: string): unknown => {
+  const operation = cdiSpec.paths[path]?.post;
+  const media = operation?.requestBody?.content?.["application/json"];
+  const example = media?.example ?? media?.examples?.default?.value;
+  if (example === undefined) throw new Error(`Missing application/json request example for POST ${path}`);
+  return example;
+};
+
+const curlBody = (code: string): unknown => {
+  const body = /(?:^|\n)\s*-d '([\s\S]*)'\s*$/u.exec(code)?.[1];
+  if (!body) throw new Error("Expected a JSON body in the cURL snippet");
+  return JSON.parse(body);
+};
 
 const test = base.extend<{ runtimeErrors: string[] }>({
   runtimeErrors: [
@@ -68,6 +142,60 @@ test("mobile header fits and exposes navigation state", async ({ page }) => {
   await expect(navToggle).toHaveAttribute("aria-expanded", "true");
   await expect(navToggle).toHaveAttribute("aria-controls", "blume-nav-drawer");
   await expect(page.locator("#blume-nav-drawer")).toBeInViewport();
+});
+
+test("desktop header brand and section links are vertically aligned", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/docs");
+
+  const header = page.locator("[data-blume-header]");
+  const logo = header.locator("[data-st-logo] > a");
+  const documentation = header.getByRole("link", { name: "Documentation", exact: true });
+  const references = header.getByRole("link", { name: "References", exact: true });
+  await expect(logo).toBeVisible();
+  await expect(documentation).toBeVisible();
+  await expect(references).toBeVisible();
+
+  const centers = await Promise.all(
+    [logo, documentation, references].map((element) =>
+      element.evaluate((node) => {
+        const bounds = node.getBoundingClientRect();
+        return bounds.top + bounds.height / 2;
+      }),
+    ),
+  );
+  expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(1);
+});
+
+test("active sidebar item has no accent edge", async ({ page }) => {
+  await page.goto("/docs/quickstart");
+
+  const activeLink = page.getByRole("link", { name: "Quickstart Guide", exact: true });
+  await expect(activeLink).toBeVisible();
+  await expect(activeLink).not.toHaveCSS("box-shadow", /inset/);
+});
+
+test("preference technology marks are monochrome and theme-aware", async ({ page }) => {
+  await page.goto("/docs/quickstart");
+
+  const trigger = page.getByRole("button", { name: /Configure example preferences/ });
+  const technologyMark = trigger.locator(".preferences-option-mark:has(.preferences-option-logo)").first();
+  await expect(technologyMark).toBeVisible();
+  await expect(technologyMark.locator("img")).toHaveCount(0);
+
+  const markColors = async () =>
+    technologyMark.evaluate((mark) => {
+      const styles = getComputedStyle(mark);
+      const logoStyles = getComputedStyle(mark.querySelector(".preferences-option-logo")!);
+      return { background: styles.backgroundColor, foreground: styles.color, maskImage: logoStyles.maskImage };
+    });
+  const lightColors = await markColors();
+  await page.getByRole("button", { name: "Switch to dark theme" }).click();
+  const darkColors = await markColors();
+  expect(lightColors.background).not.toBe(lightColors.foreground);
+  expect(lightColors.maskImage).not.toBe("none");
+  expect(darkColors.background).not.toBe(darkColors.foreground);
+  expect(darkColors).not.toEqual(lightColors);
 });
 
 test("SDK symbol hashes target symbol headings", async ({ page }) => {
@@ -237,4 +365,242 @@ test("custom frontend setup uses Web and Mobile tabs with dependent selects", as
     "aria-selected",
     "true",
   );
+});
+
+test("account migration API snippets match the CDI specification", async ({ page }) => {
+  await page.goto("/docs/migration/account-migration");
+
+  const snippets = page.locator("[data-api-request-tabs]");
+  await expect(snippets).toHaveCount(apiRequestCases.length);
+
+  const ids: string[] = [];
+  for (const apiRequest of apiRequestCases) {
+    const namespace = snippetNamespace(apiRequest.operationId, apiRequest.snippetId);
+    const snippet = snippets.filter({ has: page.locator(`#${namespace}-tab-curl`) });
+    const tabs = snippet.getByRole("tab");
+    const panels = snippet.locator('[role="tabpanel"]');
+
+    await expect(snippet).toHaveCount(1);
+    await expect(tabs).toHaveText(["cURL", "JavaScript / Node.js", "Go", "Python"]);
+    await expect(panels).toHaveCount(4);
+    await expect(snippet.getByRole("link", { name: "View the full API schema and response details" })).toHaveAttribute(
+      "href",
+      apiRequest.canonicalPath,
+    );
+
+    const languages = [
+      { id: "curl", method: `curl -X ${apiRequest.method}` },
+      { id: "js", method: `method: "${apiRequest.method}"` },
+      { id: "go", method: `http.NewRequest("${apiRequest.method}"` },
+      { id: "python", method: `requests.${apiRequest.method.toLowerCase()}(` },
+    ] as const;
+
+    for (const language of languages) {
+      const tabId = `${namespace}-tab-${language.id}`;
+      const panelId = `${namespace}-panel-${language.id}`;
+      const tab = snippet.locator(`#${tabId}`);
+      const panel = snippet.locator(`#${panelId}`);
+
+      await expect(tab).toHaveAttribute("aria-controls", panelId);
+      await expect(panel).toHaveAttribute("aria-labelledby", tabId);
+      await expect(page.locator(`#${tabId}`)).toHaveCount(1);
+      await expect(page.locator(`#${panelId}`)).toHaveCount(1);
+      ids.push(tabId, panelId);
+
+      const code = await panel.locator("code").innerText();
+      expect(code).toContain(JSON.stringify(apiRequest.url));
+      expect(code).toContain(language.method);
+      expect(code).toContain("api-key");
+      expect(code).toContain("YOUR_API_KEY");
+      if (apiRequest.method === "POST") {
+        expect(code).toContain("Content-Type");
+        expect(code).toContain("application/json");
+      } else {
+        expect(code).not.toContain("Content-Type");
+        expect(code).not.toContain("application/json");
+      }
+    }
+
+    if (apiRequest.method === "POST") {
+      const curlCode = await snippet.locator(`#${namespace}-panel-curl code`).innerText();
+      expect(curlBody(curlCode)).toEqual(requestExample(apiRequest.path));
+    }
+  }
+
+  expect(ids).toHaveLength(apiRequestCases.length * 8);
+  expect(new Set(ids).size).toBe(ids.length);
+});
+
+test("account migration API links open a reusable reference drawer", async ({ page }) => {
+  const embedDocumentRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.resourceType() === "document" && request.url().includes("/docs/api-reference-embed/")) {
+      embedDocumentRequests.push(request.url());
+    }
+  });
+  await page.goto("/docs/migration/account-migration");
+
+  const links = page.getByRole("link", { name: "View the full API schema and response details" });
+  const firstLink = links.nth(0);
+  const secondLink = links.nth(1);
+  const frames = page.locator("[data-api-reference-frame]");
+  const pageUrl = page.url();
+  const firstUrl = new URL(apiRequestCases[0].canonicalPath, pageUrl).href;
+  const secondUrl = new URL(apiRequestCases[1].canonicalPath, pageUrl).href;
+  const embedUrls = apiRequestCases.map(
+    ({ operationId }) => new URL(`/docs/api-reference-embed/${operationId.toLowerCase()}`, pageUrl).href,
+  );
+  const [firstEmbedUrl, secondEmbedUrl] = embedUrls;
+  const frameFor = (url: string) => page.locator(`[data-api-reference-frame][data-api-reference-url="${url}"]`);
+  const expectPreloadedPool = async () => {
+    const expected = embedUrls.map((url) => ({ loaded: "true", url })).sort((a, b) => a.url.localeCompare(b.url));
+    await expect(frames).toHaveCount(embedUrls.length);
+    await expect
+      .poll(() =>
+        frames.evaluateAll((elements) =>
+          elements
+            .map((element) => ({
+              loaded: (element as HTMLIFrameElement).dataset.loaded,
+              url: (element as HTMLIFrameElement).src,
+            }))
+            .sort((a, b) => a.url.localeCompare(b.url)),
+        ),
+      )
+      .toEqual(expected);
+    for (let index = 0; index < embedUrls.length; index += 1) {
+      await expect(frames.nth(index)).toBeHidden();
+    }
+    await expect(page.locator("[data-api-reference-loading]")).toHaveCount(0);
+  };
+  const expectEmbeddedOperation = async (url: string, apiRequest: (typeof apiRequestCases)[number]) => {
+    const embeddedPage = frameFor(url).contentFrame();
+    await expect(embeddedPage.getByText(apiRequest.method, { exact: true }).first()).toBeVisible();
+    await expect(embeddedPage.getByText(apiRequest.path, { exact: true })).toBeVisible();
+    if (apiRequest.method === "POST") {
+      await expect(embeddedPage.getByRole("heading", { name: "Request body" })).toBeVisible();
+    }
+    await expect(embeddedPage.getByRole("heading", { name: "Responses" })).toBeVisible();
+    await expect(
+      embeddedPage.locator("header, nav, aside, [data-blume-header], [data-blume-nav-drawer], [data-blume-sidebar]"),
+    ).toHaveCount(0);
+  };
+
+  await expect(firstLink).toHaveAttribute("href", apiRequestCases[0].canonicalPath);
+  await expect(secondLink).toHaveAttribute("href", apiRequestCases[1].canonicalPath);
+  await expectPreloadedPool();
+  expect([...embedDocumentRequests].sort()).toEqual([...embedUrls].sort());
+  const preloadedRequestCount = embedDocumentRequests.length;
+  const firstFrame = frameFor(firstEmbedUrl);
+  const secondFrame = frameFor(secondEmbedUrl);
+
+  await firstLink.click();
+
+  await expect(page).toHaveURL(pageUrl);
+  const firstDialog = page.getByRole("dialog", { name: "Import one user directly" });
+  await expect(firstDialog).toBeVisible();
+  await expect(firstFrame).toBeVisible();
+  await expect(page.locator("[data-api-reference-frame]:visible")).toHaveCount(1);
+  await expect(firstFrame).toHaveAttribute("src", firstEmbedUrl);
+  await expect(firstFrame).toHaveAttribute("title", "API reference: Import one user directly");
+  await expect(firstDialog.getByRole("link", { name: "Open full page" })).toHaveAttribute("href", firstUrl);
+  await expectEmbeddedOperation(firstEmbedUrl, apiRequestCases[0]);
+  expect(embedDocumentRequests).toHaveLength(preloadedRequestCount);
+
+  await page.keyboard.press("Escape");
+  await expect(firstDialog).toBeHidden();
+  await expect(firstLink).toBeFocused();
+
+  for (const modifier of ["ctrlKey", "metaKey"] as const) {
+    await firstLink.evaluate((link, key) => {
+      window.addEventListener("click", (event) => event.preventDefault(), { once: true });
+      link.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0, cancelable: true, [key]: true }));
+    }, modifier);
+    await expect(firstDialog).toBeHidden();
+    await expect(page).toHaveURL(pageUrl);
+  }
+
+  await secondLink.click();
+
+  const secondDialog = page.getByRole("dialog", { name: "Add bulk import users" });
+  await expect(page.locator("[data-api-reference-drawer]")).toHaveCount(1);
+  await expect(secondDialog).toBeVisible();
+  await expect(secondFrame).toBeVisible();
+  await expect(firstFrame).toBeHidden();
+  await expect(page.locator("[data-api-reference-frame]:visible")).toHaveCount(1);
+  await expect(secondFrame).toHaveAttribute("src", secondEmbedUrl);
+  await expect(secondFrame).toHaveAttribute("title", "API reference: Add bulk import users");
+  await expect(secondDialog.getByRole("link", { name: "Open full page" })).toHaveAttribute("href", secondUrl);
+  await expectEmbeddedOperation(secondEmbedUrl, apiRequestCases[1]);
+  expect(embedDocumentRequests).toHaveLength(preloadedRequestCount);
+
+  await page.keyboard.press("Escape");
+  await page.getByRole("link", { name: "Documentation", exact: true }).click();
+  await expect(page).toHaveURL(/\/docs\/?$/u);
+  await page.goBack();
+  await expect(page).toHaveURL(pageUrl);
+  await expectPreloadedPool();
+  const restoredPreloadRequestCount = embedDocumentRequests.length;
+
+  const restoredLink = page.getByRole("link", { name: "View the full API schema and response details" }).first();
+  await restoredLink.click();
+  await expect(page.locator("[data-api-reference-drawer]")).toHaveCount(1);
+  await expect(frameFor(firstEmbedUrl)).toBeVisible();
+  await expect(page.locator("[data-api-reference-frame]:visible")).toHaveCount(1);
+  expect(embedDocumentRequests).toHaveLength(restoredPreloadRequestCount);
+  await expect(page).toHaveURL(pageUrl);
+  const restoredDialog = page.getByRole("dialog", { name: "Import one user directly" });
+  await expect(restoredDialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(restoredDialog).toBeHidden();
+  await expect(restoredLink).toBeFocused();
+});
+
+test("account migration API reference drawer fills a mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/docs/migration/account-migration");
+  await page.getByRole("link", { name: "View the full API schema and response details" }).first().click();
+
+  const dialog = page.getByRole("dialog", { name: "Import one user directly" });
+  await expect(dialog).toBeVisible();
+  const bounds = await dialog.boundingBox();
+  expect(bounds?.x).toBe(0);
+  expect(bounds?.width).toBe(390);
+});
+
+test("account migration API snippet tabs support keyboard navigation", async ({ page }) => {
+  await page.goto("/docs/migration/account-migration");
+
+  const apiRequest = apiRequestCases[0];
+  const namespace = snippetNamespace(apiRequest.operationId, apiRequest.snippetId);
+  const snippet = page.locator("[data-api-request-tabs]").filter({ has: page.locator(`#${namespace}-tab-curl`) });
+  const tab = (language: "curl" | "js" | "go" | "python") => snippet.locator(`#${namespace}-tab-${language}`);
+  const panel = (language: "curl" | "js" | "go" | "python") => snippet.locator(`#${namespace}-panel-${language}`);
+
+  const expectActive = async (language: "curl" | "js" | "go" | "python") => {
+    await expect(tab(language)).toBeFocused();
+    await expect(tab(language)).toHaveAttribute("aria-selected", "true");
+    await expect(tab(language)).toHaveAttribute("tabindex", "0");
+    await expect(panel(language)).toBeVisible();
+    await expect(snippet.getByRole("tab", { selected: true })).toHaveCount(1);
+    await expect(snippet.locator('[role="tabpanel"]:visible')).toHaveCount(1);
+  };
+
+  await tab("curl").focus();
+  await expectActive("curl");
+
+  await page.keyboard.press("ArrowRight");
+  await expectActive("js");
+  await expect(panel("curl")).toBeHidden();
+
+  await page.keyboard.press("End");
+  await expectActive("python");
+
+  await page.keyboard.press("Home");
+  await expectActive("curl");
+
+  await page.keyboard.press("ArrowLeft");
+  await expectActive("python");
+
+  await page.keyboard.press("ArrowRight");
+  await expectActive("curl");
 });

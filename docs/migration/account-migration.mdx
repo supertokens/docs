@@ -43,12 +43,16 @@ Modify the legacy sign up flow logic to also create new users in **SuperTokens**
 You can do this through the `Import User` endpoint that allows you to directly create accounts.
 Call the endpoint from the authentication flow used by your legacy provider.
 
+<ApiRequestSnippet operationId="importOneUserWithBulkImport" snippetId="migration-import-one-user" />
+
 <Accordion>
 <AccordionItem title="Auth0 Instructions">
 :::warning
 Auth0 does not expose password hashes or `TOTP` device information.
 You will have to contact their support separately if you need this type of data.
 :::
+
+Create the Auth0 roles in SuperTokens before migrating users. This example assigns them to the default `public` tenant.
 
 ##### 1. Access the Auth0 Dashboard
 ##### 2. From the navigation menu go to *Actions* > *Library*
@@ -75,11 +79,11 @@ exports.onExecutePostLogin = async (event, api) => {
         auth0_user_id: auth0User.user_id,
         name: auth0User.name,
         nickname: auth0User.nickname,
-        picture: auth0User.picture
+        picture: auth0User.picture,
 	auth0_user_metadata: auth0User.user_metadata,
 	auth0_app_metadata: auth0User.app_metadata
       },
-      roles: auth0User.app_metadata?.roles || [],
+      userRoles: (auth0User.app_metadata?.roles || []).map(role => ({ role, tenantIds: ["public"] })),
       loginMethods: []
     };
 
@@ -96,8 +100,7 @@ exports.onExecutePostLogin = async (event, api) => {
 	    isPrimary: index === 0,
 	    timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
 	  });
-	}
-      } else if (identity.provider === 'auth0' || identity.provider === 'Username-Password-Authentication') {
+	} else if (identity.provider === 'auth0' || identity.provider === 'Username-Password-Authentication') {
 	// Auth0 does not export passworded hashes by default
 	// You will have to contact their support and request them
 	userPayload.loginMethods.push({
@@ -174,386 +177,9 @@ function mapProvider(strategy) {
 :::
 
 
-<Tabs>
-  <Tab title="cURL">
-
-```bash
-curl --location --request POST '<CORE_API_ENDPOINT>/bulk-import/import' \
-     --header 'api-key: <YOUR_API_KEY>' \
-     --header 'Content-Type: application/json; charset=utf-8' \
-     --data '
-    {
-      "externalUserId": "user_12345",
-      "userMetadata": {
-        "firstName": "Jane",
-        "lastName": "Doe",
-        "department": "Engineering"
-      },
-      "userRoles": [{ "role": "admin", "tenantIds": [] }],
-      "totpDevices": [
-        {
-          "secretKey": "JBSWY3DPEHPK3PXP",
-          "period": 30,
-          "skew": 1,
-          "deviceName": "Main Device"
-        }
-      ],
-      "loginMethods": [
-        {
-          "isVerified": true,
-          "isPrimary": true,
-          "timeJoinedInMSSinceEpoch": 1672531199000,
-          "recipeId": "emailpassword",
-          "email": "jane.doe@example.com",
-          "passwordHash": "$2b$12$KIXQeFz...",
-          "hashingAlgorithm": "bcrypt"
-        }
-      ]
-    }
-'
-```
-
-  </Tab>
-  <Tab title="Node.js">
-
-    ```tsx
-    const BASE_URL = '<CORE_API_ENDPOINT>';
-    const API_KEY = '<YOUR_API_KEY>';
-
-    const url = `${BASE_URL}/bulk-import/import`;
-    const options = {
-      method: 'POST',
-      headers: {
-        'api-key': API_KEY,
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-      body: JSON.stringify({
-          externalUserId: "user_12345",
-          userRoles: [{ role: "admin", tenantIds: [] }],
-          userMetadata: {
-            firstName: "Jane",
-            lastName: "Doe",
-            department: "Engineering"
-          },
-          totpDevices: [
-            {
-              secretKey: "JBSWY3DPEHPK3PXP",
-              period: 30,
-              skew: 1,
-              deviceName: "Main Device"
-            }
-          ],
-          loginMethods: [
-            {
-              isVerified: true,
-              isPrimary: true,
-              timeJoinedInMSSinceEpoch: 1672531199000,
-              recipeId: "emailpassword",
-              email: "jane.doe@example.com",
-              passwordHash: "$2b$12$KIXQeFz...",
-              hashingAlgorithm: "bcrypt"
-            }
-          ]
-      })
-    }
-
-    fetch(url, options)
-      .then(response => response.json())
-      .then(json => console.log(json))
-      .catch(err => console.error(err));
-    ```
-
-  </Tab>
-  <Tab title="Go">
-
-    ```go
-
-    import (
-      "fmt"
-      "net/http"
-      "strings"
-      "io"
-    )
-
-    func main() {
-      baseUrl := "<CORE_API_ENDPOINT>"
-      apiKey := "<YOUR_API_KEY>"
-      url := fmt.Sprintf("%s/bulk-import/import", baseUrl)
-      payload := `{
-          "externalUserId": "user_12345",
-          "userMetadata": {
-            "firstName": "Jane",
-            "lastName": "Doe",
-            "department": "Engineering"
-          },
-          "userRoles": [{ "role": "admin", "tenantIds": [] }],
-          "totpDevices": [
-            {
-              "secretKey": "JBSWY3DPEHPK3PXP",
-              "period": 30,
-              "skew": 1,
-              "deviceName": "Main Device"
-            }
-          ],
-          "loginMethods": [
-            {
-              "isVerified": true,
-              "isPrimary": true,
-              "timeJoinedInMSSinceEpoch": 1672531199000,
-              "recipeId": "emailpassword",
-              "email": "jane.doe@example.com",
-              "passwordHash": "$2b$12$KIXQeFz...",
-              "hashingAlgorithm": "bcrypt"
-            }
-        ]
-      }`
-
-      req, _ := http.NewRequest("POST", url, strings.NewReader(payload))
-
-      req.Header.Add("accept", "application/json")
-      req.Header.Add("api-key", apiKey)
-      req.Header.Add("content-type", "application/json")
-
-      res, _ := http.DefaultClient.Do(req)
-
-      defer res.Body.Close()
-      body, _ := io.ReadAll(res.Body)
-
-      fmt.Println(string(body))
-    }
-    ```
-
-  </Tab>
-  <Tab title="Python">
-
-    ```python
-    import requests
-    from typing import Dict, Any
-
-    BASE_URL = "<CORE_API_ENDPOINT>"
-    API_KEY = "<YOUR_API_KEY>"
-
-    url = f"{BASE_URL}/bulk-import/import"
-
-    payload: Dict[str, Any] = {
-        "externalUserId": "user_12345",
-        "userMetadata": {
-            "firstName": "Jane",
-            "lastName": "Doe",
-            "department": "Engineering"
-        },
-        "userRoles": [{ "role": "admin", "tenantIds": [] }],
-        "totpDevices": [
-            {
-                "secretKey": "JBSWY3DPEHPK3PXP",
-                "period": 30,
-                "skew": 1,
-                "deviceName": "Main Device"
-            }
-        ],
-        "loginMethods": [
-            {
-                "isVerified": True,
-                "isPrimary": True,
-                "timeJoinedInMSSinceEpoch": 1672531199000,
-                "recipeId": "emailpassword",
-                "email": "jane.doe@example.com",
-                "passwordHash": "$2b$12$KIXQeFz...",
-                "hashingAlgorithm": "bcrypt"
-            }
-        ]
-    }
-
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-
-    response = requests.post(url, json=payload, headers=headers)
-
-    print(response.json())
-    ```
-
-  </Tab>
-  <Tab title="Details">
-
-
-   Creates one user at a time based on the request body.
-
-
-
-
-**Authorization**: Set the `api-key` header to the value of your **SuperTokens** Core API key.
-
-
-
-
-
-
- ## Request
-
- ### Body Schema
-
-| Name           | Type                   | Description                                                                                     | Required |
-|----------------|------------------------|-------------------------------------------------------------------------------------------------|----------|
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider                         | No       |
-| `userMetadata`   | `object`               | An object with custom user information that can be used later on                               | No       |
-| `userRoles`      | `array` of `UserRole`     | The roles that will be used for authorization                                                   | No       |
-| `totpDevices`    | `array` of `TotpDevice`  | Time-based One-time Password device (TOTP) used for Multi-Factor Authentication                 | Yes      |
-| `loginMethods`   | `array` of `LoginMethod` | The actual authentication methods and credentials                                              | Yes      |
-
-#### TotpDevice
-
-| Name       | Type                | Description                                                                 | Required |
-|------------|---------------------|-----------------------------------------------------------------------------|----------|
-| `secretKey`  | `string`            | The secret key used to generate the TOTP codes.                             | Yes      |
-| period     | `number`            | The time period in seconds for which a TOTP code is valid.                  | Yes      |
-| skew       | `number`            | The allowable time skew to account for clock differences between the server and device. | Yes      |
-| `deviceName` | `string`            | The name assigned to the TOTP device for identification purposes.           | No       |
-
-#### UserRole
-
-| Name       | Type                | Description                                                                 | Required |
-|------------|---------------------|-----------------------------------------------------------------------------|----------|
-| role       | `string`            | The actual role name                             | Yes      |
-| tenantIds  | Array of `string` | The tenants that use this role. If you are not using the `multi-tenancy` just pass an empty array. | Yes |
-
-#### LoginMethod
-
-`LoginMethod` is a polymorphic type with multiple variants based on the `recipeId`. Each variant includes shared and specific fields.
-
-##### EmailPassword 
-
-###### With Encrypted Password
-
-| Name                    | Type                  | Description                                                                                     | Required |
-|-------------------------|-----------------------|-------------------------------------------------------------------------------------------------|----------|
-| email                   | `string`              | User's email address                                                                            | Yes      |
-| `passwordHash`            | `string`              | Hashed password                                                                                 | Yes      |
-| `hashingAlgorithm`        | `enum` (`"bcrypt"`, `"argon2"`, `"firebase_scrypt"`)                | Hashing algorithm used.                     | Yes      |
-| `recipeId`                | `string`              | Must be `emailpassword`                                                                          | Yes      |
-| `isVerified`              | `boolean`             | Indicates whether the user's email has been verified                                             | No       |
-| `isPrimary`               | `boolean`             | Indicates whether this is the user's primary authentication method                               | No       |
-| tenantIds | Array of `string`             | The tenant IDs that the user belongs to (if you are using the `multi-tenancy` feature)                                                                       | No       |
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider only for this authentication method                         | No       |
-| timeJoinedInMSSinceEpoch| `number`              | Timestamp representing when the user joined, in milliseconds since the Unix epoch                 | No       |
-
-###### With Plain Password
-
-| Name                    | Type                  | Description                                                                                     | Required |
-|-------------------------|-----------------------|-------------------------------------------------------------------------------------------------|----------|
-| email                   | `string`              | User's email address                                                                            | Yes      |
-| `plaintextPassword` | `string`              | A plain text password that will be hashed based on the configured hashing algorithm              | Yes      |
-| `recipeId`                | `string`              | Must be `emailpassword`                                                                          | Yes      |
-| `isVerified`              | `boolean`             | Indicates whether the user's email has been verified                                             | No       |
-| `isPrimary`               | `boolean`             | Indicates whether this is the user's primary authentication method                               | No       |
-| tenantIds | Array of `string`             | The tenant IDs that the user belongs to (if you are using the `multi-tenancy` feature)                                                                       | No       |
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider only for this authentication method                         | No       |
-| timeJoinedInMSSinceEpoch| `number`              | Timestamp representing when the user joined, in milliseconds since the Unix epoch                 | No       |
-
-
-##### ThirdParty 
-   | Name             | Type   | Description                   | Required |
-   |------------------|--------|-------------------------------|----------|
-   | `recipeId`         | `string` | Must be `"thirdparty"`        | Yes      |
-   | email            | `string` | User's email address          | Yes      |
-   | thirdPartyId     | `string` | Identifier for the third party provider | Yes |
-   | thirdPartyUserId | `string` | User identifier from the third party provider | Yes |
-| tenantIds | Array of `string`             | The tenant IDs that the user belongs to (if you are using the `multi-tenancy` feature)                                                                       | No       |
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider only for this authentication method                         | No       |
-| `isVerified`              | `boolean`             | Indicates whether the user's email has been verified                                             | No       |
-| `isPrimary`               | `boolean`             | Indicates whether this is the user's primary authentication method                               | No       |
-| timeJoinedInMSSinceEpoch| `number`              | Timestamp representing when the user joined, in milliseconds since the Unix epoch                 | No       |
-
-##### Passwordless 
-
-   | Name     | Type   | Description           | Required |
-   |----------|--------|-----------------------|----------|
-   | `recipeId` | `string` | Must be `"passwordless"` | Yes      |
-   | email    | `string` | User's email address  | One of `email` or `phoneNumber` must be provided |
-   | `phoneNumber` | `string` | User's phone number | One of `email` or `phoneNumber` must be provided |
-| tenantIds | Array of `string`             | The tenant IDs that the user belongs to (if you are using the `multi-tenancy` feature)                                                                       | No       |
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider only for this authentication method                         | No       |
-| `isVerified`              | `boolean`             | Indicates whether the user's email has been verified                                             | No       |
-| `isPrimary`               | `boolean`             | Indicates whether this is the user's primary authentication method                               | No       |
-| timeJoinedInMSSinceEpoch| `number`              | Timestamp representing when the user joined, in milliseconds since the Unix epoch                 | No       |
-
-### Example
-
-```bash
-curl --location --request POST '<CORE_API_ENDPOINT>/bulk-import/import' \
-     --header 'api-key: <YOUR_API_KEY>' \
-     --header 'Content-Type: application/json; charset=utf-8' \
-     --data '
-    {
-      "externalUserId": "user_12345",
-      "userMetadata": {
-        "firstName": "Jane",
-        "lastName": "Doe",
-        "department": "Engineering"
-      },
-      "userRoles": [{ "role": "admin", "tenantIds": [] }],
-      "totpDevices": [
-        {
-          "secretKey": "JBSWY3DPEHPK3PXP",
-          "period": 30,
-          "skew": 1,
-          "deviceName": "Main Device"
-        }
-      ],
-      "loginMethods": [
-        {
-          "isVerified": true,
-          "isPrimary": true,
-          "timeJoinedInMSSinceEpoch": 1672531199000,
-          "recipeId": "emailpassword",
-          "email": "jane.doe@example.com",
-          "passwordHash": "$2b$12$KIXQeFz...",
-          "hashingAlgorithm": "bcrypt"
-        }
-      ]
-    }
-'
-```
-
-## Response
-
-### 200
-The user has been successfully created.
-
-#### Example
-
-```json
-{ 
-  "status": "OK",
-  "user": { /* User Object */ }
-}
-```
-
-### 400
-
-The request body was invalid.
-
-#### Example
-
-```json
-{ 
-   "errors": ["No two loginMethods can have isPrimary as true.", "email is required for recipeId emailpassword", "hashingAlgorithm must be one of 'bcrypt', 'argon2', or 'firebase_scrypt'."]}
-}
-```
-
-### 500
-
-An internal server error occurred.
-
-
-  </Tab>
-</Tabs>
-
-
 ### 2. Export the accounts from your legacy provider
 
-Export the users from your legacy authentication provider and adjust the data to match the request body schema used in the [**`Add Users for Bulk Import`**](/references/cdi/import/post-bulk-import-users) endpoint.
+Export the users from your legacy authentication provider and adjust the data to match the request body schema used in the [**`Add Users for Bulk Import`**](/references/cdi/bulk-import/addbulkimportusers) endpoint.
 
 <Accordion>
 <AccordionItem title="Auth0 Instructions">
@@ -647,28 +273,30 @@ Auth0 does not expose password hashes or `TOTP` device information.
 You will have to contact their support separately if you need this type of data.
 :::
 
+Create the Auth0 roles in SuperTokens before migrating users. This example assigns them to the default `public` tenant.
+
 ```typescript
 const fs = require('fs');
 
 const auth0Users = JSON.parse(fs.readFileSync('auth0_users_array.json', 'utf8'));
 
 const superTokensUsers = auth0Users.map(auth0User => {
-  if(auth0User.user_metadata?.migrated_to_supertokens) {
+  if(auth0User.app_metadata?.migrated_to_supertokens) {
     console.log(`User ${auth0User.user_id} already migrated`);
     return;
   }
 
   const userPayload = {
-    externalUserId: event.user.user_id,
+    externalUserId: auth0User.user_id,
     userMetadata: {
       auth0_user_id: auth0User.user_id,
       name: auth0User.name,
       nickname: auth0User.nickname,
       picture: auth0User.picture,
-      auth0_user_metadata: auth0User.user_metadata
+      auth0_user_metadata: auth0User.user_metadata,
       auth0_app_metadata: auth0User.app_metadata
     },
-    roles: auth0User.app_metadata?.roles || [],
+    userRoles: (auth0User.app_metadata?.roles || []).map(role => ({ role, tenantIds: ["public"] })),
     loginMethods: [],
   };
 
@@ -685,7 +313,6 @@ const superTokensUsers = auth0Users.map(auth0User => {
 	  isPrimary: index === 0,
 	  timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime()
 	});
-      }
     } else if (identity.provider === 'auth0' || identity.provider === 'Username-Password-Authentication') {
       // Auth0 does not export passworded hashes by default
       // You will have to contact their support and request them
@@ -721,7 +348,7 @@ const superTokensUsers = auth0Users.map(auth0User => {
   });
   
   return userPayload;
-});
+}).filter(Boolean);
 
 fs.writeFileSync('supertokens_users.json', JSON.stringify({ users: superTokensUsers }, null, 2));
 
@@ -757,384 +384,7 @@ This step stages the data that the background job imports later.
 
 Keep in mind that the endpoint has a limit of **10000 users** per request.
 
-
-<Tabs>
-  <Tab title="cURL">
-
-```bash
-curl --location --request POST '<CORE_API_ENDPOINT>/bulk-import/users' \
-     --header 'api-key: <YOUR_API_KEY>' \
-     --header 'Content-Type: application/json; charset=utf-8' \
-     --data-raw '{
-    users: [
-    {
-      "externalUserId": "user_2",
-      "userMetadata": {
-        "firstName": "John",
-        "lastName": "Doe",
-        "department": "Marketing"
-      },
-      "userRoles": [{ "role": "editor", "tenantIds": [] }],
-      "loginMethods": [
-        {
-          "isVerified": true,
-          "isPrimary": true,
-          "timeJoinedInMSSinceEpoch": 1672617599000,
-          "recipeId": "thirdparty",
-          "email": "john.doe@gmail.com",
-          "thirdPartyId": "google",
-          "thirdPartyUserId": "google_987654321"
-        }
-      ]
-  }
-    ]
-}
-```
-
-  </Tab>
-  <Tab title="Node.js">
-
-    ```tsx
-    const BASE_URL = '<CORE_API_ENDPOINT>';
-    const API_KEY = '<YOUR_API_KEY>';
-
-    const url = `${BASE_URL}/bulk-import/users`;
-    const options = {
-      method: 'POST',
-      headers: {
-        'api-key': API_KEY,
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-      body: JSON.stringify({
-        users: [
-          {
-            externalUserId: "user_2",
-            userMetadata: {
-              firstName: "John",
-              lastName: "Doe",
-              department: "Marketing"
-            },
-            userRoles: [{ role: "editor", tenantIds: [] }],
-            loginMethods: [
-              {
-                isVerified: true,
-                isPrimary: true,
-                timeJoinedInMSSinceEpoch: 1672617599000,
-                recipeId: "thirdparty",
-                email: "john.doe@gmail.com",
-                thirdPartyId: "google",
-                thirdPartyUserId: "google_987654321"
-              }
-            ]
-          }
-        ]
-      })
-    }
-
-    fetch(url, options)
-      .then(response => response.json())
-      .then(json => console.log(json))
-      .catch(err => console.error(err));
-    ```
-
-  </Tab>
-  <Tab title="Go">
-
-    ```go
-    import (
-      "fmt"
-      "net/http"
-      "strings"
-      "io"
-    )
-
-    func main() {
-      baseUrl := "<CORE_API_ENDPOINT>"
-      apiKey := "<YOUR_API_KEY>"
-      url := fmt.Sprintf("%s/bulk-import/users", baseUrl)
-      payload := `{
-          "users": [
-            {
-              "externalUserId": "user_2",
-              "userMetadata": {
-                "firstName": "John",
-                "lastName": "Doe",
-                "department": "Marketing"
-              },
-              "userRoles": [{ "role": "editor", "tenantIds": [] }],
-              "loginMethods": [
-                {
-                  "isVerified": true,
-                  "isPrimary": true,
-                  "timeJoinedInMSSinceEpoch": 1672617599000,
-                  "recipeId": "thirdparty",
-                  "email": "john.doe@gmail.com",
-                  "thirdPartyId": "google",
-                  "thirdPartyUserId": "google_987654321"
-                }
-              ]
-            }
-          ]
-        }`
-
-      req, _ := http.NewRequest("POST", url, strings.NewReader(payload))
-      req.Header.Add("accept", "application/json")
-      req.Header.Add("api-key", apiKey)
-      req.Header.Add("content-type", "application/json")
-
-      res, _ := http.DefaultClient.Do(req)
-
-      defer res.Body.Close()
-      body, _ := io.ReadAll(res.Body)
-
-      fmt.Println(string(body))
-    }
-    ```
-
-  </Tab>
-  <Tab title="Python">
-
-    ```python
-    import requests
-    from typing import Dict, Any
-
-    BASE_URL = "<CORE_API_ENDPOINT>"
-    API_KEY = "<YOUR_API_KEY>"
-
-    url = f"{BASE_URL}/bulk-import/users"
-
-    payload: Dict[str, Any] = {
-        "users": [
-            {
-                "externalUserId": "user_2",
-                "userMetadata": {
-                    "firstName": "John",
-                    "lastName": "Doe",
-                    "department": "Marketing"
-                },
-                "userRoles": [{ "role": "editor", "tenantIds": [] }],
-                "loginMethods": [
-                    {
-                        "isVerified": True,
-                        "isPrimary": True,
-                        "timeJoinedInMSSinceEpoch": 1672617599000,
-                        "recipeId": "thirdparty",
-                        "email": "john.doe@gmail.com",
-                        "thirdPartyId": "google",
-                        "thirdPartyUserId": "google_987654321"
-                    }
-                ]
-            }
-        ]
-    }
-
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-
-    response = requests.post(url, json=payload, headers=headers)
-
-    print(response.json())
-    ```
-
-  </Tab>
-  <Tab title="Details">
-    
-  
-    Stages users to be imported by a background cron job.
-  
-  
-    **Authorization**: Set the `api-key` header to the value of your **SuperTokens** Core API key.
-  
-
-
-
-
- ## Request
-
- ### Body Schema
-
-| Name           | Type                | Description                       | Required |
-|----------------|---------------------|-----------------------------------|----------|
-| users | `Array` of `User` objects |  The users that you want to import. The array has a limit of 10000 items. | Yes |
-
-
-#### User
-
-| Name           | Type                   | Description                                                                                     | Required |
-|----------------|------------------------|-------------------------------------------------------------------------------------------------|----------|
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider                         | No       |
-| `userMetadata`   | `object`               | An object with custom user information that can be used later on                               | No       |
-| `userRoles`      | `array` of `UserRole`     | The roles that will be used for authorization                                                   | No       |
-| `totpDevices`    | `array` of `TotpDevice`  | Time-based One-time Password device (TOTP) used for Multi-Factor Authentication                 | Yes      |
-| `loginMethods`   | `array` of `LoginMethod` | The actual authentication methods and credentials                                              | Yes      |
-
-##### TotpDevice
-
-| Name       | Type                | Description                                                                 | Required |
-|------------|---------------------|-----------------------------------------------------------------------------|----------|
-| `secretKey`  | `string`            | The secret key used to generate the TOTP codes.                             | Yes      |
-| period     | `number`            | The time period in seconds for which a TOTP code is valid.                  | Yes      |
-| skew       | `number`            | The allowable time skew to account for clock differences between the server and device. | Yes      |
-| `deviceName` | `string`            | The name assigned to the TOTP device for identification purposes.           | No       |
-
-
-#### UserRole
-
-| Name       | Type                | Description                                                                 | Required |
-|------------|---------------------|-----------------------------------------------------------------------------|----------|
-| role       | `string`            | The actual role name                             | Yes      |
-| tenantIds  | Array of `string` | The tenants that use this role. If you are not using the `multi-tenancy` just pass an empty array. | Yes |
-
-##### LoginMethod
-
-`LoginMethod` is a polymorphic type with multiple variants based on the `recipeId`. Each variant includes shared and specific fields.
-
-###### EmailPassword 
-
-###### With Encrypted Password
-
-| Name                    | Type                  | Description                                                                                     | Required |
-|-------------------------|-----------------------|-------------------------------------------------------------------------------------------------|----------|
-| email                   | `string`              | User's email address                                                                            | Yes      |
-| `passwordHash`            | `string`              | Hashed password                                                                                 | Yes      |
-| `hashingAlgorithm`        | `enum` (`"bcrypt"`, `"argon2"`, `"firebase_scrypt"`)                | Hashing algorithm used.                     | Yes      |
-| `recipeId`                | `string`              | Must be `emailpassword`                                                                          | Yes      |
-| `isVerified`              | `boolean`             | Indicates whether the user's email has been verified                                             | No       |
-| `isPrimary`               | `boolean`             | Indicates whether this is the user's primary authentication method                               | No       |
-| tenantIds | Array of `string`             | The tenant IDs that the user belongs to (if you are using the `multi-tenancy` feature)                                                                       | No       |
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider only for this authentication method                         | No       |
-| timeJoinedInMSSinceEpoch| `number`              | Timestamp representing when the user joined, in milliseconds since the Unix epoch                 | No       |
-
-###### With Plain Password
-
-| Name                    | Type                  | Description                                                                                     | Required |
-|-------------------------|-----------------------|-------------------------------------------------------------------------------------------------|----------|
-| email                   | `string`              | User's email address                                                                            | Yes      |
-| `plaintextPassword` | `string`              | A plain text password that will be hashed based on the configured hashing algorithm              | Yes      |
-| `recipeId`                | `string`              | Must be `emailpassword`                                                                          | Yes      |
-| `isVerified`              | `boolean`             | Indicates whether the user's email has been verified                                             | No       |
-| `isPrimary`               | `boolean`             | Indicates whether this is the user's primary authentication method                               | No       |
-| tenantIds | Array of `string`             | The tenant IDs that the user belongs to (if you are using the `multi-tenancy` feature)                                                                       | No       |
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider only for this authentication method                         | No       |
-| timeJoinedInMSSinceEpoch| `number`              | Timestamp representing when the user joined, in milliseconds since the Unix epoch                 | No       |
-
-##### ThirdParty 
-   | Name             | Type   | Description                   | Required |
-   |------------------|--------|-------------------------------|----------|
-   | `recipeId`         | `string` | Must be `"thirdparty"`        | Yes      |
-   | email            | `string` | User's email address          | Yes      |
-   | thirdPartyId     | `string` | Identifier for the third party provider | Yes |
-   | thirdPartyUserId | `string` | User identifier from the third party provider | Yes |
-| tenantIds | Array of `string`             | The tenant IDs that the user belongs to (if you are using the `multi-tenancy` feature)                                                                       | No       |
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider only for this authentication method                         | No       |
-| `isVerified`              | `boolean`             | Indicates whether the user's email has been verified                                             | No       |
-| `isPrimary`               | `boolean`             | Indicates whether this is the user's primary authentication method                               | No       |
-| timeJoinedInMSSinceEpoch| `number`              | Timestamp representing when the user joined, in milliseconds since the Unix epoch                 | No       |
-
-##### Passwordless 
-
-   | Name     | Type   | Description           | Required |
-   |----------|--------|-----------------------|----------|
-   | `recipeId` | `string` | Must be `"passwordless"` | Yes      |
-   | email    | `string` | User's email address  | One of `email` or `phoneNumber` must be provided |
-   | `phoneNumber` | `string` | User's phone number | One of `email` or `phoneNumber` must be provided |
-| tenantIds | Array of `string`             | The tenant IDs that the user belongs to (if you are using the `multi-tenancy` feature)                                                                       | No       |
-| externalUserId | `string`               | ID that can be used to reference the users from your previous provider only for this authentication method                         | No       |
-| `isVerified`              | `boolean`             | Indicates whether the user's email has been verified                                             | No       |
-| `isPrimary`               | `boolean`             | Indicates whether this is the user's primary authentication method                               | No       |
-| timeJoinedInMSSinceEpoch| `number`              | Timestamp representing when the user joined, in milliseconds since the Unix epoch                 | No       |
-
-
-### Example
-
-```bash
-curl --location --request POST '<CORE_API_ENDPOINT>/bulk-import/users' \
-     --header 'api-key: <YOUR_API_KEY>' \
-     --header 'Content-Type: application/json; charset=utf-8' \
-     --data-raw '{
-    users: [
-    {
-      "externalUserId": "user_2",
-      "userMetadata": {
-        "firstName": "John",
-        "lastName": "Doe",
-        "department": "Marketing"
-      },
-      "userRoles": [{ "role": "editor", "tenantIds": [] }],
-      "loginMethods": [
-        {
-          "isVerified": true,
-          "isPrimary": true,
-          "timeJoinedInMSSinceEpoch": 1672617599000,
-          "recipeId": "thirdparty",
-          "email": "john.doe@gmail.com",
-          "thirdPartyId": "google",
-          "thirdPartyUserId": "google_987654321"
-        }
-      ]
-  }
-    ]
-}
-```
-
-## Response
-
-### 200
-All the users have been added to the `bulk_import_users` table.
-
-#### Example
-
-```json
-{ 
-  "status": "OK",
-}
-```
-
-### 400
-
-The request body was invalid.
-
-#### Example
-
-```json
-{
-  error: "Failed to add users for the bulk import. Please fix the error in the following users",
-  users: [
-    {
-      index: 11,
-      errors: ["No two loginMethods can have isPrimary as true."]
-    },
-    {
-      index: 15,
-      errors: ["email is required for recipeId emailpassword", "hashingAlgorithm must be one of 'bcrypt', 'argon2', or 'firebase_scrypt'."]
-    }
-  ]
-}
-```
-
-##### Errors
-
-- Account linking must be enabled if more than one login method is provided for a user.
-- Multitenancy must be enabled if a `tenantId` is other than `public.`
-- No two `loginMethods` can have `isPrimary` as `true`.
-- Invalid `appId` or `tenantId`.
-- A valid `email` is required.
-- A valid `passwordHash` is required.
-- `hashingAlgorithm` must be one of 'bcrypt', 'argon2', or `firebase_scrypt`.
-- A valid `email` is required.
-- `thirdPartyUserId` is required.
-- A valid `email` or `phoneNumber` is required.
-
-
-### 500
-
-An internal server error occurred.
-
-
-  </Tab>
-</Tabs>
+<ApiRequestSnippet operationId="addBulkImportUsers" snippetId="migration-add-bulk-users" />
 
 :::info[The Bulk Import Cron Job]
 
@@ -1146,7 +396,7 @@ If a user gets imported successfully it gets removed from the staged list.
 
 #### 3.2 Monitor the progress of the job
 
-To determine if the import flow has processed all the users call the [`Count Staged Users`](/references/cdi/import/get-bulk-import-users-count) API.
+To determine if the import flow has processed all the users, call the [`Count Staged Users`](/references/cdi/bulk-import/countbulkimportusers) API.
 
 Before doing that, first understand the different states in which a staged user can be.
 During the import process, the user can have one of the following statuses:
@@ -1158,153 +408,18 @@ If a user gets imported successfully it then gets removed from the staged list. 
 
 With this new information, get back to the `count users` endpoint.
 The request counts the users that await import.
-Pass a status filter as a query parameter (for example, `status=NEW`) to count only the users with that status.
+Pass a status filter as a query parameter to count only users in that state: `status=NEW`, `status=PROCESSING`, or `status=FAILED`.
+
+<ApiRequestSnippet
+  operationId="countBulkImportUsers"
+  query={{ status: "PROCESSING" }}
+  snippetId="migration-count-processing-users"
+/>
 
 Given that information, to check if your import is complete do the following:
 1. Call the `count users` API once without any filters. If the count is 0, then the import process is complete.
 2. If the count is not 0, then check if you still have rows that are getting processed (`status=PROCESSING`) or if there are rows that the import job has not yet picked up (`status=NEW`)
 3. If the only rows that remain are the ones with the `FAILED` status, then proceed to step `3.3`. There you can see how to debug those issues.
-
-
-<Tabs>
-  <Tab title="cURL">
-
-```bash
-  curl --location --request GET '`<CORE_API_ENDPOINT>`/bulk-import/users/count?status=PROCESSING' \
-     --header 'api-key: `<YOUR_API_KEY>`' \
-     --header 'Content-Type: application/json; charset=utf-8' \
-```
-
-  </Tab>
-  <Tab title="Node.js">
-
-  ```tsx
-    const BASE_URL = `'<CORE_API_ENDPOINT>'`;
-    const API_KEY = `'<YOUR_API_KEY>'`;
-
-    const url = `${BASE_URL}/bulk-import/users/count?status=PROCESSING`;
-    const options = {
-      method: 'GET',
-      headers: {
-        'api-key': API_KEY,
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    }
-
-    fetch(url, options)
-      .then(response => response.json())
-      .then(json => console.log(json))
-      .catch(err => console.error(err));
-  ```
-
-  </Tab>
-  <Tab title="Go">
-
-    ```go
-    import (
-      "fmt"
-      "net/http"
-      "io"
-    )
-
-    func main() {
-      baseUrl := "`<CORE_API_ENDPOINT>`"
-      apiKey := "`<YOUR_API_KEY>`"
-      url := fmt.Sprintf("%s/bulk-import/users/count?status=PROCESSING", baseUrl)
-
-      req, _ := http.NewRequest("GET", url, nil)
-
-      req.Header.Add("accept", "application/json")
-      req.Header.Add("api-key", apiKey)
-      req.Header.Add("content-type", "application/json")
-
-      res, _ := http.DefaultClient.Do(req)
-
-      defer res.Body.Close()
-      body, _ := io.ReadAll(res.Body)
-
-      fmt.Println(string(body))
-    }
-    ```
-
-  </Tab>
-  <Tab title="Python">
-
-    ```python
-    import requests
-
-    BASE_URL = "`<CORE_API_ENDPOINT>`"
-    API_KEY = "`<YOUR_API_KEY>`"
-
-    url = f"{BASE_URL}/bulk-import/users/count?status=PROCESSING"
-
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-
-    response = requests.post(url, headers=headers)
-
-    print(response.json())
-    ```
-
-  </Tab>
-
-  <Tab title="Details">
-    
-  
-   Returns the total number of users that were staged for import.
-   The value can be filtered by status.
-  
-  
-  **Authorization**: Set the `api-key` header to the value of your **SuperTokens** Core API key.
-  
-
-
-
-
- ## Request
-
- ### Query Parameters
-
-| Name           | Type                | Description                       | Required |
-|----------------|---------------------|-----------------------------------|----------|
-| status | `enum` (`"NEW"`, `"PROCESSING"`, `"FAILED"`)  | Can be used to count only users with a specific status. | No       |
-
-### Example
-
-```bash
-  curl --location --request GET '`<CORE_API_ENDPOINT>`/bulk-import/users/count?status=PROCESSING' \
-     --header 'api-key: `<YOUR_API_KEY>`' \
-     --header 'Content-Type: application/json; charset=utf-8' \
-```
-
-## Response
-
-### 200
-
-The users have been successfully retrieved.
-
-#### Example
-
-```json
-{ 
-  "status": "OK",
-  "count": "<number>",
-}
-```
-
-### 400
-
-The tenant or the specified app have not been found.
-
-### 500
-
-An internal server error occurred.
-
-
-  </Tab>
-</Tabs>
 
 
 #### 3.3 Handle staged users that failed to import
@@ -1315,155 +430,13 @@ This can happen for a number of reasons. Some common ones:
 - `externalUserId` is being already used by other user
 - A primary user already exists for the email but with a different login method
 
-If at the end of the previous step you have determined that you have staged users that failed to import debug the issues with the `get users` API.
+If at the end of the previous step you have determined that you have staged users that failed to import, debug the issues with the [`Get Staged Users`](/references/cdi/bulk-import/getbulkimportusers) API. Filter the results with `status=FAILED`.
 
-<Tabs>
-  <Tab title="cURL">
-
-    ```bash
-    curl --location --request GET '`<CORE_API_ENDPOINT>`/bulk-import/users?status=FAILED' \
-        --header 'api-key: `<YOUR_API_KEY>`' \
-        --header 'Content-Type: application/json; charset=utf-8' \
-    ```
-
-  </Tab>
-  <Tab title="Node.js">
-
-    ```tsx
-    const BASE_URL = `'<CORE_API_ENDPOINT>'`;
-    const API_KEY = `'<YOUR_API_KEY>'`;
-
-    const url = `${BASE_URL}/bulk-import/users?status=FAILED`;
-    const options = {
-      method: 'GET',
-      headers: {
-        'api-key': API_KEY,
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    }
-
-    fetch(url, options)
-      .then(response => response.json())
-      .then(json => console.log(json))
-      .catch(err => console.error(err));
-    ```
-
-  </Tab>
-  <Tab title="Go">
-
-    ```go
-    import (
-      "fmt"
-      "net/http"
-      "io"
-    )
-
-    func main() {
-      baseUrl := "`<CORE_API_ENDPOINT>`"
-      apiKey := "`<YOUR_API_KEY>`"
-      url := fmt.Sprintf("%s/bulk-import/users?status=FAILED", baseUrl)
-
-      req, _ := http.NewRequest("GET", url, nil)
-
-      req.Header.Add("accept", "application/json")
-      req.Header.Add("api-key", apiKey)
-      req.Header.Add("content-type", "application/json")
-
-      res, _ := http.DefaultClient.Do(req)
-
-      defer res.Body.Close()
-      body, _ := io.ReadAll(res.Body)
-
-      fmt.Println(string(body))
-    }
-    ```
-
-  </Tab>
-  <Tab title="Python">
-
-    ```python
-    import requests
-
-    BASE_URL = "`<CORE_API_ENDPOINT>`"
-    API_KEY = "`<YOUR_API_KEY>`"
-
-    url = f"{BASE_URL}/bulk-import/users?status=FAILED"
-
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-
-    response = requests.post(url, headers=headers)
-
-    print(response.json())
-    ```
-
-  </Tab>
-  <Tab title="Details">
-    
-  
-    Retrieves a paginated list of users that have been staged for import (from the `bulk_import_users` table).
-  
-  
-  **Authorization**: Set the `api-key` header to the value of your **SuperTokens** Core API key.
-  
-
-
-
-
- ## Request
-
- ### Query Parameters
-
-| Name           | Type                | Description                       | Required |
-|----------------|---------------------|-----------------------------------|----------|
-| status | `enum` (`"NEW"`, `"PROCESSING"`, `"FAILED"`) | Can be used to filter the returned values. | No       |
-| limit | `string` | The number of results that will be return. Defaults to 100 | No |
-| `paginationToken` | `string` | String token used to get a new chunk of data  | No       |
-
-### Example
-
-```bash
-curl --location --request GET '`<CORE_API_ENDPOINT>`/bulk-import/users?status=FAILED' \
-    --header 'api-key: `<YOUR_API_KEY>`' \
-    --header 'Content-Type: application/json; charset=utf-8' \
-```
-
-## Response
-
-### User Schema
-
-| Property    | Type                             | Description                                   |
-|-------------|----------------------------------|-----------------------------------------------|
-| id        | `string`                         | Unique identifier for the user.               |
-| `raw_data`  | `Object` | The initial data that you have added through the `/bulk-import/add-users` endpoint.|
-| status    | `string` (`"NEW"`, `"PROCESSING"`, `"FAILED"`) | Current status of the user.                   |
-| `error_msg` | `Array` of `string`              | List of error messages associated with the import process.|
-| `created_at`| `string` (`date-time` format)    | Timestamp when the user was created.           |
-| `updated_at`| `string` (`date-time` format)    | Timestamp when the user was last updated.      |
-
-### 200
-
-The users have been successfully retrieved.
-
-#### Example
-
-```json
-{ 
-  "users": [{ /* Array of Users */ }],
-  "nextPaginationToken": "<string>"
-}
-```
-
-### 500
-
-An internal server error occurred.
-
-
-  </Tab>
-</Tabs>
-
+<ApiRequestSnippet
+  operationId="getBulkImportUsers"
+  query={{ status: "FAILED" }}
+  snippetId="migration-get-failed-users"
+/>
 
 The response includes the import error messages for each specific user.
 Use them to determine what you need to correct in your import data.
