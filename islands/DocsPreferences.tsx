@@ -40,6 +40,7 @@ interface PreferenceRow {
 interface OptionPresentation {
   icon?: LucideIcon;
   logo?: string;
+  mark?: string;
 }
 
 interface SummaryRow {
@@ -69,21 +70,33 @@ const optionPresentations: Record<string, OptionPresentation> = {
   reactjs: { logo: "img/logos/react.svg" },
   angular: { logo: "img/logos/angular.svg" },
   vue: { logo: "img/logos/vue.svg" },
-  webjs: { logo: "img/logos/js.svg" },
+  webjs: { mark: "JS" },
   reactnative: { logo: "img/icons/react.svg" },
   android: { logo: "img/logos/android.svg" },
-  ios: { logo: "img/logos/ios.svg" },
+  ios: { mark: "iOS" },
   flutter: { logo: "img/icons/flutter.svg" },
   nodejs: { logo: "img/logos/node.svg" },
-  go: { logo: "img/logos/go-wordmark.svg" },
+  go: { logo: "img/logos/go.svg" },
   python: { logo: "img/logos/python.svg" },
   nestjs: { logo: "img/logos/nestjs.svg" },
   "aws-lambda": { logo: "img/logos/aws-lambda.svg" },
-  nextjs: { logo: "img/logos/nextjs.svg" },
+  nextjs: { mark: "N" },
   fastapi: { logo: "img/logos/fastapi.svg" },
   django: { logo: "img/logos/django.svg" },
   express: { logo: "img/logos/express.svg" },
 };
+
+function fallbackMark(label: string): string {
+  const words = label.match(/[a-z0-9]+/gi) || [];
+  const mark =
+    words.length > 1
+      ? words
+          .slice(0, 2)
+          .map((word) => word[0])
+          .join("")
+      : words[0]?.slice(0, 2);
+  return (mark || "?").toUpperCase();
+}
 
 function tabPreference(key: string, label: string, group: TabGroup | undefined): PreferenceRow | undefined {
   if (!group) return undefined;
@@ -208,7 +221,7 @@ function OptionMark({ label, presentation }: { label: string; presentation?: Opt
       ) : presentation?.logo ? (
         <span className="preferences-option-logo" style={logoStyle} />
       ) : (
-        <span>{label.slice(0, 2)}</span>
+        <span className="preferences-option-fallback">{presentation?.mark || fallbackMark(label)}</span>
       )}
     </span>
   );

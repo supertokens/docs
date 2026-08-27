@@ -175,6 +175,19 @@ test("active sidebar item has no accent edge", async ({ page }) => {
   await expect(activeLink).not.toHaveCSS("box-shadow", /inset/);
 });
 
+test("references overview keeps its page title and card icon", async ({ page }) => {
+  await page.goto("/docs/references");
+
+  await expect(page.getByRole("heading", { level: 1, name: "References", exact: true })).toBeVisible();
+  await expect(
+    page.locator("[data-blume-nav-drawer]").getByRole("link", { name: "Overview", exact: true }),
+  ).toBeVisible();
+
+  const frontendHooksCard = page.getByRole("link", { name: /Frontend Hooks/ });
+  await expect(frontendHooksCard).toBeVisible();
+  await expect(frontendHooksCard.locator("svg")).toBeVisible();
+});
+
 test("preference technology marks are monochrome and theme-aware", async ({ page }) => {
   await page.goto("/docs/quickstart");
 
@@ -183,19 +196,95 @@ test("preference technology marks are monochrome and theme-aware", async ({ page
   await expect(technologyMark).toBeVisible();
   await expect(technologyMark.locator("img")).toHaveCount(0);
 
-  const markColors = async () =>
+  const markPresentation = async () =>
     technologyMark.evaluate((mark) => {
       const styles = getComputedStyle(mark);
-      const logoStyles = getComputedStyle(mark.querySelector(".preferences-option-logo")!);
-      return { background: styles.backgroundColor, foreground: styles.color, maskImage: logoStyles.maskImage };
+      const logo = mark.querySelector<HTMLElement>(".preferences-option-logo")!;
+      const logoStyles = getComputedStyle(logo);
+      const context = document.createElement("canvas").getContext("2d")!;
+      const rgba = (color: string) => {
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+        return [...context.getImageData(0, 0, 1, 1).data];
+      };
+      const luminance = (color: string) => {
+        const [red, green, blue] = rgba(color).map((channel) => channel / 255);
+        const linear = [red, green, blue].map((channel) =>
+          channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+        );
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+      };
+      const markBounds = mark.getBoundingClientRect();
+      const logoBounds = logo.getBoundingClientRect();
+
+      return {
+        backgroundLuminance: luminance(styles.backgroundColor),
+        logoLuminance: luminance(logoStyles.backgroundColor),
+        logoHeight: logoBounds.height,
+        logoMaskImage: logoStyles.maskImage,
+        logoWidth: logoBounds.width,
+        markHeight: markBounds.height,
+        markWidth: markBounds.width,
+      };
     });
-  const lightColors = await markColors();
+  const lightPresentation = await markPresentation();
+  expect(lightPresentation.markHeight).toBeGreaterThanOrEqual(28);
+  expect(lightPresentation.markWidth).toBeGreaterThanOrEqual(28);
+  expect(lightPresentation.logoHeight).toBeGreaterThanOrEqual(18);
+  expect(lightPresentation.logoWidth).toBeGreaterThanOrEqual(18);
+  expect(lightPresentation.logoMaskImage).not.toBe("none");
+  expect(lightPresentation.backgroundLuminance).toBeGreaterThan(0.9);
+  expect(lightPresentation.logoLuminance).toBeLessThan(0.1);
+
   await page.getByRole("button", { name: "Switch to dark theme" }).click();
-  const darkColors = await markColors();
-  expect(lightColors.background).not.toBe(lightColors.foreground);
-  expect(lightColors.maskImage).not.toBe("none");
-  expect(darkColors.background).not.toBe(darkColors.foreground);
-  expect(darkColors).not.toEqual(lightColors);
+  const darkPresentation = await markPresentation();
+  expect(darkPresentation.markHeight).toBeGreaterThanOrEqual(28);
+  expect(darkPresentation.markWidth).toBeGreaterThanOrEqual(28);
+  expect(darkPresentation.logoHeight).toBeGreaterThanOrEqual(18);
+  expect(darkPresentation.logoWidth).toBeGreaterThanOrEqual(18);
+  expect(darkPresentation.logoMaskImage).not.toBe("none");
+  expect(darkPresentation.backgroundLuminance).toBeLessThan(0.1);
+  expect(darkPresentation.logoLuminance).toBeGreaterThan(0.8);
+
+  await page.goto("/docs/migration/rownd/sdk-integration-guide");
+  await trigger.click();
+  const preferencesDialog = page.getByRole("dialog", { name: "Your Setup" });
+  const webJsRadio = preferencesDialog.getByRole("radio", { name: "Web JS", exact: true });
+  const webJsOption = preferencesDialog.locator("label").filter({ hasText: "Web JS" });
+  const webJsMark = webJsOption.locator(".preferences-option-mark");
+  await expect(webJsRadio).toBeVisible();
+  await expect(webJsOption).toHaveCount(1);
+  await expect(webJsMark).toBeVisible();
+  await expect(webJsMark).toHaveText("JS");
+  await expect(webJsMark.locator("img, svg, .preferences-option-logo")).toHaveCount(0);
+  const textMarkContrast = await webJsMark.evaluate((mark) => {
+    const context = document.createElement("canvas").getContext("2d")!;
+    const luminance = (color: string) => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      const [red, green, blue] = [...context.getImageData(0, 0, 1, 1).data].map((channel) => channel / 255);
+      const [linearRed, linearGreen, linearBlue] = [red, green, blue].map((channel) =>
+        channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+      );
+      return 0.2126 * linearRed + 0.7152 * linearGreen + 0.0722 * linearBlue;
+    };
+    const markStyles = getComputedStyle(mark);
+    const textStyles = getComputedStyle(mark.querySelector(".preferences-option-fallback")!);
+    const foreground = luminance(textStyles.color);
+    const background = luminance(markStyles.backgroundColor);
+    const lighter = Math.max(foreground, background);
+    const darker = Math.min(foreground, background);
+    return (lighter + 0.05) / (darker + 0.05);
+  });
+  expect(textMarkContrast).toBeGreaterThanOrEqual(4.5);
+});
+
+test("legacy example applications route redirects to quickstart", async ({ page }) => {
+  await page.goto("/docs/quickstart/example-applications");
+
+  await expect(page).toHaveURL(/\/docs\/quickstart\/?$/u);
 });
 
 test("SDK symbol hashes target symbol headings", async ({ page }) => {

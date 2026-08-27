@@ -35,6 +35,7 @@ const rowndRedirects = [
 ] as const;
 const quickstartRedirects = [
   { from: "/quickstart/introduction", to: "/quickstart" },
+  { from: "/quickstart/example-applications", to: "/quickstart" },
   { from: "/quickstart/frontend-setup", to: "/quickstart#1-integrate-the-frontend-sdk" },
   { from: "/quickstart/backend-setup", to: "/quickstart#2-integrate-the-backend-sdk" },
   { from: "/quickstart/next-steps", to: "/quickstart#3-configure-the-core-service" },
