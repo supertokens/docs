@@ -214,11 +214,11 @@ export const openApiRedirects = [
   },
   {
     "from": "/references/cdi/import/get-bulk-import-users-count",
-    "to": "/references/cdi/bulk-import/importoneuserwithbulkimport"
+    "to": "/references/cdi/bulk-import/countbulkimportusers"
   },
   {
     "from": "/references/cdi/import/post-bulk-import-import",
-    "to": "/references/cdi/bulk-import/countbulkimportusers"
+    "to": "/references/cdi/bulk-import/importoneuserwithbulkimport"
   },
   {
     "from": "/references/cdi/import/post-bulk-import-users",
