@@ -15,10 +15,10 @@ import {
   type SecurityRequirementLike,
   type SecuritySchemeLike,
 } from "blume/components/openapi/security.ts";
-import { sampleLanguages, type RequestSample } from "blume/components/openapi/snippets.ts";
 import { withBase } from "blume/components/islands/base-path.ts";
 
 import type { ApiReferenceOperationId } from "../lib/api-reference-operations";
+import { buildApiRequestSnippetLanguages } from "../lib/api-request-snippets";
 
 interface Props {
   operationId: ApiReferenceOperationId;
@@ -116,43 +116,7 @@ for (const [name, value] of Object.entries(query)) {
 }
 const sample = buildRequest(model, values);
 
-const goSnippet = (request: RequestSample): string => {
-  const body = request.body ? `strings.NewReader(\`${request.body.replaceAll("`", "` + \"`\" + `")}\`)` : "nil";
-  const imports = request.body ? ['"net/http"', '"strings"'] : ['"net/http"'];
-  const headers = Object.entries(request.headers)
-    .map(([name, value]) => `req.Header.Set(${JSON.stringify(name)}, ${JSON.stringify(value)})`)
-    .join("\n");
-  return `package main
-
-import (
-${imports.map((entry) => `\t${entry}`).join("\n")}
-)
-
-func main() {
-\treq, err := http.NewRequest(${JSON.stringify(request.method)}, ${JSON.stringify(request.url)}, ${body})
-\tif err != nil {
-\t\tpanic(err)
-\t}
-${headers
-  .split("\n")
-  .filter(Boolean)
-  .map((line) => `\t${line}`)
-  .join("\n")}
-\tresponse, err := http.DefaultClient.Do(req)
-\tif err != nil {
-\t\tpanic(err)
-\t}
-\tdefer response.Body.Close()
-}`;
-};
-
-const builtInLanguages = sampleLanguages(["curl", "js", "python"]);
-const languages = [
-  builtInLanguages[0],
-  builtInLanguages[1] ? { ...builtInLanguages[1], label: "JavaScript / Node.js" } : undefined,
-  { build: goSnippet, id: "go", label: "Go", lang: "go" },
-  builtInLanguages[2],
-].filter((language) => language !== undefined);
+const languages = buildApiRequestSnippetLanguages();
 const idPart = (value: string): string => value.toLowerCase().replaceAll(/[^a-z0-9]+/gu, "-");
 const namespace = `api-request-${idPart(operationId)}-${idPart(snippetId)}`;
 const embedRoute = withBase(`/docs/api-reference-embed/${ref.key}`);

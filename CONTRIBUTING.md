@@ -175,7 +175,7 @@ npm install -g bun
 
 #### Docker
 
-Used to run the code block validation and formatting.
+Used to build the language-specific code block checkers.
 For install instructions check the [guide](https://docs.docker.com/get-docker/).
 
 ### Testing Steps
@@ -186,15 +186,34 @@ Use the following commands to perform linting checks on the entire project:
 
 - `npm run lint:prettier`: Formats supported files with Prettier.
 - `npm run lint:prettier:check`: Checks formatting without changing files.
+- `npm run lint:code-blocks`: Checks registered languages, empty blocks, numeric highlight metadata, exclusion markers, and supported Prettier formatting without changing files.
 - `npm run lint:vale`: Runs Vale on Markdown files and high-signal typo rules on TSX files.
 - `npm run validate`: Runs strict navigation and link validation.
 - `npm run build`: Regenerates the route manifest and builds the site.
 
 #### Validating code blocks
 
-Run `npm run check-code-blocks <language>` to validate all the code blocks for a particular language.
+Use these commands for code blocks in Markdown and MDX files:
 
-Code block validation is done in two steps:
+- `npm run format-code-blocks [path...]`: Formats supported fenced TypeScript, JavaScript, JSON, YAML, and HTML. Paths can be files or directories; the command defaults to `docs`.
+- `npm run write-code-blocks`: Extracts compilable code blocks from `.md` and `.mdx` files. It fails when a fence has a missing or unknown language.
+- `npm run check-code-blocks <language>`: Builds the Docker checker for the language. Validation runs as part of the image build; the image is not run afterward.
 
-- First, we extract all the code blocks from the `MDX` files and save them in the `/scripts/code-type-checking/<language>/snippets` folder.
-- Then, we load the code in a Docker image and run it to validate the code. This way we do not have to deal with installing different dependencies for different languages.
+Run linting and extraction before a language checker so it does not validate stale snippets:
+
+```sh
+npm run lint:code-blocks
+npm run write-code-blocks
+npm run check-code-blocks javascript
+```
+
+Checker names are `javascript`, `go`, `python`, `kotlin`, `swift`, `dart`, `php`, `java`, and `csharp`. TypeScript and JavaScript fences both use the `javascript` checker.
+
+Generated snippets are stored under `scripts/code-type-checking/<language>/snippets`, preserving the source path and including the fence's source line in each generated path.
+
+For an intentionally non-standalone snippet, use one of these exact comments as the first content line to exclude it from formatting and type checking:
+
+- `// exclude-from-type-checking`
+- `# exclude-from-type-checking`
+
+Do not use this escape hatch for standalone snippets that can be made valid.
