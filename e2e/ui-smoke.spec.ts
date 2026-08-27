@@ -219,7 +219,9 @@ test("preference technology marks are monochrome and theme-aware", async ({ page
       const logoBounds = logo.getBoundingClientRect();
 
       return {
-        backgroundLuminance: luminance(styles.backgroundColor),
+        backgroundColor: styles.backgroundColor,
+        borderRadius: styles.borderRadius,
+        borderWidth: styles.borderWidth,
         logoLuminance: luminance(logoStyles.backgroundColor),
         logoHeight: logoBounds.height,
         logoMaskImage: logoStyles.maskImage,
@@ -234,7 +236,11 @@ test("preference technology marks are monochrome and theme-aware", async ({ page
   expect(lightPresentation.logoHeight).toBeGreaterThanOrEqual(18);
   expect(lightPresentation.logoWidth).toBeGreaterThanOrEqual(18);
   expect(lightPresentation.logoMaskImage).not.toBe("none");
-  expect(lightPresentation.backgroundLuminance).toBeGreaterThan(0.9);
+  expect(lightPresentation).toMatchObject({
+    backgroundColor: "rgba(0, 0, 0, 0)",
+    borderRadius: "0px",
+    borderWidth: "0px",
+  });
   expect(lightPresentation.logoLuminance).toBeLessThan(0.1);
 
   await page.getByRole("button", { name: "Switch to dark theme" }).click();
@@ -244,7 +250,11 @@ test("preference technology marks are monochrome and theme-aware", async ({ page
   expect(darkPresentation.logoHeight).toBeGreaterThanOrEqual(18);
   expect(darkPresentation.logoWidth).toBeGreaterThanOrEqual(18);
   expect(darkPresentation.logoMaskImage).not.toBe("none");
-  expect(darkPresentation.backgroundLuminance).toBeLessThan(0.1);
+  expect(darkPresentation).toMatchObject({
+    backgroundColor: "rgba(0, 0, 0, 0)",
+    borderRadius: "0px",
+    borderWidth: "0px",
+  });
   expect(darkPresentation.logoLuminance).toBeGreaterThan(0.8);
 
   await page.goto("/docs/migration/rownd/sdk-integration-guide");
@@ -255,30 +265,7 @@ test("preference technology marks are monochrome and theme-aware", async ({ page
   const webJsMark = webJsOption.locator(".preferences-option-mark");
   await expect(webJsRadio).toBeVisible();
   await expect(webJsOption).toHaveCount(1);
-  await expect(webJsMark).toBeVisible();
-  await expect(webJsMark).toHaveText("JS");
-  await expect(webJsMark.locator("img, svg, .preferences-option-logo")).toHaveCount(0);
-  const textMarkContrast = await webJsMark.evaluate((mark) => {
-    const context = document.createElement("canvas").getContext("2d")!;
-    const luminance = (color: string) => {
-      context.clearRect(0, 0, 1, 1);
-      context.fillStyle = color;
-      context.fillRect(0, 0, 1, 1);
-      const [red, green, blue] = [...context.getImageData(0, 0, 1, 1).data].map((channel) => channel / 255);
-      const [linearRed, linearGreen, linearBlue] = [red, green, blue].map((channel) =>
-        channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-      );
-      return 0.2126 * linearRed + 0.7152 * linearGreen + 0.0722 * linearBlue;
-    };
-    const markStyles = getComputedStyle(mark);
-    const textStyles = getComputedStyle(mark.querySelector(".preferences-option-fallback")!);
-    const foreground = luminance(textStyles.color);
-    const background = luminance(markStyles.backgroundColor);
-    const lighter = Math.max(foreground, background);
-    const darker = Math.min(foreground, background);
-    return (lighter + 0.05) / (darker + 0.05);
-  });
-  expect(textMarkContrast).toBeGreaterThanOrEqual(4.5);
+  await expect(webJsMark).toHaveCount(0);
 });
 
 test("legacy example applications route redirects to quickstart", async ({ page }) => {
@@ -390,6 +377,32 @@ test("backend language and framework use synchronized header selects", async ({ 
   const nodeFrameworkContent = languageGroup.locator('[data-docs-dependent-content="node-frameworks"]');
   await expect(nodeFrameworkContent.locator('[data-selection-value="fastify"]')).toBeVisible();
   await expect(nodeFrameworkContent.locator('[data-selection-value="express"]')).toBeHidden();
+  const contentOptionLayout = await nodeFrameworkContent
+    .locator('[data-selection-value="fastify"]')
+    .evaluate((activeOption) => {
+      const optionStyles = getComputedStyle(activeOption);
+      const heading = activeOption.querySelector<HTMLElement>(".st-content-option-heading");
+      const host = activeOption.parentElement?.querySelector<HTMLElement>("[data-standalone-accessory-host]");
+      if (!heading || !host) throw new Error("Expected content option heading and standalone host");
+      const headingStyles = getComputedStyle(heading);
+      const hostStyles = getComputedStyle(host);
+      return {
+        headingDisplay: headingStyles.display,
+        hostMargin: hostStyles.margin,
+        hostPadding: hostStyles.padding,
+        optionBorderWidth: optionStyles.borderWidth,
+        optionMargin: optionStyles.margin,
+        optionPadding: optionStyles.padding,
+      };
+    });
+  expect(contentOptionLayout).toEqual({
+    headingDisplay: "none",
+    hostMargin: "0px",
+    hostPadding: "0px",
+    optionBorderWidth: "0px",
+    optionMargin: "0px",
+    optionPadding: "0px",
+  });
 
   await languageSelect.click();
   const goOption = page.getByRole("option", { name: "Go", exact: true });
@@ -479,6 +492,58 @@ test("frontend primary select keeps package manager choice in the header", async
   await expect(framework).toHaveCSS("min-height", "44px");
   await expect(packageManager).toHaveCSS("min-height", "44px");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
+
+test("standalone dependent content stays flush around the active option", async ({ page }) => {
+  await page.goto("/docs/authentication/ai-authentication");
+
+  const content = page.locator('[data-docs-dependent-content="package-managers"]');
+  const host = content.locator(":scope > [data-standalone-accessory-host]");
+  const packageManager = host.getByRole("combobox", { name: "Package manager" });
+  await expect(packageManager).toBeVisible();
+  await packageManager.click();
+  await page.getByRole("option", { name: "yarn", exact: true }).click();
+
+  const npmOption = content.locator('[data-selection-value="npm"]');
+  const yarnOption = content.locator('[data-selection-value="yarn"]');
+  await expect(npmOption).toBeHidden();
+  await expect(yarnOption).toBeVisible();
+  const layout = await content.evaluate((wrapper) => {
+    const activeOption = wrapper.querySelector<HTMLElement>('[data-selection-value="yarn"]')!;
+    const accessoryHost = wrapper.querySelector<HTMLElement>("[data-standalone-accessory-host]")!;
+    const heading = activeOption.querySelector<HTMLElement>(".st-content-option-heading")!;
+    const stylesFor = (element: HTMLElement) => {
+      const styles = getComputedStyle(element);
+      return {
+        borderWidth: styles.borderWidth,
+        margin: styles.margin,
+        padding: styles.padding,
+      };
+    };
+    return {
+      content: stylesFor(wrapper as HTMLElement),
+      headingDisplay: getComputedStyle(heading).display,
+      host: stylesFor(accessoryHost),
+      option: stylesFor(activeOption),
+    };
+  });
+  expect(layout).toEqual({
+    content: { borderWidth: "0px", margin: "0px", padding: "0px" },
+    headingDisplay: "none",
+    host: { borderWidth: "0px", margin: "0px", padding: "0px" },
+    option: { borderWidth: "0px", margin: "0px", padding: "0px" },
+  });
+});
+
+test("dependent content remains understandable without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/docs/authentication/ai-authentication");
+
+  const content = page.locator('[data-docs-dependent-content="package-managers"]');
+  await expect(content.locator(".st-content-option-heading")).toHaveText(["npm", "yarn", "pnpm"]);
+  await expect(content.locator("[data-standalone-accessory-host]")).toBeHidden();
+  await context.close();
 });
 
 test("ungrouped tabs remain accessible tabs", async ({ page }) => {
