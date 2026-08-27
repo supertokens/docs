@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { PresentedOption } from "@/components/option-presentation";
 import { SelectField, type SelectOption } from "@/components/ui/select-field";
 import { firstVisibleOwner, isVisibilityChainVisible } from "@/lib/dependent-content-state";
 import {
@@ -47,7 +48,7 @@ function setVisibleOption(options: ContentOption[], value: string): boolean {
 }
 
 function primaryContext(wrapper: HTMLElement): ControllerContext | undefined {
-  const parentTabs = wrapper.closest<HTMLElement>('.st-tab-group[data-docs-tab-control="tabs"]');
+  const parentTabs = wrapper.closest<HTMLElement>(".st-tab-group");
   const panel = parentTabs
     ? [
         ...parentTabs.querySelectorAll<HTMLElement>(
@@ -194,6 +195,7 @@ export default function DependentContentController({
           label: optionLabel,
           value: optionValue,
         }))}
+        renderOption={(option) => <PresentedOption label={option.label} value={option.value} />}
         value={value}
         onValueChange={(nextValue) => {
           setVisibleOption(options, nextValue);

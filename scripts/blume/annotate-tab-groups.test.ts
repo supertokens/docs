@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { tabGroupControl } from "../../components/tab-groups";
+import { frameworkTabGroup, languageFrameworkGroup, tabGroupControl } from "../../components/tab-groups";
 import { annotateTabGroups } from "./annotate-tab-groups.mjs";
 
 describe("annotateTabGroups", () => {
@@ -78,12 +78,22 @@ describe("annotateTabGroups", () => {
     expect(annotateTabGroups(source)).toBe(source);
   });
 
-  it("uses selects only for secondary framework choices", () => {
-    expect(tabGroupControl("backend-language")).toBe("tabs");
-    expect(tabGroupControl("frontend-custom-ui")).toBe("tabs");
+  it("uses selects for language, frontend, and secondary framework choices", () => {
+    expect(tabGroupControl("backend-language")).toBe("select");
+    expect(tabGroupControl("frontend-prebuilt-ui")).toBe("select");
+    expect(tabGroupControl("frontend-custom-ui")).toBe("select");
+    expect(tabGroupControl("frontend-platforms")).toBe("select");
     expect(tabGroupControl("node-frameworks")).toBe("select");
     expect(tabGroupControl("go-frameworks")).toBe("select");
     expect(tabGroupControl("python-frameworks")).toBe("select");
     expect(tabGroupControl("mobile-frameworks")).toBe("select");
+  });
+
+  it("maps dynamic content framework conditions to their selection groups", () => {
+    expect(languageFrameworkGroup("nodejs")).toBe("node-frameworks");
+    expect(languageFrameworkGroup("go")).toBe("go-frameworks");
+    expect(languageFrameworkGroup("curl")).toBeUndefined();
+    expect(frameworkTabGroup("django")).toBe("python-frameworks");
+    expect(frameworkTabGroup("unknown")).toBeUndefined();
   });
 });

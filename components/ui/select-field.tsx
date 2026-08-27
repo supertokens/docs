@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 
 import {
   Select,
@@ -24,6 +24,7 @@ interface SelectFieldProps {
   onValueChange: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
+  renderOption?: (option: SelectOption) => ReactNode;
   size?: "sm" | "default";
   value?: string;
 }
@@ -36,6 +37,7 @@ export function SelectField({
   onValueChange,
   options,
   placeholder,
+  renderOption,
   size,
   value,
 }: SelectFieldProps) {
@@ -59,13 +61,17 @@ export function SelectField({
           </span>
         )}
         <SelectTrigger aria-describedby={description ? descriptionId : undefined} size={size}>
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder}>
+            {value && renderOption
+              ? renderOption(options.find((option) => option.value === value) || { label: value, value })
+              : undefined}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent align="start" alignItemWithTrigger={false}>
           <SelectGroup>
             {options.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                {renderOption ? renderOption(option) : option.label}
               </SelectItem>
             ))}
           </SelectGroup>

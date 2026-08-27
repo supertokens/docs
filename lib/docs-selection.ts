@@ -2,6 +2,7 @@ import type { SelectOption } from "@/components/ui/select-field";
 import type { TabGroup } from "@/components/tab-groups";
 
 export const selectionEvent = "supertokens-docs:selection";
+export const selectionReadyEvent = "supertokens-docs:selection-ready";
 export const variantEvent = "supertokens-docs:variant";
 
 export interface SelectionDetail {

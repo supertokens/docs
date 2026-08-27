@@ -1,6 +1,6 @@
 export const tabGroups = {
   "backend-language": {
-    control: "tabs",
+    control: "select",
     defaultValue: "nodejs",
     options: {
       "Node.js": "nodejs",
@@ -14,7 +14,7 @@ export const tabGroups = {
     },
   },
   "frontend-prebuilt-ui": {
-    control: "tabs",
+    control: "select",
     defaultValue: "reactjs",
     options: {
       Reactjs: "reactjs",
@@ -25,7 +25,7 @@ export const tabGroups = {
     },
   },
   "frontend-custom-ui": {
-    control: "tabs",
+    control: "select",
     defaultValue: "web",
     options: {
       Web: "web",
@@ -45,7 +45,7 @@ export const tabGroups = {
     },
   },
   "frontend-platforms": {
-    control: "tabs",
+    control: "select",
     defaultValue: "reactjs",
     options: {
       React: "reactjs",
@@ -139,6 +139,10 @@ export function tabGroupControl(group: TabGroup): "tabs" | "select" {
 
 export function tabGroupLabel(group: TabGroup): string {
   const labels: Partial<Record<TabGroup, string>> = {
+    "backend-language": "Language",
+    "frontend-prebuilt-ui": "Frontend framework",
+    "frontend-custom-ui": "Platform",
+    "frontend-platforms": "Platform",
     "mobile-frameworks": "Mobile framework",
     "node-frameworks": "Node.js framework",
     "go-frameworks": "Go framework",
@@ -147,4 +151,20 @@ export function tabGroupLabel(group: TabGroup): string {
     "package-manager-scripts": "Package manager",
   };
   return labels[group] || "Example";
+}
+
+export type FrameworkTabGroup = "node-frameworks" | "go-frameworks" | "python-frameworks";
+
+export function languageFrameworkGroup(language: string): FrameworkTabGroup | undefined {
+  const groups: Partial<Record<string, FrameworkTabGroup>> = {
+    nodejs: "node-frameworks",
+    go: "go-frameworks",
+    python: "python-frameworks",
+  };
+  return groups[language];
+}
+
+export function frameworkTabGroup(framework: string): FrameworkTabGroup | undefined {
+  const groups: FrameworkTabGroup[] = ["node-frameworks", "go-frameworks", "python-frameworks"];
+  return groups.find((group) => Object.values(tabGroups[group].options as Record<string, string>).includes(framework));
 }

@@ -1,20 +1,13 @@
-import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 
 declare global {
   interface Window {
     posthog?: { capture: (event: string, properties?: Record<string, unknown>) => void };
   }
 }
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  Code2Icon,
-  LayoutTemplateIcon,
-  MonitorIcon,
-  SmartphoneIcon,
-  type LucideIcon,
-} from "lucide-react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
 
+import { OptionMark } from "@/components/option-presentation";
 import type { TabGroup } from "@/components/tab-groups";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import type { SelectOption } from "@/components/ui/select-field";
@@ -37,17 +30,11 @@ interface PreferenceRow {
   variantKey?: string;
 }
 
-interface OptionPresentation {
-  icon?: LucideIcon;
-  logo?: string;
-  mark?: string;
-}
-
 interface SummaryRow {
   category: string;
   key: string;
   label: string;
-  presentation?: OptionPresentation;
+  value: string;
 }
 
 const uiTypeOptions = [
@@ -59,44 +46,6 @@ const optionDescriptions: Record<string, string> = {
   prebuilt: "Drop-in components that handle the flows for you.",
   custom: "Build your own UI and call the SDK directly.",
 };
-
-const assetBase = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
-
-const optionPresentations: Record<string, OptionPresentation> = {
-  prebuilt: { icon: LayoutTemplateIcon },
-  custom: { icon: Code2Icon },
-  web: { icon: MonitorIcon },
-  mobile: { icon: SmartphoneIcon },
-  reactjs: { logo: "img/logos/react.svg" },
-  angular: { logo: "img/logos/angular.svg" },
-  vue: { logo: "img/logos/vue.svg" },
-  webjs: { mark: "JS" },
-  reactnative: { logo: "img/icons/react.svg" },
-  android: { logo: "img/logos/android.svg" },
-  ios: { mark: "iOS" },
-  flutter: { logo: "img/icons/flutter.svg" },
-  nodejs: { logo: "img/logos/node.svg" },
-  go: { logo: "img/logos/go.svg" },
-  python: { logo: "img/logos/python.svg" },
-  nestjs: { logo: "img/logos/nestjs.svg" },
-  "aws-lambda": { logo: "img/logos/aws-lambda.svg" },
-  nextjs: { mark: "N" },
-  fastapi: { logo: "img/logos/fastapi.svg" },
-  django: { logo: "img/logos/django.svg" },
-  express: { logo: "img/logos/express.svg" },
-};
-
-function fallbackMark(label: string): string {
-  const words = label.match(/[a-z0-9]+/gi) || [];
-  const mark =
-    words.length > 1
-      ? words
-          .slice(0, 2)
-          .map((word) => word[0])
-          .join("")
-      : words[0]?.slice(0, 2);
-  return (mark || "?").toUpperCase();
-}
 
 function tabPreference(key: string, label: string, group: TabGroup | undefined): PreferenceRow | undefined {
   if (!group) return undefined;
@@ -176,7 +125,7 @@ function buildSummary(rows: PreferenceRow[]): SummaryRow[] {
       key: ui.key,
       category: ui.label,
       label: uiOption.label,
-      presentation: optionPresentations[uiOption.value],
+      value: uiOption.value,
     });
   }
 
@@ -189,8 +138,7 @@ function buildSummary(rows: PreferenceRow[]): SummaryRow[] {
       label: frontendFrameworkOption
         ? `${frontendOption.label} · ${frontendFrameworkOption.label}`
         : frontendOption.label,
-      presentation:
-        optionPresentations[frontendFrameworkOption?.value || ""] || optionPresentations[frontendOption.value],
+      value: frontendFrameworkOption?.value || frontendOption.value,
     });
   }
 
@@ -201,30 +149,11 @@ function buildSummary(rows: PreferenceRow[]): SummaryRow[] {
       key: backend.key,
       category: backend.label,
       label: backendFrameworkOption ? `${backendOption.label} · ${backendFrameworkOption.label}` : backendOption.label,
-      presentation:
-        optionPresentations[backendFrameworkOption?.value || ""] || optionPresentations[backendOption.value],
+      value: backendFrameworkOption?.value || backendOption.value,
     });
   }
 
   return summary;
-}
-
-function OptionMark({ label, presentation }: { label: string; presentation?: OptionPresentation }) {
-  const Icon = presentation?.icon;
-  const logoStyle = presentation?.logo
-    ? ({ "--preferences-option-logo": `url("${assetBase}${presentation.logo}")` } as CSSProperties)
-    : undefined;
-  return (
-    <span className="preferences-option-mark" aria-hidden="true">
-      {Icon ? (
-        <Icon />
-      ) : presentation?.logo ? (
-        <span className="preferences-option-logo" style={logoStyle} />
-      ) : (
-        <span className="preferences-option-fallback">{presentation?.mark || fallbackMark(label)}</span>
-      )}
-    </span>
-  );
 }
 
 function PreferenceOption({
@@ -243,7 +172,7 @@ function PreferenceOption({
   return (
     <label className="preferences-option" data-mode={mode} data-selected={selected || undefined}>
       <input type="radio" name={groupName} value={option.value} checked={selected} onChange={onSelect} />
-      <OptionMark label={option.label} presentation={optionPresentations[option.value]} />
+      <OptionMark value={option.value} />
       <span className="preferences-option-copy">
         <span className="preferences-option-label">{option.label}</span>
         {optionDescriptions[option.value] ? (
@@ -342,7 +271,7 @@ export default function DocsPreferences() {
           <span className="preferences-summary">
             {summary.map((row) => (
               <span key={row.key} className="preferences-summary-row">
-                <OptionMark label={row.label} presentation={row.presentation} />
+                <OptionMark value={row.value} />
                 <span className="preferences-summary-copy">
                   <span className="preferences-summary-category">{row.category}</span>
                   <span className="preferences-summary-value">{row.label}</span>

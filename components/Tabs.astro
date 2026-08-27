@@ -2,25 +2,37 @@
 import type { TabsProps } from "blume/components";
 import BlumeTabs from "blume/components/content/Tabs.astro";
 
-import type { TabGroup } from "./tab-groups";
+import PrimaryTabController from "../islands/PrimaryTabController";
+import { tabGroupControl, tabGroupDefault, tabGroupLabel, type TabGroup } from "./tab-groups";
 
 interface Props extends TabsProps {
   group?: TabGroup;
 }
 
 const { group, hash = false, sync = false, ...props } = Astro.props as Props;
+const control = group ? tabGroupControl(group) : "tabs";
 const wrapperId = `docs-tab-group-${crypto.randomUUID()}`;
 const accessoryHostId = `${wrapperId}-accessory`;
+const hasPrimarySelect = control === "select";
 ---
 
 <div
   id={wrapperId}
   class="st-tab-group"
   data-docs-tab-group={group}
-  data-docs-tab-control="tabs"
+  data-docs-tab-control={control}
   data-docs-tab-accessory-host-id={accessoryHostId}
 >
   <div id={accessoryHostId} class="st-tab-accessory-host" data-docs-tab-accessory-host></div>
+  {group && hasPrimarySelect ? (
+    <PrimaryTabController
+      client:load
+      defaultValue={tabGroupDefault(group)}
+      group={group}
+      label={tabGroupLabel(group)}
+      wrapperId={wrapperId}
+    />
+  ) : null}
   <BlumeTabs hash={hash} sync={sync} {...props} dropdown={false}>
     <slot />
   </BlumeTabs>
@@ -36,6 +48,7 @@ const accessoryHostId = `${wrapperId}-accessory`;
     removeStorage,
     resolveSelection,
     selectionEvent,
+    selectionReadyEvent,
     selectionStorageKey,
     type SelectionDetail,
     writeStorage,
@@ -77,6 +90,8 @@ const accessoryHostId = `${wrapperId}-accessory`;
 
       activateSelection(wrapper, preferredValue);
       if (storedValue !== preferredValue) writeStorage(selectionStorageKey(group), preferredValue);
+      wrapper.dataset.groupSelectionReady = "true";
+      document.dispatchEvent(new CustomEvent(selectionReadyEvent, { detail: { wrapperId: wrapper.id } }));
 
       const persistSelection = (event: Event) => {
         const trigger = event.target instanceof Element ? event.target.closest<HTMLElement>('[role="tab"]') : null;
@@ -107,6 +122,14 @@ const accessoryHostId = `${wrapperId}-accessory`;
       `[data-docs-tab-group="${detail.group}"]`,
     )) {
       activateSelection(wrapper, detail.value);
+    }
+  });
+  window.addEventListener("storage", (event) => {
+    const prefix = "supertokens-docs:selection:";
+    if (!event.key?.startsWith(prefix) || !event.newValue) return;
+    const group = event.key.slice(prefix.length);
+    for (const wrapper of document.querySelectorAll<HTMLElement>(`[data-docs-tab-group="${group}"]`)) {
+      activateSelection(wrapper, event.newValue);
     }
   });
 </script>

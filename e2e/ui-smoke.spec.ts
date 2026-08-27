@@ -314,21 +314,20 @@ test("search results distinguish documentation sections", async ({ page }) => {
   await expect(dialog.getByText("References", { exact: true })).toBeVisible();
 });
 
-test("backend language tabs expose the active framework as a compact select", async ({ page }) => {
+test("backend language and framework use synchronized header selects", async ({ page }) => {
   await page.goto("/docs/quickstart#2-integrate-the-backend-sdk");
 
   const sectionHeading = page.getByRole("heading", {
     name: /2\.3 Add the SuperTokens APIs and configure CORS/,
   });
-  const languageGroup = sectionHeading
-    .locator("~ div")
-    .filter({ has: page.getByRole("tablist") })
-    .first();
-  const languageTabs = languageGroup.getByRole("tablist");
-  const directLanguageTabs = languageTabs.locator(":scope > [role='tab']");
-
-  await expect(directLanguageTabs).toHaveCount(3);
-  await expect(directLanguageTabs).toHaveText(["Node.js", "Go", "Python"]);
+  const languageGroup = sectionHeading.locator('~ .st-tab-group[data-docs-tab-group="backend-language"]').first();
+  const languageSelect = languageGroup.getByRole("combobox", { name: "Language" });
+  await expect(languageSelect).toBeVisible();
+  await expect(languageSelect).toContainText("Node.js");
+  await expect(languageSelect.locator("[data-option-icon]")).toBeVisible();
+  await expect(languageGroup.locator("[data-blume-tablist] > [role='tab']").first()).toBeHidden();
+  await expect(languageGroup.locator("[data-blume-tab-panel]:not(.hidden)")).toHaveAttribute("role", "region");
+  await expect(languageGroup.locator("[data-blume-tab-panel]:not(.hidden)")).toHaveAttribute("aria-label", "Node.js");
 
   const nodeFramework = languageGroup.getByRole("combobox", { name: "Node.js framework" });
   await expect(nodeFramework).toBeVisible();
@@ -356,11 +355,12 @@ test("backend language tabs expose the active framework as a compact select", as
   });
 
   const controlStyles = await languageGroup.evaluate((group) => {
-    const tab = group.querySelector<HTMLElement>("[role='tab']");
-    const select = group.querySelector<HTMLElement>("[role='combobox']");
-    if (!tab || !select) throw new Error("Expected a language tab and framework select");
+    const selects = group.querySelectorAll<HTMLElement>('[role="combobox"]');
+    const language = selects[0];
+    const select = selects[1];
+    if (!language || !select) throw new Error("Expected language and framework selects");
 
-    const tabStyles = getComputedStyle(tab);
+    const languageStyles = getComputedStyle(language);
     const selectStyles = getComputedStyle(select);
     return {
       select: {
@@ -370,9 +370,9 @@ test("backend language tabs expose the active framework as a compact select", as
         fontSize: selectStyles.fontSize,
         fontWeight: selectStyles.fontWeight,
       },
-      tab: {
-        fontSize: tabStyles.fontSize,
-        fontWeight: tabStyles.fontWeight,
+      language: {
+        fontSize: languageStyles.fontSize,
+        fontWeight: languageStyles.fontWeight,
       },
     };
   });
@@ -380,8 +380,8 @@ test("backend language tabs expose the active framework as a compact select", as
     backgroundColor: "rgba(0, 0, 0, 0)",
     borderStyle: "none",
     borderWidth: "0px",
-    fontSize: controlStyles.tab.fontSize,
-    fontWeight: controlStyles.tab.fontWeight,
+    fontSize: controlStyles.language.fontSize,
+    fontWeight: controlStyles.language.fontWeight,
   });
 
   await nodeFramework.click();
@@ -391,7 +391,11 @@ test("backend language tabs expose the active framework as a compact select", as
   await expect(nodeFrameworkContent.locator('[data-selection-value="fastify"]')).toBeVisible();
   await expect(nodeFrameworkContent.locator('[data-selection-value="express"]')).toBeHidden();
 
-  await languageTabs.getByRole("tab", { name: "Go", exact: true }).click();
+  await languageSelect.click();
+  const goOption = page.getByRole("option", { name: "Go", exact: true });
+  await expect(goOption.locator("[data-option-icon]")).toBeVisible();
+  await expect(goOption.locator('[data-option-logo-size="wide"]')).toBeVisible();
+  await goOption.click();
   await expect(nodeFramework).toBeHidden();
   const goFramework = languageGroup.getByRole("combobox", { name: "Go framework" });
   await expect(goFramework).toBeVisible();
@@ -414,7 +418,7 @@ test("backend language tabs expose the active framework as a compact select", as
   expect(overflow.groupRight).toBeLessThanOrEqual(overflow.pageClientWidth);
 });
 
-test("custom frontend setup uses Web and Mobile tabs with dependent selects", async ({ page }) => {
+test("custom frontend setup uses primary and dependent selects", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("supertokens-docs:platform-type", "mobile"));
   await page.goto("/docs/quickstart#1-integrate-the-frontend-sdk");
 
@@ -423,16 +427,15 @@ test("custom frontend setup uses Web and Mobile tabs with dependent selects", as
 
   const customFlow = page.locator('[data-variant-content="ui-type"][data-variant-value="custom"]');
   const installHeading = customFlow.getByRole("heading", { name: /1\.1 Install the SDK/ });
-  const platformGroup = installHeading
-    .locator("~ .st-tab-group")
-    .filter({ has: page.getByRole("tablist") })
-    .first();
-  const platformTabs = platformGroup.getByRole("tablist");
+  const platformGroup = installHeading.locator('~ .st-tab-group[data-docs-tab-group="frontend-custom-ui"]').first();
+  const platformTabs = platformGroup.locator("[data-blume-tablist]");
   const directPlatformTabs = platformTabs.locator(":scope > [role='tab']");
+  const platformSelect = platformGroup.getByRole("combobox", { name: "Platform" });
 
   await expect(directPlatformTabs).toHaveCount(2);
-  await expect(directPlatformTabs).toHaveText(["Web", "Mobile"]);
-  await expect(platformTabs.getByRole("tab", { name: "Mobile", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(directPlatformTabs.first()).toBeHidden();
+  await expect(platformSelect).toContainText("Mobile");
+  await expect(platformSelect.locator("[data-option-icon]")).toBeVisible();
   await expect(platformGroup.getByRole("combobox", { name: "Mobile framework" })).toBeVisible();
   await expect(platformGroup.getByRole("combobox", { name: "Installation method" })).toBeHidden();
   await expect(platformGroup.locator('[data-blume-tab-panel] [role="tablist"]')).toHaveCount(0);
@@ -445,15 +448,48 @@ test("custom frontend setup uses Web and Mobile tabs with dependent selects", as
     )
     .toEqual({ canonical: "mobile", migrated: null });
 
-  await platformTabs.getByRole("tab", { name: "Web", exact: true }).click();
+  await platformSelect.click();
+  await page.getByRole("option", { name: "Web", exact: true }).click();
   await expect(platformGroup.getByRole("combobox", { name: "Installation method" })).toBeVisible();
   await expect(platformGroup.getByRole("combobox", { name: "Mobile framework" })).toBeHidden();
 
   const nextPlatformGroup = customFlow.locator('[data-docs-tab-group="frontend-custom-ui"]').nth(1);
-  await expect(nextPlatformGroup.getByRole("tab", { name: "Web", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(nextPlatformGroup.getByRole("combobox", { name: "Platform" })).toContainText("Web");
+});
+
+test("frontend primary select keeps package manager choice in the header", async ({ page }) => {
+  await page.goto("/docs/quickstart#1-integrate-the-frontend-sdk");
+
+  const group = page.locator('[data-docs-tab-group="frontend-prebuilt-ui"]').first();
+  const framework = group.getByRole("combobox", { name: "Frontend framework" });
+  const packageManager = group.getByRole("combobox", { name: "Package manager" });
+  await expect(framework).toContainText("React");
+  await expect(packageManager).toContainText("npm");
+  await expect(packageManager.locator("[data-option-icon]")).toHaveCount(0);
+
+  const npmWidth = (await packageManager.boundingBox())?.width || 0;
+  await packageManager.click();
+  const pnpm = page.getByRole("option", { name: "pnpm", exact: true });
+  await expect(pnpm.locator("[data-option-icon]")).toHaveCount(0);
+  await pnpm.click();
+  await expect(group.locator('[data-blume-tab-panel]:not(.hidden) [data-selection-value="pnpm"]')).toBeVisible();
+  expect((await packageManager.boundingBox())?.width).not.toBe(npmWidth);
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  await expect(framework).toHaveCSS("min-height", "44px");
+  await expect(packageManager).toHaveCSS("min-height", "44px");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
+
+test("ungrouped tabs remain accessible tabs", async ({ page }) => {
+  await page.goto("/docs");
+
+  const group = page.locator(".st-tab-group:not([data-docs-tab-group])").first();
+  const tablist = group.getByRole("tablist");
+  await expect(tablist).toBeVisible();
+  await expect(tablist.getByRole("tab")).toHaveText(["Managed service", "Self-hosted"]);
+  await expect(group.locator('[role="tabpanel"]:not(.hidden)')).toBeVisible();
+  await expect(group.getByRole("combobox")).toHaveCount(0);
 });
 
 test("account migration API snippets match the CDI specification", async ({ page }) => {

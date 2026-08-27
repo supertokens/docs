@@ -1,0 +1,66 @@
+---
+import { frameworkTabGroup, languageFrameworkGroup, tabGroupDefault, tabGroups } from "./tab-groups";
+
+interface Props {
+  framework?: string;
+  language?: string;
+}
+
+const { framework, language } = Astro.props;
+const frameworkGroup = framework
+  ? language
+    ? languageFrameworkGroup(language)
+    : frameworkTabGroup(framework)
+  : undefined;
+const languageValues = new Set<string>(Object.values(tabGroups["backend-language"].options));
+const frameworkValues = new Set<string>(frameworkGroup ? Object.values(tabGroups[frameworkGroup].options) : []);
+if (language && !languageValues.has(language)) {
+  throw new Error(`DynamicContent received unknown backend language "${language}".`);
+}
+if (framework && (!frameworkGroup || !frameworkValues.has(framework))) {
+  throw new Error(
+    `DynamicContent received framework "${framework}"${language ? ` for unsupported language "${language}"` : ""}.`,
+  );
+}
+const matchesDefaultLanguage = !language || tabGroupDefault("backend-language") === language;
+const matchesDefaultFramework =
+  !framework || (frameworkGroup ? tabGroupDefault(frameworkGroup) === framework : false);
+---
+
+<div
+  data-docs-dynamic-content
+  data-language={language}
+  data-framework={framework}
+  data-framework-group={frameworkGroup}
+  hidden={!(matchesDefaultLanguage && matchesDefaultFramework)}
+>
+  <slot />
+</div>
+
+<script>
+  import { tabGroupDefault, tabGroups, type TabGroup } from "./tab-groups";
+  import { readStorage, selectionEvent, selectionStorageKey } from "../lib/docs-selection";
+
+  const selectedValue = (group: TabGroup): string => {
+    const storedValue = readStorage(selectionStorageKey(group));
+    const values = Object.values(tabGroups[group].options as Record<string, string>);
+    return storedValue && values.includes(storedValue) ? storedValue : tabGroupDefault(group);
+  };
+
+  const updateDynamicContent = () => {
+    for (const content of document.querySelectorAll<HTMLElement>("[data-docs-dynamic-content]")) {
+      const { framework, frameworkGroup, language } = content.dataset;
+      const languageMatches = !language || selectedValue("backend-language") === language;
+      const frameworkMatches =
+        !framework || (Boolean(frameworkGroup) && selectedValue(frameworkGroup as TabGroup) === framework);
+      content.hidden = !(languageMatches && frameworkMatches);
+    }
+  };
+
+  updateDynamicContent();
+  document.addEventListener("astro:page-load", updateDynamicContent);
+  window.addEventListener(selectionEvent, updateDynamicContent);
+  window.addEventListener("storage", (event) => {
+    if (event.key?.startsWith("supertokens-docs:selection:")) updateDynamicContent();
+  });
+</script>
