@@ -535,13 +535,40 @@ test("standalone dependent content stays flush around the active option", async 
   });
 });
 
-test("dependent content remains understandable without JavaScript", async ({ browser }) => {
+test("grouped tabs show only their first panel without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/docs/quickstart");
+
+  const group = page.locator('.st-tab-group[data-docs-tab-group="frontend-prebuilt-ui"]').first();
+  const panels = group.locator(":scope > blume-tabs > [data-blume-tab-content] > *");
+  await expect(panels).toHaveCount(3);
+  await expect(panels.nth(0)).toBeVisible();
+  await expect(panels.nth(1)).toBeHidden();
+  await expect(panels.nth(2)).toBeHidden();
+
+  const packageManagerOptions = panels
+    .nth(0)
+    .locator('[data-docs-dependent-content="package-managers"] > [data-docs-content-option]');
+  await expect(packageManagerOptions).toHaveCount(4);
+  await expect(packageManagerOptions.nth(0)).toBeVisible();
+  await expect(packageManagerOptions.nth(1)).toBeHidden();
+  await expect(packageManagerOptions.nth(2)).toBeHidden();
+  await expect(packageManagerOptions.nth(3)).toBeHidden();
+  await context.close();
+});
+
+test("dependent content shows its first option without JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto("/docs/authentication/ai-authentication");
 
   const content = page.locator('[data-docs-dependent-content="package-managers"]');
-  await expect(content.locator(".st-content-option-heading")).toHaveText(["npm", "yarn", "pnpm"]);
+  const options = content.locator("[data-docs-content-option]");
+  await expect(options).toHaveCount(3);
+  await expect(options.nth(0)).toBeVisible();
+  await expect(options.nth(1)).toBeHidden();
+  await expect(options.nth(2)).toBeHidden();
   await expect(content.locator("[data-standalone-accessory-host]")).toBeHidden();
   await context.close();
 });
