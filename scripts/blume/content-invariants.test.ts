@@ -1,8 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
+import { createProcessor } from "@mdx-js/mdx";
 import { describe, expect, it } from "vitest";
 
+import { tabValue, type TabGroup } from "../../components/tab-groups";
 import { anchorHeadingCollisions, explicitAnchorIds } from "../sdk-references/normalize-markdown-anchors";
 import { annotateTabGroups } from "./annotate-tab-groups.mjs";
 import { validateTabStructure } from "./migrate-nested-tabs";
@@ -35,6 +37,32 @@ function readContentFiles(directory: string): ContentFile[] {
 }
 
 const contentFiles = readContentFiles(docsRoot);
+const mdxProcessor = createProcessor();
+
+interface MdxNode {
+  attributes?: Array<{ name: string; value?: unknown }>;
+  children?: MdxNode[];
+  name?: string;
+  meta?: string;
+  position?: { start: { line: number } };
+  type: string;
+}
+
+const parsedContentFiles = contentFiles.map((file) => ({ ...file, tree: mdxProcessor.parse(file.source) as MdxNode }));
+
+function walkMdx(node: MdxNode, ancestors: MdxNode[], visit: (node: MdxNode, ancestors: MdxNode[]) => void) {
+  visit(node, ancestors);
+  for (const child of node.children ?? []) walkMdx(child, [...ancestors, node], visit);
+}
+
+function hasCode(node: MdxNode): boolean {
+  return node.type === "code" || (node.children ?? []).some(hasCode);
+}
+
+function stringAttribute(node: MdxNode, name: string): string | undefined {
+  const value = node.attributes?.find((attribute) => attribute.name === name)?.value;
+  return typeof value === "string" ? value : undefined;
+}
 
 function locationsMatching(pattern: RegExp): string[] {
   return contentFiles.flatMap(({ path, lines }) =>
@@ -95,6 +123,13 @@ function contentImageReferences(): Array<{ location: string; url: string }> {
 
     return references;
   });
+}
+
+function section(source: string, start: string, end: string): string {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  if (startIndex < 0 || endIndex < 0) throw new Error(`Missing section between ${start} and ${end}`);
+  return source.slice(startIndex, endIndex);
 }
 
 function tabsDirectlyWrappingCode(): string[] {
@@ -223,6 +258,172 @@ describe("published documentation invariants", () => {
       .filter(({ source }) => annotateTabGroups(source) !== source)
       .map(({ path }) => relative(repositoryRoot, path));
     expect(violations).toEqual([]);
+  });
+
+  it("keeps grouped selection ownership out of Tabs", () => {
+    expect(locationsMatching(/<Tabs\b[^>]*\bgroup=/)).toEqual([]);
+  });
+
+  it("does not use prop-based CodeBlock components", () => {
+    expect(locationsMatching(/<CodeBlock\b/)).toEqual([]);
+  });
+
+  it("keeps CodeGroup options code-only", () => {
+    const structural = new Set(["Tab", "DependentContent", "ContentOption", "ConditionalContent"]);
+    const violations: string[] = [];
+    for (const { path, tree } of parsedContentFiles) {
+      walkMdx(tree, [], (node) => {
+        if (node.name !== "CodeGroup") return;
+        const inspect = (parent: MdxNode) => {
+          for (const child of parent.children ?? []) {
+            if (child.type === "code") continue;
+            if (child.name && structural.has(child.name)) inspect(child);
+            else violations.push(`${relative(repositoryRoot, path)}:${child.position?.start.line ?? 1}`);
+          }
+        };
+        inspect(node);
+      });
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("does not leave selectable code in standalone DependentContent", () => {
+    const violations: string[] = [];
+    for (const { path, tree } of parsedContentFiles) {
+      walkMdx(tree, [], (node, ancestors) => {
+        if (
+          node.name === "DependentContent" &&
+          hasCode(node) &&
+          !node.attributes?.some(({ name }) => name === "passive") &&
+          !ancestors.some((ancestor) => ancestor.name === "CodeGroup")
+        ) {
+          violations.push(`${relative(repositoryRoot, path)}:${node.position?.start.line ?? 1}`);
+        }
+      });
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps every passive prose choice reachable from an owning CodeGroup", () => {
+    const violations: string[] = [];
+    for (const { path, tree } of parsedContentFiles) {
+      const owners = new Map<string, Set<string>>();
+      const scopeFor = (ancestors: MdxNode[]) =>
+        ancestors
+          .filter((ancestor) => ancestor.name === "VariantContent")
+          .map((ancestor) => `${stringAttribute(ancestor, "storageKey")}:${stringAttribute(ancestor, "value")}`)
+          .join("/");
+      const ownerKey = (group: string, ancestors: MdxNode[]) => `${scopeFor(ancestors)}|${group}`;
+      walkMdx(tree, [], (node, ancestors) => {
+        if (node.name !== "CodeGroup" || node.attributes?.some(({ name }) => name === "passive")) return;
+        const group = stringAttribute(node, "group");
+        if (!group) return;
+        const key = ownerKey(group, ancestors);
+        const values = owners.get(key) ?? new Set<string>();
+        for (const child of node.children ?? []) {
+          if (child.name === "Tab") {
+            const value = stringAttribute(child, "value");
+            if (value) values.add(value);
+          }
+        }
+        owners.set(key, values);
+      });
+      walkMdx(tree, [], (node, ancestors) => {
+        if (
+          node.name === "DependentContent" &&
+          !node.attributes?.some(({ name }) => name === "passive") &&
+          ancestors.some((ancestor) => {
+            if (ancestor.name !== "CodeGroup") return false;
+            if (!ancestor.attributes?.some(({ name }) => name === "passive")) return true;
+            return stringAttribute(ancestor, "secondaryControls")
+              ?.split(",")
+              .includes(stringAttribute(node, "group") ?? "");
+          })
+        ) {
+          const group = stringAttribute(node, "group");
+          if (group) {
+            const key = ownerKey(group, ancestors);
+            const values = owners.get(key) ?? new Set<string>();
+            for (const child of node.children ?? []) {
+              const value = child.name === "ContentOption" ? stringAttribute(child, "value") : undefined;
+              if (value) values.add(value);
+            }
+            owners.set(key, values);
+          }
+        }
+        if (node.type !== "code" || !node.meta) return;
+        const option = /(?:^|\s)option=["']([^:"']+):([^"']+)["']/.exec(node.meta);
+        if (option) {
+          const codeGroup = ancestors.findLast((ancestor) => ancestor.name === "CodeGroup");
+          const canOwn =
+            codeGroup &&
+            (!codeGroup.attributes?.some(({ name }) => name === "passive") ||
+              stringAttribute(codeGroup, "secondaryControls")?.split(",").includes(option[1]));
+          if (canOwn) {
+            const key = ownerKey(option[1], ancestors);
+            const values = owners.get(key) ?? new Set<string>();
+            values.add(option[2]);
+            owners.set(key, values);
+          }
+        }
+        const codeGroup = ancestors.findLast((ancestor) => ancestor.name === "CodeGroup");
+        const group = codeGroup ? stringAttribute(codeGroup, "group") : undefined;
+        const title = /(?:^|\s)title=["']([^"']+)["']/.exec(node.meta)?.[1];
+        const value = group && title ? tabValue(group as TabGroup, title) : undefined;
+        if (group && value && !codeGroup?.attributes?.some(({ name }) => name === "passive")) {
+          const key = ownerKey(group, ancestors);
+          const values = owners.get(key) ?? new Set<string>();
+          values.add(value);
+          owners.set(key, values);
+        }
+      });
+      walkMdx(tree, [], (node, ancestors) => {
+        if (node.name !== "DependentContent" || !node.attributes?.some(({ name }) => name === "passive")) return;
+        const group = stringAttribute(node, "group");
+        if (!group) return;
+        const values = owners.get(ownerKey(group, ancestors));
+        for (const child of node.children ?? []) {
+          const value = child.name === "ContentOption" ? stringAttribute(child, "value") : undefined;
+          if (value && !values?.has(value)) {
+            violations.push(`${relative(repositoryRoot, path)}:${child.position?.start.line ?? 1} ${group}:${value}`);
+          }
+        }
+      });
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps manually migrated procedures in single ordered Steps containers", () => {
+    const sourceForPath = (suffix: string) => contentFiles.find(({ path }) => path.endsWith(suffix))!.source;
+    const publicKey = section(
+      sourceForPath("additional-verification/session-verification/protect-api-routes.mdx"),
+      "### With the public key string",
+      "### Check for custom claim values",
+    );
+    const passkeySignup = section(
+      sourceForPath("authentication/passkeys/initial-setup.mdx"),
+      "#### 2.1 Add the sign up form",
+      "#### 2.2 Add the login form",
+    );
+    const passkeySignin = section(
+      sourceForPath("authentication/passkeys/initial-setup.mdx"),
+      "#### 2.2 Add the login form",
+      "</VariantContent>",
+    );
+    const m2mPublicKey = section(
+      sourceForPath("authentication/m2m/legacy-flow.mdx"),
+      "#### Using public key string",
+      "#### Claim verification",
+    );
+
+    expect(publicKey.match(/<Steps>/g)).toHaveLength(1);
+    expect(publicKey.match(/<Step\b/g)).toHaveLength(3);
+    expect(passkeySignup.match(/<Steps>/g)).toHaveLength(1);
+    expect(passkeySignup.match(/<Step\b/g)).toHaveLength(4);
+    expect(passkeySignin.match(/<Steps>/g)).toHaveLength(1);
+    expect(passkeySignin.match(/<Step\b/g)).toHaveLength(4);
+    expect(m2mPublicKey.match(/<Steps>/g)).toHaveLength(1);
+    expect(m2mPublicKey.match(/<Step\b/g)).toHaveLength(3);
   });
 
   it("does not publish raw YouTube iframes", () => {

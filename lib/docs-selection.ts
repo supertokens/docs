@@ -24,6 +24,12 @@ interface ResolveSelectionOptions {
   storedValue?: string | null;
 }
 
+export interface SelectionResolution {
+  shouldPersist: boolean;
+  unavailableStoredValue: boolean;
+  value?: string;
+}
+
 interface BlumeTabsElement extends HTMLElement {
   activate(index: number, sync: boolean, updateHash: boolean): void;
 }
@@ -54,6 +60,19 @@ export function resolveSelection({
   return [migratedValue, storedValue, legacyValue, defaultValue, values[0]].find((value): value is string =>
     Boolean(value && validValues.has(value)),
   );
+}
+
+export function resolveSelectionState(options: ResolveSelectionOptions): SelectionResolution {
+  const values = new Set(options.availableValues);
+  const migratedIsValid = Boolean(options.migratedValue && values.has(options.migratedValue));
+  const storedIsValid = Boolean(options.storedValue && values.has(options.storedValue));
+  const value = resolveSelection(options);
+
+  return {
+    shouldPersist: Boolean(value && (migratedIsValid || !options.storedValue)),
+    unavailableStoredValue: Boolean(options.storedValue && !storedIsValid && !migratedIsValid),
+    value,
+  };
 }
 
 export function readStorage(key: string): string | null {
@@ -100,7 +119,7 @@ export function optionsForWrapper(wrapper: HTMLElement): SelectOption[] {
 
 export function optionsForGroup(group: TabGroup, root: ParentNode = document): SelectOption[] {
   const options = new Map<string, string>();
-  for (const wrapper of root.querySelectorAll<HTMLElement>(`[data-docs-tab-group="${group}"]`)) {
+  for (const wrapper of root.querySelectorAll<HTMLElement>(`[data-docs-selection-group="${group}"]`)) {
     if (!isActiveVariant(wrapper)) continue;
     for (const option of optionsForWrapper(wrapper)) {
       if (!options.has(option.value)) options.set(option.value, option.label);
@@ -114,7 +133,7 @@ export function selectedGroupValue(group: TabGroup, options: SelectOption[], roo
   const stored = readStorage(selectionStorageKey(group));
   if (stored && values.has(stored)) return stored;
 
-  for (const wrapper of root.querySelectorAll<HTMLElement>(`[data-docs-tab-group="${group}"]`)) {
+  for (const wrapper of root.querySelectorAll<HTMLElement>(`[data-docs-selection-group="${group}"]`)) {
     if (!isActiveVariant(wrapper)) continue;
     const selected = directPanels(wrapper).find((panel) => !panel.classList.contains("hidden"))?.dataset.tabId;
     if (selected && values.has(selected)) return selected;

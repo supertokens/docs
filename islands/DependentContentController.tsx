@@ -121,8 +121,10 @@ export default function DependentContentController({
     const wrapper = document.getElementById(wrapperId);
     const fallbackHost = fallbackHostId ? document.getElementById(fallbackHostId) || undefined : undefined;
     if (!wrapper) return;
+    const parentGroup = wrapper.closest<HTMLElement>(".st-selection-group");
+    const activeSecondaryGroups = parentGroup?.dataset.docsSecondaryControls?.split(",") ?? [];
     const inheritedPassive =
-      wrapper.closest<HTMLElement>(".st-selection-group")?.dataset.docsSelectionPassive === "true";
+      parentGroup?.dataset.docsSelectionPassive === "true" && !activeSecondaryGroups.includes(group);
     const effectivePassive = passive || inheritedPassive;
 
     const nextOptions = contentOptions(wrapper);

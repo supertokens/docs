@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { optionsForGroup, resolveSelection } from "./docs-selection";
+import { optionsForGroup, resolveSelection, resolveSelectionState } from "./docs-selection";
 
 function wrapper(options: Array<[value: string, title: string]>, active = true): HTMLElement {
   const panels = options.map(([tabId, title]) => ({ dataset: { tabId, title } }));
@@ -40,6 +40,36 @@ describe("resolveSelection", () => {
 
   it("returns undefined when there are no choices", () => {
     expect(resolveSelection({ availableValues: [] })).toBeUndefined();
+  });
+
+  it("persists a valid migrated value over an existing stored value", () => {
+    expect(
+      resolveSelectionState({
+        availableValues,
+        migratedValue: "fastify",
+        storedValue: "koa",
+      }),
+    ).toEqual({ shouldPersist: true, unavailableStoredValue: false, value: "fastify" });
+  });
+
+  it("uses legacy selection without overwriting an unavailable stored value", () => {
+    expect(
+      resolveSelectionState({
+        availableValues,
+        legacyValue: "koa",
+        storedValue: "invalid",
+      }),
+    ).toEqual({ shouldPersist: false, unavailableStoredValue: true, value: "koa" });
+  });
+
+  it("marks unavailable stored values so passive followers can remain hidden", () => {
+    expect(
+      resolveSelectionState({
+        availableValues: ["express"],
+        defaultValue: "express",
+        storedValue: "koa",
+      }),
+    ).toEqual({ shouldPersist: false, unavailableStoredValue: true, value: "express" });
   });
 });
 

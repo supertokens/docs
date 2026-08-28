@@ -332,7 +332,9 @@ test("backend language and framework use synchronized header selects", async ({ 
   const sectionHeading = page.getByRole("heading", {
     name: /2\.3 Add the SuperTokens APIs and configure CORS/,
   });
-  const languageGroup = sectionHeading.locator('~ .st-tab-group[data-docs-tab-group="backend-language"]').first();
+  const languageGroup = sectionHeading
+    .locator('~ .st-code-group[data-docs-selection-group="backend-language"]')
+    .first();
   const languageSelect = languageGroup.getByRole("combobox", { name: "Language" });
   await expect(languageSelect).toBeVisible();
   await expect(languageSelect).toContainText("Node.js");
@@ -399,35 +401,8 @@ test("backend language and framework use synchronized header selects", async ({ 
   await nodeFramework.click();
   await page.getByRole("option", { name: "Fastify", exact: true }).click();
 
-  const nodeFrameworkContent = languageGroup.locator('[data-docs-dependent-content="node-frameworks"]');
-  await expect(nodeFrameworkContent.locator('[data-selection-value="fastify"]')).toBeVisible();
-  await expect(nodeFrameworkContent.locator('[data-selection-value="express"]')).toBeHidden();
-  const contentOptionLayout = await nodeFrameworkContent
-    .locator('[data-selection-value="fastify"]')
-    .evaluate((activeOption) => {
-      const optionStyles = getComputedStyle(activeOption);
-      const heading = activeOption.querySelector<HTMLElement>(".st-content-option-heading");
-      const host = activeOption.parentElement?.querySelector<HTMLElement>("[data-standalone-accessory-host]");
-      if (!heading || !host) throw new Error("Expected content option heading and standalone host");
-      const headingStyles = getComputedStyle(heading);
-      const hostStyles = getComputedStyle(host);
-      return {
-        headingDisplay: headingStyles.display,
-        hostMargin: hostStyles.margin,
-        hostPadding: hostStyles.padding,
-        optionBorderWidth: optionStyles.borderWidth,
-        optionMargin: optionStyles.margin,
-        optionPadding: optionStyles.padding,
-      };
-    });
-  expect(contentOptionLayout).toEqual({
-    headingDisplay: "none",
-    hostMargin: "0px",
-    hostPadding: "0px",
-    optionBorderWidth: "0px",
-    optionMargin: "0px",
-    optionPadding: "0px",
-  });
+  await expect(languageGroup.locator('[data-code-option="node-frameworks:fastify"]')).toBeVisible();
+  await expect(languageGroup.locator('[data-code-option="node-frameworks:express"]')).toBeHidden();
 
   await languageSelect.click();
   const goOption = page.getByRole("option", { name: "Go", exact: true });
@@ -465,7 +440,9 @@ test("custom frontend setup uses primary and dependent selects", async ({ page }
 
   const customFlow = page.locator('[data-variant-content="ui-type"][data-variant-value="custom"]');
   const installHeading = customFlow.getByRole("heading", { name: /1\.1 Install the SDK/ });
-  const platformGroup = installHeading.locator('~ .st-tab-group[data-docs-tab-group="frontend-custom-ui"]').first();
+  const platformGroup = installHeading
+    .locator('~ .st-code-group[data-docs-selection-group="frontend-custom-ui"]')
+    .first();
   const platformTabs = platformGroup.locator("[data-blume-tablist]");
   const directPlatformTabs = platformTabs.locator(":scope > [role='tab']");
   const platformSelect = platformGroup.getByRole("combobox", { name: "Platform" });
@@ -492,7 +469,7 @@ test("custom frontend setup uses primary and dependent selects", async ({ page }
   await expect(platformGroup.getByRole("combobox", { name: "Mobile framework" })).toBeHidden();
 
   const nextPlatformGroup = customFlow
-    .locator('[data-docs-tab-group="frontend-custom-ui"]:not([data-docs-tab-passive="true"])')
+    .locator('[data-docs-selection-group="frontend-custom-ui"]:not([data-docs-selection-passive="true"])')
     .nth(1);
   await expect(nextPlatformGroup.getByRole("combobox", { name: "Platform" })).toContainText("Web");
 });
@@ -500,7 +477,7 @@ test("custom frontend setup uses primary and dependent selects", async ({ page }
 test("frontend primary select keeps package manager choice in the header", async ({ page }) => {
   await page.goto("/docs/quickstart#1-integrate-the-frontend-sdk");
 
-  const group = page.locator('[data-docs-tab-group="frontend-prebuilt-ui"]').first();
+  const group = page.locator('[data-docs-selection-group="frontend-prebuilt-ui"]').first();
   const framework = group.getByRole("combobox", { name: "Frontend framework" });
   const packageManager = group.getByRole("combobox", { name: "Package manager" });
   await expect(framework).toContainText("React");
@@ -530,14 +507,14 @@ test("passive quickstart prose follows the primary selection without adding a co
     .filter({ hasText: "In order for the pre-built UI to be rendered" });
   const reactProse = passiveContent.locator(':scope > [data-selection-value="reactjs"]');
   const angularProse = passiveContent.locator(':scope > [data-selection-value="angular"]');
-  const group = heading.locator('~ .st-tab-group[data-docs-tab-group="frontend-prebuilt-ui"]').first();
+  const group = heading.locator('~ .st-code-group[data-docs-selection-group="frontend-prebuilt-ui"]').first();
   const framework = group.getByRole("combobox", { name: "Frontend framework" });
   const follower = group
-    .locator('~ .st-tab-group[data-docs-tab-group="frontend-prebuilt-ui"][data-docs-tab-passive="true"]')
+    .locator('~ .st-code-group[data-docs-selection-group="frontend-prebuilt-ui"][data-docs-selection-passive="true"]')
     .first();
 
   await expect(group.getByRole("combobox", { name: "Frontend framework" })).toHaveCount(1);
-  await expect(group.getByRole("combobox", { name: "Already using React Router?" })).toHaveCount(1);
+  await expect(group.getByRole("combobox", { name: "Do you use react-router-dom?" })).toHaveCount(1);
   await expect(group.getByRole("combobox")).toHaveCount(2);
   await expect(passiveContent.getByRole("combobox")).toHaveCount(0);
   await expect(follower.getByRole("combobox")).toHaveCount(0);
@@ -626,7 +603,7 @@ test("secondary fence selections synchronize through storage events", async ({ c
   await follower.close();
 });
 
-test("standalone cURL CodeBlocks preserve continuation backslashes and newlines", async ({ page }) => {
+test("standalone cURL fences preserve continuation backslashes and newlines", async ({ page }) => {
   await page.goto("/docs/quickstart#1-integrate-the-frontend-sdk");
   await page
     .getByRole("group", { name: "UI type" })
@@ -638,73 +615,77 @@ test("standalone cURL CodeBlocks preserve continuation backslashes and newlines"
   expect(await snippet.textContent()).toContain(" \\\n--header 'Cookie: sRefreshToken=...'");
 });
 
-test("standalone dependent content stays flush around the active option", async ({ page }) => {
+test("standalone package-manager choices use CodeGroup", async ({ page }) => {
   await page.goto("/docs/authentication/ai-authentication");
 
-  const content = page.locator('[data-docs-dependent-content="package-managers"]');
-  const host = content.locator(":scope > [data-standalone-accessory-host]");
-  const packageManager = host.getByRole("combobox", { name: "Package manager" });
+  const group = page.locator('.st-code-group[data-docs-selection-group="package-managers"]');
+  const packageManager = group.getByRole("combobox", { name: "Package manager" });
   await expect(packageManager).toBeVisible();
   await packageManager.click();
   await page.getByRole("option", { name: "yarn", exact: true }).click();
 
-  const npmOption = content.locator('[data-selection-value="npm"]');
-  const yarnOption = content.locator('[data-selection-value="yarn"]');
-  await expect(npmOption).toBeHidden();
-  await expect(yarnOption).toBeVisible();
-  const layout = await content.evaluate((wrapper) => {
-    const activeOption = wrapper.querySelector<HTMLElement>('[data-selection-value="yarn"]')!;
-    const accessoryHost = wrapper.querySelector<HTMLElement>("[data-standalone-accessory-host]")!;
-    const heading = activeOption.querySelector<HTMLElement>(".st-content-option-heading")!;
-    const stylesFor = (element: HTMLElement) => {
-      const styles = getComputedStyle(element);
-      return {
-        borderWidth: styles.borderWidth,
-        margin: styles.margin,
-        padding: styles.padding,
-      };
-    };
-    return {
-      content: stylesFor(wrapper as HTMLElement),
-      headingDisplay: getComputedStyle(heading).display,
-      host: stylesFor(accessoryHost),
-      option: stylesFor(activeOption),
-    };
-  });
-  expect(layout).toEqual({
-    content: { borderWidth: "0px", margin: "0px", padding: "0px" },
-    headingDisplay: "none",
-    host: { borderWidth: "0px", margin: "0px", padding: "0px" },
-    option: { borderWidth: "0px", margin: "0px", padding: "0px" },
-  });
+  await expect(group.locator('[data-tab-id="npm"]')).toBeHidden();
+  await expect(group.locator('[data-tab-id="yarn"]')).toBeVisible();
 });
 
-test("grouped tabs use safe defaults and hide mismatched passive followers without JavaScript", async ({ browser }) => {
+test("prose-only Dashboard choices remain selectable without fallback code", async ({ page }) => {
+  await page.goto("/docs/authentication/social/built-in-providers-config");
+  await page.getByRole("group", { name: "Tenant setup" }).getByRole("radio", { name: "Multi-tenant" }).click();
+
+  const multiTenant = page.locator('[data-variant-content="tenant-type"][data-variant-value="multi"]');
+  const prose = multiTenant.locator('[data-docs-dependent-content="backend-language"]').first();
+  const group = multiTenant.locator('.st-code-group[data-docs-selection-group="backend-language"]').first();
+
+  await group.getByRole("combobox", { name: "Language" }).click();
+  await page.getByRole("option", { name: "Dashboard", exact: true }).click();
+
+  await expect(prose.locator('[data-selection-value="dashboard"]')).toBeVisible();
+  await expect(group).toHaveAttribute("data-docs-code-empty", "");
+  await expect(group.locator("pre:visible, figure:visible")).toHaveCount(0);
+  await expect(group).not.toHaveAttribute("data-docs-selection-unavailable", "");
+});
+
+test("passive primary groups can introduce a secondary selector", async ({ page }) => {
+  await page.goto("/docs/authentication/passwordless/initial-setup");
+
+  const group = page.locator('.st-code-group[data-docs-secondary-controls="react-router"]').first();
+  const router = group.getByRole("combobox", { name: "Do you use react-router-dom?" });
+  await expect(router).toBeVisible();
+  await router.click();
+  await page.getByRole("option", { name: "No", exact: true }).click();
+  await expect(group.locator('[data-selection-value="no"]')).toBeVisible();
+});
+
+test("CodeGroups show fenced fallbacks and hide passive followers without JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto("/docs/quickstart");
 
-  const group = page.locator('.st-tab-group[data-docs-tab-group="frontend-prebuilt-ui"]').first();
-  const panels = group.locator(":scope > blume-tabs > [data-blume-tab-content] > *");
-  await expect(panels).toHaveCount(12);
-  await expect(panels.nth(0)).toBeVisible();
-  for (let index = 1; index < 12; index += 1) await expect(panels.nth(index)).toBeHidden();
-  await expect(panels.nth(0)).toHaveAttribute("data-title", "Reactjs");
-  await expect(panels.nth(0)).toHaveAttribute("data-code-option", "package-managers:npm");
+  const group = page.locator('.st-code-group[data-docs-selection-group="frontend-prebuilt-ui"]').first();
+  const fences = group.locator(":scope > blume-tabs > [data-blume-tab-content] > pre");
+  expect(await fences.count()).toBeGreaterThan(1);
+  await expect(group.locator(":scope > blume-tabs > [data-blume-tab-content] > pre:visible")).toHaveCount(1);
 
-  const passiveFollower = page.locator('.st-tab-group[data-docs-tab-passive="true"]').first();
+  const passiveFollower = page.locator('.st-code-group[data-docs-selection-passive="true"]').first();
   await expect(passiveFollower.locator('[data-title="Angular"]')).toHaveCount(1);
   await expect(passiveFollower.locator("[data-blume-tablist]")).toBeHidden();
   await expect(passiveFollower).toBeHidden();
+
+  await page.goto("/docs/authentication/ai-authentication");
+  const tabGroup = page.locator('.st-code-group[data-docs-selection-group="package-managers"]').first();
+  expect(await tabGroup.locator("[data-blume-tab-panel]").count()).toBeGreaterThan(1);
+  await expect(tabGroup.locator("[data-blume-tab-panel]:visible")).toHaveCount(1);
   await context.close();
 });
 
-test("dependent content shows its first option without JavaScript", async ({ browser }) => {
+test("passive dependent content shows its first option without JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
-  await page.goto("/docs/authentication/ai-authentication");
+  await page.goto("/docs/quickstart");
 
-  const content = page.locator('[data-docs-dependent-content="package-managers"]');
+  const content = page
+    .locator('[data-docs-dependent-content="frontend-prebuilt-ui"][data-docs-dependent-content-passive="true"]')
+    .first();
   const options = content.locator("[data-docs-content-option]");
   await expect(options).toHaveCount(3);
   await expect(options.nth(0)).toBeVisible();
@@ -717,7 +698,7 @@ test("dependent content shows its first option without JavaScript", async ({ bro
 test("ungrouped tabs remain accessible tabs", async ({ page }) => {
   await page.goto("/docs");
 
-  const group = page.locator(".st-tab-group:not([data-docs-tab-group])").first();
+  const group = page.locator("blume-tabs").filter({ hasText: "Managed service" }).first();
   const tablist = group.getByRole("tablist");
   await expect(tablist).toBeVisible();
   await expect(tablist.getByRole("tab")).toHaveText(["Managed service", "Self-hosted"]);

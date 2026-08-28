@@ -113,13 +113,80 @@ export const tabGroups = {
       "Script tag": "script-tag",
     },
   },
-  "yes-no-1ddf50o-1": {
+  "react-router": {
     control: "select",
     defaultValue: "yes",
     options: {
       Yes: "yes",
       No: "no",
     },
+  },
+  "uses-try-supertokens": {
+    control: "select",
+    defaultValue: "yes",
+    options: { Yes: "yes", No: "no" },
+  },
+  "python-io-style": {
+    control: "select",
+    defaultValue: "asyncio",
+    options: { Asyncio: "asyncio", Syncio: "syncio" },
+  },
+  "python-package-manager": {
+    control: "select",
+    defaultValue: "pip",
+    options: { Pip: "pip", Uv: "uv" },
+  },
+  version: {
+    control: "select",
+    defaultValue: "v6",
+    options: { V6: "v6", V5: "v5" },
+  },
+  docker: {
+    control: "select",
+    defaultValue: "with-docker",
+    options: { "With Docker": "with-docker", "Without Docker": "without-docker" },
+  },
+  comparison: {
+    control: "select",
+    defaultValue: "greater",
+    options: { Greater: "greater", Lesser: "lesser" },
+  },
+  database: {
+    control: "select",
+    defaultValue: "mysql",
+    options: { Mysql: "mysql", Postgresql: "postgresql" },
+  },
+  "operating-system": {
+    control: "select",
+    defaultValue: "linux",
+    options: { Linux: "linux", Mac: "mac", Windows: "windows" },
+  },
+  "import-column-order": {
+    control: "select",
+    defaultValue: "without-order",
+    options: {
+      "Without specifying column order": "without-order",
+      "With specifying column order": "with-order",
+    },
+  },
+  "core-deployment": {
+    control: "select",
+    defaultValue: "with-docker",
+    options: { "With Docker": "with-docker", "Without Docker": "without-docker", "With Saas": "saas" },
+  },
+  "core-hosting": {
+    control: "select",
+    defaultValue: "managed",
+    options: {
+      "Managed service": "managed",
+      "Self-hosted with Docker": "self-hosted-docker",
+      "Self-hosted without Docker": "self-hosted-binary",
+    },
+  },
+  "password-hashing-algorithm": {
+    control: "select",
+    defaultValue: "argon2",
+    options: { Argon2: "argon2", Bcrypt: "bcrypt" },
   },
   "package-manager-scripts": {
     control: "select",
@@ -143,7 +210,10 @@ export function tabValue(group: TabGroup, title: string): string | undefined {
 export function inferTabGroup(titles: string[]): TabGroup | undefined {
   if (titles.length < 2) return undefined;
 
-  return tabGroupNames.find((group) => titles.every((title) => tabValue(group, title)));
+  return tabGroupNames.find(
+    (group) =>
+      group !== "react-router" && group !== "uses-try-supertokens" && titles.every((title) => tabValue(group, title)),
+  );
 }
 
 export function tabGroupDefault(group: TabGroup): string {
@@ -167,7 +237,19 @@ export function tabGroupLabel(group: TabGroup): string {
     "package-managers": "Package manager",
     "package-manager-scripts": "Package manager",
     "install-method": "Installation method",
-    "yes-no-1ddf50o-1": "Already using React Router?",
+    "react-router": "Do you use react-router-dom?",
+    "uses-try-supertokens": "Do you need to configure a SuperTokens Core?",
+    "python-io-style": "I/O style",
+    "python-package-manager": "Package manager",
+    version: "Version",
+    docker: "Deployment method",
+    comparison: "Comparison",
+    database: "Database",
+    "operating-system": "Operating system",
+    "import-column-order": "Import method",
+    "core-deployment": "Deployment method",
+    "core-hosting": "Hosting method",
+    "password-hashing-algorithm": "Password hashing algorithm",
   };
   return labels[group] || "Example";
 }

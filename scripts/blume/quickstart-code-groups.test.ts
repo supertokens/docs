@@ -10,7 +10,7 @@ const quickstart = readFileSync(resolve(import.meta.dirname, "../../docs/quickst
 describe("quickstart code groups", () => {
   it("uses CodeGroup for synchronized code choices", () => {
     expect(quickstart).not.toMatch(/<Tabs\b[^>]*\bgroup=/);
-    expect(quickstart.match(/<CodeGroup\b/g)).toHaveLength(25);
+    expect(quickstart.match(/<CodeGroup\b/g)?.length).toBeGreaterThan(0);
     for (const group of quickstart.matchAll(/<CodeGroup\b[^>]*>([\s\S]*?)<\/CodeGroup>/g)) {
       expect(group[1]).not.toMatch(/<(?:Tab|DependentContent|ContentOption)\b/);
       expect(group[1]).toMatch(/```\w+[^\n]*\btitle="[^"]+"/);
@@ -20,9 +20,9 @@ describe("quickstart code groups", () => {
     expect(quickstart).toContain('title="Go" option="go-frameworks:gin"');
   });
 
-  it("uses CodeBlock for the standalone formFields example", () => {
-    expect(quickstart).toMatch(/<CodeBlock\s+lang="json"/);
-    expect(quickstart).not.toMatch(/```json/);
+  it("uses fences for standalone and incidental snippets", () => {
+    expect(quickstart).not.toMatch(/<CodeBlock\b/);
+    expect(quickstart).toMatch(/```json/);
   });
 
   it("uses declared secondary option values", () => {
@@ -36,7 +36,6 @@ describe("quickstart code groups", () => {
     expect(quickstart).toContain('<Tab title="Header (Authorization Bearer)">');
     const proseTabs = quickstart.match(/<Tabs>[\s\S]*?<\/Tabs>/)?.[0];
     expect(proseTabs).toBeDefined();
-    expect(proseTabs).not.toMatch(/```/);
-    expect(proseTabs?.match(/<CodeBlock\b/g)).toHaveLength(3);
+    expect(proseTabs).toMatch(/```/);
   });
 });

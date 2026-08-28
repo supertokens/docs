@@ -29,7 +29,14 @@ async function resolveFile(pathname) {
 
   try {
     const file = await stat(candidate);
-    if (file.isDirectory()) return join(candidate, "index.html");
+    if (file.isDirectory()) {
+      const indexFile = join(candidate, "index.html");
+      try {
+        if ((await stat(indexFile)).isFile()) return indexFile;
+      } catch {
+        return;
+      }
+    }
     if (file.isFile()) return candidate;
   } catch {
     if (!extname(candidate)) {
@@ -52,11 +59,29 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    response.writeHead(200, {
-      "Content-Type": contentTypes[extname(file)] ?? "application/octet-stream",
+    if (request.method === "HEAD") {
+      response.writeHead(200, {
+        "Content-Type": contentTypes[extname(file)] ?? "application/octet-stream",
+      });
+      response.end();
+      return;
+    }
+
+    const stream = createReadStream(file);
+    stream.on("error", (error) => {
+      console.error(error);
+      if (response.headersSent) response.destroy();
+      else
+        response
+          .writeHead(error.code === "ENOENT" ? 404 : 500)
+          .end(error.code === "ENOENT" ? "Not found" : "Internal server error");
     });
-    if (request.method === "HEAD") response.end();
-    else createReadStream(file).pipe(response);
+    stream.on("open", () => {
+      response.writeHead(200, {
+        "Content-Type": contentTypes[extname(file)] ?? "application/octet-stream",
+      });
+      stream.pipe(response);
+    });
   } catch (error) {
     console.error(error);
     response.writeHead(500).end("Internal server error");
