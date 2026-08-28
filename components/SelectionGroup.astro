@@ -1,0 +1,265 @@
+---
+import type { CodeGroupProps, TabsProps } from "blume/components";
+import BlumeCodeGroup from "blume/components/content/CodeGroup.astro";
+import BlumeTabs from "blume/components/content/Tabs.astro";
+
+import PrimaryTabController from "../islands/PrimaryTabController";
+import CodeOptionController from "../islands/CodeOptionController";
+import { tabGroupControl, tabGroupDefault, tabGroupLabel, tabGroups, type TabGroup } from "./tab-groups";
+
+interface Props extends TabsProps, CodeGroupProps {
+  group?: TabGroup;
+  kind: "code" | "tabs";
+  passive?: boolean;
+}
+
+const { group, kind, passive = false, ...props } = Astro.props as Props;
+const control = group ? tabGroupControl(group) : "tabs";
+const wrapperId = `docs-selection-group-${crypto.randomUUID()}`;
+const accessoryHostId = `${wrapperId}-accessory`;
+const hasPrimarySelect = control === "select";
+const Component = kind === "code" ? BlumeCodeGroup : BlumeTabs;
+const componentProps =
+  kind === "code"
+    ? {
+        dropdown: group ? false : props.dropdown,
+        tabValues: group ? JSON.stringify(tabGroups[group].options) : undefined,
+      }
+    : { ...props, dropdown: group ? false : props.dropdown };
+---
+
+<div
+  id={wrapperId}
+  class:list={["st-selection-group", "st-tab-group", kind === "code" && "st-code-group"]}
+  data-docs-selection-group={group}
+  data-docs-selection-kind={kind}
+  data-docs-selection-passive={passive ? "true" : undefined}
+  data-docs-selection-accessory-host-id={accessoryHostId}
+  data-docs-tab-group={group}
+  data-docs-tab-control={control}
+  data-docs-tab-passive={passive ? "true" : undefined}
+  data-docs-tab-accessory-host-id={accessoryHostId}
+  hidden={kind === "code" && passive ? true : undefined}
+>
+  <div id={accessoryHostId} class="st-tab-accessory-host" data-docs-tab-accessory-host></div>
+  {
+    group && hasPrimarySelect ? (
+      <PrimaryTabController
+        client:load
+        defaultValue={tabGroupDefault(group)}
+        group={group}
+        label={tabGroupLabel(group)}
+        passive={passive}
+        wrapperId={wrapperId}
+      />
+    ) : null
+  }
+  <Component {...componentProps}>
+    <slot />
+  </Component>
+  {kind === "code" && <CodeOptionController client:load passive={passive} wrapperId={wrapperId} />}
+</div>
+
+<script>
+  import { tabGroupDefault, tabValue, type TabGroup } from "./tab-groups";
+  import {
+    activateSelection,
+    directPanels,
+    dispatchSelection,
+    readStorage,
+    removeStorage,
+    resolveSelection,
+    selectionEvent,
+    selectionContentReadyEvent,
+    selectionReadyEvent,
+    selectionStorageKey,
+    variantEvent,
+    type SelectionDetail,
+    writeStorage,
+  } from "../lib/docs-selection";
+
+  const codeSurfaceSelector = "pre, figure";
+
+  const saveActiveSelection = (wrapper: HTMLElement, group: TabGroup) => {
+    const value = directPanels(wrapper).find((panel) => !panel.classList.contains("hidden"))?.dataset.tabId;
+    if (value) dispatchSelection(group, value);
+  };
+
+  const surfaceIsVisible = (surface: HTMLElement, wrapper: HTMLElement) => {
+    for (let element: HTMLElement | null = surface; element && element !== wrapper; element = element.parentElement) {
+      if (element.hidden || element.classList.contains("hidden")) return false;
+    }
+    return true;
+  };
+
+  const updateCodeGroupState = (wrapper: HTMLElement) => {
+    if (wrapper.dataset.docsSelectionKind !== "code") return;
+
+    const activePanel = directPanels(wrapper).find((panel) => !panel.classList.contains("hidden"));
+    const surfaces = activePanel
+      ? [
+          ...(activePanel.matches(codeSurfaceSelector) ? [activePanel] : []),
+          ...activePanel.querySelectorAll<HTMLElement>(codeSurfaceSelector),
+        ]
+      : [];
+    const hasCode = surfaces.some((surface) => {
+          surface.dataset.docsCodeSurface = "true";
+          return surfaceIsVisible(surface, wrapper);
+        });
+    wrapper.toggleAttribute("data-docs-code-empty", !hasCode);
+    wrapper.hidden = wrapper.dataset.docsSelectionPassive === "true" && !hasCode;
+  };
+
+  const updateCodeGroups = () => {
+    queueMicrotask(() => {
+      for (const wrapper of document.querySelectorAll<HTMLElement>('.st-selection-group[data-docs-selection-kind="code"]')) {
+        updateCodeGroupState(wrapper);
+      }
+    });
+  };
+
+  const activateLocalSelection = (wrapper: HTMLElement, value: string) => {
+    const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
+    const panels = directPanels(wrapper);
+    const availableValues = panels.map((panel) => panel.dataset.tabId).filter((candidate): candidate is string => Boolean(candidate));
+    const activated = activateSelection(wrapper, value);
+    if (activated || !group) {
+      wrapper.toggleAttribute("data-docs-selection-unavailable", !activated);
+      return activated;
+    }
+    const fallback = resolveSelection({ availableValues, defaultValue: tabGroupDefault(group) });
+    wrapper.toggleAttribute("data-docs-selection-unavailable", true);
+    if (wrapper.dataset.docsSelectionPassive === "true") {
+      for (const panel of panels) panel.classList.add("hidden");
+      return false;
+    }
+    return fallback ? activateSelection(wrapper, fallback) : false;
+  };
+
+  const initializeSelectionGroups = async () => {
+    await customElements.whenDefined("blume-tabs");
+
+    for (const wrapper of document.querySelectorAll<HTMLElement>(".st-selection-group")) {
+      if (wrapper.dataset.selectionInitialized) continue;
+      wrapper.dataset.selectionInitialized = "true";
+
+      const accessoryHost = wrapper.querySelector<HTMLElement>(":scope > [data-docs-tab-accessory-host]");
+      const tabHeader = wrapper.querySelector<HTMLElement>(":scope > blume-tabs > div");
+      if (accessoryHost && tabHeader && accessoryHost.parentElement !== tabHeader) tabHeader.append(accessoryHost);
+
+      const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
+      if (!group) continue;
+      const tabs = wrapper.querySelector<HTMLElement>(":scope > blume-tabs");
+      if (tabs?.dataset.codeGroupInvalid === "true") {
+        wrapper.dataset.docsCodeGroupInvalid = "true";
+        wrapper.dataset.groupSelectionReady = "true";
+        document.dispatchEvent(new CustomEvent(selectionReadyEvent, { detail: { wrapperId: wrapper.id } }));
+        continue;
+      }
+
+      for (const panel of directPanels(wrapper)) {
+        const value = panel.dataset.title ? tabValue(group, panel.dataset.title) : undefined;
+        if (value) panel.dataset.tabId = value;
+      }
+
+      const values = new Set(directPanels(wrapper).map((panel) => panel.dataset.tabId).filter(Boolean));
+      const storedValue = readStorage(selectionStorageKey(group));
+      const legacyValue = readStorage(`docusaurus.tab.${group}`);
+      const platformStorageKey = "supertokens-docs:platform-type";
+      const migratedValue = group === "frontend-custom-ui" ? readStorage(platformStorageKey) : null;
+      if (group === "frontend-custom-ui" && migratedValue !== null) removeStorage(platformStorageKey);
+      const preferredValue = resolveSelection({
+        availableValues: values,
+        defaultValue: tabGroupDefault(group),
+        legacyValue,
+        migratedValue,
+        storedValue,
+      });
+      if (!preferredValue) continue;
+
+      activateLocalSelection(wrapper, storedValue ?? preferredValue);
+      if (!storedValue) writeStorage(selectionStorageKey(group), preferredValue);
+      wrapper.dataset.groupSelectionReady = "true";
+      document.dispatchEvent(new CustomEvent(selectionReadyEvent, { detail: { wrapperId: wrapper.id } }));
+
+      const persistSelection = (event: Event) => {
+        const trigger = event.target instanceof Element ? event.target.closest<HTMLElement>('[role="tab"]') : null;
+        const tabs = wrapper.querySelector(":scope > blume-tabs");
+        if (!trigger || !tabs || trigger.closest("blume-tabs") !== tabs) return;
+        if (event instanceof KeyboardEvent && !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        queueMicrotask(() => saveActiveSelection(wrapper, group));
+      };
+
+      wrapper.addEventListener("click", persistSelection);
+      wrapper.addEventListener("keydown", persistSelection);
+    }
+    updateCodeGroups();
+  };
+
+  if (document.documentElement.dataset.supertokensSelectionGroupsInitialized !== "true") {
+    document.documentElement.dataset.supertokensSelectionGroupsInitialized = "true";
+    document.addEventListener("astro:page-load", initializeSelectionGroups);
+    window.addEventListener(selectionEvent, (event) => {
+      const detail = (event as CustomEvent<SelectionDetail>).detail;
+      if (!detail) return;
+      for (const wrapper of document.querySelectorAll<HTMLElement>(
+        `[data-docs-selection-group="${detail.group}"]`,
+      )) {
+        activateLocalSelection(wrapper, detail.value);
+      }
+      updateCodeGroups();
+    });
+    window.addEventListener("storage", (event) => {
+      const prefix = "supertokens-docs:selection:";
+      if (!event.key?.startsWith(prefix) || !event.newValue) return;
+      const group = event.key.slice(prefix.length);
+      for (const wrapper of document.querySelectorAll<HTMLElement>(`[data-docs-selection-group="${group}"]`)) {
+        activateLocalSelection(wrapper, event.newValue);
+      }
+      updateCodeGroups();
+    });
+    window.addEventListener(variantEvent, updateCodeGroups);
+    document.addEventListener(selectionContentReadyEvent, updateCodeGroups);
+  }
+
+  initializeSelectionGroups();
+</script>
+
+<style is:global>
+  .st-code-group[data-docs-selection-passive="true"]:not([data-docs-passive-code-resolved]) {
+    display: none;
+  }
+
+  .st-code-group[data-docs-code-empty] > blume-tabs > [data-blume-tab-content] {
+    display: none;
+  }
+
+  .st-code-group[data-docs-selection-passive="true"]:not([data-selection-initialized]):has(
+      > blume-tabs > [data-blume-tab-content] > [data-blume-tab-panel]:first-child:not(:has(pre, figure))
+    ) {
+    display: none;
+  }
+
+  .st-code-group:not([data-docs-selection-passive="true"]):not([data-selection-initialized]):has(
+      > blume-tabs > [data-blume-tab-content] > [data-blume-tab-panel]:first-child:not(:has(pre, figure))
+    )
+    > blume-tabs
+    > [data-blume-tab-content] {
+    display: none;
+  }
+
+  .st-code-group .st-dependent-content,
+  .st-code-group .st-content-option {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .st-code-group .st-content-option > :is(pre, figure):first-of-type {
+    margin-top: 0;
+  }
+
+  .st-code-group .st-content-option > :is(pre, figure):last-of-type {
+    margin-bottom: 0;
+  }
+</style>

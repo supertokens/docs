@@ -3,6 +3,7 @@ import { defineComponents } from "blume";
 import ApiRequestSnippet from "./components/ApiRequestSnippet.astro";
 import ApiReferenceDrawer from "./components/ApiReferenceDrawer.astro";
 import ConditionalContent from "./components/ConditionalContent.astro";
+import CodeGroup from "./components/CodeGroup.astro";
 import ContentOption from "./components/ContentOption.astro";
 import ContextCondition from "./components/ContextCondition.astro";
 import DependentContent from "./components/DependentContent.astro";
@@ -25,6 +26,7 @@ export default defineComponents({
   },
   mdx: {
     ApiRequestSnippet,
+    CodeGroup,
     ConditionalContent,
     ContentOption,
     ContextCondition,

@@ -18,6 +18,7 @@ import {
   readStorage,
   selectedGroupValue,
   selectionEvent,
+  selectionReadyEvent,
   variantEvent,
 } from "@/lib/docs-selection";
 
@@ -230,10 +231,12 @@ export default function DocsPreferences() {
     setRows(getPreferences());
     window.addEventListener(selectionEvent, refresh);
     window.addEventListener(variantEvent, refresh);
+    document.addEventListener(selectionReadyEvent, refresh);
     document.addEventListener("astro:page-load", refresh);
     return () => {
       window.removeEventListener(selectionEvent, refresh);
       window.removeEventListener(variantEvent, refresh);
+      document.removeEventListener(selectionReadyEvent, refresh);
       document.removeEventListener("astro:page-load", refresh);
     };
   }, []);

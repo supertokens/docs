@@ -1,0 +1,122 @@
+diff --git a/node_modules/blume/src/components/content/CodeGroup.astro b/node_modules/blume/src/components/content/CodeGroup.astro
+index d9e7412..838dc06 100644
+--- a/node_modules/blume/src/components/content/CodeGroup.astro
++++ b/node_modules/blume/src/components/content/CodeGroup.astro
+@@ -3,11 +3,12 @@ import Tabs from "./Tabs.astro";
+ 
+ interface Props {
+   dropdown?: boolean;
++  tabValues?: string;
+ }
+ 
+-const { dropdown = false } = Astro.props;
++const { dropdown = false, tabValues } = Astro.props;
+ ---
+ 
+-<Tabs dropdown={dropdown} hash={false}>
++<Tabs dropdown={dropdown} hash={false} tabValues={tabValues}>
+   <slot />
+ </Tabs>
+diff --git a/node_modules/blume/src/components/content/Tabs.astro b/node_modules/blume/src/components/content/Tabs.astro
+index 1b1d34e..aa5651b 100644
+--- a/node_modules/blume/src/components/content/Tabs.astro
++++ b/node_modules/blume/src/components/content/Tabs.astro
+@@ -19,6 +19,7 @@ interface Props {
+    */
+   param?: string;
+   sync?: boolean;
++  tabValues?: string;
+ }
+ 
+ const {
+@@ -29,6 +30,7 @@ const {
+   inline = false,
+   param,
+   sync = true,
++  tabValues,
+ } = Astro.props;
+ 
+ // MDX string attributes (`hash="false"` from generated markup) must read as
+@@ -52,6 +54,7 @@ const useDropdown = dropdown && !inline;
+   data-hash={hashEnabled ? "true" : "false"}
+   data-param={param}
+   data-sync={sync ? "true" : "false"}
++  data-tab-values={tabValues}
+ >
+   <div
+     class:list={[
+@@ -132,10 +135,37 @@ const useDropdown = dropdown && !inline;
+                 child instanceof HTMLElement && child.matches("pre, figure")
+             )
+           : [];
+-        for (const block of blocks) {
+-          block.setAttribute("data-blume-tab-panel", "");
++        if (this.dataset.tabValues) {
++          let tabValues: Record<string, string> = {};
++          try {
++            tabValues = JSON.parse(this.dataset.tabValues);
++          } catch {
++            this.dataset.codeGroupInvalid = "true";
++          }
++          const grouped = new Map<string, HTMLElement>();
++          for (const block of blocks) {
++            const title = block.dataset.title ?? "Example";
++            const value = tabValues[title];
++            const key = value ?? title;
++            if (!value) this.dataset.codeGroupInvalid = "true";
++            let panel = grouped.get(key);
++            if (!panel) {
++              panel = document.createElement("div");
++              panel.dataset.blumeTabPanel = "";
++              panel.dataset.title = title;
++              if (value) panel.dataset.tabId = value;
++              wrapper?.insertBefore(panel, block);
++              grouped.set(key, panel);
++            }
++            panel.appendChild(block);
++          }
++          panels = [...grouped.values()];
++        } else {
++          for (const block of blocks) {
++            block.setAttribute("data-blume-tab-panel", "");
++          }
++          panels = blocks;
+         }
+-        panels = blocks;
+       }
+       if (!list || panels.length === 0) {
+         return;
+diff --git a/node_modules/blume/src/markdown/code-title.ts b/node_modules/blume/src/markdown/code-title.ts
+index 9e8245d..12a349e 100644
+--- a/node_modules/blume/src/markdown/code-title.ts
++++ b/node_modules/blume/src/markdown/code-title.ts
+@@ -30,6 +30,7 @@ export interface CodeTitleTransformer {
+ // `subtitle="..."` (or any `*title=` attr) from reading as a title.
+ const TITLE_ATTR = /(?:^|\s)title=(?:"(?<dq>[^"]*)"|'(?<sq>[^']*)')/u;
+ const LINE_NUMBERS = /(?:^|\s)lineNumbers(?=\s|$)/u;
++const OPTION_ATTR = /(?:^|\s)option=(?:"(?<dq>[^"]*)"|'(?<sq>[^']*)')/u;
+ // Any quoted `key="..."` attr — blanked before keyword/bare-token scans so a
+ // quoted value can't leak tokens (`title="enable lineNumbers later"`).
+ const QUOTED_ATTR = /[\w-]+=(?:"[^"]*"|'[^']*')/gu;
+@@ -68,6 +69,11 @@ const parseTitle = (raw: string | undefined): string | undefined => {
+ const hasLineNumbers = (raw: string | undefined): boolean =>
+   Boolean(raw && LINE_NUMBERS.test(withoutQuotedAttrs(raw)));
+ 
++const parseOption = (raw: string | undefined): string | undefined => {
++  const match = raw?.match(OPTION_ATTR);
++  return match?.groups?.dq ?? match?.groups?.sq;
++};
++
+ /** Build the transformer. Runs after Shiki's built-in `data-language` hook. */
+ export const codeTitleTransformer = (): CodeTitleTransformer => ({
+   name: "blume:code-meta",
+@@ -80,5 +86,9 @@ export const codeTitleTransformer = (): CodeTitleTransformer => ({
+     if (hasLineNumbers(raw)) {
+       node.properties.dataLineNumbers = true;
+     }
++    const option = parseOption(raw);
++    if (option) {
++      node.properties.dataCodeOption = option;
++    }
+   },
+ });

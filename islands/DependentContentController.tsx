@@ -8,6 +8,7 @@ import {
   dispatchSelection,
   readStorage,
   resolveSelection,
+  selectionContentReadyEvent,
   selectionEvent,
   selectionStorageKey,
   type SelectionDetail,
@@ -16,9 +17,10 @@ import {
 
 interface DependentContentControllerProps {
   defaultValue?: string;
-  fallbackHostId: string;
+  fallbackHostId?: string;
   group: string;
   label: string;
+  passive?: boolean;
   wrapperId: string;
 }
 
@@ -48,7 +50,7 @@ function setVisibleOption(options: ContentOption[], value: string): boolean {
 }
 
 function primaryContext(wrapper: HTMLElement): ControllerContext | undefined {
-  const parentTabs = wrapper.closest<HTMLElement>(".st-tab-group");
+  const parentTabs = wrapper.closest<HTMLElement>(".st-selection-group");
   const panel = parentTabs
     ? [
         ...parentTabs.querySelectorAll<HTMLElement>(
@@ -56,7 +58,7 @@ function primaryContext(wrapper: HTMLElement): ControllerContext | undefined {
         ),
       ].find((candidate) => candidate.contains(wrapper))
     : undefined;
-  const hostId = parentTabs?.dataset.docsTabAccessoryHostId;
+  const hostId = parentTabs?.dataset.docsSelectionAccessoryHostId;
   const host = hostId ? document.getElementById(hostId) : null;
   return panel && host ? { host, visibilityElements: visibilityElements(wrapper, panel) } : undefined;
 }
@@ -91,6 +93,7 @@ function ownerForHost(group: string, host: HTMLElement): HTMLElement | undefined
     .filter(
       (candidate) =>
         candidate.dataset.docsDependentContent === group &&
+        candidate.dataset.docsDependentContentPassive !== "true" &&
         candidate.querySelectorAll(":scope > [data-docs-content-option]").length >= 2,
     )
     .flatMap((candidate) => {
@@ -106,6 +109,7 @@ export default function DependentContentController({
   fallbackHostId,
   group,
   label,
+  passive = false,
   wrapperId,
 }: DependentContentControllerProps) {
   const [host, setHost] = useState<HTMLElement>();
@@ -115,29 +119,67 @@ export default function DependentContentController({
 
   useEffect(() => {
     const wrapper = document.getElementById(wrapperId);
-    const fallbackHost = document.getElementById(fallbackHostId);
-    if (!wrapper || !fallbackHost) return;
+    const fallbackHost = fallbackHostId ? document.getElementById(fallbackHostId) || undefined : undefined;
+    if (!wrapper) return;
+    const inheritedPassive =
+      wrapper.closest<HTMLElement>(".st-selection-group")?.dataset.docsSelectionPassive === "true";
+    const effectivePassive = passive || inheritedPassive;
 
     const nextOptions = contentOptions(wrapper);
     if (nextOptions.length === 0) return;
 
     const availableValues = nextOptions.map((option) => option.value);
-    const nextValue = resolveSelection({
-      availableValues,
-      defaultValue,
-      legacyValue: readStorage(`docusaurus.tab.${group}`),
-      storedValue: readStorage(selectionStorageKey(group)),
-    });
-    if (!nextValue) return;
+    const storedValue = readStorage(selectionStorageKey(group));
+    const hasUnavailableStoredValue = Boolean(storedValue && !availableValues.includes(storedValue));
+    const nextValue = hasUnavailableStoredValue
+      ? undefined
+      : resolveSelection({
+          availableValues,
+          defaultValue,
+          legacyValue: readStorage(`docusaurus.tab.${group}`),
+          storedValue,
+        });
+    if (!nextValue && !hasUnavailableStoredValue) return;
 
-    setVisibleOption(nextOptions, nextValue);
+    for (const option of nextOptions) option.section.hidden = hasUnavailableStoredValue;
+    if (nextValue) setVisibleOption(nextOptions, nextValue);
+    document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
     wrapper.dataset.selectionReady = "true";
-    writeStorage(selectionStorageKey(group), nextValue);
+    wrapper.toggleAttribute("data-docs-selection-unavailable", hasUnavailableStoredValue);
+    if (nextValue && !storedValue) writeStorage(selectionStorageKey(group), nextValue);
     setOptions(nextOptions);
     setValue(nextValue);
 
+    const applyValue = (nextSelection: string) => {
+      const isAvailable = setVisibleOption(nextOptions, nextSelection);
+      wrapper.toggleAttribute("data-docs-selection-unavailable", !isAvailable);
+      if (!isAvailable) {
+        for (const option of nextOptions) option.section.hidden = true;
+      }
+      setValue(isAvailable ? nextSelection : undefined);
+      document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
+    };
+    const synchronize = (event: Event) => {
+      const detail = (event as CustomEvent<SelectionDetail>).detail;
+      if (detail?.group === group) applyValue(detail.value);
+    };
+    const synchronizeStorage = (event: StorageEvent) => {
+      if (event.key === selectionStorageKey(group) && event.newValue) applyValue(event.newValue);
+    };
+    const cleanUpSelection = () => {
+      delete wrapper.dataset.selectionReady;
+      wrapper.removeAttribute("data-docs-selection-unavailable");
+      for (const option of nextOptions) option.section.hidden = false;
+      window.removeEventListener(selectionEvent, synchronize);
+      window.removeEventListener("storage", synchronizeStorage);
+    };
+
+    window.addEventListener(selectionEvent, synchronize);
+    window.addEventListener("storage", synchronizeStorage);
+    if (effectivePassive) return cleanUpSelection;
+
     const context = controllerContext(wrapper, fallbackHost);
-    if (!context) return;
+    if (!context) return cleanUpSelection;
     setHost(context.host);
 
     const updateOwnership = () =>
@@ -160,32 +202,15 @@ export default function DependentContentController({
     window.addEventListener(ownershipEvent, synchronizeOwnership);
     updateOwnership();
 
-    const applyValue = (nextSelection: string) => {
-      if (!setVisibleOption(nextOptions, nextSelection)) return;
-      setValue(nextSelection);
-    };
-    const synchronize = (event: Event) => {
-      const detail = (event as CustomEvent<SelectionDetail>).detail;
-      if (detail?.group === group) applyValue(detail.value);
-    };
-    const synchronizeStorage = (event: StorageEvent) => {
-      if (event.key === selectionStorageKey(group) && event.newValue) applyValue(event.newValue);
-    };
-
-    window.addEventListener(selectionEvent, synchronize);
-    window.addEventListener("storage", synchronizeStorage);
     return () => {
       for (const observer of observers) observer.disconnect();
-      delete wrapper.dataset.selectionReady;
-      for (const option of nextOptions) option.section.hidden = false;
+      cleanUpSelection();
       window.removeEventListener(ownershipEvent, synchronizeOwnership);
-      window.removeEventListener(selectionEvent, synchronize);
-      window.removeEventListener("storage", synchronizeStorage);
       queueMicrotask(notifyOwnershipChange);
     };
-  }, [defaultValue, fallbackHostId, group, wrapperId]);
+  }, [defaultValue, fallbackHostId, group, passive, wrapperId]);
 
-  if (options.length < 2 || !host || !isOwner || !value) return null;
+  if (passive || options.length < 2 || !host || !isOwner || !value) return null;
 
   return createPortal(
     <div className="st-secondary-choice" data-secondary-choice={group}>

@@ -195,7 +195,9 @@ describe("published documentation invariants", () => {
   });
 
   it("keeps Web and Mobile as primary tabs", () => {
-    expect(locationsMatching(/<DependentContent\b[^>]*\bgroup=(["'])frontend-custom-ui\1/)).toEqual([]);
+    expect(locationsMatching(/<DependentContent\b(?![^>]*\bpassive\b)[^>]*\bgroup=(["'])frontend-custom-ui\1/)).toEqual(
+      [],
+    );
     expect(locationsMatching(/<PlatformTypeSwitch\b|storageKey=(["'])platform-type\1/)).toEqual([]);
   });
 

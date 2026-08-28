@@ -102,6 +102,23 @@ export const tabGroups = {
       npm: "npm",
       yarn: "yarn",
       pnpm: "pnpm",
+      Bun: "bun",
+    },
+  },
+  "install-method": {
+    control: "select",
+    defaultValue: "npm",
+    options: {
+      npm: "npm",
+      "Script tag": "script-tag",
+    },
+  },
+  "yes-no-1ddf50o-1": {
+    control: "select",
+    defaultValue: "yes",
+    options: {
+      Yes: "yes",
+      No: "no",
     },
   },
   "package-manager-scripts": {
@@ -149,6 +166,8 @@ export function tabGroupLabel(group: TabGroup): string {
     "python-frameworks": "Python framework",
     "package-managers": "Package manager",
     "package-manager-scripts": "Package manager",
+    "install-method": "Installation method",
+    "yes-no-1ddf50o-1": "Already using React Router?",
   };
   return labels[group] || "Example";
 }

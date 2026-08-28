@@ -2,6 +2,7 @@ import type { SelectOption } from "@/components/ui/select-field";
 import type { TabGroup } from "@/components/tab-groups";
 
 export const selectionEvent = "supertokens-docs:selection";
+export const selectionContentReadyEvent = "supertokens-docs:selection-content-ready";
 export const selectionReadyEvent = "supertokens-docs:selection-ready";
 export const variantEvent = "supertokens-docs:variant";
 
@@ -98,19 +99,14 @@ export function optionsForWrapper(wrapper: HTMLElement): SelectOption[] {
 }
 
 export function optionsForGroup(group: TabGroup, root: ParentNode = document): SelectOption[] {
-  let options: Map<string, string> | undefined;
+  const options = new Map<string, string>();
   for (const wrapper of root.querySelectorAll<HTMLElement>(`[data-docs-tab-group="${group}"]`)) {
     if (!isActiveVariant(wrapper)) continue;
-    const wrapperOptions = new Map(optionsForWrapper(wrapper).map((option) => [option.value, option.label]));
-    if (!options) {
-      options = wrapperOptions;
-      continue;
-    }
-    for (const value of options.keys()) {
-      if (!wrapperOptions.has(value)) options.delete(value);
+    for (const option of optionsForWrapper(wrapper)) {
+      if (!options.has(option.value)) options.set(option.value, option.label);
     }
   }
-  return [...(options || [])].map(([value, label]) => ({ value, label }));
+  return [...options].map(([value, label]) => ({ value, label }));
 }
 
 export function selectedGroupValue(group: TabGroup, options: SelectOption[], root: ParentNode = document) {

@@ -19,6 +19,7 @@ interface PrimaryTabControllerProps {
   defaultValue: string;
   group: TabGroup;
   label: string;
+  passive?: boolean;
   wrapperId: string;
 }
 
@@ -28,7 +29,13 @@ interface ControllerState {
   value: string;
 }
 
-export default function PrimaryTabController({ defaultValue, group, label, wrapperId }: PrimaryTabControllerProps) {
+export default function PrimaryTabController({
+  defaultValue,
+  group,
+  label,
+  passive = false,
+  wrapperId,
+}: PrimaryTabControllerProps) {
   const [state, setState] = useState<ControllerState>();
 
   useEffect(() => {
@@ -118,7 +125,7 @@ export default function PrimaryTabController({ defaultValue, group, label, wrapp
     };
   }, [defaultValue, group, wrapperId]);
 
-  if (!state) return null;
+  if (passive || !state) return null;
 
   return createPortal(
     <div className="st-primary-choice" data-primary-choice={group}>
