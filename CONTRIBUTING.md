@@ -186,7 +186,7 @@ Use the following commands to perform linting checks on the entire project:
 
 - `npm run lint:prettier`: Formats supported files with Prettier.
 - `npm run lint:prettier:check`: Checks formatting without changing files.
-- `npm run lint:code-blocks`: Checks registered languages, empty blocks, numeric highlight metadata, exclusion markers, and supported Prettier formatting without changing files.
+- `npm run lint:code-blocks -- [path...]`: Checks registered languages, empty blocks, numeric highlight metadata, exclusion markers, and supported Prettier formatting without changing files. Paths can be files or directories; the command defaults to all files in `docs`.
 - `npm run lint:vale`: Runs Vale on Markdown files and high-signal typo rules on TSX files.
 - `npm run validate`: Runs strict navigation and link validation.
 - `npm run build`: Regenerates the route manifest and builds the site.
@@ -196,8 +196,14 @@ Use the following commands to perform linting checks on the entire project:
 Use these commands for code blocks in Markdown and MDX files:
 
 - `npm run format-code-blocks [path...]`: Formats supported fenced TypeScript, JavaScript, JSON, YAML, and HTML. Paths can be files or directories; the command defaults to `docs`.
-- `npm run write-code-blocks`: Extracts compilable code blocks from `.md` and `.mdx` files. It fails when a fence has a missing or unknown language.
+- `npm run write-code-blocks -- [path...]`: Extracts compilable code blocks from `.md` and `.mdx` files. Paths can be files or directories; the command defaults to all files in `docs`. It fails when a fence has a missing or unknown language.
 - `npm run check-code-blocks <language>`: Builds the Docker checker for the language. Validation runs as part of the image build; the image is not run afterward.
+
+#### Continuous integration
+
+For pull requests, code-block CI checks only changed documentation files and the languages generated from them. Changes to checker or test infrastructure trigger a full check, as do changes affecting more than 100 documentation files or a changed-file path list larger than 50 KB. Linting, infrastructure tests, and extraction run in parallel as their dependencies allow; language checks run after extraction.
+
+Set the repository variable `RUN_FULL_CODE_BLOCK_CHECKS=true` to run full code-block checks before the GitHub Build job in the non-pull-request deployment flow. If Vercel deploys directly from Git, configure Vercel to require the GitHub Build check externally.
 
 Run linting and extraction before a language checker so it does not validate stale snippets:
 

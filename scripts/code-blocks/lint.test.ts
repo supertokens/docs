@@ -1,12 +1,14 @@
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { type ExtractedCodeBlock } from "./extract";
 import { languageRegistry, type RegisteredLanguage } from "./languages";
-import { lintCodeBlock, lintCodeBlocksInDirectory } from "./lint";
+import { lintCodeBlock, lintCodeBlockPaths, lintCodeBlocksInDirectory } from "./lint";
 
 function block(language: RegisteredLanguage, value: string, meta?: string): ExtractedCodeBlock {
   return {
@@ -135,5 +137,42 @@ describe("code block linting", () => {
       "code block is not formatted with Prettier",
       "code fence language must be a non-empty string",
     ]);
+  });
+
+  it("treats an explicit empty path selection as a no-op", async () => {
+    await expect(lintCodeBlockPaths([])).resolves.toEqual([]);
+  });
+
+  it("defaults undefined path inputs to the docs directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-block-lint-default-"));
+    const docsRoot = path.join(root, "docs");
+    await mkdir(docsRoot);
+    await writeFile(path.join(docsRoot, "invalid.mdx"), "```text\n\n```");
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
+
+    try {
+      await expect(lintCodeBlockPaths(undefined)).resolves.toContainEqual(
+        expect.objectContaining({ message: "code block must not be empty" }),
+      );
+    } finally {
+      cwd.mockRestore();
+    }
+  });
+
+  it("has no CLI module import side effects", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-block-import-"));
+    const lintModuleUrl = new URL("./lint.ts", import.meta.url).href;
+    const writerModuleUrl = new URL("../write-code-blocks.ts", import.meta.url).href;
+
+    await promisify(execFile)(
+      "bun",
+      [
+        "-e",
+        `await Promise.all([import(${JSON.stringify(lintModuleUrl)}), import(${JSON.stringify(writerModuleUrl)})])`,
+      ],
+      { cwd: root },
+    );
+
+    await expect(import("node:fs/promises").then(({ readdir }) => readdir(root))).resolves.toEqual([]);
   });
 });

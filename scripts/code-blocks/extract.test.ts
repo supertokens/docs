@@ -1,11 +1,11 @@
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { writeCodeBlocks } from "../write-code-blocks";
-import { extractCodeBlocks, scanCodeBlocks } from "./extract";
+import { extractCodeBlocks, resolveMarkdownSourcePaths, scanCodeBlocks } from "./extract";
 import { getLanguageDefinition, languageRegistry } from "./languages";
 
 describe("code block extraction", () => {
@@ -94,6 +94,37 @@ describe("code block extraction", () => {
     const blocks = await scanCodeBlocks(root);
 
     expect(blocks.map((block) => path.basename(block.sourcePath))).toEqual(["a.mdx", "z.md"]);
+  });
+
+  it("resolves mixed files and directories deterministically without duplicates", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-block-resolve-"));
+    const nested = path.join(root, "nested");
+    const markdownPath = path.join(root, "a.md");
+    const mdxPath = path.join(nested, "z.mdx");
+    await mkdir(nested);
+    await writeFile(markdownPath, "# Markdown");
+    await writeFile(mdxPath, "# MDX");
+    await writeFile(path.join(nested, "ignored.txt"), "ignored");
+    const mdxAliasPath = path.join(root, "z-alias.mdx");
+    await symlink(mdxPath, mdxAliasPath);
+
+    await expect(resolveMarkdownSourcePaths([nested, markdownPath, root, mdxPath, mdxAliasPath])).resolves.toEqual([
+      markdownPath,
+      mdxPath,
+    ]);
+  });
+
+  it("supports an explicit empty selection and rejects invalid inputs", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-block-resolve-invalid-"));
+    const unsupportedPath = path.join(root, "example.txt");
+    await writeFile(unsupportedPath, "text");
+
+    await expect(resolveMarkdownSourcePaths([])).resolves.toEqual([]);
+    await expect(resolveMarkdownSourcePaths([unsupportedPath])).rejects.toThrow(
+      "expected a Markdown file or directory",
+    );
+    await expect(resolveMarkdownSourcePaths([path.join(root, "missing.md")])).rejects.toThrow("path does not exist");
+    await expect(resolveMarkdownSourcePaths([""])).rejects.toThrow("source path must not be empty");
   });
 });
 
@@ -194,5 +225,61 @@ describe("code block writing", () => {
       "invalid.mdx:1: code fence metadata must contain exactly one check attribute",
     );
     await expect(readFile(stalePath, "utf8")).resolves.toBe("stale");
+  });
+
+  it("writes selected files relative to the docs root and leaves snippets untouched for an empty selection", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-block-write-selected-"));
+    const docsRoot = path.join(root, "docs");
+    const outputRoot = path.join(root, "output");
+    const selectedPath = path.join(docsRoot, "guide", "selected.mdx");
+    const unselectedPath = path.join(docsRoot, "other.mdx");
+    const stalePath = path.join(outputRoot, "javascript", "snippets", "stale.ts");
+    await mkdir(path.dirname(selectedPath), { recursive: true });
+    await mkdir(path.dirname(stalePath), { recursive: true });
+    await writeFile(selectedPath, "```ts\nconst selected = true;\n```");
+    await writeFile(unselectedPath, "```ts\nconst unselected = true;\n```");
+    await writeFile(stalePath, "stale");
+
+    await writeCodeBlocks({ docsRoot, outputRoot, inputs: [selectedPath] });
+
+    const selectedOutput = path.join(outputRoot, "javascript/snippets/guide/selected.mdx/1-line-1/code-block.ts");
+    await expect(readFile(selectedOutput, "utf8")).resolves.toContain("const selected = true;");
+    await expect(
+      readFile(path.join(outputRoot, "javascript/snippets/other.mdx/1-line-1/code-block.ts")),
+    ).rejects.toThrow();
+
+    await writeCodeBlocks({ docsRoot, outputRoot, inputs: [] });
+    await expect(readFile(selectedOutput, "utf8")).resolves.toContain("const selected = true;");
+  });
+
+  it("rejects source symlinks that escape the canonical docs root", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-block-write-symlink-"));
+    const docsRoot = path.join(root, "docs");
+    const outsidePath = path.join(root, "outside.mdx");
+    const linkedPath = path.join(docsRoot, "linked.mdx");
+    await mkdir(docsRoot);
+    await writeFile(outsidePath, "```ts\nconst escaped = true;\n```");
+    await symlink(outsidePath, linkedPath);
+
+    await expect(
+      writeCodeBlocks({ docsRoot, outputRoot: path.join(root, "output"), inputs: [linkedPath] }),
+    ).rejects.toThrow("source must be inside");
+  });
+
+  it("produces identical Kotlin output for full and selective extraction", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-block-write-kotlin-"));
+    const docsRoot = path.join(root, "docs");
+    const outputRoot = path.join(root, "output");
+    const selectedPath = path.join(docsRoot, "z-selected.mdx");
+    await mkdir(docsRoot);
+    await writeFile(path.join(docsRoot, "a-earlier.mdx"), "```kotlin\nclass NetworkManager\n```");
+    await writeFile(selectedPath, "```kotlin\nclass NetworkManager\nclass MainApplication\n```");
+
+    await writeCodeBlocks({ docsRoot, outputRoot });
+    const outputPath = path.join(outputRoot, "kotlin/snippets/z-selected.mdx/1-line-1/code-block.kt");
+    const fullOutput = await readFile(outputPath, "utf8");
+
+    await writeCodeBlocks({ docsRoot, outputRoot, inputs: [selectedPath] });
+    await expect(readFile(outputPath, "utf8")).resolves.toBe(fullOutput);
   });
 });

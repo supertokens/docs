@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { formatCodeBlocksInSource } from "../format-code-blocks";
+import { formatCodeBlockPaths, formatCodeBlocksInSource } from "../format-code-blocks";
 
 describe("code block formatting", () => {
   it("changes only fence content and keeps later blocks located after size changes", async () => {
@@ -129,5 +129,32 @@ describe("code block formatting", () => {
     await promisify(execFile)("bun", ["-e", `await import(${JSON.stringify(moduleUrl)})`], { cwd: root });
 
     await expect(readFile(sentinel, "utf8")).resolves.toBe("```ts\nconst value=1\n```");
+  });
+
+  it("treats an explicit empty path selection as a non-destructive no-op", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "format-code-block-empty-"));
+    const sourcePath = path.join(root, "example.mdx");
+    await writeFile(sourcePath, "```ts\nconst value=1\n```");
+
+    await formatCodeBlockPaths([]);
+
+    await expect(readFile(sourcePath, "utf8")).resolves.toBe("```ts\nconst value=1\n```");
+  });
+
+  it("defaults undefined path inputs to the docs directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "format-code-block-default-"));
+    const docsRoot = path.join(root, "docs");
+    const sourcePath = path.join(docsRoot, "example.mdx");
+    await mkdir(docsRoot);
+    await writeFile(sourcePath, "```ts\nconst value=1\n```");
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
+
+    try {
+      await formatCodeBlockPaths(undefined);
+    } finally {
+      cwd.mockRestore();
+    }
+
+    await expect(readFile(sourcePath, "utf8")).resolves.toBe("```ts\nconst value = 1;\n```");
   });
 });

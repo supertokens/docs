@@ -1,10 +1,11 @@
-import { writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { emptyDir, ensureDir } from "fs-extra";
 
 import { getFenceMetadataViolations, isExcludedFromChecking } from "./code-blocks/exclusions";
-import { scanCodeBlocks, type ExtractedCodeBlock } from "./code-blocks/extract";
+import { extractCodeBlocksFromPaths, resolveMarkdownSourcePaths, type ExtractedCodeBlock } from "./code-blocks/extract";
 import { compilableLanguageFolders } from "./code-blocks/languages";
 
 const replacements: Array<[string, string]> = [
@@ -18,9 +19,10 @@ const replacements: Array<[string, string]> = [
 export interface WriteCodeBlocksOptions {
   docsRoot?: string;
   outputRoot?: string;
+  inputs?: readonly string[];
 }
 
-export function transformCodeBlock(block: ExtractedCodeBlock, relativePath: string, blockIndex: number): string {
+export function transformCodeBlock(block: ExtractedCodeBlock, relativePath: string): string {
   if (block.definition.kind !== "compilable") {
     throw new Error(`Cannot transform render-only ${block.language} block at ${block.sourcePath}:${block.sourceLine}`);
   }
@@ -53,8 +55,10 @@ export function transformCodeBlock(block: ExtractedCodeBlock, relativePath: stri
   }
 
   if (block.language === "kotlin") {
-    value = value.replace("NetworkManager", `NetworkManager${blockIndex}`);
-    value = value.replace("MainApplication", `MainApplication${blockIndex}`);
+    const sourceIdentity = `${relativePath.split(path.sep).join("/")}:${block.sourceLine}`;
+    const suffix = createHash("sha256").update(sourceIdentity).digest("hex").slice(0, 12);
+    value = value.replace("NetworkManager", `NetworkManager${suffix}`);
+    value = value.replace("MainApplication", `MainApplication${suffix}`);
   }
 
   for (const replacement of replacements) {
@@ -65,9 +69,22 @@ export function transformCodeBlock(block: ExtractedCodeBlock, relativePath: stri
 }
 
 export async function writeCodeBlocks(options: WriteCodeBlocksOptions = {}): Promise<void> {
-  const docsRoot = options.docsRoot ?? path.join(process.cwd(), "docs");
+  if (options.inputs?.length === 0) return;
+
+  const docsRoot = await realpath(path.resolve(options.docsRoot ?? path.join(process.cwd(), "docs")));
   const outputRoot = options.outputRoot ?? path.join(process.cwd(), "scripts/code-type-checking");
-  const codeBlocks = await scanCodeBlocks(docsRoot);
+  const sourcePaths = await resolveMarkdownSourcePaths(options.inputs ?? [docsRoot]);
+  const relativePaths = new Map<string, string>();
+
+  for (const sourcePath of sourcePaths) {
+    const relativePath = path.relative(docsRoot, sourcePath);
+    if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+      throw new Error(`${sourcePath}: source must be inside ${docsRoot}`);
+    }
+    relativePaths.set(sourcePath, relativePath);
+  }
+
+  const codeBlocks = await extractCodeBlocksFromPaths(sourcePaths);
 
   for (const block of codeBlocks) {
     const [metadataViolation] = getFenceMetadataViolations(block.meta);
@@ -77,14 +94,12 @@ export async function writeCodeBlocks(options: WriteCodeBlocksOptions = {}): Pro
   await Promise.all(compilableLanguageFolders.map((folder) => emptyDir(path.join(outputRoot, folder, "snippets"))));
 
   const counts: Record<string, number> = {};
-  let blockIndex = 0;
-
   for (const block of codeBlocks) {
     if (block.definition.kind !== "compilable") continue;
     if (isExcludedFromChecking(block)) continue;
 
-    blockIndex += 1;
-    const relativePath = path.relative(docsRoot, block.sourcePath);
+    const relativePath = relativePaths.get(block.sourcePath);
+    if (relativePath === undefined) throw new Error(`${block.sourcePath}: source path was not resolved`);
     const key = `${relativePath}/${block.definition.folder}`;
     const count = (counts[key] ?? 0) + 1;
     counts[key] = count;
@@ -99,10 +114,11 @@ export async function writeCodeBlocks(options: WriteCodeBlocksOptions = {}): Pro
     );
 
     await ensureDir(path.dirname(codeBlockFilePath));
-    await writeFile(codeBlockFilePath, transformCodeBlock(block, relativePath, blockIndex));
+    await writeFile(codeBlockFilePath, transformCodeBlock(block, relativePath));
   }
 }
 
 if (import.meta.main) {
-  await writeCodeBlocks();
+  const inputs = process.argv.slice(2);
+  await writeCodeBlocks(inputs.length === 0 ? {} : { inputs });
 }

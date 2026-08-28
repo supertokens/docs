@@ -1,10 +1,7 @@
-import { readFile, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
-
-import { glob } from "glob";
+import { readFile, writeFile } from "node:fs/promises";
 
 import { isExcludedFromChecking } from "./code-blocks/exclusions";
-import { extractCodeBlocks, type ExtractedCodeBlock } from "./code-blocks/extract";
+import { extractCodeBlocks, resolveMarkdownSourcePaths, type ExtractedCodeBlock } from "./code-blocks/extract";
 import { formatCodeBlockWithPrettier } from "./code-blocks/prettier";
 
 interface Replacement {
@@ -57,30 +54,13 @@ export async function formatCodeBlockFile(sourcePath: string): Promise<void> {
   if (formatted !== source) await writeFile(sourcePath, formatted);
 }
 
-async function resolveSourcePaths(inputs: string[]): Promise<string[]> {
-  const sourcePaths = new Set<string>();
-
-  for (const input of inputs) {
-    const inputPath = path.resolve(input);
-    const inputStat = await stat(inputPath);
-    if (inputStat.isDirectory()) {
-      for (const relativePath of await glob("**/*.{md,mdx}", { cwd: inputPath, nodir: true })) {
-        sourcePaths.add(path.join(inputPath, relativePath));
-      }
-    } else if (inputStat.isFile() && [".md", ".mdx"].includes(path.extname(inputPath).toLowerCase())) {
-      sourcePaths.add(inputPath);
-    } else {
-      throw new Error(`${input}: expected a Markdown file or directory`);
-    }
-  }
-
-  return [...sourcePaths].sort();
-}
-
-export async function formatCodeBlockPaths(inputs: string[] = []): Promise<void> {
-  for (const sourcePath of await resolveSourcePaths(inputs.length === 0 ? ["docs"] : inputs)) {
+export async function formatCodeBlockPaths(inputs?: readonly string[]): Promise<void> {
+  for (const sourcePath of await resolveMarkdownSourcePaths(inputs ?? ["docs"])) {
     await formatCodeBlockFile(sourcePath);
   }
 }
 
-if (import.meta.main) await formatCodeBlockPaths(process.argv.slice(2));
+if (import.meta.main) {
+  const inputs = process.argv.slice(2);
+  await formatCodeBlockPaths(inputs.length === 0 ? undefined : inputs);
+}

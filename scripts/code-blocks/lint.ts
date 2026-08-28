@@ -1,9 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { glob } from "glob";
 import { getFenceMetadataViolations, isExcludedFromChecking, parseExclusionMarkers } from "./exclusions";
-import { extractCodeBlocks, type ExtractedCodeBlock } from "./extract";
+import { extractCodeBlocks, resolveMarkdownSourcePaths, type ExtractedCodeBlock } from "./extract";
 import { formatCodeBlockWithPrettier, getCodeBlockPrettierParser } from "./prettier";
 
 export interface CodeBlockLintViolation {
@@ -140,10 +139,13 @@ export async function lintCodeBlocks(blocks: ExtractedCodeBlock[]): Promise<Code
 }
 
 export async function lintCodeBlocksInDirectory(docsRoot: string): Promise<CodeBlockLintViolation[]> {
-  const relativePaths = (await glob("**/*.{md,mdx}", { cwd: docsRoot, nodir: true })).sort();
+  return lintCodeBlockPaths([docsRoot]);
+}
+
+export async function lintCodeBlockPaths(inputs?: readonly string[]): Promise<CodeBlockLintViolation[]> {
+  const sourcePaths = await resolveMarkdownSourcePaths(inputs ?? [path.join(process.cwd(), "docs")]);
   const results = await Promise.all(
-    relativePaths.map(async (relativePath): Promise<CodeBlockLintViolation[]> => {
-      const sourcePath = path.join(docsRoot, relativePath);
+    sourcePaths.map(async (sourcePath): Promise<CodeBlockLintViolation[]> => {
       try {
         const source = await readFile(sourcePath, "utf8");
         return lintCodeBlocks(await extractCodeBlocks(source, sourcePath));
@@ -167,9 +169,8 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-async function run(): Promise<void> {
-  const docsRoot = path.join(process.cwd(), "docs");
-  const violations = await lintCodeBlocksInDirectory(docsRoot);
+export async function runCodeBlockLint(inputs?: readonly string[]): Promise<void> {
+  const violations = await lintCodeBlockPaths(inputs);
 
   for (const item of violations) {
     console.error(`${path.relative(process.cwd(), item.sourcePath)}:${item.sourceLine}: ${item.message}`);
@@ -183,4 +184,7 @@ async function run(): Promise<void> {
   }
 }
 
-if (import.meta.main) await run();
+if (import.meta.main) {
+  const inputs = process.argv.slice(2);
+  await runCodeBlockLint(inputs.length === 0 ? undefined : inputs);
+}
