@@ -150,6 +150,18 @@ But there are exceptions to most rules.
 - Avoid opinions, criticisms, or personal commentary.
 - Focus on presenting information that helps the user achieve their goals.
 
+### Code group height
+
+Code blocks and `CodeGroup` examples are fully expanded by default. For an unusually long group, use the local
+`maxHeight` extension sparingly:
+
+```mdx
+<CodeGroup maxHeight="24rem">{/* titled fences, Tab content, or dependent content */}</CodeGroup>
+```
+
+The value must be a non-negative number followed by `px`, `rem`, `em`, `vh`, `dvh`, `svh`, or `lvh`. Printed code
+always expands to its full height.
+
 ## How to test your changes
 
 ### Prerequisites

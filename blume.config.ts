@@ -171,6 +171,9 @@ export default defineConfig({
     ],
   },
   markdown: {
+    code: {
+      wrap: true,
+    },
     codeBlocks: {
       theme: {
         light: "github-light",

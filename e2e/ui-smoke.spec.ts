@@ -615,6 +615,233 @@ test("standalone cURL fences preserve continuation backslashes and newlines", as
   expect(await snippet.textContent()).toContain(" \\\n--header 'Cookie: sRefreshToken=...'");
 });
 
+test("code snippets wrap by default and can be unwrapped independently", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/docs/quickstart#1-integrate-the-frontend-sdk");
+  await page
+    .getByRole("group", { name: "UI type" })
+    .getByRole("radio", { name: /^Custom UI/ })
+    .click();
+
+  const snippet = page.locator("pre:visible").filter({ hasText: "/auth/session/refresh" }).first();
+  const code = snippet.locator(":scope > code");
+  const toggle = snippet.locator(":scope > [data-docs-code-wrap-toggle]");
+  const stableSnippet = page.locator("pre:visible").filter({ hasText: "npm i -s supertokens-web-js" }).first();
+  const stableToggle = stableSnippet.locator(":scope > [data-docs-code-wrap-toggle]");
+  const dimensions = () =>
+    code.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+  const geometry = (block: typeof snippet) =>
+    block.evaluate((pre) => {
+      const bounds = (element: Element) => {
+        const { height, width, x, y } = element.getBoundingClientRect();
+        return { height, width, x: x + window.scrollX, y: y + window.scrollY };
+      };
+      return { code: bounds(pre.querySelector(":scope > code")!), pre: bounds(pre) };
+    });
+
+  await expect(page.locator("body")).toHaveAttribute("data-blume-code-wrap", "");
+  await expect(toggle).toHaveAttribute("type", "button");
+  await expect(toggle).toHaveAttribute("aria-label", "Wrap code lines");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveAttribute("title", "Unwrap code lines");
+  await expect(toggle.locator('[data-docs-code-wrap-icon="unwrap"]')).toHaveCount(1);
+  await expect(toggle.locator("svg")).toHaveAttribute("aria-hidden", "true");
+  await expect(toggle).toHaveCSS("opacity", "0");
+  await expect(toggle).toHaveCSS("visibility", "hidden");
+  const geometryBeforeReveal = await geometry(snippet);
+  await snippet.hover();
+  await expect(toggle).toHaveCSS("opacity", "1");
+  await expect(toggle).toHaveCSS("visibility", "visible");
+  expect(await geometry(snippet)).toEqual(geometryBeforeReveal);
+
+  const geometryBeforeIconSwap = await geometry(stableSnippet);
+  await stableSnippet.hover();
+  await stableToggle.click();
+  await expect(stableToggle.locator('[data-docs-code-wrap-icon="wrap"]')).toHaveCount(1);
+  expect(await geometry(stableSnippet)).toEqual(geometryBeforeIconSwap);
+  await stableToggle.click();
+  await page.mouse.move(0, 0);
+  await code.focus();
+  await expect(toggle).toHaveCSS("opacity", "1");
+  await expect(toggle).toHaveCSS("visibility", "visible");
+  await toggle.focus();
+  await expect(toggle).toHaveCSS("opacity", "1");
+  await expect(toggle).toHaveCSS("visibility", "visible");
+
+  const expectNeutralColor = async () => {
+    const colors = await toggle.evaluate((button) => {
+      const reference = document.createElement("span");
+      reference.style.color = "var(--blume-foreground)";
+      document.body.append(reference);
+      const result = { button: getComputedStyle(button).color, foreground: getComputedStyle(reference).color };
+      reference.remove();
+      return result;
+    });
+    expect(colors.button).toBe(colors.foreground);
+  };
+  await expectNeutralColor();
+  await page.getByRole("button", { name: "Switch to dark theme" }).click();
+  await expectNeutralColor();
+  await page.getByRole("button", { name: "Switch to light theme" }).click();
+  await expect(snippet).toHaveCSS("white-space", "pre-wrap");
+  await expect(code).toHaveCSS("white-space", "pre-wrap");
+  expect((await dimensions()).scrollWidth).toBeLessThanOrEqual((await dimensions()).clientWidth);
+
+  await snippet.hover();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(toggle).toHaveAttribute("title", "Wrap code lines");
+  await expect(toggle.locator('[data-docs-code-wrap-icon="wrap"]')).toHaveCount(1);
+  await expect(snippet).toHaveCSS("white-space", "pre");
+  await expect(code).toHaveCSS("overflow-wrap", "normal");
+  const unwrapped = await dimensions();
+  expect(unwrapped.scrollWidth).toBeGreaterThan(unwrapped.clientWidth);
+  await code.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  expect(await code.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(code).toHaveCSS("white-space", "pre-wrap");
+
+  const cappedGroup = page.locator('.st-code-group[data-docs-code-max-height="24rem"]');
+  const cappedPre = cappedGroup.locator("pre:visible").first();
+  await expect(cappedPre.locator(":scope > [data-docs-code-wrap-toggle]")).toHaveCount(1);
+  await expect(cappedPre.locator(":scope > code")).toHaveCSS("max-height", "384px");
+
+  const getEligibleControlCounts = () =>
+    page.locator(".prose pre").evaluateAll((blocks) =>
+      blocks
+        .filter((block) => {
+          if (block.parentElement?.closest("pre")) return false;
+          if (block.matches(".twoslash, .blume-source")) return false;
+          if (block.closest("blume-panel-tabs, [data-api-request-tabs]")) return false;
+          return block.querySelector(":scope > code") && block.querySelector(":scope > [data-blume-copy]");
+        })
+        .map((block) => block.querySelectorAll(":scope > [data-docs-code-wrap-toggle]").length),
+    );
+  const controlCounts = await getEligibleControlCounts();
+  expect(controlCounts.length).toBeGreaterThan(1);
+  expect(controlCounts.every((count) => count === 1)).toBe(true);
+
+  await toggle.click();
+  await page.emulateMedia({ media: "print" });
+  await expect(toggle).toBeHidden();
+  await expect(code).toHaveCSS("white-space", "pre-wrap");
+  await page.emulateMedia({ media: "screen" });
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  await page.getByRole("link", { name: "References", exact: true }).click();
+  await expect(page).toHaveURL(/\/docs\/references\/?$/u);
+  await page.getByRole("link", { name: "Documentation", exact: true }).click();
+  await expect(page).toHaveURL(/\/docs\/?$/u);
+  await page.getByRole("link", { name: "Quickstart Guide", exact: true }).click();
+  await expect(page).toHaveURL(/\/docs\/quickstart\/?$/u);
+  const routeSwapControlCounts = await getEligibleControlCounts();
+  expect(routeSwapControlCounts.length).toBeGreaterThan(0);
+  expect(routeSwapControlCounts.every((count) => count === 1)).toBe(true);
+});
+
+test("code wrap toggles remain visible and usable on touch devices", async ({ browser }, testInfo) => {
+  const context = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL as string,
+    hasTouch: true,
+    viewport: { height: 844, width: 390 },
+  });
+
+  try {
+    const page = await context.newPage();
+    await page.goto("/docs/quickstart");
+
+    expect(await page.evaluate(() => matchMedia("(hover: none)").matches)).toBe(true);
+    const snippet = page.locator(".prose pre:has(> [data-docs-code-wrap-toggle])").first();
+    const toggle = snippet.locator(":scope > [data-docs-code-wrap-toggle]");
+    await expect(toggle).toHaveCSS("opacity", "1");
+    await expect(toggle).toHaveCSS("visibility", "visible");
+    await expect(toggle).toHaveCSS("pointer-events", "auto");
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(snippet).toHaveAttribute("data-docs-code-unwrapped", "");
+  } finally {
+    await context.close();
+  }
+});
+
+test("code snippets expand by default and CodeGroups opt into a maximum height", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/docs/quickstart#2-integrate-the-backend-sdk");
+  await page
+    .getByRole("group", { name: "UI type" })
+    .getByRole("radio", { name: /^Custom UI/ })
+    .click();
+
+  const cappedGroup = page.locator('.st-code-group[data-docs-code-max-height="24rem"]');
+  const cappedCode = cappedGroup.locator("pre:visible code").first();
+  const uncappedCode = page.locator(".st-code-group:not([data-docs-code-max-height]) pre:visible code").first();
+  const standaloneCode = page.locator("pre:visible").filter({ hasText: "/auth/session/refresh" }).locator("code");
+
+  await expect(cappedGroup).toHaveCSS("--st-code-group-max-height", "24rem");
+  await expect(cappedCode).toHaveCSS("max-height", "384px");
+  await expect(cappedCode).toHaveCSS("overflow-y", "auto");
+  await expect(uncappedCode).toHaveCSS("max-height", "none");
+  await expect(standaloneCode).toHaveCSS("max-height", "none");
+
+  const dimensions = async (code: typeof cappedCode) =>
+    code.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      clientWidth: element.clientWidth,
+      scrollHeight: element.scrollHeight,
+      scrollWidth: element.scrollWidth,
+    }));
+  const cappedDimensions = await dimensions(cappedCode);
+  const uncappedDimensions = await dimensions(uncappedCode);
+  const standaloneDimensions = await dimensions(standaloneCode);
+  expect(cappedDimensions.scrollHeight).toBeGreaterThan(cappedDimensions.clientHeight);
+  expect(uncappedDimensions.scrollHeight).toBeLessThanOrEqual(uncappedDimensions.clientHeight);
+  expect(standaloneDimensions.scrollHeight).toBeLessThanOrEqual(standaloneDimensions.clientHeight);
+  expect(standaloneDimensions.scrollWidth).toBeLessThanOrEqual(standaloneDimensions.clientWidth);
+  await expect(standaloneCode).toHaveCSS("overflow-x", "auto");
+
+  await page.emulateMedia({ media: "print" });
+  await expect(cappedCode).toHaveCSS("max-height", "none");
+  await expect(cappedCode).toHaveCSS("overflow-y", "visible");
+  const printedDimensions = await dimensions(cappedCode);
+  expect(printedDimensions.scrollHeight).toBeLessThanOrEqual(printedDimensions.clientHeight);
+});
+
+test("structural CodeGroups expand and nested groups own their height", async ({ page }) => {
+  await page.goto("/docs/post-authentication/dashboard/initial-setup");
+
+  const structuralCode = page
+    .locator('.st-code-group[data-docs-selection-group="backend-language"] pre:visible code')
+    .first();
+  await expect(structuralCode).toHaveCSS("max-height", "none");
+  expect(await structuralCode.evaluate((code) => code.scrollHeight <= code.clientHeight)).toBe(true);
+
+  const nestedHeights = await page.locator(".prose").evaluate((prose) => {
+    const fixture = document.createElement("div");
+    fixture.className = "st-code-group";
+    fixture.dataset.docsCodeMaxHeight = "1px";
+    fixture.style.setProperty("--st-code-group-max-height", "1px");
+    fixture.innerHTML = `
+      <pre><code data-outer-code>outer\ncode</code></pre>
+      <div class="st-code-group"><pre><code data-inner-code>inner\ncode</code></pre></div>
+    `;
+    prose.append(fixture);
+    const outer = getComputedStyle(fixture.querySelector("[data-outer-code]")!).maxHeight;
+    const inner = getComputedStyle(fixture.querySelector("[data-inner-code]")!).maxHeight;
+    fixture.remove();
+    return { inner, outer };
+  });
+  expect(nestedHeights).toEqual({ inner: "none", outer: "1px" });
+});
+
 test("standalone package-manager choices use CodeGroup", async ({ page }) => {
   await page.goto("/docs/authentication/ai-authentication");
 
@@ -666,6 +893,12 @@ test("CodeGroups show fenced fallbacks and hide passive followers without JavaSc
   expect(await fences.count()).toBeGreaterThan(1);
   await expect(group.locator(":scope > blume-tabs > [data-blume-tab-content] > pre:visible")).toHaveCount(1);
 
+  const cappedGroup = page.locator('.st-code-group[data-docs-code-max-height="24rem"]');
+  await expect(cappedGroup.locator("pre:visible code").first()).toHaveCSS("max-height", "384px");
+  await expect(cappedGroup.locator("pre:visible code").first()).toHaveCSS("overflow-y", "auto");
+  await expect(cappedGroup.locator("pre:visible code").first()).toHaveCSS("white-space", "pre-wrap");
+  await expect(page.getByRole("button", { name: "Wrap code lines" })).toHaveCount(0);
+
   const passiveFollower = page.locator('.st-code-group[data-docs-selection-passive="true"]').first();
   await expect(passiveFollower.locator('[data-title="Angular"]')).toHaveCount(1);
   await expect(passiveFollower.locator("[data-blume-tablist]")).toBeHidden();
@@ -711,6 +944,8 @@ test("account migration API snippets match the CDI specification", async ({ page
 
   const snippets = page.locator("[data-api-request-tabs]");
   await expect(snippets).toHaveCount(apiRequestCases.length);
+  await expect(snippets.locator("[data-docs-code-wrap-toggle]")).toHaveCount(0);
+  await expect(snippets.locator("pre code").first()).toHaveCSS("white-space", "pre");
 
   const ids: string[] = [];
   for (const apiRequest of apiRequestCases) {
