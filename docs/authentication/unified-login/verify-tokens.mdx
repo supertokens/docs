@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-## Overview 
+## Overview
 
 You can verify an **OAuth2 Access Token** in two ways:
 - By using a standard **JWT**, JSON Web Token, verification library
@@ -14,7 +14,7 @@ You can verify an **OAuth2 Access Token** in two ways:
 One thing to note is that, besides the standard **OAuth2** token claims, the **Unified Login** implementation includes an additional one called `stt`.
 This stands for `SuperTokens Token Type`.
 It ensures that the validation occurs for the correct token type:
-- `0` represents a **SuperTokens Session Access Token** 
+- `0` represents a **SuperTokens Session Access Token**
 - `1` represents an **OAuth2 Access Token**
 - `2` represents an **OAuth2 ID Token**.
 
@@ -48,21 +48,21 @@ For NodeJS you can use [`jose`](https://github.com/panva/jose) to verify the tok
 ```tsx
 import * as jose from "jose";
 
-const JWKS = jose.createRemoteJWKSet(new URL('<YOUR_API_DOMAIN>/authjwt/jwks.json'))
+const JWKS = jose.createRemoteJWKSet(new URL("<YOUR_API_DOMAIN>/authjwt/jwks.json"));
 
 // Follow this example if you are using the Authorization Code Flow
 async function validateToken(jwt: string) {
   const requiredScope = "<YOUR_REQUIRED_SCOPE>";
-  const clientId = '<CLIENT_ID>';
+  const clientId = "<CLIENT_ID>";
 
   try {
     const { payload } = await jose.jwtVerify(jwt, JWKS, {
-      requiredClaims: ['stt', 'scp', 'client_id'],
+      requiredClaims: ["stt", "scp", "client_id"],
     });
 
-    if(payload.stt !== 1) return false;
-    if(payload.client_id !== clientId) return false;
-    
+    if (payload.stt !== 1) return false;
+    if (payload.client_id !== clientId) return false;
+
     const scopes = payload.scp as string[];
     return scopes.includes(requiredScope);
   } catch (err) {
@@ -88,7 +88,7 @@ import (
 
 func ValidateToken(token string) bool {
     apiDomain := "<YOUR_API_DOMAIN>"
-    apiBasePath := "/auth" 
+    apiBasePath := "/auth"
     clientId := "<CLIENT_ID>"
     requiredScope := "<REQUIRED_SCOPE>"
 
@@ -171,7 +171,7 @@ def validate_token(token: str) -> bool:
           return False
 
       return True
-  except Exception: 
+  except Exception:
       return False
 ```
 
@@ -197,7 +197,7 @@ function validateToken($jwt) {
 
     $jwks = json_decode(file_get_contents($jwksUrl), true);
     try {
-        $decoded = JWT::decode($jwt, JWK::parseKeySet($jwks), 'RS256'));
+        $decoded = JWT::decode($jwt, JWK::parseKeySet($jwks), 'RS256');
         if ($decoded->sst !== 1) {
           return false;
         }
@@ -219,57 +219,79 @@ You can use the [Auth0 JWT](https://github.com/auth0/java-jwt) library to verify
 Here is an example of how you can do that:
 
 ```java
-
 import com.auth0.jwt.JWT;
-import com.auth0.jwt.interfaces.DecodedJWT;
-import com.auth0.jwt.interfaces.JWTVerifier;
-import com.auth0.jwt.JWTVerifier.Base;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 
-import java.net.URL;
-import java.util.Map;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URL;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.RSAPublicKeySpec;
+import java.util.Base64;
+import java.util.List;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class JWTVerifier {
-
-    private static final String JWKS_URL = "<YOUR_API_DOMAIN>/authjwt/jwks.json";
+public class TokenValidator {
+    private static final String JWKS_URL = "<YOUR_API_DOMAIN>/auth/jwt/jwks.json";
     private static final String CLIENT_ID = "<CLIENT_ID>";
+    private static final String REQUIRED_SCOPE = "<YOUR_REQUIRED_SCOPE>";
 
-    private static Map<String, Object> fetchJWKS() throws Exception {
+    private static RSAPublicKey fetchPublicKey(String keyId) throws Exception {
         URL url = new URL(JWKS_URL);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
-        
-        InputStream responseStream = connection.getInputStream();
-        Scanner scanner = new Scanner(responseStream, StandardCharsets.UTF_8.name());
-        String responseBody = scanner.useDelimiter("\\A").next();
-        scanner.close();
-        
-        return JWT.decode(responseBody).getHeader();
+
+        try (InputStream responseStream = connection.getInputStream();
+                Scanner scanner = new Scanner(responseStream, StandardCharsets.UTF_8.name())) {
+            String responseBody = scanner.useDelimiter("\\A").next();
+            Matcher keys = Pattern.compile("\\{[^{}]*\\}").matcher(responseBody);
+            while (keys.find()) {
+                String key = keys.group();
+                if (keyId.equals(jsonString(key, "kid"))) {
+                    BigInteger modulus = new BigInteger(1, Base64.getUrlDecoder().decode(jsonString(key, "n")));
+                    BigInteger exponent = new BigInteger(1, Base64.getUrlDecoder().decode(jsonString(key, "e")));
+                    return (RSAPublicKey) KeyFactory.getInstance("RSA")
+                            .generatePublic(new RSAPublicKeySpec(modulus, exponent));
+                }
+            }
+        } finally {
+            connection.disconnect();
+        }
+        throw new IllegalArgumentException("No matching JWKS key");
+    }
+
+    private static String jsonString(String object, String field) {
+        Matcher matcher = Pattern.compile("\\\"" + Pattern.quote(field) + "\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"")
+                .matcher(object);
+        if (!matcher.find()) {
+            throw new IllegalArgumentException("Missing JWKS field: " + field);
+        }
+        return matcher.group(1);
     }
 
     public static boolean validateToken(String token) {
         try {
-            Map<String, Object> jwks = fetchJWKS();
-            
-            Algorithm algorithm = Algorithm.RSA256(jwks.get("x5c"), null);
-            JWTVerifier verifier = JWT.require(algorithm)
-                    .build();
-            
+            DecodedJWT unverifiedJwt = JWT.decode(token);
+            Algorithm algorithm = Algorithm.RSA256(fetchPublicKey(unverifiedJwt.getKeyId()), null);
+            com.auth0.jwt.interfaces.JWTVerifier verifier = JWT.require(algorithm).build();
+
             DecodedJWT jwt = verifier.verify(token);
-            if(jwt.getClaim("sst").asInt() != 1) {
-              return false;
+            if (jwt.getClaim("sst").asInt() != 1) {
+                return false;
             }
 
-            if(jwt.getClaim("client_id").asString() != CLIENT_ID) {
-              return false;
+            if (!CLIENT_ID.equals(jwt.getClaim("client_id").asString())) {
+                return false;
             }
 
-            List<String> scopes = jwt.getClaim("scp").asList();
-            return scopes.contains(requiredScope);
+            List<String> scopes = jwt.getClaim("scp").asList(String.class);
+            return scopes != null && scopes.contains(REQUIRED_SCOPE);
         } catch (Exception e) {
             return false;
         }
@@ -356,7 +378,7 @@ If you are using email and password based authentication, and you want to valida
 
 ## Using the token introspection API
 
-When a user logs out, their token gets removed from the **SuperTokens Core** database. 
+When a user logs out, their token gets removed from the **SuperTokens Core** database.
 That change does not reflect in token validation process that uses a JWT verification library.
 The token remains valid until its expiration time.
 
@@ -380,7 +402,7 @@ async function validateToken(token: string) {
       clientId: "<CLIENT_ID>",
       scopes: ["<REQUIRED_SCOPE>"],
     },
-    true
+    true,
   );
 
   return status === "OK";
@@ -416,7 +438,7 @@ def validate_token(token: str):
 
 
 ```
-    
+
 </Tab>
 
 <Tab title="cURL" value="curl">
@@ -429,7 +451,7 @@ curl -X POST \
      -d '{"token": "<YOUR_TOKEN>"}' \
      "<YOUR_API_DOMAIN>/auth/oauth/introspect"
 ```
-    
+
 </Tab>
 
 </Tabs>

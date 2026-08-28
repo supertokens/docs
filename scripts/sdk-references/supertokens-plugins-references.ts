@@ -5,6 +5,8 @@ import { $ } from "bun";
 import { rm, mkdir, exists } from "node:fs/promises";
 import { join } from "node:path";
 
+import { markGeneratedApiFencesInDirectory } from "./mark-generated-api-fences";
+
 export type Repository = {
   url: string;
   version: string;
@@ -123,6 +125,7 @@ async function cloneRepository(repository: { url: string; branch: string; name: 
   await cloneRepository(repository);
 
   await generateMarkdownFiles();
+  await markGeneratedApiFencesInDirectory("docs/references/plugins/references");
 
   await $`cp -v $(find docs/references/plugins/references -type f ! -name "README.mdx") docs/references/plugins`;
   await $`rm -rf docs/references/plugins/references`;

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { glob } from "glob";
 
-import { isExcludedFromTypeChecking } from "./code-blocks/exclusions";
+import { isExcludedFromChecking } from "./code-blocks/exclusions";
 import { extractCodeBlocks, type ExtractedCodeBlock } from "./code-blocks/extract";
 import { formatCodeBlockWithPrettier } from "./code-blocks/prettier";
 
@@ -34,7 +34,7 @@ export async function formatCodeBlocksInSource(source: string, sourcePath: strin
   const replacements: Replacement[] = [];
 
   for (const block of blocks) {
-    if (isExcludedFromTypeChecking(block.value) || block.value.trim().length === 0) continue;
+    if (isExcludedFromChecking(block) || block.value.trim().length === 0) continue;
 
     const formatted = await formatCodeBlockWithPrettier(block.value, block.language, sourcePath);
     if (formatted === undefined || formatted === block.value) continue;

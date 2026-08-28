@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { glob } from "glob";
-import { parseExclusionMarkers } from "./exclusions";
+import { getFenceMetadataViolations, isExcludedFromChecking, parseExclusionMarkers } from "./exclusions";
 import { extractCodeBlocks, type ExtractedCodeBlock } from "./extract";
 import { formatCodeBlockWithPrettier, getCodeBlockPrettierParser } from "./prettier";
 
@@ -78,8 +78,12 @@ export function lintHighlightMetadata(block: ExtractedCodeBlock): CodeBlockLintV
   return violations;
 }
 
+export function lintCheckMetadata(block: ExtractedCodeBlock): CodeBlockLintViolation[] {
+  return getFenceMetadataViolations(block.meta).map((message) => violation(block, message));
+}
+
 export async function lintCodeBlock(block: ExtractedCodeBlock): Promise<CodeBlockLintViolation[]> {
-  const violations = lintHighlightMetadata(block);
+  const violations = [...lintHighlightMetadata(block), ...lintCheckMetadata(block)];
   if (block.value.trim().length === 0) violations.push(violation(block, "code block must not be empty"));
 
   const markers = parseExclusionMarkers(block.value);
@@ -93,7 +97,7 @@ export async function lintCodeBlock(block: ExtractedCodeBlock): Promise<CodeBloc
     );
   }
 
-  if (!getCodeBlockPrettierParser(block.language) || markers.isExcluded || block.value.trim().length === 0) {
+  if (!getCodeBlockPrettierParser(block.language) || isExcludedFromChecking(block) || block.value.trim().length === 0) {
     return violations;
   }
 

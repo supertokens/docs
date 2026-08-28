@@ -211,9 +211,19 @@ Checker names are `javascript`, `go`, `python`, `kotlin`, `swift`, `dart`, `php`
 
 Generated snippets are stored under `scripts/code-type-checking/<language>/snippets`, preserving the source path and including the fence's source line in each generated path.
 
-For an intentionally non-standalone snippet, use one of these exact comments as the first content line to exclude it from formatting and type checking:
+For an intentionally non-standalone snippet, add `check=false` and a non-empty, quoted reason to the code fence. This excludes it from formatting and type checking:
+
+````md
+```ts check=false reason="Requires application context"
+const app = getApplicationInstance();
+```
+````
+
+An exclusion must contain exactly one unquoted `check=false` and exactly one closed, double-quoted, non-empty `reason`. Reason text may contain ASCII letters, numbers, spaces, and `. , ; : ! ? ( ) / _ + -`. Braces, quotes, backslashes, control characters, and newlines are not allowed because fence metadata is passed to Shiki.
+
+The lint and snippet writer reject malformed, duplicate, contradictory, or unsupported metadata. Invalid metadata does not skip formatting or extraction. Do not use this escape hatch for standalone snippets that can be made valid.
+
+Legacy exclusions using one of these exact comments as the first content line remain supported:
 
 - `// exclude-from-type-checking`
 - `# exclude-from-type-checking`
-
-Do not use this escape hatch for standalone snippets that can be made valid.

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { emptyDir, ensureDir } from "fs-extra";
 
-import { isExcludedFromTypeChecking } from "./code-blocks/exclusions";
+import { getFenceMetadataViolations, isExcludedFromChecking } from "./code-blocks/exclusions";
 import { scanCodeBlocks, type ExtractedCodeBlock } from "./code-blocks/extract";
 import { compilableLanguageFolders } from "./code-blocks/languages";
 
@@ -18,10 +18,6 @@ const replacements: Array<[string, string]> = [
 export interface WriteCodeBlocksOptions {
   docsRoot?: string;
   outputRoot?: string;
-}
-
-export function isExcluded(block: ExtractedCodeBlock): boolean {
-  return isExcludedFromTypeChecking(block.value);
 }
 
 export function transformCodeBlock(block: ExtractedCodeBlock, relativePath: string, blockIndex: number): string {
@@ -73,6 +69,11 @@ export async function writeCodeBlocks(options: WriteCodeBlocksOptions = {}): Pro
   const outputRoot = options.outputRoot ?? path.join(process.cwd(), "scripts/code-type-checking");
   const codeBlocks = await scanCodeBlocks(docsRoot);
 
+  for (const block of codeBlocks) {
+    const [metadataViolation] = getFenceMetadataViolations(block.meta);
+    if (metadataViolation) throw new Error(`${block.sourcePath}:${block.sourceLine}: ${metadataViolation}`);
+  }
+
   await Promise.all(compilableLanguageFolders.map((folder) => emptyDir(path.join(outputRoot, folder, "snippets"))));
 
   const counts: Record<string, number> = {};
@@ -80,7 +81,7 @@ export async function writeCodeBlocks(options: WriteCodeBlocksOptions = {}): Pro
 
   for (const block of codeBlocks) {
     if (block.definition.kind !== "compilable") continue;
-    if (isExcluded(block)) continue;
+    if (isExcludedFromChecking(block)) continue;
 
     blockIndex += 1;
     const relativePath = path.relative(docsRoot, block.sourcePath);

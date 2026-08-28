@@ -158,6 +158,10 @@ describe("code block writing", () => {
         "// exclude-from-type-checking",
         "const excluded = true;",
         "```",
+        "",
+        '```ts check=false reason="Requires application context"',
+        "const metadataExcluded = true;",
+        "```",
       ].join("\n"),
     );
 
@@ -167,6 +171,28 @@ describe("code block writing", () => {
     const dartPath = path.join(outputRoot, "dart/snippets/example.mdx/1-line-9/code-block.dart");
     await expect(readFile(javascriptPath, "utf8")).resolves.toBe('import "supertokens-web-js";\nexport {}');
     await expect(readFile(dartPath, "utf8")).resolves.toBe("void main() {}");
+    await expect(
+      readFile(path.join(outputRoot, "javascript/snippets/example.mdx/2-line-18/code-block.ts")),
+    ).rejects.toThrow();
     await expect(readFile(path.join(outputRoot, "javascript", "snippets", "stale.ts"))).rejects.toThrow();
+  });
+
+  it("rejects invalid exclusion metadata before clearing generated snippets", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "code-block-write-invalid-"));
+    const docsRoot = path.join(root, "docs");
+    const outputRoot = path.join(root, "output");
+    const stalePath = path.join(outputRoot, "javascript/snippets/stale.ts");
+    await mkdir(docsRoot);
+    await mkdir(path.dirname(stalePath), { recursive: true });
+    await writeFile(stalePath, "stale");
+    await writeFile(
+      path.join(docsRoot, "invalid.mdx"),
+      '```ts check=false check=true reason="Contradictory"\nconst value = 1;\n```',
+    );
+
+    await expect(writeCodeBlocks({ docsRoot, outputRoot })).rejects.toThrow(
+      "invalid.mdx:1: code fence metadata must contain exactly one check attribute",
+    );
+    await expect(readFile(stalePath, "utf8")).resolves.toBe("stale");
   });
 });

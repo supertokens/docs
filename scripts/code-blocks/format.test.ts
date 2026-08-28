@@ -82,6 +82,10 @@ describe("code block formatting", () => {
 
   it("leaves excluded and unsupported blocks unchanged", async () => {
     const source = [
+      '```ts check=false reason="Requires application context"',
+      "const metadataExcluded={value:true}",
+      "```",
+      "",
       "```ts",
       "// exclude-from-type-checking",
       "const excluded={value:true}",
@@ -93,6 +97,27 @@ describe("code block formatting", () => {
     ].join("\n");
 
     await expect(formatCodeBlocksInSource(source, "/docs/skipped.mdx")).resolves.toBe(source);
+  });
+
+  it("does not mistake check text inside a quoted title for metadata", async () => {
+    const source = ['```ts title="example check=false.ts"', "const value={nested:true}", "```"].join("\n");
+
+    await expect(formatCodeBlocksInSource(source, "/docs/title.mdx")).resolves.toBe(
+      ['```ts title="example check=false.ts"', "const value = { nested: true };", "```"].join("\n"),
+    );
+  });
+
+  it("formats blocks with malformed or contradictory exclusion metadata", async () => {
+    for (const meta of [
+      'check=false check=true reason="Contradictory"',
+      'check=false reason="Contains {braces}"',
+      'title="unterminated check=false reason="Hidden"',
+      'check=false reason="Valid" @unexpected',
+    ]) {
+      const source = [`\`\`\`ts ${meta}`, "const value={nested:true}", "```"].join("\n");
+      const formatted = await formatCodeBlocksInSource(source, "/docs/invalid.mdx");
+      expect(formatted, meta).toContain("const value = { nested: true };");
+    }
   });
 
   it("has no import side effect", async () => {

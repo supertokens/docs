@@ -29,6 +29,47 @@ describe("code block linting", () => {
       lintCodeBlock(block("ts", "const value = 1;", 'title="example{1}.ts" lineNumbers twoslash')),
     ).resolves.toEqual([]);
     await expect(lintCodeBlock(block("ts", "// exclude-from-type-checking\nconst value=1"))).resolves.toEqual([]);
+    await expect(
+      lintCodeBlock(block("ts", "const value=1", 'title="contains check=true" check=false reason="Needs context"')),
+    ).resolves.toEqual([]);
+  });
+
+  it("validates check metadata at the fence source line", async () => {
+    for (const meta of ["check", "check=true", 'check="false"']) {
+      await expect(lintCodeBlock(block("ts", "const value = 1;", meta))).resolves.toContainEqual({
+        sourcePath: "docs/example.mdx",
+        sourceLine: 10,
+        message: "unsupported check metadata value; use check=false",
+      });
+    }
+
+    await expect(lintCodeBlock(block("ts", "const value = 1;", "check=false"))).resolves.toContainEqual({
+      sourcePath: "docs/example.mdx",
+      sourceLine: 10,
+      message: 'check=false requires exactly one reason="..." attribute',
+    });
+
+    for (const meta of ["check=false reason=setup", 'check=false reason="   "', 'check=false reason="Uses {value}"']) {
+      await expect(lintCodeBlock(block("ts", "const value = 1;", meta))).resolves.toContainEqual({
+        sourcePath: "docs/example.mdx",
+        sourceLine: 10,
+        message: expect.stringContaining("reason must be a closed, non-empty double-quoted value"),
+      });
+    }
+  });
+
+  it("does not let invalid exclusion metadata bypass formatting", async () => {
+    const violations = await lintCodeBlock(
+      block("ts", "const value={nested:true}", 'check=false check=true reason="Contradictory"'),
+    );
+
+    expect(violations.map(({ message }) => message)).toEqual(
+      expect.arrayContaining([
+        "code fence metadata must contain exactly one check attribute",
+        "unsupported check metadata value; use check=false",
+        "code block is not formatted with Prettier",
+      ]),
+    );
   });
 
   it("reports empty blocks and misplaced exclusions with source locations", async () => {

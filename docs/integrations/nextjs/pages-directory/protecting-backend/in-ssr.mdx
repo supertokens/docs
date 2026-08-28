@@ -19,7 +19,7 @@ For this guide, we will assume that we want to pass the logged in user's ID as a
 import jwksClient from "jwks-rsa";
 import JsonWebToken from "jsonwebtoken";
 import type { JwtHeader, JwtPayload, SigningKeyCallback } from "jsonwebtoken";
-import { GetServerSidePropsContext } from 'next';
+import { GetServerSidePropsContext } from "next";
 
 const client = jwksClient({
   jwksUri: "<CORE_API_ENDPOINT>/.well-known/jwks.json",
@@ -28,40 +28,40 @@ const client = jwksClient({
   },
 });
 
-function getAccessToken(context: GetServerSidePropsContext ): string | undefined {
+function getAccessToken(context: GetServerSidePropsContext): string | undefined {
   return context.req.cookies["sAccessToken"];
 }
 
 function getPublicKey(header: JwtHeader, callback: SigningKeyCallback) {
   client.getSigningKey(header.kid, (err, key) => {
-      if (err) {
-          callback(err);
-      } else {
-          const signingKey = key?.getPublicKey();
-          callback(null, signingKey);
-      }
+    if (err) {
+      callback(err);
+    } else {
+      const signingKey = key?.getPublicKey();
+      callback(null, signingKey);
+    }
   });
 }
 
 async function verifyToken(token: string): Promise<JwtPayload> {
   return new Promise((resolve, reject) => {
-      JsonWebToken.verify(token, getPublicKey, {}, (err, decoded) => {
-          if (err) {
-              reject(err);
-          } else {
-              resolve(decoded as JwtPayload);
-          }
-      });
+    JsonWebToken.verify(token, getPublicKey, {}, (err, decoded) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(decoded as JwtPayload);
+      }
+    });
   });
 }
 
 /**
-* A helper function to retrieve session details on the server side.
-*
-* NOTE: This function does not use the getSession or verifySession functions from the supertokens-node SDK
-* because they can update the access token. These updated tokens would not be
-* propagated to the client side, as request interceptors do not run on the server side.
-*/
+ * A helper function to retrieve session details on the server side.
+ *
+ * NOTE: This function does not use the getSession or verifySession functions from the supertokens-node SDK
+ * because they can update the access token. These updated tokens would not be
+ * propagated to the client side, as request interceptors do not run on the server side.
+ */
 async function getSSRSessionHelper(context: GetServerSidePropsContext): Promise<{
   accessTokenPayload: JwtPayload | undefined;
   hasToken: boolean;
@@ -70,42 +70,42 @@ async function getSSRSessionHelper(context: GetServerSidePropsContext): Promise<
   const accessToken = getAccessToken(context);
   const hasToken = !!accessToken;
   try {
-      if (accessToken) {
-          const decoded = await verifyToken(accessToken);
-          return { accessTokenPayload: decoded, hasToken, error: undefined };
-      }
-      return { accessTokenPayload: undefined, hasToken, error: undefined };
+    if (accessToken) {
+      const decoded = await verifyToken(accessToken);
+      return { accessTokenPayload: decoded, hasToken, error: undefined };
+    }
+    return { accessTokenPayload: undefined, hasToken, error: undefined };
   } catch (error) {
-        return { accessTokenPayload: undefined, hasToken, error: undefined };
+    return { accessTokenPayload: undefined, hasToken, error: undefined };
   }
 }
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
-    const { accessTokenPayload, error } = await getSSRSessionHelper(context);
+  const { accessTokenPayload, error } = await getSSRSessionHelper(context);
 
-    if (error) {
-      throw error;
-    }
+  if (error) {
+    throw error;
+  }
 
-    if (accessTokenPayload === undefined) {
-      // This occurs if the token has expired or doesn't exist.
-      // Either way, sending this response prompts the frontend to attempt a session refresh.
-      // 
-      // Case 1: Token doesn't exist
-      // - The refresh will fail, and the user will be redirected to the login page.
-      // 
-      // Case 2: Token has expired
-      // - The client will call the refresh API and update the session tokens.
-    
-      return { props: { fromSupertokens: 'needs-refresh' } }
-      // or return {fromSupertokens: 'needs-refresh'} in case of getInitialProps
-    }
+  if (accessTokenPayload === undefined) {
+    // This occurs if the token has expired or doesn't exist.
+    // Either way, sending this response prompts the frontend to attempt a session refresh.
+    //
+    // Case 1: Token doesn't exist
+    // - The refresh will fail, and the user will be redirected to the login page.
+    //
+    // Case 2: Token has expired
+    // - The client will call the refresh API and update the session tokens.
 
-    return {
-        props: { userId: accessTokenPayload.sub }
-    }
+    return { props: { fromSupertokens: "needs-refresh" } };
+    // or return {fromSupertokens: 'needs-refresh'} in case of getInitialProps
+  }
 
-    // or return { userId: accessTokenPayload.sub } in case of getInitialProps
+  return {
+    props: { userId: accessTokenPayload.sub },
+  };
+
+  // or return { userId: accessTokenPayload.sub } in case of getInitialProps
 }
 ```
 
@@ -123,47 +123,45 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 
 ```tsx title="/pages/_app.tsx"
 import React, { useEffect } from "react";
-import Session from 'supertokens-auth-react/recipe/session'
-import { redirectToAuth } from 'supertokens-auth-react'
+import Session from "supertokens-auth-react/recipe/session";
+import { redirectToAuth } from "supertokens-auth-react";
 import { AppProps } from "next/app";
 
-function MyApp({ Component, pageProps }: AppProps<{fromSupertokens: string}>) {
-    useEffect(() => {
+function MyApp({ Component, pageProps }: AppProps<{ fromSupertokens: string }>) {
+  useEffect(() => {
+    async function doRefresh() {
+      // pageProps.fromSupertokens === 'needs-refresh' will be true
+      // when in getServerSideProps, getSession throws a TRY_REFRESH_TOKEN
+      // error.
 
-        async function doRefresh() {
-            // pageProps.fromSupertokens === 'needs-refresh' will be true
-            // when in getServerSideProps, getSession throws a TRY_REFRESH_TOKEN
-            // error.
-
-            if (pageProps.fromSupertokens === 'needs-refresh') {
-                if (await Session.attemptRefreshingSession()) {
-                    // post session refreshing, we reload the page. This will
-                    // send the new access token to the server, and then 
-                    // getServerSideProps will succeed
-                    location.reload()
-                } else {
-                    // the user's session has expired. So we redirect
-                    // them to the login page
-                    redirectToAuth()
-                }
-            }
+      if (pageProps.fromSupertokens === "needs-refresh") {
+        if (await Session.attemptRefreshingSession()) {
+          // post session refreshing, we reload the page. This will
+          // send the new access token to the server, and then
+          // getServerSideProps will succeed
+          location.reload();
+        } else {
+          // the user's session has expired. So we redirect
+          // them to the login page
+          redirectToAuth();
         }
-        doRefresh()
-
-    }, [pageProps.fromSupertokens])
-
-    if (pageProps.fromSupertokens === 'needs-refresh') {
-        // in case the frontend needs to refresh, we show nothing.
-        // Alternatively, you can show a spinner.
-
-        return null
+      }
     }
+    doRefresh();
+  }, [pageProps.fromSupertokens]);
 
-    // the below is already there by default
-    return <Component {...pageProps} />
+  if (pageProps.fromSupertokens === "needs-refresh") {
+    // in case the frontend needs to refresh, we show nothing.
+    // Alternatively, you can show a spinner.
+
+    return null;
+  }
+
+  // the below is already there by default
+  return <Component {...pageProps} />;
 }
 
-export default MyApp
+export default MyApp;
 ```
 
 </VariantContent>
@@ -172,48 +170,46 @@ export default MyApp
 
 ```tsx title="/pages/_app.tsx"
 import React, { useEffect } from "react";
-import Session from 'supertokens-web-js/recipe/session'
+import Session from "supertokens-web-js/recipe/session";
 import { AppProps } from "next/app";
 
-function MyApp({ Component, pageProps }: AppProps<{fromSupertokens: string}>) {
-    useEffect(() => {
+function MyApp({ Component, pageProps }: AppProps<{ fromSupertokens: string }>) {
+  useEffect(() => {
+    async function doRefresh() {
+      // pageProps.fromSupertokens === 'needs-refresh' will be true
+      // when in getServerSideProps, getSession throws a TRY_REFRESH_TOKEN
+      // error.
 
-        async function doRefresh() {
-            // pageProps.fromSupertokens === 'needs-refresh' will be true
-            // when in getServerSideProps, getSession throws a TRY_REFRESH_TOKEN
-            // error.
+      if (pageProps.fromSupertokens === "needs-refresh") {
+        if (await Session.attemptRefreshingSession()) {
+          // post session refreshing, we reload the page. This will
+          // send the new access token to the server, and then
+          // getServerSideProps will succeed
+          location.reload();
+        } else {
+          // the user's session has expired. So we redirect
+          // them to the login page
 
-            if (pageProps.fromSupertokens === 'needs-refresh') {
-                if (await Session.attemptRefreshingSession()) {
-                    // post session refreshing, we reload the page. This will
-                    // send the new access token to the server, and then 
-                    // getServerSideProps will succeed
-                    location.reload()
-                } else {
-                    // the user's session has expired. So we redirect
-                    // them to the login page
-                    
-                    // redirect to login page
-                    window.location.href = "/login"
-                }
-            }
+          // redirect to login page
+          window.location.href = "/login";
         }
-        doRefresh()
-
-    }, [pageProps.fromSupertokens])
-
-    if (pageProps.fromSupertokens === 'needs-refresh') {
-        // in case the frontend needs to refresh, we show nothing.
-        // Alternatively, you can show a spinner.
-
-        return null
+      }
     }
+    doRefresh();
+  }, [pageProps.fromSupertokens]);
 
-    // the below is already there by default
-    return <Component {...pageProps} />
+  if (pageProps.fromSupertokens === "needs-refresh") {
+    // in case the frontend needs to refresh, we show nothing.
+    // Alternatively, you can show a spinner.
+
+    return null;
+  }
+
+  // the below is already there by default
+  return <Component {...pageProps} />;
 }
 
-export default MyApp
+export default MyApp;
 ```
 
 </VariantContent>
@@ -221,10 +217,12 @@ export default MyApp
 ## 3. Consume the `userId` returned by getServerSideProps in your component
 
 On success, `getServerSideProps` returns
-```tsx
+```tsx check=false reason="Requires surrounding application context"
 {
-    // Refer to Step 1)
-    props: { userId: accessTokenPayload.sub }
+  // Refer to Step 1)
+  props: {
+    userId: accessTokenPayload.sub;
+  }
 }
 ```
 
@@ -232,6 +230,6 @@ Therefore, the associated page can access the `userId` like:
 
 ```tsx
 export default function Home(props: any) {
-    let userId = props.userId;
+  let userId = props.userId;
 }
 ```
