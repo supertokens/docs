@@ -1,17 +1,17 @@
 ---
-title: OAuth2 Basics
-description: Authenticate multiple applications using SuperTokens and OAuth2 for unified login across platforms.
+title: OAuth 2.0 Basics
+description: Authenticate multiple applications using SuperTokens and OAuth 2.0 for unified login across platforms.
 sidebar:
   order: 2
 ---
 
 ## Overview
 
-Each quickstart guide uses OAuth2 specific concepts that you should be aware of.
+Each quickstart guide uses OAuth 2.0-specific concepts that you should be aware of.
 Read through this page to get a better understanding of the specifications.
 
 
-**OAuth2**, Open Authorization, is an industry-standard authorization framework that enables third-party applications to obtain limited access to a user's resources without exposing their credentials.
+**OAuth 2.0** is an industry-standard authorization framework that enables applications to obtain limited access to a user's resources without exposing their credentials. OpenID Connect (OIDC) adds an identity layer to OAuth 2.0.
 
 ## Terminology
 
@@ -33,6 +33,11 @@ With that token the client can perform authorized operations on behalf of the [*
 
 The term **client** does not imply any particular implementation characteristics (for example, whether the application executes on a server, a desktop, or other devices).
 
+OAuth 2.0 distinguishes between two client types:
+
+- A **confidential client** runs in an environment that can protect credentials, such as an application backend. It can authenticate at the token endpoint with a client secret or another supported method. Never send its secret to a browser or native application.
+- A **public client** runs in an environment that cannot protect credentials, such as browser JavaScript or a native application. Configure it with `tokenEndpointAuthMethod: "none"`; it must not have or ship a client secret. Public clients must use the authorization code flow with Proof Key for Code Exchange (PKCE).
+
 #### Resource Server
 
 The server hosting the protected resources, capable of accepting and responding to protected resource requests using [**OAuth2 Access Tokens**](#oauth2-access-token).
@@ -48,7 +53,7 @@ The server issuing [**OAuth2 Access Tokens**](#oauth2-access-token) to the [**Cl
 ### Tokens
 
 Tokens are strings that represent the authorization issued to the [**Client**](#client).
-They are mainly used to access to protected resources, on behalf of the [**Resource Owner**](#resource-owner).
+They are mainly used to access protected resources on behalf of the [**Resource Owner**](#resource-owner).
 At the same time, tokens can provide more information about who the owner is.
 
 #### OAuth2 Access Token
@@ -82,7 +87,7 @@ They specify what portions of the **Resource Owner’s** data the **Client** can
 For example, when a user grants a web application permission to read their email, the application might request the `email` scope.
 
 In a general authentication flow scopes get used in the following way:
-1. When the **Client** gets created, it configures a series of scopes for the **Authorization Server**
+1. When the **Client** gets created, it configures a series of scopes for the **Authorization Server**.
 2. The **Authorization Server** authenticates the **Resource Owner** and uses the scopes to generate an **OAuth2 Access Token**.
 3. The **Resource Server** checks the scopes of the **OAuth2 Access Token** and only allows the requested actions.
 
@@ -97,11 +102,11 @@ Our implementation supports the following flow types:
 
 <img src="/img/oauth/authorization-code-flow.png" alt="Authorization Code Grant"/>
 
-This flow is best suited for scenarios that involve **web applications**.
+This flow is appropriate for confidential web applications and, with PKCE, public browser and native applications.
 It consists of the following steps:
 1. The **Client** redirects the **Resource Owner** to the **Authorization Server’s** authorization endpoint.
 2. If the **Resource Owner** grants permission, the **Authorization Server** redirects their browser back to the specified **Redirect URI** and includes an **Authorization Code** as a query parameter.
-3. The **Client** then sends a request to the **Authorization Server**’s token endpoint, including the **Authorization Code**.
+3. The **Client** then sends a request to the **Authorization Server**’s token endpoint, including the **Authorization Code**. A confidential client authenticates at this endpoint; a public client supplies its PKCE code verifier instead of a client secret.
 4. The **Authorization Server** verifies the information sent by the **Client** and, if valid, issues an **OAuth2 Access Token**.
 5. The token can make requests to the **Resource Server** to access the protected resources on behalf of the **Resource Owner**.
 
@@ -109,14 +114,15 @@ It consists of the following steps:
 
 An **Authorization Code** is a short-lived code that the [**Authorization Server**](#authorization-server) provides to the [**Client**](#client), via a **Redirect URI**, after authorization approval.
 This code then gets exchanged for an [**OAuth2 Access Token**](#oauth2-access-token).
-The **Authorization Code** flow enhances security by keeping tokens out of the user-agent and letting the [**Client**](#client) manage the backend communication with the [**Authorization Server**](#authorization-server).
+For confidential clients, the **Authorization Code** flow keeps tokens out of the user agent by letting the [**Client's**](#client) backend communicate with the [**Authorization Server**](#authorization-server). Public clients exchange the code directly and must use PKCE.
 
 ##### Proof key for code exchange (PKCE)
 
-To prevent cross-site request forgery (CSRF) and code injection attacks, the **Authorization Code flow** can use [**PKCE**](https://oauth.net/2/pkce/).
+The **Authorization Code flow** uses [**PKCE**](https://oauth.net/2/pkce/) to bind the authorization request to the token request. PKCE mitigates authorization-code interception and injection. It is mandatory for public browser and native clients and is recommended for confidential clients.
 
-At the beginning of the authentication flow the **Client** generates a random string called a *code verifier*.
-This ensures that, even if the **Authorization Code** gets intercepted, it cannot be exchanged for a token without also including the initial code.
+At the beginning of the authentication flow, the **Client** generates a random *code verifier* and sends its derived code challenge in the authorization request. The client must provide the original verifier during the code exchange, so an intercepted code alone is insufficient.
+
+PKCE is not a replacement for request binding. Generate an unpredictable `state`, bind it to the initiating browser transaction, and verify it exactly on callback before exchanging the code. For OIDC, also generate and validate a `nonce`, and validate the ID token's issuer, audience, signature, expiry, and nonce. Do not accept callback parameters that are not bound to the transaction that initiated login.
 
 #### [Client credentials](https://oauth.net/2/grant-types/client-credentials/)
 

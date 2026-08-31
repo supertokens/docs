@@ -8,7 +8,7 @@ sidebar:
 ## Overview
 
 
-You can implement the following guide if you have multiple **`frontend applications`** that use the same **`backend service`**.
+Use this guide when multiple frontend applications call the same backend service. In this topology, each browser application exchanges its own authorization code, so each is a **public OAuth client**.
 The authentication flow works in the following way:
 
 <Steps>
@@ -20,7 +20,7 @@ The authentication flow works in the following way:
 - The **Authorization Service** backend redirects the user to the `callback URL`.
 </Step>
 <Step title="The user accesses the callback URL:">
-- The `frontend` uses the callback URL information to obtain a **OAuth2 Access Token** from the **Authorization Service** backend.
+- The frontend verifies the callback `state`, then exchanges the Authorization Code with its PKCE code verifier. It never uses a client secret.
 </Step>
 </Steps>
 
@@ -51,8 +51,8 @@ Go to the [**SuperTokens.com SaaS Dashboard**](https://supertokens.com/dashboard
 ### 2. Create the OAuth2 Clients
 
 
-For each of your **`frontend`** applications create a separate [**OAuth2 client**](/authentication/unified-login/oauth2-basics#client).
-This can occur by directly calling the **SuperTokens Core** API.
+For each frontend application, create a separate [**OAuth2 client**](/authentication/unified-login/oauth2-basics#client).
+Call the **SuperTokens Core** API from a trusted administrative environment. The examples create public clients: `tokenEndpointAuthMethod` is `none`, no secret is issued or shipped, and `allowedCorsOrigins` contains only the exact origin that may call the token endpoint. Each application must use authorization code with PKCE.
 
 <Tabs>
 <Tab title="Examples">
@@ -67,8 +67,11 @@ curl --location --request POST '<CORE_API_ENDPOINT>/recipe/oauth/clients' \
       "clientName": "<YOUR_CLIENT_NAME>",
       "responseTypes": ["code"],
       "grantTypes": ["authorization_code", "refresh_token"],
+      "tokenEndpointAuthMethod": "none",
+      "allowedCorsOrigins": ["https://<YOUR_APPLICATION_DOMAIN>"],
+      "audience": ["<YOUR_API_DOMAIN>"],
       "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
     }
 '
 ```
@@ -89,6 +92,9 @@ const options = {
     clientName: "<YOUR_CLIENT_NAME>",
     responseTypes: ["code"],
     grantTypes: ["authorization_code", "refresh_token"],
+    tokenEndpointAuthMethod: "none",
+    allowedCorsOrigins: ["https://<YOUR_APPLICATION_DOMAIN>"],
+    audience: ["<YOUR_API_DOMAIN>"],
     scope: "offline_access <custom_scope_1> <custom_scope_2>",
     redirectUris: ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
   }),
@@ -118,8 +124,11 @@ func main() {
     "clientName": "<YOUR_CLIENT_NAME>",
     "responseTypes": ["code"],
     "grantTypes": ["authorization_code", "refresh_token"],
+    "tokenEndpointAuthMethod": "none",
+    "allowedCorsOrigins": ["https://<YOUR_APPLICATION_DOMAIN>"],
+    "audience": ["<YOUR_API_DOMAIN>"],
     "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-    "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+    "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
   }`
 
   req, _ := http.NewRequest("POST", url, strings.NewReader(payload))
@@ -151,8 +160,11 @@ payload: Dict[str, Any] ={
   "clientName": "<YOUR_CLIENT_NAME>",
   "responseTypes": ["code"],
   "grantTypes": ["authorization_code", "refresh_token"],
+  "tokenEndpointAuthMethod": "none",
+  "allowedCorsOrigins": ["https://<YOUR_APPLICATION_DOMAIN>"],
+  "audience": ["<YOUR_API_DOMAIN>"],
   "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-  "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+  "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
 }
 
 headers = {
@@ -176,7 +188,9 @@ Creates an OAuth2 client
 |--------------------------------------------|--------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------------|
 | `clientName`                               | `string`                 | A human-readable name of the client used for identification.                                                                                                                       | Yes      | -          |
 | `grantTypes`                               | `array` of `GrantType`   | The grant types that the Client uses.                             | Yes      | - |
-| `redirectUris`                              | `array` of `string`      | List of URIs where the Authorization Server redirects after authorization. Can include mobile/desktop deep links. Must be exact URLs without wildcards.                                    | Yes      |  -  | | `scope`                                    | `string`                 | Space-separated string of scopes the Client will request. Include `offline_access` to enable OAuth2 Refresh Token usage.                                                                      | Yes      | - |
+| `redirectUris` | `array` of `string` | Exact redirect URIs registered for the client. Wildcards are not supported. | Yes | - |
+| `allowedCorsOrigins` | `array` of `string` | Exact browser origins allowed to call OAuth endpoints. | No | - |
+| `audience` | `array` of `string` | Resource-server identifiers allowed in access tokens. | No | - |
 | `scope` | `string` | String containing a space-separated list of scope values (as described in Section 3.3 of OAuth 2.0 [RFC6749]) that the client can use when requesting access tokens. Include the `offline_access` scope to exchange OAuth2 Refresh Tokens for OAuth2 Access Tokens | No | "" |
 | `responseTypes`                            | `array` of `ResponseType` | The types of responses your client expects from the **Authorization Server**  | No | -    |
 | `tokenEndpointAuthMethod`                  | `enum`(`"client_secret_basic"`, `"client_secret_post"`, `"private_key_jwt"`, `"none"`)                 | The requested client authentication method                                                                                           | No | `client_secret_basic` |
@@ -209,38 +223,51 @@ curl -X POST <CORE_API_ENDPOINT>/recipe/oauth/clients \
       "clientName": "<YOUR_CLIENT_NAME>",
       "responseTypes": ["code"],
       "grantTypes": ["authorization_code", "refresh_token"],
+      "tokenEndpointAuthMethod": "none",
+      "allowedCorsOrigins": ["https://<YOUR_APPLICATION_DOMAIN>"],
+      "audience": ["<YOUR_API_DOMAIN>"],
       "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
     }'
 ```
 ## Response
 ### 200
 The client has been successfully created.
-### Response schema
+### Relevant response fields
+
+The response includes the persisted client configuration, including the fields below.
+
 | Property    | Type                             | Description                                   |
 |-------------|----------------------------------|-----------------------------------------------|
 | `clientName`        | `string`                         | The name of the client.               |
 | `clientId`  | `string` | Unique identifier for the client.               |
-| `clientSecret` | `string` | The secret is part of the create request as plain text, and then never again. The secret remains in hashed format and is not recoverable once lost.                   |
+| `clientSecret` | `string` | Client secret for a confidential client. Omitted for a public client. Treat it as a credential and keep it on a trusted backend. |
 | `redirectUris` | `array` of `string` | The URLs used for redirection.                   |
 | `audience` | `array` of `string` | Value used to identify for whom a token is issued. The created client can generate access token only for the specified audiences.                   |
-| `scope` | `array` of `string` |  A space separated string of scopes that the Client requests access to.                   |
+| `scope` | `string` | A space-separated string of scopes that the client can request. |
+| `responseTypes` | `array` of `string` | Registered response types. |
+| `grantTypes` | `array` of `string` | Registered grant types. |
+| `tokenEndpointAuthMethod` | `string` | Token endpoint authentication method. |
+| `allowedCorsOrigins` | `array` of `string` | Exact browser origins allowed to call OAuth endpoints. |
+| `enableRefreshTokenRotation` | `boolean` | Whether refresh token rotation is enabled. |
 #### Example
 ```json
 {
   "clientName": "<YOUR_CLIENT_NAME>",
   "clientId": "<CLIENT_ID>",
+  "tokenEndpointAuthMethod": "none",
+  "allowedCorsOrigins": ["https://<YOUR_APPLICATION_DOMAIN>"],
+  "audience": ["<YOUR_API_DOMAIN>"],
   "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
-  "audience": ["<YOUR_APPLICATION_DOMAIN>"],
-  "scope": ["offline_access <custom_scope_1> <custom_scope_2>"]
+  "scope": "offline_access <custom_scope_1> <custom_scope_2>"
 }
 ```
 </Tab>
 </Tabs>
 
 
-:::warning[You have to save the create OAuth2 Client response because this is not persisted internally for security reasons.]
-The information is necessary in the next steps.
+:::warning[Protect OAuth client credentials]
+Core persists the client configuration and encrypts confidential client secrets at rest. Store any returned client secret in a secret manager and expose it only to the application backend. Public clients do not receive or use a client secret.
 :::
 
 ### 3. Set up the Authorization Service Backend
@@ -263,6 +290,7 @@ Update the `supertokens.init` call to include the new recipe.
 <Tab title="Node.js" value="nodejs">
 ```typescript
 import supertokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
 import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
 
 supertokens.init({
@@ -275,7 +303,7 @@ supertokens.init({
     apiDomain: "...",
     websiteDomain: "...",
   },
-  recipeList: [OAuth2Provider.init()],
+  recipeList: [EmailPassword.init(), OAuth2Provider.init()],
 });
 ```
 </Tab>
@@ -285,7 +313,7 @@ supertokens.init({
 <Tab title="Python" value="python">
 ```python
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import oauth2provider
+from supertokens_python.recipe import emailpassword, oauth2provider
 
 init(
     app_info=InputAppInfo(
@@ -299,7 +327,8 @@ init(
         api_key="..."
     ),
     recipe_list=[
-        oauth2provider.init()
+        emailpassword.init(),
+        oauth2provider.init(),
     ],
 )
 ```
@@ -378,6 +407,8 @@ This is necessary because the flow uses two types of tokens:
 
 Hence the logic should distinguish between these two and prevent errors.
 
+Configure `EXPECTED_ISSUER` from the authorization server discovery document and compare it exactly. The released OAuth2Provider validators verify the signature and expiry; the examples also require the configured client ID, audience, and scopes. `checkDatabase`/`check_database` additionally rejects revoked or otherwise inactive tokens.
+
 <DependentContent passive group="backend-language">
 <ContentOption title="Node.js" value="nodejs">
 Here is an example of how to implement this in the context of an Express API:
@@ -392,68 +423,66 @@ Here is an example of how to implement this in the context of an Express API:
 <CodeGroup group="backend-language">
 <Tab title="Node.js" value="nodejs">
 ```tsx
-import supertokens from "supertokens-node";
+import express, { NextFunction, Request, Response } from "express";
+import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
 import Session from "supertokens-node/recipe/session";
-import express, { Request, Response, NextFunction } from "express";
-import * as jose from "jose";
+
+const EXPECTED_CLIENT_ID = "<CLIENT_ID>";
+const EXPECTED_AUDIENCE = "<YOUR_API_DOMAIN>";
+const EXPECTED_ISSUER = "<YOUR_CONFIGURED_ISSUER>"; // Usually <YOUR_API_DOMAIN>/auth
+const REQUIRED_SCOPES = ["<CUSTOM_SCOPE>"];
 
 interface RequestWithUserId extends Request {
   userId?: string;
 }
 
+function getBearerToken(req: Request): string {
+  const authorization = req.header("authorization");
+  if (authorization === undefined || !authorization.startsWith("Bearer ")) {
+    throw new Error("Missing bearer token");
+  }
+  return authorization.slice("Bearer ".length);
+}
+
 async function verifySession(req: RequestWithUserId, res: Response, next: NextFunction) {
-  let session = undefined;
   try {
-    session = await Session.getSession(req, res, { sessionRequired: false });
-  } catch (err) {
-    if (!Session.Error.isErrorFromSuperTokens(err) || err.type !== Session.Error.TRY_REFRESH_TOKEN) {
-      return next(err);
+    let session;
+    try {
+      session = await Session.getSession(req, res, { sessionRequired: false });
+    } catch (error) {
+      if (
+        !Session.Error.isErrorFromSuperTokens(error) ||
+        (error.type !== Session.Error.TRY_REFRESH_TOKEN && error.type !== Session.Error.UNAUTHORISED)
+      ) {
+        throw error;
+      }
     }
-  }
+    if (session !== undefined) {
+      req.userId = session.getUserId();
+      return next();
+    }
 
-  // In this case we are dealing with a SuperTokens Session
-  if (session !== undefined) {
-    const userId = session.getUserId();
-    req.userId = userId;
+    const validation = await OAuth2Provider.validateOAuth2AccessToken(
+      getBearerToken(req),
+      {
+        clientId: EXPECTED_CLIENT_ID,
+        audience: EXPECTED_AUDIENCE,
+        scopes: REQUIRED_SCOPES,
+      },
+      true,
+    );
+
+    if (validation.payload.iss !== EXPECTED_ISSUER || typeof validation.payload.sub !== "string") {
+      throw new Error("Unexpected OAuth token issuer or subject");
+    }
+
+    req.userId = validation.payload.sub;
     return next();
-  }
-
-  // The OAuth2 Access Token needs to be manually extracted and validated
-  let jwt: string | undefined = undefined;
-  if (req.headers["authorization"]) {
-    jwt = req.headers["authorization"].split("Bearer ")[1];
-  }
-  if (jwt === undefined) {
-    return next(new Error("No JWT found in the request"));
-  }
-
-  try {
-    const tokenPayload = await validateToken(jwt, "<CUSTOM_SCOPE>");
-    const userId = tokenPayload.sub;
-    req.userId = userId;
-    return next();
-  } catch (err) {
-    return next(err);
+  } catch (error) {
+    return next(error);
   }
 }
 
-const JWKS = jose.createRemoteJWKSet(new URL("<YOUR_API_DOMAIN>/auth/jwt/jwks.json"));
-
-// This is a basic example on how to validate an OAuth2 Token
-// We have a separate page that talks more in depth about the process
-async function validateToken(jwt: string, requiredScope: string) {
-  const { payload } = await jose.jwtVerify(jwt, JWKS, {
-    requiredClaims: ["stt", "scp", "sub"],
-  });
-
-  if (payload.stt !== 1) throw new Error("Invalid token");
-  const scopes = payload.scp as string[];
-  if (!scopes.includes(requiredScope)) throw new Error("Invalid token");
-
-  return payload;
-}
-
-// You can then use the function as a middleware for a protected route
 const app = express();
 app.get("/protected", verifySession, async (req, res) => {
   // Custom logic
@@ -465,77 +494,57 @@ app.get("/protected", verifySession, async (req, res) => {
 </Tab>
 <Tab title="Python" value="python">
 ```python
-from supertokens_python.recipe.session.syncio import get_session
-from supertokens_python.recipe.session.exceptions import SuperTokensSessionError, TryRefreshTokenError
 from fastapi.requests import Request
-from typing import List, Optional
-import jwt
-from jwt import PyJWKClient
+from supertokens_python.recipe.oauth2provider.interfaces import (
+    OAuth2TokenValidationRequirements,
+)
+from supertokens_python.recipe.oauth2provider.syncio import (
+    validate_oauth2_access_token,
+)
+from supertokens_python.recipe.session.exceptions import (
+    SuperTokensSessionError,
+    TryRefreshTokenError,
+    UnauthorisedError,
+)
+from supertokens_python.recipe.session.syncio import get_session
+
+EXPECTED_CLIENT_ID = "<CLIENT_ID>"
+EXPECTED_AUDIENCE = "<YOUR_API_DOMAIN>"
+EXPECTED_ISSUER = "<YOUR_CONFIGURED_ISSUER>"  # Usually <YOUR_API_DOMAIN>/auth
+REQUIRED_SCOPES = ["<CUSTOM_SCOPE>"]
 
 
-def verify_session(request: Request):
-   session = None
-   try:
-     session = get_session(request)
-   except SuperTokensSessionError as err:
-    if not isinstance(err, TryRefreshTokenError):
-        raise err
+def get_bearer_token(request: Request) -> str:
+    authorization = request.headers.get("authorization")
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise ValueError("Missing bearer token")
+    return authorization.removeprefix("Bearer ")
 
 
-   # In this case we are dealing with a SuperTokens Session
-   if session is not None:
-     return True
+def verify_session(request: Request) -> str:
+    session = None
+    try:
+        session = get_session(request, session_required=False)
+    except SuperTokensSessionError as error:
+        if not isinstance(error, (TryRefreshTokenError, UnauthorisedError)):
+            raise
 
+    if session is not None:
+        return session.get_user_id()
 
-   # The OAuth2 Access Token needs to be manually extracted and validated
-   jwt = None
-   auth_header = request.headers.get("authorization")
-   if auth_header:
-       # Split the Authorization header and get the token
-       parts = auth_header.split("Bearer ")
-       if len(parts) > 1:
-           jwt = parts[1]
-   if jwt is None:
-       raise ValueError("No JWT found in the request")
-
-   validate_token(jwt, '<CUSTOM_SCOPE>');
-   return True
-
-
-def validate_token(token: str, required_scope: str) -> bool:
-  api_domain = "<YOUR_API_DOMAIN>"
-  api_base_path = "/auth"
-  client_id = "<CLIENT_ID>"
-
-  jwks_url = f"{api_domain}{api_base_path}/jwt/jwks.json"
-  jwks_client = PyJWKClient(jwks_url)
-
-  try:
-      signing_key = jwks_client.get_signing_key_from_jwt(token)
-      decoded = jwt.decode(
-          token,
-          signing_key.key,
-          algorithms=['RS256'],
-          options={"require": ["stt", "client_id", "scp"]}
-      )
-
-      stt: Optional[int] = decoded.get('stt')
-      if stt != 1:
-          return False
-
-      token_client_id: Optional[str] = decoded.get('client_id', None)
-      if client_id != token_client_id:
-          return False
-
-
-      scopes: List[str] = decoded.get('scp', [])
-      if required_scope not in scopes:
-          return False
-
-      return True
-  except Exception:
-      return False
-  #
+    validation = validate_oauth2_access_token(
+        get_bearer_token(request),
+        OAuth2TokenValidationRequirements(
+            client_id=EXPECTED_CLIENT_ID,
+            audience=EXPECTED_AUDIENCE,
+            scopes=REQUIRED_SCOPES,
+        ),
+        check_database=True,
+    )
+    payload = validation.payload
+    if payload.get("iss") != EXPECTED_ISSUER or not isinstance(payload.get("sub"), str):
+        raise ValueError("Unexpected OAuth token issuer or subject")
+    return payload["sub"]
 ```
 </Tab>
 </CodeGroup>
@@ -557,7 +566,7 @@ For more information on how to verify the **OAuth2 Access Tokens**, please check
 
 <DependentContent passive group="frontend-prebuilt-ui">
 <ContentOption title="Reactjs" value="reactjs">
-Add the import statement for the new recipe and update the list of recipe to also include the new initialization.
+Add the import statement for the new recipe and update the list of recipes to also include the new initialization.
 </ContentOption>
 <ContentOption title="Angular" value="angular">
 Update the `AuthComponent` to include the `OAuth2Provider` recipe.
@@ -573,6 +582,7 @@ You need to add a new item in the `recipeList` array, inside the `supertokensUII
 <Tab title="Reactjs" value="reactjs">
 ```tsx
 import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 import SuperTokens from "supertokens-auth-react";
 
 SuperTokens.init({
@@ -581,7 +591,7 @@ SuperTokens.init({
     apiDomain: "...",
     websiteDomain: "...",
   },
-  recipeList: [OAuth2Provider.init()],
+  recipeList: [EmailPassword.init(), OAuth2Provider.init()],
 });
 ```
 </Tab>
@@ -703,11 +713,12 @@ import {init as supertokensUIInit} from "supertokens-auth-react"; import superto
 <ContentOption title="Yes" value="yes">
 ```tsx
 import React from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes } from "react-router-dom";
 
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import { OAuth2ProviderPreBuiltUI } from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import * as reactRouterDom from "react-router-dom";
 
 class App extends React.Component {
@@ -717,7 +728,7 @@ class App extends React.Component {
         <BrowserRouter>
           <Routes>
             {/*This renders the login UI on the /auth route*/}
-            {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [OAuth2ProviderPreBuiltUI])}
+            {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [EmailPasswordPreBuiltUI, OAuth2ProviderPreBuiltUI])}
             {/*Your app routes*/}
           </Routes>
         </BrowserRouter>
@@ -731,14 +742,15 @@ class App extends React.Component {
 ```tsx
 import React from "react";
 import { OAuth2ProviderPreBuiltUI } from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
 
 class App extends React.Component {
   render() {
-    if (canHandleRoute([OAuth2ProviderPreBuiltUI])) {
+    if (canHandleRoute([EmailPasswordPreBuiltUI, OAuth2ProviderPreBuiltUI])) {
       // This renders the login UI on the /auth route
-      return getRoutingComponent([OAuth2ProviderPreBuiltUI]);
+      return getRoutingComponent([EmailPasswordPreBuiltUI, OAuth2ProviderPreBuiltUI]);
     }
 
     return <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>;
@@ -822,7 +834,9 @@ supertokensUISession.init({
         shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
           try {
             let urlObj = new URL(url);
-            if (!urlObj.pathname.startsWith("/auth")) {
+            const isAuthApiRoute = urlObj.pathname.startsWith("/auth");
+            const isOAuth2ApiRoute = urlObj.pathname.startsWith("/auth/oauth");
+            if (!isAuthApiRoute || isOAuth2ApiRoute) {
               return false;
             }
           } catch (ignored) {}
@@ -847,7 +861,9 @@ supertokensUISession.init({
         shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
           try {
             let urlObj = new URL(url);
-            if (!urlObj.pathname.startsWith("/auth")) {
+            const isAuthApiRoute = urlObj.pathname.startsWith("/auth");
+            const isOAuth2ApiRoute = urlObj.pathname.startsWith("/auth/oauth");
+            if (!isAuthApiRoute || isOAuth2ApiRoute) {
               return false;
             }
           } catch (ignored) {}
@@ -883,7 +899,9 @@ Session.init({
         shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
           try {
             let urlObj = new URL(url);
-            if (!urlObj.pathname.startsWith("/auth")) {
+            const isAuthApiRoute = urlObj.pathname.startsWith("/auth");
+            const isOAuth2ApiRoute = urlObj.pathname.startsWith("/auth/oauth");
+            if (!isAuthApiRoute || isOAuth2ApiRoute) {
               return false;
             }
           } catch (ignored) {}
@@ -907,7 +925,9 @@ Session.init({
         shouldDoInterceptionBasedOnUrl: (url, apiDomain, sessionTokenBackendDomain) => {
           try {
             let urlObj = new URL(url);
-            if (!urlObj.pathname.startsWith("/auth")) {
+            const isAuthApiRoute = urlObj.pathname.startsWith("/auth");
+            const isOAuth2ApiRoute = urlObj.pathname.startsWith("/auth/oauth");
+            if (!isAuthApiRoute || isOAuth2ApiRoute) {
               return false;
             }
           } catch (ignored) {}
@@ -921,8 +941,7 @@ Session.init({
 </Tab>
 </CodeGroup>
 
-The code snippet only allows interception for API endpoints that start with `/auth`.
-This ensures that calls made from the Frontend SDKs continue to use the **SuperTokens Session Tokens**. As a result, the authentication flow ends up working.
+The snippets retain interception for SuperTokens authentication routes under `/auth`, but explicitly exclude `/auth/oauth`. OAuth token, introspection, and related protocol requests must not receive SuperTokens session headers or automatic session refresh behavior.
 
 For the other routes, you have full control on how you want to attach the **OAuth2 Access Tokens** to the API calls.
 
@@ -982,11 +1001,6 @@ If you want to change these routes, you need to add a custom override.
 
 :::
 </ContentOption>
-<ContentOption title="Python" value="python">
-:::warning[At the moment, there is no support for creating OAuth2 providers in the Python SDK.]
-
-:::
-</ContentOption>
 </DependentContent>
 
 <CodeGroup group="backend-language">
@@ -1008,6 +1022,9 @@ OAuth2Provider.init({
           });
           if (input.hint !== undefined) {
             queryParams.set("hint", input.hint);
+          }
+          if (input.tenantId !== undefined) {
+            queryParams.set("tenantId", input.tenantId);
           }
           if (input.forceFreshAuth) {
             queryParams.set("forceFreshAuth", "true");
@@ -1054,7 +1071,7 @@ async function shouldLogin() {
   const forceFreshAuth = urlParams.get("forceFreshAuth") as string;
   if (forceFreshAuth === "true") return true;
 
-  return Session.doesSessionExist();
+  return !(await Session.doesSessionExist());
 }
 ```
 
@@ -1067,7 +1084,7 @@ If you are using multi-tenancy, you also need to keep track of the `tenantId` qu
 #### 4.3 Complete the login attempt
 
 
-After the user submits the login form, you need to redirect them to a specific route to complete the **OAuth 2** flow.
+After the user submits the login form, you need to redirect them to a specific route to complete the **OAuth 2.0** flow.
 
 The following code sample shows you how to determine which URL to use.
 
@@ -1200,7 +1217,13 @@ async function logout() {
 
 ### 5. Update the login flow in your frontend applications
 
-Use a generic OAuth2 library to handle the login flow
+Use an OAuth 2.0/OIDC library that supports authorization code with PKCE. For every login:
+
+1. Generate a fresh high-entropy `state` and PKCE verifier; persist them only for the initiating browser transaction.
+2. Send the derived S256 code challenge in the authorization request.
+3. On callback, verify `state` exactly before exchanging the code with the verifier. If requesting `openid`, also generate and validate `nonce` and validate the ID token.
+4. Keep access and refresh tokens in memory where possible. Do not place them in `localStorage`, browser-readable cookies, or URLs. A backend-for-frontend that stores tokens server-side and issues an opaque `HttpOnly`, `Secure`, appropriately `SameSite` session cookie offers stronger protection against token theft.
+
 
 <DependentContent group="frontend-prebuilt-ui">
 <ContentOption title="Reactjs" value="reactjs">
@@ -1208,9 +1231,10 @@ You can use the [react-oidc-context](https://github.com/authts/react-oidc-contex
 Follow the instructions from the library's page.
 Identify the configuration parameters based on the response received on **step 2**, when creating the **OAuth2 Client**.
 - `authority` corresponds to the endpoint of the **Authorization Service** `<YOUR_API_DOMAIN>/auth`
-- `clientID` corresponds to `clientId`
-- `redirectUri` corresponds to a value from `callbackUrls`
-- `scope` corresponds to `scope`
+- `client_id` corresponds to `clientId`
+- `redirect_uri` corresponds to a value from `redirectUris`
+- `scope` corresponds directly to the space-separated `scope` value
+- Set `response_type` to `"code"`. The library uses S256 PKCE for code flow and generates and validates `state` (and `nonce` when using OIDC).
 If you are using a multi-tenant setup, you also need to specify the `tenantId` parameter in the authorization URL.
 To do this, set the `extraQueryParams` property with a specific value that should look like this: `{ tenant_id: "`&lt;TENANT_ID&gt;`" }`.
 </ContentOption>
@@ -1219,20 +1243,22 @@ You can use the [angular-oauth2-oidc](https://github.com/manfredsteyer/angular-o
 Follow the instructions described in the [GitHub repository](https://github.com/manfredsteyer/angular-oauth2-oidc?tab=readme-ov-file#logging-in).
 Identify the configuration parameters based on the response received on **step 2**, when creating the **OAuth2 Client**.
 - `issuer` corresponds to the endpoint of the **Authorization Service** `<YOUR_API_DOMAIN>/auth`
-- `client_id` corresponds to `clientId`
-- `redirect_uri` corresponds to a value from `callbackUrls`
-- `scope` corresponds to `scope`
+- `clientId` corresponds to `clientId`
+- `redirectUri` corresponds to a value from `redirectUris`
+- `scope` corresponds directly to the space-separated `scope` value
+- Set `responseType` to `"code"`. The library uses S256 PKCE for code flow and generates and validates `state` (and `nonce` when using OIDC).
 If you are using a multi-tenant setup, you also need to specify the `tenantId` parameter in the authorization URL.
-To do this, set the `extraQueryParams` property with a specific value that should look like this: `{ tenant_id: "`&lt;TENANT_ID&gt;`" }`.
+To do this, set `customQueryParams` to `{ tenant_id: "`&lt;TENANT_ID&gt;`" }`.
 </ContentOption>
 <ContentOption title="Vue" value="vue">
 You can use the [oidc-client-ts](https://github.com/authts/oidc-client-ts?tab=readme-ov-file) library.
 Follow the instructions described in the [GitHub repository](https://github.com/authts/oidc-client-ts/blob/main/docs/protocols/authorization-code-grant-with-pkce).
 Identify the configuration parameters based on the response received on **step 2**, when creating the **OAuth2 Client**.
-- `issuer` corresponds to the endpoint of the **Authorization Service** `<YOUR_API_DOMAIN>/auth`
+- `authority` corresponds to the endpoint of the **Authorization Service** `<YOUR_API_DOMAIN>/auth`
 - `client_id` corresponds to `clientId`
-- `redirect_uri` corresponds to a value from `callbackUrls`
-- `scope` corresponds to `scope`
+- `redirect_uri` corresponds to a value from `redirectUris`
+- `scope` corresponds directly to the space-separated `scope` value
+- Set `response_type` to `"code"`. The library uses S256 PKCE for code flow and generates and validates `state` (and `nonce` when using OIDC).
 If you are using a multi-tenant setup, you also need to specify the `tenantId` parameter in the authorization URL.
 To do this, set the `extraQueryParams` property with a specific value that should look like this: `{ tenant_id: "`&lt;TENANT_ID&gt;`" }`.
 </ContentOption>

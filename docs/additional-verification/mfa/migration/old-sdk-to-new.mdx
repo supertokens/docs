@@ -11,9 +11,13 @@ This section is applicable to those who want to enable MFA for the first time an
 
 ## If enabling MFA for all users at once
 
-If you have enabled MFA for all users, then existing logged in users will asked to complete the secondary factor as soon as they visit your app / website once you have pushed the changes to production. This happens because their existing session is modified to add the MFA claim into it, however, the `v` value in the claim will be `false` since they have not completed MFA yet. This would fail the validators on the frontend which would redirect the user to the MFA login screen.
+If you have enabled MFA for all users, then existing logged in users will be asked to complete the secondary factor as soon as they visit your app / website once you have pushed the changes to production. This happens because their existing session is modified to add the MFA claim into it, however, the `v` value in the claim will be `false` since they have not completed MFA yet. This would fail the validators on the frontend which would redirect the user to the MFA login screen.
 
-If you have clients like mobile apps, which take time to upgrade across your entire user base, then you may want to remove the global MFA validator on the backend and make it run only when you know that the request is coming from an updated client:
+If you have clients like mobile apps, which take time to upgrade across your entire user base, you can temporarily exempt a server-managed migration cohort from the global MFA validator:
+
+The application helper used below must look up eligibility in application-owned server-side storage. Bind each record to the authenticated user and session or to a registered device. Return `false` if the identity or binding is missing, invalid, expired, or outside the cohort. Also return `false` for sensitive operations, such as account recovery, credential changes, payments, or administrative actions, so that they always require MFA step-up.
+
+You may use the exact legacy `client-version` value (`1.0` in this example) only as one input when enrolling the user, session, or device into the server-side cohort. Enrollment must also satisfy server-verified migration policy; the client-controlled header must not create an eligibility record by itself or authorize an exemption at request time. Missing, malformed, and unknown values must not create an enrollment. Set an expiry on every record and a migration sunset date when you will require version `2.0` and remove the exception.
 
 <DependentContent passive group="backend-language">
 <ContentOption title="Go" value="go">
@@ -27,9 +31,20 @@ If you have clients like mobile apps, which take time to upgrade across your ent
 ```tsx {20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56}
 import Session from "supertokens-node/recipe/session";
 import { ClaimValidationResult } from "supertokens-node/recipe/session/types";
-import SuperTokens, { getRequestFromUserContext } from "supertokens-node";
+import SuperTokens, { RecipeUserId } from "supertokens-node";
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 import { UserContext } from "supertokens-node/types";
+
+async function isMfaMigrationExemptionEligible(input: {
+  tenantId: string;
+  userId: string;
+  recipeUserId: RecipeUserId;
+  userContext: UserContext;
+}): Promise<boolean> {
+  // Replace this with the server-side lookup described above. Throwing here
+  // ensures that an unimplemented lookup cannot disable MFA.
+  throw new Error("MFA migration cohort lookup is not implemented");
+}
 
 SuperTokens.init({
   appInfo: {
@@ -52,7 +67,7 @@ SuperTokens.init({
               );
 
               // We create an instance of the default validator that is added
-              // by SuperTokens so that we can make modificationts to it
+              // by SuperTokens so that we can make modifications to it
               let originalValidator =
                 MultiFactorAuth.MultiFactorAuthClaim.validators.hasCompletedMFARequirementsForAuth();
 
@@ -60,20 +75,17 @@ SuperTokens.init({
               let customValidator = {
                 ...originalValidator,
                 validate: async (payload: any, userContext: UserContext): Promise<ClaimValidationResult> => {
-                  // We only want to run the validation check
-                  // if we know that the client is not an older one.
-                  // In this example, we do this based on the header
-                  // in the API request, but the logic here can be
-                  // anything that you like.
-                  let request = getRequestFromUserContext(userContext);
-                  if (request !== undefined) {
-                    let isOlderClient = request.getHeaderValue("clilent-version") !== "2.0";
-                    if (isOlderClient) {
-                      // we return true early for older clients.
-                      return {
-                        isValid: true,
-                      };
-                    }
+                  if (
+                    await isMfaMigrationExemptionEligible({
+                      tenantId: input.tenantId,
+                      userId: input.userId,
+                      recipeUserId: input.recipeUserId,
+                      userContext,
+                    })
+                  ) {
+                    return {
+                      isValid: true,
+                    };
                   }
 
                   // for newer clients, we call the original validate function
@@ -110,7 +122,17 @@ from supertokens_python.types import RecipeUserId
 from supertokens_python.recipe.multifactorauth.multi_factor_auth_claim import (
     MultiFactorAuthClaim,
 )
-from supertokens_python import get_request_from_user_context
+
+
+async def is_mfa_migration_exemption_eligible(
+    tenant_id: str,
+    user_id: str,
+    recipe_user_id: RecipeUserId,
+    user_context: Dict[str, Any],
+) -> bool:
+    # Replace this with the server-side lookup described above. Raising here
+    # ensures that an unimplemented lookup cannot disable MFA.
+    raise NotImplementedError("MFA migration cohort lookup is not implemented")
 
 
 def override_functions(
@@ -141,13 +163,13 @@ def override_functions(
         async def custom_validate(
             payload: Any, user_context: Dict[str, Any]
         ) -> ClaimValidationResult:
-            # Check if the client is an older one based on the header
-            request = get_request_from_user_context(user_context)
-            if request is not None:
-                is_older_client = request.get_header("client-version") != "2.0"
-                if is_older_client:
-                    # Return true early for older clients
-                    return ClaimValidationResult(is_valid=True)
+            if await is_mfa_migration_exemption_eligible(
+                tenant_id,
+                user_id,
+                recipe_user_id,
+                user_context,
+            ):
+                return ClaimValidationResult(is_valid=True)
 
             # For newer clients, call the original validate function
             return await original_validator_validate_func(payload, user_context)
@@ -179,7 +201,5 @@ init(
 </Tab>
 </CodeGroup>
 
-The code above will still result in the MFA claim being added to all sessions, with the `v` boolean in it being `false`, however, for older clients, we will not run the validator that checks if the `v` value is true on the backend since those clients have no way to show the MFA UI without updating the app.
+The code above still adds the MFA claim to all sessions with its `v` boolean set to `false`. It skips backend validation only when the application confirms that the authenticated user and session or registered device belongs to the temporary migration cohort. Apply the original validator to every sensitive operation, regardless of cohort membership.
 
-:::warning[You want to add the above exception only for a certain amount of time until you force all users to update their mobile app. This is because the exception method can be used as a way for malicious users to bypass MFA by spoofing that they are using an older client.]
-:::

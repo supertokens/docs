@@ -7,6 +7,10 @@ sidebar:
 
 This page shows how to implement an MFA policy that requires all users to complete an OTP challenge before accessing your application. The OTP can be sent via email or phone.
 
+:::info[Paid feature]
+This flow requires MFA and account linking, which are available on paid plans. For a managed deployment, ensure that MFA is enabled for your deployment and contact SuperTokens support if it is not available. For self-hosting, obtain a license key and [add it to your Core service](/deployment/self-host-supertokens#5-add-license-keys).
+:::
+
 :::note[Assume that the first factor is email password or social login, but the same set of steps applies to other first factor types as well.]
 :::
 
@@ -78,7 +82,7 @@ supertokens.init({
           // linking here.
           return {
             shouldAutomaticallyLink: true,
-            shouldRequireVerification: false,
+            shouldRequireVerification: true,
           };
         }
         return {
@@ -109,7 +113,15 @@ supertokens.init({
 <Tab title="Python" value="python">
 ```python {48} check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+)
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig, MFARequirementList
 from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
 from supertokens_python.recipe.session.interfaces import SessionContainer
@@ -139,7 +151,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the 
         # new_account_info to the session user, which means it's an MFA flow, so we enable 
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
     
     return ShouldNotAutomaticallyLink()
 
@@ -174,11 +186,19 @@ init(
     ),
     framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
+        ),
+        accountlinking.init(
+            should_do_automatic_account_linking=should_do_automatic_account_linking
+        ),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
         ),
-        accountlinking.init(should_do_automatic_account_linking=should_do_automatic_account_linking)
     ],
 )
 ```
@@ -187,7 +207,7 @@ init(
 
 - Notice that the Passwordless recipe initializes in the `recipeList`. In this example, only email-based OTP is enabled, with `contactMethod` set to `EMAIL` and `flowType` to `USER_INPUT_CODE` (that is, `otp`). If you want to use phone SMS-based OTP, set the contact method to `PHONE`. If you want to give users both options, or for some users use email, and for others use phone, set `contactMethod` to `EMAIL_OR_PHONE`.
 - We have also enabled the account linking feature since it's required for MFA to work. The above enables account linking for second factor only, but if you also want to enable it for first factor, see [this section](/post-authentication/account-linking/automatic-account-linking).
-- Notice that `shouldRequireVerification: false` configures account linking. It means that the second factor can link to the first factor even though the first factor is not verified. If you want to do email verification of the first factor before setting up the second factor (for example if the first factor is email password, and the second is phone OTP), then you can set this boolean to `true`, and also init the email verification recipe on the frontend and backend in `REQUIRED` mode.
+- `shouldRequireVerification: true` prevents an unverified login method from being linked. Passwordless OTP completion verifies the email address or phone number before the SDK attempts second-factor linking, so this does not block the OTP flow. Keep the callback session-bound as shown; do not return automatic linking for first-factor requests without a session.
 - The `getMFARequirementsForAuth` function is overridden to indicate that `otp-email` must be completed before the user can access the app. Notice that `userId` is not checked there, and `otp-email` is returned for all users. You can also return `otp-phone` instead if you want users to complete the OTP challenge via a phone SMS. Finally, if you want to give users an option for email or phone, you can return the following array from the function:
 
     ```json
@@ -225,7 +245,7 @@ The `v` being `false` indicates that there are still factors that are pending. A
 }
 ```
 
-Indicating that the user has finished all required factors, and should be allowed to access the app.
+This indicates that the user has finished all required factors and should be allowed to access the app.
 
 :::warning[If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` and `flowType` are set correctly.]
 :::
@@ -488,7 +508,7 @@ If it's `false`, the frontend then needs to [call the MFA endpoint](/additional-
 
 Two possibilities exist here:
 - Case 1: The user needs to set up an email to send the OTP to. This only happens if the first factor doesn't provide an email from the user (for example, if you used phone-based `otp` as the first factor). In this example on this doc, an email is always obtained from the first factor, so you do not need to build UI for this step (but this will still be discussed later on).
-- Case 2: The user already has an email associated with them and need to complete the OTP challenge.
+- Case 2: The user already has an email associated with them and needs to complete the OTP challenge.
 
 We can know which case it is by checking if the `emails` object returned from [MFA Info endpoint](/additional-verification/mfa/initial-setup#the-mfa-info-endpoint) contains any emails associated with the `otp-email` key. If the `emails["otp-email"]` property of the response is `undefined` or an empty array, then it's case 1, else it's case 2.
 
@@ -500,7 +520,7 @@ After this API call, you can show the user the enter OTP screen, and call the [`
 
 #### Case 2 implementation: User needs to complete the OTP challenge
 
-This case is when the user already has an email associated with their account and you can directly send a code to that email. You can get the email to send the code to from the result of the [MFA Info endpoint](/additional-verification/mfa/initial-setup#the-mfa-info-endpoint). Specifically, from the response, you can read the email from the `emails` property like this: `emails["otp-email"][0]`. The first item in the array of email is picked since the emails are ordered based on:
+This case is when the user already has an email associated with their account and you can directly send a code to that email. You can get the email to send the code to from the result of the [MFA Info endpoint](/additional-verification/mfa/initial-setup#the-mfa-info-endpoint). Specifically, from the response, you can read the email from the `emails` property like this: `emails["otp-email"][0]`. The first item in the array of emails is picked since the emails are ordered based on:
 - Index 0 contains the email that belongs to the session's user. If the user's first factor was email password, the email in the 0th index of the array is that email.
 - The other emails in the array (if they exist), are from other login methods for this user ordered based on the oldest login method first.
 
@@ -508,7 +528,7 @@ You can even show a UI here asking the user to pick an email from the array if y
 
 After this API call, you can show the user the enter OTP screen, and call the [`consumeCode` API](/authentication/passwordless/initial-setup#23-verifying-the-otp). If the API call returns a `RESTART_FLOW_ERROR`, you can handle this by calling the `createCode` function once again in the background.
 
-:::note[Notice that in Case 2, there is no UI for the user to enter an email. That happens. The user only sees the enter OTP screen.]
+:::note[In Case 2, there is no UI for the user to enter an email. The user only sees the enter OTP screen.]
 :::
 
 We recommend that you add a sign out button when showing the second factor (case 1 or case 2) so that users can use this to escape out of the flow in case they are unable to complete the second factor. When the sign out button is clicked, you want to:
@@ -590,7 +610,7 @@ supertokens.init({
           // linking here.
           return {
             shouldAutomaticallyLink: true,
-            shouldRequireVerification: false,
+            shouldRequireVerification: true,
           };
         }
         return {
@@ -609,7 +629,15 @@ supertokens.init({
 <Tab title="Python" value="python">
 ```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+)
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.session.interfaces import SessionContainer
 from supertokens_python.recipe.accountlinking.types import (
     AccountInfoWithRecipeIdAndUserId,
@@ -637,7 +665,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the 
         # new_account_info to the session user, which means it's an MFA flow, so we enable 
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
     
     return ShouldNotAutomaticallyLink()
 
@@ -653,8 +681,16 @@ init(
     ),
     framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
+        ),
+        accountlinking.init(
+            should_do_automatic_account_linking=should_do_automatic_account_linking
+        ),
         multifactorauth.init(),
-        accountlinking.init(should_do_automatic_account_linking=should_do_automatic_account_linking)
     ],
 )
 ```
@@ -812,7 +848,7 @@ The `v` being `false` indicates that there are still factors that are pending. A
 }
 ```
 
-Indicating that the user has finished all required factors, and should be allowed to access the app.
+This indicates that the user has finished all required factors and should be allowed to access the app.
 
 :::warning[If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again. Ensure that the `contactMethod` and `flowType` are set correctly.]
 :::
@@ -1041,6 +1077,6 @@ See the section on [protecting frontend and backend routes](../protect-routes).
 ## Email / SMS sending and design
 By default, the email template used for otp-email login is [as shown here](https://github.com/SuperTokens/email-sms-templates?tab=readme-ov-file#otp-login), and the default SMS template is [as shown here](https://github.com/SuperTokens/email-sms-templates?tab=readme-ov-file#otp-login-1). The method for sending them is via an email and SMS sending service that is provided.
 
-If you would like to learn more about this, or change the content of the email, or the method by which they are sent, checkout the email / SMS delivery section in the recipe docs:
+If you would like to learn more about this, change the content of the email, or change the method by which messages are sent, check out the email / SMS delivery section in the recipe docs:
 - [Email delivery configuration](/platform-configuration/email-delivery)
 - [SMS delivery configuration](/platform-configuration/sms-delivery)

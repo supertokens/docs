@@ -13,7 +13,7 @@ If a user has not received an invitation before, their sign in attempt fails.
 
 ## Before you start
 
-This guide assumes that you have already implemented the [EmailPassword recipe](/authentication/email-password/introduction) and have a working application integrated with **SuperTokens**.
+This guide assumes that you have initialized the [Passwordless recipe](/authentication/passwordless/initial-setup), Session, and User Roles, and have a working application integrated with **SuperTokens**. The User Roles recipe protects the invitation endpoint in these examples.
 If you have not, please check the [Quickstart Guide](/quickstart).
 
 ## Steps
@@ -26,7 +26,9 @@ Additionally, protect the endpoint with a role requirement.
 
 The `passwordless` API uses the default magic link path, `/auth/verify`, for the invite link.
 If you are using the pre-built UI, the frontend SDK automatically logs the user in.
-For custom UI implementations, use the [`consumeCode` function provided by the frontend SDK](/authentication/passwordless/initial-setup) to call the `passwordless` API that verifies the code in the URL and creates the user.
+For custom UI implementations, use the [`consumeCode` function provided by the frontend SDK](/authentication/passwordless/initial-setup#23-consuming-the-magic-link) to verify the code in the URL and authenticate the user created by the invitation endpoint.
+
+Validate and normalize the email address before creating the user. Configure the framework's JSON body parser before this route; for Koa, expose the parsed payload as `ctx.request.body`.
 
 <DependentContent passive group="backend-language">
 <ContentOption title="Node.js" value="nodejs">
@@ -213,7 +215,7 @@ router.post(
     },
   }),
   async (ctx: SessionContext, next) => {
-    let email = (ctx.body as any).email;
+    let email = ((ctx.request as any).body as { email: string }).email;
 
     // this will create the user in supertokens if they don't already exist.
     await Passwordless.signInUp({
@@ -375,7 +377,7 @@ func main() {
 
 		session.VerifySession(&sessmodels.VerifySessionOptions{
 			OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
-				globalClaimValidators = append(globalClaimValidators, userrolesclaims.PermissionClaimValidators.Includes("admin", nil, nil))
+				globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
 				return globalClaimValidators, nil
 			},
 		}, createUserAPI).ServeHTTP(rw, r)
@@ -387,7 +389,11 @@ func createUserAPI(w http.ResponseWriter, r *http.Request) {
 
     // This will create the user in supertokens if they don't already exist.
     tenantId := "public"
-    passwordless.SignInUpByEmail(tenantId, email)
+	_, err := passwordless.SignInUpByEmail(tenantId, email)
+	if err != nil {
+		http.Error(w, "Could not create invited user", http.StatusInternalServerError)
+		return
+	}
 
 	inviteLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
 	if err != nil {
@@ -421,7 +427,7 @@ func main() {
 	// Wrap the API handler in session.VerifySession
 	router.POST("/create-user", verifySession(&sessmodels.VerifySessionOptions{
 		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
-			globalClaimValidators = append(globalClaimValidators, userrolesclaims.PermissionClaimValidators.Includes("admin", nil, nil))
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
 			return globalClaimValidators, nil
 		},
 	}), createUserAPI)
@@ -445,7 +451,11 @@ func createUserAPI(c *gin.Context) {
 
     // This will create the user in supertokens if they don't already exist.
     tenantId := "public"
-    passwordless.SignInUpByEmail(tenantId, email)
+	_, err := passwordless.SignInUpByEmail(tenantId, email)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Could not create invited user")
+		return
+	}
 
 	inviteLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
 	if err != nil {
@@ -479,7 +489,7 @@ func main() {
 	// Wrap the API handler in session.VerifySession
 	r.Post("/create-user", session.VerifySession(&sessmodels.VerifySessionOptions{
 		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
-			globalClaimValidators = append(globalClaimValidators, userrolesclaims.PermissionClaimValidators.Includes("admin", nil, nil))
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
 			return globalClaimValidators, nil
 		},
 	}, createUserAPI))
@@ -490,7 +500,11 @@ func createUserAPI(w http.ResponseWriter, r *http.Request) {
 
     // This will create the user in supertokens if they don't already exist.
     tenantId := "public"
-    passwordless.SignInUpByEmail(tenantId, email)
+	_, err := passwordless.SignInUpByEmail(tenantId, email)
+	if err != nil {
+		http.Error(w, "Could not create invited user", http.StatusInternalServerError)
+		return
+	}
 
 	inviteLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
 	if err != nil {
@@ -524,7 +538,7 @@ func main() {
 	// Wrap the API handler in session.VerifySession
 	router.HandleFunc("/create-user", session.VerifySession(&sessmodels.VerifySessionOptions{
 		OverrideGlobalClaimValidators: func(globalClaimValidators []claims.SessionClaimValidator, sessionContainer sessmodels.SessionContainer, userContext supertokens.UserContext) ([]claims.SessionClaimValidator, error) {
-			globalClaimValidators = append(globalClaimValidators, userrolesclaims.PermissionClaimValidators.Includes("admin", nil, nil))
+			globalClaimValidators = append(globalClaimValidators, userrolesclaims.UserRoleClaimValidators.Includes("admin", nil, nil))
 			return globalClaimValidators, nil
 		},
 	}, createUserAPI)).Methods(http.MethodPost)
@@ -535,7 +549,11 @@ func createUserAPI(w http.ResponseWriter, r *http.Request) {
 
     // This will create the user in supertokens if they don't already exist.
     tenantId := "public"
-    passwordless.SignInUpByEmail(tenantId, email)
+	_, err := passwordless.SignInUpByEmail(tenantId, email)
+	if err != nil {
+		http.Error(w, "Could not create invited user", http.StatusInternalServerError)
+		return
+	}
 
 	inviteLink, err := passwordless.CreateMagicLinkByEmail(tenantId, email)
 	if err != nil {
@@ -690,7 +708,7 @@ export function POST(request: NextRequest) {
 
 
 :::info[Multi Tenancy]
-In the above code snippets, the `"public"` `tenantId` passes when calling the functions - this is the default `tenantId`. If you are using the multi-tenancy feature, you can pass in a different `tenantId` and this ensures that the user with that email adds only to that tenant.
+The examples use the default `public` tenant. In a multi-tenant application, derive an authorized tenant ID from the authenticated administrator's server-side context; do not trust an arbitrary request-body tenant ID. Pass it to both user creation and magic-link creation so the user and invitation belong to the same tenant.
 
 You also need to pass in the `tenantId` to the createMagicLink function which adds the `tenantId` to the generated magic link. The resulting link uses the `websiteDomain` configured in the `appInfo` object in `SuperTokens.init`, but you can change the link's domain to match that of the tenant before sending it.
 :::

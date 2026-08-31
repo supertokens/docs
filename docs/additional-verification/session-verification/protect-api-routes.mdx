@@ -1,16 +1,15 @@
 ---
 title: Protect backend routes
-description: 'Explore three session verification methods with SuperTokens: middleware, function, and manual JWT verification.'
+description: "Protect backend routes with SuperTokens session middleware and session verification APIs."
 sidebar:
   order: 1
 ---
 
 ## Overview
 
-You can choose between three different methods to check for a session inside an API route handler.
-The easiest way to do it is to use the `Verify Session` middleware.
-Also, depending on your use case, you can directly fetch the session or manually verify the JWT.
-Check each method to see which one works for you.
+Use the `Verify Session` middleware when your framework supports middleware. Otherwise, call `Get Session` directly.
+Both methods validate the complete SuperTokens session token and configured session claims. Manual JWT verification is a
+fallback for platforms without a released SuperTokens backend SDK.
 
 
 ## Before you start
@@ -795,8 +794,8 @@ class Session:
 
     # Attaches the session to a request-response cycle.
     # `req_res_info` contains information about the request-response.
-    # Optional user_context can be used for additional contextual data.
-    async def attach_to_request_response(self, request: BaseRequest, transfer_method: TokenTransferMethod, user_context: Optional[Dict[str, Any]] = None) -> None:
+    # user_context provides contextual data for request processing.
+    async def attach_to_request_response(self, request: BaseRequest, transfer_method: TokenTransferMethod, user_context: Dict[str, Any]) -> None:
         pass
 ```
 </Tab>
@@ -1784,8 +1783,9 @@ You can also [build your own custom claim validators](/additional-verification/s
 
 ## Using `Get Session`
 
-The `Get Session` function does the same thing as the middleware, but it does not write to the client on its own.
-It throws errors that you can catch and handle.
+The `Get Session` function performs the same verification as the middleware, but it does not complete error responses on
+its own. It can still attach updated access, front, or anti-CSRF tokens to the supplied response. It throws errors that you
+can catch and handle.
 If these errors remain unhandled, the SuperTokens error handler catches these errors and writes to the client (like the `verifySession` middleware).
 
 You should use this function if your framework does not support middlewares or if you want additional control over error management.
@@ -2004,13 +2004,13 @@ async def like_comment(request: Request):
 </ContentOption>
 <ContentOption title="Flask" value="flask">
 ```python {8} check=false reason="route fragment assumes an existing framework application"
-from flask.wrappers import Request
+from flask import request
 
 from supertokens_python.recipe.session.syncio import get_session
 
 
 @app.route('/like-comment', methods=['POST']) 
-def like_comment(request: Request):
+def like_comment():
     session = get_session(request)
 
     if session is None:
@@ -2467,8 +2467,8 @@ class Session:
 
     # Attaches the session to a request-response cycle.
     # `req_res_info` contains information about the request-response.
-    # Optional user_context can be used for additional contextual data.
-    async def attach_to_request_response(self, request: BaseRequest, transfer_method: TokenTransferMethod, user_context: Optional[Dict[str, Any]] = None) -> None:
+    # user_context provides contextual data for request processing.
+    async def attach_to_request_response(self, request: BaseRequest, transfer_method: TokenTransferMethod, user_context: Dict[str, Any]) -> None:
         pass
 ```
 </Tab>
@@ -2784,13 +2784,13 @@ async def like_comment(request: Request):
 </ContentOption>
 <ContentOption title="Flask" value="flask">
 ```python {8} check=false reason="route fragment assumes an existing framework application"
-from flask.wrappers import Request
+from flask import request
 
 from supertokens_python.recipe.session.syncio import get_session
 
 
 @app.route("/like-comment", methods=["POST"])  
-def like_comment(request: Request):
+def like_comment():
     session = get_session(request, session_required=False)
 
     if session is not None:
@@ -3150,14 +3150,14 @@ async def like_comment(request: Request):
 </ContentOption>
 <ContentOption title="Flask" value="flask">
 ```python check=false reason="route fragment assumes an existing framework application"
-from flask.wrappers import Request
+from flask import request
 
 from supertokens_python.recipe.session.syncio import get_session
 from supertokens_python.recipe.userroles import UserRoleClaim
 
 
 @app.route("/like-comment", methods=["POST"])  
-def like_comment(request: Request):
+def like_comment():
     session = get_session(
         request,
         override_global_claim_validators=lambda global_validators,
@@ -3374,7 +3374,7 @@ _T = TypeVar("_T", bound=Callable[..., Any])
 def verify_session(
     session_required: bool = True,
     anti_csrf_check: Union[bool, None] = None,
-    check_database: bool = True,
+    check_database: Optional[bool] = None,
     override_global_claim_validators: Optional[
         Callable[
             [List[SessionClaimValidator], SessionContainer, Dict[str, Any]],
@@ -3643,362 +3643,43 @@ def verify_session(
 
 ---
 
-## Using a JWT verification library
+## Manual JWT verification
 
-If the previous methods are not suitable for your use case, you can use validate the token manually.
-This method works for cases like:
-- Your APIs are on a backend for which SuperTokens doesn't have SDKs.
-- You are using a non `http` protocol (like `websockets`) and passing in the access token.
-- You are using an API gateway which does JWT verification based on the JWKs endpoint.
+Use a released SuperTokens `verifySession`, `getSession`, or equivalent API whenever one is available. These APIs validate
+more than the JWT signature and expiry. For example, when you already have an access-token string rather than framework
+request and response objects, use the released `getSessionWithoutRequestResponse` API shown above.
 
-:::warning[The downside to using JWT verification manually is that:]
-- Pick and configure a JWT verification library for your framework. Many online guides explain how to do this.
-- You need to manually verify some custom claims in the JWT (like the user's role is `admin`, or that the user's email is verified) based on your authorization rules.
-- You don't have access to the [`session` object](/additional-verification/session-verification/protect-api-routes#using-verify-session) using which you can modify the session's access token payload, or revoke the session. These operations can occur in an offline manner, but they reflect in the user's session only after a session refresh.
+Manual verification is only appropriate when your platform has no released SuperTokens backend SDK, or when an API gateway
+cannot call one. Do not use mutable code snippets without pinned revisions as the verifier for a production system. Pin and
+test the JWT library and verifier implementation you maintain.
+
+A manual verifier must reject the token unless **all** of these checks pass:
+
+1. Select the key by `kid` from `<YOUR_API_DOMAIN>/auth/jwt/jwks.json`, and restrict verification to the expected signing
+   algorithm (`RS256`). Do not derive the accepted algorithm from the token-controlled header.
+2. Verify the signature and expiry (`exp`).
+3. Validate the token type using released SuperTokens semantics: if `stt` is present, require the numeric value `0`.
+   Released Node.js SDK 24.0.3 also accepts a missing `stt` for backward compatibility. Only accept that absence while
+   also validating a supported SuperTokens token header/version and that version's complete required payload shape. Reject
+   every other `stt` value or type. A valid JWT signed by a key in the JWKS is not necessarily a session access token.
+4. Validate the required session payload shape and field types. Current access tokens require string values for `sub`,
+   `sessionHandle`, `refreshTokenHash1`, `rsub`, and `tId`, plus numeric `iat` and `exp`. Treat a changed or unknown token
+   shape as invalid rather than accepting it partially.
+5. Validate every application authorization claim required by the route, such as tenant, role, permission, email
+   verification, or MFA state. Signature verification authenticates claims; it does not authorize the request.
+6. For unsafe requests authenticated by cookies, perform the configured anti-CSRF check. With `VIA_CUSTOM_HEADER`, require
+   the `rid: session` header. With `VIA_TOKEN`, compare the `anti-csrf` request header with `antiCsrfToken` in the payload.
+
+The following access-token fields are managed by SuperTokens and must not be treated as application-defined fields:
+`sub`, `iat`, `exp`, `sessionHandle`, `parentRefreshTokenHash1`, `refreshTokenHash1`, `antiCsrfToken`, `rsub`, `tId`, and
+`stt`.
+
+:::warning[Manual verification has important limitations]
+A signature-only verifier does not check session revocation or run the backend SDK's global claim validators. If immediate
+revocation matters, use a session API with database checking or add an equivalent authoritative revocation check. Claim
+refresh behavior is claim-specific: each claim defines its own refresh policy, and some built-in claims have no default
+maximum age. Do not assume that all claims refresh on a fixed five-minute interval.
 :::
-
-The manual session verification method should work in this way:
-
-<Steps>
-  ## Verify the JWT signature and expiry using a JWT verification library
-  ## Check for custom claim values for authorization.
-  ## Prevent cross-site request forgery (CSRF) attacks in case you are using cookies to store the JWT.
-</Steps>
-
-
-### With the JSON Web Key Set (JWKS) Endpoint
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Node.js" value="nodejs">
-Some libraries let you provide a JSON Web Key Set (JWKS) endpoint to verify a JWT.
-The JSON Web Key Set (JWKS) endpoint exposed by SuperTokens is available at the following URL:
-</ContentOption>
-<ContentOption title="Python" value="python">
-Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa) for a code reference of how use `PyJWK` to do session verification. The gist contains two files:
-
-- `jwt_verification.py` (which you can copy/paste into your application). You need to modify the `JWKS_URI` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL). This file is for `sync` python apps and can be modified to work with `async` apps as well.
-  - This file essentially exposes a function called `verify_jwt` which takes an input JWT string.
-  - This function takes care of caching public keys in memory and auto re-fetching if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts and is a security feature.
-- `views.py`: This is an example `GET` API which extracts the JWT token from the authorization header in the request and calls the `verify_jwt` function from the other file. If you are using cookie based auth instead of header based auth, you should read the JWT from the `sAccessToken` cookie in the request.
-</ContentOption>
-<ContentOption title="Go" value="go">
-Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d) for a code reference of how use the Golang `jwt` lib to do session verification. The gist contains two files:
-
-- `verifyToken.go` (which you can copy/paste into your application). You need to modify the `coreUrl` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL).
-  - This file essentially exposes a function called `GetJWKS` which returns a reference to the JSON Web Key Set (JWKS) public keys usable for JWT verification.
-  - This function takes care of caching public keys in memory and auto re-fetching if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts and is a security feature.
-- `main.go`: This is an example of how to verify a JWT using the golang JWT verification lib along with the helper function to get the JWKs keys. If you are using header-based auth, you can fetch the JWT from the `Authorization Bearer` header, otherwise for cookie-based auth, you can fetch it from the `sAccessToken` cookie.
-</ContentOption>
-<ContentOption title="Java" value="java">
-Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/5b2d19c02337ed7ee387723c84def9cd) for a code reference of how use the Java `nimbus-jose-jwt` lib to do session verification. The gist contains three files:
-
-- `JWTVerification.java` You need to modify the `CORE_URL` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL).
-  - This is an example of how to verify a JWT using the Java `nimbus-jose-jwt` lib along with the helper method to get the JWKs keys. If you are using header-based auth, you can fetch the JWT from the `Authorization Bearer` header, otherwise for cookie-based auth, you can fetch it from the `sAccessToken` cookie.
-  - This file has a method called `setSource` which returns a reference to the JSON Web Key Set (JWKS) public keys usable for JWT verification. This method takes care of caching public keys in memory and auto re-fetching if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts and is a security feature.
-- `pom.xml`: This shows the version of `nimbus-jose-jwt` used for this project.
-- `InvalidClaimsException.java`: This holds the custom Exception thrown when someone has an invalid JWT body, hasn't verified their email, or hasn't set up MFA.
-</ContentOption>
-</DependentContent>
-
-<CodeGroup group="backend-language">
-<Tab title="Node.js" value="nodejs">
-```bash
-curl --location --request GET '<YOUR_API_DOMAIN>/auth/jwt/jwks.json'
-```
-</Tab>
-<Tab title="Python" value="python">
-
-</Tab>
-<Tab title="Go" value="go">
-
-</Tab>
-<Tab title="Java" value="java">
-
-</Tab>
-</CodeGroup>
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Node.js" value="nodejs">
-Below is an example for NodeJS showing how you can use `jsonwebtoken` and `jwks-rsa` together to achieve JWT verification using the `jwks.json` endpoint.
-</ContentOption>
-</DependentContent>
-
-<CodeGroup passive group="backend-language">
-<Tab title="Node.js" value="nodejs">
-```ts
-import JsonWebToken, { JwtHeader, SigningKeyCallback } from "jsonwebtoken";
-import jwksClient from "jwks-rsa";
-
-var client = jwksClient({
-  jwksUri: "<YOUR_API_DOMAIN>/auth/jwt/jwks.json",
-});
-
-function getKey(header: JwtHeader, callback: SigningKeyCallback) {
-  client.getSigningKey(header.kid, function (err, key) {
-    var signingKey = key!.getPublicKey();
-    callback(err, signingKey);
-  });
-}
-
-let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
-JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
-  let decodedJWT = decoded;
-  // Use JWT
-});
-```
-</Tab>
-</CodeGroup>
-
-### With the public key string
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Node.js" value="nodejs">
-
-:::warning[This method is less secure compared to the first method because it disables key rotation of the access token signing key.]
-In this case, if the private key is somehow stolen, it can be used indefinitely to forge access tokens (Unless you manually change the key in the database).
-:::
-
-Some JWT verification libraries require you to provide the JWT secret / public key for verification.
-You can obtain the JWT secret from SuperTokens in the following way:
-
-<Steps>
-<Step title="Query the JWKS.json endpoint:">
-<br />
-
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```bash
-  curl --location --request GET '<YOUR_API_DOMAIN>/auth/jwt/jwks.json'
-
-  {
-    "keys": [
-      {
-        "kty": "RSA",
-        "kid": "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
-        "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
-        "e": "AQAB",
-        "alg": "RS256",
-        "use": "sig"
-      },
-      {
-        "kty": "RSA",
-        "kid": "d-230...802340",
-        "n": "AMZruthvYz7...lx0rU8c=",
-        "e": "...",
-        "alg": "RS256",
-        "use": "sig"
-      }
-    ]
-  }
-  ```
-  </Tab>
-  </CodeGroup>
-
-  :::note[The above shows an example output which returns two keys.]
-  More keys could return based on the configured key rotation setting in the core.
-  If you notice, each key's `kid` starts with a `s-..` or a `d-..`. The `s-..` key is a static key that never changes, whereas `d-...` keys are dynamic keys that keep changing. If you are hard-coding public keys somewhere, you always want to pick the `s-..` key.
-
-  One exception is that if you see a key with `kid` that doesn't start with `s-` or with `d-`, then treat that as a static key.
-  This only happens if you used to run an older SuperTokens core that was less than version `5.0`.
-  :::
-</Step>
-<Step title="Run the NodeJS script below to convert the above output to a PEM file format.">
-<br />
-
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```tsx
-  import jwkToPem from "jwk-to-pem";
-
-  // This JWK is copied from the result of the above SuperTokens core request
-  const jwk = {
-    kty: "RSA",
-    kid: "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
-    n: "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
-    e: "AQAB",
-    alg: "RS256",
-    use: "sig",
-  } as const;
-
-  let certString = jwkToPem(jwk);
-  ```
-  </Tab>
-  </CodeGroup>
-
-  The above snippet would generate the following certificate string:
-
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```text
-  -----BEGIN PUBLIC KEY-----
-  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9I
-  QQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm
-  ... (truncated for display)
-  XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStT
-  xwIDAQAB
-  -----END PUBLIC KEY-----
-  ```
-  </Tab>
-  </CodeGroup>
-
- Use the generated Privacy-Enhanced Mail (PEM) string in your code as shown below:
-
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```ts
-  import JsonWebToken from "jsonwebtoken";
-
-  // Truncated for display
-  let certificate =
-    "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9IQQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm...XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStTxwIDAQAB\n-----END PUBLIC KEY-----";
-  let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
-  JsonWebToken.verify(jwt, certificate, function (err, decoded) {
-    let decodedJWT = decoded;
-    // Use JWT
-  });
-  ```
-  </Tab>
-  </CodeGroup>
-</Step>
-<Step title="Tell SuperTokens to always only use the static key when creating a new session.">
-You can accomplish this by setting the below configuration in the backend SDK:
-
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```tsx {15}
-  import SuperTokens from "supertokens-node";
-  import Session from "supertokens-node/recipe/session";
-
-  SuperTokens.init({
-    supertokens: {
-      connectionURI: "...",
-    },
-    appInfo: {
-      apiDomain: "...",
-      appName: "...",
-      websiteDomain: "...",
-    },
-    recipeList: [
-      Session.init({
-        useDynamicAccessTokenSigningKey: false,
-      }),
-    ],
-  });
-  ```
-  </Tab>
-  </CodeGroup>
-
-:::warning[Updating this value causes a spike in the session refresh API, as and when users visit your application.]
-:::
-</Step>
-</Steps>
-
-</ContentOption>
-<ContentOption title="Python" value="python">
-
-:::warning[Not applicable. Please use method 1 instead.]
-:::
-
-</ContentOption>
-<ContentOption title="Go" value="go">
-
-:::warning[Not applicable. Please use method 1 instead.]
-:::
-
-</ContentOption>
-<ContentOption title="Java" value="java">
-
-:::warning[Not applicable. Please use method 1 instead.]
-:::
-
-</ContentOption>
-</DependentContent>
-
-### Check for custom claim values for authorization
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Node.js" value="nodejs">
-Once you have verified the access token, you can fetch the payload and perform authorization checks based on the values of the custom claims. For example, if you want to check if the user's email is verified, you should check the `st-ev` claim in the payload as shown below:
-</ContentOption>
-<ContentOption title="Python" value="python">
-Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa), in `views.py`, between lines 20 and 28, the `st-ev` claim in the JWT payload undergoes verification. If the claim is not present or has a value of `false`, a `403` is sent to the frontend, causing the frontend SDK (pre-built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.
-</ContentOption>
-<ContentOption title="Go" value="go">
-Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d), in `main.go`, between lines 32 and 44, the `st-ev` claim in the JWT payload undergoes verification. If the claim is not present or has a value of `false`, a `403` is sent to the frontend, causing the frontend SDK (pre-built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.
-</ContentOption>
-<ContentOption title="Java" value="java">
-Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/5b2d19c02337ed7ee387723c84def9cd), in `JWTVerification.java`, between lines 42 and 58, the `st-ev` and `st-mfa` claims in the JWT payload undergo verification.
-If the claims are not present or have a value of `false`, a `403` is sent to the frontend, causing the frontend SDK (pre-built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.
-</ContentOption>
-</DependentContent>
-
-<CodeGroup group="backend-language">
-<Tab title="Node.js" value="nodejs">
-```ts
-import JsonWebToken, { JwtHeader, SigningKeyCallback } from "jsonwebtoken";
-import jwksClient from "jwks-rsa";
-
-var client = jwksClient({
-  jwksUri: "<YOUR_API_DOMAIN>/auth/jwt/jwks.json",
-});
-
-function getKey(header: JwtHeader, callback: SigningKeyCallback) {
-  client.getSigningKey(header.kid, function (err, key) {
-    var signingKey = key!.getPublicKey();
-    callback(err, signingKey);
-  });
-}
-
-let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
-JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
-  if (err) {
-    // send a 401 to the frontend..
-  }
-  if (decoded !== undefined && typeof decoded !== "string") {
-    let isEmailVerified = (decoded as any)["st-ev"].v;
-    if (!isEmailVerified) {
-      // send a 403 to the frontend..
-    }
-  }
-});
-```
-</Tab>
-<Tab title="Python" value="python">
-
-</Tab>
-<Tab title="Go" value="go">
-
-</Tab>
-<Tab title="Java" value="java">
-
-</Tab>
-</CodeGroup>
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Node.js" value="nodejs">
-Claims like email verification and user roles claims are included in the access token by the backend SDK automatically. You can even [add your own custom claims](/additional-verification/session-verification/claim-validation#using-the-access-token-payload) to the access token payload, and those claims will be in the JWT as expected.
-
-:::note[On claim validation failure, you must send a `403` to the frontend, which causes the frontend SDK (pre-built UI SDK) to recheck the claims added on the frontend and navigate to the right screen.]
-:::
-</ContentOption>
-</DependentContent>
-
-### Check for anti-csrf during authorization
-
-:::note[You need to check for anti-cross-site request forgery (CSRF) for **non** GET requests when cookie-based authentication is active.]
-:::
-
-Two methods exist for configuring [cross-site request forgery (CSRF) protection](/post-authentication/session-management/security#anti-csrf): `VIA_CUSTOM_HEADER` and `VIA_TOKEN`.
-
-####  `VIA_CUSTOM_HEADER` 
-
-`VIA_CUSTOM_HEADER` is automatically set if `sameSite` is `none` or if your `apiDomain` and `websiteDomain` do not share the same top level domain.
-In this case, you need to check for the presence of the `rid` header from incoming requests.
-
-#### `VIA_TOKEN` 
-
-When configured with `VIA_TOKEN`, an explicit `anti-csrf` token attaches as a header to requests with `anti-csrf` as the key.
-To verify the `anti-csrf` token, you need to compare it to the value of the `antiCsrfToken` key from the payload of the decoded JWT.
 
 ---
 

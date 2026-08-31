@@ -1,70 +1,55 @@
 ---
 title: Legacy Flow
-description: Guide for implementing JWT-based authentication between microservices using SuperTokens Core.
+description: Guide for implementing custom JWT authentication between microservices using SuperTokens Core.
 sidebar:
   order: 3
 ---
 
 ## Overview
 
-This custom flow makes use of the **SuperTokens Core** without adhering to the **OAuth2** standard.
-It involves creating private access tokens and passing them to the microservices.
+Use the [OAuth2 Client Credentials Flow](/authentication/m2m/client-credentials) when it is available. It gives each
+client an identity and uses the standard OAuth2 token and scope model.
 
-The authentication sequence works in the following way:
+This legacy flow is a custom bearer-token scheme for deployments that cannot use client credentials. A service with
+access to the SuperTokens Core JWT API can mint a token containing arbitrary claims. Consequently, a `source` or
+`sub` claim proves only that a caller with signing access asserted that value; it does not independently prove which
+service made the request.
+
+The flow is:
 
 <Steps>
-  ## Microservice `M1` requests a JWT (JSON Web Token) from the **SuperTokens Core**
-  ## Microservice `M1` sends the JWT to `M2`
-  ## Microservice `M2` verifies the JWT and completes the action if the JWT is valid
+  ## Service `M1` requests a short-lived JWT from SuperTokens Core
+  ## `M1` sends the JWT to `M2` in the `Authorization` header
+  ## `M2` verifies the signature and every required claim before authorizing the request
 </Steps>
 
-<img src="/img/microservice_auth/architecture.png" alt="Microservice auth flow diagram" />
+:::warning[Security boundary]
+Anyone who can call the Core JWT API can mint any service identity or permission accepted by this scheme. Restrict
+Core access with network controls and an API key, store the API key in a secrets manager, and monitor issuance. Multiple
+Core API keys simplify secret rotation and may help attribute Core requests, but the issued JWT does not identify which
+API key was used. Multiple keys therefore do not create cryptographic service identities or authorization boundaries.
+:::
 
-The first step is to create a JWT from the microservice that sends the request (refer to this microservice as `M1`).
-Other microservices verify this JWT when `M1` sends them a request.
-Since this JWT remains static per microservice, the best time to create this is on process starts - that is when `M1` starts.
+For stronger isolation, use client credentials or separate trust domains. Deploying separate Cores can create separate
+signing domains, but it adds operational cost and does not turn a shared Core API key into service identity.
 
-The JWT can contain any information you like. At a minimum, it needs to contain information proving that it is a microservice allowed to query other microservices in your infrastructure.
-This is necessary since you may issue a JWT to an end user as well, and they should not be able to query any microservice directly.
-Add the following claim in the JWT to "mark" the JWT as one meant for microservice auth only:
-```json check=false reason="The ellipses indicate omitted JWT claims."
-{..., "source": "microservice", ...}
-```
-In the receiving microservice (`M2`), verify the JWT and check that this claim is present before serving the request.
+## Token policy
 
+For every token:
 
-### Security considerations
+- Use a short validity appropriate to the request path. The examples below use five minutes.
+- Use dynamic signing keys. Dynamic keys rotate every 168 hours (one week) by default unless the Core configuration
+  changes `access_token_dynamic_signing_key_update_interval`.
+- Require an exact issuer (`iss`), audience (`aud`), subject/service identity (`sub`), source, token type, permissions,
+  and expiration (`exp`) at the receiving service.
+- Grant only the permissions needed by the target API. Do not treat successful signature verification as authorization.
+- Fetch keys from JWKS and support key rotation. Do not embed a public key in the application.
 
-#### Who can query the microservices?
-Anyone or any service that has direct access to the SuperTokens core can produce a valid JWT and query your microservices.
-If the core is open to the internet, you *must* add an API key to protect it.
-Even though end users may receive a JWT for their session (that the core signs), they cannot query a microservice directly. Their JWT *should* not have the `source: "microservice"` claim in it.
+The JWT recipe defaults to a 100-year validity and a static signing key when those arguments are omitted. Those defaults
+are unsuitable for bearer credentials. Static keys do not rotate. Always pass a short validity and explicitly select
+the dynamic signing key as shown below.
 
-#### What happens if someone compromises the core's API key?
-
-Then the attacker can issue their own JWTs to be able to query your microservices. To limit this protection, you may want to add firewall rules to allow access to the core only from services on your backend.
-You can also provide multiple API keys to the core and give a unique key to each microservice in your infrastructure. This way, it would be easier to track where a leak came from.
-
-#### What happens if someone compromises the JWT signing key?
-
-In this case, the attacker could fabricate their own JWT to be able to query your microservices.
-To limit this risk, a JWT signing key rotation methodology is in place. Until then, you can limit the reachability of your microservices based on the request's IP address.
-
-#### How to limit which microservice can query another one?
-
-If an organisation has multiple teams and microservices, it is common to limit which other services a given microservice can query.
-For example, if there exists `M1`, `M2` and `M3` microservices, there may be a situation in which `M1` should only be able to query `M2` and not `M3`.
-With one SuperTokens core deployment, having this type of restriction is impossible. All the microservices create and verify their JWTs using the same public/private keys. Therefore `M3` receives a request, it has no way of reliably knowing if the request is from `M1` or `M2` (assuming that IP-based access control is not implemented).
-This type of restriction can occur by deploying multiple cores connected to their own databases. In this example, a dedicated SuperTokens core can handle `M3`'s auth, such that only `M3` uses that to verify the incoming JWTs. Then, only other services that have access to that core can create JWTs that `M3` accepts. If `M1` doesn't have access to `M3`'s core's API key, it can be assured that successful requests to `M3` are not from `M1`.
-
-
-## Steps
-
-### 1. Create a JWT
-
-#### Using a backend SDK
-
-First, initialize the `JWT` recipe in the `supertokens.init` function call:
+## 1. Initialize the JWT recipe
 
 <CodeGroup group="backend-language">
 <Tab title="Node.js" value="nodejs">
@@ -74,13 +59,13 @@ import jwt from "supertokens-node/recipe/jwt";
 
 supertokens.init({
   appInfo: {
-    apiDomain: "...",
-    appName: "...",
-    websiteDomain: "...",
+    apiDomain: "https://auth.example.com",
+    appName: "service-auth",
+    websiteDomain: "https://example.com",
   },
   supertokens: {
-    connectionURI: "...", // location of the core
-    apiKey: "...", // provide the core's API key if configured
+    connectionURI: "...",
+    apiKey: "...",
   },
   recipeList: [jwt.init()],
 });
@@ -95,15 +80,15 @@ import (
 
 func main() {
 	supertokens.Init(supertokens.TypeInput{
-        AppInfo: supertokens.AppInfo{
-            AppName: "...",
-            WebsiteDomain: "...",
-            APIDomain: "...",
-        },
-        Supertokens: &supertokens.ConnectionInfo{
-            ConnectionURI: "...", // location of the core
-            APIKey: "...", // provide the core's API key if configured
-        },
+		AppInfo: supertokens.AppInfo{
+			AppName:      "service-auth",
+			WebsiteDomain: "https://example.com",
+			APIDomain:     "https://auth.example.com",
+		},
+		Supertokens: &supertokens.ConnectionInfo{
+			ConnectionURI: "...",
+			APIKey:        "...",
+		},
 		RecipeList: []supertokens.Recipe{
 			jwt.Init(nil),
 		},
@@ -118,67 +103,72 @@ from supertokens_python.recipe import jwt
 
 init(
     app_info=InputAppInfo(
-        app_name="...",
-        api_domain="...",
-        website_domain="...",
+        app_name="service-auth",
+        api_domain="https://auth.example.com",
+        website_domain="https://example.com",
     ),
     supertokens_config=SupertokensConfig(
-        connection_uri="...", # location of the core
-        api_key="..." # provide the core's API key if configured
+        connection_uri="...",
+        api_key="...",
     ),
-    framework='django',
-    recipe_list=[
-        jwt.init(),
-    ],
+    framework="django",
+    recipe_list=[jwt.init()],
 )
 ```
 </Tab>
 </CodeGroup>
 
-:::note[- The value of `apiDomain` should be the domain part of the JWKS URL used to verify the JWT (from `M2`). This should ideally be the domain of the microservice that has all the other SuperTokens' recipes initialized in them.]
-- If this microservice does not initialize any other recipe, the values of `appName` and `websiteDomain` don't matter.
-:::
+The `apiDomain`/`api_domain`/`APIDomain` value becomes the JWT issuer domain and must be the domain that serves the JWKS
+endpoint. If this process initializes no other recipe, `appName` and `websiteDomain` do not affect this flow.
 
-After this, you can use the JWT recipe to create your own JWT whenever required:
+## 2. Create a short-lived JWT
+
+Use a fixed schema rather than accepting arbitrary claims from request input. This example identifies `M1`, limits the
+token to `M2`, and grants one permission.
 
 <CodeGroup group="backend-language">
 <Tab title="Node.js" value="nodejs">
 ```tsx
 import jwt from "supertokens-node/recipe/jwt";
 
-async function createJWT(payload: any) {
-  let jwtResponse = await jwt.createJWT({
-    ...payload,
+const response = await jwt.createJWT(
+  {
+    iss: "https://auth.example.com",
+    aud: "service-m2",
+    sub: "service-m1",
     source: "microservice",
-  });
-  if (jwtResponse.status === "OK") {
-    // Send JWT as Authorization header to M2
-    return jwtResponse.jwt;
-  }
-  throw new Error("Unable to create JWT. Should never come here.");
+    token_type: "service_access",
+    permissions: ["comments:write"],
+  },
+  300,
+  false,
+);
+
+if (response.status !== "OK") {
+  throw new Error("JWT creation failed");
 }
+
+const accessToken = response.jwt;
 ```
 </Tab>
 <Tab title="Go" value="go">
 ```go
-import (
-	"fmt"
+validitySeconds := uint64(300)
+useStaticSigningKey := false
 
-	"github.com/supertokens/supertokens-golang/recipe/jwt"
-)
-
-func main() {
-	jwtResponse, err := jwt.CreateJWT(map[string]interface{}{
-		"source": "microservice",
-		// ...additional payload
-	}, nil, nil)
-	if err != nil {
-		// handle error
-	}
-	jwtString := jwtResponse.OK.Jwt
-	fmt.Println(jwtString)
-	// Send JWT as Authorization header to M2
+response, err := jwt.CreateJWT(map[string]interface{}{
+	"iss":         "https://auth.example.com",
+	"aud":         "service-m2",
+	"sub":         "service-m1",
+	"source":      "microservice",
+	"token_type":  "service_access",
+	"permissions": []string{"comments:write"},
+}, &validitySeconds, &useStaticSigningKey)
+if err != nil {
+	return err
 }
+
+accessToken := response.OK.Jwt
 ```
 </Tab>
 <Tab title="Python" value="python">
@@ -188,18 +178,22 @@ func main() {
 from supertokens_python.recipe.jwt import asyncio
 from supertokens_python.recipe.jwt.interfaces import CreateJwtOkResult
 
-
-async def create_jwt():
-    jwtResponse = await asyncio.create_jwt({
+response = await asyncio.create_jwt(
+    {
+        "iss": "https://auth.example.com",
+        "aud": "service-m2",
+        "sub": "service-m1",
         "source": "microservice",
-        # ... extra payload
-    })
+        "token_type": "service_access",
+        "permissions": ["comments:write"],
+    },
+    validity_seconds=300,
+    use_static_signing_key=False,
+)
+if not isinstance(response, CreateJwtOkResult):
+    raise RuntimeError("JWT creation failed")
 
-    if isinstance(jwtResponse, CreateJwtOkResult):
-        _ = jwtResponse.jwt
-        # Send JWT as Authorization header to M2
-    else:
-        raise Exception("Unable to create JWT. Should never come here.")
+access_token = response.jwt
 ```
 </ContentOption>
 <ContentOption title="Syncio" value="syncio">
@@ -207,468 +201,126 @@ async def create_jwt():
 from supertokens_python.recipe.jwt.interfaces import CreateJwtOkResult
 from supertokens_python.recipe.jwt.syncio import create_jwt
 
-jwtResponse = create_jwt({
-    "source": "microservice",
-    # ... extra payload
-})
-
-if isinstance(jwtResponse, CreateJwtOkResult):
-    jwtStr = jwtResponse.jwt
-    # Send JWT as Authorization header to M2
-else:
-    raise Exception("Unable to create JWT. Should never come here.")
-```
-</ContentOption>
-</DependentContent>
-</Tab>
-</CodeGroup>
-
-:::note[By default, the lifetime of the JWT is a 100 years. You can pass a second argument to the `createJWT` function indicating a custom lifetime (in seconds) for the JWT.]
-:::
-
-:::note[By default, the JWT uses a static key for signing, not subject to the key rotation normally applied to access tokens. You can pass `false` as the third argument to the `createJWT` function to use the dynamic keys.]
-:::
-
-#### Calling the Core API directly
-
-You can send a `HTTP` request to the core as follows:
-
-```bash
-curl --location --request POST '${connectionURI}/recipe/jwt' \
---header 'rid: jwt' \
---header 'api-key: ${APIKey}' \
---header 'Content-Type: application/json; charset=utf-8' \
---data-raw '{
-  "payload": {
-    "source": "microservice",
-    ...
-  },
-  "useStaticSigningKey": true,
-  "algorithm": "RS256",
-  "jwksDomain": "${apiDomain}",
-  "validity": ${validityInSeconds}
-}'
-```
-- The value of `${connectionURI}` is the core's location
-- `${APIKey}` is the API key to query the core. This is only needed if an API key exists on the core.
-- The value of `${apiDomain}` is the domain on which the JWKs URLs are available from
-- `${validityInSeconds}` is the lifetime of the JWT
-
-An example response is as follows:
-```json
-{
-  "status": "OK",
-  "jwt": "eyJraWQiOiI0YTE...rCFPcIRgzu_bChIIpFdA"
-}
-```
-
-### 2. Store the JWT
-
-Once you create the JWT, you can store it in a (globally accessible) variable and access it when you want to talk to a microservice.
-Add the JWT as an `Authorization: Bearer` token like this:
-
-```bash
-curl --location --request POST 'https://microservice_location/path' \
---header 'Authorization: Bearer eyJraWQiOiI0YTE...rCFPcIRgzu_bChIIpFdA' \
---header 'Content-Type: application/json; charset=utf-8' \
---data-raw '{
-    "request": "payload"
-}'
-```
-
-### 3. Verify JWTs
-
-
-When a target microservice receives a JWT, it must first verify it before proceeding to serve the request. The process involves two steps:
-- A standard verification of the JWT
-- Checking the JWT claim to make sure that another microservice has queried it.
-
-#### Using JWKS endpoint
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Node.js" value="nodejs">
-##### Get JWKS endpoint
-
-The JWKS endpoint is `<YOUR_API_DOMAIN>//auth/jwt/jwks.json`. Here the `apiDomain` and `apiBasePath` are values pointing to the server in which you have initialized SuperTokens using the backend SDK.
-
-##### Verify the JWT
-
-Some libraries let you provide a JWKS endpoint to verify a JWT. For example for NodeJS you can use `jsonwebtoken` and `jwks-rsa` together to achieve this.
-</ContentOption>
-<ContentOption title="Python" value="python">
-Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa) for a code reference of how use `PyJWK` to do JWT verification. The gist contains two files:
-
-- `jwt_verification.py` (which you can copy/paste into your application). You have to modify the `JWKS_URI` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL). This file is for `sync` python apps, and you can modify it to work with `async` apps as well.
-  - This file essentially exposes a function called `verify_jwt` which takes an input JWT string.
-  - This function takes care of caching public keys in memory + auto `refetching` if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts, and is just a security feature.
-- `views.py`: This is an example `GET` API which extracts the JWT token from the authorization header in the request and calls the `verify_jwt` function from the other file.
-</ContentOption>
-<ContentOption title="Go" value="go">
-Refer to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d) for a code reference of how use the Golang `jwt` lib to do session verification. The gist contains two files:
-
-- `verifyToken.go` (which you can copy/paste into your application). You have to modify the `coreUrl` in this file to point to your SuperTokens core instance (replacing the `try.supertokens.com` part of the URL).
-  - This file essentially exposes a function called `GetJWKS` which returns a reference to the JWKS public keys useful for JWT verification.
-  - This function takes care of caching public keys in memory + auto `refetching` if the public keys have changed (which happens automatically every 24 hours with SuperTokens). This does not cause any user logouts, and is just a security feature.
-- `main.go`: This is an example of how to verify a JWT using the golang JWT verification lib along with a helper function to get the JWKs keys.
-</ContentOption>
-</DependentContent>
-
-<CodeGroup group="backend-language">
-<Tab title="Node.js" value="nodejs">
-```ts
-import JsonWebToken, { JwtHeader, SigningKeyCallback } from "jsonwebtoken";
-import jwksClient from "jwks-rsa";
-
-var client = jwksClient({
-  jwksUri: "<YOUR_API_DOMAIN>/auth/jwt/jwks.json",
-});
-
-function getKey(header: JwtHeader, callback: SigningKeyCallback) {
-  client.getSigningKey(header.kid, function (err, key) {
-    var signingKey = key!.getPublicKey();
-    callback(err, signingKey);
-  });
-}
-
-let jwt = "...";
-JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
-  let decodedJWT = decoded;
-  // Use JWT
-});
-```
-</Tab>
-<Tab title="Python" value="python">
-
-</Tab>
-<Tab title="Go" value="go">
-
-</Tab>
-</CodeGroup>
-
-#### Using public key string
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Node.js" value="nodejs">
-
-Some JWT verification libraries require you to provide the JWT secret / public key for verification. You can obtain the JWT secret from SuperTokens in the following way:
-
-<Steps>
-<Step title="First, query the JWKS.json endpoint:">
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```bash
-  curl --location --request GET '<YOUR_API_DOMAIN>/auth/jwt/jwks.json'
-
-  {
-    "keys": [
-      {
-        "kty": "RSA",
-        "kid": "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
-        "n": "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
-        "e": "AQAB",
-        "alg": "RS256",
-        "use": "sig"
-      },
-      {
-        "kty": "RSA",
-        "kid": "d-230...802340",
-        "n": "AMZruthvYz7...lx0rU8c=",
-        "e": "...",
-        "alg": "RS256",
-        "use": "sig"
-      }
-    ]
-  }
-  ```
-  </Tab>
-  </CodeGroup>
-
-  :::note[The above shows an example output which returns two keys. There could be more keys returned based on the configured key rotation setting in the core. If you notice, each key's `kid` starts with a `s-..` or a `d-..`. The `s-..` key is a static key that never changes, whereas `d-...` keys are dynamic keys that keep changing. If you are `hardcoding` public keys somewhere, you always want to pick the `s-..` key.]
-  :::
-</Step>
-
-<Step title="Next, run the NodeJS script below to convert the above output to a PEM file format.">
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```tsx
-  import jwkToPem from "jwk-to-pem";
-
-  // This JWK is copied from the result of the above SuperTokens core request
-  const jwk = {
-    kty: "RSA",
-    kid: "s-2de612a5-a5ba-413e-9216-4c43e2e78c86",
-    n: "AMZruthvYz7Ft-Dp0BC_SEEJaWK91s_YA-RR81iLJ6BTT6gJp0CcV4DfBynFU_59dRGOZyVQpAW6Drnc_6LyZpVWHROzqt-Fjh8TAqodayhPJVuZt25eQiYrqcaK_dnuHrm8qwUq-hko6q1o9NIIZWNfUBEVWmNhyAJFk5bi3pLwtKPYrUQzVLcTdDUe4SIltvvfpYHbVFnYtxkBVmqO68j7sI8ktmTXM_heals-W6WmozabDkC9_ITCeRat2f7A2l0t4QzO0ZCzZcJfhusF4X1niKgY6yYXpbX6is4HCfhYfdabcE52xYMNl-gw9XDjsIxfBMUDvOFRHWlx0rU8c=",
-    e: "AQAB",
-    alg: "RS256",
-    use: "sig",
-  } as const;
-
-  let certString = jwkToPem(jwk);
-  ```
-  </Tab>
-  </CodeGroup>
-
-  The above snippet would generate the following certificate string:
-
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```text
-  -----BEGIN PUBLIC KEY-----
-  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmu62G9jPsW34OnQEL9I
-  QQlpYr3Wz9gD5FHzWIsnoFNPqAmnQJxXgN8HKcVT/n11EY5nJVCkBboOudz/ovJm
-  ... (truncated for display)
-  XhfWeIqBjrJheltfqKzgcJ+Fh91ptwTnbFgw2X6DD1cOOwjF8ExQO84VEdaXHStT
-  xwIDAQAB
-  -----END PUBLIC KEY-----
-  ```
-  </Tab>
-  </CodeGroup>
-</Step>
-
-<Step title="You can use the generated PEM string in your code like shown below:">
-  <CodeGroup passive group="backend-language">
-  <Tab title="Node.js" value="nodejs">
-  ```ts
-  import JsonWebToken from "jsonwebtoken";
-
-  // Truncated for display
-  let certificate = "-----BEGIN PUBLIC KEY-----\nnMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----";
-  let jwt = "..."; // fetch the JWT from sAccessToken cookie or Authorization Bearer header
-  JsonWebToken.verify(jwt, certificate, function (err, decoded) {
-    let decodedJWT = decoded;
-    // Use JWT
-  });
-  ```
-  </Tab>
-  </CodeGroup>
-</Step>
-</Steps>
-
-</ContentOption>
-<ContentOption title="Python" value="python">
-
-:::warning[Not applicable. Please use method 1 instead.]
-:::
-
-</ContentOption>
-<ContentOption title="Go" value="go">
-
-:::warning[Not applicable. Please use method 1 instead.]
-:::
-
-</ContentOption>
-</DependentContent>
-
-#### Claim verification
-
-The second step is to get the JWT payload and check that it has the `"source": "microservice"` claim:
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Python" value="python">
-Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/ea31502923ec9a53136371f2b6317ffa), in `views.py`, between lines 20 and 28, the value of a certain claim in the decoded JWT payload undergoes a check. You can do something similar and check for the `source` claim whose value must be `microservice`. If it is, then all's good, else you can return a 401.
-</ContentOption>
-<ContentOption title="Go" value="go">
-Referring once again to this [GitHub gist](https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d), in `main.go`, between lines 32 and 44, the value of a certain claim in the decoded JWT payload undergoes a check. You can do something similar and check for the `source` claim whose value must be `microservice`. If it is, then all's good, else you can return a 401.
-</ContentOption>
-</DependentContent>
-
-<CodeGroup group="backend-language">
-<Tab title="Node.js" value="nodejs">
-```tsx {17,18,19,20,21,22}
-import JsonWebToken, { JwtHeader, SigningKeyCallback } from "jsonwebtoken";
-import jwksClient from "jwks-rsa";
-
-var client = jwksClient({
-  jwksUri: "<YOUR_API_DOMAIN>/auth/jwt/jwks.json",
-});
-
-function getKey(header: JwtHeader, callback: SigningKeyCallback) {
-  client.getSigningKey(header.kid, function (err, key) {
-    var signingKey = key!.getPublicKey();
-    callback(err, signingKey);
-  });
-}
-
-let jwt = "...";
-JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
-  let decodedJWT = decoded;
-  if (
-    decodedJWT === undefined ||
-    typeof decodedJWT === "string" ||
-    decodedJWT.source === undefined ||
-    decodedJWT.source !== "microservice"
-  ) {
-    // return a 401 unauthorised error
-  } else {
-    // handle API request...
-  }
-});
-```
-</Tab>
-<Tab title="Python" value="python">
-
-</Tab>
-<Tab title="Go" value="go">
-
-</Tab>
-</CodeGroup>
-
-#### M2M and frontend session verification for the same API
-You may have a setup wherein the same API receives calls from the frontend as well as from other microservices. The frontend session works differently than m2m sessions, therefore both forms of token inputs must be accounted for.
-
-The approach here would be to first attempt frontend session verification, and if that fails, then attempt m2m JWT verification (using the above method). If both fail, then send back a `401` response.
-
-The [`getSession` function](https://supertokens.com/docs/additional-verification/session-verification/protect-api-routes) serves for frontend session verification.
-
-<CodeGroup group="backend-language">
-<Tab title="Node.js" value="nodejs">
-```tsx {22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43}
-import express from "express";
-import Session from "supertokens-node/recipe/session";
-import JsonWebToken, { JwtHeader, SigningKeyCallback } from "jsonwebtoken";
-import jwksClient from "jwks-rsa";
-
-let app = express();
-
-var client = jwksClient({
-  jwksUri: "<YOUR_API_DOMAIN>/auth/jwt/jwks.json",
-});
-
-function getKey(header: JwtHeader, callback: SigningKeyCallback) {
-  client.getSigningKey(header.kid, function (err, key) {
-    var signingKey = key!.getPublicKey();
-    callback(err, signingKey);
-  });
-}
-
-app.post("/like-comment", async (req, res, next) => {
-  try {
-    let session = await Session.getSession(req, res, { sessionRequired: false });
-
-    if (session !== undefined) {
-      // API call from the frontend and session verification is successful..
-      let userId = session.getUserId();
-    } else {
-      // maybe this API is called from a microservice, so we attempt JWT verification as
-      // shown above.
-      let jwt = req.headers["authorization"];
-      jwt = jwt === undefined ? undefined : jwt.split("Bearer ")[1];
-      if (jwt === undefined) {
-        // return a 401 unauthorised error...
-      } else {
-        JsonWebToken.verify(jwt, getKey, {}, function (err, decoded) {
-          let decodedJWT = decoded;
-          // microservices auth is successful..
-        });
-      }
-    }
-  } catch (err) {
-    next(err);
-  }
-});
-```
-</Tab>
-<Tab title="Python" value="python">
-```python check=false reason="This example omits surrounding application and SuperTokens configuration."
-from typing import Optional, cast
-
-from django.http import HttpRequest
-
-from supertokens_python.recipe.session.asyncio import get_session
-
-
-async def like_comment(request: HttpRequest):
-    session = await get_session(request, session_required=False)
-    user_id = ""
-    if session is not None:
-        user_id = session.get_user_id()
-    else:
-        jwt: Optional[str] = cast(Optional[str], request.headers.get("Authorization"))
-        if jwt is None:
-            # return a 401 unauthorised error...
-            pass
-        else:
-            jwt = jwt.split("Bearer ")[1]
-            # JWT verification (see previous step)
-            pass
-
-    print(user_id)  # TODO
-```
-</Tab>
-<Tab title="Go" value="go">
-```go
-import (
-	"fmt"
-	"net/http"
-	"strings"
-
-	"github.com/supertokens/supertokens-golang/recipe/session"
-	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
-	"github.com/supertokens/supertokens-golang/supertokens"
+response = create_jwt(
+    {
+        "iss": "https://auth.example.com",
+        "aud": "service-m2",
+        "sub": "service-m1",
+        "source": "microservice",
+        "token_type": "service_access",
+        "permissions": ["comments:write"],
+    },
+    validity_seconds=300,
+    use_static_signing_key=False,
 )
+if not isinstance(response, CreateJwtOkResult):
+    raise RuntimeError("JWT creation failed")
 
-func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
-	sessionRequired := false
-	sessionContainer, err := session.GetSession(r, w, &sessmodels.VerifySessionOptions{
-		SessionRequired: &sessionRequired,
-	})
-
-	if err != nil {
-		err = supertokens.ErrorHandler(err, r, w)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		return
-	}
-
-	if sessionContainer != nil {
-		userID := sessionContainer.GetUserID()
-
-		// TODO: API logic...
-		fmt.Println(userID)
-	} else {
-		// Check for JWT in the Authorization header
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			// Return 401 Unauthorized error
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		// Split the Authorization header to get the JWT
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			// Return 401 Unauthorized error
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		jwt := parts[1]
-
-		fmt.Println(jwt)
-
-		// verify JWT based on code snippet here: https://gist.github.com/rishabhpoddar/8c26ed237add1a5b86481e72032abf8d
-	}
-}
+access_token = response.jwt
 ```
+</ContentOption>
+</DependentContent>
 </Tab>
 </CodeGroup>
 
-<DependentContent passive group="backend-language">
-<ContentOption title="Node.js" value="nodejs">
-- Notice that the `sessionRequired: false` option appears when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function returns `undefined`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function throws a try refresh token error, sending a 401 to the frontend. This triggers a session refresh flow as expected.
-- If the `getSession` function returns `undefined`, it means that the session is not from the frontend and a microservice auth verification can occur using the JWT verification method shown previously in this page.
-- If that fails too, send back a `401` response.
-</ContentOption>
-<ContentOption title="Python" value="python">
-- Notice that the `sessionRequired: false` option appears when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function returns `None`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function throws a try refresh token error, sending a 401 to the frontend. This triggers a session refresh flow as expected.
-- If the `getSession` function returns `None`, it means that the session is not from the frontend and a microservice auth verification can occur using the JWT verification method shown previously in this page.
-- If that fails too, send back a `401` response.
-</ContentOption>
-<ContentOption title="Go" value="go">
-- Notice that the `sessionRequired: false` option appears when calling `getSession`. This is because in case the input tokens are from another microservice, then instead of throwing an unauthorised error, the `getSession` function returns `nil`. It's important to note that if the session does exist, but the access token has expired, the `getSession` function returns an error, and the `supertokens.ErrorHandler` sends a 401 to the frontend. This triggers a session refresh flow as expected.
-- If the `getSession` function returns `nil`, it means that the session is not from the frontend and a microservice auth verification can occur using the JWT verification method shown previously in this page.
-- If that fails too, send back a `401` response.
-</ContentOption>
-</DependentContent>
+Prefer the backend SDK. It avoids manually constructing the Core request and keeps the API key out of command-line
+arguments. If operational tooling must call the released Core API directly, provide the URL and headers through an
+owner-readable curl config file (`0600`) populated by your secret tooling. Provide the request body over standard input:
+
+```bash
+curl --config /run/secrets/supertokens-curl.conf --data-binary @- <<'JSON'
+{
+  "payload": {
+    "iss": "https://auth.example.com",
+    "aud": "service-m2",
+    "sub": "service-m1",
+    "source": "microservice",
+    "token_type": "service_access",
+    "permissions": ["comments:write"]
+  },
+  "useStaticSigningKey": false,
+  "algorithm": "RS256",
+  "jwksDomain": "https://auth.example.com",
+  "validity": 300
+}
+JSON
+```
+
+Configure that file with the `/recipe/jwt` URL, `POST` method, `rid: jwt`, `Content-Type: application/json`, and
+`api-key` header. Do not put the API key in command-line arguments, shell history, environment dumps, or generated logs.
+Disable shell tracing such as `set -x` around secret handling, restrict access to the config file, and remove temporary
+copies immediately after use.
+
+Keep the token in memory only as long as needed. Send it as `Authorization: Bearer <token>` over TLS. Never log the
+token or place it in a URL, source file, or long-lived configuration value.
+
+## 3. Verify and authorize the JWT
+
+The JWKS endpoint is:
+
+```text
+<YOUR_API_DOMAIN><API_BASE_PATH>/jwt/jwks.json
+```
+
+With the default API base path, this is `https://auth.example.com/auth/jwt/jwks.json`. Configure a maintained JWT
+library to fetch and cache this JWKS, honor its cache behavior, and refetch when it encounters an unknown `kid`. Dynamic
+keys rotate every week by default. Static keys may also appear in JWKS, but they do not rotate and must not be selected
+or hardcoded for this flow.
+
+Do not trust decoded data until the verification library reports success. Verification must:
+
+1. Allow only `RS256`; reject an unexpected or missing `alg` or `kid`.
+2. Verify the signature with the JWKS key selected by `kid`.
+3. Reject every library error before reading claims. This includes an invalid signature, expired token, malformed token,
+   unknown key, and issuer or audience mismatch.
+4. Require `exp` and reject expired tokens. Do not disable expiry verification or add an unbounded clock tolerance.
+5. Require exact expected values for `iss`, `aud`, `source`, and `token_type`.
+6. Require an approved `sub` service identity and every permission needed by the endpoint.
+
+For the example above, `M2` must require:
+
+| Claim | Required value |
+| --- | --- |
+| `iss` | `https://auth.example.com` |
+| `aud` | `service-m2` |
+| `sub` | An approved calling service, such as `service-m1` |
+| `source` | `microservice` |
+| `token_type` | `service_access` |
+| `permissions` | Includes the endpoint's required permission |
+| `exp` | Present and in the future |
+
+Return `401 Unauthorized` when authentication fails. Return `403 Forbidden` when the token is valid but its service or
+permissions do not authorize the operation. Do not reveal signature, key, or claim-validation details to the caller.
+
+### Idempotent writes and replay
+
+A valid bearer token can be replayed until it expires. For non-idempotent writes, require a caller-generated
+`Idempotency-Key` scoped to the authenticated service and operation. Atomically reserve the key in shared durable storage
+before the side effect, and return the stored result for an identical retry. Reject reuse with different request data,
+and retain the record for a bounded period covering the retry window.
+
+If a token must be accepted only once, add a server-generated, unpredictable, unique `jti` claim when creating it. Before
+the side effect, atomically insert `(iss, sub, jti)` into replay storage shared by every service instance; reject the
+request if it already exists. Keep the entry until at least `exp` plus the permitted clock skew. Couple replay reservation
+and the write transaction, or use a transactional outbox, so a crash cannot consume the token without a defined result.
+An `Idempotency-Key` or `jti` is not a substitute for signature, claim, identity, and permission verification.
+
+### APIs that accept frontend sessions and service tokens
+
+Prefer separate endpoints or an explicit authentication policy for frontend sessions and service tokens. If one endpoint
+must accept both, verify each credential only with its intended verifier and apply a separate authorization policy. Never
+fall back to trusting decoded JWT claims after either verifier returns an error. A malformed, expired, or invalid token
+must not be downgraded into another authentication path.
+
+Use the backend SDK's `getSession` function for frontend session verification. Use the bounded JWKS procedure above for
+legacy service tokens. Accept the request only after one verifier succeeds and the corresponding identity and permission
+checks pass.
+
+## Compromise response
+
+- **Core API key compromised:** revoke and replace it, stop token issuance while investigating, and wait at least the
+  maximum token lifetime before considering previously minted tokens expired. Review issuance and service logs.
+- **Dynamic signing key compromised:** rotate the signing material, prevent further issuance, and reject affected keys.
+  Network restrictions can reduce exposure but do not make forged tokens safe.
+- **Bearer token compromised:** revoke or disable the caller where possible and let the short expiry bound exposure. If
+  immediate revocation is required, use an introspected or stateful design rather than this self-contained legacy flow.

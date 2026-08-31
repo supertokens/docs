@@ -8,7 +8,8 @@ sidebar:
 ## Overview
 
 SuperTokens sends SMS in different authentication scenarios.
-The method applies to the `Passwordless` and `MFA` recipes.
+SMS delivery is configured by the `Passwordless` recipe. Phone OTP can be used as an MFA factor, but the `MFA` recipe
+does not expose a separate SMS-delivery configuration.
 
 The following page shows you how to configure the SMS delivery method and adjust the content that gets sent to your users.
 
@@ -16,13 +17,20 @@ The following page shows you how to configure the SMS delivery method and adjust
 
 ### Default method
 
-If you provide no configuration for SMS delivery, the backend SDK sends SMSs by talking to SuperTokens servers on `https://api.supertokens.com`.
-This applies to both self hosted and managed services.
+If you provide no configuration for SMS delivery, the Passwordless recipe uses the backend SDK's built-in service at
+`https://api.supertokens.com/0/services/sms`. This applies whether the Core is self-hosted or managed.
 
 :::info[Important]
-- This is a free service and is globally rate limited. This is not suitable for production use. If you do not receive an SMS using this method, then the SDK prints the SMS content on the terminal.
-- We do not log / store any of the info sent to the API that sends out emails on behalf of your app.
+- Do not depend on the built-in service for production delivery. Its quota and availability are service policy, not an SDK contract.
+- When the service returns HTTP 429, released SDK fallback implementations treat that response as terminal and print the message input. This can include the phone number, OTP, magic link, and code lifetime.
 - You cannot customize the SMS content when using this method. If you want to customize the content, please see one of the other methods in this section.
+:::
+
+:::caution[Sensitive fallback logs]
+OTP codes and magic links are authentication secrets. Prevent production fallback logs from reaching shared consoles or
+third-party log pipelines. If you must retain them for testing, restrict access, redact the phone number and secret values,
+set a short retention period, and verify deletion. Prefer configuring Twilio or a custom service before production so a
+quota response cannot expose message content through this fallback.
 :::
 
 ### Twilio
@@ -56,9 +64,8 @@ supertokens.init({
               // optionally extra config to pass to Twilio client
             },
 
-            // give either from or messagingServiceSid
+            // Use exactly one sender option. This example uses from.
             from: "...",
-            messagingServiceSid: "...",
           },
         }),
       },
@@ -83,9 +90,8 @@ func main() {
 		Settings: smsdelivery.TwilioSettings{
 			AccountSid: "...",
 			AuthToken:  "...",
-			// Pass only one of From or MessagingServiceSid
-			From:                "...",
-			MessagingServiceSid: "...",
+			// Use exactly one sender option. This example uses From.
+			From: "...",
 		},
 	})
 	if err != nil {
@@ -95,6 +101,8 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Service: smsService,
 				},
@@ -109,6 +117,7 @@ func main() {
 ```python {12,13,14,15,16,17,18,19,20,21,22,23,24,25,26} check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig, TwilioSettings
 
 
@@ -118,6 +127,8 @@ init(
     framework='...',
     recipe_list=[
         passwordless.init(
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(
                 service=passwordless.TwilioService(
                     twilio_settings=TwilioSettings(
@@ -127,9 +138,8 @@ init(
                             # Optional configs to pass to twilio client
                         },
 
-                        # give either from_ or messaging_service_sid
+                        # Use exactly one sender option. This example uses from_.
                         from_="...",
-                        messaging_service_sid="...",
                     )
                 )
             )
@@ -142,31 +152,14 @@ init(
 
 To learn about how to customize the SMS templates, please see the next section.
 
-### SuperTokens SMS Service
+### SuperTokens SMS service
 
-Using this method, SuperTokens sends messages to your users automatically.
-Use this method if:
-- You are already using the managed service. This is the quickest way to set up SMS sending.
-- You want to take advantage of some SMS sending optimizations we do over time:
-    - Reduce SMS cost by picking a local SMS service based on the destination country.
-    - Fight spam / misuse of SMS.
+The backend SDKs also expose an API-key-based `SuperTokensSMSService`. It calls an external SMS endpoint directly and can
+be used whether your Core is self-hosted or managed. Availability, pricing, credits, quotas, sender identity, key issuance,
+and the Dashboard workflow are mutable service policy. Confirm them in your current Dashboard or contract before adopting
+this option; they are not guaranteed by the released SDK interface.
 
-:::note[This is a paid service and charges apply for every SMS based on the cost incurred.]
-New users receive $10 worth of credits.
-:::
-
-#### 1. Get the SMS API key
-
-<Steps>
-  ## Sign up on SuperTokens.com
-  ## Create a new development `env`
-  ## Scroll down and create a new production `env` (it takes a few minutes to create one)
-  ## Once the production `env` is set up, you can find your SMS API key under the setup section:
-</Steps>
-
-<img src="/img/passwordless/sms-api-key.png" alt="SMS API key screen"/>
-
-#### 2. Set the SMS API key in the backend SDK configuration
+If you have been issued an SMS API key, set it in the backend SDK configuration:
 
 <CodeGroup group="backend-language">
 <Tab title="Node.js" value="nodejs">
@@ -208,6 +201,8 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Service: passwordless.MakeSupertokensSMSService("<SMS API KEY GOES HERE>"),
 				},
@@ -221,6 +216,7 @@ func main() {
 ```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig
 
 init(
@@ -229,6 +225,8 @@ init(
     framework='...',
     recipe_list=[
         passwordless.init(
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(
                 service=passwordless.SuperTokensSMSService("<SMS API KEY GOES HERE>"))
         )
@@ -243,7 +241,7 @@ init(
 This method allows you to send messages however you like.
 The input to the send function consists of SMS template variables, allowing you to create the content of the SMS as well.
 Use this method if you are:
-- Using a third party SMS service that is **not** Twilio.
+- Using a third-party SMS service that is **not** Twilio.
 - You want to use another delivery method like WhatsApp or Facebook Messenger.
 - You want to do some custom spam protection before sending the SMS.
 - You already have an SMS sending infrastructure and want to use that.
@@ -301,6 +299,8 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Override: func(originalImplementation smsdelivery.SmsDeliveryInterface) smsdelivery.SmsDeliveryInterface {
 
@@ -336,6 +336,7 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe.passwordless.types import SMSDeliveryOverrideInput, SMSTemplateVars
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from typing import Dict, Any
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig
 
@@ -358,6 +359,8 @@ init(
     framework='...',
     recipe_list=[
         passwordless.init(
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(override=custom_sms_deliver)
         )
     ]
@@ -373,7 +376,9 @@ When using this callback, you must manage sending the SMS yourself.
 :::
 
 :::note[Error Management]
-To handle failures and other types of issues in the `sendSms` function throw an error. The SDK catches any exception through an upper level error handler. This error is then propagated if this is through an API call or otherwise logged.
+Throw or return an error from `sendSms` when delivery fails. API-triggered delivery can propagate it through the SDK's
+error handler; non-API calls may log it. Do not include phone numbers, OTPs, magic links, provider credentials, or complete
+provider responses in exceptions or logs.
 :::
 
 ## SMS Customization
@@ -385,7 +390,7 @@ You can see the default SMS content:
 
 To change the content of the default SMS templates, you can override the `getContent` function in the `smsDelivery` object.
 It allows you to return an object that has the following properties:
-- `body`: This is the email's body. This can be HTML or text as well.
+- `body`: The SMS message body.
 - `toPhoneNumber`: The phone number where the SMS is sent to.
 
 
@@ -486,15 +491,15 @@ func main() {
 				fmt.Println(urlWithLinkCode)
 				fmt.Println(userInputCode)
 
-				// send some custom email content
+				// send custom SMS content
 				return smsdelivery.SMSContent{
 					Body:          "SMS BODY",
 					ToPhoneNumber: phoneNumber,
 				}, nil
 
-				// Or you can call the original implemenation and change its content:
+				// Or call the original implementation and change its content:
 				/*
-				   originalResponse, err := originalGetContent(input, userContex)
+				   originalResponse, err := originalGetContent(input, userContext)
 				   if err != nil {
 				       return smsdelivery.SMSContent{}, nil
 				   }
@@ -513,6 +518,8 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Service: smsService,
 				},
@@ -526,6 +533,7 @@ func main() {
 ```python {12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,38,39,40,41,42,43,44} check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from supertokens_python.recipe.passwordless.types import TwilioOverrideInput, SMSTemplateVars
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig, SMSContent, TwilioSettings
 from typing import Dict, Any
@@ -542,8 +550,8 @@ def custom_sms_content_override(original_implementation: TwilioOverrideInput) ->
         __ = template_vars.url_with_link_code  # magic link
         ___ = template_vars.user_input_code  # OTP
 
-        # send some custom email content
-        return SMSContent(body="EMAIL BODY", to_phone=phone_number)
+        # send custom SMS content
+        return SMSContent(body="SMS BODY", to_phone=phone_number)
 
         # you can even call the original implementation and modify that
 
@@ -561,6 +569,8 @@ init(
     framework='...',
     recipe_list=[
         passwordless.init(
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(
                 service=passwordless.TwilioService(
 
@@ -582,7 +592,7 @@ You can use the override functionality to trigger any kind of behavior before an
 This can include things like:
 - Logging
 - Spam protection actions
-- Modifying the email template variables before sending the emails
+- Modifying the SMS template variables before sending messages
 
 
 <CodeGroup group="backend-language">
@@ -635,6 +645,8 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Override: func(originalImplementation smsdelivery.SmsDeliveryInterface) smsdelivery.SmsDeliveryInterface {
 
@@ -666,6 +678,7 @@ func main() {
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe.passwordless.types import SMSDeliveryOverrideInput, SMSTemplateVars
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from typing import Dict, Any
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig
 
@@ -690,6 +703,8 @@ init(
     framework='...',
     recipe_list=[
         passwordless.init(
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(override=custom_sms_deliver)
         )
     ]

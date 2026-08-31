@@ -21,12 +21,12 @@ The authentication flow works in the following way:
    - The [**Authorization Service**](/authentication/unified-login/oauth2-basics#authorization-server) backend redirects the user to a `callback URL` that includes the **Authorization Code**.
 
   ## The user accesses the callback URL
-   - The **Authentication Code** gets sent to the application `backend`
-   - The `backend` exchanges the **Authentication Code** for an [**OAuth2 Access Token**](/authentication/unified-login/oauth2-basics#oauth2-access-token)
-   - The `backend` saves the received token in a server session and sends it back to the `frontend` as a cookie.
+   - The Authorization Code and `state` are sent to the application backend.
+   - The backend verifies `state`, exchanges the Authorization Code, and keeps the OAuth tokens server-side.
+   - The backend rotates the application session and sends only an opaque session identifier in a cookie.
 </Steps>
 
-The `frontend` can use the new cookie to access protected resources from the `backend`.
+The frontend uses an opaque `HttpOnly`, `Secure`, appropriately `SameSite` application-session cookie to access its backend. OAuth access and refresh tokens never enter browser-readable storage.
 
 <img src="/img/oauth/multiple-frontend-domains-with-separate-backends.png" alt="Multiple Frontend Domains with separate Backends"/>
 
@@ -41,7 +41,7 @@ These instructions assume that you already have gone through the main [quickstar
 If you have skipped that page, please follow the tutorial and return here once you're done.
 
 :::info
-Note that, if the *frontends* and *backends* are in different *sub domains*, you don't need to use *OAuth* and can instead use [session sharing across sub domains](/post-authentication/session-management/share-session-across-sub-domains).
+Note that, if the *frontends* and *backends* are in different *subdomains*, you don't need to use *OAuth* and can instead use [session sharing across sub domains](/post-authentication/session-management/share-session-across-sub-domains).
 :::
 
 
@@ -55,8 +55,12 @@ Go to the [**SuperTokens.com SaaS Dashboard**](https://supertokens.com/dashboard
 ### 2. Create the OAuth2 Clients
 
 
-For each of your applications you need to create a separate [**OAuth2 client**](/authentication/unified-login/oauth2-basics#client).
-You can do this by directly calling the **SuperTokens Core** API.
+For each application, create a separate [**OAuth2 client**](/authentication/unified-login/oauth2-basics#client).
+Call the **SuperTokens Core** API from a trusted administrative environment. Because each application backend performs the code exchange and can protect credentials, these are **confidential clients**. The examples below register `client_secret_basic`, which is appropriate for Go oauth2, `Authlib`, League OAuth2 Client with `HttpBasicAuthOptionProvider`, Spring Security, and ASP.NET Core. Never expose a client secret to frontend code, logs, URLs, or browser storage.
+
+:::warning[passport-oauth2 requires a separately registered client]
+passport-oauth2 1.8.0 sends `client_id` and `client_secret` in the token request body. For the Node.js Passport application, register its own client with `tokenEndpointAuthMethod: "client_secret_post"` instead of the `client_secret_basic` value shown below. Do not reuse that client or secret in another application.
+:::
 
 
 <Tabs>
@@ -72,8 +76,10 @@ curl --location --request POST '<CORE_API_ENDPOINT>/recipe/oauth/clients' \
       "clientName": "<YOUR_CLIENT_NAME>",
       "responseTypes": ["code"],
       "grantTypes": ["authorization_code", "refresh_token"],
+      "tokenEndpointAuthMethod": "client_secret_basic",
+      "audience": ["<YOUR_APPLICATION_RESOURCE_SERVER>"],
       "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
     }
 '
 ```
@@ -94,6 +100,8 @@ const options = {
     clientName: "<YOUR_CLIENT_NAME>",
     responseTypes: ["code"],
     grantTypes: ["authorization_code", "refresh_token"],
+    tokenEndpointAuthMethod: "client_secret_basic",
+    audience: ["<YOUR_APPLICATION_RESOURCE_SERVER>"],
     scope: "offline_access <custom_scope_1> <custom_scope_2>",
     redirectUris: ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
   }),
@@ -123,8 +131,10 @@ func main() {
     "clientName": "<YOUR_CLIENT_NAME>",
     "responseTypes": ["code"],
     "grantTypes": ["authorization_code", "refresh_token"],
+    "tokenEndpointAuthMethod": "client_secret_basic",
+    "audience": ["<YOUR_APPLICATION_RESOURCE_SERVER>"],
     "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-    "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+    "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
   }`
 
   req, _ := http.NewRequest("POST", url, strings.NewReader(payload))
@@ -156,8 +166,10 @@ payload: Dict[str, Any] ={
   "clientName": "<YOUR_CLIENT_NAME>",
   "responseTypes": ["code"],
   "grantTypes": ["authorization_code", "refresh_token"],
+  "tokenEndpointAuthMethod": "client_secret_basic",
+  "audience": ["<YOUR_APPLICATION_RESOURCE_SERVER>"],
   "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-  "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+  "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
 }
 
 headers = {
@@ -190,7 +202,8 @@ Creates an OAuth2 client
 |--------------------------------------------|--------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------------|
 | `clientName`                               | `string`                 | A human-readable name of the client used for identification.                                                                                                                       | Yes      | -          |
 | `grantTypes`                               | `array` of `GrantType`   | The grant types that the Client uses.                             | Yes      | - |
-| `redirectUris`                              | `array` of `string`      | List of URIs where the Authorization Server redirects after authorization. Can include mobile/desktop deep links. Must be exact URLs without wildcards.                                    | Yes      |  -  | | `scope`                                    | `string`                 | Space-separated string of scopes the Client will request. Include `offline_access` to enable OAuth2 Refresh Token usage.                                                                      | Yes      | - |
+| `redirectUris` | `array` of `string` | Exact redirect URIs registered for the client. Wildcards are not supported. | Yes | - |
+| `audience` | `array` of `string` | Resource-server identifiers allowed in access tokens. | No | - |
 | `scope` | `string` | String containing a space-separated list of scope values (as described in Section 3.3 of OAuth 2.0 [RFC6749]) that the client can use when requesting access tokens. Include the `offline_access` scope to exchange OAuth2 Refresh Tokens for OAuth2 Access Tokens | No | "" |
 | `responseTypes`                            | `array` of `ResponseType` | The types of responses your client expects from the **Authorization Server**  | No | -    |
 | `tokenEndpointAuthMethod`                  | `enum`(`"client_secret_basic"`, `"client_secret_post"`, `"private_key_jwt"`, `"none"`)                 | The requested client authentication method                                                                                           | No | `client_secret_basic` |
@@ -223,41 +236,52 @@ curl -X POST <CORE_API_ENDPOINT>/recipe/oauth/clients \
       "clientName": "<YOUR_CLIENT_NAME>",
       "responseTypes": ["code"],
       "grantTypes": ["authorization_code", "refresh_token"],
+      "tokenEndpointAuthMethod": "client_secret_basic",
+      "audience": ["<YOUR_APPLICATION_RESOURCE_SERVER>"],
       "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"]
     }'
 ```
 ## Response
 ### 200
 The client has been successfully created.
-### Response schema
+### Relevant response fields
+
+The response includes the persisted client configuration, including the fields below.
+
 | Property    | Type                             | Description                                   |
 |-------------|----------------------------------|-----------------------------------------------|
 | `clientName`        | `string`                         | The name of the client.               |
 | `clientId`  | `string` | Unique identifier for the client.               |
-| `clientSecret` | `string` | The secret is part of the create request as plain text, and then never again. The secret remains in hashed format and is not recoverable once lost.                   |
+| `clientSecret` | `string` | Client secret for a confidential client. Omitted for a public client. Treat it as a credential and keep it on a trusted backend. |
 | `redirectUris` | `array` of `string` | The URLs used for redirection.                   |
 | `audience` | `array` of `string` | Value used to identify for whom a token is issued. The created client can generate access token only for the specified audiences.                   |
-| `scope` | `array` of `string` |  A space separated string of scopes that the Client requests access to.                   |
+| `scope` | `string` | A space-separated string of scopes that the client can request. |
+| `responseTypes` | `array` of `string` | Registered response types. |
+| `grantTypes` | `array` of `string` | Registered grant types. |
+| `tokenEndpointAuthMethod` | `string` | Token endpoint authentication method. |
+| `enableRefreshTokenRotation` | `boolean` | Whether refresh token rotation is enabled. |
 #### Example
 ```json
 {
   "clientName": "<YOUR_CLIENT_NAME>",
   "clientId": "<CLIENT_ID>",
+  "clientSecret": "<CLIENT_SECRET>",
+  "tokenEndpointAuthMethod": "client_secret_basic",
+  "audience": ["<YOUR_APPLICATION_RESOURCE_SERVER>"],
   "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
-  "audience": ["<YOUR_APPLICATION_DOMAIN>"],
-  "scope": ["offline_access <custom_scope_1> <custom_scope_2>"]
+  "scope": "offline_access <custom_scope_1> <custom_scope_2>"
 }
 ```
 </Tab>
 </Tabs>
 
-:::warning[You have to save the create OAuth2 Client response because this is not persisted internally for security reasons.]
-The information is necessary for the next steps.
+:::warning[Protect OAuth client credentials]
+Core persists the client configuration and encrypts confidential client secrets at rest. Store any returned client secret in a secret manager and expose it only to the application backend. Public clients do not receive or use a client secret.
 :::
 
 
-### 3. Set Up your Authorization Service backend
+### 3. Set up your Authorization Service backend
 
 In your [**Authorization Service**](/authentication/unified-login/oauth2-basics#authorization-server) you need to initialize the **OAuth2Provider** recipe.
 The recipe exposes the endpoints needed for enabling the [**OAuth 2.0**](/authentication/unified-login/oauth2-basics) flow.
@@ -266,7 +290,7 @@ The recipe exposes the endpoints needed for enabling the [**OAuth 2.0**](/authen
 <ContentOption title="Node.js" value="nodejs">
 Update the `supertokens.init` call to include the `OAuth2Provider` recipe.
 
-Add the import statement for the recipe and update the list of recipes with the new initialization step.
+Add the import statement for the recipe and update the recipe list with the new initialization step.
 </ContentOption>
 <ContentOption title="Go" value="go">
 :::warning[At the moment there is no support for creating OAuth2 providers in the Go SDK.]
@@ -279,6 +303,7 @@ Add the import statement for the recipe and update the list of recipes with the 
 <Tab title="Node.js" value="nodejs">
 ```typescript
 import supertokens from "supertokens-node";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
 import OAuth2Provider from "supertokens-node/recipe/oauth2provider";
 
 supertokens.init({
@@ -291,7 +316,7 @@ supertokens.init({
     apiDomain: "...",
     websiteDomain: "...",
   },
-  recipeList: [OAuth2Provider.init()],
+  recipeList: [EmailPassword.init(), OAuth2Provider.init()],
 });
 ```
 </Tab>
@@ -301,7 +326,7 @@ supertokens.init({
 <Tab title="Python" value="python">
 ```python
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import oauth2provider
+from supertokens_python.recipe import emailpassword, oauth2provider
 
 init(
     app_info=InputAppInfo(
@@ -315,7 +340,8 @@ init(
         api_key="..."
     ),
     recipe_list=[
-        oauth2provider.init()
+        emailpassword.init(),
+        oauth2provider.init(),
     ],
 )
 ```
@@ -342,7 +368,7 @@ init(
 
 <DependentContent passive group="frontend-prebuilt-ui">
 <ContentOption title="Reactjs" value="reactjs">
-Add the import statement for the new recipe and update the list of recipe to also include the new initialization.
+Add the import statement for the new recipe and update the list of recipes to also include the new initialization.
 </ContentOption>
 <ContentOption title="Angular" value="angular">
 Update the `AuthComponent` to include the `OAuth2Provider` recipe.
@@ -358,6 +384,7 @@ You need to add a new item in the `recipeList` array, inside the `supertokensUII
 <Tab title="Reactjs" value="reactjs">
 ```tsx
 import OAuth2Provider from "supertokens-auth-react/recipe/oauth2provider";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 import SuperTokens from "supertokens-auth-react";
 
 SuperTokens.init({
@@ -366,7 +393,7 @@ SuperTokens.init({
     apiDomain: "...",
     websiteDomain: "...",
   },
-  recipeList: [OAuth2Provider.init()],
+  recipeList: [EmailPassword.init(), OAuth2Provider.init()],
 });
 ```
 </Tab>
@@ -488,11 +515,12 @@ import {init as supertokensUIInit} from "supertokens-auth-react"; import superto
 <ContentOption title="Yes" value="yes">
 ```tsx
 import React from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes } from "react-router-dom";
 
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import { OAuth2ProviderPreBuiltUI } from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import * as reactRouterDom from "react-router-dom";
 
 class App extends React.Component {
@@ -502,7 +530,7 @@ class App extends React.Component {
         <BrowserRouter>
           <Routes>
             {/*This renders the login UI on the /auth route*/}
-            {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [OAuth2ProviderPreBuiltUI])}
+            {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [EmailPasswordPreBuiltUI, OAuth2ProviderPreBuiltUI])}
             {/*Your app routes*/}
           </Routes>
         </BrowserRouter>
@@ -516,14 +544,15 @@ class App extends React.Component {
 ```tsx
 import React from "react";
 import { OAuth2ProviderPreBuiltUI } from "supertokens-auth-react/recipe/oauth2provider/prebuiltui";
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
 
 class App extends React.Component {
   render() {
-    if (canHandleRoute([OAuth2ProviderPreBuiltUI])) {
+    if (canHandleRoute([EmailPasswordPreBuiltUI, OAuth2ProviderPreBuiltUI])) {
       // This renders the login UI on the /auth route
-      return getRoutingComponent([OAuth2ProviderPreBuiltUI]);
+      return getRoutingComponent([EmailPasswordPreBuiltUI, OAuth2ProviderPreBuiltUI]);
     }
 
     return <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>;
@@ -589,11 +618,6 @@ If you want to change these routes, you need to add a custom override.
 
 :::
 </ContentOption>
-<ContentOption title="Python" value="python">
-:::warning[At the moment, there is no support for creating OAuth2 providers in the Python SDK.]
-
-:::
-</ContentOption>
 </DependentContent>
 
 <CodeGroup group="backend-language">
@@ -615,6 +639,9 @@ OAuth2Provider.init({
           });
           if (input.hint !== undefined) {
             queryParams.set("hint", input.hint);
+          }
+          if (input.tenantId !== undefined) {
+            queryParams.set("tenantId", input.tenantId);
           }
           if (input.forceFreshAuth) {
             queryParams.set("forceFreshAuth", "true");
@@ -661,7 +688,7 @@ async function shouldLogin() {
   const forceFreshAuth = urlParams.get("forceFreshAuth") as string;
   if (forceFreshAuth === "true") return true;
 
-  return Session.doesSessionExist();
+  return !(await Session.doesSessionExist());
 }
 ```
 
@@ -674,7 +701,7 @@ If you are using multi-tenancy, you also need to keep track of the `tenantId` qu
 #### 4.3 Complete the login attempt
 
 
-After the user submits the login form, you need to redirect them to a specific route to complete the **OAuth 2** flow.
+After the user submits the login form, you need to redirect them to a specific route to complete the **OAuth 2.0** flow.
 
 The following code sample shows you how to determine which URL to use.
 
@@ -806,57 +833,452 @@ async function logout() {
 ### 5. Set up session handling in each application
 
 In each of your individual `applications` you need to set up logic for handling the **OAuth 2.0** authentication flow.
-You can use a generic **OIDC** or **OAuth2** library to do this.
+Use a framework OAuth 2.0/OIDC login middleware rather than implementing the protocol manually. The authorization endpoint is `<YOUR_API_DOMAIN>/auth/oauth/auth`, and the token endpoint is `<YOUR_API_DOMAIN>/auth/oauth/token`. Each registered callback must exactly match one of the client's `redirectUris`.
+
+A secure implementation must:
+
+1. Generate a high-entropy `state`, bind it to the initiating browser session, and verify it exactly before code exchange. Use PKCE as defense in depth where the library supports it.
+2. For OIDC, request `openid`, generate and verify `nonce`, and validate the ID token signature, issuer, audience, expiry, and nonce.
+3. Keep OAuth access and refresh tokens in a server-side session store. After callback, rotate the application session identifier to prevent session fixation.
+4. Return only an opaque session identifier in an `HttpOnly`, `Secure`, appropriately `SameSite` cookie. Never return OAuth tokens in browser-readable cookies, JavaScript storage, or URLs.
+5. Preserve the selected `tenantId` through authorization, callback, and the resulting application session.
 
 <DependentContent passive group="backend-language">
 <ContentOption title="Node.js" value="nodejs">
-You can use the [passport-oauth2](https://www.passportjs.org/packages/passport-oauth2/) library.
-Follow the instructions on the library's page and set up your application `backend`.
-You can determine the configuration parameters based on the response received in **step 2**, when creating the **OAuth2 Client**.
-- `authorizationURL` corresponds to `authorizeUrl`
-- `tokenURL` corresponds to `tokenFetchUrl`
-- `clientID` corresponds to `clientId`
-- `clientSecret` corresponds to `clientSecret`
-- `callbackURL` corresponds to a value from `callbackUrls`
-- `scope` corresponds to `scope`
-Make sure that you expose an endpoint that calls `passport.authenticate('oauth2')`.
-This way the user ends up accessing the actual login page served by the **Authorization Service**.
+With [passport-oauth2](https://www.passportjs.org/packages/passport-oauth2/), state protection and PKCE are opt-in. Configure both. Install server-side Express session middleware before Passport; do not use a client-side cookie session store. This example uses the separately registered `client_secret_post` client described in step 2.
+
+```javascript
+const CLIENT_ID = "<PASSPORT_CLIENT_ID>";
+const EXPECTED_AUDIENCE = "<YOUR_APPLICATION_RESOURCE_SERVER>";
+const EXPECTED_ISSUER = "<YOUR_CONFIGURED_ISSUER>";
+const REQUIRED_SCOPES = ["<custom_scope_1>"];
+const INTROSPECTION_URL = "<YOUR_API_DOMAIN>/auth/oauth/introspect";
+
+class SuperTokensOAuth2Strategy extends OAuth2Strategy {
+  authorizationParams(options) {
+    return { tenant_id: options.tenantId };
+  }
+}
+
+async function introspectAndValidateTenant(accessToken, expectedTenant) {
+  const response = await fetch(INTROSPECTION_URL, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token: accessToken, scope: REQUIRED_SCOPES.join(" ") }),
+  });
+  if (!response.ok) throw new Error("OAuth introspection failed");
+
+  const tokenInfo = await response.json();
+  const audiences = Array.isArray(tokenInfo.aud) ? tokenInfo.aud : [tokenInfo.aud];
+  if (
+    tokenInfo.active !== true ||
+    tokenInfo.tId !== expectedTenant ||
+    tokenInfo.client_id !== CLIENT_ID ||
+    tokenInfo.iss !== EXPECTED_ISSUER ||
+    !audiences.includes(EXPECTED_AUDIENCE)
+  ) {
+    throw new Error("OAuth token does not match the login transaction");
+  }
+}
+
+app.use(
+  session({
+    secret: mustGetEnv("APPLICATION_SESSION_SECRET"),
+    store: serverSideSessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, secure: true, sameSite: "lax" },
+  }),
+);
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.use(
+  new SuperTokensOAuth2Strategy(
+    {
+      authorizationURL: "<YOUR_API_DOMAIN>/auth/oauth/auth",
+      tokenURL: "<YOUR_API_DOMAIN>/auth/oauth/token",
+      clientID: CLIENT_ID,
+      clientSecret: mustGetEnv("OAUTH_CLIENT_SECRET"),
+      callbackURL: "https://<YOUR_APPLICATION_DOMAIN>/oauth/callback",
+      scope: "offline_access <custom_scope_1> <custom_scope_2>",
+      state: true,
+      pkce: true,
+      passReqToCallback: true,
+    },
+    async (req, accessToken, refreshToken, params, profile, done) => {
+      try {
+        const transaction = req.session.oauthTransaction;
+        delete req.session.oauthTransaction;
+        if (transaction === undefined) throw new Error("OAuth transaction missing");
+
+        await introspectAndValidateTenant(accessToken, transaction.tenantId);
+        const user = await resolveUserFromOAuthTokens(accessToken, refreshToken);
+        done(null, user, {
+          oauthTokens: { accessToken, refreshToken },
+          tenantId: transaction.tenantId,
+        });
+      } catch (error) {
+        done(error);
+      }
+    },
+  ),
+);
+
+app.get("/login", (req, res, next) => {
+  const tenantId = resolveAllowedTenant(req);
+  req.session.oauthTransaction = { tenantId };
+  passport.authenticate("oauth2", { tenantId })(req, res, next);
+});
+
+app.get("/oauth/callback", (req, res, next) => {
+  passport.authenticate("oauth2", { session: false }, (error, user, info) => {
+    if (error || !user) return next(error ?? new Error("OAuth login failed"));
+    if (!info?.oauthTokens || typeof info.tenantId !== "string") {
+      return next(new Error("OAuth transaction result missing"));
+    }
+
+    req.session.regenerate((regenerateError) => {
+      if (regenerateError) return next(regenerateError);
+      req.logIn(user, (loginError) => {
+        if (loginError) return next(loginError);
+        applicationSessionStore.set(req.sessionID, {
+          tenantId: info.tenantId,
+          oauthTokens: info.oauthTokens,
+        });
+        res.redirect("/");
+      });
+    });
+  })(req, res, next);
+});
+```
+
+passport-oauth2 generates and consumes its state and PKCE verifier in the initiating `req.session`. The separate `oauthTransaction` binds the allowlisted tenant to that same session, and `authorizationParams` sends it as the released `tenant_id` authorization parameter. The trusted introspection endpoint validates signature, expiry, revocation, and required scopes before the example compares the released `tId`, issuer, client, and audience fields. The rotated opaque application session stores the validated tenant and tokens server-side.
 </ContentOption>
 <ContentOption title="Go" value="go">
-You can use the [OAuth2](https://pkg.go.dev/golang.org/x/oauth2) library.
-Follow these [instructions](https://golang.org/pkg/golang.org/x/oauth2/#example-Config-RequestToken) and implement it in your `backend`.
-You can determine the configuration parameters based on the response received in **step 2**.
-- `ClientID` corresponds to `clientId`
-- `ClientSecret` corresponds to `clientSecret`
-- `Scopes` corresponds to `scope`
-- `Endpoint.AuthURL` corresponds to `authorizeUrl`
-- `Endpoint.TokenURL` corresponds to `tokenFetchUrl`
-Make sure that you expose an endpoint that redirects to the authentication URL obtained from calling `AuthCodeURL`.
-This way the user ends up accessing the actual login page served by the **Authorization Service**.
+Use [golang.org/x/oauth2](https://pkg.go.dev/golang.org/x/oauth2) with a one-time, server-side transaction store. The store must key each transaction by the initiating application session ID; `Consume` must atomically read and delete it.
+
+```go
+type OAuthTransaction struct {
+  State    string
+  Verifier string
+  TenantID string
+}
+
+type Audience []string
+
+func (audience *Audience) UnmarshalJSON(data []byte) error {
+  var single string
+  if err := json.Unmarshal(data, &single); err == nil {
+    *audience = Audience{single}
+    return nil
+  }
+
+  var multiple []string
+  if err := json.Unmarshal(data, &multiple); err != nil {
+    return errors.New("invalid OAuth audience")
+  }
+  *audience = multiple
+  return nil
+}
+
+func (audience Audience) Contains(expected string) bool {
+  for _, value := range audience {
+    if value == expected {
+      return true
+    }
+  }
+  return false
+}
+
+type IntrospectionResponse struct {
+  Active   bool     `json:"active"`
+  Audience Audience `json:"aud"`
+  TenantID string   `json:"tId"`
+  ClientID string   `json:"client_id"`
+  Issuer   string   `json:"iss"`
+}
+
+type AppSession struct {
+  TenantID string
+  Token    *oauth2.Token
+}
+
+func randomURLSafeToken(size int) (string, error) {
+  value := make([]byte, size)
+  if _, err := rand.Read(value); err != nil {
+    return "", err
+  }
+  return base64.RawURLEncoding.EncodeToString(value), nil
+}
+
+func introspectAndValidateTenant(ctx context.Context, accessToken, expectedTenant string) error {
+  form := url.Values{
+    "token": {accessToken},
+    "scope": {strings.Join(requiredScopes, " ")},
+  }
+  request, err := http.NewRequestWithContext(ctx, http.MethodPost, introspectionURL, strings.NewReader(form.Encode()))
+  if err != nil {
+    return err
+  }
+  request.Header.Set("content-type", "application/x-www-form-urlencoded")
+
+  response, err := http.DefaultClient.Do(request)
+  if err != nil {
+    return err
+  }
+  defer response.Body.Close()
+  if response.StatusCode != http.StatusOK {
+    return errors.New("OAuth introspection failed")
+  }
+
+  var tokenInfo IntrospectionResponse
+  if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&tokenInfo); err != nil {
+    return err
+  }
+  if !tokenInfo.Active || !tokenInfo.Audience.Contains(expectedAudience) || tokenInfo.TenantID != expectedTenant || tokenInfo.ClientID != oauthConfig.ClientID || tokenInfo.Issuer != expectedIssuer {
+    return errors.New("OAuth token does not match the login transaction")
+  }
+  return nil
+}
+
+func login(w http.ResponseWriter, r *http.Request) {
+  state, err := randomURLSafeToken(32)
+  if err != nil {
+    http.Error(w, "login unavailable", http.StatusInternalServerError)
+    return
+  }
+  tenantID := resolveAllowedTenant(r)
+  verifier := oauth2.GenerateVerifier()
+  transaction := OAuthTransaction{State: state, Verifier: verifier, TenantID: tenantID}
+  if err := oauthTransactions.Put(applicationSessionID(r), transaction); err != nil {
+    http.Error(w, "login unavailable", http.StatusInternalServerError)
+    return
+  }
+
+  authURL := oauthConfig.AuthCodeURL(
+    state,
+    oauth2.S256ChallengeOption(verifier),
+    oauth2.SetAuthURLParam("tenant_id", tenantID),
+  )
+  http.Redirect(w, r, authURL, http.StatusFound)
+}
+
+func callback(w http.ResponseWriter, r *http.Request) {
+  transaction, ok := oauthTransactions.Consume(applicationSessionID(r))
+  providedState := r.URL.Query().Get("state")
+  if !ok || subtle.ConstantTimeCompare([]byte(transaction.State), []byte(providedState)) != 1 {
+    http.Error(w, "invalid OAuth state", http.StatusBadRequest)
+    return
+  }
+
+  token, err := oauthConfig.Exchange(r.Context(), r.URL.Query().Get("code"), oauth2.VerifierOption(transaction.Verifier))
+  if err != nil {
+    http.Error(w, "code exchange failed", http.StatusBadRequest)
+    return
+  }
+  if err := introspectAndValidateTenant(r.Context(), token.AccessToken, transaction.TenantID); err != nil {
+    http.Error(w, "token validation failed", http.StatusUnauthorized)
+    return
+  }
+
+  newSessionID, err := rotateApplicationSession(w, r)
+  if err != nil {
+    http.Error(w, "session creation failed", http.StatusInternalServerError)
+    return
+  }
+  applicationSessionStore.Put(newSessionID, AppSession{TenantID: transaction.TenantID, Token: token})
+  http.Redirect(w, r, "/", http.StatusFound)
+}
+```
+
+The snippet uses `crypto/rand`, `encoding/base64`, and the standard HTTP/JSON packages. Set `introspectionURL` to `<YOUR_API_DOMAIN>/auth/oauth/introspect`, `expectedIssuer` to the exact configured issuer, `expectedAudience` to this resource server, and `requiredScopes` to its scopes. Core 12.1.1 introspection can return `aud` as a JSON string or array; `Audience.UnmarshalJSON` handles both and the callback requires the configured audience before creating a session. The released `tenant_id` authorization parameter selects the tenant, and introspection returns its signed `tId`. Only the rotated opaque session ID reaches the browser.
 </ContentOption>
 <ContentOption title="Python" value="python">
-You can use the [AuthLib](https://docs.authlib.org/) library.
-Follow these [instructions](https://docs.authlib.org/en/latest/client/oauth2.html) and implement it in your `backend`.
-You can determine the configuration parameters based on the response received in **step 2**.
-- `client_id` corresponds to `clientId`
-- `client_secret` corresponds to `clientSecret`
-- `scope` corresponds to `scope`
-- `authorization_endpoint` corresponds to `authorizeUrl`
-- `token_endpoint` corresponds to `tokenFetchUrl`
-Make sure that you expose an endpoint that redirects to the authentication URL obtained from calling `create_authorization_url`.
-This way the user ends up accessing the actual login page served by the **Authorization Service**.
+Use [Authlib](https://docs.authlib.org/) with a one-time server-side transaction store. These functions are framework-agnostic; connect `redirect`, `request_url`, and the session helpers to your framework.
+
+```python
+import secrets
+
+import requests
+from authlib.common.security import generate_token
+from authlib.integrations.requests_client import OAuth2Session
+
+
+def introspect_and_validate_tenant(access_token: str, expected_tenant: str) -> None:
+    response = requests.post(
+        INTROSPECTION_URL,
+        data={"token": access_token, "scope": " ".join(REQUIRED_SCOPES)},
+        timeout=5,
+    )
+    response.raise_for_status()
+    token_info = response.json()
+    audiences = token_info.get("aud", [])
+    if isinstance(audiences, str):
+        audiences = [audiences]
+    if (
+        token_info.get("active") is not True
+        or token_info.get("tId") != expected_tenant
+        or token_info.get("client_id") != CLIENT_ID
+        or token_info.get("iss") != EXPECTED_ISSUER
+        or EXPECTED_AUDIENCE not in audiences
+    ):
+        raise ValueError("OAuth token does not match the login transaction")
+
+
+def login():
+    client = OAuth2Session(
+        CLIENT_ID,
+        CLIENT_SECRET,
+        token_endpoint_auth_method="client_secret_basic",
+        scope=SCOPES,
+        redirect_uri=CALLBACK_URL,
+        code_challenge_method="S256",
+    )
+    verifier = generate_token(48)
+    tenant_id = resolve_allowed_tenant()
+    authorization_url, state = client.create_authorization_url(
+        AUTHORIZATION_URL,
+        code_verifier=verifier,
+        tenant_id=tenant_id,
+    )
+    transaction_store.put(
+        application_session_id(),
+        {"state": state, "verifier": verifier, "tenant_id": tenant_id},
+    )
+    return redirect(authorization_url)
+
+
+def callback():
+    # consume atomically reads and deletes the initiating session's transaction
+    transaction = transaction_store.consume(application_session_id())
+    provided_state = request_query_parameter("state") or ""
+    if transaction is None or not secrets.compare_digest(
+        transaction["state"], provided_state
+    ):
+        raise InvalidOAuthState()
+
+    client = OAuth2Session(
+        CLIENT_ID,
+        CLIENT_SECRET,
+        token_endpoint_auth_method="client_secret_basic",
+        state=transaction["state"],
+        redirect_uri=CALLBACK_URL,
+        code_challenge_method="S256",
+    )
+    token = client.fetch_token(
+        TOKEN_URL,
+        authorization_response=request_url(),
+        code_verifier=transaction["verifier"],
+    )
+    introspect_and_validate_tenant(token["access_token"], transaction["tenant_id"])
+
+    new_session_id = rotate_application_session()
+    application_session_store.put(
+        new_session_id,
+        {"tenant_id": transaction["tenant_id"], "oauth_token": token},
+    )
+    return redirect("/")
+```
+
+Set `INTROSPECTION_URL` to `<YOUR_API_DOMAIN>/auth/oauth/introspect`, `EXPECTED_ISSUER` to the exact configured issuer, and configure the expected client, audience, and required scopes. Authlib sends the released `tenant_id` authorization parameter. Core introspection validates signature, expiry, revocation, and requested scopes and returns the signed `tId`; only the rotated opaque session ID is sent to the browser.
 </ContentOption>
 <ContentOption title="PHP" value="php">
-You can use the [League OAuth2 Client](https://github.com/thephpleague/oauth2-client) library.
-Follow these [instructions](https://oauth2-client.thephpleague.com/usage/) and implement it in your `backend`.
-You can determine the configuration parameters based on the response received in **step 2**.
-- `clientId` corresponds to `clientId`
-- `clientSecret` corresponds to `clientSecret`
-- `redirectUri` corresponds to a value from `callbackUrls`
-- `urlAuthorize` corresponds to `authorizeUrl`
-- `urlAccessToken` corresponds to `tokenFetchUrl`
-Make sure that you expose an endpoint that redirects to the authentication URL obtained from calling `getAuthorizationUrl`.
-This way the user ends up accessing the actual login page served by the **Authorization Service**.
+Use [League OAuth2 Client](https://oauth2-client.thephpleague.com/usage/) with a server-side application session and one-time transaction store.
+
+```php
+$clientSecret = getenv('OAUTH_CLIENT_SECRET');
+if ($clientSecret === false) {
+    throw new RuntimeException('OAUTH_CLIENT_SECRET is required');
+}
+
+$httpClient = new GuzzleHttp\Client(['timeout' => 5]);
+$provider = new League\OAuth2\Client\Provider\GenericProvider(
+    [
+        'clientId' => CLIENT_ID,
+        'clientSecret' => $clientSecret,
+        'redirectUri' => 'https://<YOUR_APPLICATION_DOMAIN>/oauth/callback',
+        'urlAuthorize' => '<YOUR_API_DOMAIN>/auth/oauth/auth',
+        'urlAccessToken' => '<YOUR_API_DOMAIN>/auth/oauth/token',
+        'urlResourceOwnerDetails' => '<YOUR_API_DOMAIN>/auth/oauth/userinfo',
+        'scopes' => ['offline_access', '<custom_scope_1>', '<custom_scope_2>'],
+        'scopeSeparator' => ' ',
+        'pkceMethod' => League\OAuth2\Client\Provider\GenericProvider::PKCE_METHOD_S256,
+    ],
+    [
+        'httpClient' => $httpClient,
+        'optionProvider' => new League\OAuth2\Client\OptionProvider\HttpBasicAuthOptionProvider(),
+    ],
+);
+
+if ($requestPath === '/login') {
+    $tenantId = resolveAllowedTenant();
+    $authorizationUrl = $provider->getAuthorizationUrl([
+        'tenant_id' => $tenantId,
+    ]);
+    $transactionStore->put(session_id(), [
+        'state' => $provider->getState(),
+        'pkceCode' => $provider->getPkceCode(),
+        'tenantId' => $tenantId,
+    ]);
+    header('Location: ' . $authorizationUrl);
+    exit;
+}
+
+if ($requestPath !== '/oauth/callback') {
+    throw new RuntimeException('Not found');
+}
+
+// consume atomically reads and deletes the initiating session's transaction
+$transaction = $transactionStore->consume(session_id());
+$providedState = $_GET['state'] ?? '';
+if ($transaction === null || !hash_equals($transaction['state'], $providedState)) {
+    throw new RuntimeException('Invalid OAuth state');
+}
+if (isset($_GET['error']) || !isset($_GET['code'])) {
+    throw new RuntimeException('OAuth authorization failed');
+}
+
+$provider->setPkceCode($transaction['pkceCode']);
+$token = $provider->getAccessToken('authorization_code', [
+    'code' => $_GET['code'],
+]);
+
+$introspectionResponse = $httpClient->request('POST', INTROSPECTION_URL, [
+    'form_params' => [
+        'token' => $token->getToken(),
+        'scope' => implode(' ', REQUIRED_SCOPES),
+    ],
+]);
+$tokenInfo = json_decode(
+    (string) $introspectionResponse->getBody(),
+    true,
+    512,
+    JSON_THROW_ON_ERROR,
+);
+$audiences = is_array($tokenInfo['aud'] ?? null)
+    ? $tokenInfo['aud']
+    : [$tokenInfo['aud'] ?? null];
+if (
+    ($tokenInfo['active'] ?? false) !== true
+    || ($tokenInfo['tId'] ?? null) !== $transaction['tenantId']
+    || ($tokenInfo['client_id'] ?? null) !== CLIENT_ID
+    || ($tokenInfo['iss'] ?? null) !== EXPECTED_ISSUER
+    || !in_array(EXPECTED_AUDIENCE, $audiences, true)
+) {
+    throw new RuntimeException('OAuth token does not match the login transaction');
+}
+
+session_regenerate_id(true);
+$applicationSessionStore->put(session_id(), [
+    'tenantId' => $transaction['tenantId'],
+    'oauthToken' => $token,
+]);
+header('Location: /');
+exit;
+```
+
+Set `INTROSPECTION_URL` to `<YOUR_API_DOMAIN>/auth/oauth/introspect`, `EXPECTED_ISSUER` to the exact configured issuer, and configure the expected audience and required scopes. League sends the released `tenant_id` authorization parameter. Core introspection validates signature, expiry, revocation, and requested scopes and returns signed `tId`; only the rotated opaque session ID reaches the browser.
 </ContentOption>
 <ContentOption title="Java" value="java">
 You can use the [Spring Security](https://github.com/spring-projects/spring-security) library.
@@ -866,17 +1288,13 @@ You can determine the configuration parameters based on the response received in
 - `client-secret` corresponds to `clientSecret`
 - `scope` corresponds to `scope`
 - `issuer-uri` corresponds to `<YOUR_API_DOMAIN>/auth`
+
+Use an `OAuth2AuthorizationRequestResolver` to add the allowlisted tenant as the `tenant_id` authorization parameter and retain it in the server-side `AuthorizationRequestRepository` transaction. After callback, call `<YOUR_API_DOMAIN>/auth/oauth/introspect`, require `active`, the configured scopes/client/audience/issuer, and exact `tId`, then persist that tenant and the tokens in the rotated server-side application session.
 </ContentOption>
 <ContentOption title="C#" value="csharp">
-You can use the [IdentityModel](https://github.com/IdentityModel/IdentityModel) library.
-Follow these [instructions](https://identitymodel.readthedocs.io/en/latest/client/token.html#requesting-a-token-using-the-authorization-code-grant-type) and implement it in your `backend`.
-You can determine the configuration parameters based on the response received in **step 2**.
-- `Address` corresponds to `<YOUR_API_DOMAIN>/auth`
-- `ClientId` corresponds to `clientId`
-- `ClientSecret` corresponds to `clientSecret`
-- `RedirectUri` corresponds to a value from `callbackUrls`
-Make sure that you expose an endpoint that redirects to the authentication URL obtained by using [this example](https://identitymodel.readthedocs.io/en/latest/misc/request_url.html#authorization-endpoint).
-This way the user ends up accessing the actual login page served by the **Authorization Service**.
+Use ASP.NET Core's OpenID Connect authentication middleware to handle the authorization callback, correlation cookie, `state`, `nonce`, token validation, and application-session rotation. Configure its authority as `<YOUR_API_DOMAIN>/auth`, set `ClientId` and `ClientSecret` from the confidential client, and set `CallbackPath` to the path of an exact `redirectUris` entry. Store tokens server-side rather than in the authentication cookie.
+
+In `OnRedirectToIdentityProvider`, add the allowlisted tenant to `AuthenticationProperties.Items` and send it as `ProtocolMessage.SetParameter("tenant_id", tenantId)`. After callback, introspect the access token at `<YOUR_API_DOMAIN>/auth/oauth/introspect`; require `active`, the configured scopes/client/audience/issuer, and exact `tId`. Put that tenant and the tokens in the rotated server-side application session, never in the browser cookie.
 </ContentOption>
 </DependentContent>
 
@@ -892,8 +1310,7 @@ In your `frontend` applications you need to add a login action that directs the 
 
 The user should first redirect to the `backend` authentication endpoint defined during the previous step.
 There the `backend` generates a safe `authorization` URL using the **OAuth2** library and then redirects the user there.
-After the user has logged in from the [**Authorization Service**](/authentication/unified-login/oauth2-basics#authorization-server) they redirect to the `backend` callback URL.
-Then the `backend` creates the authentication session and sends it to the user agent as a cookie.
+After login, the Authorization Service redirects the user to the backend callback. The backend verifies the bound `state` (and OIDC `nonce` when applicable), exchanges the code, rotates the application session, and sets only the hardened opaque session cookie described above.
 
 ### 7. Test the new authentication flow
 

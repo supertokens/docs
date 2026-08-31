@@ -1,6 +1,6 @@
 ---
 title: Link social accounts
-description: Link social accounts accounts using the account linking feature.
+description: Link social accounts using the account linking feature.
 sidebar:
   order: 6
 ---
@@ -16,8 +16,10 @@ Of course, there are security checks done to ensure there is no account takeover
 
 ## Before you start
 
-:::info[Managed service feature]
-This feature is available for managed SuperTokens deployments.
+:::info[Paid feature]
+This feature is available for managed deployments and licensed self-hosted deployments. For managed deployments,
+[contact SuperTokens support](mailto:support@supertokens.com) to enable it. For self-hosted deployments, obtain a
+license key from SuperTokens and [add it to the Core](/deployment/self-host-supertokens#5-add-license-keys).
 :::
 
 We do not provide pre-built UI for this flow since it's probably something you want to add in your settings page or during the sign up process. This guide focuses on which APIs to call from your own UI.
@@ -31,10 +33,6 @@ The frontend code snippets below refer to the `supertokens-web-js` SDK. You can 
 
 <DependentContent passive group="backend-language">
 <ContentOption title="Go" value="go">
-:::note[At the moment this feature is not supported through the Go SDK.]
-:::
-</ContentOption>
-<ContentOption title="Python" value="python">
 :::note[At the moment this feature is not supported through the Go SDK.]
 :::
 </ContentOption>
@@ -73,7 +71,7 @@ supertokens.init({
             shouldRequireVerification: true,
           };
         }
-        if (session !== undefined && session.getUserId() === user.id) {
+        if (session !== undefined && session.getUserId() === user.id && session.getTenantId() === tenantId) {
           return {
             shouldAutomaticallyLink: true,
             shouldRequireVerification: true,
@@ -92,11 +90,50 @@ supertokens.init({
 
 </Tab>
 <Tab title="Python" value="python">
+```python
+from typing import Any, Dict, Optional, Union
 
+from supertokens_python.recipe import accountlinking
+from supertokens_python.recipe.accountlinking.types import (
+    AccountInfoWithRecipeIdAndUserId,
+    ShouldAutomaticallyLink,
+    ShouldNotAutomaticallyLink,
+)
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.types import User
+
+
+async def should_do_automatic_account_linking(
+    new_account_info: AccountInfoWithRecipeIdAndUserId,
+    user: Optional[User],
+    session: Optional[SessionContainer],
+    tenant_id: str,
+    user_context: Dict[str, Any],
+) -> Union[ShouldNotAutomaticallyLink, ShouldAutomaticallyLink]:
+    if user is None:
+        return ShouldAutomaticallyLink(should_require_verification=True)
+
+    if (
+        session is not None
+        and session.get_user_id() == user.id
+        and session.get_tenant_id() == tenant_id
+    ):
+        return ShouldAutomaticallyLink(should_require_verification=True)
+
+    return ShouldNotAutomaticallyLink()
+
+
+accountlinking.init(
+    should_do_automatic_account_linking=should_do_automatic_account_linking
+)
+```
 </Tab>
 </CodeGroup>
 
-In the above implementation of `shouldDoAutomaticAccountLinking`, account linking is only allowed if the input session is present. This means that the process is trying to link a social login account to an existing session user. Otherwise, account linking is not allowed, which means that first factor account linking does not occur. If you want to enable that too, you can see [the automatic account linking page](./automatic-account-linking).
+The callback allows a new user to become a primary user when `user` is absent. It links to an existing user only when
+the session user and tenant match the proposed primary user and current tenant. It therefore does not enable linking
+between existing users during first-factor authentication. To enable that behavior, see
+[the automatic account linking page](./automatic-account-linking).
 
 ### 2. Create a UI to show social login buttons and handle login
 
@@ -108,7 +145,7 @@ The exact implementation of the above is available [in the initial setup documen
 - When you call the `signinup` API, you need to provide the session's access token in the request. If you are using the frontend SDK, the frontend network interceptors automatically handle this. The access token enables the backend to get a session and then link the social login account to session user.
 - New types of failure scenarios exist when calling the `signinup` API which are impossible during first factor login. To learn more about them, see the [error codes section](./automatic-account-linking#error-status-codes) (> `ERR_CODE_008`).
 
-### 3. Remove the social login access token and user profile info on the backend
+### 3. Access the social login access token and user profile on the backend
 
 Once you call the `signinup` API from the frontend, SuperTokens verifies the OAuth tokens and fetches the user's profile info from the third party provider. SuperTokens also links the newly created recipe user to the session user.
 
@@ -116,10 +153,6 @@ To fetch the new user object and also the third party profile, you can override 
 
 <DependentContent passive group="backend-language">
 <ContentOption title="Go" value="go">
-:::note[At the moment this feature is not supported through the Go SDK.]
-:::
-</ContentOption>
-<ContentOption title="Python" value="python">
 :::note[At the moment this feature is not supported through the Go SDK.]
 :::
 </ContentOption>
@@ -149,8 +182,8 @@ SuperTokens.init({
             ...originalImplementation,
             // override the thirdparty sign in / up function
             signInUp: async function (input) {
-              let existingUser: User | undefined = undefined;
-              if (input.session !== undefined) {
+              let existingUser: User | undefined;
+              if (input.session !== undefined && input.session.getTenantId() === input.tenantId) {
                 existingUser = await SuperTokens.getUser(input.session.getUserId());
               }
 
@@ -161,8 +194,13 @@ SuperTokens.init({
 
                 let firstName = response.rawUserInfoFromProvider.fromUserInfoAPI!["first_name"];
 
-                if (input.session !== undefined && response.user.id === input.session.getUserId()) {
-                  if (response.user.loginMethods.length === existingUser!.loginMethods.length + 1) {
+                if (
+                  input.session !== undefined &&
+                  input.session.getTenantId() === input.tenantId &&
+                  response.user.id === input.session.getUserId() &&
+                  existingUser !== undefined
+                ) {
+                  if (response.user.loginMethods.length === existingUser.loginMethods.length + 1) {
                     // new social account was linked to session user
                   } else {
                     // social account was already linked to the session
@@ -188,11 +226,90 @@ SuperTokens.init({
 
 </Tab>
 <Tab title="Python" value="python">
+```python
+from typing import Any, Dict, Optional
 
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.session.interfaces import SessionContainer
+from supertokens_python.recipe.thirdparty.interfaces import (
+    RecipeInterface,
+    SignInUpOkResult,
+)
+from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
+
+
+def override_thirdparty_functions(
+    original_implementation: RecipeInterface,
+) -> RecipeInterface:
+    original_sign_in_up = original_implementation.sign_in_up
+
+    async def sign_in_up(
+        third_party_id: str,
+        third_party_user_id: str,
+        email: str,
+        is_verified: bool,
+        oauth_tokens: Dict[str, Any],
+        raw_user_info_from_provider: RawUserInfoFromProvider,
+        session: Optional[SessionContainer],
+        should_try_linking_with_session_user: Optional[bool],
+        tenant_id: str,
+        user_context: Dict[str, Any],
+    ):
+        existing_login_method_count = None
+        if session is not None and session.get_tenant_id() == tenant_id:
+            from supertokens_python.asyncio import get_user
+
+            existing_user = await get_user(session.get_user_id(), user_context)
+            if existing_user is not None:
+                existing_login_method_count = len(existing_user.login_methods)
+
+        result = await original_sign_in_up(
+            third_party_id,
+            third_party_user_id,
+            email,
+            is_verified,
+            oauth_tokens,
+            raw_user_info_from_provider,
+            session,
+            should_try_linking_with_session_user,
+            tenant_id,
+            user_context,
+        )
+
+        if (
+            isinstance(result, SignInUpOkResult)
+            and session is not None
+            and session.get_tenant_id() == tenant_id
+            and result.user.id == session.get_user_id()
+            and existing_login_method_count is not None
+        ):
+            _access_token = result.oauth_tokens.get("access_token")
+            _provider_profile = result.raw_user_info_from_provider.from_user_info_api
+
+            if len(result.user.login_methods) == existing_login_method_count + 1:
+                pass  # The provider account was linked to this session user.
+            else:
+                pass  # The provider account was already linked to this session user.
+
+        return result
+
+    original_implementation.sign_in_up = sign_in_up
+    return original_implementation
+
+
+thirdparty.init(
+    override=thirdparty.ThirdPartyOverrideConfig(
+        functions=override_thirdparty_functions
+    )
+)
+```
 </Tab>
 </CodeGroup>
 
-Notice in the above snippet that the check is for `input.session !== undefined && response.user.id === input.session.getUserId()`. This ensures that the custom logic runs only if it's linking a social account to your session account, and not during first factor login.
+The checks bind custom logic to the same session user and tenant. The provider identifiers, tokens, and profile in these
+function results come from the backend-verified OAuth exchange; never use client-submitted provider identifiers as proof
+that the current user owns a social account. A conflict leaves the provider login method linked to its existing primary
+user and returns a linking error instead of moving it to the session user.
 
 ---
 

@@ -10,7 +10,7 @@ sidebar:
 ## Passkey integration summary
 
 - This guide configures standalone passkey authentication, not passkeys as an MFA factor.
-- WebAuthn is supported by the Node.js and Python backend SDKs; the Go SDK does not support it.
+- WebAuthn is supported by the Node.js, Python, and Go backend SDKs.
 - Configure the WebAuthn and Session recipes on both the frontend and backend, then expose and render the authentication routes.
 - The backend recipe exposes the endpoints used by the frontend and communicates with SuperTokens Core to complete registration and authentication.
 
@@ -34,8 +34,22 @@ These instructions assume that you already have gone through the main [quickstar
 If you have skipped that page please follow the tutorial and return here once you're done.
 
 :::info[SDK Support]
-WebAuthn (Passkeys) authentication is available in the **Node.js SDK** and **Python SDK**.
+WebAuthn (Passkeys) authentication is available in the **Node.js SDK**, **Python SDK**, and **Go SDK**.
 :::
+
+:::warning[WebAuthn deployment requirements]
+WebAuthn is available only in a [secure context](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API),
+so serve the frontend over HTTPS in production. Browsers also allow `http://localhost` for local development.
+
+The relying party (RP) ID must equal the frontend hostname or be a registrable suffix of it. The expected origin must
+exactly match the frontend origin, including its scheme and non-default port. If the frontend and API use different
+hostnames, [configure these values explicitly](/authentication/passkeys/customization#backend-recipe-configuration)
+instead of relying on values derived from the API domain.
+:::
+
+Passkeys may be unavailable because of browser, device, or authenticator support. Keep another authentication method or
+an account-recovery path available. A user can also cancel the browser or platform prompt; treat cancellation as an
+interrupted attempt, let the user retry, and do not report it as a successful sign-in or sign-up.
 
 
 ## Steps
@@ -50,19 +64,13 @@ WebAuthn (Passkeys) authentication is available in the **Node.js SDK** and **Pyt
 
 
 <DependentContent passive group="frontend-prebuilt-ui">
-<ContentOption title="Reactjs" value="reactjs">
+<ContentOption title="React" value="reactjs">
 #### 1.1 Add the `WebAuthn` recipe in your main configuration file.
-</ContentOption>
-<ContentOption title="Angular" value="angular">
-Add the `WebAuthn` recipe in your `AuthComponent`.
-</ContentOption>
-<ContentOption title="Vue" value="vue">
-Add the `WebAuthn` recipe in your `AuthView` file.
 </ContentOption>
 </DependentContent>
 
 <CodeGroup group="frontend-prebuilt-ui">
-<Tab title="Reactjs" value="reactjs">
+<Tab title="React" value="reactjs">
 ```tsx {4,14}
 import React from "react";
 
@@ -80,104 +88,10 @@ SuperTokens.init({
 });
 ```
 </Tab>
-<Tab title="Angular" value="angular">
-```tsx title="/app/auth/auth.component.ts" {42} check=false reason="This example omits surrounding application and SuperTokens configuration."
-import { Component, OnDestroy, AfterViewInit, Renderer2, Inject } from "@angular/core";
-import { DOCUMENT } from "@angular/common";
-
-@Component({
-  selector: "app-auth",
-  template: '<div id="supertokensui"></div>',
-})
-export class AuthComponent implements OnDestroy, AfterViewInit {
-  constructor(
-    private renderer: Renderer2,
-    @Inject(DOCUMENT) private document: Document,
-  ) {}
-
-  ngAfterViewInit() {
-    this.loadScript("https://cdn.jsdelivr.net/gh/supertokens/prebuiltui@vX.Y.Z/build/static/js/main.test.js");
-  }
-
-  ngOnDestroy() {
-    // Remove the script when the component is destroyed
-    const script = this.document.getElementById("supertokens-script");
-    if (script) {
-      script.remove();
-    }
-  }
-
-  private loadScript(src: string) {
-    const script = this.renderer.createElement("script");
-    script.type = "text/javascript";
-    script.src = src;
-    script.id = "supertokens-script";
-    script.onload = () => {
-      supertokensUIInit({
-        appInfo: {
-          appName: "<YOUR_APP_NAME>",
-          apiDomain: "<YOUR_API_DOMAIN>",
-          websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
-          apiBasePath: "/auth",
-          websiteBasePath: "/auth",
-        },
-        recipeList: [supertokensUIWebAuthn.init(), supertokensUISession.init()],
-      });
-    };
-    this.renderer.appendChild(this.document.body, script);
-  }
-}
-```
-</Tab>
-<Tab title="Vue" value="vue">
-```html {20}
-<script lang="ts">
-  import { defineComponent, onMounted, onUnmounted } from "vue";
-  export default defineComponent({
-    setup() {
-      const loadScript = (src: string) => {
-        const script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = src;
-        script.id = "supertokens-script";
-        script.onload = () => {
-          supertokensUIInit({
-            appInfo: {
-              appName: "<YOUR_APP_NAME>",
-              apiDomain: "<YOUR_API_DOMAIN>",
-              websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
-              apiBasePath: "/auth",
-              websiteBasePath: "/auth",
-            },
-            recipeList: [supertokensUIWebAuthn.init(), supertokensUISession.init()],
-          });
-        };
-        document.body.appendChild(script);
-      };
-
-      onMounted(() => {
-        loadScript("https://cdn.jsdelivr.net/gh/supertokens/prebuiltui@vX.Y.Z/build/static/js/main.test.js");
-      });
-
-      onUnmounted(() => {
-        const script = document.getElementById("supertokens-script");
-        if (script) {
-          script.remove();
-        }
-      });
-    },
-  });
-</script>
-
-<template>
-  <div id="supertokensui" />
-</template>
-```
-</Tab>
 </CodeGroup>
 
 <DependentContent passive group="frontend-prebuilt-ui">
-<ContentOption title="Reactjs" value="reactjs">
+<ContentOption title="React" value="reactjs">
 #### 1.2 Include the pre-built UI components in your application.
 
 In order for the **pre-built UI** to render inside your application, you have to specify which routes show the authentication components.
@@ -187,7 +101,7 @@ Based on whether you already use this package or not in your project, there are 
 </DependentContent>
 
 <CodeGroup passive group="frontend-prebuilt-ui" secondaryControls="react-router">
-<Tab title="Reactjs" value="reactjs">
+<Tab title="React" value="reactjs">
 <DependentContent group="react-router" label="Do you use react-router-dom?">
 <ContentOption title="Yes" value="yes">
 ```tsx {9,21}
@@ -240,7 +154,7 @@ class App extends React.Component {
 </CodeGroup>
 
 <DependentContent passive group="frontend-prebuilt-ui">
-<ContentOption title="Reactjs" value="reactjs">
+<ContentOption title="React" value="reactjs">
 <DependentContent passive group="react-router">
 <ContentOption title="Yes" value="yes">
 :::note[If you are using `useRoutes`, `createBrowserRouter` or have routes defined in a different file, you need to adjust the code sample.]
@@ -251,7 +165,7 @@ Please see [this issue](https://github.com/supertokens/supertokens-auth-react/is
 </DependentContent>
 
 <CodeGroup passive group="frontend-prebuilt-ui">
-<Tab title="Reactjs" value="reactjs">
+<Tab title="React" value="reactjs">
 <DependentContent group="react-router" label="Do you use react-router-dom?">
 <ContentOption title="Yes" value="yes">
 ```tsx
@@ -259,13 +173,12 @@ import React from "react";
 
 import { BrowserRouter, useRoutes } from "react-router-dom";
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
+import { WebauthnPreBuiltUI } from "supertokens-auth-react/recipe/webauthn/prebuiltui";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import * as reactRouterDom from "react-router-dom";
 
 function AppRoutes() {
-  const authRoutes = getSuperTokensRoutesForReactRouterDom(reactRouterDom, [
-    /* Add your UI recipes here e.g. EmailPasswordPrebuiltUI, PasswordlessPrebuiltUI, ThirdPartyPrebuiltUI */
-  ]);
+  const authRoutes = getSuperTokensRoutesForReactRouterDom(reactRouterDom, [WebauthnPreBuiltUI]);
 
   const routes = useRoutes([
     ...authRoutes.map((route) => route.props),
@@ -291,7 +204,7 @@ function App() {
 </CodeGroup>
 
 <DependentContent passive group="frontend-prebuilt-ui">
-<ContentOption title="Reactjs" value="reactjs">
+<ContentOption title="React" value="reactjs">
 <DependentContent passive group="react-router">
 <ContentOption title="Yes" value="yes">
 :::
@@ -310,20 +223,8 @@ Call the SDK init function at the start of your application.
 The invocation includes the [main configuration details](/references/frontend-sdks/reference#sdk-configuration), as well as the **recipes** that you use in your setup.
 
 
-<DependentContent passive group="frontend-custom-ui">
-<ContentOption title="Web" value="web">
-<DependentContent passive group="install-method">
-<ContentOption title="Script tag" value="script-tag">
-First, you need to add the recipe script tag.
-</ContentOption>
-</DependentContent>
-</ContentOption>
-</DependentContent>
-
 <CodeGroup group="frontend-custom-ui">
 <Tab title="Web" value="web">
-<DependentContent group="install-method" label="Installation method">
-<ContentOption title="npm" value="npm">
 ```tsx
 import SuperTokens from "supertokens-web-js";
 import Session from "supertokens-web-js/recipe/session";
@@ -338,17 +239,10 @@ SuperTokens.init({
   recipeList: [Session.init(), WebAuthn.init()],
 });
 ```
-</ContentOption>
-<ContentOption title="Script tag" value="script-tag">
-```html
-<script src="https://cdn.jsdelivr.net/gh/supertokens/supertokens-web-js@vX.Y.Z/bundle/webauthn.test.js"></script>
-```
-</ContentOption>
-</DependentContent>
 </Tab>
 <Tab title="Mobile" value="mobile">
 <DependentContent group="mobile-frameworks" label="Mobile framework">
-<ContentOption title="Reactnative" value="reactnative">
+<ContentOption title="React Native" value="reactnative">
 ```tsx
 import SuperTokens from "supertokens-react-native";
 
@@ -374,7 +268,7 @@ class MainApplication: Application() {
 }
 ```
 </ContentOption>
-<ContentOption title="Ios" value="ios">
+<ContentOption title="iOS" value="ios">
 ```swift
 import UIKit
 import SuperTokensIOS
@@ -409,35 +303,6 @@ void main() {
         apiBasePath: "/auth",
     );
 }
-```
-</ContentOption>
-</DependentContent>
-</Tab>
-</CodeGroup>
-
-<DependentContent passive group="frontend-custom-ui">
-<ContentOption title="Web" value="web">
-<DependentContent passive group="install-method">
-<ContentOption title="Script tag" value="script-tag">
-You can initialize the SDK.
-</ContentOption>
-</DependentContent>
-</ContentOption>
-</DependentContent>
-
-<CodeGroup passive group="frontend-custom-ui">
-<Tab title="Web" value="web">
-<DependentContent group="install-method" label="Installation method">
-<ContentOption title="Script tag" value="script-tag">
-```tsx check=false reason="This example omits surrounding application and SuperTokens configuration."
-supertokens.init({
-  appInfo: {
-    apiDomain: "<YOUR_API_DOMAIN>",
-    apiBasePath: "/auth",
-    appName: "...",
-  },
-  recipeList: [supertokensSession.init(), supertokensWebAuthn.init()],
-});
 ```
 </ContentOption>
 </DependentContent>
@@ -496,9 +361,15 @@ async function signUp(email: string) {
       // These should be handled individually by you.
       // The user should be informed that they should retry the sign up process or get in touch with you.
       window.alert("Please try again");
-    } else {
+    } else if (response.status === "INVALID_GENERATED_OPTIONS_ERROR") {
+      window.alert("The registration request expired. Please try again.");
+    } else if (response.status === "GENERAL_ERROR") {
+      window.alert(response.message);
+    } else if (response.status === "OK") {
       // User signed up successfully.
       window.alert("You have been signed up successfully");
+    } else {
+      window.alert("Sign up could not be completed. Please try another authentication method.");
     }
   } catch (err: any) {
     if (err.isSuperTokensGeneralError === true) {
@@ -520,6 +391,10 @@ async function signUp(email: string) {
 <DependentContent passive group="frontend-custom-ui">
 <ContentOption title="Mobile" value="mobile">
 
+The requests in this standalone authentication flow omit `shouldTryLinkingWithSessionUser`, so it defaults to `false`.
+Set it to `true` only for an authenticated add-factor or account-linking flow where your backend policy permits linking
+to the session user.
+
 <Steps>
 
 <Step title="Get the email address from the user">
@@ -534,7 +409,7 @@ Save the response to use it in the next step.
 <CodeGroup passive group="frontend-custom-ui">
 <Tab title="Mobile" value="mobile">
 ```bash
-curl --location --request POST '<YOUR_API_DOMAIN>/auth/webauthn/register/options' \
+curl --location --request POST '<YOUR_API_DOMAIN>/auth/webauthn/options/register' \
 --header 'Content-Type: application/json; charset=utf-8' \
 --data-raw '{
   "email": "johndoe@gmail.com",
@@ -544,7 +419,7 @@ curl --location --request POST '<YOUR_API_DOMAIN>/auth/webauthn/register/options
 </Tab>
 </CodeGroup>
 
-:::warning[The returned result matches the format required by the **browser's WebAuthn API**.]
+:::warning[The returned result matches the format required by a WebAuthn client API.]
 You will have to map the properties to the correct format based on the requirements of your platform.
 :::
 </Step>
@@ -561,7 +436,7 @@ The implementation will vary based on the platform you are using.
 
 <Step title="Call the sign up API">
 
-Using the newly generate credential, call the sign up API to save the new authentication method.
+Using the newly generated credential, call the sign up API to save the new authentication method.
 
 <CodeGroup passive group="frontend-custom-ui">
 <Tab title="Mobile" value="mobile">
@@ -571,19 +446,24 @@ curl --location --request POST '<YOUR_API_DOMAIN>/auth/webauthn/signup' \
 --data-raw '{
   "webauthnGeneratedOptionsId": "opt_123...",
   "credential": {
-    "id": "credential_id",
-    "rawId": "raw_credential_id",
+    "id": "AbCdEf0123_-",
+    "rawId": "AbCdEf0123_-",
+    "authenticatorAttachment": "platform",
+    "clientExtensionResults": {},
     "response": {
-      "clientDataJSON": "base64_client_data_json",
-      "attestationObject": "base64_attestation_object"
+      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0",
+      "attestationObject": "o2NmbXRkbm9uZQ",
+      "transports": ["internal", "hybrid"]
     },
     "type": "public-key"
-  },
-  "shouldTryLinkingWithSessionUser": true
+  }
 }'
 ```
 </Tab>
 </CodeGroup>
+
+Encode `id`, `rawId`, `clientDataJSON`, and `attestationObject` as unpadded Base64URL. Include `transports` when the
+authenticator supplies it.
 </Step>
 
 </Steps>
@@ -605,7 +485,7 @@ Add a button that can trigger the sign in flow.
 This is all that you need in terms of UI.
 When the user clicks it, call the `authenticateCredentialWithSignIn` method to handle the whole process.
 
-The function uses the backend registration options to trigger the challenge signing action through the browser API.
+The function uses the backend authentication options to trigger the challenge signing action through the browser API.
 Then, it forwards the result to the backend for validation.
 For a more detailed overview of the login flow check the [Important Concepts page](/authentication/passkeys/important-concepts#login).
 
@@ -629,14 +509,23 @@ async function signIn() {
     } else if (response.status === "WEBAUTHN_NOT_SUPPORTED") {
       // the user's browser does not support the WebAuthn standard
       window.alert("Login method not supported");
-    } else if (response.status === "INVALID_CREDENTIALS_ERROR" || response.status === "FAILED_TO_AUTHENTICATE_USER") {
+    } else if (
+      response.status === "INVALID_CREDENTIALS_ERROR" ||
+      response.status === "INVALID_OPTIONS_ERROR" ||
+      response.status === "FAILED_TO_AUTHENTICATE_USER"
+    ) {
       // These errors represent various issues with the authenticator, credential or the flow itself.
+      // FAILED_TO_AUTHENTICATE_USER can also indicate that the user cancelled the authenticator prompt.
       // These should be handled individually by you.
       // The user should be informed that they should retry the sign in process or get in touch with you.
       window.alert("Please try again");
-    } else {
+    } else if (response.status === "GENERAL_ERROR") {
+      window.alert(response.message);
+    } else if (response.status === "OK") {
       // User signed in successfully.
       window.alert("You have been signed in successfully");
+    } else {
+      window.alert("Sign in could not be completed. Please try another authentication method.");
     }
   } catch (err: any) {
     if (err.isSuperTokensGeneralError === true) {
@@ -668,7 +557,7 @@ When the user taps the sign in button, call the backend API to fetch the sign in
 <CodeGroup passive group="frontend-custom-ui">
 <Tab title="Mobile" value="mobile">
 ```bash
-curl --location --request POST '<YOUR_API_DOMAIN>/auth/webauthn/signin/options' \
+curl --location --request POST '<YOUR_API_DOMAIN>/auth/webauthn/options/signin' \
 --header 'Content-Type: application/json; charset=utf-8'
 ```
 </Tab>
@@ -693,19 +582,24 @@ curl --location --request POST '<YOUR_API_DOMAIN>/auth/webauthn/signin' \
 --data-raw '{
   "webauthnGeneratedOptionsId": "opt_123...",
   "credential": {
-    "id": "credential_id",
-    "rawId": "raw_credential_id",
+    "id": "AbCdEf0123_-",
+    "rawId": "AbCdEf0123_-",
+    "authenticatorAttachment": "platform",
+    "clientExtensionResults": {},
     "response": {
-      "clientDataJSON": "base64_client_data_json",
-      "attestationObject": "base64_attestation_object"
+      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0In0",
+      "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4Y",
+      "signature": "MEUCIQDxV_LS8qk"
     },
     "type": "public-key"
-  },
-  "shouldTryLinkingWithSessionUser": true
+  }
 }'
 ```
 </Tab>
 </CodeGroup>
+
+Encode `id`, `rawId`, `clientDataJSON`, `authenticatorData`, `signature`, and an optional `userHandle` as unpadded
+Base64URL. Include `userHandle` in `credential.response` when the authenticator returns it.
 </Step>
 
 </Steps>
@@ -735,15 +629,7 @@ It specifies how the backend connects to the **SuperTokens Core**, as well as th
 
 The recipe exposes the required endpoints that get accessed by the frontend code, and communicates with the **SuperTokens Core** to complete the authentication flow.
 You can [configure different aspects](/authentication/passkeys/customization) of the recipe's behavior but, for the completion of this guide, use the default values.
-After you confirm that the flow works as expected you can explore more advanced customisations options.
-
-<DependentContent passive group="backend-language">
-<ContentOption title="Go" value="go">
-:::warning[At the moment there is no support for using passkeys authentication in the Go SDK.]
-
-:::
-</ContentOption>
-</DependentContent>
+After you confirm that the flow works as expected, you can explore more advanced customization options.
 
 <CodeGroup group="backend-language">
 <Tab title="Node.js" value="nodejs">
@@ -774,7 +660,34 @@ supertokens.init({
 ```
 </Tab>
 <Tab title="Go" value="go">
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/webauthn"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
 
+func main() {
+	err := supertokens.Init(supertokens.TypeInput{
+		Supertokens: &supertokens.ConnectionInfo{
+			ConnectionURI: "https://try.supertokens.io",
+			// APIKey: "<YOUR_API_KEY>",
+		},
+		AppInfo: supertokens.AppInfo{
+			AppName:       "<YOUR_APP_NAME>",
+			APIDomain:     "<YOUR_API_DOMAIN>",
+			WebsiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+		},
+		RecipeList: []supertokens.Recipe{
+			webauthn.Init(nil),
+			session.Init(nil),
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+}
+```
 </Tab>
 <Tab title="Python" value="python">
 ```python

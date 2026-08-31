@@ -7,6 +7,12 @@ sidebar:
 
 Protect frontend routes by requiring user sessions and verifying session claims for access control.
 
+:::caution[Frontend guards are for user experience only]
+Users can bypass client-side route guards or modify client-side state. Protect every API used by these pages with
+backend session verification and the required role, permission, MFA, or verification claim validators. A frontend check
+may control rendering or navigation, but it is not an authorization boundary.
+:::
+
 
 ## Before you start
 
@@ -332,11 +338,16 @@ import org.json.JSONObject
 
 class MainApplication: Application() {
     fun doesSessionExist() {
-        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
-        if(accessTokenPayload != null) {
-            // user is logged in
-        } else {
+        if (!SuperTokens.doesSessionExist(this)) {
             // user has not logged in yet
+            return
+        }
+
+        try {
+            SuperTokens.getAccessTokenPayloadSecurely(this)
+            // user is logged in
+        } catch (error: java.io.IOException) {
+            // the session expired, refresh failed, or the payload could not be read
         }
     }
 }
@@ -363,12 +374,17 @@ fileprivate class ViewController: UIViewController {
 import 'package:supertokens_flutter/supertokens.dart';
 
 Future<void> doesSessionExist() async {
-    var accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
-    if (accessTokenPayload != null) {
-       // user is logged in
-    } else {
-        // user has not logged in yet
-    }
+  if (!await SuperTokens.doesSessionExist()) {
+    // user has not logged in yet
+    return;
+  }
+
+  try {
+    await SuperTokens.getAccessTokenPayloadSecurely();
+    // user is logged in
+  } catch (error) {
+    // the session expired, refresh failed, or the payload could not be read
+  }
 }
 ```
 </ContentOption>
@@ -483,16 +499,25 @@ async function getRole() {
 ```kotlin
 import android.app.Application
 import com.supertokens.session.SuperTokens
+import org.json.JSONArray
 import org.json.JSONObject
 
 class MainApplication: Application() {
     fun checkIfUserIsAnAdmin() {
-        val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this);
-        val roles: List<String> = (accessTokenPayload.get("st-role") as JSONObject).get("v") as List<String>;
-        if (roles.contains("admin")) {
-            // user is an admin
-        } else {
-            // user is not an admin
+        if (!SuperTokens.doesSessionExist(this)) return
+
+        try {
+            val accessTokenPayload: JSONObject = SuperTokens.getAccessTokenPayloadSecurely(this)
+            val rolesJson: JSONArray = accessTokenPayload.getJSONObject("st-role").getJSONArray("v")
+            val roles = (0 until rolesJson.length()).map { rolesJson.getString(it) }
+
+            if (roles.contains("admin")) {
+                // user is an admin
+            } else {
+                // user is not an admin
+            }
+        } catch (error: java.io.IOException) {
+            // the session expired, refresh failed, or the payload could not be read
         }
     }
 }
@@ -521,13 +546,15 @@ fileprivate class ViewController: UIViewController {
 import 'package:supertokens_flutter/supertokens.dart';
 
 Future<void> checkIfUserIsAnAdmin() async {
-    var accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
+  if (!await SuperTokens.doesSessionExist()) return;
 
+  try {
+    final accessTokenPayload = await SuperTokens.getAccessTokenPayloadSecurely();
     if (accessTokenPayload.containsKey("st-role")) {
-      Map<String, dynamic> roleObject = accessTokenPayload["st-role"];
+      final roleObject = accessTokenPayload["st-role"] as Map<String, dynamic>;
 
       if (roleObject.containsKey("v")) {
-        List<String> roles = roleObject["v"];
+        final roles = (roleObject["v"] as List<dynamic>).whereType<String>().toList();
 
         if (roles.contains("admin")) {
           // user is an admin
@@ -536,6 +563,9 @@ Future<void> checkIfUserIsAnAdmin() async {
         }
       }
     }
+  } catch (error) {
+    // the session expired, refresh failed, or the payload could not be read
+  }
 }
 ```
 </ContentOption>

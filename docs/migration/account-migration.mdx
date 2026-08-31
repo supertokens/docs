@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-The following guide will show you how to move your users from your current authentication solution to **SuperTokens**
+The following guide shows you how to move users from your current authentication solution to **SuperTokens**.
 
 ---
 
@@ -34,6 +34,21 @@ The process is asynchronous and can work with large amounts of data.
 This guide assumes that you have already integrated **SuperTokens** with your existing stack.
 If you have not, please check the [Quickstart Guide](/quickstart) and explore all the supported [authentication methods](/authentication/overview).
 
+Bulk import requires Core `10.0.0` or later and persistent database storage; the in-memory database does not support
+these APIs. Before importing:
+
+- create and configure every target tenant, role, recipe, and third-party provider referenced by the import;
+- enable account linking before importing a user with multiple login methods, and test your linking policy with a
+  representative export;
+- decide how each legacy identity maps to a tenant and login method, and reject ambiguous or duplicate mappings; and
+- take a restorable source export and define retry, reconciliation, rollback, and cutover procedures.
+
+For email/password users, provide either a supported `passwordHash` with its `hashingAlgorithm`, or a
+`plainTextPassword`, as defined by the [bulk-import request schema](/references/cdi/bulk-import/addbulkimportusers).
+Prefer compatible bcrypt, Argon2, or Firebase `scrypt` hashes over plain-text passwords. Treat exports, password hashes,
+MFA secrets, API keys, and access tokens as credentials: encrypt them in transit and at rest, restrict access, never put
+them in logs or user metadata, and securely delete temporary copies after reconciliation.
+
 
 ## Steps
 
@@ -47,125 +62,71 @@ Call the endpoint from the authentication flow used by your legacy provider.
 
 <Accordion>
 <AccordionItem title="Auth0 Instructions">
+:::caution[Unverified mapping pseudocode]
+The following Action illustrates where a login-time direct import can run. Its identity fields, provider mapping, and
+`getPasswordHash` placeholder have not been validated against a current Auth0 password/MFA support export. Adapt and
+test it against a redacted export before use; do not deploy it as-is.
+:::
 :::warning
 Auth0 does not expose password hashes or `TOTP` device information.
 You will have to contact their support separately if you need this type of data.
 :::
 
-Create the Auth0 roles in SuperTokens before migrating users. This example assigns them to the default `public` tenant.
+Create the Auth0 roles in SuperTokens before migrating users. The application endpoint must own an allowlisted mapping
+from Auth0 organization/connection/provider identifiers to SuperTokens tenants and providers. Do not let Action input
+select arbitrary tenant IDs or provider configuration.
 
 ##### 1. Access the Auth0 Dashboard
 ##### 2. From the navigation menu go to *Actions* > *Library*
 ##### 3. Click *Create Action* > *Create custom action*
 ##### 4. Specify a custom name for your action and then select *Login/Post Login* as the trigger
-##### 5. After the action has been created, click the *Add Secret* button and save your `SUPERTOKENS_CORE_API_KEY` as a secret
-##### 5. Paste the following code in the editor
+##### 5. Add `MIGRATION_ENDPOINT_URL` and `MIGRATION_ENDPOINT_TOKEN` Action secrets
+##### 6. Paste the following code in the editor
+
+`MIGRATION_ENDPOINT_TOKEN` must authorize only this migration endpoint. The endpoint must authenticate every request,
+allow only the expected Auth0 tenant/issuer, rate-limit by credential and legacy user ID, enforce request-size limits,
+and use `externalUserId` as an idempotency key. Keep the Core URL and Core API key only in your backend secret store. The
+backend validates and maps the identity, retrieves any credential export through restricted storage, and then calls Core.
 
 ```typescript check=false reason="Requires application specific migration types"
 exports.onExecutePostLogin = async (event, api) => {
-  const SUPERTOKENS_CORE_URL = "<YOUR_SUPERTOKENS_CORE_URL>";
-  const SUPERTOKENS_API_KEY = event.secrets.SUPERTOKENS_CORE_API_KEY;
-  const auth0User = event.user;
+  const migrationEndpoint = event.secrets.MIGRATION_ENDPOINT_URL;
+  const migrationToken = event.secrets.MIGRATION_ENDPOINT_TOKEN;
 
   try {
-    if (auth0User.app_metadata?.migrated_to_supertokens) {
-      console.log(`User ${auth0User.user_id} already migrated`);
+    if (event.user.app_metadata?.migrated_to_supertokens) {
       return;
     }
 
-    const userPayload = {
-      externalUserId: auth0User.user_id,
-      userMetadata: {
-        auth0_user_id: auth0User.user_id,
-        name: auth0User.name,
-        nickname: auth0User.nickname,
-        picture: auth0User.picture,
-        auth0_user_metadata: auth0User.user_metadata,
-        auth0_app_metadata: auth0User.app_metadata,
-      },
-      userRoles: (auth0User.app_metadata?.roles || []).map((role) => ({ role, tenantIds: ["public"] })),
-      loginMethods: [],
-    };
-
-    const ThirdPartyProviders = ["google-oauth2", "facebook", "github", "apple"];
-
-    auth0User.identities.forEach((identity, index) => {
-      if (ThirdPartyProviders.includes(identity.provider)) {
-        userPayload.loginMethods.push({
-          recipeId: "thirdparty",
-          thirdPartyId: mapProvider(identity.provider),
-          thirdPartyUserId: identity.user_id,
-          email: identity.profileData?.email ?? auth0User.email,
-          isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
-          isPrimary: index === 0,
-          timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime(),
-        });
-      } else if (identity.provider === "auth0" || identity.provider === "Username-Password-Authentication") {
-        // Auth0 does not export passworded hashes by default
-        // You will have to contact their support and request them
-        userPayload.loginMethods.push({
-          recipeId: "emailpassword",
-          email: identity.profileData?.email ?? auth0User.email,
-          // Request the password hash from Auth0 and then implement the function to retrieve the values
-          passwordHash: getPasswordHash(identity.profileData?.email),
-          hashingAlgorithm: "bcrypt",
-          isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
-          isPrimary: index === 0,
-          timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime(),
-        });
-      } else if (identity.provider === "sms") {
-        userPayload.loginMethods.push({
-          recipeId: "passwordless",
-          phoneNumber: identity.profileData?.phone_number ?? auth0User.phone_number,
-          isVerified: identity.profileData?.phone_verified ?? auth0User.phone_verified ?? false,
-          isPrimary: index === 0,
-          timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime(),
-        });
-      } else if (identity.provider === "email") {
-        userPayload.loginMethods.push({
-          recipeId: "passwordless",
-          email: identity.profileData?.email || auth0User.email,
-          isVerified: identity.profileData?.email_verified ?? auth0User.email_verified ?? false,
-          isPrimary: index === 0,
-          timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime(),
-        });
-      } else {
-        throw new Error(`Unknown provider: ${identity.provider}`);
-      }
-    });
-
-    const response = await fetch(`${SUPERTOKENS_CORE_URL}/bulk-import/import`, {
+    const response = await fetch(migrationEndpoint, {
       method: "POST",
       headers: {
-        "api-key": SUPERTOKENS_API_KEY,
+        Authorization: `Bearer ${migrationToken}`,
         "Content-Type": "application/json; charset=utf-8",
       },
-      body: JSON.stringify(userPayload),
+      body: JSON.stringify({
+        externalUserId: event.user.user_id,
+        auth0OrganizationId: event.organization?.id,
+        identities: event.user.identities?.map(({ provider, connection, user_id }) => ({
+          provider,
+          connection,
+          userId: user_id,
+        })),
+      }),
     });
 
     const result = await response.json();
 
     if (response.ok && result.status === "OK") {
-      console.log(`User migrated: ${event.user.email || event.user.user_id}`);
       api.user.setAppMetadata("migrated_to_supertokens", true);
-      api.user.setAppMetadata("supertokens_user_id", result.user?.id);
+      api.user.setAppMetadata("supertokens_user_id", result.userId);
     } else {
-      console.error(`Migration failed: ${JSON.stringify(result)}`);
+      console.error("Migration endpoint rejected the request");
     }
   } catch (error) {
-    console.error("Migration error:", error.message);
+    console.error("Migration endpoint request failed");
   }
 };
-
-function mapProvider(strategy) {
-  const mapping = {
-    "google-oauth2": "google",
-    facebook: "facebook",
-    github: "github",
-    apple: "apple",
-  };
-  return mapping[strategy] || strategy;
-}
 ```
 </AccordionItem>
 </Accordion>
@@ -192,7 +153,7 @@ You will have to contact their support and request them.
 ##### 1.2 Select `Auth0 Management API`
 ##### 1.3 Go to `Machine to Machine Applications` tab
 ##### 1.4 Authorize your application or create a new one
-##### 1.5 Grant the following permissions: `read:users`, `update:users`, `create:users`, `read:user_app_metadata`
+##### 1.5 Grant only `read:users` and `read:users_app_metadata`
 ##### 1.6 Save your `Domain`, `Client ID`, and `Client Secret`
 
 #### 2. Get the management API access token
@@ -254,16 +215,28 @@ The previous request returns a `location` attribute in the response body if the 
 Use it do access your data.
 
 ```bash
-curl -o auth0_users.json.gz "LOCATION_URL_FROM_RESPONSE"
-gunzip auth0_users.json.gz
+umask 077
+cd /secure-migration-work # An encrypted, access-restricted filesystem
+curl --fail --location --proto '=https' -o auth0_users.json.gz "LOCATION_URL_FROM_RESPONSE"
+gzip --test auth0_users.json.gz
+sha256sum auth0_users.json.gz > auth0_users.json.gz.sha256
+age --recipient "<MIGRATION_ARCHIVE_RECIPIENT>" --output auth0_users.json.gz.age auth0_users.json.gz
 ```
 
-Auth0 exports data in `NDJSON` format.
-Convert it to JSON first:
+Keep the compressed download on that encrypted filesystem, move the encrypted archive and checksum to restricted
+migration storage, and verify that decryption succeeds. Auth0 exports NDJSON inside the gzip stream. Convert it without
+replacing the retained compressed archive:
 
 ```bash
-cat auth0_users.json | jq -s '.' > auth0_users_array.json
+age --decrypt --identity /run/secrets/migration-archive-key auth0_users.json.gz.age \
+  | gzip -dc \
+  | jq -s '.' > /secure-migration-work/auth0_users_array.json
 ```
+
+Keep the compressed export, encrypted copy, and checksum unchanged through transformation, import, failed-row retries,
+and source-to-target reconciliation. Keep derived plaintext only on encrypted restricted storage and delete it after
+each run. Delete all source-archive copies only after final reconciliation and rollback retention requirements are met;
+use your storage system's verified deletion/lifecycle mechanism rather than assuming `rm` securely erases every medium.
 
 #### 6. Transform the data to the SuperTokens format
 
@@ -273,6 +246,12 @@ You will have to contact their support separately if you need this type of data.
 :::
 
 Create the Auth0 roles in SuperTokens before migrating users. This example assigns them to the default `public` tenant.
+
+:::caution[Unverified mapping pseudocode]
+The transformation below assumes application-specific Auth0 identity fields and an undefined `getPasswordHash` lookup.
+The relationship between ordinary user-export rows and a separately requested password/MFA export is not established
+here. Validate the mapping against a redacted current export and Core import validation before handling production data.
+:::
 
 ```typescript check=false reason="Requires application specific migration types"
 const fs = require("fs");
@@ -314,7 +293,7 @@ const superTokensUsers = auth0Users
           timeJoinedInMSSinceEpoch: new Date(auth0User.created_at).getTime(),
         });
       } else if (identity.provider === "auth0" || identity.provider === "Username-Password-Authentication") {
-        // Auth0 does not export passworded hashes by default
+        // Auth0 does not export password hashes through the ordinary user export
         // You will have to contact their support and request them
         userPayload.loginMethods.push({
           recipeId: "emailpassword",
@@ -441,7 +420,14 @@ If at the end of the previous step you have determined that you have staged user
 
 The response includes the import error messages for each specific user.
 Use them to determine what you need to correct in your import data.
-After you have fixed the issues, run the process again, from step `3.1`, only for the corrected data.
+Record the failed staged-row IDs and remove those exact rows before retrying. Verify that every requested ID appears in
+`deletedIds` and that `invalidIds` is empty; otherwise, stop and reconcile the discrepancy.
+
+<ApiRequestSnippet operationId="deleteBulkImportUsers" snippetId="migration-delete-failed-users" />
+
+After removal, fix the source records and repeat step `3.1` only for that corrected data. Re-run the status checks and
+reconcile every source identity to one successfully imported account. Never treat a zero count as sufficient if the
+source export, removed IDs, corrected retries, and final accounts do not reconcile.
 
 
 :::success[You have successfully migrated your accounts]

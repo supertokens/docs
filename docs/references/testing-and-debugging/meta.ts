@@ -1,7 +1,7 @@
 import { defineMeta } from "blume";
 
 export default defineMeta({
-  "title": "Testing and Debugging",
-  "icon": "bug",
-  "order": 80
+  title: "Testing and Debugging",
+  icon: "bug",
+  order: 80,
 });

@@ -5,7 +5,8 @@ sidebar:
   order: 1
 ---
 
-Move your Rownd users, sessions, and compatible authentication flows to **SuperTokens** without any breaking changes
+Move supported Rownd users, sessions, and compatible authentication flows to **SuperTokens** with an assisted,
+project-specific migration.
 
 ---
 
@@ -35,18 +36,48 @@ Please get in touch with the [SuperTokens team](mailto:support@supertokens.com) 
 
 :::
 
+## Checkpoints and rollback plan
+
+Agree on these gates with the SuperTokens team before changing production traffic. Record evidence and an owner for each
+gate; do not advance on partial success.
+
+1. **Baseline checkpoint:** Export a time-stamped inventory of expected Rownd users and enabled identity providers.
+   Record current client/plugin versions, routing, OAuth configuration, and session behavior. Keep the existing Rownd
+   deployment and configuration available for rollback.
+2. **Lazy-migration gate:** Deploy only to a controlled cohort. Verify successful and rejected legacy-token session
+   bootstrap, sign-in/up, sign-out, refresh, profile reads/writes, and expected compatibility claims. Confirm failures do
+   not create duplicate SuperTokens users or sessions before expanding the cohort.
+3. **Bulk checkpoint:** Freeze or account for writes during the export boundary. Reconcile every expected Rownd user to
+   exactly one intended SuperTokens identity, including tenant/provider mapping. Classify every missing, duplicate,
+   failed, and retried record; a total count alone cannot pass this gate.
+4. **Cutover gate:** Capture a final delta and reconciliation report, stop configuration changes, and define the exact
+   traffic switch and rollback deadline. Test both newly created SuperTokens sessions and supported migrated legacy
+   sessions before increasing traffic gradually.
+5. **Post-cutover checkpoint:** Monitor authentication errors, session bootstrap/refresh failures, duplicate identities,
+   and reconciliation drift. Keep Rownd authoritative and reversible until the agreed observation window and all
+   acceptance checks pass.
+
+If any gate fails, stop the migration, route traffic back to the previously verified Rownd clients/backend path, and stop
+new writes to the SuperTokens migration path while investigating. Do not copy SuperTokens-only writes back into Rownd
+without a separately tested reverse-data contract. Instead, preserve the failed-state evidence, identify writes made
+after the checkpoint, and have the migration owners decide whether to replay them after correction. Revoke migration
+credentials and retire Rownd only after final identity, provider, session, and failed-record reconciliation is approved.
+
 ### 1. Lazy migration
 
-Update your existing Rownd client libraries to the latest version.
-With this you will enable the following behavior: after a successful sign-up, the SDK will call the migration endpoint exposed by the compatibility plugin.
-This phase ensures that no users are missed during the bulk migration flow. 
-This is necessary since there is a time gap between when you export all your data for bulk import and when you go live with **SuperTokens**. 
+For released lazy-migration behavior, update supported Rownd React, iOS, and Android clients to the versions selected
+with the SuperTokens team. Do not assume that every Rownd client or version implements this behavior. After a successful
+sign-up, a supported SDK calls the migration endpoint exposed by the compatibility plugin.
+This phase reduces the export-to-cutover gap, but does not prove that every user was migrated. Reconcile it with the
+bulk snapshot and failed records because users can be created between export and cutover.
 
 ### 2. Bulk migration
 
 This step is performed by the SuperTokens team.
 Once you have deployed the updated Rownd client libraries and confirmed that the migration works, you can start the next step.
-The migration will copy all your existing users from the Rownd account to the newly created SuperTokens core instance.
+The plugin provides a released paginated Rownd-user migration path. Your migration plan must still prove that the
+project-specific export snapshot covered every expected user and that every failed or retried record was reconciled;
+deployment of the plugin alone does not prove completeness.
 
 ### 3. Cutover
 
@@ -57,9 +88,12 @@ After cutover, authentication traffic goes through SuperTokens while your applic
 
 #### Compatibility model
 
-The migration is designed to preserve the Rownd-facing integration surface where possible.
-Frontend APIs such as `requestSignIn()`, `signOut()`, `getAccessToken()`, profile management, and signed-in state continue to be exposed by the SuperTokens Rownd SDKs.
-Authentication UIs are preserved as well as the Rownd specific session claims. 
+Released compatibility clients preserve parts of the Rownd-facing integration surface, depending on platform and
+version. Verified implementations expose APIs including `requestSignIn()`, `signOut()`, `getAccessToken()`, profile
+management, and signed-in state; released backend plugins preserve Rownd identity metadata and compatibility session
+claims. This is not a no-change guarantee: cutover requires backend/plugin deployment, client package changes, and may
+require platform upgrades or OAuth reauthorization. Confirm every API, UI, claim, and platform your application uses in
+a staging environment before cutover.
 
 ## Next steps
 

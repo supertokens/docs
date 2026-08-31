@@ -7,17 +7,20 @@ sidebar:
 
 ## Overview
 
-Automatic account linking is a feature that allows users to automatically sign in to their existing account using more than one login method. On a high level, SuperTokens automatically links the accounts for the different login methods provided that:
+Automatic account linking is a feature that allows users to automatically sign in to their existing account using more than one login method. At a high level, SuperTokens can automatically link accounts for different login methods when:
 - Their emails or phone numbers are the same.
-- They have verified their emails or phone numbers.
+- The new login method has a verified identifier when your callback returns `shouldRequireVerification: true`.
 
-SuperTokens ensures that accounts are automatically linked only if there is no risk of account takeover.
+SuperTokens applies account-takeover checks before linking. Your callback remains part of that security boundary,
+especially if you disable verification.
 
 
 ## Before you start
 
-:::info[Managed service feature]
-This feature is available for managed SuperTokens deployments.
+:::info[Paid feature]
+This feature is available for managed deployments and licensed self-hosted deployments. For managed deployments,
+[contact SuperTokens support](mailto:support@supertokens.com) to enable it. For self-hosted deployments, obtain a
+license key from SuperTokens and [add it to the Core](/deployment/self-host-supertokens#5-add-license-keys).
 :::
 
 
@@ -74,6 +77,15 @@ supertokens.init({
         tenantId: string,
         userContext: any,
       ) => {
+        if (
+          session !== undefined &&
+          (user === undefined || session.getUserId() !== user.id || session.getTenantId() !== tenantId)
+        ) {
+          return {
+            shouldAutomaticallyLink: false,
+          };
+        }
+
         // This step is required if you are saving user information in your own database.
         const hasAssociatedInformation = checkIfUserHasAssociatedInformation(newAccountInfo, user);
         if (hasAssociatedInformation) {
@@ -95,7 +107,7 @@ supertokens.init({
 
 </Tab>
 <Tab title="Python" value="python">
-```python check=false reason="Partial configuration example"
+```python
 from supertokens_python import init, InputAppInfo, SupertokensConfig
 from supertokens_python.recipe import accountlinking
 from supertokens_python.types import User
@@ -121,6 +133,13 @@ async def should_do_automatic_account_linking(
     tenant_id: str,
     user_context: Dict[str, Any]
 ) -> Union[ShouldNotAutomaticallyLink, ShouldAutomaticallyLink]:
+    if session is not None and (
+        user is None
+        or session.get_user_id() != user.id
+        or session.get_tenant_id() != tenant_id
+    ):
+        return ShouldNotAutomaticallyLink()
+
     has_associated_information = await check_if_user_has_associated_information(new_account_info, user)
     # This step is required if you are saving user information in your own database.
     if has_associated_information:
@@ -138,7 +157,7 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework='...',
+    framework="fastapi",
     recipe_list=[
         accountlinking.init(should_do_automatic_account_linking=should_do_automatic_account_linking)
     ],
@@ -151,29 +170,38 @@ init(
 <AccordionItem title="Input ">
 | Argument | Type | Description |
 |----------|------|-------------|
-| `newAccountInfo` | `AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }` | Contains information about the user whose account is going to link or become a primary user. Includes email, social login info, phone number, and login method (`emailpassword`, `thirdparty`, or `passwordless`). May contain `recipeUserId` during account linking. Note: When `newAccountInfo.recipeUserId !== undefined && user !== undefined`, extra logic checks if the user ID has associated data in your application db to prevent data loss. |
+| `newAccountInfo` | `AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }` | Contains information about the user whose account is going to link or become a primary user. Includes email, social login info, phone number, WebAuthn credential IDs, and login method (`emailpassword`, `thirdparty`, `passwordless`, or `webauthn`). May contain `recipeUserId` during account linking. When `newAccountInfo.recipeUserId !== undefined && user !== undefined`, check whether that recipe user ID has associated data in your application database to prevent data loss. |
 | `user` | `User \| undefined` | If not `undefined`, indicates `newAccountInfo` user links to this user. If `undefined`, `newAccountInfo` user becomes a primary user. |
 | `session` | `SessionContainerInterface \| undefined` | Session object of the user who is linking. `undefined` for first factor login. Defined if user completed first factor and calls sign up/in API again (MFA or social login linking). |
-| `tenant` | `string` | ID of the tenant the user is signing in/up to. |
-| `userContext` | `any` | User defined context object. |
+| `tenantId` | `string` | ID of the tenant the user is signing in or signing up to. Account matching and linking are scoped to this tenant. |
+| `userContext` | `any` | User-defined context object. |
 </AccordionItem>
 <AccordionItem title="Output">
 | Argument | Type | Description |
 |----------|------|-------------|
 | `shouldAutomaticallyLink` | `boolean` | If `true`, `newAccountInfo` links or becomes primary user during API call (subject to security checks). If `false`, no account linking operation occurs. |
-| `shouldRequireVerification` | `boolean` | If `true`, account linking only happens if `newAccountInfo` verifies. **Strongly recommended to keep as `true` for security.** |
+| `shouldRequireVerification` | `boolean` | If `true`, account linking only happens after the new login method's matching identifier is verified. Keep this `true` unless your backend has independently verified ownership of that identifier; client-provided values are not ownership evidence. |
 </AccordionItem>
 </Accordion>
 
 <br />
 
 :::note
-If you are returning `shouldRequireVerification` as `true`, then you need to also [enable the email verification recipe](/additional-verification/email-verification/initial-setup) in `REQUIRED` mode. This means that if the login method does not inherently verify the email (like for email password login), SuperTokens requires the user to go through the email verification flow first. Then, it attempts auto linking of the account. For other login methods like sign in with Google, the email is already verified during login. The user does not need to verify the email again, and account linking occurs immediately.
+If you return `shouldRequireVerification: true`, enable the
+[email verification recipe](/additional-verification/email-verification/initial-setup). `REQUIRED` mode prevents access
+until a login method that does not inherently verify its email, such as email-password, completes verification; linking
+is then retried. A provider login whose backend-validated response marks the email verified can link immediately.
 
 If you enable email verification in `OPTIONAL` mode, the user can access the account after email password login. However, account linking only occurs after they verify their email later on. This is risky because while the user had access to their email password account after sign up, they could lose access after verification and account linking completes due to the change in the primary user ID. A callback is available to help migrate data from one user ID to another.
 :::
 
 You can use the input of the function to dynamically decide if you want to do account linking for a particular user and / or login method or not.
+
+Do not use a client-provided email, phone number, provider user ID, or WebAuthn credential ID to authorize linking.
+Derive identifiers from the authenticated provider, WebAuthn ceremony, or backend user record. If `session` is present,
+only authorize a session-driven link when `session.getUserId()` equals `user.id` and `session.getTenantId()` equals
+`tenantId`. Returning `false` preserves both existing users; conflict statuses never transfer a login method between
+primary users.
 
 
 ## References
@@ -284,15 +312,32 @@ This appears in the [code snippet above](#1-enable-the-recipe).
     });
     ```
 
-:::warning[If your logic in `onAccountLinked` throws an error, then it is not called again, and still results in linking the accounts. However, the end user would see an error on the UI as the API returns a `500` status code. They can retry the login action and log into the primary user's account as expected.]
+:::warning[`onAccountLinked` does not provide rollback]
+SuperTokens calls `onAccountLinked` after the Core has linked the accounts. If the callback throws, the link remains,
+the callback is not retried automatically, and the API returns `500`. Make data migration idempotent and record enough
+state to reconcile failures asynchronously. Retrying login does not rerun this callback for an already-linked account.
 :::
 
 ### Error status codes
 
-The following is a list of error status codes that the end user might see during their interaction with the login UI (as a general error message in the pre-built UI).
+The following codes can appear in general errors shown by the pre-built UI. Released Node.js 24.0.3 uses these families:
+
+| Recipe or operation | Codes |
+|---|---|
+| Password reset/recovery protection | `ERR_CODE_001` |
+| Passwordless sign-in/up and session linking | `ERR_CODE_002`, `ERR_CODE_003`, `ERR_CODE_017`–`ERR_CODE_019` |
+| Third-party sign-in/up and session linking | `ERR_CODE_004`–`ERR_CODE_006`, `ERR_CODE_020`–`ERR_CODE_024` |
+| Email-password sign-in/up and session linking | `ERR_CODE_007`–`ERR_CODE_016` |
+| WebAuthn sign-up and session linking | `ERR_CODE_025`–`ERR_CODE_029` |
+| WebAuthn sign-in and session linking | `ERR_CODE_030`–`ERR_CODE_034` |
+
+For session-linking families, the consecutive codes distinguish verification required, a recipe user already linked to
+another primary user, account information already associated with another primary user, and session-user account
+information already associated with another primary user. Do not parse the message text; handle the API status and show
+the reason as a support-safe error.
 
 <Accordion>
-<AccordionItem title="ERRCODE001 ">
+<AccordionItem title="ERR_CODE_001">
 - This can happen during creating a password reset code in the email password flow:
     - API path and method: `/user/password/reset/token POST`
     - Output JSON:
@@ -314,7 +359,7 @@ To prevent this scenario, enforcement ensures that the password link is only gen
 
 - To resolve this, you would have to manually verify the user's identity and check that they own each of the emails / phone numbers associated with the primary user. Once verified, you can manually mark the email from the email password account as verified, and then ask them to go through the password reset flow once again. If they do not own each of the emails / phone numbers associated with the account, you can manually unlink the login methods which they do not own, and then ask them to go through the password reset flow once again. **You can do these actions using the user management dashboard.**
 </AccordionItem>
-<AccordionItem title="ERRCODE002">
+<AccordionItem title="ERR_CODE_002">
 - This can happen during the passwordless recipe's create or consume code API (during sign up):
     - API path and method: `/signinup/code POST` or `/signinup/code/consume POST`
     - Output JSON:
@@ -335,10 +380,14 @@ A user is trying to sign up using passwordless login method with email `e1`. The
 
 - To resolve this issue, you should ask the user to try another login method (which already has their email), or then mark their email as verified in the other account that has the same email, before asking them to retry passwordless login. **You can do these actions using the user management dashboard.**
 </AccordionItem>
-<AccordionItem title="ERRCODE003">
-This used to be an error code which is no longer valid and you can ignore it.
+<AccordionItem title="ERR_CODE_003">
+- This can happen during passwordless code consumption when sign-in is blocked to prevent unsafe account linking:
+  - API path and method: `/signinup/code/consume POST`
+  - Output status: `SIGN_IN_UP_NOT_ALLOWED`
+- Ask the user to use another login method that is already associated with the account or contact support. Do not bypass
+  the check based on client-provided account information.
 </AccordionItem>
-<AccordionItem title="ERRCODE004">
+<AccordionItem title="ERR_CODE_004">
 - This can happen during the third party recipe's `/signinup` API (during sign in):
     - API path and method: `/signinup POST`
     - Output JSON:
@@ -356,7 +405,7 @@ There exists a `thirdparty` user with email `e1`, sign in with Google (owned by 
 
 - To resolve this issue, you can delete the login method that has the unverified email, or if manually mark the unverified account as verified (if you confirm the identity of its owner). **You can do these actions using the user management dashboard.**
 </AccordionItem>
-<AccordionItem title="ERRCODE005">
+<AccordionItem title="ERR_CODE_005">
 - This can happen during the third party recipe's `signinup` API (during sign in):
     - API path and method: `/signinup POST`
     - Output JSON:
@@ -374,7 +423,7 @@ There exists a primary, third party user with email `e1`, sign in with Google. T
 
 - To resolve this issue, you can make one of the primary users as non primary (use the unlink button against the login method on the user management dashboard). Once the user is not a primary user, you can ask the user to re-login with that method, and it should auto link that account with the existing primary user.
 </AccordionItem>
-<AccordionItem title="ERRCODE006">
+<AccordionItem title="ERR_CODE_006">
 - This can happen during the third party recipe's `signinup` API (during sign up):
     - API path and method: `/signinup POST`
     - Output JSON:
@@ -394,7 +443,7 @@ A user is trying to sign up using third party login method with email `e1`. Ther
 
 - To resolve this issue, you should ask the user to try another login method (which already has their email), or then manually mark their email as verified in the other account that has the same email, before asking them to retry third party login. **You can do these actions using the user management dashboard.**
 </AccordionItem>
-<AccordionItem title="ERRCODE007">
+<AccordionItem title="ERR_CODE_007">
 - This can happen during the email password sign up API:
     - API path and method: `/signup POST`
     - Output JSON:
@@ -412,7 +461,7 @@ There exists a primary, social login account with email `e1`, sign in with Googl
 
 - To resolve this issue, you can ask the user to try and login, or go through the reset password flow.
 </AccordionItem>
-<AccordionItem title="ERRCODE008">
+<AccordionItem title="ERR_CODE_008">
 - This can happen during the email password sign in API:
     - API path and method: `/signin POST`
     - Output JSON:
@@ -430,7 +479,7 @@ There exists a primary, social login account with email `e1`, sign in with Googl
 
 - To resolve this issue, you can ask the user to try the reset password flow.
 </AccordionItem>
-<AccordionItem title="ERRCODE014">
+<AccordionItem title="ERR_CODE_014">
 - This can happen when adding a password to an existing session user:
     - API Path is `/signup POST`.
     - Output JSON:
@@ -447,7 +496,7 @@ There exists a primary, social login account with email `e1`, sign in with Googl
 
 - To resolve this, it is recommended to manually link the `e1` social login account with the `e1` email password account. Alternatively, enable automatic account linking for first factor to prevent the above scenario.
 </AccordionItem>
-<AccordionItem title="ERRCODE015">
+<AccordionItem title="ERR_CODE_015">
 - This can happen when adding a password to an existing session user:
     - API Path is `/signup POST`.
     - Output JSON:
@@ -465,7 +514,7 @@ There exists a primary, social login account with email `e1`, sign in with Googl
 
 - To resolve this, it is recommended not allowing users to specify an email when asking them to add a password for their account.
 </AccordionItem>
-<AccordionItem title="ERRCODE016">
+<AccordionItem title="ERR_CODE_016">
 - This can happen when adding a password to an existing session user:
     - API Path is `/signup POST`.
     - Output JSON:
@@ -482,7 +531,7 @@ There exists a primary, social login account with email `e1`, sign in with Googl
 
 - To resolve this, it is recommended that you manually link the `e1` GitHub social login account with the `e1` Google social login account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
 </AccordionItem>
-<AccordionItem title="ERRCODE020">
+<AccordionItem title="ERR_CODE_020">
 - This can happen during association of a third party login to an existing session's account.
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -493,9 +542,11 @@ There exists a primary, social login account with email `e1`, sign in with Googl
         }
         ```
 - This can happen when the third party account that is trying to link to the session's account is not verified. It could happen when you are trying to associate a social login account to a user, but that social account's email is not verified (and if the email of that account is not the same as the current session's account's email).
-- To resolve this, you can return `shouldRequireVerification` as `false` in the `shouldDoAutomaticAccountLinking` function implementation, or you can only allow users to link social login accounts that give verified accounts.
+- Only allow users to link provider accounts whose identifiers the provider marks as verified. Return
+  `shouldRequireVerification: false` only if your backend has independently verified ownership; client input is not
+  sufficient evidence.
 </AccordionItem>
-<AccordionItem title="ERRCODE021">
+<AccordionItem title="ERR_CODE_021">
 - This can happen during association of a third party login to an existing session's account.
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -507,7 +558,7 @@ There exists a primary, social login account with email `e1`, sign in with Googl
         ```
 - This can happen when the third party account that is trying to link to the session's account is already linked with another primary user.
 </AccordionItem>
-<AccordionItem title="ERRCODE022">
+<AccordionItem title="ERR_CODE_022">
 - This can happen during association of a third party login to an existing session's account.
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -519,7 +570,7 @@ There exists a primary, social login account with email `e1`, sign in with Googl
         ```
 - This can happen when the third party account that is trying to link to the session's account has the same email as another primary user.
 </AccordionItem>
-<AccordionItem title="ERRCODE023">
+<AccordionItem title="ERR_CODE_023">
 - This can happen during association of a third party login to an existing session's account.
     - API Path is `/signinup POST`.
     - Output JSON:
@@ -531,7 +582,7 @@ There exists a primary, social login account with email `e1`, sign in with Googl
         ```
 - To link the third party user with the session user, we need to make sure that the session user is a primary user. However, that can fail if there exists another primary user with the same email as the session user, and in this case, this error returns to the frontend.
 </AccordionItem>
-<AccordionItem title="ERRCODE024">
+<AccordionItem title="ERR_CODE_024">
 - This happens during third party sign in, when the user is trying to sign in with a non-primary user, and the third party provider does not verify their email, and their exists a primary user with the same email. This can also happen the other way around wherein the user is trying to sign in with the primary user (unverified email), and there exists a non-primary user with the same email.
     - API Path is `/signinup POST`.
     - Output JSON:

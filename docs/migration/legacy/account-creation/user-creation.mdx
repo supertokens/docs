@@ -6,6 +6,22 @@ sidebar:
 
 ## Email Password Migration
 
+:::caution[Legacy procedure]
+This page documents version-qualified CDI 2.16 behavior. For a new migration, use the current
+[account migration guide](/migration/account-migration), which supports staged bulk import and reconciliation.
+:::
+
+:::danger[Secure the legacy Core before importing]
+Keep Core on a private network; for a same-host migration, bind the published port to the local interface only. Generate a
+high-entropy API key (for example, `openssl rand -hex 32`), store it in your secret manager, and configure the same key in
+Core and the migration client without putting it in source control, shell history, or logs. Pin the Core/database image
+to a tested immutable digest that implements the documented CDI/storage version. Never use an untagged or mutable image
+for a migration, and do not expose Core directly to the internet.
+
+The requests below read their API-key header from `/run/secrets/supertokens-curl.conf`. Create it with mode `0600` and
+the line `header = "api-key: <GENERATED_API_KEY>"`; provision it from your secret manager and disable shell/curl tracing.
+:::
+
 :::note
 If you do not have access to your user's password hashes, you can use our [guide for migrating them dynamically during login](./ep-migration-without-password-hash).
 :::
@@ -13,13 +29,13 @@ If you do not have access to your user's password hashes, you can use our [guide
 SuperTokens allows you to import users with password hashes generated with `BCrypt`, `Argon2` and `Firebase SCrypt` with our import user API.
 You can find the API spec [here](https://app.swaggerhub.com/apis/supertokens/CDI/2.16.0#/EmailPassword%20Recipe/userImport).
 
-### Migrating users With Argon2 or `BCrypt` Password hashes
+### Migrating users with Argon2 or `BCrypt` password hashes
 
 For users with `BCrypt` or `Argon2` password hashes you can use the following curl command to import your user.
 
 ```bash
 curl --location --request POST '<CORE_API_ENDPOINT>/recipe/user/passwordhash/import' \
---header 'api-key: <YOUR_API_KEY>' \
+--config /run/secrets/supertokens-curl.conf \
 --header 'Content-Type: application/json; charset=utf-8' \
 --data-raw '{
     "email": "johndoe@example.com",
@@ -38,7 +54,7 @@ Sample password hashes for `BCrypt` and Argon2 in standard format:
 
 ### Migrating users with Firebase `SCrypt` Password hashes
 
-Importing users from Firebases requires an update to your SuperTokens core config and formatting the input password hash.
+Importing users from Firebase requires an update to your SuperTokens Core configuration and formatting the input password hash.
 
 #### Step 1: Retrieve your Firebase password hashing parameters from your dashboard.
 
@@ -46,20 +62,26 @@ Importing users from Firebases requires an update to your SuperTokens core confi
 
 #### Step 2: Update the SuperTokens core to use the `base64_signer_key`
 
-- ** For Managed Service **
+**For Managed Service**
 
 
 - Edit the core configuration on the **Configuration** page of the relevant deployment in the SuperTokens SaaS Dashboard.
 - Set the `firebase_password_hashing_signer_key` field in the config to the `base64_signer_key` retrieved from your firebase hashing parameters.
 
+**With Docker:** Create `/run/secrets/supertokens-migration.environment` with mode `0600`. It must contain
+`API_KEYS=<GENERATED_API_KEY>` and `FIREBASE_PASSWORD_HASHING_SIGNER_KEY=<BASE64_SIGNER_KEY>`. Use deployment-managed
+secrets instead of an environment file where available.
+
+**Without Docker:** Restrict the Core listener to a private or local-only interface with host firewall/network policy. The
+exact process binding is deployment-specific; verify from another host that port `3567` is unreachable before importing.
 
 <CodeGroup group="docker">
 <Tab title="With Docker" value="with-docker">
 ```bash {3}
- docker run \
-    -p 3567:3567 \
-    -e FIREBASE_PASSWORD_HASHING_SIGNER_KEY="gRhC3eDeQOdyEn4bMd9c6kxguWVmcIVq/HbJKnCXdWscZx0l2WbCJ1wbg==" \
-    -d supertokens/supertokens-<db_name>
+docker run \
+    --env-file /run/secrets/supertokens-migration.environment \
+    -p 127.0.0.1:3567:3567 \
+    -d supertokens/supertokens-<db_name>@sha256:<TESTED_IMAGE_DIGEST>
 ```
 </Tab>
 <Tab title="Without Docker" value="without-docker">
@@ -68,6 +90,7 @@ Importing users from Firebases requires an update to your SuperTokens core confi
 # The file path can be found by running the "supertokens --help" command
 
 firebase_password_hashing_signer_key: "gRhC3eDeQOdyEn4bMd9c6kxguWVmcIVq/HbJKnCXdWscZx0l2WbCJ1wbg=="
+api_keys: "<GENERATED_API_KEY>"
 ```
 </Tab>
 </CodeGroup>
@@ -108,8 +131,8 @@ firebase_password_hashing_signer_key: "gRhC3eDeQOdyEn4bMd9c6kxguWVmcIVq/HbJKnCXd
 
 ```bash
 curl --location --request POST '<CORE_API_ENDPOINT>/recipe/user/passwordhash/import' \
+--config /run/secrets/supertokens-curl.conf \
 --header 'Content-Type: application/json; charset=utf-8' \
---header 'api-key: <YOUR_API_KEY>' \
 --data-raw '{
   "email": "test@example.com",
   "passwordHash": "$f_scrypt$9Y8ICWcqbzmI42DxV1jpyEjbrJPG8EQ6nI6oC32JYz+/dd7aEjI/R7jG9P5kYh8v9gyqFKaXMDzMg7eLCypbOA==$/cj0jC1br5o4+w==$m=14$r=8$s=Bw==",
@@ -120,7 +143,11 @@ curl --location --request POST '<CORE_API_ENDPOINT>/recipe/user/passwordhash/imp
 
 ## Passwordless Migration
 
-To migrate a Passwordless user from your previous authentication provider to SuperTokens, you will first need to generate a code for the user and then call the consume code API.
+This legacy procedure is an active passwordless authentication flow, not a side-effect-free import. Generating a code
+creates temporary passwordless device/code records with an expiry. Consuming the link code consumes that credential and
+performs passwordless sign-in/up, creating the user if necessary. Repeating or racing these requests can produce used,
+expired, or duplicate-flow errors. Run them only in a controlled migration process, keep returned codes secret, and
+reconcile the resulting user before retrying. Use bulk import for new migrations.
 
 ### Generate passwordless code
 
@@ -128,7 +155,7 @@ To migrate a Passwordless user from your previous authentication provider to Sup
 
 ```bash
 curl --location --request POST '<CORE_API_ENDPOINT>/recipe/signinup/code' \
---header 'api-key: <YOUR_API_KEY>' \
+--config /run/secrets/supertokens-curl.conf \
 --header 'Content-Type: application/json; charset=utf-8' \
 --data-raw '{
     "email": "johndoe@example.com"
@@ -139,7 +166,7 @@ curl --location --request POST '<CORE_API_ENDPOINT>/recipe/signinup/code' \
 
 ```bash
 curl --location --request POST '<CORE_API_ENDPOINT>/recipe/signinup/code' \
---header 'api-key: <YOUR_API_KEY>' \
+--config /run/secrets/supertokens-curl.conf \
 --header 'Content-Type: application/json; charset=utf-8' \
 --data-raw '{
     "phoneNumber": "+14155552671"
@@ -167,7 +194,7 @@ Retrieve the `preAuthSessionId` and `linkCode` from the previous response and se
 
 ```bash
 curl --location --request POST '<CORE_API_ENDPOINT>/recipe/signinup/code/consume' \
---header 'api-key: <YOUR_API_KEY>' \
+--config /run/secrets/supertokens-curl.conf \
 --header 'Content-Type: application/json; charset=utf-8' \
 --data-raw '{
     "preAuthSessionId": "d3Zpa9eoyV2Wr7uN5DLr6H1clzbwwGTc_0wIIXJT55M=",
@@ -175,11 +202,12 @@ curl --location --request POST '<CORE_API_ENDPOINT>/recipe/signinup/code/consume
 }'
 ```
 
-If the user has both email and password associated with them, then you can call the update user API to associate the missing information
+If the imported passwordless login method should have both an email address and phone number, use its returned user ID
+to add the missing contact information:
 
 ```bash
 curl --location --request PUT '<CORE_API_ENDPOINT>/recipe/user' \
---header 'api-key: <YOUR_API_KEY>' \
+--config /run/secrets/supertokens-curl.conf \
 --header 'rid: passwordless' \
 --header 'Content-Type: application/json; charset=utf-8' \
 --data-raw '{
@@ -200,7 +228,7 @@ If we were importing a user with Google as their provider with their third party
 
 ```bash
 curl --location --request POST '<CORE_API_ENDPOINT>/recipe/signinup' \
---header 'api-key: <YOUR_API_KEY>' \
+--config /run/secrets/supertokens-curl.conf \
 --header 'Content-Type: application/json; charset=utf-8' \
 --data-raw '{
   "thirdPartyId": "google",

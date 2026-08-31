@@ -142,6 +142,7 @@ function TOTPPage() {
 </Tab>
 </CodeGroup>
 
+
 <DependentContent passive group="frontend-prebuilt-ui">
 <ContentOption title="Reactjs" value="reactjs">
 #### Without React Router
@@ -229,15 +230,15 @@ The following example shows the scenario where you embed the TOTP Widget in a po
 
 <CodeGroup group="frontend-prebuilt-ui">
 <Tab title="Reactjs" value="reactjs">
-```tsx {6,7,49}
-import React, { useState, useEffect } from "react";
+```tsx
+import React, { useEffect, useRef, useState } from "react";
 import Modal from "react-modal";
 import SuperTokens from "supertokens-auth-react";
 import TOTP from "supertokens-auth-react/recipe/totp";
 import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth";
 import { MFATOTP } from "supertokens-auth-react/recipe/totp/prebuiltui";
 import Session from "supertokens-auth-react/recipe/session";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 SuperTokens.init({
   appInfo: {
@@ -253,12 +254,62 @@ SuperTokens.init({
 });
 
 function TOTPPopup() {
-  let sessionContext = Session.useSessionContext();
+  const sessionContext = Session.useSessionContext();
   const navigate = useNavigate();
+  const location = useLocation();
+  const retryStarted = useRef(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState<string>();
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openModal = () => {
+    const url = new URL(window.location.href);
+    const returnUrl = new URL(url);
+    returnUrl.searchParams.delete("stepUp");
+    returnUrl.searchParams.delete("redirectToPath");
+    returnUrl.searchParams.set("retryProtectedOperation", "true");
+
+    url.searchParams.delete("retryProtectedOperation");
+    url.searchParams.set("stepUp", "true");
+    url.searchParams.set("redirectToPath", `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`);
+    window.history.replaceState(window.history.state, "", url);
+    retryStarted.current = false;
+    setError(undefined);
+    setIsModalOpen(true);
+  };
+
+  const cancelModal = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("stepUp");
+    url.searchParams.delete("redirectToPath");
+    url.searchParams.delete("retryProtectedOperation");
+    window.history.replaceState(window.history.state, "", url);
+    setIsModalOpen(false);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("retryProtectedOperation") !== "true" || retryStarted.current) {
+      return;
+    }
+
+    retryStarted.current = true;
+    void (async () => {
+      try {
+        await MultiFactorAuth.resyncSessionAndFetchMFAInfo();
+        const response = await fetch("/api/sensitive-operation", { method: "POST" });
+        if (!response.ok) {
+          throw new Error("The protected operation was rejected");
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("retryProtectedOperation");
+        navigate(`${url.pathname}${url.search}${url.hash}`, { replace: true });
+        setIsModalOpen(false);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "The protected operation failed");
+      }
+    })();
+  }, [location.search, navigate]);
 
   if (sessionContext.loading) {
     return null;
@@ -270,11 +321,15 @@ function TOTPPopup() {
         <Session.SessionAuth>
           <h2>You are logged In! </h2>
           <h3>UserId: {sessionContext.userId}</h3>
+          <button onClick={openModal}>Verify with TOTP</button>
           <button onClick={() => Session.signOut()}>Sign Out</button>
         </Session.SessionAuth>
       }
 
-      <Modal isOpen={isModalOpen} contentLabel="TOTP Modal">
+      {error !== undefined && <p role="alert">{error}</p>}
+
+      <Modal isOpen={isModalOpen} onRequestClose={cancelModal} contentLabel="TOTP challenge">
+        <button onClick={cancelModal}>Cancel</button>
         <MFATOTP navigate={navigate} />
       </Modal>
     </div>
@@ -295,15 +350,15 @@ function TOTPPopup() {
 
 <CodeGroup passive group="frontend-prebuilt-ui">
 <Tab title="Reactjs" value="reactjs">
-```tsx {6,7,49}
-import React, { useState, useEffect } from "react";
+```tsx
+import React, { useEffect, useRef, useState } from "react";
 import Modal from "react-modal";
 import SuperTokens from "supertokens-auth-react";
 import TOTP from "supertokens-auth-react/recipe/totp";
 import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth";
 import { MFATOTP } from "supertokens-auth-react/recipe/totp/prebuiltui";
 import Session from "supertokens-auth-react/recipe/session";
-import { useHistory } from "react-router-dom5";
+import { useHistory, useLocation } from "react-router-dom5";
 
 SuperTokens.init({
   appInfo: {
@@ -319,12 +374,62 @@ SuperTokens.init({
 });
 
 function TOTPPopup() {
-  let sessionContext = Session.useSessionContext();
+  const sessionContext = Session.useSessionContext();
   const history = useHistory();
+  const location = useLocation();
+  const retryStarted = useRef(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState<string>();
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openModal = () => {
+    const url = new URL(window.location.href);
+    const returnUrl = new URL(url);
+    returnUrl.searchParams.delete("stepUp");
+    returnUrl.searchParams.delete("redirectToPath");
+    returnUrl.searchParams.set("retryProtectedOperation", "true");
+
+    url.searchParams.delete("retryProtectedOperation");
+    url.searchParams.set("stepUp", "true");
+    url.searchParams.set("redirectToPath", `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`);
+    window.history.replaceState(window.history.state, "", url);
+    retryStarted.current = false;
+    setError(undefined);
+    setIsModalOpen(true);
+  };
+
+  const cancelModal = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("stepUp");
+    url.searchParams.delete("redirectToPath");
+    url.searchParams.delete("retryProtectedOperation");
+    window.history.replaceState(window.history.state, "", url);
+    setIsModalOpen(false);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("retryProtectedOperation") !== "true" || retryStarted.current) {
+      return;
+    }
+
+    retryStarted.current = true;
+    void (async () => {
+      try {
+        await MultiFactorAuth.resyncSessionAndFetchMFAInfo();
+        const response = await fetch("/api/sensitive-operation", { method: "POST" });
+        if (!response.ok) {
+          throw new Error("The protected operation was rejected");
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("retryProtectedOperation");
+        history.replace(`${url.pathname}${url.search}${url.hash}`);
+        setIsModalOpen(false);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "The protected operation failed");
+      }
+    })();
+  }, [history, location.search]);
 
   if (sessionContext.loading) {
     return null;
@@ -336,11 +441,15 @@ function TOTPPopup() {
         <Session.SessionAuth>
           <h2>You are logged In! </h2>
           <h3>UserId: {sessionContext.userId}</h3>
+          <button onClick={openModal}>Verify with TOTP</button>
           <button onClick={() => Session.signOut()}>Sign Out</button>
         </Session.SessionAuth>
       }
 
-      <Modal isOpen={isModalOpen} contentLabel="TOTP Modal">
+      {error !== undefined && <p role="alert">{error}</p>}
+
+      <Modal isOpen={isModalOpen} onRequestClose={cancelModal} contentLabel="TOTP challenge">
+        <button onClick={cancelModal}>Cancel</button>
         <MFATOTP navigate={history} />
       </Modal>
     </div>
@@ -358,8 +467,8 @@ function TOTPPopup() {
 
 <CodeGroup passive group="frontend-prebuilt-ui">
 <Tab title="Reactjs" value="reactjs">
-```tsx {6,7,47}
-import React, { useState, useEffect } from "react";
+```tsx
+import React, { useEffect, useRef, useState } from "react";
 import Modal from "react-modal";
 import SuperTokens from "supertokens-auth-react";
 import TOTP from "supertokens-auth-react/recipe/totp";
@@ -381,11 +490,60 @@ SuperTokens.init({
 });
 
 function TOTPPopup() {
-  let sessionContext = Session.useSessionContext();
+  const sessionContext = Session.useSessionContext();
+  const retryStarted = useRef(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState<string>();
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openModal = () => {
+    const url = new URL(window.location.href);
+    const returnUrl = new URL(url);
+    returnUrl.searchParams.delete("stepUp");
+    returnUrl.searchParams.delete("redirectToPath");
+    returnUrl.searchParams.set("retryProtectedOperation", "true");
+
+    url.searchParams.delete("retryProtectedOperation");
+    url.searchParams.set("stepUp", "true");
+    url.searchParams.set("redirectToPath", `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`);
+    window.history.replaceState(window.history.state, "", url);
+    retryStarted.current = false;
+    setError(undefined);
+    setIsModalOpen(true);
+  };
+
+  const cancelModal = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("stepUp");
+    url.searchParams.delete("redirectToPath");
+    url.searchParams.delete("retryProtectedOperation");
+    window.history.replaceState(window.history.state, "", url);
+    setIsModalOpen(false);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("retryProtectedOperation") !== "true" || retryStarted.current) {
+      return;
+    }
+
+    retryStarted.current = true;
+    void (async () => {
+      try {
+        await MultiFactorAuth.resyncSessionAndFetchMFAInfo();
+        const response = await fetch("/api/sensitive-operation", { method: "POST" });
+        if (!response.ok) {
+          throw new Error("The protected operation was rejected");
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("retryProtectedOperation");
+        window.history.replaceState(window.history.state, "", url);
+        setIsModalOpen(false);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "The protected operation failed");
+      }
+    })();
+  }, []);
 
   if (sessionContext.loading) {
     return null;
@@ -397,11 +555,15 @@ function TOTPPopup() {
         <Session.SessionAuth>
           <h2>You are logged In! </h2>
           <h3>UserId: {sessionContext.userId}</h3>
+          <button onClick={openModal}>Verify with TOTP</button>
           <button onClick={() => Session.signOut()}>Sign Out</button>
         </Session.SessionAuth>
       }
 
-      <Modal isOpen={isModalOpen} contentLabel="TOTP Modal">
+      {error !== undefined && <p role="alert">{error}</p>}
+
+      <Modal isOpen={isModalOpen} onRequestClose={cancelModal} contentLabel="TOTP challenge">
+        <button onClick={cancelModal}>Cancel</button>
         <MFATOTP />
       </Modal>
     </div>
@@ -410,3 +572,5 @@ function TOTPPopup() {
 ```
 </Tab>
 </CodeGroup>
+
+The `retryProtectedOperation` return marker is not proof that step-up authentication succeeded. After the factor flow returns, call `MultiFactorAuth.resyncSessionAndFetchMFAInfo()` to synchronize the session and retry the server-protected operation. The MFA freshness validator on the backend is authoritative and must reject the operation if the required factor is missing or too old. The **Cancel** button only cancels the popup; it must not retry or authorize the operation.

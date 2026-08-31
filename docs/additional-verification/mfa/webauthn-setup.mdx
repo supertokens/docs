@@ -15,8 +15,10 @@ For standalone passwordless sign-in with passkeys, use the [Passkey Authenticati
 
 The tutorial assumes that the first factor is email password or social login, but the same set of steps are applicable for other first factor types.
 
-:::info[Managed service feature]
-This feature is available for managed SuperTokens deployments.
+:::info[Paid feature]
+This feature is available for managed deployments and licensed self-hosted deployments. For managed deployments,
+[contact SuperTokens support](mailto:support@supertokens.com) to enable it. For self-hosted deployments, obtain a
+license key from SuperTokens and [add it to the Core](/deployment/self-host-supertokens#5-add-license-keys).
 :::
 
 ## Steps
@@ -86,17 +88,62 @@ supertokens.init({
 
 </Tab>
 <Tab title="Python" value="python">
-```python check=false reason="framework placeholder must be replaced for the target Python server"
+```python
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, webauthn
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    session,
+    thirdparty,
+    webauthn,
+)
+from supertokens_python.recipe.accountlinking.types import (
+    AccountInfoWithRecipeIdAndUserId,
+    ShouldAutomaticallyLink,
+    ShouldNotAutomaticallyLink,
+)
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
     OverrideConfig,
     MFARequirementList,
 )
 from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
+from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.types import User
-from typing import Dict, Any, Callable, Awaitable, List
+
+
+async def should_link_webauthn_mfa_account(
+    new_account_info: AccountInfoWithRecipeIdAndUserId,
+    user: Optional[User],
+    current_session: Optional[SessionContainer],
+    tenant_id: str,
+    user_context: Dict[str, Any],
+) -> Union[ShouldNotAutomaticallyLink, ShouldAutomaticallyLink]:
+    if current_session is None or current_session.get_tenant_id() != tenant_id:
+        return ShouldNotAutomaticallyLink()
+
+    is_making_session_user_primary = (
+        user is None
+        and new_account_info.recipe_user_id is not None
+        and new_account_info.recipe_user_id.get_as_string()
+        == current_session.get_recipe_user_id().get_as_string()
+    )
+    is_linking_webauthn_to_session_user = (
+        new_account_info.recipe_id == "webauthn"
+        and user is not None
+        and user.id == current_session.get_user_id()
+    )
+
+    if (
+        not is_making_session_user_primary
+        and not is_linking_webauthn_to_session_user
+    ):
+        return ShouldNotAutomaticallyLink()
+
+    return ShouldAutomaticallyLink(should_require_verification=True)
 
 
 def override_functions(original_implementation: RecipeInterface):
@@ -121,15 +168,21 @@ def override_functions(original_implementation: RecipeInterface):
 
 init(
     app_info=InputAppInfo(
-        app_name="...",
-        api_domain="...",
-        website_domain="...",
+        app_name="Example App",
+        api_domain="http://localhost:3001",
+        website_domain="http://localhost:3000",
     ),
     supertokens_config=SupertokensConfig(
-        connection_uri="...",
+        connection_uri="http://localhost:3567",
     ),
-    framework="...",  
+    framework="fastapi",
     recipe_list=[
+        session.init(),
+        thirdparty.init(),
+        emailpassword.init(),
+        accountlinking.init(
+            should_do_automatic_account_linking=should_link_webauthn_mfa_account
+        ),
         webauthn.init(),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
@@ -224,22 +277,75 @@ supertokens.init({
 
 </Tab>
 <Tab title="Python" value="python">
-```python check=false reason="framework placeholder must be replaced for the target Python server"
+```python
+from typing import Any, Dict, Optional, Union
+
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, webauthn
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    session,
+    thirdparty,
+    webauthn,
+)
+from supertokens_python.recipe.accountlinking.types import (
+    AccountInfoWithRecipeIdAndUserId,
+    ShouldAutomaticallyLink,
+    ShouldNotAutomaticallyLink,
+)
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.types import User
+
+
+async def should_link_webauthn_mfa_account(
+    new_account_info: AccountInfoWithRecipeIdAndUserId,
+    user: Optional[User],
+    current_session: Optional[SessionContainer],
+    tenant_id: str,
+    user_context: Dict[str, Any],
+) -> Union[ShouldNotAutomaticallyLink, ShouldAutomaticallyLink]:
+    if current_session is None or current_session.get_tenant_id() != tenant_id:
+        return ShouldNotAutomaticallyLink()
+
+    is_making_session_user_primary = (
+        user is None
+        and new_account_info.recipe_user_id is not None
+        and new_account_info.recipe_user_id.get_as_string()
+        == current_session.get_recipe_user_id().get_as_string()
+    )
+    is_linking_webauthn_to_session_user = (
+        new_account_info.recipe_id == "webauthn"
+        and user is not None
+        and user.id == current_session.get_user_id()
+    )
+
+    if (
+        not is_making_session_user_primary
+        and not is_linking_webauthn_to_session_user
+    ):
+        return ShouldNotAutomaticallyLink()
+
+    return ShouldAutomaticallyLink(should_require_verification=True)
 
 
 init(
     app_info=InputAppInfo(
-        app_name="...",
-        api_domain="...",
-        website_domain="...",
+        app_name="Example App",
+        api_domain="http://localhost:3001",
+        website_domain="http://localhost:3000",
     ),
     supertokens_config=SupertokensConfig(
-        connection_uri="...",
+        connection_uri="http://localhost:3567",
     ),
-    framework="...",  
+    framework="fastapi",
     recipe_list=[
+        session.init(),
+        thirdparty.init(),
+        emailpassword.init(),
+        accountlinking.init(
+            should_do_automatic_account_linking=should_link_webauthn_mfa_account
+        ),
         webauthn.init(),
         multifactorauth.init(),
     ],
@@ -372,7 +478,173 @@ Indicating that the user has finished all required factors, and should be allowe
 
 </VariantContent>
 
-### 2. Configure the frontend
+### 2. Authorize account linking on the backend
+
+`shouldTryLinkingWithSessionUser: true` in the client calls below only asks the backend to try linking. It is not an
+authorization decision. The backend `AccountLinking` policy must decide whether linking is allowed.
+
+SuperTokens automatically initializes `AccountLinking` with a deny-by-default policy when you omit the recipe. To use
+WebAuthn as a second factor, initialize one explicitly configured `AccountLinking` recipe in the same recipe list. This
+replaces the automatic default; do not add a second initialization. The Python examples above already include this
+policy. For Node.js, add the configuration below to the recipe list shown above. If you already configure account
+linking, merge these checks into that policy.
+
+The following policy only permits linking for the current session and tenant. It also requires verified account
+information. SuperTokens and the Core still perform the authoritative conflict checks and reject linking if the recipe
+user or account information belongs to another primary user.
+
+The single-tenant and multi-tenant Python examples above already initialize the configured `accountlinking` recipe
+exactly once. Do not initialize it again.
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```ts
+import { RecipeUserId, User } from "supertokens-node";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
+import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
+import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
+
+const accountLinkingForWebAuthnMFA = AccountLinking.init({
+  shouldDoAutomaticAccountLinking: async (
+    newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId },
+    user: User | undefined,
+    session: SessionContainerInterface | undefined,
+    tenantId: string,
+  ) => {
+    if (session === undefined || session.getTenantId() !== tenantId) {
+      return { shouldAutomaticallyLink: false };
+    }
+
+    const sessionRecipeUserId = session.getRecipeUserId().getAsString();
+    const isMakingSessionUserPrimary =
+      user === undefined && newAccountInfo.recipeUserId?.getAsString() === sessionRecipeUserId;
+    const isLinkingWebAuthnToSessionUser = newAccountInfo.recipeId === "webauthn" && user?.id === session.getUserId();
+
+    if (!isMakingSessionUserPrimary && !isLinkingWebAuthnToSessionUser) {
+      return { shouldAutomaticallyLink: false };
+    }
+
+    return {
+      shouldAutomaticallyLink: true,
+      shouldRequireVerification: true,
+    };
+  },
+});
+
+// Add accountLinkingForWebAuthnMFA once to the recipeList passed to supertokens.init.
+```
+</Tab>
+<Tab title="Go" value="go">
+
+</Tab>
+</CodeGroup>
+
+### 3. Configure the WebAuthn RP ID and origin
+
+WebAuthn validates the browser origin independently of your API domain. If your website is
+`https://app.example.com` and your API is `https://api.example.com`, use the website origin for `origin`. The RP ID
+must be the website hostname (`app.example.com`) or a registrable parent domain (`example.com`) whose scope you
+intentionally accept. Production origins must use HTTPS.
+
+For tenant custom domains, keep the allowed RP ID and exact origin in server-side configuration or a trusted database
+indexed by the validated tenant ID. Reject unknown tenants. Never derive or reflect either value from `Origin`,
+`Host`, `X-Forwarded-Host`, or other request headers: an attacker may control those headers, and changing RP values can
+break credential scoping or allow ceremonies for an unintended domain.
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```ts
+import WebAuthn from "supertokens-node/recipe/webauthn";
+
+const relyingPartyByTenant: Record<string, { relyingPartyId: string; origin: string }> = {
+  public: {
+    relyingPartyId: "example.com",
+    origin: "https://app.example.com",
+  },
+  customer1: {
+    relyingPartyId: "login.customer.example",
+    origin: "https://login.customer.example",
+  },
+};
+
+function getRelyingParty(tenantId: string) {
+  const relyingParty = relyingPartyByTenant[tenantId];
+  if (relyingParty === undefined) {
+    throw new Error("WebAuthn is not configured for this tenant");
+  }
+  return relyingParty;
+}
+
+const webAuthnWithTrustedRelyingParties = WebAuthn.init({
+  getRelyingPartyId: async ({ tenantId }) => getRelyingParty(tenantId).relyingPartyId,
+  getOrigin: async ({ tenantId }) => getRelyingParty(tenantId).origin,
+});
+
+// Use webAuthnWithTrustedRelyingParties instead of webauthn.init() in the recipeList above.
+```
+</Tab>
+<Tab title="Go" value="go">
+
+</Tab>
+<Tab title="Python" value="python">
+```python
+from typing import Dict, Optional
+
+from supertokens_python.framework import BaseRequest
+from supertokens_python.recipe import webauthn
+from supertokens_python.recipe.webauthn import WebauthnConfig
+from supertokens_python.types.base import UserContext
+
+relying_party_by_tenant: Dict[str, Dict[str, str]] = {
+    "public": {
+        "relying_party_id": "example.com",
+        "origin": "https://app.example.com",
+    },
+    "customer1": {
+        "relying_party_id": "login.customer.example",
+        "origin": "https://login.customer.example",
+    },
+}
+
+
+def get_relying_party(tenant_id: str) -> Dict[str, str]:
+    relying_party = relying_party_by_tenant.get(tenant_id)
+    if relying_party is None:
+        raise ValueError("WebAuthn is not configured for this tenant")
+    return relying_party
+
+
+async def get_relying_party_id(
+    *,
+    tenant_id: str,
+    request: Optional[BaseRequest],
+    user_context: UserContext,
+) -> str:
+    return get_relying_party(tenant_id)["relying_party_id"]
+
+
+async def get_origin(
+    *,
+    tenant_id: str,
+    request: Optional[BaseRequest],
+    user_context: UserContext,
+) -> str:
+    return get_relying_party(tenant_id)["origin"]
+
+
+web_authn_with_trusted_relying_parties = webauthn.init(
+    config=WebauthnConfig(
+        get_relying_party_id=get_relying_party_id,
+        get_origin=get_origin,
+    )
+)
+
+# Use web_authn_with_trusted_relying_parties instead of webauthn.init() in the recipe_list above.
+```
+</Tab>
+</CodeGroup>
+
+### 4. Configure the frontend
 
 <UITypeSwitch />
 
@@ -740,6 +1012,7 @@ import Webauthn from "supertokens-web-js/recipe/webauthn";
 async function secondFactorSignUp(email: string, userContext: Record<string, any>) {
   const response = await Webauthn.registerCredentialWithSignUp({
     email,
+    shouldTryLinkingWithSessionUser: true,
     userContext,
   });
 
@@ -752,6 +1025,7 @@ async function secondFactorSignUp(email: string, userContext: Record<string, any
 async function secondFactorSignUp(email: string, userContext: Record<string, any>) {
   const response = await supertokensWebAuthn.registerCredentialWithSignUp({
     email,
+    shouldTryLinkingWithSessionUser: true,
     userContext,
   });
 
@@ -790,6 +1064,7 @@ import Webauthn from "supertokens-web-js/recipe/webauthn";
 
 async function secondFactorSignUp(userContext: Record<string, any>) {
   const response = await Webauthn.authenticateCredentialWithSignIn({
+    shouldTryLinkingWithSessionUser: true,
     userContext,
   });
 
@@ -801,6 +1076,7 @@ async function secondFactorSignUp(userContext: Record<string, any>) {
 ```ts check=false reason="script-tag example relies on the WebAuthn global provided by the loaded SuperTokens bundle"
 async function secondFactorSignUp(userContext: Record<string, any>) {
   const response = await supertokensWebAuthn.authenticateCredentialWithSignIn({
+    shouldTryLinkingWithSessionUser: true,
     userContext,
   });
 

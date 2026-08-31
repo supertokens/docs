@@ -1,7 +1,7 @@
 import { defineMeta } from "blume";
 
 export default defineMeta({
-  "title": "Plugins",
-  "icon": "plug",
-  "order": 30
+  title: "Plugins",
+  icon: "plug",
+  order: 30,
 });

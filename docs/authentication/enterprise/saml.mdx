@@ -10,12 +10,12 @@ sidebar:
 The following guide shows you how to configure SAML with your SuperTokens integration.
 `SAML`, or Security Assertion Markup Language, is an open protocol that exchanges information between the authentication server and the client application.
 
-### How it works?
+### How does it work?
 
-Your `SAML` identity provider has a metadata file (`.xml`) that you or your end users need to upload to the `SAML` client.
+Your SAML identity provider (IdP) has a metadata file (`.xml`) that you or your end users need to upload to the SAML service provider (SP).
 
 The `.xml` metadata file contains (amongst other things):
-- A unique entity ID that you must keep private. The `SAML` provider uses this to identify your application.
+- A unique entity ID that identifies the IdP. It is an identifier, not a secret, and may be shared as part of SAML metadata.
 - A public certificate that verifies the signature attached to the incoming `SAML` response.
 This ensures the response is coming from the expected Identity Provider.
 - Information about where to redirect the end user to when they click on the login button in your application.
@@ -24,17 +24,24 @@ This URL is to a website controlled by the `SAML` provider and asks the end user
 
 ## Before you start
 
-:::info[Managed service feature]
-This feature is available for managed SuperTokens deployments.
+:::info[Paid feature]
+SAML is available for managed deployments and licensed self-hosted deployments. For self-hosting, obtain a license key and [add it to your Core service](/deployment/self-host-supertokens#5-add-license-keys).
 :::
 
 These instructions assume that you already have gone through the main [quickstart guide](/quickstart).
 If you have skipped that page please follow the tutorial and return here once you're done.
 
 
-:::warning[You need to use a SuperTokens core that is at least on version `11.3`.]
-The feature is only available with the `Node.js` SDK.
-Support for `Python` and `Golang` is in active development.
+:::warning[Use a current, patched SuperTokens Core]
+SAML requires Core `12.0.10` or later because `12.0.10` fixed an XML Signature Wrapping vulnerability. Upgrade to the latest available Core patch rather than relying on the original `11.3` feature minimum.
+
+Released SAML support is available in the Node.js and Python SDKs. The examples on this page use Node.js. Python support is available in Python SDK `0.31.3`; Go is not currently supported.
+:::
+
+:::danger[Core 12.1.1 validation limitation]
+Core `12.1.1` does not validate `Response.Destination`. Its audience check also accepts a multi-assertion response when the expected audience appears in only one assertion, even though claims are consumed from every assertion.
+
+This page is blocked for production assurance unless a trusted upstream SAML validator enforces an exact ACS `Destination` and validates the expected audience on every assertion that SuperTokens consumes, or you use a later released Core whose implementation and tests demonstrate both checks. Do not assume that configuring the ACS URL or SP entity ID makes Core `12.1.1` enforce these properties.
 :::
 
 
@@ -124,7 +131,7 @@ After creating the SAML client, you need to configure your identity provider wit
 
 On the IdP side, configure the following properties:
 - **Entity ID**: Should match the `saml_sp_entity_id` value used in your [tenant configuration](/authentication/enterprise/manage-tenants#update-a-tenant). The default value is `https://saml.supertokens.com`.
-- **ACS URL** (Assertion Consumer Service URL): `<API_DOMAIN>/auth/`&lt;TENANT_ID&gt;`saml/callback`
+- **ACS URL** (Assertion Consumer Service URL): `<API_DOMAIN>/auth/`&lt;TENANT_ID&gt;`/saml/callback`
 
 ### 5. Add the ThirdParty provider
 
@@ -171,6 +178,17 @@ SuperTokens.init({
   ],
 });
 ```
+
+### 6. Test rejection paths before production
+
+Use an isolated test tenant and test IdP to verify that invalid SAML responses fail closed. At minimum, confirm that authentication is rejected for:
+
+- A response that has neither a valid response signature nor a valid signature on every assertion, including an assertion modified after signing and a response containing a duplicate or wrapping assertion.
+- An assertion with a future `NotBefore` value or an expired `NotOnOrAfter` value.
+
+Core `12.1.1` is not expected to reject a mismatched `Response.Destination`, and its audience validation is insufficient for responses containing multiple assertions. If a trusted upstream validator supplies the missing controls, test destination and per-assertion audience rejection at that layer before production.
+
+Do not disable signature or time-condition validation to make negative tests pass. Keep failure details in server-side logs and return a generic authentication error to the browser.
 
 
 ## See also

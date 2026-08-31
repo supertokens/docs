@@ -1,6 +1,6 @@
 ---
 title: Reuse website login for desktop and mobile apps
-description: Implement web authentication for desktop and mobile apps using OAuth2
+description: Implement web authentication for desktop and mobile apps using OAuth 2.0.
 sidebar:
   order: 3
 ---
@@ -20,11 +20,12 @@ The authentication flow works in the following way:
  - The [**Authorization Service**](/authentication/unified-login/oauth2-basics#authorization-server) redirects the user to the login UI
 </Step>
 <Step title="User completes the login attempt ">
-- The [**Authorization Service**](/authentication/unified-login/oauth2-basics#authorization-server) backend redirects the user to the `callback URL`.
- - This URL should be a deep link that your actual application can open.
+- The Authorization Service redirects the user to the registered callback URL.
+  - Prefer an OS-claimed HTTPS universal link or app link. If you must use a custom scheme, follow the platform guidance for preventing other apps from claiming it.
 </Step>
-<Step title="The application uses the callback URL information to request a OAuth2 Access Token from the Authorization Service(/authentication/unified-login/oauth2-basics#authorization-server).">
-- The application saves the returned token.
+<Step title="The application completes the authorization code flow">
+- The application verifies `state`, then exchanges the code with the original PKCE verifier.
+- It stores returned tokens only in platform-protected secure storage.
 </Step>
 </Steps>
 
@@ -50,8 +51,8 @@ Go to the [**SuperTokens.com SaaS Dashboard**](https://supertokens.com/dashboard
 ### 2. Create the OAuth2 Clients
 
 
-For each of your applications you need to create a separate [**OAuth2 client**](/authentication/unified-login/oauth2-basics#client).
-You can do this by directly calling the **SuperTokens Core** API.
+For each native application, create a separate [**OAuth2 client**](/authentication/unified-login/oauth2-basics#client).
+Call the **SuperTokens Core** API from a trusted administrative environment. Native applications are **public clients**: `tokenEndpointAuthMethod` must be `none`, and the application must never contain or receive a client secret. Use authorization code with S256 PKCE.
 
 
 <Tabs>
@@ -65,11 +66,11 @@ curl --location --request POST '<CORE_API_ENDPOINT>/recipe/oauth/clients' \
      --data '
     {
       "clientName": "<YOUR_CLIENT_NAME>",
-      "responseTypes": ["code", "id_token"],
+      "responseTypes": ["code"],
       "grantTypes": ["authorization_code", "refresh_token"],
       "tokenEndpointAuthMethod": "none",
       "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+      "redirectUris": ["https://app.example.com/oauth/callback"]
     }
 '
 ```
@@ -88,11 +89,11 @@ const options = {
   },
   body: JSON.stringify({
     clientName: "<YOUR_CLIENT_NAME>",
-    responseTypes: ["code", "id_token"],
+    responseTypes: ["code"],
     grantTypes: ["authorization_code", "refresh_token"],
     tokenEndpointAuthMethod: "none",
     scope: "offline_access <custom_scope_1> <custom_scope_2>",
-    redirectUris: ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+    redirectUris: ["https://app.example.com/oauth/callback"],
   }),
 };
 
@@ -118,11 +119,11 @@ func main() {
   url := fmt.Sprintf("%s/recipe/oauth/clients", baseUrl)
   payload := `{
     "clientName": "<YOUR_CLIENT_NAME>",
-    "responseTypes": ["code", "id_token"],
+    "responseTypes": ["code"],
     "grantTypes": ["authorization_code", "refresh_token"],
     "tokenEndpointAuthMethod": "none",
     "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-    "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+    "redirectUris": ["https://app.example.com/oauth/callback"]
   }`
 
   req, _ := http.NewRequest("POST", url, strings.NewReader(payload))
@@ -152,11 +153,11 @@ url = f"{BASE_URL}/recipe/oauth/clients"
 
 payload: Dict[str, Any] ={
   "clientName": "<YOUR_CLIENT_NAME>",
-  "responseTypes": ["code", "id_token"],
+  "responseTypes": ["code"],
   "grantTypes": ["authorization_code", "refresh_token"],
   "tokenEndpointAuthMethod": "none",
   "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-  "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+  "redirectUris": ["https://app.example.com/oauth/callback"]
 }
 
 headers = {
@@ -180,7 +181,7 @@ Creates an OAuth2 client
 |--------------------------------------------|--------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------------|
 | `clientName`                               | `string`                 | A human-readable name of the client used for identification.                                                                                                                       | Yes      | -          |
 | `grantTypes`                               | `array` of `GrantType`   | The grant types that the Client uses.                             | Yes      | - |
-| `redirectUris`                              | `array` of `string`      | List of URIs where the Authorization Server redirects after authorization. Can include mobile/desktop deep links. Must be exact URLs without wildcards.                                    | Yes      |  -  | | `scope`                                    | `string`                 | Space-separated string of scopes the Client will request. Include `offline_access` to enable OAuth2 Refresh Token usage.                                                                      | Yes      | - |
+| `redirectUris` | `array` of `string` | Exact redirect URIs registered for the client. Wildcards are not supported. | Yes | - |
 | `scope` | `string` | String containing a space-separated list of scope values (as described in Section 3.3 of OAuth 2.0 [RFC6749]) that the client can use when requesting access tokens. Include the `offline_access` scope to exchange OAuth2 Refresh Tokens for OAuth2 Access Tokens | No | "" |
 | `responseTypes`                            | `array` of `ResponseType` | The types of responses your client expects from the **Authorization Server**  | No | -    |
 | `tokenEndpointAuthMethod`                  | `enum`(`"client_secret_basic"`, `"client_secret_post"`, `"private_key_jwt"`, `"none"`)                 | The requested client authentication method                                                                                           | No | `client_secret_basic` |
@@ -213,37 +214,46 @@ curl -X POST <CORE_API_ENDPOINT>/recipe/oauth/clients \
       "clientName": "<YOUR_CLIENT_NAME>",
       "responseTypes": ["code"],
       "grantTypes": ["authorization_code", "refresh_token"],
+      "tokenEndpointAuthMethod": "none",
       "scope": "offline_access <custom_scope_1> <custom_scope_2>",
-      "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+      "redirectUris": ["https://app.example.com/oauth/callback"]
     }'
 ```
 ## Response
 ### 200
 The client has been successfully created.
-### Response schema
+### Relevant response fields
+
+The response includes the persisted client configuration, including the fields below.
+
 | Property    | Type                             | Description                                   |
 |-------------|----------------------------------|-----------------------------------------------|
 | `clientName`        | `string`                         | The name of the client.               |
 | `clientId`  | `string` | Unique identifier for the client.               |
-| `clientSecret` | `string` | The secret is part of the create request as plain text, and then never again. The secret remains in hashed format and is not recoverable once lost.                   |
+| `clientSecret` | `string` | Client secret for a confidential client. Omitted for a public client. Treat it as a credential and keep it on a trusted backend. |
 | `redirectUris` | `array` of `string` | The URLs used for redirection.                   |
 | `audience` | `array` of `string` | Value used to identify for whom a token is issued. The created client can generate access token only for the specified audiences.                   |
-| `scope` | `array` of `string` |  A space separated string of scopes that the Client requests access to.                   |
+| `scope` | `string` | A space-separated string of scopes that the client can request. |
+| `responseTypes` | `array` of `string` | Registered response types. |
+| `grantTypes` | `array` of `string` | Registered grant types. |
+| `tokenEndpointAuthMethod` | `string` | Token endpoint authentication method. |
+| `enableRefreshTokenRotation` | `boolean` | Whether refresh token rotation is enabled. |
 #### Example
 ```json
 {
   "clientName": "<YOUR_CLIENT_NAME>",
   "clientId": "<CLIENT_ID>",
-  "redirectUris": ["https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"],
+  "tokenEndpointAuthMethod": "none",
+  "redirectUris": ["https://app.example.com/oauth/callback"],
   "audience": ["<YOUR_APPLICATION_DOMAIN>"],
-  "scope": ["offline_access <custom_scope_1> <custom_scope_2>"]
+  "scope": "offline_access <custom_scope_1> <custom_scope_2>"
 }
 ```
 </Tab>
 </Tabs>
 
-:::warning[You have to save the create OAuth2 Client response because this is not persisted internally for security reasons.]
-The information is necessary for the next steps.
+:::warning[Protect OAuth client credentials]
+Core persists the client configuration and encrypts confidential client secrets at rest. Store any returned client secret in a secret manager and expose it only to the application backend. Public clients do not receive or use a client secret.
 :::
 
 Based on the client creation process, you can infer two additional values that you need later on:
@@ -253,14 +263,16 @@ Based on the client creation process, you can infer two additional values that y
 ### 3. Configure the Authorization Service
 
 Check one of the previous guides that show you how to set up the **Authorization Service** and then return to this page.
-Choose the tutorial based whether you use multiple backend services or not:
+Choose the tutorial based on whether you use multiple backend services or not:
 - [Single Backend Setup](/authentication/unified-login/quickstart-guides/multiple-frontends-with-a-single-backend#3-set-up-the-authorization-service-backend)
-- [Multiple Backends Setup](/authentication/unified-login/quickstart-guides/multiple-frontends-with-a-single-backend#3-set-up-the-authorization-service-backend)
+- [Multiple Backends Setup](/authentication/unified-login/quickstart-guides/multiple-frontends-with-separate-backends#3-set-up-your-authorization-service-backend)
 
 ### 4. Update the login flow in your applications
 
 In each of your individual `applications`, you need to set up logic for handling the **OAuth 2.0** authentication flow.
-You can use a generic **OIDC** or **OAuth** library to do this.
+Use a maintained native OAuth 2.0/OIDC library that uses the system browser and authorization code with S256 PKCE. For every request, let the library generate a fresh PKCE verifier and high-entropy `state`; verify `state` before code exchange. If you request `openid`, also generate and validate `nonce` and validate the ID token's signature, issuer, audience, expiry, and nonce. Never use an embedded web view.
+
+Register an exact callback URI. Prefer an OS-claimed HTTPS universal link or app link; use a custom scheme only when the platform's interception protections are configured. Store access and refresh tokens in Keychain, Android Keystore-backed storage, or the platform equivalent. Never put tokens in logs, URLs, plain-text preferences, or application bundles.
 
 <DependentContent group="mobile-frameworks" label="Mobile framework">
 
@@ -271,12 +283,12 @@ You can use a generic **OIDC** or **OAuth** library to do this.
 You can use the [react-native-app-auth](https://commerce.nearform.com/open-source/react-native-app-auth/) library.
 Follow [the instructions](https://commerce.nearform.com/open-source/react-native-app-auth/docs/usage/config) to set up your application.
 
-You can identify the configuration parameters based on the response received in **step 2**, when creating the **OAuth2 Client**.
+Use authorization code with S256 PKCE and validate `state`. You can identify the configuration parameters from the response in **step 2**.
 
 - `issuer` corresponds to the endpoint of the **Authorization Service** `<YOUR_API_DOMAIN>/auth`
-- `clientID` corresponds to `clientId`
-- `redirectUrl` corresponds a value from `callbackUrls`
-- `scopes` corresponds to `scopes`
+- `clientId` corresponds to `clientId`
+- `redirectUrl` corresponds to a value from `redirectUris`
+- `scopes` is the space-separated `scope` value split into a list
 
 You also need to set the `additionalParameters` property with the following values:
 - `max_age: 0` This forces a new authentication flow once the user ends up on the **Authorization Service** frontend.
@@ -293,10 +305,10 @@ You also need to set the `additionalParameters` property with the following valu
 You can use the [AppAuth-Android](https://github.com/openid/AppAuth-Android) library.
 Follow [the instructions](https://github.com/openid/AppAuth-Android?tab=readme-ov-file#authorization-service-configuration) to set up your application.
 
-You can identify the configuration parameters based on the response received in **step 2**, when creating the **OAuth2 Client**.
+Use authorization code with S256 PKCE and validate `state`. You can identify the configuration parameters from the response in **step 2**.
 
 For the `AuthorizationServiceConfiguration`, the parameters you need to provide are: `authorizeUrl` and `tokenFetchUrl`.
-When calling the `AuthorizationRequest.Builder` function you can use `clientId` and a value from `callbackUrls` to replace the example values.
+When calling the `AuthorizationRequest.Builder` function you can use `clientId` and a value from `redirectUris` to replace the example values.
 
 You need to set additional query parameters by calling the `setAdditionalParameters` function on the `AuthorizationRequest.Builder` object:
 - `max_age: 0` This forces a new authentication flow once the user ends up on the **Authorization Service** frontend.
@@ -310,14 +322,14 @@ You need to set additional query parameters by calling the `setAdditionalParamet
 
 
 
-You can use the [AppAuth-iOS](https://github.com/openid/AppAuth-Android) library.
+You can use the [AppAuth-iOS](https://github.com/openid/AppAuth-iOS) library.
 Follow [the instructions](https://github.com/openid/AppAuth-iOS?tab=readme-ov-file#auth-flow) to set up your application.
 
-You can identify the configuration parameters based on the response received in **step 2**, when creating the **OAuth2 Client**.
+Use authorization code with S256 PKCE and validate `state`. You can identify the configuration parameters from the response in **step 2**.
 
-- `clientID` corresponds to `clientId`
-- `redirectUrl` corresponds a value from `callbackUrls`
-- `scopes` corresponds to `scopes`
+- `clientId` corresponds to `clientId`
+- `redirectUrl` corresponds to a value from `redirectUris`
+- `scopes` is the space-separated `scope` value split into a list
 - `authorizationEndpoint` corresponds to `authorizeUrl`
 - `tokenEndpoint` corresponds to `tokenFetchUrl`
 
@@ -336,12 +348,12 @@ You also need to set extra query parameters, when instantiating the `OIDAuthoriz
 You can use the [AppAuth](https://github.com/MaikuB/flutter_appauth) library.
 Follow [the instructions](https://github.com/MaikuB/flutter_appauth/tree/master/flutter_appauth) to set up your application.
 
-You can identify the configuration parameters based on the response received in **step 2**, when creating the **OAuth2 Client**.
+Use authorization code with S256 PKCE and validate `state`. You can identify the configuration parameters from the response in **step 2**.
 
 - `<client_id>` corresponds to `clientId`
 - `<issuer>` corresponds to the endpoint of the **Authorization Service** `<YOUR_API_DOMAIN>/auth`
-- `<redirect_url>` corresponds a value from `callbackUrls`
-- `scopes` corresponds to `scopes`
+- `<redirect_url>` corresponds to a value from `redirectUris`
+- `scopes` is the space-separated `scope` value split into a list
 
 You also need to set the `additionalParameters` property with the following values:
 - `max_age: 0` This forces a new authentication flow once the user ends up on the **Authorization Service** frontend.

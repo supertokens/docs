@@ -1,63 +1,61 @@
 ---
-title: Using the Next.js middleware
-description: Implement session verification in Next.js middleware to manage user authentication and retrieve user IDs.
+title: Using Next.js Proxy
+description: Implement session verification in Next.js Proxy to manage user authentication and retrieve user IDs.
 sidebar:
   order: 2
 ---
 
-:::warning[OAuth2 token verification]
-Verify OAuth2 access tokens with your OAuth2/OIDC library instead of the SuperTokens Session SDK.
-:::
 
-:::note
 This method is an alternative method for using sessions in an API. If you are already using [session guards](./session-verification-session-guard), you can skip this step.
-:::
+If you are checking OAuth2 access tokens use your OAuth2/OIDC library instead of the SuperTokens Session SDK.
 
-## Setting up the middleware
+## Setting up Proxy
 
-In the middleware we check if a session exists using the `withSession` helper function and set the user's user id to the request headers using the session object. You can set other information in the same way.
+In Next.js 16, request interception uses `proxy.ts`. Earlier Next.js versions called this file `middleware.ts`. The Proxy checks for a session with `withSession` and forwards the user's ID to Route Handlers through an internal request header. You can forward other information in the same way.
 
 :::warning
-You cannot pass the full session container through the middleware because the Next.js middleware does not allow objects to be passed. If you need to access the full session container in your APIs switch to using [session guards](./session-verification-session-guard).
+You cannot pass the full session container through Proxy because request headers can only contain strings. If you need the full session container in your APIs, use [session guards](./session-verification-session-guard).
 :::
 
-```tsx title="middleware.ts" check=false reason="Requires surrounding framework application context"
+```tsx title="proxy.ts" check=false reason="Requires surrounding framework application context"
 import { withSession } from "supertokens-node/nextjs";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SessionContainer } from "supertokens-node/recipe/session";
 import { ensureSuperTokensInit } from "./app/config/backend";
 
 ensureSuperTokensInit();
 
-export async function middleware(request: NextRequest & { session?: SessionContainer }) {
-  if (request.headers.has("x-user-id")) {
+export async function proxy(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+
+  if (requestHeaders.has("x-user-id")) {
     console.warn("The FE tried to pass x-user-id, which is only supposed to be a backend internal header. Ignoring.");
-    request.headers.delete("x-user-id");
+    requestHeaders.delete("x-user-id");
   }
 
   if (request.nextUrl.pathname.startsWith("/api/auth")) {
-    /**
-     * /api/auth/* endpoints are exposed by the SuperTokens SDK,
-     * we do not want to modify the request for these routes
-     */
-    return NextResponse.next();
+    // SuperTokens exposes /api/auth/*, so do not run session verification for these routes.
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  return withSession(request, async (err, session) => {
-    if (err) {
-      return NextResponse.json(err, { status: 500 });
-    }
-    if (session === undefined) {
-      return NextResponse.next();
-    }
-    return NextResponse.next({
-      headers: {
-        // You cannot attach the full session object here
-        "x-user-id": session.getUserId(),
-      },
-    });
-  });
+  return withSession(
+    request,
+    async (err, session) => {
+      if (err) {
+        console.error("Session verification failed", {
+          method: request.method,
+          pathname: request.nextUrl.pathname,
+        });
+        return new NextResponse("Internal server error", { status: 500 });
+      }
+      if (session !== undefined) {
+        requestHeaders.set("x-user-id", session.getUserId());
+      }
+
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    },
+    { sessionRequired: false },
+  );
 }
 
 export const config = {
@@ -67,7 +65,7 @@ export const config = {
 
 ## Fetching the user ID in your APIs
 
-The middleware will run for all routes, we can read information set by the middleware in the API routes:
+Proxy runs for the API routes matched by `/api/:path*`. Route Handlers can read the information it forwards:
 
 ```tsx title="app/api/userid/route.ts" check=false reason="Requires surrounding framework application context"
 import { NextResponse, NextRequest } from "next/server";
@@ -78,7 +76,7 @@ ensureSuperTokensInit();
 export function GET(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
 
-  // The middleware only adds the userId if a session exists
+  // Proxy only adds the user ID if a session exists
   if (userId === null) {
     return new NextResponse("Authentication required", { status: 401 });
   }
@@ -89,4 +87,4 @@ export function GET(request: NextRequest) {
 }
 ```
 
-This creates a `GET` request for the `/api/userid` route which returns the user id of the currently logged in user.
+This creates a `GET` request for the `/api/userid` route which returns the user ID of the currently signed-in user.

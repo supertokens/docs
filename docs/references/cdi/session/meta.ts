@@ -1,7 +1,7 @@
 import { defineMeta } from "blume";
 
 export default defineMeta({
-  "title": "Session",
-  "icon": "clock-3",
-  "order": 11
+  title: "Session",
+  icon: "clock-3",
+  order: 11,
 });

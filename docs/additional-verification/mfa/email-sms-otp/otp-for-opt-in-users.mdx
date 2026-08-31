@@ -10,11 +10,15 @@ Before reading the below, please first go through the setup for [OTP for all use
 :::
 
 This page shows how to implement an MFA policy that requires certain users to do the OTP challenge via email or SMS. You can decide which users based on any criteria. For example:
-- Only users that have an `admin` role require to do OTP; OR
+- Only users that have an `admin` role are required to complete OTP; OR
 - Only users that have enabled OTP on their account require to do OTP; OR
 - Only users that have a paid account require to do OTP.
 
-Whatever the criteria is, the steps to implementing this type of a flow is the same.
+Whatever the criteria, the steps for implementing this type of flow are the same.
+
+:::info[Paid feature]
+This flow requires MFA and account linking, which are available on paid plans. For a managed deployment, ensure that MFA is enabled for your deployment and contact SuperTokens support if it is not available. For self-hosting, obtain a license key and [add it to your Core service](/deployment/self-host-supertokens#5-add-license-keys).
+:::
 
 :::note[Assume that the first factor is email password or social login, but the same set of steps applies to other first factor types as well.]
 :::
@@ -93,7 +97,7 @@ supertokens.init({
           // linking here.
           return {
             shouldAutomaticallyLink: true,
-            shouldRequireVerification: false,
+            shouldRequireVerification: true,
           };
         }
         return {
@@ -113,7 +117,7 @@ supertokens.init({
                 // we only want otp-email for admins
                 return [MultiFactorAuth.FactorIds.OTP_EMAIL];
               } else {
-                // no MFA for non admin users.
+                // no MFA for non-admin users.
                 return [];
               }
             },
@@ -131,7 +135,16 @@ supertokens.init({
 <Tab title="Python" value="python">
 ```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+    userroles,
+)
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
     OverrideConfig,
@@ -166,7 +179,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the
         # new_account_info to the session user, which means it's an MFA flow, so we enable
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
 
     return ShouldNotAutomaticallyLink()
 
@@ -209,12 +222,19 @@ init(
     ),
     framework="...",  
     recipe_list=[
-        multifactorauth.init(
-            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
-            override=OverrideConfig(functions=override_functions),
+        session.init(),
+        userroles.init(),
+        emailpassword.init(),
+        thirdparty.init(),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
         ),
         accountlinking.init(
             should_do_automatic_account_linking=should_do_automatic_account_linking
+        ),
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            override=OverrideConfig(functions=override_functions),
         ),
     ],
 )
@@ -314,7 +334,7 @@ supertokens.init({
           // linking here.
           return {
             shouldAutomaticallyLink: true,
-            shouldRequireVerification: false,
+            shouldRequireVerification: true,
           };
         }
         return {
@@ -335,11 +355,17 @@ supertokens.init({
 <Tab title="Python" value="python">
 ```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+)
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
 )
-from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
 from supertokens_python.recipe.session.interfaces import SessionContainer
 from supertokens_python.recipe.accountlinking.types import (
     AccountInfoWithRecipeIdAndUserId,
@@ -348,9 +374,8 @@ from supertokens_python.recipe.accountlinking.types import (
 )
 from supertokens_python.types import User
 from typing import Dict, Any, Optional, Union
-from supertokens_python.recipe import passwordless
 from supertokens_python.recipe.passwordless.interfaces import (
-    RecipeInterface,
+    RecipeInterface as PasswordlessRecipeInterface,
     ConsumeCodeOkResult,
 )
 from supertokens_python.recipe.multifactorauth.asyncio import (
@@ -375,12 +400,12 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the
         # new_account_info to the session user, which means it's an MFA flow, so we enable
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
 
     return ShouldNotAutomaticallyLink()
 
 
-def override_functions(original_implementation: RecipeInterface):
+def override_functions(original_implementation: PasswordlessRecipeInterface):
     original_consume_code = original_implementation.consume_code
 
     async def consume_code(
@@ -426,16 +451,19 @@ init(
     ),
     framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
         passwordless.init(
             contact_config=passwordless.ContactEmailOnlyConfig(),
             flow_type="USER_INPUT_CODE",
             override=passwordless.InputOverrideConfig(functions=override_functions),
         ),
-        multifactorauth.init(
-            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
-        ),
         accountlinking.init(
             should_do_automatic_account_linking=should_do_automatic_account_linking
+        ),
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
         ),
     ],
 )
@@ -451,7 +479,7 @@ In both of the examples above, notice that the Passwordless recipe initializes i
 
 We have also enabled the account linking feature since it's required for MFA to work. The above enables account linking for second factor only, but if you also want to enable it for first factor, see [this section](/post-authentication/account-linking/automatic-account-linking).
 
-Notice that `shouldRequireVerification: false` configures account linking. It means that the second factor can link to the first factor even though the first factor is not verified. If you want to do email verification of the first factor before setting up the second factor (for example if the first factor is email password, and the second is phone OTP), then set this boolean to `true`, and also init the email verification recipe on the frontend and backend in `REQUIRED` mode.
+`shouldRequireVerification: true` prevents an unverified login method from being linked. Passwordless OTP completion verifies the email address or phone number before the SDK attempts second-factor linking, so this does not block the OTP flow. Keep the callback session-bound as shown; do not return automatic linking for first-factor requests without a session.
 
 Once the user finishes the first factor (for example, with `emailpassword`), their session access token payload looks like this (for those that require OTP):
 ```json
@@ -479,7 +507,7 @@ The `v` being `false` indicates that there are still factors that are pending. A
 }
 ```
 
-Indicating that the user has finished all required factors, and should access the app.
+This indicates that the user has finished all required factors and should be allowed to access the app.
 
 :::warning[If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again.]
 :::
@@ -496,7 +524,7 @@ The second part, which is only applicable in case you want to allow users to ena
 - When the user navigates to their settings page, you can show them if OTP challenge is active or not.
 - If enabled, you can allow them to disable it, or vice versa.
 
-To know if the user has enabled OTP, you can make an API your backend which calls the following function:
+To know if the user has enabled OTP, you can create an API on your backend that calls the following function:
 
 <DependentContent passive group="backend-language">
 <ContentOption title="Go" value="go">
@@ -531,7 +559,7 @@ async def is_otp_email_factor_enabled_for_user(user_id: str) -> bool:
 </Tab>
 </CodeGroup>
 
-If the user wants to enable or disable otp-email for them, you can make an API on your backend which calls the following function:
+If the user wants to enable or disable `otp-email`, you can create an API on your backend that calls the following function:
 
 <DependentContent passive group="backend-language">
 <ContentOption title="Go" value="go">
@@ -654,7 +682,7 @@ supertokens.init({
           // linking here.
           return {
             shouldAutomaticallyLink: true,
-            shouldRequireVerification: false,
+            shouldRequireVerification: true,
           };
         }
         return {
@@ -677,7 +705,7 @@ supertokens.init({
                 // we only want otp-email for admins
                 return [MultiFactorAuth.FactorIds.OTP_EMAIL];
               } else {
-                // no MFA for non admin users.
+                // no MFA for non-admin users.
                 return [];
               }
             },
@@ -695,7 +723,15 @@ supertokens.init({
 <Tab title="Python" value="python">
 ```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking, passwordless
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+    userroles,
+)
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
     OverrideConfig,
@@ -731,7 +767,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the
         # new_account_info to the session user, which means it's an MFA flow, so we enable
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
 
     return ShouldNotAutomaticallyLink()
 
@@ -777,15 +813,19 @@ init(
     ),
     framework="...",  
     recipe_list=[
+        session.init(),
+        userroles.init(),
+        emailpassword.init(),
+        thirdparty.init(),
         passwordless.init(
             contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
+        ),
+        accountlinking.init(
+            should_do_automatic_account_linking=should_do_automatic_account_linking
         ),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
-        ),
-        accountlinking.init(
-            should_do_automatic_account_linking=should_do_automatic_account_linking
         ),
     ],
 )
@@ -793,7 +833,7 @@ init(
 </Tab>
 </CodeGroup>
 
-- The implementation of `shouldRequireOTPEmailForTenant` is entirely up to you.
+- This override requires `otp-email` only when the user has the `admin` role and the tenant's `requiredSecondaryFactors` includes `otp-email`.
 
 
 #### Example 2: Ask for OTP only for users that have enabled OTP on their account
@@ -883,7 +923,7 @@ supertokens.init({
           // linking here.
           return {
             shouldAutomaticallyLink: true,
-            shouldRequireVerification: false,
+            shouldRequireVerification: true,
           };
         }
         return {
@@ -920,7 +960,14 @@ supertokens.init({
 <Tab title="Python" value="python">
 ```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking, passwordless
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+)
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
     OverrideConfig,
@@ -963,7 +1010,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the
         # new_account_info to the session user, which means it's an MFA flow, so we enable
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
 
     return ShouldNotAutomaticallyLink()
 
@@ -1040,17 +1087,20 @@ init(
     ),
     framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
         passwordless.init(
             contact_config=ContactEmailOnlyConfig(),
             flow_type="USER_INPUT_CODE",
             override=passwordless.InputOverrideConfig(apis=passwordless_override),
         ),
+        accountlinking.init(
+            should_do_automatic_account_linking=should_do_automatic_account_linking
+        ),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
-        ),
-        accountlinking.init(
-            should_do_automatic_account_linking=should_do_automatic_account_linking
         ),
     ],
 )
@@ -1058,7 +1108,7 @@ init(
 </Tab>
 </CodeGroup>
 
-An override for `getMFARequirementsForAuth` is available, which checks if otp-email is active for the user, and also considers the `tenantId` to decide if this user should go through the otp-email flow while logging into this tenant. The implementation of `shouldRequireOTPEmailForTenant` is entirely up to you.
+The `getMFARequirementsForAuth` override requires `otp-email` only when it is enabled for the user and the tenant's `requiredSecondaryFactors` includes `otp-email`. This lets the same user require OTP in selected tenants only.
 
 
 ### Frontend setup
@@ -1072,6 +1122,6 @@ See the section on [protecting frontend and backend routes](../protect-routes).
 ## Email / SMS sending and design
 By default, the email template used for otp-email login is [as shown here](https://github.com/SuperTokens/email-sms-templates?tab=readme-ov-file#otp-login), and the default SMS template is [as shown here](https://github.com/SuperTokens/email-sms-templates?tab=readme-ov-file#otp-login-1). The method for sending them is via an email and SMS sending service that is available.
 
-If you would like to learn more about this, or change the content of the email, or the method by which they send, checkout the email / SMS delivery section in the recipe docs:
+If you would like to learn more about this, change the content of the email, or change the method by which messages are sent, check out the email / SMS delivery section in the recipe docs:
 - [Email delivery configuration](/platform-configuration/email-delivery)
 - [SMS delivery configuration](/platform-configuration/sms-delivery)

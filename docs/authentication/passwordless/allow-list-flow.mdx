@@ -26,8 +26,7 @@ You need to [enable it](/post-authentication/user-management/user-metadata) in t
 ### 1. Add a way to keep track of allowed emails or phone numbers
 
 Start by maintaining an allow list of emails.
-You can either store this list in your own database, or use the metadata feature provided by SuperTokens to store this.
-This may seem like a strange use case of the user metadata recipe provided, but it works.
+Use transactional application storage for a production allow list. The User Metadata examples below are suitable for a simple prototype, but their read-modify-write updates are not atomic: concurrent additions can overwrite each other.
 
 The following code samples show you how to save the allow list in the user metadata.
 
@@ -36,32 +35,34 @@ The following code samples show you how to save the allow list in the user metad
 ```tsx
 import UserMetadata from "supertokens-node/recipe/usermetadata";
 
-async function addEmailToAllowlist(email: string) {
-  let existingData = await UserMetadata.getUserMetadata("emailAllowList");
+async function addEmailToAllowlist(tenantId: string, email: string) {
+  const metadataKey = `${tenantId}:emailAllowList`;
+  let existingData = await UserMetadata.getUserMetadata(metadataKey);
   let allowList: string[] = existingData.metadata.allowList || [];
   allowList = [...allowList, email];
-  await UserMetadata.updateUserMetadata("emailAllowList", {
+  await UserMetadata.updateUserMetadata(metadataKey, {
     allowList,
   });
 }
 
-async function isEmailAllowed(email: string) {
-  let existingData = await UserMetadata.getUserMetadata("emailAllowList");
+async function isEmailAllowed(tenantId: string, email: string) {
+  let existingData = await UserMetadata.getUserMetadata(`${tenantId}:emailAllowList`);
   let allowList: string[] = existingData.metadata.allowList || [];
   return allowList.includes(email);
 }
 
-async function addPhoneNumberToAllowlist(phoneNumber: string) {
-  let existingData = await UserMetadata.getUserMetadata("phoneNumberAllowList");
+async function addPhoneNumberToAllowlist(tenantId: string, phoneNumber: string) {
+  const metadataKey = `${tenantId}:phoneNumberAllowList`;
+  let existingData = await UserMetadata.getUserMetadata(metadataKey);
   let allowList: string[] = existingData.metadata.allowList || [];
   allowList = [...allowList, phoneNumber];
-  await UserMetadata.updateUserMetadata("phoneNumberAllowList", {
+  await UserMetadata.updateUserMetadata(metadataKey, {
     allowList,
   });
 }
 
-async function isPhoneNumberAllowed(phoneNumber: string) {
-  let existingData = await UserMetadata.getUserMetadata("phoneNumberAllowList");
+async function isPhoneNumberAllowed(tenantId: string, phoneNumber: string) {
+  let existingData = await UserMetadata.getUserMetadata(`${tenantId}:phoneNumberAllowList`);
   let allowList: string[] = existingData.metadata.allowList || [];
   return allowList.includes(phoneNumber);
 }
@@ -69,34 +70,56 @@ async function isPhoneNumberAllowed(phoneNumber: string) {
 </Tab>
 <Tab title="Go" value="go">
 ```go
-import "github.com/supertokens/supertokens-golang/recipe/usermetadata"
+import (
+	"fmt"
 
-func addEmailToAllowlist(email string) error {
-	existingData, err := usermetadata.GetUserMetadata("emailAllowList")
+	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
+)
+
+func stringListFromMetadata(value interface{}) ([]string, error) {
+	if value == nil {
+		return []string{}, nil
+	}
+	items, ok := value.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("allowList metadata is not an array")
+	}
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		text, ok := item.(string)
+		if !ok {
+			return nil, fmt.Errorf("allowList metadata contains a non-string value")
+		}
+		result = append(result, text)
+	}
+	return result, nil
+}
+
+func addEmailToAllowlist(tenantId, email string) error {
+	metadataKey := tenantId + ":emailAllowList"
+	existingData, err := usermetadata.GetUserMetadata(metadataKey)
 	if err != nil {
 		return err
 	}
-	allowList := []string{}
-	allowListFromMetadata, ok := existingData["allowList"].([]string)
-	if ok {
-		allowList = allowListFromMetadata
+	allowList, err := stringListFromMetadata(existingData["allowList"])
+	if err != nil {
+		return err
 	}
 	allowList = append(allowList, email)
-	_, err = usermetadata.UpdateUserMetadata("emailAllowList", map[string]interface{}{
+	_, err = usermetadata.UpdateUserMetadata(metadataKey, map[string]interface{}{
 		"allowList": allowList,
 	})
 	return err
 }
 
-func isEmailAllowed(email string) (bool, error) {
-	existingData, err := usermetadata.GetUserMetadata("emailAllowList")
+func isEmailAllowed(tenantId, email string) (bool, error) {
+	existingData, err := usermetadata.GetUserMetadata(tenantId + ":emailAllowList")
 	if err != nil {
 		return false, err
 	}
-	allowList := []string{}
-	allowListFromMetadata, ok := existingData["allowList"].([]string)
-	if ok {
-		allowList = allowListFromMetadata
+	allowList, err := stringListFromMetadata(existingData["allowList"])
+	if err != nil {
+		return false, err
 	}
 	for _, allowedEmail := range allowList {
 		if allowedEmail == email {
@@ -106,32 +129,31 @@ func isEmailAllowed(email string) (bool, error) {
 	return false, nil
 }
 
-func addPhoneNumberToAllowlist(phoneNumber string) error {
-	existingData, err := usermetadata.GetUserMetadata("phoneNumberAllowList")
+func addPhoneNumberToAllowlist(tenantId, phoneNumber string) error {
+	metadataKey := tenantId + ":phoneNumberAllowList"
+	existingData, err := usermetadata.GetUserMetadata(metadataKey)
 	if err != nil {
 		return err
 	}
-	allowList := []string{}
-	allowListFromMetadata, ok := existingData["allowList"].([]string)
-	if ok {
-		allowList = allowListFromMetadata
+	allowList, err := stringListFromMetadata(existingData["allowList"])
+	if err != nil {
+		return err
 	}
 	allowList = append(allowList, phoneNumber)
-	_, err = usermetadata.UpdateUserMetadata("phoneNumberAllowList", map[string]interface{}{
+	_, err = usermetadata.UpdateUserMetadata(metadataKey, map[string]interface{}{
 		"allowList": allowList,
 	})
 	return err
 }
 
-func isPhoneNumberAllowed(phoneNumber string) (bool, error) {
-	existingData, err := usermetadata.GetUserMetadata("phoneNumberAllowList")
+func isPhoneNumberAllowed(tenantId, phoneNumber string) (bool, error) {
+	existingData, err := usermetadata.GetUserMetadata(tenantId + ":phoneNumberAllowList")
 	if err != nil {
 		return false, err
 	}
-	allowList := []string{}
-	allowListFromMetadata, ok := existingData["allowList"].([]string)
-	if ok {
-		allowList = allowListFromMetadata
+	allowList, err := stringListFromMetadata(existingData["allowList"])
+	if err != nil {
+		return false, err
 	}
 	for _, allowedPhoneNumber := range allowList {
 		if allowedPhoneNumber == phoneNumber {
@@ -152,29 +174,31 @@ from supertokens_python.recipe.usermetadata.asyncio import (
 )
 
 
-async def add_email_to_allow_list(email: str):
-    metadataResult = await get_user_metadata("emailAllowList")
+async def add_email_to_allow_list(tenant_id: str, email: str):
+    metadata_key = f"{tenant_id}:emailAllowList"
+    metadataResult = await get_user_metadata(metadata_key)
     allow_list: List[str] = metadataResult.metadata["allowList"] if "allowList" in metadataResult.metadata else []
     allow_list.append(email)
-    await update_user_metadata("emailAllowList", {
+    await update_user_metadata(metadata_key, {
         "allowList": allow_list
     })
 
-async def is_email_allowed(email: str):
-    metadataResult = await get_user_metadata("emailAllowList")
+async def is_email_allowed(tenant_id: str, email: str):
+    metadataResult = await get_user_metadata(f"{tenant_id}:emailAllowList")
     allow_list: List[str] = metadataResult.metadata["allowList"] if "allowList" in metadataResult.metadata else []
     return email in allow_list
 
-async def add_phone_number_to_allow_list(phone_number: str):
-    metadataResult = await get_user_metadata("phoneNumberAllowList")
+async def add_phone_number_to_allow_list(tenant_id: str, phone_number: str):
+    metadata_key = f"{tenant_id}:phoneNumberAllowList"
+    metadataResult = await get_user_metadata(metadata_key)
     allow_list: List[str] = metadataResult.metadata["allowList"] if "allowList" in metadataResult.metadata else []
     allow_list.append(phone_number)
-    await update_user_metadata("phoneNumberAllowList", {
+    await update_user_metadata(metadata_key, {
         "allowList": allow_list
     })
 
-async def is_phone_number_allowed(phone_number: str):
-    metadataResult = await get_user_metadata("phoneNumberAllowList")
+async def is_phone_number_allowed(tenant_id: str, phone_number: str):
+    metadataResult = await get_user_metadata(f"{tenant_id}:phoneNumberAllowList")
     allow_list: List[str] = metadataResult.metadata["allowList"] if "allowList" in metadataResult.metadata else []
     return phone_number in allow_list
 ```
@@ -183,7 +207,7 @@ async def is_phone_number_allowed(phone_number: str):
 
 
 :::info[Multi Tenancy]
-For a multi tenant setup, you can even store an allow list per tenant. This would allow you to limit sign ups for different emails / phone numbers for different tenants. If you are doing this, then you would also need to pass in the tenantID to the functions above, which you can obtain from the input to the `API overrides` shown below.
+The helpers separate prototype metadata by `tenantId`, which the API overrides provide. User Metadata has no `tenantId` argument, so never use one shared synthetic key across tenants. For production, enforce tenant isolation and atomic updates in application storage.
 :::
 
 
@@ -217,7 +241,7 @@ Passwordless.init({
             );
             if (userWithPasswordles === undefined) {
               // this is sign up attempt
-              if (!(await isEmailAllowed(input.email))) {
+              if (!(await isEmailAllowed(input.tenantId, input.email))) {
                 return {
                   status: "GENERAL_ERROR",
                   message: "Sign up disabled. Please contact the admin.",
@@ -236,7 +260,7 @@ Passwordless.init({
             );
             if (userWithPasswordles === undefined) {
               // this is sign up attempt
-              if (!(await isPhoneNumberAllowed(input.phoneNumber))) {
+              if (!(await isPhoneNumberAllowed(input.tenantId, input.phoneNumber))) {
                 return {
                   status: "GENERAL_ERROR",
                   message: "Sign up disabled. Please contact the admin.",
@@ -260,12 +284,12 @@ import (
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
-func isEmailAllowed(email string) (bool, error) {
+func isEmailAllowed(tenantId, email string) (bool, error) {
 	// ... from previous code snippet
 	return false, nil
 }
 
-func isPhoneNumberAllowed(phoneNumber string) (bool, error) {
+func isPhoneNumberAllowed(tenantId, phoneNumber string) (bool, error) {
 	// ... from previous code snippet
 	return false, nil
 }
@@ -285,7 +309,7 @@ func main() {
 						}
 						if existingUser == nil {
 							// sign up attempt
-							emailAllowed, err := isEmailAllowed(*email)
+							emailAllowed, err := isEmailAllowed(tenantId, *email)
 							if err != nil {
 								return plessmodels.CreateCodePOSTResponse{}, err
 							}
@@ -304,7 +328,7 @@ func main() {
 						}
 						if existingUser == nil {
 							// sign up attempt
-							phoneNumberAllowed, err := isPhoneNumberAllowed(*phoneNumber)
+							phoneNumberAllowed, err := isPhoneNumberAllowed(tenantId, *phoneNumber)
 							if err != nil {
 								return plessmodels.CreateCodePOSTResponse{}, err
 							}
@@ -343,12 +367,12 @@ from supertokens_python.types import GeneralErrorResponse
 from supertokens_python.types.base import AccountInfoInput
 
 
-async def is_email_allowed(email: str):
+async def is_email_allowed(tenant_id: str, email: str):
     # from previous code snippet..
     return False
 
 
-async def is_phone_number_allowed(phone_number: str):
+async def is_phone_number_allowed(tenant_id: str, phone_number: str):
     # from previous code snippet..
     return False
 
@@ -384,7 +408,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
 
             if user_with_passwordless is None:
                 # sign up attempt
-                if not (await is_email_allowed(email)):
+                if not (await is_email_allowed(tenant_id, email)):
                     return GeneralErrorResponse(
                         "Sign ups disabled. Please contact admin."
                     )
@@ -408,7 +432,7 @@ def override_passwordless_apis(original_implementation: APIInterface):
 
             if user_with_passwordless is None:
                 # sign up attempt
-                if not (await is_phone_number_allowed(phone_number)):
+                if not (await is_phone_number_allowed(tenant_id, phone_number)):
                     return GeneralErrorResponse(
                         "Sign ups disabled. Please contact admin."
                     )

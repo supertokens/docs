@@ -4,7 +4,7 @@ sidebar:
   order: 4
 ---
 
-In this section we will go over how to migrate your user sessions from you previous authentication provider to SuperTokens.
+This section explains how to migrate user sessions from your previous authentication provider to SuperTokens.
 
 This process involves two steps.
  - Adding a new `/migrate-session` API to your backend which will create a new SuperTokens session
@@ -14,54 +14,163 @@ This process involves two steps.
 
 <img src="/img/migration/session-migration-diagram.png" alt="Session migration flow chart" />
 
-### Backend Changes:
+### Backend changes
 
-- Create an API on your backend, this will be called by the frontend to migrate a user's existing session to a SuperTokens session:
+Create a rate-limited backend API that exchanges a valid legacy access token for a SuperTokens session. The following
+example uses the APIs released in SuperTokens Node SDK 24.0.3.
 
 ```tsx title="Backend changes" check=false reason="Requires surrounding framework application context"
 import express from "express";
+import SuperTokens from "supertokens-node";
 import Session from "supertokens-node/recipe/session";
 
-let app = express();
+const app = express();
+app.use(express.json());
 
-app.post("/migrate-session", async (req, res) => {
-  // extract the access token from the request object
-  if (req.headers.authorization !== undefined) {
-    let access_token = req.headers.authorization.split("Bearer ")[1];
+interface VerifiedLegacyToken {
+  issuer: string;
+  subject: string;
+  tenantId: string;
+}
 
-    // verify the access token and retrieve the old userId
-    let customUserId = await verifyAccessTokenAndRetrieveUserId(access_token);
-
-    // create a new SuperTokens session using the customUserId
-    // the createNewSession function will attach the SuperTokens session tokens to the response object.
-    await Session.createNewSession(req, res, customUserId);
-    res.send({
-      status: "OK",
-    });
+app.post("/migrate-session", migrationRateLimiter, async (req, res, next) => {
+  const match = req.headers.authorization?.match(/^Bearer[ \t]+([^\s,]+)$/i);
+  const idempotencyKey = req.header("Idempotency-Key");
+  if (match === null || match === undefined || !isValidIdempotencyKey(idempotencyKey)) {
+    res.status(401).send({ status: "INVALID_LEGACY_TOKEN" });
+    return;
   }
 
-  // handle access_token not present in request
+  let verifiedToken: VerifiedLegacyToken;
+  try {
+    verifiedToken = await verifyLegacyAccessToken(match[1]);
+  } catch {
+    res.status(401).send({ status: "INVALID_LEGACY_TOKEN" });
+    return;
+  }
+
+  try {
+    const identity = getNamespacedLegacyIdentity(verifiedToken);
+    await enforceVerifiedIdentityRateLimit(identity.identityKey);
+
+    const mapping = await SuperTokens.getUserIdMapping({
+      userId: identity.externalUserId,
+      userIdType: "EXTERNAL",
+    });
+    if (mapping.status !== "OK") {
+      res.status(401).send({ status: "INVALID_LEGACY_TOKEN" });
+      return;
+    }
+
+    const recipeUserId = SuperTokens.convertToRecipeUserId(mapping.superTokensUserId);
+    const result = await migrateSessionIdempotently(
+      {
+        idempotencyKey,
+        identityKey: identity.identityKey,
+        tenantId: verifiedToken.tenantId,
+        recipeUserId: recipeUserId.getAsString(),
+      },
+      () => Session.createNewSession(req, res, verifiedToken.tenantId, recipeUserId),
+    );
+    if (result.status === "CONFLICT") {
+      res.status(409).send({ status: "MIGRATION_CONFLICT" });
+      return;
+    }
+    if (result.status === "IN_PROGRESS") {
+      res.set("Retry-After", "1").status(409).send({ status: "MIGRATION_IN_PROGRESS" });
+      return;
+    }
+    res.send({ status: result.status });
+  } catch (error) {
+    next(error);
+  }
 });
 
-async function verifyAccessTokenAndRetrieveUserId(access_token: string): Promise<string> {
-  // verify the access_token and return the decoded userId
-  return "...";
+app.post("/confirm-session-migration", migrationRateLimiter, async (req, res, next) => {
+  const idempotencyKey = req.body?.idempotencyKey;
+  if (!isValidIdempotencyKey(idempotencyKey)) {
+    res.status(400).send({ status: "INVALID_IDEMPOTENCY_KEY" });
+    return;
+  }
+
+  try {
+    const session = await Session.getSession(req, res);
+    const confirmed = await confirmMigrationOutcome({
+      idempotencyKey,
+      tenantId: session.getTenantId(),
+      recipeUserId: session.getRecipeUserId().getAsString(),
+    });
+    res.status(confirmed ? 200 : 409).send({ status: confirmed ? "CONFIRMED" : "IDENTITY_MISMATCH" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+function isValidIdempotencyKey(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{32,128}$/.test(value);
 }
+
+declare function migrationRateLimiter(req: express.Request, res: express.Response, next: express.NextFunction): void;
+declare function enforceVerifiedIdentityRateLimit(identityKey: string): Promise<void>;
+
+declare function getNamespacedLegacyIdentity(verifiedToken: VerifiedLegacyToken): {
+  identityKey: string;
+  externalUserId: string;
+};
+
+declare function migrateSessionIdempotently(
+  input: {
+    idempotencyKey: string;
+    identityKey: string;
+    tenantId: string;
+    recipeUserId: string;
+  },
+  createSession: () => ReturnType<typeof Session.createNewSession>,
+): Promise<{ status: "CREATED" | "RECOVERED" | "CONFLICT" | "IN_PROGRESS" }>;
+
+declare function confirmMigrationOutcome(input: {
+  idempotencyKey: string;
+  tenantId: string;
+  recipeUserId: string;
+}): Promise<boolean>;
+
+// Implement this contract with your provider's supported SDK or a JWT library configured for that provider.
+declare function verifyLegacyAccessToken(accessToken: string): Promise<VerifiedLegacyToken>;
 ```
 
 :::info[Important]
 
-Verifying the access token will require you to access your previous providers JWKS endpoint, which means that you will have to continue to use your previous auth provider even after switching to SuperTokens.
+`verifyLegacyAccessToken` is an application-owned security boundary, not a provider-independent implementation. It must
+verify the signature with the provider's trusted algorithms and keys, and validate the exact issuer, audience, expiry,
+not-before time, token type or purpose, and required subject claims. If the provider uses JWKS, use HTTPS, cache keys,
+and refresh them safely when keys rotate. Derive `tenantId` from trusted application configuration and validated claims,
+never directly from request data that has not been verified.
 
-If you want to immediately stop querying your previous authentication provider you can use the JWKS public keys and provide them as a secret to the JWT verification function.
-You can follow our [guide](/additional-verification/session-verification/protect-api-routes) on how to do this.
+`getNamespacedLegacyIdentity` must use the same collision-resistant canonical encoding used during account import. Its
+external ID and identity key must include the validated issuer, trusted tenant, and subject. Do not concatenate ambiguous
+strings or map by subject alone: subjects are only unique within an issuer and can also overlap between tenants.
 :::
 
-### Frontend Changes:
+Configure CORS on the backend with the exact frontend origin, `credentials: true`, and the `Authorization`,
+`Content-Type`, and `Idempotency-Key` request headers explicitly allowed. Do not combine credentialed requests with
+`Access-Control-Allow-Origin: *`. The endpoint's error handler should return a generic 401 for verification failures
+without exposing token-validation details.
 
-- On your frontend, on page load, check if a session with your previous authentication provider exists.
-- If a session exists send a request to the `/migrate-session` API with the access token to create a new SuperTokens session.
-- Revoke the old session.
+Implement `migrateSessionIdempotently` with a distributed outcome store indexed uniquely by both the stable request key
+and the legacy identity scoped to its issuer and tenant. A completed outcome records the tenant, recipe user ID, and
+created session handle. A
+retry for the same key and identity must return or safely recover that logical outcome; if the original session was not
+delivered, revoke it before issuing a replacement. Reject a key bound to another identity, another key for an already
+migrated identity, and concurrent in-progress exchanges. Never store the raw legacy token. Keep completed outcomes at
+least until the legacy session and token can no longer be accepted. `confirmMigrationOutcome` must compare the current
+SuperTokens tenant and recipe user ID with that stored outcome and atomically mark it confirmed.
+
+### Frontend changes
+
+On page load, obtain the legacy token and its stable request key. If a SuperTokens session exists, confirm that it
+matches the stored migration outcome before cleaning up the legacy session. Otherwise, perform the idempotent exchange,
+then confirm the identities. Never treat an HTTP success alone as proof that the current SuperTokens and legacy
+identities match. The example uses SuperTokens Web JS 0.16.0 and assumes that the SDK is initialized.
 
 ```tsx title="Frontend changes"
 import axios from "axios";
@@ -70,31 +179,65 @@ import Session from "supertokens-web-js/recipe/session";
 
 // Call this function on page load
 async function migrateUserSessions() {
-  let apiDomain = "...";
-  // On page load retrieve the users access token if a session exists
-  let accessToken = await getAccessTokenFromOldProvider();
+  const apiDomain = "...";
+  const accessToken = await getAccessTokenFromOldProvider();
+  if (accessToken === undefined) {
+    return;
+  }
 
-  if (accessToken !== undefined) {
-    // send a request to your migrate session endpoint with the bearer token
-    await axios.post(`${apiDomain}/migrate-session`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
+  const idempotencyKey = await getOrCreateMigrationIdempotencyKey();
+
+  if (!(await Session.doesSessionExist())) {
+    await axios.post(
+      `${apiDomain}/migrate-session`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Idempotency-Key": idempotencyKey,
+        },
+        withCredentials: true,
       },
-    });
-    await revokeSessionFromOldProvider();
+    );
+  }
+
+  if (!(await confirmMigratedIdentity(apiDomain, idempotencyKey))) {
+    return;
+  }
+
+  await revokeSessionFromOldProvider();
+  await clearMigrationIdempotencyKey();
+}
+
+async function confirmMigratedIdentity(apiDomain: string, idempotencyKey: string): Promise<boolean> {
+  try {
+    const response = await axios.post(
+      `${apiDomain}/confirm-session-migration`,
+      { idempotencyKey },
+      { withCredentials: true },
+    );
+    return response.data.status === "CONFIRMED";
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 409) {
+      return false;
+    }
+    throw error;
   }
 }
 
 async function getAccessTokenFromOldProvider(): Promise<string | undefined> {
-  // Check if a session with your your previous provider exists and return the access_token. Return undefined otherwise
+  // Return the provider's access token when its session exists, or undefined otherwise.
   return "...";
 }
+
+// Persist one random key for this specific legacy provider session until cleanup succeeds.
+declare function getOrCreateMigrationIdempotencyKey(): Promise<string>;
+declare function clearMigrationIdempotencyKey(): Promise<void>;
 
 async function revokeSessionFromOldProvider() {
   // Revoke the session associated with the previous provider
 }
 ```
-
 ---
 
 ## See also

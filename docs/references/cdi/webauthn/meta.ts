@@ -1,7 +1,7 @@
 import { defineMeta } from "blume";
 
 export default defineMeta({
-  "title": "WebAuthn",
-  "icon": "fingerprint",
-  "order": 15
+  title: "WebAuthn",
+  icon: "fingerprint",
+  order: 15,
 });

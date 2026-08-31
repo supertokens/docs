@@ -14,16 +14,23 @@ This guide shows you how to achieve this by only allowing a certain type of user
 
 ## Before you start
 
-:::warning[Since this feature allows you to login as any user in your application, only admins or custom support staff should use it.]
-You can use any method to protect this API. (API Key, specific user roles, IP address validation, etc.)
+:::danger[Impersonation is a privileged operation]
+Require a valid staff session and enforce an explicit backend role or permission check before reading the target identifier, looking up the target, or creating a session. Hiding the UI, checking a role in the browser, restricting access to approved IP addresses, or knowing the endpoint URL is not authorization.
 :::
+
+For production use, apply these additional controls:
+
+- Require a recent step-up authentication before each impersonation starts. For example, require the staff member to complete MFA again.
+- Require a reason and write append-only audit events for every attempt and outcome. Include the actor's user ID, target user ID, reason, timestamp, outcome, and impersonation session handle. Do not rely only on a custom access token claim as the audit record. Fail closed if the start event cannot be recorded.
+- Set a short maximum duration. Enforce the deadline on the backend, revoke the impersonation session when it expires, and provide an explicit way to terminate it early. Monitor and alert on unusual impersonation activity.
+- Decide which targets and actions staff may access while impersonating. For example, prevent impersonation of other administrators and block credential, MFA, payment, and destructive account changes unless your policy explicitly allows them.
 
 
 ## Steps
 
 ### 1. Create the impersonation endpoint
 
-Create a new API endpoint that accepts some form of identifier (email, phone number, user ID, etc.) and creates a new impersonation session for that user.
+Create a new API endpoint that accepts a stable user ID and creates a new impersonation session for that user. If you instead use an email address, phone number, or other account information, require the lookup to return exactly one user; never select the first of multiple matches.
 
 In order for this to work, admins need to first log in to the application as themselves. Once they create their session (like any regular user's session), they can call the API via a frontend UI that's only shown to them. You can detect the admin role on the frontend by seeing [this guide](/additional-verification/user-roles/protecting-routes#protect-frontend-routes).
 
@@ -65,8 +72,8 @@ app.post(
       email,
     });
 
-    if (user.length === 0) {
-      throw new Error("User does not exist");
+    if (user.length !== 1) {
+      throw new Error("Identifier does not uniquely identify a user");
     }
 
     await Session.createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
@@ -110,8 +117,8 @@ server.route({
       email,
     });
 
-    if (user.length === 0) {
-      throw new Error("User does not exist");
+    if (user.length !== 1) {
+      throw new Error("Identifier does not uniquely identify a user");
     }
 
     await Session.createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
@@ -150,8 +157,8 @@ fastify.post(
       email,
     });
 
-    if (user.length === 0) {
-      throw new Error("User does not exist");
+    if (user.length !== 1) {
+      throw new Error("Identifier does not uniquely identify a user");
     }
 
     await Session.createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
@@ -179,8 +186,8 @@ async function impersonate(awsEvent: SessionEvent) {
     email,
   });
 
-  if (user.length === 0) {
-    throw new Error("User does not exist");
+  if (user.length !== 1) {
+    throw new Error("Identifier does not uniquely identify a user");
   }
 
   await Session.createNewSession(awsEvent, awsEvent, "public", user[0].loginMethods[0].recipeUserId, {
@@ -226,8 +233,8 @@ router.post(
       email,
     });
 
-    if (user.length === 0) {
-      throw new Error("User does not exist");
+    if (user.length !== 1) {
+      throw new Error("Identifier does not uniquely identify a user");
     }
 
     await Session.createNewSession(ctx, ctx, "public", user[0].loginMethods[0].recipeUserId, {
@@ -267,8 +274,8 @@ class Login {
       email,
     });
 
-    if (user.length === 0) {
-      throw new Error("User does not exist");
+    if (user.length !== 1) {
+      throw new Error("Identifier does not uniquely identify a user");
     }
 
     await Session.createNewSession(this.ctx, this.ctx, "public", user[0].loginMethods[0].recipeUserId, {
@@ -310,8 +317,8 @@ export default async function impersonate(req: SessionRequest, res: any) {
     email,
   });
 
-  if (user.length === 0) {
-    throw new Error("User does not exist");
+  if (user.length !== 1) {
+    throw new Error("Identifier does not uniquely identify a user");
   }
 
   await superTokensNextWrapper(
@@ -359,8 +366,8 @@ export class ExampleController {
       email,
     });
 
-    if (user.length === 0) {
-      throw new Error("User does not exist");
+    if (user.length !== 1) {
+      throw new Error("Identifier does not uniquely identify a user");
     }
 
     await createNewSession(req, res, "public", user[0].loginMethods[0].recipeUserId, {
@@ -462,8 +469,8 @@ async def impersonate(
     # we use the email password recipe here, but you can use the recipe you use
     user = await list_users_by_account_info("public", AccountInfoInput(email=email))
 
-    if len(user) == 0:
-        # return a 400 error to the client
+    if len(user) != 1:
+        # return a 400 error because the identifier is missing or ambiguous
         return
 
     await create_new_session(
@@ -502,8 +509,8 @@ def login(request: Request):
     # we use the email password recipe here, but you can use the recipe you use
     user = list_users_by_account_info("public", AccountInfoInput(email=email))
 
-    if len(user) == 0:
-        # return a 400 error to the client
+    if len(user) != 1:
+        # return a 400 error because the identifier is missing or ambiguous
         return
 
     create_new_session(
@@ -540,8 +547,8 @@ async def impersonate(request: HttpRequest):
     # we use the email password recipe here, but you can use the recipe you use
     user = await list_users_by_account_info("public", AccountInfoInput(email=email))
 
-    if len(user) == 0:
-        # return a 400 error to the client
+    if len(user) != 1:
+        # return a 400 error because the identifier is missing or ambiguous
         return
 
     await create_new_session(
@@ -565,32 +572,215 @@ async def impersonate(request: HttpRequest):
 <ContentOption title="Next.js" value="nextjs">
 <ConditionalContent propertyName="nextjsRouterType" condition="app-router">
 
-```tsx check=false reason="Requires surrounding framework application context"
+```tsx check=false reason="Requires surrounding framework application context and application audit logging"
 import { NextResponse, NextRequest } from "next/server";
 import SuperTokens from "supertokens-node";
 import { withPreParsedRequestResponse } from "supertokens-node/nextjs";
 import { CollectingResponse, PreParsedRequest } from "supertokens-node/framework/custom";
-import { createNewSession } from "supertokens-node/recipe/session";
+import Session, { createNewSession } from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+
 import { backendConfig } from "@/app/config/backend";
+import {
+  assertRecentImpersonationStepUp,
+  createImpersonationAttemptId,
+  getAuthorizedImpersonationTenant,
+  getImpersonationExpiry,
+  recordImpersonationAuditEvent,
+  registerImpersonationExpiry,
+} from "@/app/auth/impersonation-security";
 
 SuperTokens.init(backendConfig());
 
-export function POST(req: NextRequest) {
-  return withPreParsedRequestResponse(req, async (baseRequest: PreParsedRequest, baseResponse: CollectingResponse) => {
-    let email = "..."; // read from request body
+function copyCollectedCredentials(source: CollectingResponse, destination: CollectingResponse) {
+  source.headers.forEach((value, key) => destination.setHeader(key, value, false));
+  for (const cookie of source.cookies) {
+    destination.setCookie(
+      cookie.key,
+      cookie.value,
+      cookie.domain,
+      cookie.secure,
+      cookie.httpOnly,
+      cookie.expires,
+      cookie.path,
+      cookie.sameSite,
+    );
+  }
+}
 
-    let users = await SuperTokens.listUsersByAccountInfo("public", { email });
+export function POST(request: NextRequest) {
+  return withPreParsedRequestResponse(
+    request,
+    async (baseRequest: PreParsedRequest, baseResponse: CollectingResponse) => {
+      const actorSession = await Session.getSession(baseRequest, baseResponse, {
+        sessionRequired: true,
+        overrideGlobalClaimValidators: async (globalValidators) => [
+          ...globalValidators,
+          UserRoles.UserRoleClaim.validators.includes("admin"),
+        ],
+      });
 
-    if (users.length === 0) {
-      throw new Error("User does not exist");
-    }
+      const actorUserId = actorSession.getUserId();
+      const attemptId = createImpersonationAttemptId();
+      await recordImpersonationAuditEvent({
+        attemptId,
+        actorUserId,
+        outcome: "ATTEMPT_STARTED",
+      });
 
-    const session = await createNewSession(baseRequest, baseResponse, "public", users[0].loginMethods[0].recipeUserId, {
-      isImpersonation: true,
-    });
+      try {
+        await assertRecentImpersonationStepUp(actorSession);
+      } catch {
+        await recordImpersonationAuditEvent({
+          attemptId,
+          actorUserId,
+          outcome: "STEP_UP_FAILED",
+        });
+        return NextResponse.json({ message: "Impersonation request denied" }, { status: 403 });
+      }
 
-    return NextResponse.json({ message: "Impersonation successful" });
-  });
+      // This application-owned helper derives allowed tenants from trusted
+      // server-side staff entitlements. It must not trust a request-body tenant ID.
+      let tenantId: string;
+      try {
+        tenantId = await getAuthorizedImpersonationTenant({
+          actorUserId,
+          actorSessionTenantId: actorSession.getTenantId(),
+        });
+      } catch {
+        await recordImpersonationAuditEvent({
+          attemptId,
+          actorUserId,
+          outcome: "TENANT_AUTHORIZATION_FAILED",
+        });
+        return NextResponse.json({ message: "Impersonation request denied" }, { status: 403 });
+      }
+
+      // Authorization and step-up have succeeded. Only now read the target and reason.
+      let targetRecipeUserId = "..."; // validate and read a stable recipe user ID from the request body
+      let reason = "..."; // require a non-empty support or incident reason
+      let targetUser: Awaited<ReturnType<typeof SuperTokens.getUser>>;
+      try {
+        targetUser = await SuperTokens.getUser(targetRecipeUserId);
+      } catch {
+        await recordImpersonationAuditEvent({
+          attemptId,
+          actorUserId,
+          tenantId,
+          reason,
+          outcome: "TARGET_LOOKUP_FAILED",
+        });
+        return NextResponse.json({ message: "Impersonation request denied" }, { status: 400 });
+      }
+      const targetLoginMethod = targetUser?.loginMethods.find(
+        (loginMethod) => loginMethod.recipeUserId.getAsString() === targetRecipeUserId,
+      );
+
+      if (!targetUser || !targetLoginMethod?.tenantIds.includes(tenantId)) {
+        await recordImpersonationAuditEvent({
+          attemptId,
+          actorUserId,
+          targetRecipeUserId,
+          tenantId,
+          reason,
+          outcome: "TARGET_DENIED",
+        });
+        return NextResponse.json({ message: "Impersonation request denied" }, { status: 400 });
+      }
+
+      let expiresAt: number;
+      try {
+        expiresAt = await getImpersonationExpiry({ actorUserId, tenantId });
+      } catch {
+        await recordImpersonationAuditEvent({
+          attemptId,
+          actorUserId,
+          targetUserId: targetUser.id,
+          targetRecipeUserId,
+          tenantId,
+          reason,
+          outcome: "EXPIRY_DERIVATION_FAILED",
+        });
+        return NextResponse.json({ message: "Impersonation request denied" }, { status: 500 });
+      }
+      await recordImpersonationAuditEvent({
+        attemptId,
+        actorUserId,
+        targetUserId: targetUser.id,
+        targetRecipeUserId,
+        tenantId,
+        reason,
+        outcome: "ATTEMPT_APPROVED",
+        expiresAt,
+      });
+
+      const stagedResponse = new CollectingResponse();
+      let impersonationSession: Awaited<ReturnType<typeof createNewSession>> | undefined;
+      let stage: "SESSION_CREATION" | "EXPIRY_REGISTRATION" | "SUCCESS_AUDIT" = "SESSION_CREATION";
+
+      try {
+        impersonationSession = await createNewSession(baseRequest, stagedResponse, tenantId, targetLoginMethod.recipeUserId, {
+          isImpersonation: true,
+          impersonatedBy: actorUserId,
+          impersonationExpiresAt: expiresAt,
+        });
+
+        stage = "EXPIRY_REGISTRATION";
+        await registerImpersonationExpiry({
+          sessionHandle: impersonationSession.getHandle(),
+          expiresAt,
+        });
+
+        stage = "SUCCESS_AUDIT";
+        await recordImpersonationAuditEvent({
+          attemptId,
+          actorUserId,
+          targetUserId: targetUser.id,
+          targetRecipeUserId,
+          tenantId,
+          reason,
+          outcome: "SESSION_CREATED",
+          impersonationSessionHandle: impersonationSession.getHandle(),
+          expiresAt,
+        });
+      } catch {
+        let revoked: boolean | undefined;
+        if (impersonationSession) {
+          try {
+            revoked = await Session.revokeSession(impersonationSession.getHandle());
+          } catch {
+            revoked = false;
+          }
+        }
+
+        let failureOutcome = "SESSION_CREATION_FAILED";
+        if (stage === "EXPIRY_REGISTRATION") {
+          failureOutcome = "EXPIRY_REGISTRATION_FAILED";
+        } else if (stage === "SUCCESS_AUDIT") {
+          failureOutcome = "SUCCESS_AUDIT_FAILED";
+        }
+
+        await recordImpersonationAuditEvent({
+          attemptId,
+          actorUserId,
+          targetUserId: targetUser.id,
+          targetRecipeUserId,
+          tenantId,
+          reason,
+          outcome: failureOutcome,
+          impersonationSessionHandle: impersonationSession?.getHandle(),
+          revoked,
+          revocationFailed: revoked === false,
+          expiresAt,
+        });
+        return NextResponse.json({ message: "Impersonation request failed" }, { status: 500 });
+      }
+
+      // Staged credentials remain unreachable until every post-creation control succeeds.
+      copyCollectedCredentials(stagedResponse, baseResponse);
+      return NextResponse.json({ message: "Impersonation successful" });
+    },
+  );
 }
 ```
 
@@ -601,14 +791,14 @@ export function POST(req: NextRequest) {
 </CodeGroup>
 
 :::info[Multi Tenancy]
-Notice that the `"public"` `tenantId` goes to the function call above. This is the default `tenantId` in SuperTokens. If you are using the multi-tenancy feature and want to login into a different tenant, you can replace `"public"` with the `tenantId` you want to login into.
+Most examples use the default `"public"` tenant. In a multi-tenant application, derive the target tenant from trusted server-side data and verify that the actor may impersonate users in that tenant.
 
-You can fetch this `tenantId` based on the admin user's tenant (from their session), or you can pass it in the request body.
+Never authorize a tenant only because its ID was supplied in the request body. If the client selects a tenant, treat that value as client-controlled input and check it against the actor's server-side tenant assignments before target lookup or session creation.
 :::
 
-- The API should call from your frontend application such that the frontend SDKs' network interceptors are running.
-- In the API above, session verification runs first to ensure that the user has the admin role. If not, the API returns a `403` to the frontend.
-- The target user is then fetched based on their email ID. If the user does not exist, an error occurs (which you can map to a `400` status code).
-- A new session is then created using the target user's user ID. The `isImpersonation` flag goes as `true` in the access token payload to detect this on the frontend and show a message to the admin user that they are impersonating the target user (this is UI you would have to build if you want to). You can also use this custom access token payload to protect certain APIs which the admin cannot call, even if in impersonation mode. In the code, you use `isImpersonation`, but you can use anything else you like. In fact, you can even add the admin user's user ID to the access token payload (with a key like `adminUserId`), for logging purposes.
-- The new session tokens attach to the response and overwrite the existing admin session. Cookies apply if the request contains the `st-auth-mode: "cookie"` header, otherwise the mode is header-based auth. Since you would be calling this API via the frontend interceptors, you do not need to explicitly set this header since the frontend SDK does this on its own.
-- Once impersonated, the admin user can logout of the target user's session by clicking on the sign out button of your app - nothing special needs to happen there.
+- The API should be called from your frontend application so that the frontend SDK's network interceptors run.
+- In the APIs above, required-session verification and backend admin-role validation run before the request reads or looks up the target. A missing or invalid session is rejected, and a session without the required role is rejected with `403`.
+- Prefer a stable target user or recipe-user ID. If you look up by account information instead, reject zero or multiple matches rather than selecting the first result.
+- A new session is then created using the target user's user ID. The `isImpersonation` flag is added to the access token payload so that the frontend can show that the staff member is impersonating a user. Backend APIs can also use this claim to restrict actions while impersonating. Treat claims such as `isImpersonation` and `impersonatedBy` as enforcement context, not as a durable audit log.
+- The new session tokens attach to the response and overwrite the active admin credentials in that browser. This does not revoke the original admin session in SuperTokens. Cookies apply if the request contains the `st-auth-mode: "cookie"` header; otherwise, the mode is header-based authentication. The frontend interceptors set this header automatically.
+- Signing out revokes the current impersonation session. Also provide explicit early termination and enforce your maximum duration on the backend; do not depend on the user remembering to sign out.

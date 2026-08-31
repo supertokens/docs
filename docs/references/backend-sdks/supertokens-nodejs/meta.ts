@@ -1,7 +1,7 @@
 import { defineMeta } from "blume";
 
 export default defineMeta({
-  "title": "Node.js SDK Reference",
-  "icon": "/img/logos/nodejs-small.svg",
-  "order": 70
+  title: "Node.js SDK Reference",
+  icon: "/img/logos/nodejs-small.svg",
+  order: 70,
 });

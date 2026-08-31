@@ -5,88 +5,40 @@ sidebar:
   order: 7
 ---
 
-Lets modify the Home page we made in a [previous step](/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard) to make a call to this API
+Let's modify the Home page from the [route protection step](/integrations/nextjs/app-directory/protecting-route) to call this API.
 
 <UITypeSwitch />
 
 <VariantContent storageKey="ui-type" value="prebuilt">
 
-```tsx title="app/components/home.tsx" {94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119} check=false reason="Requires surrounding framework application context"
+```tsx title="app/components/home.tsx" check=false reason="Requires surrounding framework application context"
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { getSSRSession } from "supertokens-node/nextjs";
+
 import { TryRefreshComponent } from "./tryRefreshClientComponent";
 import { SessionAuthForNextJS } from "./sessionAuthForNextJS";
-import jwksClient from "jwks-rsa";
-import JsonWebToken from "jsonwebtoken";
-import type { JwtHeader, JwtPayload, SigningKeyCallback } from "jsonwebtoken";
+import { appInfo } from "../config/appInfo";
+import { ensureSuperTokensInit } from "../config/backend";
 
-const client = jwksClient({
-  jwksUri: "<CORE_API_ENDPOINT>/.well-known/jwks.json",
-});
+ensureSuperTokensInit();
 
 async function getAccessToken() {
   const cookiesStore = await cookies();
   return cookiesStore.get("sAccessToken")?.value;
 }
 
-function getPublicKey(header: JwtHeader, callback: SigningKeyCallback) {
-  client.getSigningKey(header.kid, (err, key) => {
-    if (err) {
-      callback(err);
-    } else {
-      const signingKey = key?.getPublicKey();
-      callback(null, signingKey);
-    }
-  });
-}
-
-async function verifyToken(token: string): Promise<JwtPayload> {
-  return new Promise((resolve, reject) => {
-    JsonWebToken.verify(token, getPublicKey, {}, (err, decoded) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(decoded as JwtPayload);
-      }
-    });
-  });
-}
-
-/**
- * A helper function to retrieve session details on the server side.
- *
- * NOTE: This function does not use the getSession / verifySession function from the supertokens-node SDK
- * because those functions may update the access token. These updated tokens would not be
- * propagated to the client side properly, as request interceptors do not run on the server side.
- * So instead, we use regular JWT verification library
- */
-async function getSSRSessionHelper(): Promise<{
-  accessTokenPayload: JwtPayload | undefined;
-  hasToken: boolean;
-  error: Error | undefined;
-}> {
-  const accessToken = await getAccessToken();
-  const hasToken = !!accessToken;
-  try {
-    if (accessToken) {
-      const decoded = await verifyToken(accessToken);
-      return { accessTokenPayload: decoded, hasToken, error: undefined };
-    }
-    return { accessTokenPayload: undefined, hasToken, error: undefined };
-  } catch (error) {
-    return { accessTokenPayload: undefined, hasToken, error: undefined };
-  }
-}
-
 export async function HomePage() {
-  const { accessTokenPayload, hasToken, error } = await getSSRSessionHelper();
+  const cookieStore = await cookies();
+  const { accessTokenPayload, hasToken, error } = await getSSRSession(cookieStore.getAll());
   const accessToken = await getAccessToken();
 
   if (error) {
-    return <div>Something went wrong while trying to get the session. Error - {error.message}</div>;
+    console.error("Unable to read the SSR session", { component: "HomePage" });
+    return <div role="alert">Unable to verify your session. Please try again.</div>;
   }
 
-  // `accessTokenPayload` will be undefined if it the session does not exist or has expired
+  // `accessTokenPayload` is undefined if the session does not exist or has expired
   if (accessTokenPayload === undefined) {
     if (!hasToken) {
       /**
@@ -105,10 +57,10 @@ export async function HomePage() {
     return <TryRefreshComponent key={Date.now()} />;
   }
 
-  const userInfoResponse = await fetch("http://localhost:3000/api/user", {
+  const userInfoResponse = await fetch(new URL("/api/user", appInfo.websiteDomain), {
     headers: {
       /**
-       * We read the access token from the cookies and use that as a Bearer token when
+       * We read the access token from the cookies and use it as a Bearer token when
        * making network requests.
        */
       Authorization: "Bearer " + accessToken,
@@ -130,7 +82,7 @@ export async function HomePage() {
     return <SessionAuthForNextJS />;
   }
 
-  // You can use `userInfoResponse` to read the users session information
+  // You can use `userInfoResponse` to read the user's session information
 
   return (
     <SessionAuthForNextJS>
@@ -146,80 +98,33 @@ We read the access token of the user from cookies. We can then send the access t
 
 <VariantContent storageKey="ui-type" value="custom">
 
-```tsx title="app/components/home.tsx" {91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119} check=false reason="Requires surrounding framework application context"
+```tsx title="app/components/home.tsx" check=false reason="Requires surrounding framework application context"
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { TryRefreshComponent } from "./tryRefreshClientComponent";
-import jwksClient from "jwks-rsa";
-import JsonWebToken from "jsonwebtoken";
-import type { JwtHeader, JwtPayload, SigningKeyCallback } from "jsonwebtoken";
+import { getSSRSession } from "supertokens-node/nextjs";
 
-const client = jwksClient({
-  jwksUri: "<CORE_API_ENDPOINT>/.well-known/jwks.json",
-});
+import { TryRefreshComponent } from "./tryRefreshClientComponent";
+import { appInfo } from "../config/appInfo";
+import { ensureSuperTokensInit } from "../config/backend";
+
+ensureSuperTokensInit();
 
 async function getAccessToken() {
   const cookiesStore = await cookies();
   return cookiesStore.get("sAccessToken")?.value;
 }
 
-function getPublicKey(header: JwtHeader, callback: SigningKeyCallback) {
-  client.getSigningKey(header.kid, (err, key) => {
-    if (err) {
-      callback(err);
-    } else {
-      const signingKey = key?.getPublicKey();
-      callback(null, signingKey);
-    }
-  });
-}
-
-async function verifyToken(token: string): Promise<JwtPayload> {
-  return new Promise((resolve, reject) => {
-    JsonWebToken.verify(token, getPublicKey, {}, (err, decoded) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(decoded as JwtPayload);
-      }
-    });
-  });
-}
-
-/**
- * A helper function to retrieve session details on the server side.
- *
- * NOTE: This function does not use the getSession / verifySession function from the supertokens-node SDK
- * because those functions may update the access token. These updated tokens would not be
- * propagated to the client side properly, as request interceptors do not run on the server side.
- * So instead, we use regular JWT verification library
- */
-async function getSSRSessionHelper(): Promise<{
-  accessTokenPayload: JwtPayload | undefined;
-  hasToken: boolean;
-  error: Error | undefined;
-}> {
-  const accessToken = await getAccessToken();
-  const hasToken = !!accessToken;
-  try {
-    if (accessToken) {
-      const decoded = await verifyToken(accessToken);
-      return { accessTokenPayload: decoded, hasToken, error: undefined };
-    }
-    return { accessTokenPayload: undefined, hasToken, error: undefined };
-  } catch (error) {
-    return { accessTokenPayload: undefined, hasToken, error: undefined };
-  }
-}
-
 export async function HomePage() {
-  const { accessTokenPayload, hasToken, error } = await getSSRSessionHelper();
+  const cookieStore = await cookies();
+  const { accessTokenPayload, hasToken, error } = await getSSRSession(cookieStore.getAll());
+  const accessToken = await getAccessToken();
 
   if (error) {
-    return <div>Something went wrong while trying to get the session. Error - {error.message}</div>;
+    console.error("Unable to read the SSR session", { component: "HomePage" });
+    return <div role="alert">Unable to verify your session. Please try again.</div>;
   }
 
-  // `accessTokenPayload` will be undefined if it the session does not exist or has expired
+  // `accessTokenPayload` is undefined if the session does not exist or has expired
   if (accessTokenPayload === undefined) {
     if (!hasToken) {
       /**
@@ -238,13 +143,13 @@ export async function HomePage() {
     return <TryRefreshComponent key={Date.now()} />;
   }
 
-  const userInfoResponse = await fetch("http://localhost:3000/api/user", {
+  const userInfoResponse = await fetch(new URL("/api/user", appInfo.websiteDomain), {
     headers: {
       /**
-       * We read the access token from the cookies and use that as a Bearer token when
+       * We read the access token from the cookies and use it as a Bearer token when
        * making network requests.
        */
-      Authorization: "Bearer " + getAccessToken(),
+      Authorization: "Bearer " + accessToken,
     },
   });
 
@@ -266,14 +171,15 @@ export async function HomePage() {
     return <div>Invalid Session Claims</div>;
   }
 
-  // You can use `userInfoResponse` to read the users session information
+  // You can use `userInfoResponse` to read the user's session information
 
   return <div>{message}</div>;
 }
 ```
 
 APIs that require sessions will return status:
-- `401` if there is no valid session or if the session has expired. In this case we return the `TryRefreshComponent` component which will try to refresh the session or redirect to the login page if the session cant be refreshed.
-- `403` if one or more of the session claims fail their validation. In this case you should check which session claim failed and redirect the user accordingly. For example to check for the email verification claim you can refer to [this page](/additional-verification/email-verification/protecting-routes).
+
+- `401` if there is no valid session or if the session has expired. In this case, we return the `TryRefreshComponent` component, which tries to refresh the session or redirects to the login page if the session can't be refreshed.
+- `403` if one or more session claims fail validation. In this case, check which session claim failed and redirect the user accordingly. For example, refer to [protecting routes with email verification](/additional-verification/email-verification/protecting-routes) to check the email verification claim.
 
 </VariantContent>

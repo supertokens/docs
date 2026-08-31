@@ -7,13 +7,18 @@ sidebar:
 
 ## Overview
 
-**SuperTokens** provides two approaches for managing access control: 
+**SuperTokens** provides two approaches for working with authorization data:
 
 1. **Session Claims**: An abstraction that includes automatic validation and refresh capabilities
 2. **Access Token Payload**: A basic way to check the token payload
 
-In most of the cases the recommended way is to use session claims.
-You can use next table to understand the differences between the two approaches.
+In most cases, the recommended approach is to use session claims.
+Use the following table to understand the differences between the two approaches.
+
+:::caution[Enforce authorization on the backend]
+Frontend claim checks are user-experience controls only. Client code and client-readable payloads can be bypassed or
+modified. Every protected API must verify the session and enforce its required claim validators on the backend.
+:::
 
 | Feature                              | Session Claims | Access Token Payload |
 | ------------------------------------ | -------------- | -------------------- |
@@ -89,13 +94,13 @@ Like the backend, the frontend also has the concept of session claim objects whi
 ```tsx
 type SessionClaim<T> = {
   // Refresh the claim values based on an async API call
-  refresh(): Promise<void>;
+  refresh(userContext: any): Promise<void>;
 
   // Returns the value from the session claim
-  getValueFromPayload(payload: any): T | undefined;
+  getValueFromPayload(payload: any, userContext: any): T | undefined;
 
   // Returns the last time the claim was refreshed
-  getLastFetchedTime(payload: any): number | undefined;
+  getLastFetchedTime(payload: any, userContext: any): number | undefined;
 };
 ```
 
@@ -123,7 +128,7 @@ type SessionClaimValidator = {
 
   // Determines if the value of the claim should undergo fetching again.
   // In the built-in validators, this function typically returns `true` if the claim does not exist in the `payload`, or if it's too old.
-  shouldRefetch: (payload: any, userContext: any) => Promise<boolean>;
+  shouldRefetch: (payload: any, userContext: any) => boolean | Promise<boolean>;
 
   /** extracts the claim value from the input `payload` (typically using `claim.getValueFromPayload`), and determines if the validator check has passed or not.
    * For example, if the validator aims to enforce that the user has verified their email, and if the claim value is `false`, then this function would return:
@@ -142,7 +147,8 @@ type SessionClaimValidator = {
 type ClaimValidationResult = { isValid: true } | { isValid: false; reason?: any };
 ```
 
-Using this interface and the claims interface, SuperTokens runs the following session claim validation process during session verification:
+Conceptually, SuperTokens runs the following session claim validation process during session verification. This
+pseudocode omits recipe user ID, tenant ID, user context, asynchronous operations, and the actual payload update flow:
 
 ```tsx check=false reason="algorithm pseudocode intentionally omits declarations and concrete SDK types"
 function validateSessionClaims(accessToken, claimValidators) {
@@ -185,7 +191,9 @@ The built-in base claims (`PrimitiveClaim`, `PrimitiveArrayClaim`, `BooleanClaim
 
 In all the above claim validators, the `maxAgeInSeconds`/`maxAge` input (which is optional) governs how often to refetch the session claim value:
 - A value of `0` causes it to refetch the claim value each time a check happens.
-- If not passed, the claim is only refetched if it's missing in the session. The built-in claims like email verification or user roles claims have a default value of five minutes, meaning that those claim values refresh from the database after every five minutes.
+- If not passed, base claim validators refetch only when the claim is missing. Recipe-specific validators can use other
+  defaults. For example, the email verification `isVerified` validator refetches a `false` value after ten seconds by
+  default and has no default maximum age for a `true` value. The user roles validators do not set a default maximum age.
 
 ```tsx
 interface SessionClaim<T> {
@@ -283,6 +291,8 @@ app.post(
 
 #### Frontend validation
 
+This controls frontend rendering only. Apply the equivalent validator to every protected backend route, as shown above.
+
 ```tsx
 import React from "react";
 import { SessionAuth } from "supertokens-auth-react/recipe/session";
@@ -354,9 +364,10 @@ The access token payload is a simple way to store custom data that needs to be a
 
 ### 1. Add Custom Claims to the Access Token Payload
 
-:::note[The access token payload has a set of default claims that can not be overwritten.]
-They reserve these for standard or SuperTokens specific use-cases.
-Those claims are: `sub`, `iat`, `exp`, `sessionHandle`, `refreshTokenHash1`, `parentRefreshTokenHash1`, `antiCsrfToken`
+:::note[The access token payload has a set of protected claims that cannot be overwritten.]
+SuperTokens reserves these for standard or internal use cases.
+Those claims are: `sub`, `iat`, `exp`, `sessionHandle`, `refreshTokenHash1`, `parentRefreshTokenHash1`, `antiCsrfToken`,
+`rsub`, `tId`, and `stt`.
 
 Trying to overwrite these values results in errors in the authentication flow process.
 :::
@@ -440,6 +451,8 @@ app.get("/myApi", verifySession(), async (req, res) => {
 ```
 
 #### On the frontend
+
+Use frontend payload values only for display and navigation. Do not authorize access to backend data from this check.
 
 ```tsx
 import Session from "supertokens-auth-react/recipe/session";

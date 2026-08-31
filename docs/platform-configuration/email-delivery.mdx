@@ -9,8 +9,8 @@ sidebar:
 
 ## Email delivery summary
 
-- Email delivery applies to the EmailPassword, Passwordless, and AccountLinking recipes.
-- Without configuration, the backend SDK sends through `https://api.supertokens.com` from `noreply@supertokens.io`; this default service does not support template customization.
+- Email delivery is owned by the `EmailPassword`, `EmailVerification`, `Passwordless`, and `WebAuthn` recipes. `AccountLinking` does not configure delivery.
+- Without configuration, each recipe uses its built-in delivery service. The endpoint and failure behavior differ by recipe and SDK; this service does not support template customization.
 - Configure your own SMTP server to send from your domain and optionally customize the subject and template.
 - For complete control, provide a custom delivery implementation or override `sendEmail`.
 
@@ -19,7 +19,9 @@ sidebar:
 ## Overview
 
 SuperTokens sends emails in different authentication scenarios.
-The method applies in the `EmailPassword`, `Passwordless`, and `AccountLinking` recipes.
+Email delivery is configured on the recipe that generates the message: `EmailPassword` for password resets,
+`EmailVerification`, `Passwordless` for email codes and links, and `WebAuthn` for account-recovery emails.
+The `AccountLinking` recipe does not own an email-delivery configuration.
 
 The following page shows you how to configure the email delivery method and adjust the content that gets sent to your users.
 
@@ -27,20 +29,26 @@ The following page shows you how to configure the email delivery method and adju
 
 ### Default service
 
-If you provide no configuration for email delivery, the backend SDK sends emails by talking to the servers on `https://api.supertokens.com`
-This applies to both self hosted and managed services.
+If you provide no email-delivery configuration, the recipe uses the backend SDK's built-in delivery service. This applies
+whether the Core is self-hosted or managed. Do not allow the external delivery endpoints from a single hostname: released
+recipes use both `api.supertokens.io` and `api.supertokens.com`.
 
-:::note[- No info sent to the API that sends out emails on behalf of your app is logged or stored.]
-- The system sends emails using `noreply@supertokens.io` email ID. If you want to use your own domain, please see one of the other methods in this section.
-- You cannot customize the email template when using this method. If you want to customize the emails, please see one of the other methods in this section.
-- Emails sent via the service are free and may land up in user's spam due to the high number of apps that use the service. If you want to avoid this, we recommend using one of the other methods mentioned in this section.
+:::note
+The built-in service does not support template customization. Configure SMTP or a custom delivery implementation when
+you need to control the sender, content, delivery guarantees, or data-processing terms.
+:::
+
+:::caution[Failure behavior differs]
+Do not treat the built-in service as a durable queue. In Node.js 24.0.3, Passwordless awaits delivery, while several other
+email flows suppress built-in-service failures outside serverless environments. If delivery is security-critical, provide
+your own service, await its result, monitor failures, and make retries idempotent.
 :::
 
 ---
 
 ### SMTP service
 
-Using this method, you can provide your own SMTP server's configuration and the system sends the emails using those.
+Using this method, you can provide your own SMTP server configuration and the system sends emails through it.
 Use this method if you want to:
 - Send emails using your own domain.
 - Optionally customize the default email template and subject.
@@ -55,8 +63,12 @@ import Session from "supertokens-node/recipe/session";
 import { SMTPService } from "supertokens-node/recipe/emailpassword/emaildelivery";
 import EmailVerification from "supertokens-node/recipe/emailverification";
 import { SMTPService as EmailVerificationSMTPService } from "supertokens-node/recipe/emailverification/emaildelivery";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import { SMTPService as PasswordlessSMTPService } from "supertokens-node/recipe/passwordless/emaildelivery";
+import WebAuthn from "supertokens-node/recipe/webauthn";
+import { SMTPService as WebAuthnSMTPService } from "supertokens-node/recipe/webauthn/emaildelivery";
 
-let smtpSettings = {
+const smtpSettings = {
   host: "...",
   authUsername: "...", // this is optional. In case not given, from.email will be used
   password: "...",
@@ -88,6 +100,18 @@ supertokens.init({
         service: new EmailVerificationSMTPService({ smtpSettings }),
       },
     }),
+    Passwordless.init({
+      contactMethod: "EMAIL",
+      flowType: "USER_INPUT_CODE",
+      emailDelivery: {
+        service: new PasswordlessSMTPService({ smtpSettings }),
+      },
+    }),
+    WebAuthn.init({
+      emailDelivery: {
+        service: new WebAuthnSMTPService({ smtpSettings }),
+      },
+    }),
     Session.init(),
   ],
 });
@@ -101,9 +125,10 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 
-	"crypto/tls"
 )
 
 func main() {
@@ -117,13 +142,8 @@ func main() {
 		Port:     465,
 		Username: &smtpUsername, // this is optional. In case not given, from.email will be used
 		Password: "...",
-		Secure:   false,
+		Secure:   true,
 
-		// this is optional. TLS config is used if Secure is set to true, or server supports STARTTLS
-		// if not provided, the SDK will use a default config
-		TLSConfig: &tls.Config{
-			// ...
-		},
 	}
 
 	supertokens.Init(supertokens.TypeInput{
@@ -144,6 +164,15 @@ func main() {
 					}),
 				},
 			}),
+			passwordless.Init(plessmodels.TypeInput{
+				ContactMethodEmail: plessmodels.ContactMethodEmailConfig{Enabled: true},
+				FlowType:          "USER_INPUT_CODE",
+				EmailDelivery: &emaildelivery.TypeInput{
+					Service: passwordless.MakeSMTPService(emaildelivery.SMTPServiceConfig{
+						Settings: smtpSettings,
+					}),
+				},
+			}),
 		},
 	})
 }
@@ -155,6 +184,8 @@ from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
 from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig, SMTPSettingsFrom, SMTPSettings
 from supertokens_python.recipe import emailverification
+from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 
 smtp_settings = SMTPSettings(
     host="...",
@@ -164,7 +195,7 @@ smtp_settings = SMTPSettings(
         email="..."
     ),
     password="...",
-    secure=False,
+    secure=True,
     username="..." # this is optional. In case not given, from_.email will be used
 )
 
@@ -189,12 +220,26 @@ init(
                     smtp_settings=smtp_settings
                 )
             )
+        ),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
+            email_delivery=EmailDeliveryConfig(
+                service=passwordless.SMTPService(smtp_settings=smtp_settings)
+            )
         )
     ]
 )
 ```
 </Tab>
 </CodeGroup>
+
+Port 465 conventionally uses implicit TLS, so the examples set `secure`/`Secure` to `true`. For STARTTLS, use the port
+specified by your provider (commonly 587) and set `secure`/`Secure` to `false`; the connection starts without encryption
+and is then upgraded. Never disable certificate or hostname verification. Node.js 24.0.3 exports a WebAuthn SMTP template
+service. Python 0.31.3 and Go 0.26.0 accept WebAuthn email-delivery implementations but do not export a public,
+recipe-specific WebAuthn SMTP template service; configure a WebAuthn delivery override in those SDKs instead of importing
+an internal module or reusing another recipe's template service.
 
 ### Custom method
 
@@ -370,8 +415,10 @@ If you call the original implementation function for `sendEmail`, it uses the se
 
 Using this method, you can, for example, have your custom way of sending email verification emails, but use the default or SMTP service to send the reset password emails.
 
-:::note[Error Management]
-To handle failures and other types of issues in the `sendEmail` function throw an error. The SDK catches any exception through an upper level error handler. This error is then propagated if this is through an API call or otherwise logged.
+:::note[Error management]
+Throw or return an error from your custom `sendEmail` implementation when delivery fails. API-triggered delivery can
+propagate the error through the SDK's error handler; non-API calls may log it. This does not describe every recipe's
+built-in service behavior; see the warning under [Default service](#default-service).
 :::
 
 ---
@@ -389,7 +436,7 @@ The method allows you to return an object that has the following properties:
 - `subject`: This is the subject of the email to send.
 - `toEmail`: The system sends the email to this email.
 
-Other information like which email ID to send from appears in the `smtpSettings` object.
+Other information like which email address to send from appears in the `smtpSettings` object.
 
 
 <CodeGroup group="backend-language">
