@@ -36,10 +36,9 @@ export const tabGroups = {
     control: "select",
     defaultValue: "reactnative",
     options: {
-      Reactnative: "reactnative",
+      ReactNative: "reactnative",
       "React Native": "reactnative",
       Android: "android",
-      Ios: "ios",
       iOS: "ios",
       Flutter: "flutter",
     },
@@ -51,10 +50,9 @@ export const tabGroups = {
       React: "reactjs",
       Webjs: "webjs",
       Android: "android",
-      Ios: "ios",
       iOS: "ios",
       Flutter: "flutter",
-      Reactnative: "reactnative",
+      ReactNative: "reactnative",
       "React Native": "reactnative",
     },
   },
@@ -100,6 +98,7 @@ export const tabGroups = {
     defaultValue: "npm",
     options: {
       npm: "npm",
+      Yarn: "yarn",
       yarn: "yarn",
       pnpm: "pnpm",
       Bun: "bun",
@@ -117,8 +116,8 @@ export const tabGroups = {
     control: "select",
     defaultValue: "yes",
     options: {
-      Yes: "yes",
-      No: "no",
+      "With React Router": "yes",
+      "Without React Router": "no",
     },
   },
   "uses-try-supertokens": {

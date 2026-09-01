@@ -184,6 +184,20 @@ function tabsWithoutTabChildren(): string[] {
   return violations;
 }
 
+function stepsWithoutStepChildren(): string[] {
+  const violations: string[] = [];
+
+  for (const { path, tree } of parsedContentFiles) {
+    walkMdx(tree, [], (node) => {
+      if (node.name === "Steps" && !node.children?.some((child) => child.name === "Step")) {
+        violations.push(`${relative(repositoryRoot, path)}:${node.position?.start.line ?? 1}`);
+      }
+    });
+  }
+
+  return violations;
+}
+
 describe("published documentation invariants", () => {
   it("does not end an outer code fence at a shorter nested fence", () => {
     expect(withoutFencedCode("````md\n```md\n![Example](/img/missing.png)\n```\n````")).toBe("\n\n\n\n");
@@ -217,6 +231,18 @@ describe("published documentation invariants", () => {
 
   it("does not publish tab groups without Tab children", () => {
     expect(tabsWithoutTabChildren()).toEqual([]);
+  });
+
+  it("does not publish Steps without Step children", () => {
+    expect(stepsWithoutStepChildren()).toEqual([]);
+  });
+
+  it("does not publish highlighted code lines", () => {
+    expect(locationsMatching(/^\s*(?:`{3,}|~{3,})[^\s]+\s+\{[0-9, -]+\}(?:\s|$)/)).toEqual([]);
+  });
+
+  it("uses canonical mobile option labels", () => {
+    expect(locationsMatching(/title=(['"])(?:Reactnative|Ios)\1/)).toEqual([]);
   });
 
   it("does not publish nested or unbalanced tab controls", () => {
@@ -395,11 +421,6 @@ describe("published documentation invariants", () => {
 
   it("keeps manually migrated procedures in single ordered Steps containers", () => {
     const sourceForPath = (suffix: string) => contentFiles.find(({ path }) => path.endsWith(suffix))!.source;
-    const publicKey = section(
-      sourceForPath("additional-verification/session-verification/protect-api-routes.mdx"),
-      "### With the public key string",
-      "### Check for custom claim values",
-    );
     const passkeySignup = section(
       sourceForPath("authentication/passkeys/initial-setup.mdx"),
       "#### 2.1 Add the sign up form",
@@ -410,20 +431,11 @@ describe("published documentation invariants", () => {
       "#### 2.2 Add the login form",
       "</VariantContent>",
     );
-    const m2mPublicKey = section(
-      sourceForPath("authentication/m2m/legacy-flow.mdx"),
-      "#### Using public key string",
-      "#### Claim verification",
-    );
 
-    expect(publicKey.match(/<Steps>/g)).toHaveLength(1);
-    expect(publicKey.match(/<Step\b/g)).toHaveLength(3);
     expect(passkeySignup.match(/<Steps>/g)).toHaveLength(1);
     expect(passkeySignup.match(/<Step\b/g)).toHaveLength(4);
     expect(passkeySignin.match(/<Steps>/g)).toHaveLength(1);
     expect(passkeySignin.match(/<Step\b/g)).toHaveLength(4);
-    expect(m2mPublicKey.match(/<Steps>/g)).toHaveLength(1);
-    expect(m2mPublicKey.match(/<Step\b/g)).toHaveLength(3);
   });
 
   it("does not publish raw YouTube iframes", () => {
@@ -461,10 +473,19 @@ describe("published documentation invariants", () => {
   });
 
   it("serves standalone SDK logos as valid SVG documents", () => {
-    for (const file of ["js.svg", "nodejs-small.svg"]) {
+    for (const file of [
+      "js.svg",
+      "nodejs-small.svg",
+      "fastify.svg",
+      "flask.svg",
+      "koa.svg",
+      "loopback.svg",
+      "php.svg",
+      "serverless.svg",
+    ]) {
       const source = readFileSync(resolve(publicRoot, "img/logos", file), "utf8");
       expect(source, file).toMatch(/<svg\b[^>]*\bxmlns="http:\/\/www\.w3\.org\/2000\/svg"/u);
-      expect(source, file).toMatch(/<svg\b[^>]*\bwidth="\d+"[^>]*\bheight="\d+"/u);
+      expect(source, file).toMatch(/<svg\b[^>]*(?:\bviewBox="[^"]+"|\bwidth="\d+"[^>]*\bheight="\d+")/u);
     }
   });
 

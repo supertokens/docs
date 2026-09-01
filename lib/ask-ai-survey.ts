@@ -47,9 +47,7 @@ export const toAskAiSurveyProperties = ({
   submissionId: string;
   survey: AskAiSurveyConfig;
 }): Record<string, unknown> => ({
-  $ai_input: metadata.messages
-    .filter(({ role }) => role === "user")
-    .map(({ content, role }) => ({ content, role })),
+  $ai_input: metadata.messages.filter(({ role }) => role === "user").map(({ content, role }) => ({ content, role })),
   $ai_output_choices: [{ content: answer, role: "assistant" }],
   $ai_session_id: metadata.conversationId,
   $ai_span_id: answerId,

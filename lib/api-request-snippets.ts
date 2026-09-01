@@ -1,5 +1,9 @@
 import { sampleLanguages, type RequestSample, type SampleLanguage } from "blume/components/openapi/snippets.js";
 
+interface ApiRequestSnippetLanguageOptions {
+  curlConfig?: string;
+}
+
 export const buildGoRequestSnippet = (request: RequestSample): string => {
   const body = request.body ? `strings.NewReader(\`${request.body.replaceAll("`", '` + "`" + `')}\`)` : "nil";
   const imports = request.body ? ['"net/http"', '"strings"'] : ['"net/http"'];
@@ -31,11 +35,26 @@ ${headers
 }`;
 };
 
-export const buildApiRequestSnippetLanguages = (): SampleLanguage[] => {
+export const buildApiRequestSnippetLanguages = ({
+  curlConfig,
+}: ApiRequestSnippetLanguageOptions = {}): SampleLanguage[] => {
   const builtInLanguages = sampleLanguages(["curl", "js", "python"]);
+  const curl = builtInLanguages[0];
+  const configuredCurl =
+    curlConfig && curl
+      ? {
+          ...curl,
+          build: (request: RequestSample) => {
+            const { "api-key": _apiKey, ...headers } = request.headers;
+            const lines = curl.build({ ...request, headers }).split(" \\\n");
+            lines.splice(1, 0, `  --config '${curlConfig}'`);
+            return lines.join(" \\\n");
+          },
+        }
+      : curl;
 
   return [
-    builtInLanguages[0],
+    configuredCurl,
     builtInLanguages[1] ? { ...builtInLanguages[1], label: "JavaScript / Node.js" } : undefined,
     { build: buildGoRequestSnippet, id: "go", label: "Go", lang: "go" } satisfies SampleLanguage,
     builtInLanguages[2],

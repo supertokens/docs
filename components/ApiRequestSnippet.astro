@@ -21,9 +21,18 @@ import type { ApiReferenceOperationId } from "../lib/api-reference-operations";
 import { buildApiRequestSnippetLanguages } from "../lib/api-request-snippets";
 
 interface Props {
+  body?: JsonObject;
+  curlConfig?: string;
   operationId: ApiReferenceOperationId;
+  path?: Record<string, string>;
   query?: Record<string, string>;
   snippetId: string;
+}
+
+type JsonValue = boolean | null | number | string | JsonValue[] | JsonObject;
+
+interface JsonObject {
+  [key: string]: JsonValue;
 }
 
 interface MediaTypeLike {
@@ -43,7 +52,7 @@ interface OperationLike {
   security?: SecurityRequirementLike[];
 }
 
-const { operationId, query = {}, snippetId } = Astro.props;
+const { body, curlConfig, operationId, path = {}, query = {}, snippetId } = Astro.props;
 if (snippetId.trim() === "") {
   throw new Error(`[ApiRequestSnippet] "snippetId" must not be empty for operation "${operationId}".`);
 }
@@ -105,6 +114,9 @@ const model = operationModel({
   servers: [{ url: "<CORE_API_ENDPOINT>" }],
 });
 const values = defaultValues(model);
+if (body !== undefined) {
+  values.body = JSON.stringify(body, null, 2);
+}
 for (const [name, value] of Object.entries(query)) {
   const parameter = model.params.find((candidate) => candidate.in === "query" && candidate.name === name);
   if (!parameter) {
@@ -115,8 +127,15 @@ for (const [name, value] of Object.entries(query)) {
   values.params[paramKey(parameter)] = value;
 }
 const sample = buildRequest(model, values);
+for (const [name, value] of Object.entries(path)) {
+  const placeholder = `{${name}}`;
+  if (!sample.url.includes(placeholder)) {
+    throw new Error(`[ApiRequestSnippet] Path override "${name}" is not present in operation "${operationId}".`);
+  }
+  sample.url = sample.url.replaceAll(placeholder, encodeURIComponent(value));
+}
 
-const languages = buildApiRequestSnippetLanguages();
+const languages = buildApiRequestSnippetLanguages({ curlConfig });
 const idPart = (value: string): string => value.toLowerCase().replaceAll(/[^a-z0-9]+/gu, "-");
 const namespace = `api-request-${idPart(operationId)}-${idPart(snippetId)}`;
 const embedRoute = withBase(`/docs/api-reference-embed/${ref.key}`);
