@@ -38,6 +38,13 @@ describe("PaidFeatureCallout", () => {
     expect(source).toMatch(/!managedOnly\s+&&\s+\([\s\S]*Self Hosted/u);
   });
 
+  it("wraps each numbered step as a single grid item", async () => {
+    const source = await readFile(componentUrl, "utf8");
+    const steps = source.match(/<li>\s*<span>[\s\S]*?<\/span>\s*<\/li>/gu);
+
+    expect(steps).toHaveLength(6);
+  });
+
   it("places the drawer on the right and makes it full-width on small screens", async () => {
     const theme = await readFile(themeUrl, "utf8");
 
