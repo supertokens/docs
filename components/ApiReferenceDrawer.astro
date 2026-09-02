@@ -12,12 +12,28 @@
           API schema and response details
         </h2>
       </div>
-      <a
-        class="shrink-0 font-medium text-accent text-sm underline underline-offset-4"
-        data-api-reference-full-link
+      <button
+        class="group inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-md border border-border px-3 font-medium text-sm transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+        data-api-reference-full-page
+        type="button"
       >
-        Open full page
-      </a>
+        <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+          <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+        </svg>
+        Open Page
+      </button>
+      <button
+        class="group inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-md border border-border px-3 font-medium text-sm transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+        data-api-reference-copy-spec
+        type="button"
+      >
+        <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+          <rect height="13" rx="2" stroke="currentColor" stroke-width="2" width="13" x="9" y="9"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+        </svg>
+        <span class="group-data-[copied]:hidden">Copy</span>
+        <span class="hidden group-data-[copied]:inline">Copied</span>
+      </button>
       <button
         aria-label="Close API reference"
         class="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -34,21 +50,29 @@
 </dialog>
 
 <script>
+  import { copyText, createCopyFlash } from "blume/components/copy-feedback.ts";
+
   interface ApiReferenceState {
+    canonicalUrl: string | null;
     generation: number;
     loadingTimeout: number | null;
     selectedUrl: string | null;
+    specUrl: string | null;
     trigger: HTMLAnchorElement | null;
   }
 
   const state: ApiReferenceState = {
+    canonicalUrl: null,
     generation: 0,
     loadingTimeout: null,
     selectedUrl: null,
+    specUrl: null,
     trigger: null,
   };
 
   let triggerObserver: IntersectionObserver | null = null;
+  const specRequests = new Map<string, Promise<string | null>>();
+  const specTextCache = new Map<string, string>();
 
   const drawer = () => document.querySelector<HTMLDialogElement>("#api-reference-drawer");
 
@@ -68,8 +92,56 @@
       );
       if (!pendingFrame?.dataset.loaded && !pendingFrame?.dataset.apiReferencePreloaded) pendingFrame?.remove();
     }
+    state.canonicalUrl = null;
     state.selectedUrl = null;
+    state.specUrl = null;
     state.trigger = null;
+  };
+
+  const flashCopiedSpec = createCopyFlash((copied) => {
+    const copy = drawer()?.querySelector<HTMLButtonElement>("[data-api-reference-copy-spec]");
+    copy?.toggleAttribute("data-copied", copied);
+  }, "OpenAPI spec copied");
+
+  const preloadSpec = (specUrl: string) => {
+    const cached = specTextCache.get(specUrl);
+    if (cached !== undefined) return Promise.resolve(cached);
+
+    const pending = specRequests.get(specUrl);
+    if (pending) return pending;
+
+    const request = fetch(specUrl)
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const text = await response.text();
+        specTextCache.set(specUrl, text);
+        return text;
+      })
+      .catch(() => null)
+      .finally(() => {
+        specRequests.delete(specUrl);
+      });
+    specRequests.set(specUrl, request);
+    return request;
+  };
+
+  const copySpec = async (button: HTMLButtonElement) => {
+    const specUrl = state.specUrl;
+    if (!specUrl) return;
+
+    const cached = specTextCache.get(specUrl);
+    if (cached !== undefined) {
+      if (await copyText(cached)) flashCopiedSpec();
+      return;
+    }
+
+    button.disabled = true;
+    try {
+      const text = await preloadSpec(specUrl);
+      if (text !== null && (await copyText(text))) flashCopiedSpec();
+    } finally {
+      button.disabled = false;
+    }
   };
 
   const ensureFrame = (currentDrawer: HTMLDialogElement, url: URL, fetchPriority: "high" | "low") => {
@@ -167,6 +239,18 @@
         return;
       }
 
+      const fullPage = event.target.closest<HTMLButtonElement>("[data-api-reference-full-page]");
+      if (fullPage && state.canonicalUrl) {
+        window.location.assign(state.canonicalUrl);
+        return;
+      }
+
+      const copy = event.target.closest<HTMLButtonElement>("[data-api-reference-copy-spec]");
+      if (copy) {
+        void copySpec(copy);
+        return;
+      }
+
       const link = triggerFromSource(event.target);
       if (!link) {
         if (!currentDrawer?.open) cancelPendingLoad(currentDrawer);
@@ -189,9 +273,11 @@
       const canonicalUrl = new URL(link.href, window.location.href);
       if (!currentDrawer || canonicalUrl.origin !== window.location.origin) return;
 
-      const fullLink = currentDrawer.querySelector<HTMLAnchorElement>("[data-api-reference-full-link]");
       const title = currentDrawer.querySelector<HTMLElement>("[data-api-reference-title]");
-      if (!fullLink || !title) return;
+      const specHref = link.dataset.apiReferenceSpecHref;
+      if (!title || !specHref) return;
+      const specUrl = new URL(specHref, window.location.href);
+      if (specUrl.origin !== window.location.origin) return;
 
       cancelPendingLoad(currentDrawer);
       const preload = preloadFromSource(link, "high");
@@ -200,12 +286,14 @@
 
       event.preventDefault();
       state.trigger = link;
+      state.canonicalUrl = canonicalUrl.href;
       state.selectedUrl = embedUrl.href;
+      state.specUrl = specUrl.href;
+      void preloadSpec(specUrl.href);
       link.setAttribute("aria-busy", "true");
       const generation = ++state.generation;
       const operationTitle = link.dataset.apiReferenceTitle || "API schema and response details";
       title.textContent = operationTitle;
-      fullLink.href = canonicalUrl.href;
       frame.title = `API reference: ${operationTitle}`;
 
       const open = () => showFrame(currentDrawer, frame, embedUrl, generation);
@@ -250,7 +338,9 @@
       state.loadingTimeout = null;
       state.trigger?.removeAttribute("aria-busy");
       state.trigger = null;
+      state.canonicalUrl = null;
       state.selectedUrl = null;
+      state.specUrl = null;
       state.generation++;
     },
     true,
@@ -261,7 +351,9 @@
     triggerObserver = null;
     cancelPendingLoad(drawer());
     state.generation++;
+    state.canonicalUrl = null;
     state.selectedUrl = null;
+    state.specUrl = null;
     state.trigger = null;
     const currentDrawer = drawer();
     if (currentDrawer?.open) currentDrawer.close();

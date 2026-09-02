@@ -19,6 +19,11 @@ interface OpenApiOperation {
 }
 
 interface OpenApiDocument {
+  info?: {
+    title?: string;
+    version?: string;
+  };
+  openapi?: string;
   paths: Record<string, Record<string, OpenApiOperation>>;
 }
 
@@ -994,6 +999,7 @@ test("account migration API snippets match the CDI specification", async ({ page
       "data-api-reference-embed-href",
       `/docs/api-reference-embed/cdi/${apiRequest.embedKey}`,
     );
+    await expect(apiReference).toHaveAttribute("data-api-reference-spec-href", "/docs/api-spec/cdi.json");
 
     const languages = [
       { label: "cURL", method: `curl -X ${apiRequest.method}` },
@@ -1044,7 +1050,6 @@ test("account migration API links selectively preload a reusable reference drawe
   const links = page.locator("[data-api-reference-trigger]");
   const frames = page.locator("[data-api-reference-frame]");
   const pageUrl = page.url();
-  const canonicalUrls = apiRequestCases.map(({ canonicalPath }) => new URL(canonicalPath, pageUrl).href);
   const embedUrls = apiRequestCases.map(
     ({ embedKey }) => new URL(`/docs/api-reference-embed/cdi/${embedKey}`, pageUrl).href,
   );
@@ -1066,6 +1071,7 @@ test("account migration API links selectively preload a reusable reference drawe
   await expect(links).toHaveCount(apiRequestCases.length);
   for (const [index, apiRequest] of apiRequestCases.entries()) {
     await expect(links.nth(index)).toHaveAttribute("href", apiRequest.canonicalPath);
+    await expect(links.nth(index)).toHaveAttribute("data-api-reference-spec-href", "/docs/api-spec/cdi.json");
     await expect(links.nth(index)).toHaveAccessibleName(`API Reference: ${apiRequest.title}`);
   }
 
@@ -1100,10 +1106,9 @@ test("account migration API links selectively preload a reusable reference drawe
   await expect(page.locator("[data-api-reference-frame]:visible")).toHaveCount(1);
   await expect(preloadFrame).toHaveAttribute("src", preloadEmbedUrl);
   await expect(preloadFrame).toHaveAttribute("title", `API reference: ${preloadCase.title}`);
-  await expect(preloadDialog.getByRole("link", { name: "Open full page" })).toHaveAttribute(
-    "href",
-    canonicalUrls[preloadIndex],
-  );
+  const openPage = preloadDialog.getByRole("button", { name: "Open Page", exact: true });
+  await expect(openPage).toBeVisible();
+  await expect(openPage.locator('svg[aria-hidden="true"]')).toHaveCount(1);
   await expectEmbeddedOperation(preloadEmbedUrl, preloadCase);
   expect(embedDocumentRequests).toHaveLength(preloadedRequestCount);
   expect(requestCountFor(preloadEmbedUrl)).toBe(1);
@@ -1161,6 +1166,48 @@ test("account migration API links selectively preload a reusable reference drawe
   await page.keyboard.press("Escape");
   await expect(restoredDialog).toBeHidden();
   await expect(restoredLink).toBeFocused();
+});
+
+test("API reference drawer copies the full normalized CDI specification", async ({ context, page }) => {
+  const origin = new URL(test.info().project.use.baseURL as string).origin;
+  const specUrl = new URL("/docs/api-spec/cdi.json", origin).href;
+  const specRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url() === specUrl) specRequests.push(request.url());
+  });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin });
+  await page.goto("/docs/migration/account-migration");
+
+  const apiRequest = apiRequestCases[0];
+  await page.getByRole("link", { name: `API Reference: ${apiRequest.title}`, exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: apiRequest.title, exact: true });
+  const copy = dialog.getByRole("button", { name: "Copy", exact: true });
+  await expect.poll(() => specRequests).toEqual([specUrl]);
+  await expect(copy.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+  await copy.click();
+  await expect(dialog.getByRole("button", { name: "Copied" })).toBeVisible();
+  expect(specRequests).toEqual([specUrl]);
+
+  const copiedSpec = JSON.parse(await page.evaluate(() => navigator.clipboard.readText())) as OpenApiDocument;
+  expect(copiedSpec.openapi).toBe("3.1.1");
+  expect(copiedSpec.info).toEqual(cdiSpec.info);
+  expect(Object.keys(copiedSpec.paths).sort()).toEqual(Object.keys(cdiSpec.paths).sort());
+  expect(copiedSpec.paths[apiRequest.path]?.post?.operationId).toBe(cdiSpec.paths[apiRequest.path]?.post?.operationId);
+  expect(copiedSpec.paths[apiRequest.path]?.post?.summary).toBe(cdiSpec.paths[apiRequest.path]?.post?.summary);
+});
+
+test("API reference drawer opens the canonical operation page", async ({ page }) => {
+  await page.goto("/docs/migration/account-migration");
+
+  const apiRequest = apiRequestCases[0];
+  const canonicalUrl = new URL(apiRequest.canonicalPath, page.url()).href;
+  await page.getByRole("link", { name: `API Reference: ${apiRequest.title}`, exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: apiRequest.title, exact: true });
+
+  const openPage = dialog.getByRole("button", { name: "Open Page", exact: true });
+  await expect(openPage.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+  await openPage.click();
+  await expect(page).toHaveURL(canonicalUrl);
 });
 
 test("API reference intent signals preload hidden frames without opening the drawer", async ({ page }) => {
