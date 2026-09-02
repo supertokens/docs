@@ -157,6 +157,8 @@ export default defineConfig({
     },
     mode: "system",
     fonts: {
+      body: "inter",
+      display: "inter",
       mono: "ibm-plex-mono",
     },
   },

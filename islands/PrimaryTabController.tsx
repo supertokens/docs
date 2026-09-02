@@ -8,12 +8,17 @@ import {
   activateSelection,
   directPanels,
   dispatchSelection,
+  initializeSelectionUrlState,
+  isSelectionContextVisible,
   optionsForWrapper,
   selectedGroupValue,
   selectionEvent,
   selectionReadyEvent,
   selectionStorageKey,
+  selectionUrlStateEvent,
   type SelectionDetail,
+  writeStorage,
+  readQuery,
 } from "@/lib/docs-selection";
 
 interface PrimaryTabControllerProps {
@@ -70,7 +75,7 @@ export default function PrimaryTabController({
       const options = optionsForWrapper(wrapper);
       const activeValue = directPanels(wrapper).find((panel) => !panel.classList.contains("hidden"))?.dataset.tabId;
       const value = group
-        ? selectedGroupValue(group, options, wrapper) || defaultValue
+        ? selectedGroupValue(group, options, wrapper, isSelectionContextVisible(wrapper))
         : options.find((option) => option.value === activeValue)?.value || options[0]?.value;
       if (options.length < 2 || !value) return;
 
@@ -94,9 +99,12 @@ export default function PrimaryTabController({
       wrapper.dataset.primarySelectionReady = "true";
       setState({ host, options, value, wrapper });
 
-      const applyValue = (nextValue: string) => {
-        if (!options.some((option) => option.value === nextValue)) return;
-        setState((current) => (current ? { ...current, value: nextValue } : current));
+      const applyValue = (nextValue: string | undefined) => {
+        if (!nextValue || !options.some((option) => option.value === nextValue)) {
+          setState(undefined);
+          return;
+        }
+        setState({ host, options, value: nextValue, wrapper });
       };
       const synchronize = (event: Event) => {
         if (!group) return;
@@ -105,11 +113,20 @@ export default function PrimaryTabController({
       };
       const synchronizeStorage = (event: StorageEvent) => {
         if (!group) return;
-        if (event.key === selectionStorageKey(group) && event.newValue) applyValue(event.newValue);
+        if (event.key !== selectionStorageKey(group) || !event.newValue) return;
+        applyValue(selectedGroupValue(group, options, wrapper, isSelectionContextVisible(wrapper)));
+      };
+      const synchronizeUrl = () => {
+        if (!group) return;
+        const nextValue = selectedGroupValue(group, options, wrapper, isSelectionContextVisible(wrapper));
+        applyValue(nextValue);
+        if (nextValue && readQuery(group) === nextValue) writeStorage(selectionStorageKey(group), nextValue);
       };
       if (group) {
         window.addEventListener(selectionEvent, synchronize);
         window.addEventListener("storage", synchronizeStorage);
+        window.addEventListener(selectionUrlStateEvent, synchronizeUrl);
+        initializeSelectionUrlState();
       }
       cleanup = () => {
         delete wrapper.dataset.primarySelectionReady;
@@ -126,6 +143,7 @@ export default function PrimaryTabController({
         }
         window.removeEventListener(selectionEvent, synchronize);
         window.removeEventListener("storage", synchronizeStorage);
+        window.removeEventListener(selectionUrlStateEvent, synchronizeUrl);
       };
     });
 

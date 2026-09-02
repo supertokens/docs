@@ -14,11 +14,14 @@ import type { SelectOption } from "@/components/ui/select-field";
 import {
   dispatchSelection,
   dispatchVariant,
+  initializeSelectionUrlState,
   optionsForGroup,
-  readStorage,
+  readGlobalValue,
   selectedGroupValue,
   selectionEvent,
   selectionReadyEvent,
+  selectionUrlStateEvent,
+  variantStorageKey,
   variantEvent,
 } from "@/lib/docs-selection";
 
@@ -56,10 +59,25 @@ function tabPreference(key: string, label: string, group: TabGroup | undefined):
   return { key, label, group, options, value };
 }
 
+function variantValues(key: string): string[] {
+  return [...document.querySelectorAll<HTMLElement>(`[data-variant-content="${CSS.escape(key)}"]`)].flatMap(
+    (element) => (element.dataset.variantValue ? [element.dataset.variantValue] : []),
+  );
+}
+
 function getPreferences(): PreferenceRow[] {
   const rows: Array<PreferenceRow | undefined> = [];
   const hasUiVariants = Boolean(document.querySelector('[data-variant-content="ui-type"]'));
-  const uiType = readStorage("supertokens-docs:ui-type") === "custom" ? "custom" : "prebuilt";
+  const pageUiTypeValues = variantValues("ui-type");
+  const uiType =
+    readGlobalValue(
+      "ui-type",
+      uiTypeOptions.map((option) => option.value),
+      variantStorageKey("ui-type"),
+      pageUiTypeValues.length > 0 ? pageUiTypeValues : uiTypeOptions.map((option) => option.value),
+    ) === "custom"
+      ? "custom"
+      : "prebuilt";
 
   if (hasUiVariants) {
     rows.push({
@@ -231,11 +249,14 @@ export default function DocsPreferences() {
     setRows(getPreferences());
     window.addEventListener(selectionEvent, refresh);
     window.addEventListener(variantEvent, refresh);
+    window.addEventListener(selectionUrlStateEvent, refresh);
     document.addEventListener(selectionReadyEvent, refresh);
     document.addEventListener("astro:page-load", refresh);
+    initializeSelectionUrlState();
     return () => {
       window.removeEventListener(selectionEvent, refresh);
       window.removeEventListener(variantEvent, refresh);
+      window.removeEventListener(selectionUrlStateEvent, refresh);
       document.removeEventListener(selectionReadyEvent, refresh);
       document.removeEventListener("astro:page-load", refresh);
     };

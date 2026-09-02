@@ -38,28 +38,59 @@ const matchesDefaultFramework =
 </div>
 
 <script>
-  import { tabGroupDefault, tabGroups, type TabGroup } from "./tab-groups";
-  import { readStorage, selectionEvent, selectionStorageKey } from "../lib/docs-selection";
+  import { tabGroupDefault, type TabGroup } from "./tab-groups";
+  import {
+    ensureQuery,
+    initializeSelectionUrlState,
+    isSelectionContextVisible,
+    readContextualQuery,
+    readStorage,
+    resolveSelection,
+    selectionEvent,
+    selectionStorageKey,
+    selectionUrlStateEvent,
+    valuesForSelectionGroup,
+    valuesForSelectionQuery,
+  } from "../lib/docs-selection";
 
-  const selectedValue = (group: TabGroup): string => {
+  const selectedValue = (group: TabGroup, contextIsVisible: boolean): string => {
+    const values = valuesForSelectionGroup(group);
     const storedValue = readStorage(selectionStorageKey(group));
-    const values = Object.values(tabGroups[group].options as Record<string, string>);
-    return storedValue && values.includes(storedValue) ? storedValue : tabGroupDefault(group);
+    const fallbackValue = resolveSelection({
+      availableValues: values,
+      defaultValue: tabGroupDefault(group),
+      storedValue,
+    });
+    return (
+      readContextualQuery(group, values, valuesForSelectionQuery(group), contextIsVisible, fallbackValue) ||
+      fallbackValue ||
+      tabGroupDefault(group)
+    );
   };
 
   const updateDynamicContent = () => {
     for (const content of document.querySelectorAll<HTMLElement>("[data-docs-dynamic-content]")) {
       const { framework, frameworkGroup, language } = content.dataset;
-      const languageMatches = !language || selectedValue("backend-language") === language;
+      const contextIsVisible = Boolean(content.parentElement && isSelectionContextVisible(content.parentElement));
+      const languageValue = selectedValue("backend-language", contextIsVisible);
+      if (contextIsVisible && language) ensureQuery("backend-language", languageValue);
+      const languageMatches = !language || languageValue === language;
+      const frameworkValue =
+        languageMatches && frameworkGroup
+          ? selectedValue(frameworkGroup as TabGroup, contextIsVisible)
+          : undefined;
+      if (contextIsVisible && frameworkValue) ensureQuery(frameworkGroup as TabGroup, frameworkValue);
       const frameworkMatches =
-        !framework || (Boolean(frameworkGroup) && selectedValue(frameworkGroup as TabGroup) === framework);
+        languageMatches && (!framework || (Boolean(frameworkGroup) && frameworkValue === framework));
       content.hidden = !(languageMatches && frameworkMatches);
     }
   };
 
   updateDynamicContent();
+  initializeSelectionUrlState();
   document.addEventListener("astro:page-load", updateDynamicContent);
   window.addEventListener(selectionEvent, updateDynamicContent);
+  window.addEventListener(selectionUrlStateEvent, updateDynamicContent);
   window.addEventListener("storage", (event) => {
     if (event.key?.startsWith("supertokens-docs:selection:")) updateDynamicContent();
   });

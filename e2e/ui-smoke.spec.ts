@@ -190,12 +190,65 @@ test("desktop header brand and section links are vertically aligned", async ({ p
   expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(1);
 });
 
+test("desktop section tabs clearly identify the active section", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/docs");
+
+  const documentation = page.getByRole("link", { name: "Documentation", exact: true });
+  const references = page.getByRole("link", { name: "References", exact: true });
+  await expect(documentation).toHaveAttribute("aria-current", "page");
+  await expect(references).not.toHaveAttribute("aria-current");
+  expect(await documentation.evaluate((link) => getComputedStyle(link).backgroundColor)).not.toBe(
+    await references.evaluate((link) => getComputedStyle(link).backgroundColor),
+  );
+
+  await references.click();
+  await expect(page).toHaveURL(/\/docs\/references\/?$/u);
+  await expect(references).toHaveAttribute("aria-current", "page");
+  await expect(documentation).not.toHaveAttribute("aria-current");
+});
+
 test("active sidebar item has no accent edge", async ({ page }) => {
   await page.goto("/docs/quickstart");
 
   const activeLink = page.getByRole("link", { name: "Quickstart Guide", exact: true });
   await expect(activeLink).toBeVisible();
   await expect(activeLink).not.toHaveCSS("box-shadow", /inset/);
+});
+
+test("TOC activation does not change item geometry", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/docs/quickstart");
+
+  const toc = page.getByRole("navigation", { name: "On this page" });
+  const target = toc.locator('a[href="#1-integrate-the-frontend-sdk"]');
+  const before = await target.boundingBox();
+  await page.locator('[id="1-integrate-the-frontend-sdk"]').evaluate((heading) => {
+    window.scrollTo(0, heading.getBoundingClientRect().top + window.scrollY - 70);
+    dispatchEvent(new Event("scroll"));
+  });
+  await expect(target).toHaveAttribute("aria-current", "location");
+  const after = await target.boundingBox();
+  expect({ width: after?.width, x: after?.x }).toEqual({ width: before?.width, x: before?.x });
+});
+
+test("dark theme softens page contrast and preferences keep readable text", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/docs/quickstart");
+
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(24, 24, 26)");
+  await expect(page.locator("body")).toHaveCSS("color", "rgb(237, 238, 240)");
+
+  await page.getByRole("button", { name: /Configure example preferences/ }).click();
+  const minimumFontSize = await page.getByRole("dialog", { name: "Your Setup" }).evaluate((dialog) => {
+    const visibleText = [...dialog.querySelectorAll<HTMLElement>("*")].filter((element) => {
+      const style = getComputedStyle(element);
+      return element.textContent?.trim() && style.display !== "none" && style.visibility !== "hidden";
+    });
+    return Math.min(...visibleText.map((element) => Number.parseFloat(getComputedStyle(element).fontSize)));
+  });
+  expect(minimumFontSize).toBeGreaterThanOrEqual(12);
 });
 
 test("references overview keeps its page title and card icon", async ({ page }) => {
@@ -347,6 +400,163 @@ test("search results distinguish documentation sections", async ({ page }) => {
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Introduction", { exact: true })).toHaveCount(1);
   await expect(dialog.getByText("References", { exact: true })).toBeVisible();
+});
+
+test("search discloses additional filters without a nested scrolling strip", async ({ page }) => {
+  await page.goto("/docs");
+  await page.getByRole("button", { name: "Search" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("combobox", { name: "Search docs" }).fill("session");
+  const filters = dialog.locator("[data-blume-search-filters]");
+  const pills = filters.locator("button:not([data-st-filter-disclosure])");
+  const more = filters.getByRole("button", { name: "Show more search filters" });
+  await expect(more).toBeVisible();
+  expect(await pills.count()).toBeGreaterThan(4);
+  await expect(pills.locator(":visible")).toHaveCount(4);
+  await expect(more).toHaveText("More");
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await expect(more).toHaveAttribute("aria-controls", await filters.getAttribute("id"));
+  await expect(filters).toHaveCSS("overflow-y", "visible");
+
+  await more.click();
+  const less = filters.getByRole("button", { name: "Show fewer search filters" });
+  await expect(pills.locator(":visible")).toHaveCount(await pills.count());
+  await expect(less).toHaveText("Less");
+  await expect(less).toHaveAttribute("aria-expanded", "true");
+  await expect(less).toBeFocused();
+  expect(await filters.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
+});
+
+test("query selections override storage and persist the shared state", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("supertokens-docs:ui-type", "prebuilt");
+    localStorage.setItem("supertokens-docs:selection:frontend-custom-ui", "mobile");
+    localStorage.setItem("supertokens-docs:selection:backend-language", "nodejs");
+  });
+  await page.goto("/docs/quickstart?ui=custom&frontend=web&backend=go");
+
+  await expect(page.getByRole("group", { name: "UI type" }).getByRole("radio", { name: /^Custom UI/ })).toBeChecked();
+  await expect(page.getByRole("combobox", { name: "Platform" }).first()).toContainText("Web");
+  await expect(page.getByRole("combobox", { name: "Language" }).first()).toContainText("Go");
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        backend: localStorage.getItem("supertokens-docs:selection:backend-language"),
+        frontend: localStorage.getItem("supertokens-docs:selection:frontend-custom-ui"),
+        ui: localStorage.getItem("supertokens-docs:ui-type"),
+      })),
+    )
+    .toEqual({ backend: "go", frontend: "web", ui: "custom" });
+});
+
+test("stored selections remain the fallback when the URL omits them", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("supertokens-docs:ui-type", "custom");
+    localStorage.setItem("supertokens-docs:selection:frontend-custom-ui", "mobile");
+    localStorage.setItem("supertokens-docs:selection:backend-language", "python");
+  });
+  await page.goto("/docs/quickstart?campaign=qa");
+
+  await expect(page.getByRole("group", { name: "UI type" }).getByRole("radio", { name: /^Custom UI/ })).toBeChecked();
+  await expect(page.getByRole("combobox", { name: "Platform" }).first()).toContainText("Mobile");
+  await expect(page.getByRole("combobox", { name: "Language" }).first()).toContainText("Python");
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const query = new URL(location.href).searchParams;
+        return {
+          backend: query.get("backend"),
+          campaign: query.get("campaign"),
+          frontend: query.get("frontend"),
+          ui: query.get("ui"),
+        };
+      }),
+    )
+    .toEqual({ backend: "python", campaign: "qa", frontend: "mobile", ui: "custom" });
+});
+
+test("preference controls share selections through URL and storage", async ({ page }) => {
+  await page.goto("/docs/quickstart?campaign=qa#2-integrate-the-backend-sdk");
+
+  const frontend = page.locator('[data-docs-selection-group="frontend-prebuilt-ui"]').first();
+  const packageManager = frontend.getByRole("combobox", { name: "Package manager" });
+  await packageManager.click();
+  await page.getByRole("option", { name: "pnpm", exact: true }).click();
+  await frontend.getByRole("combobox", { name: "Frontend framework" }).click();
+  await page.getByRole("option", { name: "Angular", exact: true }).click();
+
+  const backend = page
+    .getByRole("heading", { name: /2\.3 Add the SuperTokens APIs and configure CORS/ })
+    .locator('~ .st-code-group[data-docs-selection-group="backend-language"]')
+    .first();
+  await backend.getByRole("combobox", { name: "Language" }).click();
+  await page.getByRole("option", { name: "Go", exact: true }).click();
+  await backend.getByRole("combobox", { name: "Go framework" }).click();
+  await page.getByRole("option", { name: "Gin", exact: true }).click();
+  await page
+    .getByRole("group", { name: "UI type" })
+    .getByRole("radio", { name: /^Custom UI/ })
+    .click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        hash: location.hash,
+        query: (() => {
+          const params = new URL(location.href).searchParams;
+          return {
+            backend: params.get("backend"),
+            campaign: params.get("campaign"),
+            frontend: params.get("frontend"),
+            framework: params.get("backend-framework"),
+            packageManager: params.get("package-manager"),
+            ui: params.get("ui"),
+          };
+        })(),
+        storage: {
+          backend: localStorage.getItem("supertokens-docs:selection:backend-language"),
+          framework: localStorage.getItem("supertokens-docs:selection:go-frameworks"),
+          frontend: localStorage.getItem("supertokens-docs:selection:frontend-prebuilt-ui"),
+          packageManager: localStorage.getItem("supertokens-docs:selection:package-managers"),
+          ui: localStorage.getItem("supertokens-docs:ui-type"),
+        },
+      })),
+    )
+    .toEqual({
+      hash: "#2-integrate-the-backend-sdk",
+      query: {
+        backend: "go",
+        campaign: "qa",
+        frontend: "web",
+        framework: "gin",
+        packageManager: "pnpm",
+        ui: "custom",
+      },
+      storage: { backend: "go", framework: "gin", frontend: "angular", packageManager: "pnpm", ui: "custom" },
+    });
+});
+
+test("popstate reapplies query selections", async ({ page }) => {
+  await page.goto("/docs/quickstart?frontend=reactjs");
+  const framework = page
+    .locator('[data-docs-selection-group="frontend-prebuilt-ui"]')
+    .first()
+    .getByRole("combobox", { name: "Frontend framework" });
+  await expect(framework).toContainText("React");
+
+  await page.evaluate(() => {
+    history.pushState({}, "", "?frontend=angular");
+    dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(framework).toContainText("Angular");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("supertokens-docs:selection:frontend-prebuilt-ui")))
+    .toBe("angular");
+
+  await page.goBack();
+  await expect(page).toHaveURL(/frontend=reactjs/u);
+  await expect(framework).toContainText("React");
 });
 
 test("backend language and framework use synchronized header selects", async ({ page }) => {

@@ -87,6 +87,10 @@ const componentProps = {
     activateSelection,
     directPanels,
     dispatchSelection,
+    ensureQuery,
+    initializeSelectionUrlState,
+    isSelectionContextVisible,
+    readContextualQuery,
     readStorage,
     removeStorage,
     resolveSelection,
@@ -95,8 +99,11 @@ const componentProps = {
     selectionContentReadyEvent,
     selectionReadyEvent,
     selectionStorageKey,
+    selectionUrlStateEvent,
     variantEvent,
     type SelectionDetail,
+    valuesForSelectionGroup,
+    valuesForSelectionQuery,
     writeStorage,
   } from "../lib/docs-selection";
 
@@ -138,7 +145,34 @@ const componentProps = {
     });
   };
 
-  const activateLocalSelection = (wrapper: HTMLElement, value: string) => {
+  const canonicalizeVisibleSelectionGroups = () => {
+    for (const wrapper of document.querySelectorAll<HTMLElement>("[data-docs-selection-group]")) {
+      const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
+      if (!group || !isSelectionContextVisible(wrapper)) continue;
+      const groupValues = valuesForSelectionGroup(group);
+      const fallbackValue = resolveSelection({
+        availableValues: groupValues,
+        defaultValue: tabGroupDefault(group),
+        storedValue: readStorage(selectionStorageKey(group)),
+      });
+      let queryValue = readContextualQuery(
+        group,
+        groupValues,
+        valuesForSelectionQuery(group),
+        true,
+        fallbackValue,
+      );
+      const value = resolveSelection({
+        availableValues: groupValues,
+        defaultValue: tabGroupDefault(group),
+        queryValue,
+        storedValue: readStorage(selectionStorageKey(group)),
+      });
+      if (value) ensureQuery(group, value);
+    }
+  };
+
+  const activateLocalSelection = (wrapper: HTMLElement, value: string, hideWhenUnavailable = false) => {
     const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
     const panels = directPanels(wrapper);
     const availableValues = panels.map((panel) => panel.dataset.tabId).filter((candidate): candidate is string => Boolean(candidate));
@@ -149,7 +183,7 @@ const componentProps = {
     }
     const fallback = resolveSelection({ availableValues, defaultValue: tabGroupDefault(group) });
     wrapper.toggleAttribute("data-docs-selection-unavailable", true);
-    if (wrapper.dataset.docsSelectionPassive === "true") {
+    if (hideWhenUnavailable || wrapper.dataset.docsSelectionPassive === "true") {
       for (const panel of panels) panel.classList.add("hidden");
       return false;
     }
@@ -188,22 +222,50 @@ const componentProps = {
       const platformStorageKey = "supertokens-docs:platform-type";
       const migratedValue = group === "frontend-custom-ui" ? readStorage(platformStorageKey) : null;
       if (group === "frontend-custom-ui" && migratedValue !== null) removeStorage(platformStorageKey);
-      const resolution = resolveSelectionState({
-        availableValues: values,
+      const contextIsVisible = isSelectionContextVisible(wrapper);
+      const groupValues = valuesForSelectionGroup(group);
+      const fallbackValue = resolveSelection({
+        availableValues: groupValues,
         defaultValue: tabGroupDefault(group),
         legacyValue,
         migratedValue,
         storedValue,
       });
+      let queryValue = readContextualQuery(
+        group,
+        groupValues,
+        valuesForSelectionQuery(group),
+        contextIsVisible,
+        fallbackValue,
+      );
+      const canonicalValue = queryValue || fallbackValue;
+      if (!queryValue && canonicalValue && contextIsVisible) {
+        ensureQuery(group, canonicalValue);
+        queryValue = canonicalValue;
+      }
+      const resolution = resolveSelectionState({
+        availableValues: values,
+        defaultValue: tabGroupDefault(group),
+        legacyValue,
+        migratedValue,
+        queryAvailableValues: valuesForSelectionQuery(group),
+        queryValue,
+        storedValue,
+      });
       if (!resolution.value) continue;
 
-      if (wrapper.dataset.docsSelectionPassive === "true" && resolution.unavailableStoredValue && storedValue) {
+      if (queryValue && !values.has(queryValue)) {
+        activateLocalSelection(wrapper, queryValue, true);
+      } else if (wrapper.dataset.docsSelectionPassive === "true" && resolution.unavailableStoredValue && storedValue) {
         activateLocalSelection(wrapper, storedValue);
       } else {
         activateLocalSelection(wrapper, resolution.value);
-        wrapper.toggleAttribute("data-docs-selection-unavailable", resolution.unavailableStoredValue);
+        wrapper.toggleAttribute(
+          "data-docs-selection-unavailable",
+          resolution.unavailableStoredValue || Boolean(queryValue && !values.has(queryValue)),
+        );
       }
-      if (resolution.shouldPersist) writeStorage(selectionStorageKey(group), resolution.value);
+      if (contextIsVisible && resolution.shouldPersist) writeStorage(selectionStorageKey(group), resolution.value);
       wrapper.dataset.groupSelectionReady = "true";
       document.dispatchEvent(new CustomEvent(selectionReadyEvent, { detail: { wrapperId: wrapper.id } }));
 
@@ -218,6 +280,7 @@ const componentProps = {
       wrapper.addEventListener("click", persistSelection);
       wrapper.addEventListener("keydown", persistSelection);
     }
+    canonicalizeVisibleSelectionGroups();
     updateCodeGroups();
   };
 
@@ -230,7 +293,7 @@ const componentProps = {
       for (const wrapper of document.querySelectorAll<HTMLElement>(
         `[data-docs-selection-group="${detail.group}"]`,
       )) {
-        activateLocalSelection(wrapper, detail.value);
+        activateLocalSelection(wrapper, detail.value, true);
       }
       updateCodeGroups();
     });
@@ -239,14 +302,95 @@ const componentProps = {
       if (!event.key?.startsWith(prefix) || !event.newValue) return;
       const group = event.key.slice(prefix.length);
       for (const wrapper of document.querySelectorAll<HTMLElement>(`[data-docs-selection-group="${group}"]`)) {
-        activateLocalSelection(wrapper, event.newValue);
+        const values = directPanels(wrapper).map((panel) => panel.dataset.tabId).filter(Boolean);
+        const queryAvailableValues = valuesForSelectionQuery(group as TabGroup);
+        const contextIsVisible = isSelectionContextVisible(wrapper);
+        const groupValues = valuesForSelectionGroup(group as TabGroup);
+        const fallbackValue = resolveSelection({
+          availableValues: groupValues,
+          defaultValue: tabGroupDefault(group as TabGroup),
+          storedValue: event.newValue,
+        });
+        let queryValue = readContextualQuery(
+          group,
+          groupValues,
+          queryAvailableValues,
+          contextIsVisible,
+          fallbackValue,
+        );
+        if (!queryValue && contextIsVisible && fallbackValue) {
+          ensureQuery(group, fallbackValue);
+          queryValue = fallbackValue;
+        }
+        const value = resolveSelection({
+          availableValues: values,
+          queryAvailableValues,
+          queryValue,
+          storedValue: event.newValue,
+        });
+        if (value) activateLocalSelection(wrapper, value, Boolean(queryValue));
       }
       updateCodeGroups();
     });
-    window.addEventListener(variantEvent, updateCodeGroups);
-    document.addEventListener(selectionContentReadyEvent, updateCodeGroups);
+    window.addEventListener(selectionUrlStateEvent, () => {
+      for (const wrapper of document.querySelectorAll<HTMLElement>("[data-docs-selection-group]")) {
+        const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
+        if (!group) continue;
+        const values = directPanels(wrapper).map((panel) => panel.dataset.tabId).filter(Boolean);
+        const storedValue = readStorage(selectionStorageKey(group));
+        const queryAvailableValues = valuesForSelectionQuery(group);
+        const contextIsVisible = isSelectionContextVisible(wrapper);
+        const groupValues = valuesForSelectionGroup(group);
+        const fallbackValue = resolveSelection({
+          availableValues: groupValues,
+          defaultValue: tabGroupDefault(group),
+          storedValue,
+        });
+        let queryValue = readContextualQuery(
+          group,
+          groupValues,
+          queryAvailableValues,
+          contextIsVisible,
+          fallbackValue,
+        );
+        if (!queryValue && contextIsVisible && fallbackValue) {
+          ensureQuery(group, fallbackValue);
+          queryValue = fallbackValue;
+        }
+        const resolution = resolveSelectionState({
+          availableValues: values,
+          defaultValue: tabGroupDefault(group),
+          queryAvailableValues,
+          queryValue,
+          storedValue,
+        });
+        if (!resolution.value) continue;
+        activateLocalSelection(wrapper, resolution.value, Boolean(queryValue));
+        wrapper.toggleAttribute(
+          "data-docs-selection-unavailable",
+          resolution.unavailableStoredValue || Boolean(queryValue && !values.includes(queryValue)),
+        );
+        if (isSelectionContextVisible(wrapper) && resolution.shouldPersist) {
+          writeStorage(selectionStorageKey(group), resolution.value);
+        }
+      }
+      updateCodeGroups();
+    });
+    window.addEventListener(variantEvent, () => {
+      queueMicrotask(() => {
+        canonicalizeVisibleSelectionGroups();
+        updateCodeGroups();
+      });
+    });
+    document.addEventListener(selectionContentReadyEvent, () => {
+      queueMicrotask(() => {
+        canonicalizeVisibleSelectionGroups();
+        updateCodeGroups();
+      });
+    });
   }
 
+  initializeSelectionUrlState();
   initializeSelectionGroups();
 </script>
 

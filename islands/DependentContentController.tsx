@@ -2,16 +2,25 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { PresentedOption } from "@/components/option-presentation";
+import { tabGroupNames, type TabGroup } from "@/components/tab-groups";
 import { SelectField, type SelectOption } from "@/components/ui/select-field";
 import { firstVisibleOwner, isVisibilityChainVisible } from "@/lib/dependent-content-state";
 import {
   dispatchSelection,
+  ensureQuery,
+  initializeSelectionUrlState,
+  isSelectionContextVisible,
+  readContextualQuery,
   readStorage,
   resolveSelection,
   selectionContentReadyEvent,
   selectionEvent,
   selectionStorageKey,
+  selectionUrlStateEvent,
   type SelectionDetail,
+  valuesForSelectionGroup,
+  valuesForSelectionQuery,
+  variantEvent,
   writeStorage,
 } from "@/lib/docs-selection";
 
@@ -41,6 +50,22 @@ function contentOptions(wrapper: HTMLElement): ContentOption[] {
     const value = section.dataset.selectionValue;
     return label && value ? [{ label, section, value }] : [];
   });
+}
+
+function pageValues(group: string): string[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      `[data-docs-dependent-content="${CSS.escape(group)}"] > [data-docs-content-option]`,
+    ),
+  ].flatMap((section) => (section.dataset.selectionValue ? [section.dataset.selectionValue] : []));
+}
+
+function globalValues(group: string): string[] {
+  return tabGroupNames.includes(group as TabGroup) ? valuesForSelectionQuery(group as TabGroup) : pageValues(group);
+}
+
+function contextValues(group: string): string[] {
+  return tabGroupNames.includes(group as TabGroup) ? valuesForSelectionGroup(group as TabGroup) : pageValues(group);
 }
 
 function setVisibleOption(options: ContentOption[], value: string): boolean {
@@ -131,26 +156,67 @@ export default function DependentContentController({
     if (nextOptions.length === 0) return;
 
     const availableValues = nextOptions.map((option) => option.value);
-    const storedValue = readStorage(selectionStorageKey(group));
-    const hasUnavailableStoredValue = Boolean(storedValue && !availableValues.includes(storedValue));
-    const nextValue = hasUnavailableStoredValue
-      ? undefined
-      : resolveSelection({
-          availableValues,
-          defaultValue,
-          legacyValue: readStorage(`docusaurus.tab.${group}`),
-          storedValue,
-        });
-    if (!nextValue && !hasUnavailableStoredValue) return;
+    const resolveCurrent = () => {
+      const storedValue = readStorage(selectionStorageKey(group));
+      const queryAvailableValues = globalValues(group);
+      const availableContextValues = contextValues(group);
+      const fallbackValue = resolveSelection({
+        availableValues: availableContextValues,
+        defaultValue,
+        legacyValue: readStorage(`docusaurus.tab.${group}`),
+        storedValue,
+      });
+      const contextIsVisible = isSelectionContextVisible(wrapper);
+      let queryValue = readContextualQuery(
+        group,
+        availableContextValues,
+        queryAvailableValues,
+        contextIsVisible,
+        fallbackValue,
+      );
+      if (!queryValue && contextIsVisible && fallbackValue) {
+        ensureQuery(group, fallbackValue);
+        queryValue = fallbackValue;
+      }
+      const hasUnavailableStoredValue = Boolean(storedValue && !availableValues.includes(storedValue));
+      const resolvedValue = resolveSelection({
+        availableValues,
+        defaultValue,
+        legacyValue: readStorage(`docusaurus.tab.${group}`),
+        queryAvailableValues,
+        queryValue,
+        storedValue,
+      });
+      const canonicalValue = resolveSelection({
+        availableValues: availableContextValues,
+        defaultValue,
+        legacyValue: readStorage(`docusaurus.tab.${group}`),
+        queryValue,
+        storedValue,
+      });
+      return {
+        canonicalValue,
+        unavailable:
+          Boolean(resolvedValue && !availableValues.includes(resolvedValue)) ||
+          Boolean(!queryValue && hasUnavailableStoredValue),
+        value: !queryValue && hasUnavailableStoredValue ? undefined : resolvedValue,
+        queryValue,
+      };
+    };
+    const initial = resolveCurrent();
+    if (!initial.value && !initial.unavailable) return;
 
-    for (const option of nextOptions) option.section.hidden = hasUnavailableStoredValue;
-    if (nextValue) setVisibleOption(nextOptions, nextValue);
+    for (const option of nextOptions) option.section.hidden = initial.unavailable;
+    if (initial.value) setVisibleOption(nextOptions, initial.value);
     document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
     wrapper.dataset.selectionReady = "true";
-    wrapper.toggleAttribute("data-docs-selection-unavailable", hasUnavailableStoredValue);
-    if (nextValue && !storedValue) writeStorage(selectionStorageKey(group), nextValue);
+    wrapper.toggleAttribute("data-docs-selection-unavailable", initial.unavailable);
+    if (initial.value && initial.queryValue === initial.value) writeStorage(selectionStorageKey(group), initial.value);
+    if (!effectivePassive && initial.canonicalValue && isSelectionContextVisible(wrapper)) {
+      ensureQuery(group, initial.canonicalValue);
+    }
     setOptions(nextOptions);
-    setValue(nextValue);
+    setValue(initial.unavailable ? undefined : initial.value);
 
     const applyValue = (nextSelection: string) => {
       const isAvailable = setVisibleOption(nextOptions, nextSelection);
@@ -164,9 +230,40 @@ export default function DependentContentController({
     const synchronize = (event: Event) => {
       const detail = (event as CustomEvent<SelectionDetail>).detail;
       if (detail?.group === group) applyValue(detail.value);
+      else scheduleVisibilityRefresh();
     };
     const synchronizeStorage = (event: StorageEvent) => {
-      if (event.key === selectionStorageKey(group) && event.newValue) applyValue(event.newValue);
+      if (event.key !== selectionStorageKey(group) || !event.newValue) return;
+      synchronizeUrl();
+    };
+    const synchronizeUrl = () => {
+      const resolved = resolveCurrent();
+      if (resolved.value) applyValue(resolved.value);
+      else {
+        for (const option of nextOptions) option.section.hidden = true;
+        wrapper.toggleAttribute("data-docs-selection-unavailable", resolved.unavailable);
+        setValue(undefined);
+        document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
+      }
+      if (resolved.value && resolved.queryValue === resolved.value) {
+        writeStorage(selectionStorageKey(group), resolved.value);
+      }
+      if (!effectivePassive && resolved.canonicalValue && isSelectionContextVisible(wrapper)) {
+        ensureQuery(group, resolved.canonicalValue);
+      }
+    };
+    let contextWasVisible = isSelectionContextVisible(wrapper);
+    let visibilityRefreshScheduled = false;
+    const scheduleVisibilityRefresh = () => {
+      if (visibilityRefreshScheduled) return;
+      visibilityRefreshScheduled = true;
+      queueMicrotask(() => {
+        visibilityRefreshScheduled = false;
+        if (!wrapper.isConnected) return;
+        const contextIsVisible = isSelectionContextVisible(wrapper);
+        if (contextIsVisible && !contextWasVisible) synchronizeUrl();
+        contextWasVisible = contextIsVisible;
+      });
     };
     const cleanUpSelection = () => {
       delete wrapper.dataset.selectionReady;
@@ -174,10 +271,17 @@ export default function DependentContentController({
       for (const option of nextOptions) option.section.hidden = false;
       window.removeEventListener(selectionEvent, synchronize);
       window.removeEventListener("storage", synchronizeStorage);
+      window.removeEventListener(selectionUrlStateEvent, synchronizeUrl);
+      window.removeEventListener(variantEvent, scheduleVisibilityRefresh);
+      document.removeEventListener(selectionContentReadyEvent, scheduleVisibilityRefresh);
     };
 
     window.addEventListener(selectionEvent, synchronize);
     window.addEventListener("storage", synchronizeStorage);
+    window.addEventListener(selectionUrlStateEvent, synchronizeUrl);
+    window.addEventListener(variantEvent, scheduleVisibilityRefresh);
+    document.addEventListener(selectionContentReadyEvent, scheduleVisibilityRefresh);
+    initializeSelectionUrlState();
     if (effectivePassive) return cleanUpSelection;
 
     const context = controllerContext(wrapper, fallbackHost);

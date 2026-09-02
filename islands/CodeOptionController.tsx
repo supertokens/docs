@@ -7,12 +7,21 @@ import { SelectField, type SelectOption } from "@/components/ui/select-field";
 import {
   directPanels,
   dispatchSelection,
+  initializeSelectionUrlState,
+  isSelectionContextVisible,
+  readQuery,
   readStorage,
+  replaceQuery,
   selectionContentReadyEvent,
   selectionEvent,
   selectionReadyEvent,
   selectionStorageKey,
+  selectionUrlStateEvent,
   type SelectionDetail,
+  valuesForSelectionGroup,
+  valuesForSelectionQuery,
+  variantEvent,
+  writeStorage,
 } from "@/lib/docs-selection";
 import { parseCodeOption, resolveSecondarySelection } from "@/lib/code-group-options";
 
@@ -80,8 +89,36 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
         const surfaces = surfacesForPanel(panel);
         const storedOptions = surfaces.map((surface) => surface.element.dataset.codeOption);
         const initialGroup = surfaces.find((surface) => surface.group)?.group;
-        const stored = initialGroup ? readStorage(selectionStorageKey(initialGroup)) : undefined;
-        const selection = resolveSecondarySelection(storedOptions, stored);
+        const availableValues = surfaces
+          .filter((surface) => surface.group === initialGroup)
+          .map((surface) => surface.value)
+          .filter((value): value is string => Boolean(value));
+        const storedValue = initialGroup ? readStorage(selectionStorageKey(initialGroup)) : null;
+        const groupValues = initialGroup ? valuesForSelectionGroup(initialGroup) : [];
+        const fallbackValue = initialGroup
+          ? resolveSecondarySelection(
+              groupValues.map((value) => `${initialGroup}:${value}`),
+              storedValue,
+            )?.value
+          : undefined;
+        const queryValue = initialGroup ? readQuery(initialGroup) : null;
+        const queryIsValid = Boolean(
+          initialGroup && queryValue && valuesForSelectionQuery(initialGroup).includes(queryValue),
+        );
+        const queryMatchesGroup = Boolean(queryIsValid && queryValue && groupValues.includes(queryValue));
+        const globalValue = queryMatchesGroup ? queryValue : fallbackValue;
+        if (initialGroup && globalValue && !availableValues.includes(globalValue)) {
+          for (const surface of surfaces) {
+            if (surface.group) surface.element.hidden = true;
+          }
+          panel.setAttribute("data-docs-secondary-selection-unavailable", "");
+          setState(undefined);
+          wrapper.dataset.docsPassiveCodeResolved = "true";
+          if (passive) wrapper.hidden = true;
+          document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
+          return;
+        }
+        const selection = resolveSecondarySelection(storedOptions, globalValue);
         panel.toggleAttribute("data-docs-code-option-invalid", Boolean(selection?.invalid));
         if (!selection || selection.invalid || !selection.value) {
           for (const surface of surfaces) surface.element.hidden = false;
@@ -100,7 +137,7 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
           )?.[0];
           choices.set(surface.value, title ?? surface.value);
         }
-        if (passive && stored && stored !== value) {
+        if (passive && globalValue && globalValue !== value) {
           for (const surface of surfaces) {
             if (surface.group) surface.element.hidden = true;
           }
@@ -111,9 +148,16 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
           return;
         }
         setVisibleSurfaces(surfaces, group, value);
-        panel.toggleAttribute("data-docs-secondary-selection-unavailable", Boolean(stored && stored !== value));
+        panel.toggleAttribute(
+          "data-docs-secondary-selection-unavailable",
+          Boolean(globalValue && globalValue !== value),
+        );
         wrapper.dataset.docsPassiveCodeResolved = "true";
         if (passive) wrapper.hidden = false;
+        if (isSelectionContextVisible(wrapper)) {
+          if (queryValue !== value) replaceQuery(group, value);
+          writeStorage(selectionStorageKey(group), value);
+        }
         document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
         setState({
           group,
@@ -134,6 +178,9 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
       wrapper.addEventListener("keydown", update);
       window.addEventListener(selectionEvent, synchronize);
       window.addEventListener("storage", synchronizeStorage);
+      window.addEventListener(selectionUrlStateEvent, update);
+      window.addEventListener(variantEvent, update);
+      initializeSelectionUrlState();
       document.addEventListener(selectionReadyEvent, update);
       update();
       cleanup = () => {
@@ -142,6 +189,8 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
         wrapper.removeEventListener("keydown", update);
         window.removeEventListener(selectionEvent, synchronize);
         window.removeEventListener("storage", synchronizeStorage);
+        window.removeEventListener(selectionUrlStateEvent, update);
+        window.removeEventListener(variantEvent, update);
         document.removeEventListener(selectionReadyEvent, update);
       };
     });
