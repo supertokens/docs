@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canonicalSelectionUrl,
+  DocsSelectionStore,
   optionsForGroup,
   readContextualQuery,
   resolveSelection,
@@ -11,6 +12,16 @@ import {
   selectionUrl,
   valuesForSelectionQuery,
 } from "./docs-selection";
+
+function memoryStorage(initial: Record<string, string> = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    removeItem: (key: string) => values.delete(key),
+    setItem: (key: string, value: string) => values.set(key, value),
+    values,
+  };
+}
 
 function wrapper(options: Array<[value: string, title: string]>, active = true): HTMLElement {
   const panels = options.map(([tabId, title]) => ({ dataset: { tabId, title } }));
@@ -106,6 +117,170 @@ describe("resolveSelection", () => {
         storedValue: "koa",
       }),
     ).toEqual({ shouldPersist: false, unavailableStoredValue: true, value: "express" });
+  });
+});
+
+describe("DocsSelectionStore", () => {
+  it("provides stable defaults without browser initialization", () => {
+    const store = new DocsSelectionStore();
+
+    expect(store.get("backend-language")).toBe("nodejs");
+    expect(store.get("node-frameworks")).toBe("express");
+    expect(store.get("ui-type")).toBe("prebuilt");
+    expect(store.getServerSnapshot()).toBe(store.getSnapshot());
+  });
+
+  it("hydrates query values before storage and ignores invalid external values", () => {
+    const store = new DocsSelectionStore();
+    store.init(
+      memoryStorage({
+        "supertokens-docs:selection:backend-language": "python",
+        "supertokens-docs:selection:go-frameworks": "chi",
+        "supertokens-docs:ui-type": "invalid",
+      }),
+    );
+
+    store.hydrate(new URLSearchParams("backend=go&backend-framework=gin"));
+
+    expect(store.get("backend-language")).toBe("go");
+    expect(store.get("go-frameworks")).toBe("gin");
+    expect(store.get("ui-type")).toBe("prebuilt");
+  });
+
+  it("commits a transaction before notifying and replaces the URL once", () => {
+    const store = new DocsSelectionStore();
+    const storage = memoryStorage();
+    const urls: string[] = [];
+    store.init(storage, {
+      dispatch: () => undefined,
+      href: () => "https://example.com/docs?campaign=qa#setup",
+      replace: (url) => urls.push(url),
+    });
+    const snapshots: Array<[string, string]> = [];
+    store.subscribe("backend-language", () => {
+      snapshots.push([store.get("backend-language"), store.get("go-frameworks")]);
+    });
+
+    store.transaction([
+      { key: "backend-language", value: "go" },
+      { key: "go-frameworks", value: "gin" },
+    ]);
+
+    expect(snapshots).toEqual([["go", "gin"]]);
+    expect(urls).toEqual(["/docs?campaign=qa&backend=go&backend-framework=gin#setup"]);
+    expect(storage.values.get("supertokens-docs:selection:backend-language")).toBe("go");
+    expect(storage.values.get("supertokens-docs:selection:go-frameworks")).toBe("gin");
+  });
+
+  it("rejects an invalid transaction without side effects", () => {
+    const store = new DocsSelectionStore();
+    const storage = memoryStorage();
+    const urls: string[] = [];
+    store.init(storage, {
+      dispatch: () => undefined,
+      href: () => "https://example.com/docs",
+      replace: (url) => urls.push(url),
+    });
+
+    expect(() =>
+      store.transaction([
+        { key: "backend-language", value: "go" },
+        { key: "go-frameworks", value: "express" } as never,
+      ]),
+    ).toThrow('Invalid value "express" for selection "go-frameworks".');
+    expect(store.get("backend-language")).toBe("nodejs");
+    expect(storage.values.size).toBe(0);
+    expect(urls).toEqual([]);
+  });
+
+  it("rejects transactions with competing values for one query parameter", () => {
+    const store = new DocsSelectionStore();
+
+    expect(() =>
+      store.transaction([
+        { key: "node-frameworks", value: "express" },
+        { key: "go-frameworks", value: "gin" },
+      ]),
+    ).toThrow('Selection transaction contains multiple values for query parameter "backend-framework".');
+  });
+
+  it("notifies remaining subscribers when one subscriber throws", () => {
+    const store = new DocsSelectionStore();
+    const errors: unknown[] = [];
+    const previousReportError = (globalThis as { reportError?: (error: unknown) => void }).reportError;
+    (globalThis as { reportError?: (error: unknown) => void }).reportError = (error) => errors.push(error);
+    let notified = false;
+    store.subscribe("backend-language", () => {
+      throw new Error("subscriber failed");
+    });
+    store.subscribe("backend-language", () => {
+      notified = true;
+    });
+
+    try {
+      store.set("backend-language", "go");
+      expect(notified).toBe(true);
+      expect(errors).toHaveLength(1);
+    } finally {
+      if (previousReportError) {
+        (globalThis as { reportError?: (error: unknown) => void }).reportError = previousReportError;
+      } else {
+        Reflect.deleteProperty(globalThis, "reportError");
+      }
+    }
+  });
+
+  it("treats cross-tab storage changes as authoritative without writing them back", () => {
+    const store = new DocsSelectionStore();
+    const storage = memoryStorage({ "supertokens-docs:selection:node-frameworks": "express" });
+    const urls: string[] = [];
+    store.init(storage, {
+      dispatch: () => undefined,
+      href: () => "https://example.com/docs?backend=nodejs&backend-framework=express",
+      replace: (url) => urls.push(url),
+    });
+    store.hydrate(new URLSearchParams("backend=nodejs&backend-framework=express"));
+
+    store.synchronizeStorage("supertokens-docs:selection:node-frameworks", "fastify");
+
+    expect(store.get("node-frameworks")).toBe("fastify");
+    expect(urls).toEqual(["/docs?backend=nodejs&backend-framework=fastify"]);
+    expect(storage.values.get("supertokens-docs:selection:node-frameworks")).toBe("express");
+  });
+
+  it("synchronizes a cross-tab backend language with its remembered framework", () => {
+    const store = new DocsSelectionStore();
+    const urls: string[] = [];
+    store.init(memoryStorage({ "supertokens-docs:selection:go-frameworks": "chi" }), {
+      dispatch: () => undefined,
+      href: () => "https://example.com/docs?backend=nodejs&backend-framework=express",
+      replace: (url) => urls.push(url),
+    });
+    store.hydrate(new URLSearchParams());
+
+    store.synchronizeStorage("supertokens-docs:selection:backend-language", "go");
+
+    expect(store.get("backend-language")).toBe("go");
+    expect(store.get("go-frameworks")).toBe("chi");
+    expect(urls).toEqual(["/docs?backend=go&backend-framework=chi"]);
+  });
+
+  it("changes backend language and its remembered framework atomically", () => {
+    const store = new DocsSelectionStore();
+    const urls: string[] = [];
+    store.init(memoryStorage({ "supertokens-docs:selection:go-frameworks": "chi" }), {
+      dispatch: () => undefined,
+      href: () => "https://example.com/docs?backend=nodejs&backend-framework=fastify",
+      replace: (url) => urls.push(url),
+    });
+    store.hydrate(new URLSearchParams());
+
+    store.updateBackendLanguage("go");
+
+    expect(store.get("backend-language")).toBe("go");
+    expect(store.get("go-frameworks")).toBe("chi");
+    expect(urls).toEqual(["/docs?backend=go&backend-framework=chi"]);
+    expect(() => store.updateBackendFramework("express")).toThrow('Backend framework "express" is not valid for go.');
   });
 });
 

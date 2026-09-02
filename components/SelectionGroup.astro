@@ -88,6 +88,7 @@ const componentProps = {
     directPanels,
     dispatchSelection,
     ensureQuery,
+    hydrateDocsSelection,
     initializeSelectionUrlState,
     isSelectionContextVisible,
     readContextualQuery,
@@ -221,7 +222,12 @@ const componentProps = {
       const legacyValue = readStorage(`docusaurus.tab.${group}`);
       const platformStorageKey = "supertokens-docs:platform-type";
       const migratedValue = group === "frontend-custom-ui" ? readStorage(platformStorageKey) : null;
-      if (group === "frontend-custom-ui" && migratedValue !== null) removeStorage(platformStorageKey);
+      if (group === "frontend-custom-ui" && migratedValue !== null) {
+        if (valuesForSelectionGroup(group).includes(migratedValue)) {
+          writeStorage(selectionStorageKey(group), migratedValue);
+        }
+        removeStorage(platformStorageKey);
+      }
       const contextIsVisible = isSelectionContextVisible(wrapper);
       const groupValues = valuesForSelectionGroup(group);
       const fallbackValue = resolveSelection({
@@ -255,7 +261,7 @@ const componentProps = {
       if (!resolution.value) continue;
 
       if (queryValue && !values.has(queryValue)) {
-        activateLocalSelection(wrapper, queryValue, true);
+        activateLocalSelection(wrapper, queryValue, wrapper.dataset.docsSelectionPassive === "true");
       } else if (wrapper.dataset.docsSelectionPassive === "true" && resolution.unavailableStoredValue && storedValue) {
         activateLocalSelection(wrapper, storedValue);
       } else {
@@ -281,6 +287,7 @@ const componentProps = {
       wrapper.addEventListener("keydown", persistSelection);
     }
     canonicalizeVisibleSelectionGroups();
+    hydrateDocsSelection();
     updateCodeGroups();
   };
 
@@ -293,7 +300,7 @@ const componentProps = {
       for (const wrapper of document.querySelectorAll<HTMLElement>(
         `[data-docs-selection-group="${detail.group}"]`,
       )) {
-        activateLocalSelection(wrapper, detail.value, true);
+        activateLocalSelection(wrapper, detail.value, wrapper.dataset.docsSelectionPassive === "true");
       }
       updateCodeGroups();
     });
@@ -328,7 +335,7 @@ const componentProps = {
           queryValue,
           storedValue: event.newValue,
         });
-        if (value) activateLocalSelection(wrapper, value, Boolean(queryValue));
+        if (value) activateLocalSelection(wrapper, value, wrapper.dataset.docsSelectionPassive === "true");
       }
       updateCodeGroups();
     });
@@ -365,7 +372,7 @@ const componentProps = {
           storedValue,
         });
         if (!resolution.value) continue;
-        activateLocalSelection(wrapper, resolution.value, Boolean(queryValue));
+        activateLocalSelection(wrapper, resolution.value, wrapper.dataset.docsSelectionPassive === "true");
         wrapper.toggleAttribute(
           "data-docs-selection-unavailable",
           resolution.unavailableStoredValue || Boolean(queryValue && !values.includes(queryValue)),
@@ -379,12 +386,14 @@ const componentProps = {
     window.addEventListener(variantEvent, () => {
       queueMicrotask(() => {
         canonicalizeVisibleSelectionGroups();
+        hydrateDocsSelection();
         updateCodeGroups();
       });
     });
     document.addEventListener(selectionContentReadyEvent, () => {
       queueMicrotask(() => {
         canonicalizeVisibleSelectionGroups();
+        hydrateDocsSelection();
         updateCodeGroups();
       });
     });

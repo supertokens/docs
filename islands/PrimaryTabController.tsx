@@ -123,10 +123,10 @@ export default function PrimaryTabController({
         if (nextValue && readQuery(group) === nextValue) writeStorage(selectionStorageKey(group), nextValue);
       };
       if (group) {
+        initializeSelectionUrlState();
         window.addEventListener(selectionEvent, synchronize);
         window.addEventListener("storage", synchronizeStorage);
         window.addEventListener(selectionUrlStateEvent, synchronizeUrl);
-        initializeSelectionUrlState();
       }
       cleanup = () => {
         delete wrapper.dataset.primarySelectionReady;

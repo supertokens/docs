@@ -211,7 +211,9 @@ export default function DependentContentController({
     document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
     wrapper.dataset.selectionReady = "true";
     wrapper.toggleAttribute("data-docs-selection-unavailable", initial.unavailable);
-    if (initial.value && initial.queryValue === initial.value) writeStorage(selectionStorageKey(group), initial.value);
+    if (initial.value && initial.queryValue === initial.value && isSelectionContextVisible(wrapper)) {
+      writeStorage(selectionStorageKey(group), initial.value);
+    }
     if (!effectivePassive && initial.canonicalValue && isSelectionContextVisible(wrapper)) {
       ensureQuery(group, initial.canonicalValue);
     }
@@ -245,7 +247,7 @@ export default function DependentContentController({
         setValue(undefined);
         document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
       }
-      if (resolved.value && resolved.queryValue === resolved.value) {
+      if (resolved.value && resolved.queryValue === resolved.value && isSelectionContextVisible(wrapper)) {
         writeStorage(selectionStorageKey(group), resolved.value);
       }
       if (!effectivePassive && resolved.canonicalValue && isSelectionContextVisible(wrapper)) {
@@ -276,12 +278,12 @@ export default function DependentContentController({
       document.removeEventListener(selectionContentReadyEvent, scheduleVisibilityRefresh);
     };
 
+    initializeSelectionUrlState();
     window.addEventListener(selectionEvent, synchronize);
     window.addEventListener("storage", synchronizeStorage);
     window.addEventListener(selectionUrlStateEvent, synchronizeUrl);
     window.addEventListener(variantEvent, scheduleVisibilityRefresh);
     document.addEventListener(selectionContentReadyEvent, scheduleVisibilityRefresh);
-    initializeSelectionUrlState();
     if (effectivePassive) return cleanUpSelection;
 
     const context = controllerContext(wrapper, fallbackHost);

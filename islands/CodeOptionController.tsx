@@ -107,7 +107,8 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
         );
         const queryMatchesGroup = Boolean(queryIsValid && queryValue && groupValues.includes(queryValue));
         const globalValue = queryMatchesGroup ? queryValue : fallbackValue;
-        if (initialGroup && globalValue && !availableValues.includes(globalValue)) {
+        const globalValueIsUnavailable = Boolean(initialGroup && globalValue && !availableValues.includes(globalValue));
+        if (globalValueIsUnavailable && passive) {
           for (const surface of surfaces) {
             if (surface.group) surface.element.hidden = true;
           }
@@ -118,7 +119,7 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
           document.dispatchEvent(new CustomEvent(selectionContentReadyEvent));
           return;
         }
-        const selection = resolveSecondarySelection(storedOptions, globalValue);
+        const selection = resolveSecondarySelection(storedOptions, globalValueIsUnavailable ? undefined : globalValue);
         panel.toggleAttribute("data-docs-code-option-invalid", Boolean(selection?.invalid));
         if (!selection || selection.invalid || !selection.value) {
           for (const surface of surfaces) surface.element.hidden = false;
@@ -150,11 +151,11 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
         setVisibleSurfaces(surfaces, group, value);
         panel.toggleAttribute(
           "data-docs-secondary-selection-unavailable",
-          Boolean(globalValue && globalValue !== value),
+          globalValueIsUnavailable || Boolean(globalValue && globalValue !== value),
         );
         wrapper.dataset.docsPassiveCodeResolved = "true";
         if (passive) wrapper.hidden = false;
-        if (isSelectionContextVisible(wrapper)) {
+        if (!globalValueIsUnavailable && isSelectionContextVisible(wrapper)) {
           if (queryValue !== value) replaceQuery(group, value);
           writeStorage(selectionStorageKey(group), value);
         }
@@ -174,13 +175,13 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
       const synchronizeStorage = (event: StorageEvent) => {
         if (event.key?.startsWith("supertokens-docs:selection:")) update();
       };
+      initializeSelectionUrlState();
       wrapper.addEventListener("click", update);
       wrapper.addEventListener("keydown", update);
       window.addEventListener(selectionEvent, synchronize);
       window.addEventListener("storage", synchronizeStorage);
       window.addEventListener(selectionUrlStateEvent, update);
       window.addEventListener(variantEvent, update);
-      initializeSelectionUrlState();
       document.addEventListener(selectionReadyEvent, update);
       update();
       cleanup = () => {
