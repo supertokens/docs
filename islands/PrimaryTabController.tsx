@@ -5,6 +5,7 @@ import { PresentedOption } from "@/components/option-presentation";
 import type { TabGroup } from "@/components/tab-groups";
 import { SelectField, type SelectOption } from "@/components/ui/select-field";
 import {
+  activateSelection,
   directPanels,
   dispatchSelection,
   optionsForWrapper,
@@ -16,10 +17,11 @@ import {
 } from "@/lib/docs-selection";
 
 interface PrimaryTabControllerProps {
-  defaultValue: string;
-  group: TabGroup;
+  defaultValue?: string;
+  group?: TabGroup;
   label: string;
   passive?: boolean;
+  showOptionMarks?: boolean;
   wrapperId: string;
 }
 
@@ -27,6 +29,7 @@ interface ControllerState {
   host: HTMLElement;
   options: SelectOption[];
   value: string;
+  wrapper: HTMLElement;
 }
 
 export default function PrimaryTabController({
@@ -34,6 +37,7 @@ export default function PrimaryTabController({
   group,
   label,
   passive = false,
+  showOptionMarks = true,
   wrapperId,
 }: PrimaryTabControllerProps) {
   const [state, setState] = useState<ControllerState>();
@@ -49,7 +53,7 @@ export default function PrimaryTabController({
       const host = wrapper?.querySelector<HTMLElement>(":scope > blume-tabs > div > [data-blume-tablist]");
       if (!wrapper || !host) return;
 
-      if (wrapper.dataset.groupSelectionReady !== "true") {
+      if (group && wrapper.dataset.groupSelectionReady !== "true") {
         await new Promise<void>((resolve) => {
           readyListener = (event) => {
             const detail = (event as CustomEvent<{ wrapperId?: string }>).detail;
@@ -64,7 +68,10 @@ export default function PrimaryTabController({
       if (cancelled) return;
 
       const options = optionsForWrapper(wrapper);
-      const value = selectedGroupValue(group, options, wrapper) || defaultValue;
+      const activeValue = directPanels(wrapper).find((panel) => !panel.classList.contains("hidden"))?.dataset.tabId;
+      const value = group
+        ? selectedGroupValue(group, options, wrapper) || defaultValue
+        : options.find((option) => option.value === activeValue)?.value || options[0]?.value;
       if (options.length < 2 || !value) return;
 
       const previousRole = host.getAttribute("role");
@@ -85,21 +92,25 @@ export default function PrimaryTabController({
         if (element.dataset.title) element.setAttribute("aria-label", element.dataset.title);
       }
       wrapper.dataset.primarySelectionReady = "true";
-      setState({ host, options, value });
+      setState({ host, options, value, wrapper });
 
       const applyValue = (nextValue: string) => {
         if (!options.some((option) => option.value === nextValue)) return;
         setState((current) => (current ? { ...current, value: nextValue } : current));
       };
       const synchronize = (event: Event) => {
+        if (!group) return;
         const detail = (event as CustomEvent<SelectionDetail>).detail;
         if (detail?.group === group) applyValue(detail.value);
       };
       const synchronizeStorage = (event: StorageEvent) => {
+        if (!group) return;
         if (event.key === selectionStorageKey(group) && event.newValue) applyValue(event.newValue);
       };
-      window.addEventListener(selectionEvent, synchronize);
-      window.addEventListener("storage", synchronizeStorage);
+      if (group) {
+        window.addEventListener(selectionEvent, synchronize);
+        window.addEventListener("storage", synchronizeStorage);
+      }
       cleanup = () => {
         delete wrapper.dataset.primarySelectionReady;
         if (previousRole) host.setAttribute("role", previousRole);
@@ -128,13 +139,23 @@ export default function PrimaryTabController({
   if (passive || !state) return null;
 
   return createPortal(
-    <div className="st-primary-choice" data-primary-choice={group}>
+    <div className="st-primary-choice" data-primary-choice={group || "local"}>
       <SelectField
         label={label}
         options={state.options}
-        renderOption={(option) => <PresentedOption label={option.label} value={option.value} />}
+        renderOption={
+          showOptionMarks
+            ? (option) => <PresentedOption label={option.label} value={option.value} />
+            : (option) => option.label
+        }
         value={state.value}
-        onValueChange={(value) => dispatchSelection(group, value)}
+        onValueChange={(value) => {
+          if (group) {
+            dispatchSelection(group, value);
+          } else if (activateSelection(state.wrapper, value)) {
+            setState((current) => (current ? { ...current, value } : current));
+          }
+        }}
       />
     </div>,
     state.host,

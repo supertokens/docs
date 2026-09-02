@@ -5,6 +5,7 @@ import { expect, test as base } from "@playwright/test";
 import { load } from "js-yaml";
 
 interface OpenApiOperation {
+  operationId?: string;
   requestBody?: {
     content?: Record<
       string,
@@ -14,6 +15,7 @@ interface OpenApiOperation {
       }
     >;
   };
+  summary?: string;
 }
 
 interface OpenApiDocument {
@@ -21,44 +23,60 @@ interface OpenApiDocument {
 }
 
 const cdiSpec = load(readFileSync(resolve("openapi/cdi.yml"), "utf8")) as OpenApiDocument;
+const fdiSpec = load(readFileSync(resolve("openapi/fdi.yml"), "utf8")) as OpenApiDocument;
 
 const apiRequestCases = [
   {
     canonicalPath: "/docs/references/cdi/bulk-import/importoneuserwithbulkimport",
+    embedKey: "importoneuserwithbulkimport",
+    hasRequestExample: true,
     method: "POST",
     operationId: "importOneUserWithBulkImport",
     path: "/appid-{appId}/bulk-import/import",
-    snippetId: "migration-import-one-user",
+    title: "Import one user directly",
     url: "<CORE_API_ENDPOINT>/appid-public/bulk-import/import",
   },
   {
     canonicalPath: "/docs/references/cdi/bulk-import/addbulkimportusers",
+    embedKey: "addbulkimportusers",
+    hasRequestExample: true,
     method: "POST",
     operationId: "addBulkImportUsers",
     path: "/appid-{appId}/bulk-import/users",
-    snippetId: "migration-add-bulk-users",
+    title: "Add bulk import users",
     url: "<CORE_API_ENDPOINT>/appid-public/bulk-import/users",
   },
   {
     canonicalPath: "/docs/references/cdi/bulk-import/countbulkimportusers",
+    embedKey: "countbulkimportusers",
+    hasRequestExample: false,
     method: "GET",
     operationId: "countBulkImportUsers",
     path: "/appid-{appId}/bulk-import/users/count",
-    snippetId: "migration-count-processing-users",
+    title: "Count bulk import users",
     url: "<CORE_API_ENDPOINT>/appid-public/bulk-import/users/count?status=PROCESSING",
   },
   {
     canonicalPath: "/docs/references/cdi/bulk-import/getbulkimportusers",
+    embedKey: "getbulkimportusers",
+    hasRequestExample: false,
     method: "GET",
     operationId: "getBulkImportUsers",
     path: "/appid-{appId}/bulk-import/users",
-    snippetId: "migration-get-failed-users",
+    title: "List bulk import users",
     url: "<CORE_API_ENDPOINT>/appid-public/bulk-import/users?status=FAILED",
   },
+  {
+    canonicalPath: "/docs/references/cdi/bulk-import/deletebulkimportusers",
+    embedKey: "deletebulkimportusers",
+    hasRequestExample: false,
+    method: "POST",
+    operationId: "deleteBulkImportUsers",
+    path: "/appid-{appId}/bulk-import/users/remove",
+    title: "Delete bulk import users",
+    url: "<CORE_API_ENDPOINT>/appid-{appId}/bulk-import/users/remove",
+  },
 ] as const;
-
-const snippetNamespace = (operationId: string, snippetId: string) =>
-  `api-request-${operationId.toLowerCase()}-${snippetId}`;
 
 const requestExample = (path: string): unknown => {
   const operation = cdiSpec.paths[path]?.post;
@@ -719,7 +737,7 @@ test("code snippets wrap by default and can be unwrapped independently", async (
         .filter((block) => {
           if (block.parentElement?.closest("pre")) return false;
           if (block.matches(".twoslash, .blume-source")) return false;
-          if (block.closest("blume-panel-tabs, [data-api-request-tabs]")) return false;
+          if (block.closest("blume-panel-tabs, .api-request-snippet")) return false;
           return block.querySelector(":scope > code") && block.querySelector(":scope > [data-blume-copy]");
         })
         .map((block) => block.querySelectorAll(":scope > [data-docs-code-wrap-toggle]").length),
@@ -942,48 +960,58 @@ test("ungrouped tabs remain accessible tabs", async ({ page }) => {
 test("account migration API snippets match the CDI specification", async ({ page }) => {
   await page.goto("/docs/migration/account-migration");
 
-  const snippets = page.locator("[data-api-request-tabs]");
+  const snippets = page.locator(".api-request-snippet");
   await expect(snippets).toHaveCount(apiRequestCases.length);
+  await expect(snippets.locator("select")).toHaveCount(0);
   await expect(snippets.locator("[data-docs-code-wrap-toggle]")).toHaveCount(0);
   await expect(snippets.locator("pre code").first()).toHaveCSS("white-space", "pre");
 
-  const ids: string[] = [];
+  const firstSnippet = snippets.nth(0);
+  const secondSnippet = snippets.nth(1);
+  const firstLanguage = firstSnippet.getByRole("combobox", { name: "Language" });
+  await firstLanguage.click();
+  await expect(page.getByRole("option").locator(".preferences-option-logo")).toHaveCount(0);
+  await page.getByRole("option", { name: "JavaScript", exact: true }).click();
+  await expect(firstSnippet.locator('[data-blume-tab-panel][data-title="JavaScript"]')).toBeVisible();
+  await expect(secondSnippet.locator('[data-blume-tab-panel][data-title="cURL"]')).toBeVisible();
+  await expect(secondSnippet.locator('[data-blume-tab-panel][data-title="JavaScript"]')).toBeHidden();
+  await firstLanguage.click();
+  await page.getByRole("option", { name: "cURL", exact: true }).click();
+
   for (const apiRequest of apiRequestCases) {
-    const namespace = snippetNamespace(apiRequest.operationId, apiRequest.snippetId);
-    const snippet = snippets.filter({ has: page.locator(`#${namespace}-tab-curl`) });
-    const tabs = snippet.getByRole("tab");
-    const panels = snippet.locator('[role="tabpanel"]');
+    const snippet = snippets.filter({
+      has: page.locator(`a[data-api-reference-trigger][href="${apiRequest.canonicalPath}"]`),
+    });
+    const language = snippet.getByRole("combobox", { name: "Language" });
+    const panels = snippet.locator("[data-blume-tab-panel]");
 
     await expect(snippet).toHaveCount(1);
-    await expect(tabs).toHaveText(["cURL", "JavaScript / Node.js", "Go", "Python"]);
+    await expect(language).toContainText("cURL");
     await expect(panels).toHaveCount(4);
-    await expect(snippet.getByRole("link", { name: "View the full API schema and response details" })).toHaveAttribute(
-      "href",
-      apiRequest.canonicalPath,
+    const apiReference = snippet.getByRole("link", { name: `API Reference: ${apiRequest.title}`, exact: true });
+    await expect(apiReference).toHaveAttribute("href", apiRequest.canonicalPath);
+    await expect(apiReference).toHaveAttribute(
+      "data-api-reference-embed-href",
+      `/docs/api-reference-embed/cdi/${apiRequest.embedKey}`,
     );
 
     const languages = [
-      { id: "curl", method: `curl -X ${apiRequest.method}` },
-      { id: "js", method: `method: "${apiRequest.method}"` },
-      { id: "go", method: `http.NewRequest("${apiRequest.method}"` },
-      { id: "python", method: `requests.${apiRequest.method.toLowerCase()}(` },
+      { label: "cURL", method: `curl -X ${apiRequest.method}` },
+      { label: "JavaScript", method: `method: "${apiRequest.method}"` },
+      { label: "Go", method: `http.NewRequest("${apiRequest.method}"` },
+      { label: "Python", method: `requests.${apiRequest.method.toLowerCase()}(` },
     ] as const;
 
-    for (const language of languages) {
-      const tabId = `${namespace}-tab-${language.id}`;
-      const panelId = `${namespace}-panel-${language.id}`;
-      const tab = snippet.locator(`#${tabId}`);
-      const panel = snippet.locator(`#${panelId}`);
+    for (const languageCase of languages) {
+      await language.click();
+      await page.getByRole("option", { name: languageCase.label, exact: true }).click();
+      const panel = panels.filter({ has: page.locator(`code`) }).filter({ hasText: languageCase.method });
 
-      await expect(tab).toHaveAttribute("aria-controls", panelId);
-      await expect(panel).toHaveAttribute("aria-labelledby", tabId);
-      await expect(page.locator(`#${tabId}`)).toHaveCount(1);
-      await expect(page.locator(`#${panelId}`)).toHaveCount(1);
-      ids.push(tabId, panelId);
-
+      await expect(panel).toBeVisible();
+      await expect(snippet.locator("[data-blume-tab-panel]:visible")).toHaveCount(1);
       const code = await panel.locator("code").innerText();
       expect(code).toContain(JSON.stringify(apiRequest.url));
-      expect(code).toContain(language.method);
+      expect(code).toContain(languageCase.method);
       expect(code).toContain("api-key");
       expect(code).toContain("YOUR_API_KEY");
       if (apiRequest.method === "POST") {
@@ -995,17 +1023,16 @@ test("account migration API snippets match the CDI specification", async ({ page
       }
     }
 
-    if (apiRequest.method === "POST") {
-      const curlCode = await snippet.locator(`#${namespace}-panel-curl code`).innerText();
+    if (apiRequest.hasRequestExample) {
+      await language.click();
+      await page.getByRole("option", { name: "cURL", exact: true }).click();
+      const curlCode = await snippet.locator('[data-blume-tab-panel][data-title="cURL"] code').innerText();
       expect(curlBody(curlCode)).toEqual(requestExample(apiRequest.path));
     }
   }
-
-  expect(ids).toHaveLength(apiRequestCases.length * 8);
-  expect(new Set(ids).size).toBe(ids.length);
 });
 
-test("account migration API links open a reusable reference drawer", async ({ page }) => {
+test("account migration API links selectively preload a reusable reference drawer", async ({ page }) => {
   const embedDocumentRequests: string[] = [];
   page.on("request", (request) => {
     if (request.resourceType() === "document" && request.url().includes("/docs/api-reference-embed/")) {
@@ -1014,38 +1041,15 @@ test("account migration API links open a reusable reference drawer", async ({ pa
   });
   await page.goto("/docs/migration/account-migration");
 
-  const links = page.getByRole("link", { name: "View the full API schema and response details" });
-  const firstLink = links.nth(0);
-  const secondLink = links.nth(1);
+  const links = page.locator("[data-api-reference-trigger]");
   const frames = page.locator("[data-api-reference-frame]");
   const pageUrl = page.url();
-  const firstUrl = new URL(apiRequestCases[0].canonicalPath, pageUrl).href;
-  const secondUrl = new URL(apiRequestCases[1].canonicalPath, pageUrl).href;
+  const canonicalUrls = apiRequestCases.map(({ canonicalPath }) => new URL(canonicalPath, pageUrl).href);
   const embedUrls = apiRequestCases.map(
-    ({ operationId }) => new URL(`/docs/api-reference-embed/${operationId.toLowerCase()}`, pageUrl).href,
+    ({ embedKey }) => new URL(`/docs/api-reference-embed/cdi/${embedKey}`, pageUrl).href,
   );
-  const [firstEmbedUrl, secondEmbedUrl] = embedUrls;
   const frameFor = (url: string) => page.locator(`[data-api-reference-frame][data-api-reference-url="${url}"]`);
-  const expectPreloadedPool = async () => {
-    const expected = embedUrls.map((url) => ({ loaded: "true", url })).sort((a, b) => a.url.localeCompare(b.url));
-    await expect(frames).toHaveCount(embedUrls.length);
-    await expect
-      .poll(() =>
-        frames.evaluateAll((elements) =>
-          elements
-            .map((element) => ({
-              loaded: (element as HTMLIFrameElement).dataset.loaded,
-              url: (element as HTMLIFrameElement).src,
-            }))
-            .sort((a, b) => a.url.localeCompare(b.url)),
-        ),
-      )
-      .toEqual(expected);
-    for (let index = 0; index < embedUrls.length; index += 1) {
-      await expect(frames.nth(index)).toBeHidden();
-    }
-    await expect(page.locator("[data-api-reference-loading]")).toHaveCount(0);
-  };
+  const requestCountFor = (url: string) => embedDocumentRequests.filter((requestUrl) => requestUrl === url).length;
   const expectEmbeddedOperation = async (url: string, apiRequest: (typeof apiRequestCases)[number]) => {
     const embeddedPage = frameFor(url).contentFrame();
     await expect(embeddedPage.getByText(apiRequest.method, { exact: true }).first()).toBeVisible();
@@ -1059,80 +1063,176 @@ test("account migration API links open a reusable reference drawer", async ({ pa
     ).toHaveCount(0);
   };
 
-  await expect(firstLink).toHaveAttribute("href", apiRequestCases[0].canonicalPath);
-  await expect(secondLink).toHaveAttribute("href", apiRequestCases[1].canonicalPath);
-  await expectPreloadedPool();
-  expect([...embedDocumentRequests].sort()).toEqual([...embedUrls].sort());
-  const preloadedRequestCount = embedDocumentRequests.length;
-  const firstFrame = frameFor(firstEmbedUrl);
-  const secondFrame = frameFor(secondEmbedUrl);
+  await expect(links).toHaveCount(apiRequestCases.length);
+  for (const [index, apiRequest] of apiRequestCases.entries()) {
+    await expect(links.nth(index)).toHaveAttribute("href", apiRequest.canonicalPath);
+    await expect(links.nth(index)).toHaveAccessibleName(`API Reference: ${apiRequest.title}`);
+  }
 
-  await firstLink.click();
+  await page.waitForLoadState("networkidle");
+  expect(await frames.count()).toBeLessThan(apiRequestCases.length);
+  expect(new Set(embedDocumentRequests).size).toBeLessThan(apiRequestCases.length);
+
+  const initiallyLoadedUrls = await frames.evaluateAll((loadedFrames) =>
+    loadedFrames.filter((frame) => frame.dataset.loaded === "true").map((frame) => frame.dataset.apiReferenceUrl),
+  );
+  const preloadIndex = embedUrls.findIndex((url) => !initiallyLoadedUrls.includes(url));
+  expect(preloadIndex).toBeGreaterThanOrEqual(0);
+
+  const preloadCase = apiRequestCases[preloadIndex];
+  const preloadLink = links.nth(preloadIndex);
+  const preloadEmbedUrl = embedUrls[preloadIndex];
+  const preloadFrame = frameFor(preloadEmbedUrl);
+  const preloadDialog = page.getByRole("dialog", { name: preloadCase.title, exact: true });
+  await preloadLink.scrollIntoViewIfNeeded();
+  await expect(preloadFrame).toHaveAttribute("data-loaded", "true");
+  await expect(preloadFrame).toBeHidden();
+  await expect(page.locator("[data-api-reference-drawer]")).not.toHaveAttribute("open", "");
+  expect(requestCountFor(preloadEmbedUrl)).toBe(1);
+
+  const preloadedRequestCount = embedDocumentRequests.length;
+  await preloadLink.click();
 
   await expect(page).toHaveURL(pageUrl);
-  const firstDialog = page.getByRole("dialog", { name: "Import one user directly" });
-  await expect(firstDialog).toBeVisible();
-  await expect(firstFrame).toBeVisible();
+  await expect(preloadDialog).toBeVisible();
+  await expect(preloadDialog.getByRole("button", { name: "Close API reference" })).toBeFocused();
+  await expect(preloadFrame).toBeVisible();
   await expect(page.locator("[data-api-reference-frame]:visible")).toHaveCount(1);
-  await expect(firstFrame).toHaveAttribute("src", firstEmbedUrl);
-  await expect(firstFrame).toHaveAttribute("title", "API reference: Import one user directly");
-  await expect(firstDialog.getByRole("link", { name: "Open full page" })).toHaveAttribute("href", firstUrl);
-  await expectEmbeddedOperation(firstEmbedUrl, apiRequestCases[0]);
+  await expect(preloadFrame).toHaveAttribute("src", preloadEmbedUrl);
+  await expect(preloadFrame).toHaveAttribute("title", `API reference: ${preloadCase.title}`);
+  await expect(preloadDialog.getByRole("link", { name: "Open full page" })).toHaveAttribute(
+    "href",
+    canonicalUrls[preloadIndex],
+  );
+  await expectEmbeddedOperation(preloadEmbedUrl, preloadCase);
   expect(embedDocumentRequests).toHaveLength(preloadedRequestCount);
+  expect(requestCountFor(preloadEmbedUrl)).toBe(1);
 
   await page.keyboard.press("Escape");
-  await expect(firstDialog).toBeHidden();
-  await expect(firstLink).toBeFocused();
+  await expect(preloadDialog).toBeHidden();
+  await expect(preloadLink).toBeFocused();
 
   for (const modifier of ["ctrlKey", "metaKey"] as const) {
-    await firstLink.evaluate((link, key) => {
+    await preloadLink.evaluate((link, key) => {
       window.addEventListener("click", (event) => event.preventDefault(), { once: true });
       link.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0, cancelable: true, [key]: true }));
     }, modifier);
-    await expect(firstDialog).toBeHidden();
+    await expect(preloadDialog).toBeHidden();
     await expect(page).toHaveURL(pageUrl);
   }
+  expect(requestCountFor(preloadEmbedUrl)).toBe(1);
 
-  await secondLink.click();
+  await preloadLink.click();
+  await expect(preloadDialog).toBeVisible();
+  await expect(preloadFrame).toBeVisible();
+  expect(requestCountFor(preloadEmbedUrl)).toBe(1);
 
-  const secondDialog = page.getByRole("dialog", { name: "Add bulk import users" });
-  await expect(page.locator("[data-api-reference-drawer]")).toHaveCount(1);
-  await expect(secondDialog).toBeVisible();
-  await expect(secondFrame).toBeVisible();
-  await expect(firstFrame).toBeHidden();
+  await page.keyboard.press("Escape");
+  const alternateIndex = (preloadIndex + 1) % apiRequestCases.length;
+  const alternateCase = apiRequestCases[alternateIndex];
+  const alternateEmbedUrl = embedUrls[alternateIndex];
+  const alternateLink = links.nth(alternateIndex);
+  const alternateFrame = frameFor(alternateEmbedUrl);
+  await alternateLink.scrollIntoViewIfNeeded();
+  await expect(alternateFrame).toHaveAttribute("data-loaded", "true");
+  const alternateRequestCount = requestCountFor(alternateEmbedUrl);
+  await alternateLink.click();
+  await expect(page.getByRole("dialog", { name: alternateCase.title, exact: true })).toBeVisible();
+  await expect(alternateFrame).toBeVisible();
+  await expect(preloadFrame).toBeHidden();
   await expect(page.locator("[data-api-reference-frame]:visible")).toHaveCount(1);
-  await expect(secondFrame).toHaveAttribute("src", secondEmbedUrl);
-  await expect(secondFrame).toHaveAttribute("title", "API reference: Add bulk import users");
-  await expect(secondDialog.getByRole("link", { name: "Open full page" })).toHaveAttribute("href", secondUrl);
-  await expectEmbeddedOperation(secondEmbedUrl, apiRequestCases[1]);
-  expect(embedDocumentRequests).toHaveLength(preloadedRequestCount);
+  expect(requestCountFor(alternateEmbedUrl)).toBe(alternateRequestCount);
 
   await page.keyboard.press("Escape");
   await page.getByRole("link", { name: "Documentation", exact: true }).click();
   await expect(page).toHaveURL(/\/docs\/?$/u);
+  await expect(frames).toHaveCount(0);
   await page.goBack();
   await expect(page).toHaveURL(pageUrl);
-  await expectPreloadedPool();
-  const restoredPreloadRequestCount = embedDocumentRequests.length;
 
-  const restoredLink = page.getByRole("link", { name: "View the full API schema and response details" }).first();
+  const restoredLink = page.locator("[data-api-reference-trigger]").nth(preloadIndex);
   await restoredLink.click();
   await expect(page.locator("[data-api-reference-drawer]")).toHaveCount(1);
-  await expect(frameFor(firstEmbedUrl)).toBeVisible();
+  await expect(frameFor(preloadEmbedUrl)).toBeVisible();
   await expect(page.locator("[data-api-reference-frame]:visible")).toHaveCount(1);
-  expect(embedDocumentRequests).toHaveLength(restoredPreloadRequestCount);
   await expect(page).toHaveURL(pageUrl);
-  const restoredDialog = page.getByRole("dialog", { name: "Import one user directly" });
+  const restoredDialog = page.getByRole("dialog", { name: preloadCase.title, exact: true });
   await expect(restoredDialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(restoredDialog).toBeHidden();
   await expect(restoredLink).toBeFocused();
 });
 
+test("API reference intent signals preload hidden frames without opening the drawer", async ({ page }) => {
+  await page.addInitScript(() => Reflect.deleteProperty(window, "IntersectionObserver"));
+  await page.goto("/docs/migration/account-migration");
+
+  const drawer = page.locator("[data-api-reference-drawer]");
+  const frameFor = (index: number) => {
+    const embedUrl = new URL(`/docs/api-reference-embed/cdi/${apiRequestCases[index].embedKey}`, page.url()).href;
+    return page.locator(`[data-api-reference-frame][data-api-reference-url="${embedUrl}"]`);
+  };
+  const linkFor = (index: number) =>
+    page.getByRole("link", { name: `API Reference: ${apiRequestCases[index].title}`, exact: true });
+
+  await linkFor(0).hover();
+  await expect(frameFor(0)).toHaveAttribute("data-loaded", "true");
+  await expect(frameFor(0)).toBeHidden();
+
+  await linkFor(1).evaluate((link) => link.focus({ preventScroll: true }));
+  await expect(frameFor(1)).toHaveAttribute("data-loaded", "true");
+  await expect(frameFor(1)).toBeHidden();
+
+  await linkFor(2).dispatchEvent("pointerdown", { pointerType: "touch" });
+  await expect(frameFor(2)).toHaveAttribute("data-loaded", "true");
+  await expect(frameFor(2)).toBeHidden();
+  await expect(drawer).not.toHaveAttribute("open", "");
+});
+
+test("a cold API reference click stays load-gated", async ({ page }) => {
+  await page.addInitScript(() => Reflect.deleteProperty(window, "IntersectionObserver"));
+
+  const apiRequest = apiRequestCases[0];
+  const embedUrl = new URL(
+    `/docs/api-reference-embed/cdi/${apiRequest.embedKey}`,
+    test.info().project.use.baseURL as string,
+  ).href;
+  let releaseEmbed: () => void = () => {};
+  const embedBlocked = new Promise<void>((resolve) => {
+    releaseEmbed = resolve;
+  });
+  const embedRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.resourceType() === "document" && request.url() === embedUrl) embedRequests.push(request.url());
+  });
+  await page.route(embedUrl, async (route) => {
+    await embedBlocked;
+    await route.continue();
+  });
+  await page.goto("/docs/migration/account-migration");
+
+  const link = page.getByRole("link", { name: `API Reference: ${apiRequest.title}`, exact: true });
+  const frame = page.locator(`[data-api-reference-frame][data-api-reference-url="${embedUrl}"]`);
+  const dialog = page.getByRole("dialog", { name: apiRequest.title, exact: true });
+  await link.evaluate((trigger) =>
+    trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0, cancelable: true })),
+  );
+
+  await expect.poll(() => embedRequests).toEqual([embedUrl]);
+  await expect(frame).toHaveCount(1);
+  await expect(frame).not.toHaveAttribute("data-loaded", "true");
+  await expect(dialog).toBeHidden();
+
+  releaseEmbed();
+  await expect(frame).toHaveAttribute("data-loaded", "true");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Close API reference" })).toBeFocused();
+});
+
 test("account migration API reference drawer fills a mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/docs/migration/account-migration");
-  await page.getByRole("link", { name: "View the full API schema and response details" }).first().click();
+  await page.locator("[data-api-reference-trigger]").first().click();
 
   const dialog = page.getByRole("dialog", { name: "Import one user directly" });
   await expect(dialog).toBeVisible();
@@ -1141,40 +1241,42 @@ test("account migration API reference drawer fills a mobile viewport", async ({ 
   expect(bounds?.width).toBe(390);
 });
 
-test("account migration API snippet tabs support keyboard navigation", async ({ page }) => {
-  await page.goto("/docs/migration/account-migration");
+test("CDI and FDI embed routes render their referenced operations without documentation chrome", async ({ page }) => {
+  const cases = [
+    {
+      key: apiRequestCases[0].embedKey,
+      method: "POST",
+      operationId: apiRequestCases[0].operationId,
+      path: apiRequestCases[0].path,
+      source: "cdi",
+      spec: cdiSpec,
+      title: apiRequestCases[0].title,
+    },
+    {
+      key: "signin",
+      method: "POST",
+      operationId: "signIn",
+      path: "/{apiBasePath}/{tenantId}/signin",
+      source: "fdi",
+      spec: fdiSpec,
+      title: "Sign in with email",
+    },
+  ] as const;
 
-  const apiRequest = apiRequestCases[0];
-  const namespace = snippetNamespace(apiRequest.operationId, apiRequest.snippetId);
-  const snippet = page.locator("[data-api-request-tabs]").filter({ has: page.locator(`#${namespace}-tab-curl`) });
-  const tab = (language: "curl" | "js" | "go" | "python") => snippet.locator(`#${namespace}-tab-${language}`);
-  const panel = (language: "curl" | "js" | "go" | "python") => snippet.locator(`#${namespace}-panel-${language}`);
+  for (const operationCase of cases) {
+    const operation = operationCase.spec.paths[operationCase.path]?.[operationCase.method.toLowerCase()];
+    expect(operation?.operationId).toBe(operationCase.operationId);
+    expect(operation?.summary).toBe(operationCase.title);
 
-  const expectActive = async (language: "curl" | "js" | "go" | "python") => {
-    await expect(tab(language)).toBeFocused();
-    await expect(tab(language)).toHaveAttribute("aria-selected", "true");
-    await expect(tab(language)).toHaveAttribute("tabindex", "0");
-    await expect(panel(language)).toBeVisible();
-    await expect(snippet.getByRole("tab", { selected: true })).toHaveCount(1);
-    await expect(snippet.locator('[role="tabpanel"]:visible')).toHaveCount(1);
-  };
+    await page.goto(`/docs/api-reference-embed/${operationCase.source}/${operationCase.key}`);
 
-  await tab("curl").focus();
-  await expectActive("curl");
-
-  await page.keyboard.press("ArrowRight");
-  await expectActive("js");
-  await expect(panel("curl")).toBeHidden();
-
-  await page.keyboard.press("End");
-  await expectActive("python");
-
-  await page.keyboard.press("Home");
-  await expectActive("curl");
-
-  await page.keyboard.press("ArrowLeft");
-  await expectActive("python");
-
-  await page.keyboard.press("ArrowRight");
-  await expectActive("curl");
+    await expect(page).toHaveTitle(`${operationCase.title} API reference`);
+    await expect(page.getByText(operationCase.method, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(operationCase.path, { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Request body" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
+    await expect(
+      page.locator("header, nav, aside, [data-blume-header], [data-blume-nav-drawer], [data-blume-sidebar]"),
+    ).toHaveCount(0);
+  }
 });

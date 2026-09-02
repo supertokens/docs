@@ -3,33 +3,30 @@ import specs from "blume:openapi";
 import Operation from "blume/components/openapi/Operation.astro";
 import "blume:theme";
 
-import { apiReferenceOperationIds } from "../../../lib/api-reference-operations";
-
 interface Props {
   operationKey: string;
+  source: string;
   title: string;
 }
 
 export function getStaticPaths() {
-  const spec = specs["references-cdi"];
-  if (!spec) {
-    throw new Error('[api-reference-embed] OpenAPI source "references-cdi" was not found.');
-  }
+  const embedSources = [
+    { route: "cdi", source: "references-cdi" },
+    { route: "fdi", source: "references-fdi" },
+  ] as const;
 
-  return apiReferenceOperationIds.map((operationId) => {
-    const operation = Object.values(spec.operations).find((candidate) => candidate.operationId === operationId);
-    if (!operation) {
-      throw new Error(`[api-reference-embed] Operation "${operationId}" was not found in "references-cdi".`);
-    }
+  return embedSources.flatMap(({ route, source }) => {
+    const spec = specs[source];
+    if (!spec) throw new Error(`[api-reference-embed] OpenAPI source "${source}" was not found.`);
 
-    return {
-      params: { operation: operation.key },
-      props: { operationKey: operation.key, title: operation.summary },
-    };
+    return Object.values(spec.operations).map((operation) => ({
+      params: { operation: operation.key, source: route },
+      props: { operationKey: operation.key, source, title: operation.summary },
+    }));
   });
 }
 
-const { operationKey, title } = Astro.props;
+const { operationKey, source, title } = Astro.props;
 ---
 
 <!doctype html>
@@ -45,23 +42,27 @@ const { operationKey, title } = Astro.props;
         try {
           theme = window.parent.document.documentElement.dataset.theme;
         } catch {}
-        theme ||= localStorage.getItem("blume-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        theme ||=
+          localStorage.getItem("blume-theme") ||
+          (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
         document.documentElement.dataset.theme = theme;
       };
 
       applyTheme();
       try {
         if (window.parent !== window) {
-          new MutationObserver(applyTheme).observe(window.parent.document.documentElement, {
+          const observer = new MutationObserver(applyTheme);
+          observer.observe(window.parent.document.documentElement, {
             attributeFilter: ["data-theme"],
           });
+          window.addEventListener("pagehide", () => observer.disconnect(), { once: true });
         }
       } catch {}
     </script>
   </head>
   <body class="m-0 bg-background font-sans text-foreground antialiased">
     <main class="min-h-dvh p-4 sm:p-6">
-      <Operation id={operationKey} source="references-cdi" />
+      <Operation id={operationKey} source={source} />
     </main>
   </body>
 </html>

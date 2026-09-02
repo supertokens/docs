@@ -55,7 +55,7 @@ export const buildApiRequestSnippetLanguages = ({
 
   return [
     configuredCurl,
-    builtInLanguages[1] ? { ...builtInLanguages[1], label: "JavaScript / Node.js" } : undefined,
+    builtInLanguages[1] ? { ...builtInLanguages[1], label: "JavaScript" } : undefined,
     { build: buildGoRequestSnippet, id: "go", label: "Go", lang: "go" } satisfies SampleLanguage,
     builtInLanguages[2],
   ].filter((language): language is SampleLanguage => language !== undefined);

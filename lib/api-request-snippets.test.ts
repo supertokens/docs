@@ -89,7 +89,23 @@ describe("buildApiRequestSnippetLanguages", () => {
     const languages = buildApiRequestSnippetLanguages();
 
     expect(languages.map(({ id }) => id)).toEqual(["curl", "js", "go", "python"]);
-    expect(languages.map(({ label }) => label)).toEqual(["cURL", "JavaScript / Node.js", "Go", "Python"]);
+    expect(languages.map(({ label }) => label)).toEqual(["cURL", "JavaScript", "Go", "Python"]);
     expect(languages.map(({ lang }) => lang)).toEqual(["bash", "js", "go", "python"]);
+  });
+
+  it("uses a protected curl config instead of an API key argument", () => {
+    const curl = buildApiRequestSnippetLanguages({ curlConfig: "<PROTECTED_CONFIG>" })[0];
+    const source = curl.build({
+      body: '{"grantTypes":["client_credentials"]}',
+      bodyValue: { grantTypes: ["client_credentials"] },
+      headers: { "api-key": "YOUR_API_KEY", "Content-Type": "application/json" },
+      method: "POST",
+      url: "https://core.example.com/appid-public/recipe/oauth/clients",
+    });
+
+    expect(source).toContain("--config '<PROTECTED_CONFIG>'");
+    expect(source).not.toContain("api-key");
+    expect(source).not.toContain("YOUR_API_KEY");
+    expect(source).toContain("Content-Type: application/json");
   });
 });

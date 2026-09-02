@@ -32,3 +32,242 @@
     <div class="relative min-h-0 flex-1" data-api-reference-frames></div>
   </div>
 </dialog>
+
+<script>
+  interface ApiReferenceState {
+    generation: number;
+    loadingTimeout: number | null;
+    selectedUrl: string | null;
+    trigger: HTMLAnchorElement | null;
+  }
+
+  const state: ApiReferenceState = {
+    generation: 0,
+    loadingTimeout: null,
+    selectedUrl: null,
+    trigger: null,
+  };
+
+  let triggerObserver: IntersectionObserver | null = null;
+
+  const drawer = () => document.querySelector<HTMLDialogElement>("#api-reference-drawer");
+
+  const triggerFromSource = (source: EventTarget | null) =>
+    source instanceof Element ? source.closest<HTMLAnchorElement>("[data-api-reference-trigger]") : null;
+
+  const cancelPendingLoad = (currentDrawer: HTMLDialogElement | null) => {
+    if (state.loadingTimeout === null) return;
+
+    window.clearTimeout(state.loadingTimeout);
+    state.loadingTimeout = null;
+    state.generation++;
+    state.trigger?.removeAttribute("aria-busy");
+    if (state.selectedUrl) {
+      const pendingFrame = [...(currentDrawer?.querySelectorAll<HTMLIFrameElement>("[data-api-reference-frame]") ?? [])].find(
+        (frame) => frame.dataset.apiReferenceUrl === state.selectedUrl,
+      );
+      if (!pendingFrame?.dataset.loaded && !pendingFrame?.dataset.apiReferencePreloaded) pendingFrame?.remove();
+    }
+    state.selectedUrl = null;
+    state.trigger = null;
+  };
+
+  const ensureFrame = (currentDrawer: HTMLDialogElement, url: URL, fetchPriority: "high" | "low") => {
+    const container = currentDrawer.querySelector<HTMLElement>("[data-api-reference-frames]");
+    if (!container) return null;
+
+    const existing = [...container.querySelectorAll<HTMLIFrameElement>("[data-api-reference-frame]")].find(
+      (frame) => frame.dataset.apiReferenceUrl === url.href,
+    );
+    if (existing) {
+      if (fetchPriority === "high") existing.fetchPriority = "high";
+      return existing;
+    }
+
+    const frame = document.createElement("iframe");
+    frame.className = "absolute inset-0 h-full w-full border-0 bg-background";
+    frame.dataset.apiReferenceFrame = "";
+    frame.dataset.apiReferenceUrl = url.href;
+    frame.fetchPriority = fetchPriority;
+    if (fetchPriority === "low") frame.dataset.apiReferencePreloaded = "true";
+    frame.hidden = true;
+    frame.setAttribute("aria-hidden", "true");
+    frame.addEventListener("load", () => {
+      frame.dataset.loaded = "true";
+    });
+    frame.src = url.href;
+    container.append(frame);
+    return frame;
+  };
+
+  const preloadFromSource = (source: EventTarget | null, fetchPriority: "high" | "low" = "low") => {
+    const link = triggerFromSource(source);
+    const currentDrawer = drawer();
+    const embedHref = link?.dataset.apiReferenceEmbedHref;
+    if (!link?.isConnected || !currentDrawer || !embedHref) return null;
+
+    const embedUrl = new URL(embedHref, window.location.href);
+    if (embedUrl.origin !== window.location.origin) return null;
+
+    const frame = ensureFrame(currentDrawer, embedUrl, fetchPriority);
+    return frame ? { embedUrl, frame, link } : null;
+  };
+
+  const observeTriggers = () => {
+    triggerObserver?.disconnect();
+    triggerObserver = null;
+    if (!("IntersectionObserver" in window)) return;
+
+    triggerObserver = new IntersectionObserver(
+      (entries, observer) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          preloadFromSource(entry.target);
+          observer.unobserve(entry.target);
+        }
+      },
+      { rootMargin: "100% 0px" },
+    );
+    for (const link of document.querySelectorAll<HTMLAnchorElement>("[data-api-reference-trigger]")) {
+      triggerObserver.observe(link);
+    }
+  };
+
+  const showFrame = (
+    currentDrawer: HTMLDialogElement,
+    frame: HTMLIFrameElement,
+    embedUrl: URL,
+    generation: number,
+  ) => {
+    if (generation !== state.generation || state.selectedUrl !== embedUrl.href || !frame.isConnected) return;
+
+    if (state.loadingTimeout !== null) window.clearTimeout(state.loadingTimeout);
+    state.loadingTimeout = null;
+    state.trigger?.removeAttribute("aria-busy");
+
+    for (const candidate of currentDrawer.querySelectorAll<HTMLIFrameElement>("[data-api-reference-frame]")) {
+      const active = candidate === frame;
+      candidate.hidden = !active;
+      candidate.toggleAttribute("aria-hidden", !active);
+    }
+
+    if (!currentDrawer.open) currentDrawer.showModal();
+    currentDrawer.querySelector<HTMLButtonElement>("[data-api-reference-close]")?.focus();
+  };
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (!(event.target instanceof Element)) return;
+
+      const currentDrawer = drawer();
+      const close = event.target.closest<HTMLElement>("[data-api-reference-close]");
+      if (close && currentDrawer) {
+        currentDrawer.close();
+        return;
+      }
+
+      const link = triggerFromSource(event.target);
+      if (!link) {
+        if (!currentDrawer?.open) cancelPendingLoad(currentDrawer);
+        return;
+      }
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        link.target ||
+        link.hasAttribute("download")
+      ) {
+        if (!currentDrawer?.open) cancelPendingLoad(currentDrawer);
+        return;
+      }
+
+      const canonicalUrl = new URL(link.href, window.location.href);
+      if (!currentDrawer || canonicalUrl.origin !== window.location.origin) return;
+
+      const fullLink = currentDrawer.querySelector<HTMLAnchorElement>("[data-api-reference-full-link]");
+      const title = currentDrawer.querySelector<HTMLElement>("[data-api-reference-title]");
+      if (!fullLink || !title) return;
+
+      cancelPendingLoad(currentDrawer);
+      const preload = preloadFromSource(link, "high");
+      if (!preload) return;
+      const { embedUrl, frame } = preload;
+
+      event.preventDefault();
+      state.trigger = link;
+      state.selectedUrl = embedUrl.href;
+      link.setAttribute("aria-busy", "true");
+      const generation = ++state.generation;
+      const operationTitle = link.dataset.apiReferenceTitle || "API schema and response details";
+      title.textContent = operationTitle;
+      fullLink.href = canonicalUrl.href;
+      frame.title = `API reference: ${operationTitle}`;
+
+      const open = () => showFrame(currentDrawer, frame, embedUrl, generation);
+      if (frame.dataset.loaded) open();
+      else {
+        frame.addEventListener("load", open, { once: true });
+        state.loadingTimeout = window.setTimeout(() => cancelPendingLoad(currentDrawer), 15_000);
+      }
+    },
+    true,
+  );
+
+  document.addEventListener("click", (event) => {
+    const currentDrawer = drawer();
+    if (event.target === currentDrawer) currentDrawer.close();
+  });
+
+  document.addEventListener("focusin", (event) => {
+    if (state.loadingTimeout !== null && event.target !== state.trigger) cancelPendingLoad(drawer());
+    preloadFromSource(event.target);
+  });
+
+  document.addEventListener("pointerover", (event) => preloadFromSource(event.target));
+
+  document.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "touch") preloadFromSource(event.target);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || state.loadingTimeout === null) return;
+    const trigger = state.trigger;
+    cancelPendingLoad(drawer());
+    if (trigger?.isConnected) trigger.focus();
+  });
+
+  document.addEventListener(
+    "close",
+    (event) => {
+      if (event.target !== drawer()) return;
+      if (state.trigger?.isConnected) state.trigger.focus();
+      if (state.loadingTimeout !== null) window.clearTimeout(state.loadingTimeout);
+      state.loadingTimeout = null;
+      state.trigger?.removeAttribute("aria-busy");
+      state.trigger = null;
+      state.selectedUrl = null;
+      state.generation++;
+    },
+    true,
+  );
+
+  document.addEventListener("astro:before-swap", () => {
+    triggerObserver?.disconnect();
+    triggerObserver = null;
+    cancelPendingLoad(drawer());
+    state.generation++;
+    state.selectedUrl = null;
+    state.trigger = null;
+    const currentDrawer = drawer();
+    if (currentDrawer?.open) currentDrawer.close();
+    currentDrawer?.querySelector("[data-api-reference-frames]")?.replaceChildren();
+  });
+
+  document.addEventListener("astro:page-load", observeTriggers);
+  observeTriggers();
+</script>

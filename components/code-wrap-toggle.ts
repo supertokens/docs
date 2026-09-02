@@ -37,7 +37,7 @@ export const codeWrapPresentation = (wrapped: boolean): CodeWrapPresentation => 
 const isEligibleCodeBlock = (pre: HTMLPreElement): boolean => {
   if (pre.parentElement?.closest("pre")) return false;
   if (pre.matches(".twoslash, .blume-source")) return false;
-  if (pre.closest("blume-panel-tabs, [data-api-request-tabs]")) return false;
+  if (pre.closest("blume-panel-tabs, .api-request-snippet")) return false;
 
   return pre.querySelector(":scope > code") !== null && pre.querySelector(":scope > [data-blume-copy]") !== null;
 };
