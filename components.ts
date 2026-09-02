@@ -10,6 +10,7 @@ import DependentContent from "./components/DependentContent.astro";
 import DynamicContent from "./components/DynamicContent.astro";
 import Header from "./components/Header.astro";
 import NextjsRouterTypeSelect from "./components/NextjsRouterTypeSelect.astro";
+import PaidFeatureCallout from "./components/PaidFeatureCallout.astro";
 import PasswordlessRecipeForm from "./components/PasswordlessRecipeForm.astro";
 import Tab from "./components/Tab.astro";
 import TableOfContents from "./components/TableOfContents.astro";
@@ -33,6 +34,7 @@ export default defineComponents({
     DependentContent,
     DynamicContent,
     NextjsRouterTypeSelect,
+    PaidFeatureCallout,
     PasswordlessRecipeForm,
     Tab,
     Tabs,

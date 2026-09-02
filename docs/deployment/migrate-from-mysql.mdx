@@ -8,14 +8,10 @@ assume that schemas from different Core versions are compatible, and never use a
 
 ## Before you start
 
-Treat this as a manual, high-risk database migration. SuperTokens does not provide a supported automated
-MySQL-to-PostgreSQL migration procedure on this page. Do not use generic dump and import scripts: a naive CSV-based
-migration can silently drop rows, shift columns, corrupt escaped or binary values, violate constraints, or report
-success after a partial import. Plan and validate the procedure with your SuperTokens support contact or a maintainer
+Treat this as a manual, high-risk database migration. Plan and validate the procedure with your SuperTokens support contact or a maintainer
 who understands the released Core storage schemas. Do not test it directly on production data.
 
-Do not begin the production migration until a maintainer or your support contact has reviewed a migration-specific
-procedure and all of the following are true:
+Do not begin the production migration until the following are true:
 
 - Record the exact source Core image tag, storage schema version, database name, schema, and custom table prefix.
 - Initialize the PostgreSQL schema with the exact same Core version and the same custom table prefix. Upgrade Core only
@@ -32,75 +28,445 @@ procedure and all of the following are true:
 
 ## Steps
 
-<Steps>
+### 1. Create a backup of your MySQL database
 
-<Step title="Build and test the import">
+Create a final backup of your MySQL database.
+The instructions for this step are specific to your database management system.
 
-The import implementation must be built and tested for the exact released source and target schemas. It must:
+### 2. Prepare the PostgreSQL database
 
-- use explicit table and column lists and one binary-safe transfer contract that defines character encoding, escaping,
-  line endings, `NULL`, empty strings, headers, and binary values;
-- handle schema-specific conversions, including WebAuthn public-key bytes and third-party provider scope arrays, without
-  parsing text in a way that may lose information;
-- run in one database session and transaction, fail on the first error, and roll back the entire attempt rather than
-  continuing or reporting partial success;
-- use a dependency order proven against the matching released schema;
-- preserve or restore trigger and constraint behavior in the same transaction, and validate all foreign-key, unique,
-  check, and not-null constraints before commit; and
-- pass a disposable migration fixture containing empty and populated tables, SQL `NULL` and empty strings, tabs,
-  newlines, backslashes, Unicode, JSON, binary WebAuthn values, and provider scopes, and prove the exhaustive
-  reconciliation below before it is approved for production.
+Start the same version of [`supertokens-postgresql`](https://hub.docker.com/r/supertokens/supertokens-postgresql) to initialize the schema in the database.
 
-If these properties have not been demonstrated by an automated fixture, stop and ask SuperTokens support or a
-maintainer for assistance. Equal row counts alone are not evidence of a safe migration.
+:::warning
+Make sure to use the same version as the `supertokens-mysql` instance that you are currently running.
+:::
 
-Run the approved implementation against the new PostgreSQL target only while every source writer and the target Core
-remain stopped.
+### 3. Export data from MySQL
 
-</Step>
+#### 3.1 Export standard tables
 
-<Step title="Reconcile the data">
+Run the following command to export most of your data:
 
-Before starting the PostgreSQL Core:
+```bash
+mysqldump supertokens --fields-terminated-by ','  --fields-enclosed-by '"' --fields-escaped-by '\'  --no-create-info --tab /var/lib/mysql-files/
+```
 
-1. Compare row counts for every source and target table. Any missing, extra, or skipped table is a failed migration, but
-   matching counts alone are not sufficient.
-2. Reconcile every source row to exactly one target row by its complete primary key, including every column of a
-   composite key. Missing, duplicate, or unexpected keys are migration failures.
-3. Compare every migrated value using a deterministic, per-table normalization contract reviewed for the exact
-   MySQL and PostgreSQL schemas. Sort canonical rows by the complete primary key, encode field boundaries and types
-   unambiguously, and distinguish SQL `NULL`, empty strings, empty arrays, and empty objects. Compare the canonical
-   streams directly or compare hashes produced from those streams only after the support-assisted review approves the
-   canonical representation and hash choice; this page does not prescribe a cross-database hash algorithm.
-4. Include every column in that comparison, explicitly including password hashes, session records and payloads,
-   signing keys, tenant and user-to-tenant mappings, timestamps, escaped and Unicode text, binary WebAuthn values, JSON,
-   and third-party provider scopes. Normalize a value only where the released schemas require a representation change,
-   and document and test each normalization.
-5. Validate all target constraints and confirm that no staging tables, disabled triggers, or partially imported rows
-   remain.
-6. Retain the source backup and untouched source database for rollback.
+:::info
 
-</Step>
+If you do not have permissions to write to the database filesystem you can use the following python script to export tables one by one:
+<Accordion>
+<AccordionItem title="Export script">
+```python
+#!/usr/bin/env python3
+import subprocess
+import os
+import csv
 
-<Step title="Validate the PostgreSQL Core">
+DB_HOST = "DB_HOST"
+DB_PORT = "3306"
+DB_USER = "DB_USER"
+DB_NAME = "DB_NAME"
+DB_PASS = "DB_PASS"
 
-Start the PostgreSQL Core on the private network only after every reconciliation check passes. Then verify:
+def run_mysql_command(query):
+    """Run a mysql command and return the output"""
+    cmd = [
+        "mysql",
+        "-h", DB_HOST,
+        "-P", DB_PORT,
+        "-u", DB_USER,
+        f"-p{DB_PASS}",
+        "--batch",
+        "-e", query,
+        DB_NAME
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.stdout
 
-- Core starts without schema or constraint errors and its `/hello` endpoint responds;
-- existing users can sign in;
-- an existing session can refresh;
-- each enabled recipe passes a smoke test, including account creation or sign-in and its critical follow-up operation;
-  and
-- logs contain no storage, decoding, or constraint errors.
+def main():
+    os.makedirs("./mysql", exist_ok=True)
 
-</Step>
+    print("Getting list of tables")
+    cmd = [
+        "mysql",
+        "-h", DB_HOST,
+        "-P", DB_PORT,
+        "-u", DB_USER,
+        f"-p{DB_PASS}",
+        "-N",
+        "-e", "SHOW TABLES",
+        DB_NAME
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
 
-<Step title="Cut over traffic">
+    if result.returncode != 0:
+        print(f"ERROR: Failed to get table list: {result.stderr}")
+        return
 
-Cut application traffic over only after all checks pass. If any reconciliation or smoke test fails, stop the PostgreSQL
-Core, return traffic to the unchanged MySQL deployment, preserve the failed target for investigation, and follow the
-tested rollback procedure.
+    tables = [t.strip() for t in result.stdout.strip().split('\n') if t.strip()]
+    print(f"Found {len(tables)} tables")
 
-</Step>
+    for table in tables:
+        print(f"Exporting table: {table}")
 
-</Steps>
+        query = f"SELECT * FROM {table}"
+        output = run_mysql_command(query)
+
+        if not output.strip():
+            print(f"  -> Table {table} is empty, skipping")
+            continue
+
+        lines = output.strip().split('\n')
+
+        output_file = f"./mysql/{table}.csv"
+        with open(output_file, 'w', newline='') as f:
+            csv_writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+
+            for line in lines:
+                fields = line.split('\t')
+                csv_writer.writerow(fields)
+
+        print(f"  -> Exported {len(lines)} rows")
+
+    print("Export complete!")
+
+if __name__ == "__main__":
+    main()
+```
+</AccordionItem>
+</Accordion>
+:::
+
+This creates CSV files for all tables in the `/var/lib/mysql-files/` directory.
+
+#### 3.2 Export the WebAuthn credentials table
+
+The `webauthn_credentials` table requires special handling because of the data type used to store the `public_key` field.
+
+```sql
+SELECT id, app_id, rp_id, user_id, counter, HEX(public_key) AS public_key, transports, created_at, updated_at
+FROM webauthn_credentials
+INTO OUTFILE '/var/lib/mysql-files/webauthn_credentials_hex.txt'
+FIELDS TERMINATED BY ','
+OPTIONALLY ENCLOSED BY '"'
+ESCAPED BY '\\'
+LINES TERMINATED BY '\n';
+```
+
+This exports the `public_key` field as hexadecimal text for proper conversion to PostgreSQL's Binary Data (BYTEA) format.
+
+### 4. Transfer data files
+
+If necessary, copy the exported CSV files to a location where the `PostgreSQL` database can access them.
+
+### 5. Import data into the PostgreSQL database
+
+Next, you need to import the data into your PostgreSQL database.
+
+#### 5.1. Disable triggers
+
+Connect to your PostgreSQL database and disable triggers to prevent constraint violations during import.
+
+```sql
+SET session_replication_role = 'replica';
+```
+
+:::info
+If you cannot disable the triggers, use the order specified in the next step.
+The *With Order* shows you how to import everything one by one without triggering the constraints.
+:::
+
+#### 5.2 Import the standard tables
+
+For most tables, you can import the data directly.
+
+<CodeGroup group="import-column-order">
+<Tab value="without-order" title="Without specifying column order">
+```sql
+COPY <table_name> FROM '/pg-data-host/<table_name>.csv'
+CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
+```
+</Tab>
+
+<Tab value="with-order" title="With specifying column order">
+```bash
+#!/bin/bash
+
+PG_HOST="PG_HOST"
+PG_PORT="5432"
+PG_USER="PG_USER"
+PG_DB="PG_DB"
+PG_PASS="PG_PASS"
+CSV_DIR="./mysql"
+
+import_table() {
+    local table=$1
+    local columns=$2
+    local csv_file="${CSV_DIR}/${table}.csv"
+
+    if [ ! -f "$csv_file" ]; then
+        echo "File not found: $csv_file, skipping"
+        return
+    fi
+
+    echo "Importing table: $table"
+
+    if [ -z "$columns" ] || [ "$columns" = "*" ]; then
+        PGPASSWORD=$PG_PASS psql -h $PG_HOST -p $PG_PORT -U $PG_USER -d $PG_DB -c \
+            "\\COPY $table FROM '$csv_file' WITH (FORMAT csv, HEADER true);"
+    else
+        PGPASSWORD=$PG_PASS psql -h $PG_HOST -p $PG_PORT -U $PG_USER -d $PG_DB -c \
+            "\\COPY $table ($columns) FROM '$csv_file' WITH (FORMAT csv, HEADER true);"
+    fi
+
+    if [ $? -eq 0 ]; then
+        echo "Successfully imported $table"
+    else
+        echo "ERROR importing $table"
+    fi
+}
+
+echo "Starting PostgreSQL import"
+
+import_table "apps" ""
+import_table "tenants" ""
+import_table "key_value" "app_id, tenant_id, name, value, created_at_time"
+import_table "all_auth_recipe_users" "app_id, tenant_id, user_id, primary_or_recipe_user_id, is_linked_or_is_a_primary_user, recipe_id, time_joined, primary_or_recipe_user_time_joined"
+import_table "app_id_to_user_id" "app_id, user_id, recipe_id, primary_or_recipe_user_id, is_linked_or_is_a_primary_user"
+import_table "bulk_import_users" "id, app_id, primary_user_id, raw_data, status, error_msg, created_at, updated_at"
+import_table "dashboard_user_sessions" "app_id, session_id, user_id, time_created, expiry"
+import_table "dashboard_users" "app_id, user_id, email, password_hash, time_joined"
+import_table "emailpassword_pswd_reset_tokens" "app_id, user_id, token, email, token_expiry"
+import_table "emailpassword_user_to_tenant" "app_id, tenant_id, user_id, email"
+import_table "emailpassword_users" "app_id, user_id, email, password_hash, time_joined"
+import_table "emailverification_tokens" "app_id, tenant_id, user_id, email, token, token_expiry"
+import_table "emailverification_verified_emails" "app_id, user_id, email"
+import_table "jwt_signing_keys" "app_id, key_id, key_string, algorithm, created_at"
+import_table "oauth_clients" "app_id, client_id, client_secret, enable_refresh_token_rotation, is_client_credentials_only"
+import_table "oauth_logout_challenges" "app_id, challenge, client_id, post_logout_redirect_uri, session_handle, state, time_created"
+import_table "oauth_m2m_tokens" "app_id, client_id, iat, exp"
+import_table "oauth_sessions" "gid, app_id, client_id, session_handle, external_refresh_token, internal_refresh_token, jti, exp"
+import_table "passwordless_codes" "app_id, tenant_id, code_id, device_id_hash, link_code_hash, created_at"
+import_table "passwordless_devices" "app_id, tenant_id, device_id_hash, email, phone_number, link_code_salt, failed_attempts"
+import_table "passwordless_user_to_tenant" "app_id, tenant_id, user_id, email, phone_number"
+import_table "passwordless_users" "app_id, user_id, email, phone_number, time_joined"
+import_table "role_permissions" "app_id, role, permission"
+import_table "roles" "app_id, role"
+import_table "session_access_token_signing_keys" "app_id, created_at_time, value"
+import_table "session_info" "app_id, tenant_id, session_handle, user_id, refresh_token_hash_2, session_data, expires_at, created_at_time, jwt_user_payload, use_static_key"
+import_table "tenant_first_factors" "connection_uri_domain, app_id, tenant_id, factor_id"
+import_table "tenant_required_secondary_factors" "connection_uri_domain, app_id, tenant_id, factor_id"
+import_table "tenant_thirdparty_providers" "connection_uri_domain, app_id, tenant_id, third_party_id, name, authorization_endpoint, authorization_endpoint_query_params, token_endpoint, token_endpoint_body_params, user_info_endpoint, user_info_endpoint_query_params, user_info_endpoint_headers, jwks_uri, oidc_discovery_endpoint, require_email, user_info_map_from_id_token_payload_user_id, user_info_map_from_id_token_payload_email, user_info_map_from_id_token_payload_email_verified, user_info_map_from_user_info_endpoint_user_id, user_info_map_from_user_info_endpoint_email, user_info_map_from_user_info_endpoint_email_verified"
+import_table "thirdparty_user_to_tenant" "app_id, tenant_id, user_id, third_party_id, third_party_user_id"
+import_table "thirdparty_users" "app_id, third_party_id, third_party_user_id, user_id, email, time_joined"
+import_table "totp_used_codes" "app_id, tenant_id, user_id, code, is_valid, expiry_time_ms, created_time_ms"
+import_table "tenant_configs" "connection_uri_domain, app_id, tenant_id, core_config, email_password_enabled, passwordless_enabled, third_party_enabled, is_first_factors_null"
+import_table "totp_user_devices" "app_id, user_id, device_name, secret_key, period, skew, verified, created_at"
+import_table "totp_users" "app_id, user_id"
+import_table "user_last_active" "app_id, user_id, last_active_time"
+import_table "user_metadata" "app_id, user_id, user_metadata"
+import_table "user_roles" "app_id, tenant_id, user_id, role"
+import_table "userid_mapping" "app_id, supertokens_user_id, external_user_id, external_user_id_info"
+import_table "webauthn_account_recovery_tokens" "app_id, tenant_id, user_id, email, token, expires_at"
+import_table "webauthn_generated_options" "app_id, tenant_id, id, challenge, email, rp_id, rp_name, origin, expires_at, created_at, user_presence_required, user_verification"
+import_table "webauthn_user_to_tenant" "app_id, tenant_id, user_id, email"
+import_table "webauthn_users" "app_id, user_id, email, rp_id, time_joined"
+
+echo ""
+echo "Import complete!"
+
+```
+</Tab>
+
+</CodeGroup>
+
+
+#### 5.3 Handle the third-party provider clients table
+
+The `tenant_thirdparty_provider_clients` table requires special handling.
+You need to do this to differences between the `MySQL` `JSON` and `PostgreSQL` `text[]` formats.
+
+##### 5.3.1 Create a staging table
+
+```sql
+CREATE TABLE tenant_thirdparty_provider_clients_raw (
+    connection_uri_domain VARCHAR(256) DEFAULT '' NOT NULL,
+    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
+    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
+    third_party_id VARCHAR(28) NOT NULL,
+    client_type VARCHAR(64) DEFAULT '' NOT NULL,
+    client_id VARCHAR(256) NOT NULL,
+    client_secret TEXT,
+    scope JSONB,
+    force_pkce BOOLEAN,
+    additional_config TEXT
+);
+```
+
+##### 5.3.2 Import data into the staging table
+
+```sql
+COPY tenant_thirdparty_provider_clients_raw FROM '/host/tenant_thirdparty_provider_clients.txt'
+CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
+```
+
+##### 5.3.3 Convert and insert into the final table
+
+```sql
+INSERT INTO tenant_thirdparty_provider_clients (
+    connection_uri_domain, app_id, tenant_id, third_party_id, client_type,
+    client_id, client_secret, force_pkce, additional_config, scope
+)
+SELECT
+    connection_uri_domain, app_id, tenant_id, third_party_id, client_type,
+    client_id, client_secret, force_pkce, additional_config,
+    ARRAY(
+        SELECT jsonb_array_elements_text(scope->jsonb_object_keys(scope))
+    )
+FROM tenant_thirdparty_provider_clients_raw;
+```
+
+#### 5.4 Handle the WebAuthn credentials table
+
+The `webauthn_credentials` table requires conversion from MySQL Binary Large Object, `BLOB`, to PostgreSQL Binary Data, `BYTEA` format.
+
+##### 5.4.1 Create a staging table
+
+```sql
+CREATE TABLE IF NOT EXISTS webauthn_credentials_staging (
+   id VARCHAR(256) NOT NULL,
+   app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
+   rp_id VARCHAR(256) NOT NULL,
+   user_id CHAR(36),
+   counter BIGINT NOT NULL,
+   public_key TEXT NOT NULL,
+   transports TEXT NOT NULL,
+   created_at BIGINT NOT NULL,
+   updated_at BIGINT NOT NULL
+);
+```
+
+##### 5.4.2 Import the hexadecimal data
+
+```sql
+COPY webauthn_credentials_staging FROM '/host/webauthn_credentials_hex.txt'
+CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
+```
+
+##### 5.4.3 Convert and insert into the final table
+
+```sql
+INSERT INTO webauthn_credentials (
+   id, app_id, rp_id, user_id, counter, public_key, transports, created_at, updated_at
+)
+SELECT
+   id, app_id, rp_id, user_id, counter,
+   decode(public_key, 'hex'),
+   transports, created_at, updated_at
+FROM webauthn_credentials_staging;
+```
+
+
+#### 5.5 Delete the staging tables
+
+Delete the two temporary tables.
+
+```
+DROP TABLE webauthn_credentials_staging;
+DROP TABLE tenant_thirdparty_provider_clients_raw;
+```
+
+#### 5.6 Re-enable triggers
+
+After importing all data, re-enable the triggers:
+
+```sql
+SET session_replication_role = 'origin';
+```
+
+### 6. Verify the migration
+
+Verify that all data migrated successfully by comparing record counts between your MySQL and PostgreSQL databases:
+
+```bash
+#!/bin/bash
+
+MYSQL_HOST="DB_HOST"
+MYSQL_PORT="3306"
+MYSQL_USER="DB_USER"
+MYSQL_DB="DB_NAME"
+MYSQL_PASS="DB_PASS"
+
+PG_HOST="PG_HOST"
+PG_PORT="5432"
+PG_USER="PG_USER"
+PG_DB="PG_DB"
+PG_PASS="PG_PASS"
+
+echo "Comparing table row counts between MySQL and PostgreSQL"
+
+echo "Getting table list from MySQL"
+TABLES=$(mysql -h $MYSQL_HOST -P $MYSQL_PORT -u $MYSQL_USER -p$MYSQL_PASS \
+  -N -e "SHOW TABLES" $MYSQL_DB)
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to get table list from MySQL"
+    exit 1
+fi
+
+TOTAL_TABLES=$(echo "$TABLES" | wc -l)
+echo "Found $TOTAL_TABLES tables"
+echo ""
+
+MATCH_COUNT=0
+MISMATCH_COUNT=0
+ERROR_COUNT=0
+
+for TABLE in $TABLES; do
+    MYSQL_COUNT=$(mysql -h $MYSQL_HOST -P $MYSQL_PORT -u $MYSQL_USER -p$MYSQL_PASS \
+        -N -e "SELECT COUNT(*) FROM $TABLE" $MYSQL_DB 2>&1)
+
+    if [ $? -ne 0 ]; then
+        echo "$TABLE - MySQL: ERROR, PostgreSQL: -, Status: ERROR"
+        ERROR_COUNT=$((ERROR_COUNT + 1))
+        continue
+    fi
+
+    PG_COUNT=$(PGPASSWORD=$PG_PASS psql -h $PG_HOST -p $PG_PORT -U $PG_USER -d $PG_DB \
+        -t -c "SELECT COUNT(*) FROM $TABLE" 2>&1)
+
+    if [ $? -ne 0 ]; then
+        echo "$TABLE - MySQL: $MYSQL_COUNT, PostgreSQL: ERROR, Status: ERROR"
+        ERROR_COUNT=$((ERROR_COUNT + 1))
+        continue
+    fi
+
+    MYSQL_COUNT=$(echo $MYSQL_COUNT | xargs)
+    PG_COUNT=$(echo $PG_COUNT | xargs)
+
+    if [ "$MYSQL_COUNT" = "$PG_COUNT" ]; then
+        echo "$TABLE - MySQL: $MYSQL_COUNT, PostgreSQL: $PG_COUNT, Status: ✓ MATCH"
+        MATCH_COUNT=$((MATCH_COUNT + 1))
+    else
+        echo "$TABLE - MySQL: $MYSQL_COUNT, PostgreSQL: $PG_COUNT, Status: ✗ MISMATCH"
+        MISMATCH_COUNT=$((MISMATCH_COUNT + 1))
+    fi
+done
+
+echo "Summary:"
+echo "  Total tables:     $TOTAL_TABLES"
+echo "  Matching:         $MATCH_COUNT"
+echo "  Mismatched:       $MISMATCH_COUNT"
+echo "  Errors:           $ERROR_COUNT"
+echo ""
+
+if [ $MISMATCH_COUNT -eq 0 ] && [ $ERROR_COUNT -eq 0 ]; then
+    echo "✓ All tables match!"
+    exit 0
+else
+    echo "✗ Some tables have mismatches or errors"
+    exit 1
+fi
+```
+
+If the numbers match, you have successfully migrated your SuperTokens data from `MySQL` to `PostgreSQL` :tada:
