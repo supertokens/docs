@@ -108,9 +108,10 @@ export class DocsSelectionStore {
 
   hydrate(queryParams: URLSearchParams): void {
     const next = defaultState();
+    const querySelection = selectionFromQuery(queryParams);
     for (const key of [...tabGroupNames, ...Object.keys(variantDefinitions)] as DocsSelectionKey[]) {
       const values = valuesForKey(key);
-      const queryValue = queryParams.get(selectionQueryKey(key));
+      const queryValue = querySelection[selectionQueryKey(key)];
       const storedValue = this.readStorage(storageKeyForSelection(key));
       const value = [queryValue, storedValue, next[key]].find(
         (candidate): candidate is DocsSelectionState[typeof key] => Boolean(candidate && values.includes(candidate)),
@@ -311,10 +312,10 @@ export class DocsSelectionStore {
   private updatedUrl(updates: readonly DocsSelectionUpdate[], removedQueryKeys: readonly string[]): string | undefined {
     if (!this.browser) return;
     try {
-      const url = new URL(this.browser.href());
-      for (const key of removedQueryKeys) url.searchParams.delete(key);
-      for (const update of updates) url.searchParams.set(selectionQueryKey(update.key), update.value);
-      return `${url.pathname}${url.search}${url.hash}`;
+      const queryUpdates: Record<string, string | undefined> = {};
+      for (const key of removedQueryKeys) queryUpdates[selectionQueryKey(key)] = undefined;
+      for (const update of updates) queryUpdates[selectionQueryKey(update.key)] = update.value;
+      return compactSelectionUrl(this.browser.href(), queryUpdates);
     } catch (error) {
       this.report(error);
       return;
@@ -388,6 +389,173 @@ const queryKeyAliases: Record<string, string> = {
   "ui-type": "ui",
 };
 
+const compactSelectionAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+export interface CompactSelectionField {
+  readonly key: string;
+  readonly values: readonly string[];
+}
+
+// This ordering is the v1 compatibility contract. Any schema change requires a new codec version.
+const compactSelectionV1Fields: readonly CompactSelectionField[] = Object.freeze(
+  [
+    { key: "backend", values: Object.freeze(["nodejs", "go", "python", "curl", "dashboard", "java", "csharp", "php"]) },
+    {
+      key: "frontend",
+      values: Object.freeze([
+        "reactjs",
+        "angular",
+        "vue",
+        "web",
+        "mobile",
+        "webjs",
+        "android",
+        "ios",
+        "flutter",
+        "reactnative",
+      ]),
+    },
+    { key: "frontend-framework", values: Object.freeze(["reactnative", "android", "ios", "flutter"]) },
+    {
+      key: "backend-framework",
+      values: Object.freeze([
+        "express",
+        "hapi",
+        "fastify",
+        "koa",
+        "loopback",
+        "serverless",
+        "aws-lambda",
+        "nextjs",
+        "nestjs",
+        "http",
+        "gin",
+        "chi",
+        "mux",
+        "fastapi",
+        "flask",
+        "django",
+      ]),
+    },
+    { key: "package-manager", values: Object.freeze(["npm", "yarn", "pnpm", "bun"]) },
+    { key: "install-method", values: Object.freeze(["npm", "script-tag"]) },
+    { key: "react-router", values: Object.freeze(["yes", "no"]) },
+    { key: "uses-try-supertokens", values: Object.freeze(["yes", "no"]) },
+    { key: "python-io-style", values: Object.freeze(["asyncio", "syncio"]) },
+    { key: "python-package-manager", values: Object.freeze(["pip", "uv"]) },
+    { key: "version", values: Object.freeze(["v6", "v5"]) },
+    { key: "docker", values: Object.freeze(["with-docker", "without-docker"]) },
+    { key: "comparison", values: Object.freeze(["greater", "lesser"]) },
+    { key: "database", values: Object.freeze(["mysql", "postgresql"]) },
+    { key: "operating-system", values: Object.freeze(["linux", "mac", "windows"]) },
+    { key: "import-column-order", values: Object.freeze(["without-order", "with-order"]) },
+    { key: "core-deployment", values: Object.freeze(["with-docker", "without-docker", "saas"]) },
+    { key: "core-hosting", values: Object.freeze(["managed", "self-hosted-docker", "self-hosted-binary"]) },
+    { key: "password-hashing-algorithm", values: Object.freeze(["argon2", "bcrypt"]) },
+    { key: "package-manager-scripts", values: Object.freeze(["npm", "yarn", "pnpm"]) },
+    { key: "nextjs-router-type", values: Object.freeze(["app-router", "pages-router"]) },
+    { key: "passwordless-contact-method", values: Object.freeze(["EMAIL", "PHONE", "EMAIL_OR_PHONE"]) },
+    {
+      key: "passwordless-flow-type",
+      values: Object.freeze(["MAGIC_LINK", "USER_INPUT_CODE", "USER_INPUT_CODE_AND_MAGIC_LINK"]),
+    },
+    { key: "tenant-type", values: Object.freeze(["single", "multi"]) },
+    { key: "ui", values: Object.freeze(["prebuilt", "custom"]) },
+  ].map((field) => Object.freeze(field)),
+);
+
+const compactSelectionV1ByKey = new Map(compactSelectionV1Fields.map((field) => [field.key, field]));
+const compactSelectionReadableKeys = new Set(compactSelectionV1Fields.map((field) => field.key));
+
+export type CompactSelectionState = Readonly<Partial<Record<string, string>>>;
+
+function encodeCompactInteger(value: bigint): string {
+  if (value === 0n) return compactSelectionAlphabet[0];
+  let result = "";
+  while (value > 0n) {
+    result = compactSelectionAlphabet[Number(value % 64n)] + result;
+    value /= 64n;
+  }
+  return result;
+}
+
+const compactSelectionV1MaxTokenLength =
+  1 +
+  encodeCompactInteger(
+    compactSelectionV1Fields.reduce((product, field) => product * BigInt(field.values.length + 1), 1n) - 1n,
+  ).length;
+
+export function getCompactSelectionV1Schema(): readonly CompactSelectionField[] {
+  return compactSelectionV1Fields;
+}
+
+/** Encodes canonical URL selections using the immutable v1 mixed-radix schema. */
+export function encodeCompactSelection(selection: CompactSelectionState): string {
+  let encoded = 0n;
+  for (const field of compactSelectionV1Fields) {
+    const value = selection[field.key];
+    const index = value === undefined ? -1 : field.values.indexOf(value);
+    if (value !== undefined && index < 0) throw new Error(`Invalid compact selection value for "${field.key}".`);
+    encoded = encoded * BigInt(field.values.length + 1) + BigInt(index + 1);
+  }
+  return `B${encodeCompactInteger(encoded)}`;
+}
+
+/** Returns null for unknown versions and malformed, out-of-range, or noncanonical tokens. */
+export function decodeCompactSelection(token: string | null): CompactSelectionState | null {
+  if (!token || token[0] !== "B" || token.length < 2 || token.length > compactSelectionV1MaxTokenLength) return null;
+  const payload = token.slice(1);
+  if (payload.length > 1 && payload[0] === compactSelectionAlphabet[0]) return null;
+  let encoded = 0n;
+  for (const character of payload) {
+    const digit = compactSelectionAlphabet.indexOf(character);
+    if (digit < 0) return null;
+    encoded = encoded * 64n + BigInt(digit);
+  }
+
+  const selection: Record<string, string> = {};
+  for (let index = compactSelectionV1Fields.length - 1; index >= 0; index -= 1) {
+    const field = compactSelectionV1Fields[index];
+    const radix = BigInt(field.values.length + 1);
+    const digit = Number(encoded % radix);
+    encoded /= radix;
+    if (digit > 0) selection[field.key] = field.values[digit - 1];
+  }
+  if (encoded !== 0n) return null;
+  const result = Object.freeze(selection);
+  return encodeCompactSelection(result) === token ? result : null;
+}
+
+function selectionFromQuery(queryParams: URLSearchParams): Record<string, string> {
+  const selection: Record<string, string> = {};
+  Object.assign(selection, decodeCompactSelection(queryParams.get("q")) ?? {});
+  for (const field of compactSelectionV1Fields) {
+    const readableValue = queryParams.get(field.key);
+    if (readableValue !== null && field.values.includes(readableValue)) selection[field.key] = readableValue;
+  }
+  return selection;
+}
+
+function compactSelectionUrl(href: string, updates: Readonly<Record<string, string | undefined>>): string {
+  const url = new URL(href);
+  const selection = selectionFromQuery(url.searchParams);
+  for (const [key, value] of Object.entries(updates)) {
+    if (!compactSelectionV1ByKey.has(key)) continue;
+    if (value === undefined) delete selection[key];
+    else selection[key] = value;
+  }
+  for (const key of compactSelectionReadableKeys) url.searchParams.delete(key);
+
+  const validSelection: Record<string, string> = {};
+  for (const field of compactSelectionV1Fields) {
+    const value = selection[field.key];
+    if (value && field.values.includes(value)) validSelection[field.key] = value;
+  }
+  if (Object.keys(validSelection).length > 0) url.searchParams.set("q", encodeCompactSelection(validSelection));
+  else url.searchParams.delete("q");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function selectionQueryKey(key: string): string {
   if (key.endsWith("-frameworks") && key !== "mobile-frameworks") return "backend-framework";
   return queryKeyAliases[key] ?? key;
@@ -408,21 +576,42 @@ export function valuesForSelectionQuery(group: TabGroup): string[] {
   ];
 }
 
+export function getCurrentSelectionQuerySchema(): readonly CompactSelectionField[] {
+  const valuesByKey = new Map<string, Set<string>>();
+  const addValues = (key: string, values: readonly string[]) => {
+    const current = valuesByKey.get(key) ?? new Set<string>();
+    for (const value of values) current.add(value);
+    valuesByKey.set(key, current);
+  };
+  for (const group of tabGroupNames) addValues(selectionQueryKey(group), valuesForSelectionGroup(group));
+  for (const key of Object.keys(variantDefinitions) as VariantSelectionKey[]) {
+    addValues(selectionQueryKey(key), variantDefinitions[key].values);
+  }
+  return Object.freeze(
+    [...valuesByKey].map(([key, values]) => Object.freeze({ key, values: Object.freeze([...values]) })),
+  );
+}
+
 export function selectionUrl(href: string, key: string, value: string): string {
+  const queryKey = selectionQueryKey(key);
+  if (compactSelectionV1ByKey.has(queryKey)) return compactSelectionUrl(href, { [queryKey]: value });
   const url = new URL(href);
-  url.searchParams.set(selectionQueryKey(key), value);
+  url.searchParams.set(queryKey, value);
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export function canonicalSelectionUrl(href: string, key: string, value: string): string {
   const url = new URL(href);
   const queryKey = selectionQueryKey(key);
-  if (!url.searchParams.has(queryKey)) url.searchParams.set(queryKey, value);
-  return `${url.pathname}${url.search}${url.hash}`;
+  if (selectionFromQuery(url.searchParams)[queryKey] !== undefined) return `${url.pathname}${url.search}${url.hash}`;
+  return selectionUrl(href, key, value);
 }
 
 export function readQuery(key: string): string | null {
-  return new URL(window.location.href).searchParams.get(selectionQueryKey(key));
+  const queryKey = selectionQueryKey(key);
+  const queryParams = new URL(window.location.href).searchParams;
+  if (compactSelectionV1ByKey.has(queryKey)) return selectionFromQuery(queryParams)[queryKey] ?? null;
+  return queryParams.get(queryKey) ?? decodeCompactSelection(queryParams.get("q"))?.[queryKey] ?? null;
 }
 
 export function replaceQuery(key: string, value: string): void {
@@ -430,6 +619,21 @@ export function replaceQuery(key: string, value: string): void {
 }
 
 export function ensureQuery(key: string, value: string): void {
+  const queryKey = selectionQueryKey(key);
+  const field = compactSelectionV1ByKey.get(queryKey);
+  if (field) {
+    const url = new URL(window.location.href);
+    const readableValue = url.searchParams.get(queryKey);
+    if (readableValue !== null && !field.values.includes(readableValue)) {
+      const resolvedValue = selectionFromQuery(url.searchParams)[queryKey] ?? value;
+      window.history.replaceState(
+        window.history.state,
+        "",
+        compactSelectionUrl(window.location.href, { [queryKey]: resolvedValue }),
+      );
+      return;
+    }
+  }
   if (readQuery(key) !== null) return;
   window.history.replaceState(window.history.state, "", canonicalSelectionUrl(window.location.href, key, value));
 }
@@ -437,15 +641,34 @@ export function ensureQuery(key: string, value: string): void {
 export function removeQuery(key: string): void {
   const url = new URL(window.location.href);
   const queryKey = selectionQueryKey(key);
-  if (!url.searchParams.has(queryKey)) return;
-  url.searchParams.delete(queryKey);
-  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  if (compactSelectionV1ByKey.has(queryKey)) {
+    if (selectionFromQuery(url.searchParams)[queryKey] === undefined) return;
+    window.history.replaceState(
+      window.history.state,
+      "",
+      compactSelectionUrl(window.location.href, { [queryKey]: undefined }),
+    );
+    return;
+  }
+  if (url.searchParams.has(queryKey)) {
+    url.searchParams.delete(queryKey);
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
 }
 
 export function readCanonicalQuery(key: string, availableValues: Iterable<string>): string | null {
-  const value = readQuery(key);
+  const values = new Set(availableValues);
+  const queryKey = selectionQueryKey(key);
+  const url = new URL(window.location.href);
+  const readableValue = url.searchParams.get(queryKey);
+  if (readableValue !== null) {
+    if (values.has(readableValue)) return readableValue;
+    url.searchParams.delete(queryKey);
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+  const value = decodeCompactSelection(url.searchParams.get("q"))?.[queryKey];
   if (!value) return null;
-  if (new Set(availableValues).has(value)) return value;
+  if (values.has(value)) return value;
   removeQuery(key);
   return null;
 }

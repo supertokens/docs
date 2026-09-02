@@ -469,14 +469,21 @@ test("stored selections remain the fallback when the URL omits them", async ({ p
           backend: query.get("backend"),
           campaign: query.get("campaign"),
           frontend: query.get("frontend"),
+          q: query.get("q"),
           ui: query.get("ui"),
         };
       }),
     )
-    .toEqual({ backend: "python", campaign: "qa", frontend: "mobile", ui: "custom" });
+    .toEqual({
+      backend: null,
+      campaign: "qa",
+      frontend: null,
+      q: expect.stringMatching(/^B[A-Za-z0-9_-]+$/u),
+      ui: null,
+    });
 });
 
-test("preference controls share selections through URL and storage", async ({ page }) => {
+test("preference controls share selections through URL and storage", async ({ browser, page }) => {
   await page.goto("/docs/quickstart?campaign=qa#2-integrate-the-backend-sdk");
 
   const frontend = page.locator('[data-docs-selection-group="frontend-prebuilt-ui"]').first();
@@ -511,6 +518,7 @@ test("preference controls share selections through URL and storage", async ({ pa
             frontend: params.get("frontend"),
             framework: params.get("backend-framework"),
             packageManager: params.get("package-manager"),
+            q: params.get("q"),
             ui: params.get("ui"),
           };
         })(),
@@ -526,15 +534,35 @@ test("preference controls share selections through URL and storage", async ({ pa
     .toEqual({
       hash: "#2-integrate-the-backend-sdk",
       query: {
-        backend: "go",
+        backend: null,
         campaign: "qa",
-        frontend: "web",
-        framework: "gin",
-        packageManager: "pnpm",
-        ui: "custom",
+        frontend: null,
+        framework: null,
+        packageManager: null,
+        q: expect.stringMatching(/^B[A-Za-z0-9_-]+$/u),
+        ui: null,
       },
       storage: { backend: "go", framework: "gin", frontend: "angular", packageManager: "pnpm", ui: "custom" },
     });
+
+  const generatedUrl = page.url();
+  const freshContext = await browser.newContext();
+  try {
+    const freshPage = await freshContext.newPage();
+    await freshPage.goto(generatedUrl);
+    await expect(
+      freshPage.getByRole("group", { name: "UI type" }).getByRole("radio", { name: /^Custom UI/ }),
+    ).toBeChecked();
+    await expect(freshPage.getByRole("combobox", { name: "Platform" }).first()).toContainText("Web");
+    await expect(freshPage.getByRole("combobox", { name: "Language" }).first()).toContainText("Go");
+    await expect(freshPage.getByRole("combobox", { name: "Go framework" }).first()).toContainText("Gin");
+    await expect(
+      freshPage.getByRole("combobox", { name: "Package manager", includeHidden: true }).first(),
+    ).toContainText("pnpm");
+    expect(freshPage.url()).toBe(generatedUrl);
+  } finally {
+    await freshContext.close();
+  }
 });
 
 test("popstate reapplies query selections", async ({ page }) => {
@@ -555,7 +583,7 @@ test("popstate reapplies query selections", async ({ page }) => {
     .toBe("angular");
 
   await page.goBack();
-  await expect(page).toHaveURL(/frontend=reactjs/u);
+  await expect(page).toHaveURL(/\/docs\/quickstart\?q=B[A-Za-z0-9_-]+$/u);
   await expect(framework).toContainText("React");
 });
 

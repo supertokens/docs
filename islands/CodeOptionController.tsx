@@ -155,7 +155,7 @@ export default function CodeOptionController({ passive, wrapperId }: Props) {
         );
         wrapper.dataset.docsPassiveCodeResolved = "true";
         if (passive) wrapper.hidden = false;
-        if (!globalValueIsUnavailable && isSelectionContextVisible(wrapper)) {
+        if (!globalValueIsUnavailable && (!queryIsValid || queryMatchesGroup) && isSelectionContextVisible(wrapper)) {
           if (queryValue !== value) replaceQuery(group, value);
           writeStorage(selectionStorageKey(group), value);
         }
