@@ -32,6 +32,10 @@ describe("microfrontend routing", () => {
     ]);
   });
 
+  it("serves docs assets directly without deployment-only bridge rewrites", () => {
+    expect(vercel.rewrites.filter(({ source }) => source.startsWith("/docs-assets/"))).toEqual([]);
+  });
+
   it("proxies every SDK namespace and redirects roots through latest", () => {
     for (const [sdk, entrypoint] of Object.entries(sdkEntrypoints)) {
       expect(vercel.redirects).toContainEqual({

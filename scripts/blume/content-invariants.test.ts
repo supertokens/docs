@@ -465,8 +465,7 @@ describe("published documentation invariants", () => {
         return [`${location}: invalid URL ${url}`];
       }
 
-      const publicPath = pathname.replace(/^\/docs-assets/, "");
-      const assetPath = resolve(publicRoot, `.${publicPath}`);
+      const assetPath = resolve(publicRoot, `.${pathname}`);
       return assetPath.startsWith(`${publicRoot}/`) && existsSync(assetPath) ? [] : [`${location}: ${url}`];
     });
 
@@ -484,7 +483,7 @@ describe("published documentation invariants", () => {
       "php.svg",
       "serverless.svg",
     ]) {
-      const source = readFileSync(resolve(publicRoot, "img/logos", file), "utf8");
+      const source = readFileSync(resolve(publicRoot, "docs-assets/img/logos", file), "utf8");
       expect(source, file).toMatch(/<svg\b[^>]*\bxmlns="http:\/\/www\.w3\.org\/2000\/svg"/u);
       expect(source, file).toMatch(/<svg\b[^>]*(?:\bviewBox="[^"]+"|\bwidth="\d+"[^>]*\bheight="\d+")/u);
     }
