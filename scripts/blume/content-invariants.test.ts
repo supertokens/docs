@@ -446,10 +446,10 @@ describe("published documentation invariants", () => {
     ).toEqual([]);
   });
 
-  it("does not prefix public images with the documentation base path", () => {
+  it("uses the docs-owned public image namespace", () => {
     expect(
       contentImageReferences()
-        .filter(({ url }) => url.startsWith("/docs/img/"))
+        .filter(({ url }) => url.startsWith("/img/") || url.startsWith("/docs/img/"))
         .map(({ location, url }) => `${location}: ${url}`),
     ).toEqual([]);
   });
@@ -465,7 +465,8 @@ describe("published documentation invariants", () => {
         return [`${location}: invalid URL ${url}`];
       }
 
-      const assetPath = resolve(publicRoot, `.${pathname}`);
+      const publicPath = pathname.replace(/^\/docs-assets/, "");
+      const assetPath = resolve(publicRoot, `.${publicPath}`);
       return assetPath.startsWith(`${publicRoot}/`) && existsSync(assetPath) ? [] : [`${location}: ${url}`];
     });
 

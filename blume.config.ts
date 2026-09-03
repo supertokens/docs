@@ -1,6 +1,8 @@
 import { defineConfig } from "blume";
+import { microfrontends } from "@vercel/microfrontends/experimental/vite";
 
 import { ASK_AI_MODEL } from "./lib/ask-ai-config";
+import { legacyRedirects } from "./scripts/migration/legacy-redirects";
 import { openApiRedirects } from "./scripts/blume/openapi-redirects";
 
 const publicOrigin = process.env.DOCS_PUBLIC_ORIGIN;
@@ -140,10 +142,11 @@ export default defineConfig({
   title: "SuperTokens Docs",
   description: "Open Source User Authentication",
   basePath: "/docs",
+  publicAssetBasePath: "/docs-assets",
   logo: {
     image: {
-      light: "/img/logos/supertokens-dark.svg",
-      dark: "/img/logos/supertokens-dark.svg",
+      light: "/docs-assets/img/logos/supertokens-dark.svg",
+      dark: "/docs-assets/img/logos/supertokens-dark.svg",
       alt: "SuperTokens",
     },
     text: "",
@@ -201,7 +204,8 @@ export default defineConfig({
     },
     mcp: {
       enabled: true,
-      route: "/mcp",
+      discovery: false,
+      route: "/docs/mcp",
       name: "SuperTokens Documentation",
       instructions:
         "Search with specific authentication or deployment terms, then read the relevant overview and setup pages. Distinguish standalone passkey authentication under Authentication from passkeys used as an MFA factor under Additional Verification.",
@@ -221,6 +225,7 @@ export default defineConfig({
     ...referenceRedirects,
     ...integrationRedirects,
     ...openApiRedirects,
+    ...legacyRedirects,
   ],
   deployment: {
     output: "server",
@@ -229,6 +234,9 @@ export default defineConfig({
   },
   seo: {
     agentReadability: true,
+  },
+  vite: {
+    plugins: [microfrontends()],
   },
   ...(posthogToken
     ? {
