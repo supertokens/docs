@@ -1,5 +1,5 @@
 diff --git a/node_modules/blume/dist/cli/index.js b/node_modules/blume/dist/cli/index.js
-index 86b5ac9..ea91ce0 100755
+index 86b5ac9..a713ff1 100755
 --- a/node_modules/blume/dist/cli/index.js
 +++ b/node_modules/blume/dist/cli/index.js
 @@ -3269,7 +3269,7 @@ var buildApiCatalog = (config) => {
@@ -110,7 +110,68 @@ index 86b5ac9..ea91ce0 100755
        url: abs(config.ai.mcp.route)
      };
    }
-@@ -18706,7 +18714,7 @@ var detectUsesMath = async (root, staged = []) => {
+@@ -16019,6 +16027,51 @@ var TRAILING_SLASH_REDIRECT = {
+   status: 308
+ };
+ var isNegotiationRoute = (route) => route.has?.some((condition) => condition.value === ACCEPT_MARKDOWN_HEADER_VALUE) === true || route.continue === true && route.headers?.vary === "Accept" && isString6(route.src) && Object.keys(route).length === 3 || route.continue === true && isString6(route.headers?.link) && route.src === HOME_SRC && Object.keys(route).length === 3 || route.status === TRAILING_SLASH_REDIRECT.status && route.src === TRAILING_SLASH_REDIRECT.src;
++var deduplicateRedirectRoutes = (routes) => {
++  const filesystemIndices = routes.flatMap((route, index) => route.handle === "filesystem" ? [index] : []);
++  if (filesystemIndices.length !== 1) {
++    return routes;
++  }
++  const filesystemIndex = filesystemIndices[0];
++  const redirectsByFallbackSrc = /* @__PURE__ */ new Map();
++  const fallbacksBySrc = /* @__PURE__ */ new Map();
++  for (const [index, route] of routes.entries()) {
++    if (index < filesystemIndex && isString6(route.src) && route.src.startsWith("^") && route.src.endsWith("$") && !route.src.endsWith("/?$") && route.status !== void 0 && route.status >= 300 && route.status < 400 && isString6(route.headers?.Location) && Object.keys(route.headers).length === 1 && Object.keys(route).length === 3) {
++      const fallbackSrc = `${route.src.slice(0, -1)}/?$`;
++      const redirects = redirectsByFallbackSrc.get(fallbackSrc) ?? [];
++      redirects.push(index);
++      redirectsByFallbackSrc.set(fallbackSrc, redirects);
++    } else if (index > filesystemIndex && route.dest === "_render" && isString6(route.src) && route.src.startsWith("^") && route.src.endsWith("/?$") && Object.keys(route).length === 2) {
++      const fallbacks = fallbacksBySrc.get(route.src) ?? [];
++      fallbacks.push(index);
++      fallbacksBySrc.set(route.src, fallbacks);
++    }
++  }
++  const pairs = [];
++  for (const [fallbackSrc, redirects] of redirectsByFallbackSrc) {
++    const fallbacks = fallbacksBySrc.get(fallbackSrc);
++    if (redirects.length === 1 && fallbacks?.length === 1) {
++      pairs.push({
++        fallbackIndex: fallbacks[0],
++        fallbackSrc,
++        redirectIndex: redirects[0]
++      });
++    }
++  }
++  pairs.sort((left, right) => left.redirectIndex - right.redirectIndex);
++  if (pairs.some((pair, index) => index > 0 && pair.fallbackIndex <= pairs[index - 1].fallbackIndex)) {
++    return routes;
++  }
++  const replacements = new Map(pairs.map((pair) => [pair.redirectIndex, pair.fallbackSrc]));
++  const redundantFallbacks = new Set(pairs.map((pair) => pair.fallbackIndex));
++  return routes.flatMap((route, index) => {
++    if (redundantFallbacks.has(index)) {
++      return [];
++    }
++    const src = replacements.get(index);
++    return [src ? { ...route, src } : route];
++  });
++};
+ var injectNegotiationRoutes = (configText, routePaths, homeLinkHeader, contentTypeOverrides, homeTokens) => {
+   const overrideEntries = Object.entries(contentTypeOverrides ?? {});
+   let config;
+@@ -16033,7 +16086,7 @@ var injectNegotiationRoutes = (configText, routePaths, homeLinkHeader, contentTy
+   for (const [path, contentType] of overrideEntries) {
+     config.overrides = { ...config.overrides, [path]: { contentType } };
+   }
+-  const routes = config.routes.filter((route) => !isNegotiationRoute(route));
++  const routes = deduplicateRedirectRoutes(config.routes.filter((route) => !isNegotiationRoute(route)));
+   const filesystemIndex = routes.findIndex((route) => route.handle === "filesystem");
+   if (filesystemIndex === -1) {
+     return null;
+@@ -18706,7 +18759,7 @@ var detectUsesMath = async (root, staged = []) => {
  };
  var hashConfigSource = (source) => createHash4("sha256").update(source).digest("hex");
  var loadIntegrationBridge = async (config, context) => {
@@ -119,7 +180,7 @@ index 86b5ac9..ea91ce0 100755
      return;
    }
    return {
-@@ -18843,11 +18851,13 @@ var APPLE_ICON_CANDIDATES = [
+@@ -18843,11 +18896,13 @@ var APPLE_ICON_CANDIDATES = [
    "apple-icon.jpeg",
    "apple-touch-icon.png"
  ];
@@ -135,7 +196,7 @@ index 86b5ac9..ea91ce0 100755
      }
    }
    for (const name of candidates) {
-@@ -18861,11 +18871,12 @@ var resolveIconFile = (project, candidates) => {
+@@ -18861,11 +18916,12 @@ var resolveIconFile = (project, candidates) => {
  };
  var resolveFavicon = (project) => {
    const { root } = project.context;
@@ -150,7 +211,7 @@ index 86b5ac9..ea91ce0 100755
      }
    }
    for (const name of FAVICON_CANDIDATES) {
-@@ -18971,7 +18982,7 @@ var buildRuntimeData = (project) => {
+@@ -18971,7 +19027,7 @@ var buildRuntimeData = (project) => {
        analytics: config.analytics ?? null,
        appleIcon: resolveAppleIcon(project),
        ask: config.ai.ask?.enabled ? {
@@ -159,7 +220,7 @@ index 86b5ac9..ea91ce0 100755
          suggestions: config.ai.ask.suggestions
        } : null,
        banner: resolveBanner(config),
-@@ -19090,7 +19101,7 @@ var planMcp = (project, srcDir, userPages) => {
+@@ -19090,7 +19146,7 @@ var planMcp = (project, srcDir, userPages) => {
    }
    return {
      ...base,
@@ -168,7 +229,7 @@ index 86b5ac9..ea91ce0 100755
        {
          entrypoint: join28(dir, "discovery.ts"),
          pattern: "/.well-known/mcp.json"
-@@ -19099,7 +19110,7 @@ var planMcp = (project, srcDir, userPages) => {
+@@ -19099,7 +19155,7 @@ var planMcp = (project, srcDir, userPages) => {
          entrypoint: join28(dir, "server-card.ts"),
          pattern: "/.well-known/mcp/server-card.json"
        }
@@ -177,7 +238,7 @@ index 86b5ac9..ea91ce0 100755
      enabled: true
    };
  };
-@@ -19119,8 +19130,10 @@ var writeMcpFiles = async (project, plan, write) => {
+@@ -19119,8 +19175,10 @@ var writeMcpFiles = async (project, plan, write) => {
      write(join28(plan.srcDir, "generated", "mcp-data.json"), `${JSON.stringify(data)}
  `),
      write(join28(plan.srcDir, "pages", mcpPageFile(plan.route)), mcpEndpointTemplate(plan.route)),
@@ -793,6 +854,114 @@ index 476af6f..5db7079 100644
      versions: versionsConfigSchema.optional(),
    })
    .superRefine((config, ctx) => {
+diff --git a/node_modules/blume/src/deploy/vercel-negotiation.ts b/node_modules/blume/src/deploy/vercel-negotiation.ts
+index 02b18f7..f40d845 100644
+--- a/node_modules/blume/src/deploy/vercel-negotiation.ts
++++ b/node_modules/blume/src/deploy/vercel-negotiation.ts
+@@ -202,7 +202,91 @@ const isNegotiationRoute = (route: VercelRoute): boolean =>
+     Object.keys(route).length === 3) ||
+   (route.status === TRAILING_SLASH_REDIRECT.status &&
+     route.src === TRAILING_SLASH_REDIRECT.src);
+-
++/**
++ * Astro's Vercel adapter emits every redirect twice in server output: a direct
++ * redirect and a server-render fallback that only adds optional-trailing-slash
++ * matching. Fold that matching into the direct redirect and drop the fallback
++ * to avoid consuming two Vercel routes per redirect.
++ */
++const deduplicateRedirectRoutes = (routes: VercelRoute[]): VercelRoute[] => {
++  const filesystemIndices = routes.flatMap((route, index) =>
++    route.handle === "filesystem" ? [index] : []
++  );
++  if (filesystemIndices.length !== 1) {
++    return routes;
++  }
++  const filesystemIndex = filesystemIndices[0];
++  const redirectsByFallbackSrc = new Map<string, number[]>();
++  const fallbacksBySrc = new Map<string, number[]>();
++  for (const [index, route] of routes.entries()) {
++    if (
++      index < filesystemIndex &&
++      isString(route.src) &&
++      route.src.startsWith("^") &&
++      route.src.endsWith("$") &&
++      !route.src.endsWith("/?$") &&
++      route.status !== undefined &&
++      route.status >= 300 &&
++      route.status < 400 &&
++      isString(route.headers?.Location) &&
++      Object.keys(route.headers).length === 1 &&
++      Object.keys(route).length === 3
++    ) {
++      const fallbackSrc = `${route.src.slice(0, -1)}/?$`;
++      const redirects = redirectsByFallbackSrc.get(fallbackSrc) ?? [];
++      redirects.push(index);
++      redirectsByFallbackSrc.set(fallbackSrc, redirects);
++    } else if (
++      index > filesystemIndex &&
++      route.dest === "_render" &&
++      isString(route.src) &&
++      route.src.startsWith("^") &&
++      route.src.endsWith("/?$") &&
++      Object.keys(route).length === 2
++    ) {
++      const fallbacks = fallbacksBySrc.get(route.src) ?? [];
++      fallbacks.push(index);
++      fallbacksBySrc.set(route.src, fallbacks);
++    }
++  }
++  const pairs: {
++    fallbackIndex: number;
++    fallbackSrc: string;
++    redirectIndex: number;
++  }[] = [];
++  for (const [fallbackSrc, redirects] of redirectsByFallbackSrc) {
++    const fallbacks = fallbacksBySrc.get(fallbackSrc);
++    if (redirects.length === 1 && fallbacks?.length === 1) {
++      pairs.push({
++        fallbackIndex: fallbacks[0],
++        fallbackSrc,
++        redirectIndex: redirects[0],
++      });
++    }
++  }
++  pairs.sort((left, right) => left.redirectIndex - right.redirectIndex);
++  if (
++    pairs.some(
++      (pair, index) =>
++        index > 0 && pair.fallbackIndex <= pairs[index - 1].fallbackIndex
++    )
++  ) {
++    return routes;
++  }
++  const replacements = new Map(
++    pairs.map((pair) => [pair.redirectIndex, pair.fallbackSrc])
++  );
++  const redundantFallbacks = new Set(
++    pairs.map((pair) => pair.fallbackIndex)
++  );
++  return routes.flatMap((route, index) => {
++    if (redundantFallbacks.has(index)) {
++      return [];
++    }
++    const src = replacements.get(index);
++    return [src ? { ...route, src } : route];
++  });
++};
+ /**
+  * Splice the negotiation routes into a Build Output `config.json`, plus — when
+  * given — a homepage `Link` header route for agent discovery (see
+@@ -243,7 +327,9 @@ export const injectNegotiationRoutes = (
+     // user's own override of the same path is simply refreshed.
+     config.overrides = { ...config.overrides, [path]: { contentType } };
+   }
+-  const routes = config.routes.filter((route) => !isNegotiationRoute(route));
++  const routes = deduplicateRedirectRoutes(
++    config.routes.filter((route) => !isNegotiationRoute(route))
++  );
+   const filesystemIndex = routes.findIndex(
+     (route) => route.handle === "filesystem"
+   );
 diff --git a/node_modules/blume/src/markdown/code-title.ts b/node_modules/blume/src/markdown/code-title.ts
 index 9e8245d..12a349e 100644
 --- a/node_modules/blume/src/markdown/code-title.ts
