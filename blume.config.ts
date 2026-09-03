@@ -146,7 +146,7 @@ export default defineConfig({
   logo: {
     image: {
       light: "/docs-assets/img/logos/supertokens-dark.svg",
-      dark: "/docs-assets/img/logos/supertokens-dark.svg",
+      dark: "/docs-assets/img/logos/supertokens-light.svg",
       alt: "SuperTokens",
     },
     text: "",

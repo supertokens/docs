@@ -176,6 +176,8 @@ test("desktop header brand and section links are vertically aligned", async ({ p
   const documentation = header.getByRole("link", { name: "Documentation", exact: true });
   const references = header.getByRole("link", { name: "References", exact: true });
   await expect(logo).toBeVisible();
+  await expect(logo.locator("img.dark\\:hidden")).toHaveAttribute("src", "/docs-assets/img/logos/supertokens-dark.svg");
+  await expect(logo.locator("img.dark\\:block")).toHaveAttribute("src", "/docs-assets/img/logos/supertokens-light.svg");
   await expect(documentation).toBeVisible();
   await expect(references).toBeVisible();
 
