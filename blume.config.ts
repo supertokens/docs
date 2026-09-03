@@ -144,11 +144,7 @@ export default defineConfig({
   basePath: "/docs",
   publicAssetBasePath: "/docs-assets",
   logo: {
-    image: {
-      light: "/docs-assets/img/logos/supertokens-dark.svg",
-      dark: "/docs-assets/img/logos/supertokens-light.svg",
-      alt: "SuperTokens",
-    },
+    image: "/docs-assets/img/logos/supertokens-dark.svg",
     text: "",
     href: "https://supertokens.com",
   },

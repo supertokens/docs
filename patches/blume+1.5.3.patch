@@ -1,10 +1,9 @@
 diff --git a/node_modules/blume/dist/cli/index.js b/node_modules/blume/dist/cli/index.js
-index 86b5ac9..3f17a89 100755
+index 86b5ac9..ea91ce0 100755
 --- a/node_modules/blume/dist/cli/index.js
 +++ b/node_modules/blume/dist/cli/index.js
 @@ -3269,7 +3269,7 @@ var buildApiCatalog = (config) => {
--
-+
+ 
  // src/ai/link-headers.ts
  var buildHomeLinkHeader = (config, routePaths) => {
 -  const deployBase = normalizeBasePath(config.deployment.base);
@@ -24,8 +23,7 @@ index 86b5ac9..3f17a89 100755
    return {
 @@ -3806,7 +3807,8 @@ import { createModuleLoader } from "blume/core/load-module.ts";
  const blumeConfig = await loadBlumeConfig(resolve(dirname(fileURLToPath(import.meta.url)), ${JSON.stringify(bridge.configFile)}));
--
-+
+ 
  `,
 -    userIntegrationSpread: ", ...(blumeConfig?.integrations ?? [])"
 +    userIntegrationSpread: ", ...(blumeConfig?.integrations ?? [])",
@@ -137,7 +135,9 @@ index 86b5ac9..3f17a89 100755
      }
    }
    for (const name of candidates) {
-@@ -18865,8 +18876,9 @@ var resolveFavicon = (project) => {
+@@ -18861,11 +18871,12 @@ var resolveIconFile = (project, candidates) => {
+ };
+ var resolveFavicon = (project) => {
    const { root } = project.context;
 +  const publicAssetDir = join28(root, "public", project.config.publicAssetBasePath?.slice(1) ?? "");
    for (const name of FAVICON_CANDIDATES) {
@@ -149,6 +149,7 @@ index 86b5ac9..3f17a89 100755
 +      return existsSync15(join28(publicAssetDir, sibling)) ? { dark: { href: publicAssetHref(project.config.publicAssetBasePath, sibling), type }, href: publicAssetHref(project.config.publicAssetBasePath, name), type } : { href: publicAssetHref(project.config.publicAssetBasePath, name), type };
      }
    }
+   for (const name of FAVICON_CANDIDATES) {
 @@ -18971,7 +18982,7 @@ var buildRuntimeData = (project) => {
        analytics: config.analytics ?? null,
        appleIcon: resolveAppleIcon(project),
@@ -167,7 +168,7 @@ index 86b5ac9..3f17a89 100755
        {
          entrypoint: join28(dir, "discovery.ts"),
          pattern: "/.well-known/mcp.json"
-@@ -19099,7 +19108,7 @@ var planMcp = (project, srcDir, userPages) => {
+@@ -19099,7 +19110,7 @@ var planMcp = (project, srcDir, userPages) => {
          entrypoint: join28(dir, "server-card.ts"),
          pattern: "/.well-known/mcp/server-card.json"
        }
@@ -224,6 +225,32 @@ index 6084a0c..9fa2792 100644
      /** Docs versioning (opt-in frozen snapshots with a version switcher). */
      versions?: VersionsConfig;
  }
+diff --git a/node_modules/blume/docs/content/components.mdx b/node_modules/blume/docs/content/components.mdx
+index 2eef8b0..f17dbde 100644
+--- a/node_modules/blume/docs/content/components.mdx
++++ b/node_modules/blume/docs/content/components.mdx
+@@ -293,7 +293,7 @@ fn greet(name: &str) -> String {
+ 
+ ## Frame
+ 
+-Wrap an image or any visual in a centered, bordered frame with an optional `caption` (rendered as Markdown) and `hint`.
++Wrap an image or any visual in a centered, bordered frame with an optional `caption` (rendered as Markdown) and `hint`. Set `borderless` to remove the border, background, and padding when another component already provides a container.
+ 
+ <Frame
+   caption="A **framed** illustration."
+@@ -319,6 +319,12 @@ Wrap an image or any visual in a centered, bordered frame with an optional `capt
+ </Frame>
+ ```
+ 
++```astro
++<Frame borderless>
++  <img src="/diagram.png" alt="Architecture diagram" />
++</Frame>
++```
++
+ ## YouTube
+ 
+ Embed a YouTube video in a responsive, privacy-friendly (`youtube-nocookie.com`) 16:9 frame that ships no client JavaScript. Pass a video `id` or a full `url`, plus an optional `title` (for accessibility) and a `start` time in seconds.
 diff --git a/node_modules/blume/src/ai/agent-readability.ts b/node_modules/blume/src/ai/agent-readability.ts
 index e28fba2..562d9b1 100644
 --- a/node_modules/blume/src/ai/agent-readability.ts
@@ -281,8 +308,7 @@ index bf13cb5..35e122c 100644
 -  "Access-Control-Allow-Origin": "*",
    "Access-Control-Expose-Headers": "Mcp-Session-Id",
  };
--
-+
+ 
 +const appendVaryOrigin = (headers: Headers): void => {
 +  const vary = headers.get("Vary");
 +  if (!vary?.split(",").some((value) => value.trim().toLowerCase() === "origin")) {
@@ -308,8 +334,7 @@ index bf13cb5..35e122c 100644
  // meaning "no filter", out-of-range limits clamped rather than rejected), and
 @@ -476,13 +495,26 @@ export const createMcpFetchHandler = (
    const index = createIndexProvider(data.documents, data.defaultLocale);
--
-+
+ 
    return async (request: Request): Promise<Response> => {
 +    const origin = request.headers.get("Origin");
 +    if (origin !== null && origin !== new URL(request.url).origin) {
@@ -339,8 +364,7 @@ index bf13cb5..35e122c 100644
 @@ -498,10 +530,7 @@ export const createMcpFetchHandler = (
      await server.connect(transport);
      const response = await transport.handleRequest(request);
--
-+
+ 
 -    const headers = new Headers(response.headers);
 -    for (const [key, value] of Object.entries(CORS_HEADERS)) {
 -      headers.set(key, value);
@@ -350,7 +374,7 @@ index bf13cb5..35e122c 100644
        headers,
        status: response.status,
 diff --git a/node_modules/blume/src/astro/generate.ts b/node_modules/blume/src/astro/generate.ts
-index 185a200..dd9a740 100644
+index 185a200..77c5ed5 100644
 --- a/node_modules/blume/src/astro/generate.ts
 +++ b/node_modules/blume/src/astro/generate.ts
 @@ -22,7 +22,7 @@ import { askBackendRuntimeDep, resolveAskBackend } from "../ai/ask.ts";
@@ -374,7 +398,9 @@ index 185a200..dd9a740 100644
      return;
    }
    return {
-@@ -1034,7 +1037,15 @@ const resolveIconFile = (
+@@ -1032,9 +1035,17 @@ const resolveIconFile = (
+   candidates: string[]
+ ): BlumeFavicon | null => {
    const { root } = project.context;
 +  const publicAssetDir = join(
 +    root,
@@ -395,15 +421,16 @@ index 185a200..dd9a740 100644
 @@ -1047,6 +1058,9 @@ const resolveIconFile = (
    return null;
  };
--
-+
+ 
 +export const publicAssetHref = (basePath: string | undefined, name: string): string =>
 +  `${basePath ?? ""}/${name}`;
 +
  /**
   * Resolve the site favicon by convention, falling back to the bundled Blume mark
   * when the project ships no `icon.*`/`favicon.*` file. The dark-scheme variant
-@@ -1058,10 +1069,22 @@ const resolveFavicon = (project: BlumeProject): BlumeFavicon => {
+@@ -1058,13 +1072,25 @@ const resolveIconFile = (
+  */
+ const resolveFavicon = (project: BlumeProject): BlumeFavicon => {
    const { root } = project.context;
 +  const publicAssetDir = join(
 +    root,
@@ -430,6 +457,7 @@ index 185a200..dd9a740 100644
 +        : { href: publicAssetHref(project.config.publicAssetBasePath, name), type };
      }
    }
+   for (const name of FAVICON_CANDIDATES) {
 @@ -1237,7 +1263,8 @@ export const buildRuntimeData = (project: BlumeProject): string => {
        appleIcon: resolveAppleIcon(project),
        ask: config.ai.ask?.enabled
@@ -495,10 +523,9 @@ index 185a200..dd9a740 100644
 +      : []),
    ]);
  };
--
-+
+ 
 diff --git a/node_modules/blume/src/astro/templates.ts b/node_modules/blume/src/astro/templates.ts
-index d4656c7..af2e29e 100644
+index d4656c7..2ca1f63 100644
 --- a/node_modules/blume/src/astro/templates.ts
 +++ b/node_modules/blume/src/astro/templates.ts
 @@ -352,6 +352,7 @@ const renderIntegrationBridge = (
@@ -516,8 +543,7 @@ index d4656c7..af2e29e 100644
 +    userVitePluginSpread: ", ...(blumeConfig?.vite?.plugins ?? [])",
    };
  };
--
-+
+ 
 @@ -513,6 +515,9 @@ export const astroConfigTemplate = (options: {
    const baseOption = deployment.base
      ? `\n  base: ${JSON.stringify(deployment.base)},`
@@ -526,8 +552,7 @@ index d4656c7..af2e29e 100644
 +    ? `\n  build: { assets: ${JSON.stringify(`${config.publicAssetBasePath.slice(1)}/_astro`)} },`
 +    : "";
    const imageOption = renderImageOption(config);
--
-+
+ 
    // Astro's native i18n gives locale-aware helpers + `<html lang>` correctness.
 @@ -666,6 +671,7 @@ export const astroConfigTemplate = (options: {
      userConfigImports,
@@ -535,8 +560,7 @@ index d4656c7..af2e29e 100644
      userIntegrationSpread,
 +    userVitePluginSpread,
    } = renderIntegrationBridge(options.integrationBridge);
--
-+
+ 
    return `// Generated by Blume. Do not edit; this file is recreated on each run.
 @@ -679,7 +685,7 @@ ${userConfigSetup}export default defineConfig({
    srcDir: ${JSON.stringify(`${context.outDir}/src`)},
@@ -575,6 +599,37 @@ index d9e7412..838dc06 100644
 +<Tabs dropdown={dropdown} hash={false} tabValues={tabValues}>
    <slot />
  </Tabs>
+diff --git a/node_modules/blume/src/components/content/Frame.astro b/node_modules/blume/src/components/content/Frame.astro
+index 3ed6661..e5426c8 100644
+--- a/node_modules/blume/src/components/content/Frame.astro
++++ b/node_modules/blume/src/components/content/Frame.astro
+@@ -4,11 +4,12 @@ import { createSatteriMarkdownProcessor } from "@astrojs/markdown-satteri";
+ import { escapeRawHtml, unwrapParagraph } from "./inline-markdown.ts";
+ 
+ interface Props {
++  borderless?: boolean;
+   caption?: string;
+   hint?: string;
+ }
+ 
+-const { caption, hint } = Astro.props;
++const { borderless = false, caption, hint } = Astro.props;
+ 
+ const markdownProcessor = await createSatteriMarkdownProcessor();
+ const captionHtml = caption
+@@ -26,7 +27,11 @@ const captionHtml = caption
+       )
+     }
+     <div
+-      class="flex justify-center overflow-hidden rounded-blume border border-border bg-muted/30 p-6 [&>:first-child]:m-0! [&_img]:h-auto [&_img]:max-w-full [&_video]:h-auto [&_video]:max-w-full"
++      class:list={[
++        "flex justify-center overflow-hidden [&>:first-child]:m-0! [&_img]:h-auto [&_img]:max-w-full [&_video]:h-auto [&_video]:max-w-full",
++        !borderless &&
++          "rounded-blume border border-border bg-muted/30 p-6",
++      ]}
+     >
+       <slot />
+     </div>
 diff --git a/node_modules/blume/src/components/content/Tabs.astro b/node_modules/blume/src/components/content/Tabs.astro
 index 1b1d34e..aa5651b 100644
 --- a/node_modules/blume/src/components/content/Tabs.astro
@@ -675,8 +730,7 @@ index dc11a82..4e598b8 100644
 --- a/node_modules/blume/src/core/config-input.ts
 +++ b/node_modules/blume/src/core/config-input.ts
 @@ -713,6 +713,8 @@ export interface LlmsTxtConfig {
--
-+
+ 
  /** Expose the docs as an MCP server for connecting agents. */
  export interface McpConfig {
 +  /** Emit MCP discovery under `/.well-known`. Defaults to `true`. */
@@ -710,8 +764,7 @@ index 476af6f..5db7079 100644
 +++ b/node_modules/blume/src/core/schema.ts
 @@ -760,6 +760,7 @@ const publicJwkSchema = z
    });
--
-+
+ 
  const mcpConfigSchema = z.strictObject({
 +  discovery: z.boolean().default(true),
    enabled: z.boolean().default(false),
@@ -785,8 +838,7 @@ index 981debb..7c11602 100644
 +  /** Raw fence metadata for callers rendering a migrated Markdown fence. */
 +  meta?: string;
  }
--
-+
+ 
  /**
 @@ -224,9 +226,11 @@ export const highlightCode = async (
        // The code-title transformer reads the fence meta; feeding a `title="..."`

@@ -169,6 +169,7 @@ test("mobile header fits and exposes navigation state", async ({ page }) => {
 
 test("desktop header brand and section links are vertically aligned", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/docs");
 
   const header = page.locator("[data-blume-header]");
@@ -176,8 +177,9 @@ test("desktop header brand and section links are vertically aligned", async ({ p
   const documentation = header.getByRole("link", { name: "Documentation", exact: true });
   const references = header.getByRole("link", { name: "References", exact: true });
   await expect(logo).toBeVisible();
-  await expect(logo.locator("img.dark\\:hidden")).toHaveAttribute("src", "/docs-assets/img/logos/supertokens-dark.svg");
-  await expect(logo.locator("img.dark\\:block")).toHaveAttribute("src", "/docs-assets/img/logos/supertokens-light.svg");
+  await expect(logo.locator("svg")).toBeVisible();
+  await expect(logo.locator("svg")).toHaveCSS("color", "rgb(237, 238, 240)");
+  await expect(logo.locator("img")).toHaveCount(0);
   await expect(documentation).toBeVisible();
   await expect(references).toBeVisible();
 
