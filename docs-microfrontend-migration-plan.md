@@ -4,7 +4,7 @@
 
 Serve the Blume documentation as a Vercel microfrontend under `https://supertokens.com/docs/**`, stop routing authored
 documentation through `supertokens-backend-website`, and preserve generated SDK reference URLs by rewriting them to
-`https://sdk.supertokens.com`.
+`https://sdk-references.supertokens.com`.
 
 This workstream covers these repositories:
 
@@ -16,7 +16,8 @@ This workstream covers these repositories:
 Repository-relative paths are used throughout this plan. A developer's local worktree path is not a portable
 implementation reference.
 
-Provisioning and publishing content to `sdk.supertokens.com` is covered by `sdk-docs-infrastructure-plan.md`.
+Provisioning and publishing content to `sdk-references.supertokens.com` is covered by
+`sdk-docs-infrastructure-plan.md`.
 
 This document records the required implementation and rollout sequence. The docs-side routing, asset prefix, endpoint
 rewrites, redirect generator, security headers, and credential-free preview smoke automation are implemented; shared
@@ -26,7 +27,7 @@ preview acceptance, dashboard rollout, SDK-origin validation, and production cut
 
 Before production cutover, the infrastructure workstream must provide:
 
-- A production CloudFront origin at `https://sdk.supertokens.com`.
+- A production CloudFront origin at `https://sdk-references.supertokens.com`.
 - All existing SDK namespaces and historical versions.
 - Stable object paths matching `/<sdk>/<version-or-path>/**`.
 - Edge mappings for unversioned and `N.N.X` paths to immutable exact releases.
@@ -39,7 +40,7 @@ The docs application preserves public URLs with rewrites such as:
 
 ```text
 https://supertokens.com/docs/nodejs/24.0.X/modules.html
-  -> https://sdk.supertokens.com/nodejs/24.0.X/modules.html
+  -> https://sdk-references.supertokens.com/nodejs/24.0.X/modules.html
 ```
 
 This must be an external rewrite, not a browser redirect.
@@ -98,9 +99,9 @@ Required changes:
 - Generate LLM indexes at the documented URLs.
 - Rewrite `/docs/.well-known/api-catalog` to Blume's generated root artifact. This is the only docs-owned well-known
   rewrite; dashboard-owned MCP discovery remains separate.
-- Rewrite `/docs/sdk-manifest.json` to `https://sdk.supertokens.com/manifest.json` and update the SDK version selector to
-  use it instead of `/sdk/versions`. Retain the selector during migration. It must use `/manifest.json` when an SDK page
-  is opened directly on `sdk.supertokens.com`.
+- Rewrite `/docs/sdk-manifest.json` to `https://sdk-references.supertokens.com/manifest.json` and update the SDK version
+  selector to use it instead of `/sdk/versions`. Retain the selector during migration. It must use `/manifest.json` when
+  an SDK page is opened directly on `sdk-references.supertokens.com`.
 - Update `docs/integrate-with-ai.mdx` after route behavior is final.
 - Remove duplicate root and `/docs` endpoint header rules after migration.
 
@@ -128,7 +129,7 @@ Each route removes only the public `/docs` prefix:
 ```json
 {
   "source": "/docs/nodejs/:path*",
-  "destination": "https://sdk.supertokens.com/nodejs/:path*"
+  "destination": "https://sdk-references.supertokens.com/nodejs/:path*"
 }
 ```
 
@@ -194,18 +195,18 @@ code. Keep the script allowlist narrow and avoid `unsafe-eval` and `unsafe-inlin
 
 CloudFront owns CSP-compatible SDK response headers, SDK caching, and the Android framing exception. The docs
 application owns headers for authored Blume responses and must verify that external rewrites preserve, rather than
-weaken or replace, origin SDK headers. Use `robots.txt` on the direct `sdk.supertokens.com` host to discourage duplicate
-indexing while canonical SDK URLs continue to point to `supertokens.com/docs/**`.
+weaken or replace, origin SDK headers. Use `robots.txt` on the direct `sdk-references.supertokens.com` host to discourage
+duplicate indexing while canonical SDK URLs continue to point to `supertokens.com/docs/**`.
 
 Define cache policies by response type:
 
-| Response                 | Policy                                                                |
-| ------------------------ | --------------------------------------------------------------------- |
-| Versioned Astro assets   | Long-lived immutable                                                  |
-| Authored HTML            | CDN cache with controlled revalidation                                |
-| Ask AI and MCP           | No store unless explicitly safe                                       |
-| Markdown and LLM indexes | CDN cache with deployment invalidation                                |
-| SDK artifacts            | Supplied by `sdk.supertokens.com` and honored by the external rewrite |
+| Response                 | Policy                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------- |
+| Versioned Astro assets   | Long-lived immutable                                                             |
+| Authored HTML            | CDN cache with controlled revalidation                                           |
+| Ask AI and MCP           | No store unless explicitly safe                                                  |
+| Markdown and LLM indexes | CDN cache with deployment invalidation                                           |
+| SDK artifacts            | Supplied by `sdk-references.supertokens.com` and honored by the external rewrite |
 
 If HTML and Markdown are negotiated from the same URL, include `Vary: Accept` or use separate cache keys.
 
@@ -281,11 +282,11 @@ Run the relevant test, typecheck, lint, and build commands for `saas-dashboard-u
 
 Validate through the shared microfrontend preview domain:
 
-By default, docs previews rewrite SDK paths to production `sdk.supertokens.com` artifacts. An SDK artifact preview is
-validated directly under `https://sdk.supertokens.com/_preview/<run-id>/**`. If a combined docs-and-SDK preview is
-needed, create a temporary docs preview deployment whose SDK rewrite includes that run ID; never change the production
-manifest or aliases for preview validation. Preview SDK pages use `/_preview/<run-id>/manifest.json` for version
-selection.
+By default, docs previews rewrite SDK paths to production `sdk-references.supertokens.com` artifacts. An SDK artifact
+preview is validated directly under `https://sdk-references.supertokens.com/_preview/<run-id>/**`. If a combined
+docs-and-SDK preview is needed, create a temporary docs preview deployment whose SDK rewrite includes that run ID; never
+change the production manifest or aliases for preview validation. Preview SDK pages use
+`/_preview/<run-id>/manifest.json` for version selection.
 
 1. Load `/docs` and representative authored pages.
 2. Confirm the owning application using Vercel microfrontend diagnostics.
@@ -311,7 +312,7 @@ verify the edge credential contract.
 ## Rollout Order
 
 1. Agree on the SDK origin path and manifest contract.
-2. Deploy `sdk.supertokens.com` and migrate the existing SDK archive.
+2. Deploy `sdk-references.supertokens.com` and migrate the existing SDK archive.
 3. Start a temporary SDK documentation release freeze before taking the final archive delta. Deploy no additional
    authored documentation during this freeze.
 4. Take and migrate the final archive delta.
@@ -344,7 +345,8 @@ verify the edge credential contract.
 - Authored docs are served by the docs Vercel application, not `supertokens-backend-website`.
 - All Astro and public assets are owned by the docs microfrontend and return successfully.
 - Ask AI, MCP, LLM indexes, Markdown, API specs, and discovery URLs match their published documentation.
-- Existing `/docs/<sdk>/**` URLs remain unchanged and are served from `sdk.supertokens.com` through external rewrites.
+- Existing `/docs/<sdk>/**` URLs remain unchanged and are served from `sdk-references.supertokens.com` through external
+  rewrites.
 - The dashboard microfrontends configuration is authoritative, and its synchronization check passes.
 - `docs-microfrontend` is enabled in shared previews and remains independently controllable in production.
 - Unversioned SDK deep links and mutable `N.N.X` compatibility paths resolve to the intended exact releases or

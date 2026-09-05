@@ -127,9 +127,10 @@ test("applies authored security headers without replacing SDK origin headers", a
   expect(embed.headers()["content-security-policy"]).toContain("frame-ancestors 'self'");
 
   const sdk = await request.get("/docs/nodejs/latest/modules.html");
-  expect(sdk.headers()["content-security-policy"], "SDK headers must come from sdk.supertokens.com").not.toBe(
-    authored.headers()["content-security-policy"],
-  );
+  expect(
+    sdk.headers()["content-security-policy"],
+    "SDK headers must come from sdk-references.supertokens.com",
+  ).not.toBe(authored.headers()["content-security-policy"]);
 
   const android = await request.get("/docs/android/latest/index.html");
   expect(android.headers()["x-frame-options"]).toBe("SAMEORIGIN");

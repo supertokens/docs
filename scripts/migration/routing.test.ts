@@ -45,7 +45,7 @@ describe("microfrontend routing", () => {
       });
       expect(vercel.rewrites).toContainEqual({
         source: `/docs/${sdk}/:path*`,
-        destination: `https://sdk.supertokens.com/${sdk}/:path*`,
+        destination: `https://sdk-references.supertokens.com/${sdk}/:path*`,
       });
     }
   });
@@ -60,7 +60,7 @@ describe("microfrontend routing", () => {
         { source: "/docs/.well-known/api-catalog", destination: "/.well-known/api-catalog" },
         {
           source: "/docs/sdk-manifest.json",
-          destination: "https://sdk.supertokens.com/manifest.json",
+          destination: "https://sdk-references.supertokens.com/manifest.json",
         },
       ]),
     );

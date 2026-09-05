@@ -3,7 +3,7 @@
 ## Goal
 
 Publish generated SDK references independently of the authored documentation and serve them from
-`https://sdk.supertokens.com` without committing generated SDK output to the docs repository.
+`https://sdk-references.supertokens.com` without committing generated SDK output to the docs repository.
 
 The existing public URLs under `https://supertokens.com/docs/<sdk>/**` remain supported by external rewrites in the
 docs application. This workstream owns storage, delivery, artifact transformation, publication, and migration of the
@@ -11,7 +11,7 @@ existing SDK archive.
 
 ## Scope
 
-- Provision S3 and CloudFront for `sdk.supertokens.com`.
+- Provision S3 and CloudFront for `sdk-references.supertokens.com`.
 - Define the SDK artifact layout and publication contract.
 - Create a reusable SDK documentation publisher.
 - Move required HTML transformations from request time to publication time.
@@ -30,19 +30,19 @@ is complete.
 The artifact origin exposes paths without the `/docs` prefix:
 
 ```text
-https://sdk.supertokens.com/nodejs/24.0.X/modules.html
-https://sdk.supertokens.com/nodejs/latest/modules.html
-https://sdk.supertokens.com/python/0.24.X/index.html
-https://sdk.supertokens.com/python/latest/index.html
-https://sdk.supertokens.com/android/0.5.X/index.html
-https://sdk.supertokens.com/android/latest/index.html
+https://sdk-references.supertokens.com/nodejs/24.0.X/modules.html
+https://sdk-references.supertokens.com/nodejs/latest/modules.html
+https://sdk-references.supertokens.com/python/0.24.X/index.html
+https://sdk-references.supertokens.com/python/latest/index.html
+https://sdk-references.supertokens.com/android/0.5.X/index.html
+https://sdk-references.supertokens.com/android/latest/index.html
 ```
 
 The docs application maps existing public paths to this origin:
 
 ```text
 https://supertokens.com/docs/nodejs/24.0.X/modules.html
-  -> https://sdk.supertokens.com/nodejs/24.0.X/modules.html
+  -> https://sdk-references.supertokens.com/nodejs/24.0.X/modules.html
 ```
 
 The rewrite preserves the browser-visible `supertokens.com/docs/**` URL.
@@ -137,15 +137,15 @@ a historical release. Alias mappings and the manifest may change only after a co
 1. Create a private S3 bucket with public access blocked.
 2. Enable bucket versioning.
 3. Create a CloudFront distribution using Origin Access Control.
-4. Issue and attach an ACM certificate for `sdk.supertokens.com`.
-5. Create the DNS record for `sdk.supertokens.com`.
+4. Issue and attach an ACM certificate for `sdk-references.supertokens.com`.
+5. Create the DNS record for `sdk-references.supertokens.com`.
 6. Configure compression for supported text formats.
 7. Configure access logging and CloudFront metrics.
 8. Configure response headers, including `X-Content-Type-Options: nosniff` and a suitable referrer policy.
 9. Define an explicit 404 response rather than serving an SDK index for arbitrary missing objects.
 10. Apply an SDK-compatible CSP and deny framing by default.
 11. Apply `SAMEORIGIN` framing only to Android paths that require frames.
-12. Serve a `robots.txt` that prevents direct `sdk.supertokens.com` pages from competing with canonical
+12. Serve a `robots.txt` that prevents direct `sdk-references.supertokens.com` pages from competing with canonical
     `supertokens.com/docs/**` URLs.
 
 Use infrastructure as code in the organization's existing infrastructure repository. Do not provision this manually
@@ -334,8 +334,8 @@ Retain the SDK version selector and replace `/sdk/versions` with `manifest.json`
 - Display ordering and deprecated status if required by the selector.
 
 SDK UI should fetch `/docs/sdk-manifest.json` when served through `supertokens.com` and `/manifest.json` when accessed
-directly through `sdk.supertokens.com`. The docs application rewrites the compatibility URL to
-`https://sdk.supertokens.com/manifest.json`. Add a narrow CORS policy to the direct manifest response only if a separate
+directly through `sdk-references.supertokens.com`. The docs application rewrites the compatibility URL to
+`https://sdk-references.supertokens.com/manifest.json`. Add a narrow CORS policy to the direct manifest response only if a separate
 origin needs to fetch it.
 
 The intended edge implementation is therefore limited to alias resolution, optional extensionless normalization,
@@ -406,7 +406,7 @@ The new workflow should:
 
 1. Generate SDK references.
 2. Invoke the shared publisher.
-3. Verify the versioned URL on `sdk.supertokens.com`.
+3. Verify the versioned URL on `sdk-references.supertokens.com`.
 4. Verify the patch-family, `latest`, and unversioned mappings when applicable.
 5. Report the published paths and manifest revision.
 
@@ -429,7 +429,7 @@ The IaC and shared publisher repositories must be selected before implementation
 
 1. Deploy the infrastructure without changing public routing.
 2. Upload the existing archive.
-3. Validate direct `sdk.supertokens.com` URLs.
+3. Validate direct `sdk-references.supertokens.com` URLs.
 4. Provide the origin and manifest contract to the docs migration workstream.
 5. Allow the docs application to add preview rewrites.
 6. Start the temporary SDK documentation release freeze before capturing the final archive delta; deploy no additional
@@ -450,7 +450,7 @@ The IaC and shared publisher repositories must be selected before implementation
 
 ## Acceptance Criteria
 
-- `sdk.supertokens.com` serves every existing SDK namespace and retained version over HTTPS.
+- `sdk-references.supertokens.com` serves every existing SDK namespace and retained version over HTTPS.
 - S3 is not publicly readable except through CloudFront.
 - Exact releases are immutable; `N.N.X` aliases remain compatible with patch updates.
 - Existing unresolved artifacts are preserved under immutable legacy snapshot IDs.
