@@ -51,48 +51,156 @@ const props = Astro.props as Props;
 }
 
 <script>
-  const triggerOffset = 72;
+  interface TocEntry {
+    heading: HTMLElement;
+    item: HTMLElement;
+    link: HTMLAnchorElement;
+  }
 
-  const updateToc = (toc: HTMLElement) => {
-    const entries = [...toc.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')].flatMap((link) => {
-      const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
-      const item = link.closest<HTMLElement>("[data-st-toc-item]");
-      if (!heading || !item) return [];
-      const hiddenAncestor = heading.closest<HTMLElement>("[hidden], .hidden");
-      const visible = !hiddenAncestor;
-      item.hidden = !visible;
-      return visible ? [{ heading, link }] : [];
-    });
-    for (const link of toc.querySelectorAll("a[aria-current]")) link.removeAttribute("aria-current");
-    const pageIsScrollable = document.documentElement.scrollHeight > window.innerHeight;
-    const atPageEnd = pageIsScrollable && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
-    const active = atPageEnd
-      ? entries.at(-1)
-      : entries.filter(({ heading }) => heading.getBoundingClientRect().top <= triggerOffset).at(-1) ?? entries[0];
-    active?.link.setAttribute("aria-current", "location");
+  interface TocState {
+    entries: TocEntry[];
+    visibleEntries: TocEntry[];
+  }
+
+  const fallbackTriggerOffset = 88;
+  let header: HTMLElement | null;
+  let tocStates: TocState[] = [];
+
+  const headingIsVisible = (heading: HTMLElement) => {
+    if (heading.closest('[hidden], [aria-hidden="true"], .hidden')) return false;
+    return heading.getClientRects().length > 0 && getComputedStyle(heading).visibility !== "hidden";
   };
 
-  let scrollFrame: number | undefined;
-  const updateAllTocs = () => document.querySelectorAll<HTMLElement>("[data-st-toc]").forEach(updateToc);
-  const scheduleTocUpdate = () => {
-    if (scrollFrame) return;
-    scrollFrame = requestAnimationFrame(() => {
-      scrollFrame = undefined;
-      updateAllTocs();
+  const activationOffset = () => {
+    const headerBottom = header?.getBoundingClientRect().bottom;
+    return Math.max(fallbackTriggerOffset, (headerBottom ?? 0) + 24, Math.min(200, window.innerHeight * 0.25));
+  };
+
+  const rebuildTocStates = () => {
+    header = document.querySelector<HTMLElement>("[data-blume-header]");
+    tocStates = [...document.querySelectorAll<HTMLElement>("[data-st-toc]")].map((toc) => {
+      const entries = [...toc.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')].flatMap((link) => {
+        const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+        const item = link.closest<HTMLElement>("[data-st-toc-item]");
+        return heading && item ? [{ heading, item, link }] : [];
+      });
+      return { entries, visibleEntries: [] };
     });
   };
-  const initializeTocs = () => {
-    updateAllTocs();
-    if (!document.documentElement.dataset.stTocScrollListener) {
-      document.documentElement.dataset.stTocScrollListener = "true";
-      window.addEventListener("scroll", scheduleTocUpdate, { passive: true });
-      window.addEventListener("supertokens-docs:variant", scheduleTocUpdate);
-      window.addEventListener("supertokens-docs:variant-content-updated", scheduleTocUpdate);
-      window.addEventListener("supertokens-docs:selection", scheduleTocUpdate);
-      document.addEventListener("supertokens-docs:selection-content-ready", scheduleTocUpdate);
+
+  const recomputeVisibility = () => {
+    for (const state of tocStates) {
+      state.visibleEntries = state.entries.filter(({ heading, item }) => {
+        const visible = headingIsVisible(heading);
+        item.hidden = !visible;
+        return visible;
+      });
     }
   };
 
-  initializeTocs();
-  document.addEventListener("astro:page-load", initializeTocs);
+  const updateToc = ({ entries, visibleEntries }: TocState) => {
+    for (const { link } of entries) link.removeAttribute("aria-current");
+    if (visibleEntries.length === 0) return;
+    const triggerOffset = activationOffset();
+    const pageIsScrollable = document.documentElement.scrollHeight > window.innerHeight;
+    const atPageEnd = pageIsScrollable && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
+    let active = visibleEntries[0];
+    if (atPageEnd) {
+      active = visibleEntries.at(-1) ?? active;
+    } else {
+      for (const entry of visibleEntries) {
+        if (entry.heading.getBoundingClientRect().top > triggerOffset + 1) break;
+        active = entry;
+      }
+    }
+    active.link.setAttribute("aria-current", "location");
+  };
+
+  let updateFrame: number | undefined;
+  let shouldRebuildEntries = false;
+  let shouldRecomputeVisibility = false;
+  let contentResizeObserver: ResizeObserver | undefined;
+  let contentMutationObserver: MutationObserver | undefined;
+  const updateAllTocs = () => tocStates.forEach(updateToc);
+  const scheduleTocUpdate = ({ rebuild = false, visibility = false } = {}) => {
+    shouldRebuildEntries ||= rebuild;
+    shouldRecomputeVisibility ||= visibility;
+    if (updateFrame !== undefined) return;
+    updateFrame = requestAnimationFrame(() => {
+      updateFrame = undefined;
+      if (shouldRebuildEntries) rebuildTocStates();
+      if (shouldRebuildEntries || shouldRecomputeVisibility) recomputeVisibility();
+      shouldRebuildEntries = false;
+      shouldRecomputeVisibility = false;
+      updateAllTocs();
+    });
+  };
+
+  const schedulePositionUpdate = () => scheduleTocUpdate();
+  const scheduleVisibilityUpdate = () => scheduleTocUpdate({ visibility: true });
+
+  const observeContent = () => {
+    contentResizeObserver?.disconnect();
+    contentMutationObserver?.disconnect();
+    const article = document.querySelector<HTMLElement>("#blume-content > article");
+    if (!article) return;
+
+    contentResizeObserver = new ResizeObserver(scheduleVisibilityUpdate);
+    contentResizeObserver.observe(article);
+    contentMutationObserver = new MutationObserver((mutations) => {
+      scheduleTocUpdate({
+        rebuild: mutations.some(({ type }) => type === "childList"),
+        visibility: true,
+      });
+    });
+    contentMutationObserver.observe(article, {
+      attributeFilter: ["aria-hidden", "class", "hidden"],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+  };
+
+  const initializeTocs = () => {
+    rebuildTocStates();
+    recomputeVisibility();
+    observeContent();
+    scheduleTocUpdate();
+  };
+
+  const disconnectContentObservers = () => {
+    contentResizeObserver?.disconnect();
+    contentMutationObserver?.disconnect();
+  };
+
+  if (!document.documentElement.dataset.stTocController) {
+    document.documentElement.dataset.stTocController = "true";
+    window.addEventListener("scroll", schedulePositionUpdate, { passive: true });
+    window.addEventListener("resize", scheduleVisibilityUpdate, { passive: true });
+    window.addEventListener("hashchange", schedulePositionUpdate);
+    window.addEventListener("popstate", scheduleVisibilityUpdate);
+    window.addEventListener("pageshow", initializeTocs);
+    window.addEventListener("supertokens-docs:variant", scheduleVisibilityUpdate);
+    window.addEventListener("supertokens-docs:variant-content-updated", scheduleVisibilityUpdate);
+    window.addEventListener("supertokens-docs:selection", scheduleVisibilityUpdate);
+    document.addEventListener("supertokens-docs:selection-content-ready", scheduleVisibilityUpdate);
+    document.addEventListener("astro:page-load", initializeTocs);
+    document.addEventListener("astro:before-swap", () => {
+      disconnectContentObservers();
+      tocStates = [];
+      if (updateFrame !== undefined) cancelAnimationFrame(updateFrame);
+      updateFrame = undefined;
+      shouldRebuildEntries = false;
+      shouldRecomputeVisibility = false;
+    });
+    document.addEventListener(
+      "load",
+      (event) => {
+        if (event.target instanceof HTMLImageElement) scheduleVisibilityUpdate();
+      },
+      true,
+    );
+    void document.fonts?.ready.then(scheduleVisibilityUpdate);
+    initializeTocs();
+  }
 </script>
