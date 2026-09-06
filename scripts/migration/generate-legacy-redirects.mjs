@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { format, resolveConfig } from "prettier";
 
+import { configuredRedirects } from "../blume/configured-redirects.mjs";
+
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 const defaultInput = path.resolve(repositoryRoot, "../supertokens-backend-website/app/src/routeRedirects.ts");
 const defaultOutput = path.join(repositoryRoot, "scripts/migration/legacy-redirects.ts");
@@ -54,9 +56,22 @@ const withoutDocsPrefix = (value) => {
 
 const pathname = (value) => value.split(/[?#]/, 1)[0].replace(/\/$/, "") || "/";
 
-export const applicableRedirects = (redirects, currentRoutes) => {
+const parseUrl = (value) => new URL(value, "https://docs.supertokens.invalid");
+
+const mergeUrlSuffix = (target, incoming) => {
+  const targetUrl = parseUrl(target);
+  const incomingUrl = parseUrl(incoming);
+  if (incomingUrl.search) targetUrl.search = incomingUrl.search;
+  if (incomingUrl.hash) targetUrl.hash = incomingUrl.hash;
+  return /^https?:\/\//.test(target)
+    ? targetUrl.toString()
+    : `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+};
+
+export const applicableRedirects = (redirects, currentRoutes, aliases = configuredRedirects) => {
   const firstBySource = new Map();
   const duplicates = [];
+  const crossSetDuplicates = [];
   const ignored = [];
   for (const redirect of redirects) {
     if (firstBySource.has(redirect.from)) {
@@ -72,22 +87,56 @@ export const applicableRedirects = (redirects, currentRoutes) => {
     firstBySource.set(redirect.from, redirect);
   }
 
+  const aliasSources = new Set(aliases.map(({ from }) => withoutDocsPrefix(pathname(from))));
+  const redirectsBySource = new Map();
+  for (const redirect of firstBySource.values()) {
+    redirectsBySource.set(withoutDocsPrefix(pathname(redirect.from)), redirect);
+  }
+  for (const alias of aliases) {
+    redirectsBySource.set(withoutDocsPrefix(pathname(alias.from)), alias);
+  }
   const resolveTarget = (initial) => {
     let target = initial;
     const seen = new Set();
-    while (firstBySource.has(pathname(target)) && !seen.has(pathname(target))) {
-      const source = pathname(target);
+    while (!/^https?:\/\//.test(target)) {
+      const targetPathname = pathname(target);
+      const source = withoutDocsPrefix(targetPathname);
+      if (currentRoutes.has(source)) return { target };
+      if (seen.has(source)) return { cycle: [...seen, source], target };
+      const next = redirectsBySource.get(source);
+      if (!next) return { target };
       seen.add(source);
-      const suffix = target.slice(source.length);
-      target = `${firstBySource.get(source).to}${suffix}`;
+      target = mergeUrlSuffix(next.to, target);
     }
-    return target;
+    return { target };
   };
 
   const migrated = [];
   const retained = [];
   for (const [from, redirect] of firstBySource) {
-    const target = resolveTarget(redirect.to);
+    const migratedFrom = withoutDocsPrefix(from);
+    if (aliasSources.has(pathname(migratedFrom))) {
+      crossSetDuplicates.push(from);
+      ignored.push({
+        from,
+        reason: "configured-alias-source",
+        sourcePosition: redirect.sourcePosition,
+        target: redirect.to,
+      });
+      continue;
+    }
+    const resolution = resolveTarget(redirect.to);
+    const { target } = resolution;
+    if (resolution.cycle) {
+      ignored.push({
+        cycle: resolution.cycle,
+        from,
+        reason: "redirect-cycle",
+        sourcePosition: redirect.sourcePosition,
+        target,
+      });
+      continue;
+    }
     const targetPath = withoutDocsPrefix(pathname(target));
     if (!/^https?:\/\//.test(target) && !currentRoutes.has(targetPath)) {
       ignored.push({
@@ -99,7 +148,6 @@ export const applicableRedirects = (redirects, currentRoutes) => {
       continue;
     }
 
-    const migratedFrom = withoutDocsPrefix(from);
     if (currentRoutes.has(pathname(migratedFrom))) {
       ignored.push({
         from,
@@ -118,7 +166,7 @@ export const applicableRedirects = (redirects, currentRoutes) => {
     });
   }
 
-  return { diagnostics: { ignored, retained }, duplicates, redirects: migrated };
+  return { crossSetDuplicates, diagnostics: { ignored, retained }, duplicates, redirects: migrated };
 };
 
 export const renderGeneratedRedirects = async (result) => {
@@ -129,6 +177,7 @@ export const renderGeneratedRedirects = async (result) => {
 export const legacyRedirects = ${JSON.stringify(result.redirects, null, 2)};
 export const legacyRedirectDiagnostics = ${JSON.stringify(result.diagnostics, null, 2)} as const;
 export const ignoredDuplicateLegacySources = ${JSON.stringify([...new Set(result.duplicates)], null, 2)} as const;
+export const configuredAliasLegacySources = ${JSON.stringify([...new Set(result.crossSetDuplicates)], null, 2)} as const;
 `,
     { ...prettierConfig, parser: "typescript" },
   );

@@ -118,8 +118,24 @@ export const legacyRedirects = [
     to: "/references",
   },
   {
+    from: "/emailpassword/appinfo",
+    to: "/references",
+  },
+  {
+    from: "/emailpassword/architecture",
+    to: "/#how-supertokens-works",
+  },
+  {
     from: "/emailpassword/attack-protection-suite",
     to: "/additional-verification/attack-protection-suite/introduction",
+  },
+  {
+    from: "/emailpassword/capacitor-integration/about",
+    to: "/integrations/overview",
+  },
+  {
+    from: "/emailpassword/common-customizations/account-linking/adding-accounts-to-session",
+    to: "/post-authentication/account-linking/manual-account-linking",
   },
   {
     from: "/emailpassword/common-customizations/change-email-post-login",
@@ -350,6 +366,10 @@ export const legacyRedirects = [
     to: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
   },
   {
+    from: "/emailpassword/common-customizations/sessions/error-handling",
+    to: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+  },
+  {
     from: "/emailpassword/common-customizations/sessions/fetch-sessions-for-user",
     to: "/post-authentication/session-management/access-session-data",
   },
@@ -360,6 +380,10 @@ export const legacyRedirects = [
   {
     from: "/emailpassword/common-customizations/sessions/handling-session-expiry",
     to: "/post-authentication/session-management/session-invalidation",
+  },
+  {
+    from: "/emailpassword/common-customizations/sessions/in-iframe",
+    to: "/post-authentication/session-management/advanced-workflows/in-iframe",
   },
   {
     from: "/emailpassword/common-customizations/sessions/jwt-signing-key-rotation",
@@ -392,6 +416,10 @@ export const legacyRedirects = [
   {
     from: "/emailpassword/common-customizations/sessions/session-verification-in-api/verify-session",
     to: "/additional-verification/session-verification/protect-api-routes",
+  },
+  {
+    from: "/emailpassword/common-customizations/sessions/share-sessions-across-sub-domains",
+    to: "/post-authentication/session-management/share-session-across-sub-domains",
   },
   {
     from: "/emailpassword/common-customizations/sessions/ssr",
@@ -494,6 +522,10 @@ export const legacyRedirects = [
     to: "/authentication/email-password/implement-username-login",
   },
   {
+    from: "/emailpassword/compatibility-table",
+    to: "/references/updating-supertokens#sdk-compatibility-table",
+  },
+  {
     from: "/emailpassword/custom-ui/forgot-password",
     to: "/authentication/email-password/password-reset",
   },
@@ -520,6 +552,18 @@ export const legacyRedirects = [
   {
     from: "/emailpassword/email-delivery/smtp/configure-smtp",
     to: "/platform-configuration/email-delivery",
+  },
+  {
+    from: "/emailpassword/graphql-integration/backend-setup",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/emailpassword/graphql-integration/making-requests",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/emailpassword/hasura-integration/with-jwt",
+    to: "/integrations/hasura",
   },
   {
     from: "/emailpassword/mfa",
@@ -560,6 +604,78 @@ export const legacyRedirects = [
   {
     from: "/emailpassword/multi-tenant",
     to: "/authentication/enterprise/introduction",
+  },
+  {
+    from: "/emailpassword/nestjs/guide",
+    to: "/integrations/nestjs",
+  },
+  {
+    from: "/emailpassword/nextjs/about",
+    to: "/integrations/nextjs/pages-directory/about",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/about",
+    to: "/integrations/nextjs/app-directory/about",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/init",
+    to: "/integrations/nextjs/app-directory/init",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/next-steps",
+    to: "/integrations/nextjs/app-directory/next-steps",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/protecting-route",
+    to: "/integrations/nextjs/app-directory/protecting-route",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/server-components-requests",
+    to: "/integrations/nextjs/app-directory/server-components-requests",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/session-verification-middleware",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/session-verification-session-guard",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/setting-up-backend",
+    to: "/integrations/nextjs/app-directory/setting-up-backend",
+  },
+  {
+    from: "/emailpassword/nextjs/app-directory/setting-up-frontend",
+    to: "/integrations/nextjs/app-directory/setting-up-frontend",
+  },
+  {
+    from: "/emailpassword/nextjs/init",
+    to: "/integrations/nextjs/pages-directory/init",
+  },
+  {
+    from: "/emailpassword/nextjs/next-steps",
+    to: "/integrations/nextjs/pages-directory/next-steps",
+  },
+  {
+    from: "/emailpassword/nextjs/protecting-route",
+    to: "/integrations/nextjs/pages-directory/protecting-route",
+  },
+  {
+    from: "/emailpassword/nextjs/session-verification/in-api",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+  },
+  {
+    from: "/emailpassword/nextjs/session-verification/in-ssr",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+  },
+  {
+    from: "/emailpassword/nextjs/setting-up-backend",
+    to: "/integrations/nextjs/pages-directory/setting-up-backend",
+  },
+  {
+    from: "/emailpassword/nextjs/setting-up-frontend",
+    to: "/integrations/nextjs/pages-directory/setting-up-frontend",
   },
   {
     from: "/emailpassword/other-frameworks",
@@ -610,6 +726,14 @@ export const legacyRedirects = [
     to: "/deployment/self-host-supertokens",
   },
   {
+    from: "/emailpassword/pre-built-ui/setup/frontend",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/emailpassword/pre-built-ui/setup/backend",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
     from: "/emailpassword/pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions",
     to: "/post-authentication/dashboard/user-management",
   },
@@ -630,8 +754,32 @@ export const legacyRedirects = [
     to: "/post-authentication/dashboard/user-management",
   },
   {
+    from: "/emailpassword/pre-built-ui/sign-out",
+    to: "/post-authentication/session-management/session-invalidation#user-sign-out",
+  },
+  {
+    from: "/emailpassword/quickstart/backend-setup",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
+    from: "/emailpassword/quickstart/frontend-setup",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/emailpassword/quickstart/introduction",
+    to: "/quickstart",
+  },
+  {
+    from: "/emailpassword/quickstart/next-steps",
+    to: "/quickstart#3-configure-the-core-service",
+  },
+  {
     from: "/emailpassword/rate-limits",
     to: "/deployment/rate-limits",
+  },
+  {
+    from: "/emailpassword/redwood/about",
+    to: "/integrations/overview",
   },
   {
     from: "/emailpassword/scalability",
@@ -640,6 +788,102 @@ export const legacyRedirects = [
   {
     from: "/emailpassword/sdks",
     to: "/references",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/about",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/appsync-integration",
+    to: "/integrations/aws-lambda/appsync-integration",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/frontend",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/jwt-authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/next-steps",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/session-verification",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/setup-api-gateway",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/setup-lambda",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/emailpassword/serverless/with-aws-lambda/setup-lambda-layer",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/emailpassword/serverless/with-netlify/about",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/emailpassword/serverless/with-netlify/auth-serverless",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/emailpassword/serverless/with-netlify/backend-config",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/emailpassword/serverless/with-netlify/frontend",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/emailpassword/serverless/with-netlify/next-steps",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/emailpassword/serverless/with-netlify/session-verification",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/emailpassword/serverless/with-vercel/about",
+    to: "/integrations/vercel",
+  },
+  {
+    from: "/emailpassword/supabase-intergration/about",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/emailpassword/supabase-intergration/backend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/emailpassword/supabase-intergration/backend-signup-override",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/emailpassword/supabase-intergration/frontend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/emailpassword/supabase-intergration/policies",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/emailpassword/supabase-intergration/setup",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/emailpassword/supabase-intergration/supabase-client",
+    to: "/integrations/supabase",
   },
   {
     from: "/emailpassword/t4-app/about",
@@ -704,6 +948,10 @@ export const legacyRedirects = [
   {
     from: "/mfa/backup-codes",
     to: "/additional-verification/mfa/backup-codes",
+  },
+  {
+    from: "/mfa/email-sms-otp/embed",
+    to: "/additional-verification/mfa/embed-the-prebuilt-ui",
   },
   {
     from: "/mfa/email-sms-otp/otp-for-all-users",
@@ -786,12 +1034,20 @@ export const legacyRedirects = [
     to: "/additional-verification/mfa/step-up-auth",
   },
   {
+    from: "/mfa/totp/embed",
+    to: "/additional-verification/mfa/embed-the-prebuilt-ui",
+  },
+  {
     from: "/mfa/totp/totp-for-all-users",
     to: "/additional-verification/mfa/totp/totp-for-all-users",
   },
   {
     from: "/mfa/totp/totp-for-opt-in-users",
     to: "/additional-verification/mfa/totp/totp-for-opt-in-users",
+  },
+  {
+    from: "/mfa/with-email-verification",
+    to: "/additional-verification/mfa/initial-setup#usage-with-email-verification",
   },
   {
     from: "/microservice_auth/client-credentials",
@@ -918,12 +1174,24 @@ export const legacyRedirects = [
     to: "/references",
   },
   {
+    from: "/passwordless/appinfo",
+    to: "/references",
+  },
+  {
     from: "/passwordless/architecture",
     to: "/authentication/enterprise/important-concepts",
   },
   {
     from: "/passwordless/attack-protection-suite",
     to: "/additional-verification/attack-protection-suite/introduction",
+  },
+  {
+    from: "/passwordless/capacitor-integration/about",
+    to: "/integrations/overview",
+  },
+  {
+    from: "/passwordless/common-customizations/account-linking/adding-accounts-to-session",
+    to: "/post-authentication/account-linking/manual-account-linking",
   },
   {
     from: "/passwordless/common-customizations/change-code-lifetime",
@@ -1122,6 +1390,10 @@ export const legacyRedirects = [
     to: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
   },
   {
+    from: "/passwordless/common-customizations/sessions/error-handling",
+    to: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+  },
+  {
     from: "/passwordless/common-customizations/sessions/fetch-sessions-for-user",
     to: "/post-authentication/session-management/access-session-data",
   },
@@ -1132,6 +1404,10 @@ export const legacyRedirects = [
   {
     from: "/passwordless/common-customizations/sessions/handling-session-expiry",
     to: "/post-authentication/session-management/session-invalidation",
+  },
+  {
+    from: "/passwordless/common-customizations/sessions/in-iframe",
+    to: "/post-authentication/session-management/advanced-workflows/in-iframe",
   },
   {
     from: "/passwordless/common-customizations/sessions/jwt-signing-key-rotation",
@@ -1166,6 +1442,10 @@ export const legacyRedirects = [
     to: "/additional-verification/session-verification/protect-api-routes",
   },
   {
+    from: "/passwordless/common-customizations/sessions/share-sessions-across-sub-domains",
+    to: "/post-authentication/session-management/share-session-across-sub-domains",
+  },
+  {
     from: "/passwordless/common-customizations/sessions/ssr",
     to: "/additional-verification/session-verification/ssr",
   },
@@ -1176,6 +1456,10 @@ export const legacyRedirects = [
   {
     from: "/passwordless/common-customizations/sessions/user-impersonation",
     to: "/post-authentication/session-management/advanced-workflows/user-impersonation",
+  },
+  {
+    from: "/passwordless/common-customizations/sessions/with-jwt/jwt-verification",
+    to: "/integrations/aws-lambda/session-verification",
   },
   {
     from: "/passwordless/common-customizations/sessions/with-jwt/read-jwt",
@@ -1254,6 +1538,10 @@ export const legacyRedirects = [
     to: "/post-authentication/user-management/user-metadata",
   },
   {
+    from: "/passwordless/compatibility-table",
+    to: "/references/updating-supertokens#sdk-compatibility-table",
+  },
+  {
     from: "/passwordless/email-delivery/about",
     to: "/platform-configuration/email-delivery",
   },
@@ -1276,6 +1564,22 @@ export const legacyRedirects = [
   {
     from: "/passwordless/email-delivery/smtp/configure-smtp",
     to: "/platform-configuration/email-delivery",
+  },
+  {
+    from: "/passwordless/flow_diagram",
+    to: "/#how-supertokens-works",
+  },
+  {
+    from: "/passwordless/graphql-integration/backend-setup",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/passwordless/graphql-integration/making-requests",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/passwordless/hasura-integration/with-jwt",
+    to: "/integrations/hasura",
   },
   {
     from: "/passwordless/mfa",
@@ -1314,6 +1618,78 @@ export const legacyRedirects = [
     to: "/authentication/enterprise/introduction",
   },
   {
+    from: "/passwordless/nestjs/guide",
+    to: "/integrations/nestjs",
+  },
+  {
+    from: "/passwordless/nextjs/about",
+    to: "/integrations/nextjs/pages-directory/about",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/about",
+    to: "/integrations/nextjs/app-directory/about",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/init",
+    to: "/integrations/nextjs/app-directory/init",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/next-steps",
+    to: "/integrations/nextjs/app-directory/next-steps",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/protecting-route",
+    to: "/integrations/nextjs/app-directory/protecting-route",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/server-components-requests",
+    to: "/integrations/nextjs/app-directory/server-components-requests",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/session-verification-middleware",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/session-verification-session-guard",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/setting-up-backend",
+    to: "/integrations/nextjs/app-directory/setting-up-backend",
+  },
+  {
+    from: "/passwordless/nextjs/app-directory/setting-up-frontend",
+    to: "/integrations/nextjs/app-directory/setting-up-frontend",
+  },
+  {
+    from: "/passwordless/nextjs/init",
+    to: "/integrations/nextjs/pages-directory/init",
+  },
+  {
+    from: "/passwordless/nextjs/next-steps",
+    to: "/integrations/nextjs/pages-directory/next-steps",
+  },
+  {
+    from: "/passwordless/nextjs/protecting-route",
+    to: "/integrations/nextjs/pages-directory/protecting-route",
+  },
+  {
+    from: "/passwordless/nextjs/session-verification/in-api",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+  },
+  {
+    from: "/passwordless/nextjs/session-verification/in-ssr",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+  },
+  {
+    from: "/passwordless/nextjs/setting-up-backend",
+    to: "/integrations/nextjs/pages-directory/setting-up-backend",
+  },
+  {
+    from: "/passwordless/nextjs/setting-up-frontend",
+    to: "/integrations/nextjs/pages-directory/setting-up-frontend",
+  },
+  {
     from: "/passwordless/other-frameworks",
     to: "/references/backend-sdks/other-frameworks",
   },
@@ -1332,6 +1708,10 @@ export const legacyRedirects = [
   {
     from: "/passwordless/pre-built-ui/handling-session-tokens",
     to: "/post-authentication/session-management/introduction",
+  },
+  {
+    from: "/passwordless/pre-built-ui/setup/core/saas-setup",
+    to: "/quickstart#2-integrate-the-backend-sdk",
   },
   {
     from: "/passwordless/pre-built-ui/setup/core/with-docker",
@@ -1374,8 +1754,48 @@ export const legacyRedirects = [
     to: "/post-authentication/dashboard/user-management",
   },
   {
+    from: "/passwordless/pre-built-ui/sign-out",
+    to: "/post-authentication/session-management/session-invalidation#user-sign-out",
+  },
+  {
+    from: "/passwordless/pre-built-ui/setup/frontend",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/passwordless/pre-built-ui/setup/backend",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
+    from: "/passwordless/quick-setup/backend",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
+    from: "/passwordless/quickstart/backend-setup",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
+    from: "/passwordless/quickstart/frontend-setup",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/passwordless/quick-setup/frontend",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/passwordless/quickstart/introduction",
+    to: "/quickstart",
+  },
+  {
+    from: "/passwordless/quickstart/next-steps",
+    to: "/quickstart#3-configure-the-core-service",
+  },
+  {
     from: "/passwordless/rate-limits",
     to: "/deployment/rate-limits",
+  },
+  {
+    from: "/passwordless/redwood/about",
+    to: "/integrations/overview",
   },
   {
     from: "/passwordless/scalability",
@@ -1384,6 +1804,74 @@ export const legacyRedirects = [
   {
     from: "/passwordless/sdks",
     to: "/references",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/about",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/appsync-integration",
+    to: "/integrations/aws-lambda/appsync-integration",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/frontend",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/jwt-authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/next-steps",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/session-verification",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/setup-api-gateway",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/setup-lambda",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/passwordless/serverless/with-aws-lambda/setup-lambda-layer",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/passwordless/serverless/with-netlify/about",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/passwordless/serverless/with-netlify/auth-serverless",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/passwordless/serverless/with-netlify/backend-config",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/passwordless/serverless/with-netlify/frontend",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/passwordless/serverless/with-netlify/next-steps",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/passwordless/serverless/with-netlify/session-verification",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/passwordless/serverless/with-vercel/about",
+    to: "/integrations/vercel",
   },
   {
     from: "/passwordless/sms-delivery/about",
@@ -1412,6 +1900,34 @@ export const legacyRedirects = [
   {
     from: "/passwordless/sms-delivery/twilio/configure-twilio",
     to: "/platform-configuration/sms-delivery",
+  },
+  {
+    from: "/passwordless/supabase-intergration/about",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/passwordless/supabase-intergration/backend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/passwordless/supabase-intergration/backend-signup-override",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/passwordless/supabase-intergration/frontend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/passwordless/supabase-intergration/policies",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/passwordless/supabase-intergration/setup",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/passwordless/supabase-intergration/supabase-client",
+    to: "/integrations/supabase",
   },
   {
     from: "/passwordless/t4-app/about",
@@ -1558,6 +2074,10 @@ export const legacyRedirects = [
     to: "/references",
   },
   {
+    from: "/session/appinfo",
+    to: "/references",
+  },
+  {
     from: "/session/architecture",
     to: "/authentication/enterprise/important-concepts",
   },
@@ -1646,6 +2166,10 @@ export const legacyRedirects = [
     to: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
   },
   {
+    from: "/session/common-customizations/sessions/error-handling",
+    to: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+  },
+  {
     from: "/session/common-customizations/sessions/fetch-sessions-for-user",
     to: "/post-authentication/session-management/access-session-data",
   },
@@ -1656,6 +2180,10 @@ export const legacyRedirects = [
   {
     from: "/session/common-customizations/sessions/handling-session-expiry",
     to: "/post-authentication/session-management/session-invalidation",
+  },
+  {
+    from: "/session/common-customizations/sessions/in-iframe",
+    to: "/post-authentication/session-management/advanced-workflows/in-iframe",
   },
   {
     from: "/session/common-customizations/sessions/jwt-signing-key-rotation",
@@ -1694,6 +2222,10 @@ export const legacyRedirects = [
     to: "/additional-verification/session-verification/protect-api-routes",
   },
   {
+    from: "/session/common-customizations/sessions/share-sessions-across-sub-domains",
+    to: "/post-authentication/session-management/share-session-across-sub-domains",
+  },
+  {
     from: "/session/common-customizations/sessions/ssr",
     to: "/additional-verification/session-verification/ssr",
   },
@@ -1706,12 +2238,32 @@ export const legacyRedirects = [
     to: "/post-authentication/session-management/advanced-workflows/user-impersonation",
   },
   {
+    from: "/session/common-customizations/sessions/with-jwt/jwt-verification",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
     from: "/session/common-customizations/sessions/with-jwt/read-jwt",
     to: "/post-authentication/session-management/access-session-data",
   },
   {
     from: "/session/common-customizations/sessions/with-websocket",
     to: "/additional-verification/session-verification/with-websocket",
+  },
+  {
+    from: "/session/compatibility-table",
+    to: "/references/updating-supertokens#sdk-compatibility-table",
+  },
+  {
+    from: "/session/graphql-integration/backend-setup",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/session/graphql-integration/making-requests",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/session/hasura-integration/with-jwt",
+    to: "/integrations/hasura",
   },
   {
     from: "/session/introduction",
@@ -1722,8 +2274,20 @@ export const legacyRedirects = [
     to: "/migration/session-migration",
   },
   {
+    from: "/session/nestjs/guide",
+    to: "/integrations/nestjs",
+  },
+  {
     from: "/session/other-frameworks",
     to: "/references/backend-sdks/other-frameworks",
+  },
+  {
+    from: "/session/quick-setup/backend",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
+    from: "/session/quick-setup/core/saas-setup",
+    to: "/quickstart#2-integrate-the-backend-sdk",
   },
   {
     from: "/session/quick-setup/core/with-docker",
@@ -1746,6 +2310,10 @@ export const legacyRedirects = [
     to: "/deployment/self-host-supertokens",
   },
   {
+    from: "/session/quick-setup/frontend",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
     from: "/session/quick-setup/handling-session-tokens",
     to: "/post-authentication/session-management/introduction",
   },
@@ -1756,6 +2324,74 @@ export const legacyRedirects = [
   {
     from: "/session/sdks",
     to: "/references",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/about",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/appsync-integration",
+    to: "/integrations/aws-lambda/appsync-integration",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/frontend",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/jwt-authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/next-steps",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/session-verification",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/setup-api-gateway",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/setup-lambda",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/session/serverless/with-aws-lambda/setup-lambda-layer",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/session/serverless/with-netlify/about",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/session/serverless/with-netlify/auth-serverless",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/session/serverless/with-netlify/backend-config",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/session/serverless/with-netlify/frontend",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/session/serverless/with-netlify/next-steps",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/session/serverless/with-netlify/session-verification",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/session/serverless/with-vercel/about",
+    to: "/integrations/vercel",
   },
   {
     from: "/session/testing/testing-with-postman",
@@ -1858,12 +2494,24 @@ export const legacyRedirects = [
     to: "/references",
   },
   {
+    from: "/thirdparty/appinfo",
+    to: "/references",
+  },
+  {
     from: "/thirdparty/architecture",
     to: "/authentication/enterprise/important-concepts",
   },
   {
     from: "/thirdparty/attack-protection-suite",
     to: "/additional-verification/attack-protection-suite/introduction",
+  },
+  {
+    from: "/thirdparty/capacitor-integration/about",
+    to: "/integrations/overview",
+  },
+  {
+    from: "/thirdparty/common-customizations/account-linking/adding-accounts-to-session",
+    to: "/post-authentication/account-linking/manual-account-linking",
   },
   {
     from: "/thirdparty/common-customizations/account-linking/automatic-account-linking",
@@ -2030,6 +2678,26 @@ export const legacyRedirects = [
     to: "/authentication/social/add-multiple-clients-for-the-same-provider",
   },
   {
+    from: "/thirdparty/common-customizations/saml/saml-login",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdparty/common-customizations/saml/what-is-saml",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdparty/common-customizations/saml/with-boxyhq/flow-diagram",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdparty/common-customizations/saml/with-boxyhq/integration-steps",
+    to: "/authentication/enterprise/legacy-saml",
+  },
+  {
+    from: "/thirdparty/common-customizations/saml/with-boxyhq/what-is-boxyhq",
+    to: "/authentication/enterprise/saml",
+  },
+  {
     from: "/thirdparty/common-customizations/sessions/about",
     to: "/post-authentication/session-management/introduction",
   },
@@ -2070,6 +2738,10 @@ export const legacyRedirects = [
     to: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
   },
   {
+    from: "/thirdparty/common-customizations/sessions/error-handling",
+    to: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+  },
+  {
     from: "/thirdparty/common-customizations/sessions/fetch-sessions-for-user",
     to: "/post-authentication/session-management/access-session-data",
   },
@@ -2080,6 +2752,10 @@ export const legacyRedirects = [
   {
     from: "/thirdparty/common-customizations/sessions/handling-session-expiry",
     to: "/post-authentication/session-management/session-invalidation",
+  },
+  {
+    from: "/thirdparty/common-customizations/sessions/in-iframe",
+    to: "/post-authentication/session-management/advanced-workflows/in-iframe",
   },
   {
     from: "/thirdparty/common-customizations/sessions/jwt-signing-key-rotation",
@@ -2114,6 +2790,10 @@ export const legacyRedirects = [
     to: "/additional-verification/session-verification/protect-api-routes",
   },
   {
+    from: "/thirdparty/common-customizations/sessions/share-sessions-across-sub-domains",
+    to: "/post-authentication/session-management/share-session-across-sub-domains",
+  },
+  {
     from: "/thirdparty/common-customizations/sessions/ssr",
     to: "/additional-verification/session-verification/ssr",
   },
@@ -2124,6 +2804,10 @@ export const legacyRedirects = [
   {
     from: "/thirdparty/common-customizations/sessions/user-impersonation",
     to: "/post-authentication/session-management/advanced-workflows/user-impersonation",
+  },
+  {
+    from: "/thirdparty/common-customizations/sessions/with-jwt/jwt-verification",
+    to: "/integrations/aws-lambda/session-verification",
   },
   {
     from: "/thirdparty/common-customizations/sessions/with-jwt/read-jwt",
@@ -2194,6 +2878,10 @@ export const legacyRedirects = [
     to: "/post-authentication/user-management/user-metadata",
   },
   {
+    from: "/thirdparty/compatibility-table",
+    to: "/references/updating-supertokens#sdk-compatibility-table",
+  },
+  {
     from: "/thirdparty/email-delivery/about",
     to: "/platform-configuration/email-delivery",
   },
@@ -2216,6 +2904,18 @@ export const legacyRedirects = [
   {
     from: "/thirdparty/email-delivery/smtp/configure-smtp",
     to: "/platform-configuration/email-delivery",
+  },
+  {
+    from: "/thirdparty/graphql-integration/backend-setup",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/thirdparty/graphql-integration/making-requests",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/thirdparty/hasura-integration/with-jwt",
+    to: "/integrations/hasura",
   },
   {
     from: "/thirdparty/mfa",
@@ -2254,6 +2954,78 @@ export const legacyRedirects = [
     to: "/authentication/enterprise/introduction",
   },
   {
+    from: "/thirdparty/nestjs/guide",
+    to: "/integrations/nestjs",
+  },
+  {
+    from: "/thirdparty/nextjs/about",
+    to: "/integrations/nextjs/pages-directory/about",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/about",
+    to: "/integrations/nextjs/app-directory/about",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/init",
+    to: "/integrations/nextjs/app-directory/init",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/next-steps",
+    to: "/integrations/nextjs/app-directory/next-steps",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/protecting-route",
+    to: "/integrations/nextjs/app-directory/protecting-route",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/server-components-requests",
+    to: "/integrations/nextjs/app-directory/server-components-requests",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/session-verification-middleware",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/session-verification-session-guard",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/setting-up-backend",
+    to: "/integrations/nextjs/app-directory/setting-up-backend",
+  },
+  {
+    from: "/thirdparty/nextjs/app-directory/setting-up-frontend",
+    to: "/integrations/nextjs/app-directory/setting-up-frontend",
+  },
+  {
+    from: "/thirdparty/nextjs/init",
+    to: "/integrations/nextjs/pages-directory/init",
+  },
+  {
+    from: "/thirdparty/nextjs/next-steps",
+    to: "/integrations/nextjs/pages-directory/next-steps",
+  },
+  {
+    from: "/thirdparty/nextjs/protecting-route",
+    to: "/integrations/nextjs/pages-directory/protecting-route",
+  },
+  {
+    from: "/thirdparty/nextjs/session-verification/in-api",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+  },
+  {
+    from: "/thirdparty/nextjs/session-verification/in-ssr",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+  },
+  {
+    from: "/thirdparty/nextjs/setting-up-backend",
+    to: "/integrations/nextjs/pages-directory/setting-up-backend",
+  },
+  {
+    from: "/thirdparty/nextjs/setting-up-frontend",
+    to: "/integrations/nextjs/pages-directory/setting-up-frontend",
+  },
+  {
     from: "/thirdparty/other-frameworks",
     to: "/references/backend-sdks/other-frameworks",
   },
@@ -2280,6 +3052,14 @@ export const legacyRedirects = [
   {
     from: "/thirdparty/pre-built-ui/setup/core/with-docker",
     to: "/deployment/self-host-supertokens",
+  },
+  {
+    from: "/thirdparty/pre-built-ui/setup/frontend",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/thirdparty/pre-built-ui/setup/backend",
+    to: "/quickstart#2-integrate-the-backend-sdk",
   },
   {
     from: "/thirdparty/pre-built-ui/setup/core/without-docker",
@@ -2318,8 +3098,32 @@ export const legacyRedirects = [
     to: "/post-authentication/dashboard/user-management",
   },
   {
+    from: "/thirdparty/pre-built-ui/sign-out",
+    to: "/post-authentication/session-management/session-invalidation#user-sign-out",
+  },
+  {
+    from: "/thirdparty/quickstart/backend-setup",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
+    from: "/thirdparty/quickstart/frontend-setup",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/thirdparty/quickstart/introduction",
+    to: "/quickstart",
+  },
+  {
+    from: "/thirdparty/quickstart/next-steps",
+    to: "/quickstart#3-configure-the-core-service",
+  },
+  {
     from: "/thirdparty/rate-limits",
     to: "/deployment/rate-limits",
+  },
+  {
+    from: "/thirdparty/redwood/about",
+    to: "/integrations/overview",
   },
   {
     from: "/thirdparty/scalability",
@@ -2328,6 +3132,102 @@ export const legacyRedirects = [
   {
     from: "/thirdparty/sdks",
     to: "/references",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/about",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/appsync-integration",
+    to: "/integrations/aws-lambda/appsync-integration",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/frontend",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/jwt-authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/next-steps",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/session-verification",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/setup-api-gateway",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/setup-lambda",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdparty/serverless/with-aws-lambda/setup-lambda-layer",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdparty/serverless/with-netlify/about",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdparty/serverless/with-netlify/auth-serverless",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdparty/serverless/with-netlify/backend-config",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdparty/serverless/with-netlify/frontend",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdparty/serverless/with-netlify/next-steps",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdparty/serverless/with-netlify/session-verification",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdparty/serverless/with-vercel/about",
+    to: "/integrations/vercel",
+  },
+  {
+    from: "/thirdparty/supabase-intergration/about",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdparty/supabase-intergration/backend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdparty/supabase-intergration/backend-signup-override",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdparty/supabase-intergration/frontend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdparty/supabase-intergration/policies",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdparty/supabase-intergration/setup",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdparty/supabase-intergration/supabase-client",
+    to: "/integrations/supabase",
   },
   {
     from: "/thirdparty/t4-app/about",
@@ -2470,12 +3370,24 @@ export const legacyRedirects = [
     to: "/references",
   },
   {
+    from: "/thirdpartyemailpassword/appinfo",
+    to: "/references",
+  },
+  {
     from: "/thirdpartyemailpassword/architecture",
     to: "/authentication/enterprise/important-concepts",
   },
   {
     from: "/thirdpartyemailpassword/attack-protection-suite",
     to: "/additional-verification/attack-protection-suite/introduction",
+  },
+  {
+    from: "/thirdpartyemailpassword/capacitor-integration/about",
+    to: "/integrations/overview",
+  },
+  {
+    from: "/thirdpartyemailpassword/common-customizations/account-linking/adding-accounts-to-session",
+    to: "/post-authentication/account-linking/manual-account-linking",
   },
   {
     from: "/thirdpartyemailpassword/common-customizations/account-linking/automatic-account-linking",
@@ -2694,6 +3606,26 @@ export const legacyRedirects = [
     to: "/authentication/email-password/password-reset",
   },
   {
+    from: "/thirdpartyemailpassword/common-customizations/saml/saml-login",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdpartyemailpassword/common-customizations/saml/what-is-saml",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/flow-diagram",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/integration-steps",
+    to: "/authentication/enterprise/legacy-saml",
+  },
+  {
+    from: "/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/what-is-boxyhq",
+    to: "/authentication/enterprise/saml",
+  },
+  {
     from: "/thirdpartyemailpassword/common-customizations/sessions/about",
     to: "/post-authentication/session-management/introduction",
   },
@@ -2734,6 +3666,10 @@ export const legacyRedirects = [
     to: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
   },
   {
+    from: "/thirdpartyemailpassword/common-customizations/sessions/error-handling",
+    to: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+  },
+  {
     from: "/thirdpartyemailpassword/common-customizations/sessions/fetch-sessions-for-user",
     to: "/post-authentication/session-management/access-session-data",
   },
@@ -2744,6 +3680,10 @@ export const legacyRedirects = [
   {
     from: "/thirdpartyemailpassword/common-customizations/sessions/handling-session-expiry",
     to: "/post-authentication/session-management/session-invalidation",
+  },
+  {
+    from: "/thirdpartyemailpassword/common-customizations/sessions/in-iframe",
+    to: "/post-authentication/session-management/advanced-workflows/in-iframe",
   },
   {
     from: "/thirdpartyemailpassword/common-customizations/sessions/jwt-signing-key-rotation",
@@ -2778,6 +3718,10 @@ export const legacyRedirects = [
     to: "/additional-verification/session-verification/protect-api-routes",
   },
   {
+    from: "/thirdpartyemailpassword/common-customizations/sessions/share-sessions-across-sub-domains",
+    to: "/post-authentication/session-management/share-session-across-sub-domains",
+  },
+  {
     from: "/thirdpartyemailpassword/common-customizations/sessions/ssr",
     to: "/additional-verification/session-verification/ssr",
   },
@@ -2788,6 +3732,10 @@ export const legacyRedirects = [
   {
     from: "/thirdpartyemailpassword/common-customizations/sessions/user-impersonation",
     to: "/post-authentication/session-management/advanced-workflows/user-impersonation",
+  },
+  {
+    from: "/thirdpartyemailpassword/common-customizations/sessions/with-jwt/jwt-verification",
+    to: "/integrations/aws-lambda/session-verification",
   },
   {
     from: "/thirdpartyemailpassword/common-customizations/sessions/with-jwt/read-jwt",
@@ -2878,6 +3826,10 @@ export const legacyRedirects = [
     to: "/post-authentication/user-management/user-metadata",
   },
   {
+    from: "/thirdpartyemailpassword/compatibility-table",
+    to: "/references/updating-supertokens#sdk-compatibility-table",
+  },
+  {
     from: "/thirdpartyemailpassword/email-delivery/about",
     to: "/platform-configuration/email-delivery",
   },
@@ -2900,6 +3852,18 @@ export const legacyRedirects = [
   {
     from: "/thirdpartyemailpassword/email-delivery/smtp/configure-smtp",
     to: "/platform-configuration/email-delivery",
+  },
+  {
+    from: "/thirdpartyemailpassword/graphql-integration/backend-setup",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/thirdpartyemailpassword/graphql-integration/making-requests",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/thirdpartyemailpassword/hasura-integration/with-jwt",
+    to: "/integrations/hasura",
   },
   {
     from: "/thirdpartyemailpassword/mfa",
@@ -2942,6 +3906,78 @@ export const legacyRedirects = [
     to: "/authentication/enterprise/introduction",
   },
   {
+    from: "/thirdpartyemailpassword/nestjs/guide",
+    to: "/integrations/nestjs",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/about",
+    to: "/integrations/nextjs/pages-directory/about",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/about",
+    to: "/integrations/nextjs/app-directory/about",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/init",
+    to: "/integrations/nextjs/app-directory/init",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/next-steps",
+    to: "/integrations/nextjs/app-directory/next-steps",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/protecting-route",
+    to: "/integrations/nextjs/app-directory/protecting-route",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/server-components-requests",
+    to: "/integrations/nextjs/app-directory/server-components-requests",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/session-verification-middleware",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/session-verification-session-guard",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/setting-up-backend",
+    to: "/integrations/nextjs/app-directory/setting-up-backend",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/setting-up-frontend",
+    to: "/integrations/nextjs/app-directory/setting-up-frontend",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/init",
+    to: "/integrations/nextjs/pages-directory/init",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/next-steps",
+    to: "/integrations/nextjs/pages-directory/next-steps",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/protecting-route",
+    to: "/integrations/nextjs/pages-directory/protecting-route",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/session-verification/in-api",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/session-verification/in-ssr",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/setting-up-backend",
+    to: "/integrations/nextjs/pages-directory/setting-up-backend",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/setting-up-frontend",
+    to: "/integrations/nextjs/pages-directory/setting-up-frontend",
+  },
+  {
     from: "/thirdpartyemailpassword/other-frameworks",
     to: "/references/backend-sdks/other-frameworks",
   },
@@ -2952,6 +3988,14 @@ export const legacyRedirects = [
   {
     from: "/thirdpartyemailpassword/pre-built-ui/further-reading/email-password-login",
     to: "/references/frontend-sdks/prebuilt-ui/ui-showcase",
+  },
+  {
+    from: "/thirdpartyemailpassword/pre-built-ui/setup/frontend",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/thirdpartyemailpassword/pre-built-ui/setup/backend",
+    to: "/quickstart#2-integrate-the-backend-sdk",
   },
   {
     from: "/thirdpartyemailpassword/pre-built-ui/further-reading/email-verification",
@@ -3014,8 +4058,32 @@ export const legacyRedirects = [
     to: "/post-authentication/dashboard/user-management",
   },
   {
+    from: "/thirdpartyemailpassword/pre-built-ui/sign-out",
+    to: "/post-authentication/session-management/session-invalidation#user-sign-out",
+  },
+  {
+    from: "/thirdpartyemailpassword/quickstart/backend-setup",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
+    from: "/thirdpartyemailpassword/quickstart/frontend-setup",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/thirdpartyemailpassword/quickstart/introduction",
+    to: "/quickstart",
+  },
+  {
+    from: "/thirdpartyemailpassword/quickstart/next-steps",
+    to: "/quickstart#3-configure-the-core-service",
+  },
+  {
     from: "/thirdpartyemailpassword/rate-limits",
     to: "/deployment/rate-limits",
+  },
+  {
+    from: "/thirdpartyemailpassword/redwood/about",
+    to: "/integrations/overview",
   },
   {
     from: "/thirdpartyemailpassword/scalability",
@@ -3024,6 +4092,106 @@ export const legacyRedirects = [
   {
     from: "/thirdpartyemailpassword/sdks",
     to: "/references",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/about",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/appsync-integration",
+    to: "/integrations/aws-lambda/appsync-integration",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/frontend",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/jwt-authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/next-steps",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/session-verification",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/setup-api-gateway",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/setup-lambda",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-aws-lambda/setup-lambda-layer",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-netlify/about",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-netlify/auth-serverless",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-netlify/backend-config",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-netlify/frontend",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-netlify/next-steps",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-netlify/session-verification",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartyemailpassword/serverless/with-vercel/about",
+    to: "/integrations/vercel",
+  },
+  {
+    from: "/thirdpartyemailpassword/supabase-intergration/about",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartyemailpassword/supabase-intergration/backend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartyemailpassword/supabase-intergration/backend-signup-override",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartyemailpassword/supabase-intergration/frontend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartyemailpassword/supabase-intergration/policies",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartyemailpassword/supabase-intergration/setup",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartyemailpassword/supabase-intergration/supabase-client",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartyemailpassword/t4-app/about",
+    to: "/quickstart",
   },
   {
     from: "/thirdpartyemailpassword/testing/testing-with-postman",
@@ -3162,12 +4330,24 @@ export const legacyRedirects = [
     to: "/references",
   },
   {
+    from: "/thirdpartypasswordless/appinfo",
+    to: "/references",
+  },
+  {
     from: "/thirdpartypasswordless/architecture",
     to: "/authentication/enterprise/important-concepts",
   },
   {
     from: "/thirdpartypasswordless/attack-protection-suite",
     to: "/additional-verification/attack-protection-suite/introduction",
+  },
+  {
+    from: "/thirdpartypasswordless/capacitor-integration/about",
+    to: "/integrations/overview",
+  },
+  {
+    from: "/thirdpartypasswordless/common-customizations/account-linking/adding-accounts-to-session",
+    to: "/post-authentication/account-linking/manual-account-linking",
   },
   {
     from: "/thirdpartypasswordless/common-customizations/account-linking/automatic-account-linking",
@@ -3358,6 +4538,26 @@ export const legacyRedirects = [
     to: "/authentication/social/add-multiple-clients-for-the-same-provider",
   },
   {
+    from: "/thirdpartypasswordless/common-customizations/saml/saml-login",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdpartypasswordless/common-customizations/saml/what-is-saml",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdpartypasswordless/common-customizations/saml/with-boxyhq/flow-diagram",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdpartypasswordless/common-customizations/saml/with-boxyhq/integration-steps",
+    to: "/authentication/enterprise/legacy-saml",
+  },
+  {
+    from: "/thirdpartypasswordless/common-customizations/saml/with-boxyhq/what-is-boxyhq",
+    to: "/authentication/enterprise/saml",
+  },
+  {
     from: "/thirdpartypasswordless/common-customizations/sessions/about",
     to: "/post-authentication/session-management/introduction",
   },
@@ -3398,6 +4598,10 @@ export const legacyRedirects = [
     to: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
   },
   {
+    from: "/thirdpartypasswordless/common-customizations/sessions/error-handling",
+    to: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+  },
+  {
     from: "/thirdpartypasswordless/common-customizations/sessions/fetch-sessions-for-user",
     to: "/post-authentication/session-management/access-session-data",
   },
@@ -3408,6 +4612,10 @@ export const legacyRedirects = [
   {
     from: "/thirdpartypasswordless/common-customizations/sessions/handling-session-expiry",
     to: "/post-authentication/session-management/session-invalidation",
+  },
+  {
+    from: "/thirdpartypasswordless/common-customizations/sessions/in-iframe",
+    to: "/post-authentication/session-management/advanced-workflows/in-iframe",
   },
   {
     from: "/thirdpartypasswordless/common-customizations/sessions/jwt-signing-key-rotation",
@@ -3440,6 +4648,10 @@ export const legacyRedirects = [
   {
     from: "/thirdpartypasswordless/common-customizations/sessions/session-verification-in-api/verify-session",
     to: "/additional-verification/session-verification/protect-api-routes",
+  },
+  {
+    from: "/thirdpartypasswordless/common-customizations/sessions/share-sessions-across-sub-domains",
+    to: "/post-authentication/session-management/share-session-across-sub-domains",
   },
   {
     from: "/thirdpartypasswordless/common-customizations/sessions/ssr",
@@ -3546,6 +4758,10 @@ export const legacyRedirects = [
     to: "/post-authentication/user-management/user-metadata",
   },
   {
+    from: "/thirdpartypasswordless/compatibility-table",
+    to: "/references/updating-supertokens#sdk-compatibility-table",
+  },
+  {
     from: "/thirdpartypasswordless/email-delivery/about",
     to: "/platform-configuration/email-delivery",
   },
@@ -3568,6 +4784,22 @@ export const legacyRedirects = [
   {
     from: "/thirdpartypasswordless/email-delivery/smtp/configure-smtp",
     to: "/platform-configuration/email-delivery",
+  },
+  {
+    from: "/thirdpartypasswordless/flow_diagram",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/thirdpartypasswordless/graphql-integration/backend-setup",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/thirdpartypasswordless/graphql-integration/making-requests",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/thirdpartypasswordless/hasura-integration/with-jwt",
+    to: "/integrations/hasura",
   },
   {
     from: "/thirdpartypasswordless/mfa",
@@ -3606,12 +4838,92 @@ export const legacyRedirects = [
     to: "/authentication/enterprise/introduction",
   },
   {
+    from: "/thirdpartypasswordless/nestjs/guide",
+    to: "/integrations/nestjs",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/about",
+    to: "/integrations/nextjs/pages-directory/about",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/about",
+    to: "/integrations/nextjs/app-directory/about",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/init",
+    to: "/integrations/nextjs/app-directory/init",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/next-steps",
+    to: "/integrations/nextjs/app-directory/next-steps",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/protecting-route",
+    to: "/integrations/nextjs/app-directory/protecting-route",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/server-components-requests",
+    to: "/integrations/nextjs/app-directory/server-components-requests",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/session-verification-middleware",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/session-verification-session-guard",
+    to: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/setting-up-backend",
+    to: "/integrations/nextjs/app-directory/setting-up-backend",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/app-directory/setting-up-frontend",
+    to: "/integrations/nextjs/app-directory/setting-up-frontend",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/init",
+    to: "/integrations/nextjs/pages-directory/init",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/next-steps",
+    to: "/integrations/nextjs/pages-directory/next-steps",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/protecting-route",
+    to: "/integrations/nextjs/pages-directory/protecting-route",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/session-verification/in-api",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/session-verification/in-ssr",
+    to: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/setting-up-backend",
+    to: "/integrations/nextjs/pages-directory/setting-up-backend",
+  },
+  {
+    from: "/thirdpartypasswordless/nextjs/setting-up-frontend",
+    to: "/integrations/nextjs/pages-directory/setting-up-frontend",
+  },
+  {
     from: "/thirdpartypasswordless/other-frameworks",
     to: "/references/backend-sdks/other-frameworks",
   },
   {
     from: "/thirdpartypasswordless/pre-built-ui/auth-redirection",
     to: "/post-authentication/post-login-redirect",
+  },
+  {
+    from: "/thirdpartypasswordless/pre-built-ui/setup/frontend",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/thirdpartypasswordless/pre-built-ui/setup/backend",
+    to: "/quickstart#2-integrate-the-backend-sdk",
   },
   {
     from: "/thirdpartypasswordless/pre-built-ui/further-reading/email-verification",
@@ -3674,8 +4986,32 @@ export const legacyRedirects = [
     to: "/post-authentication/dashboard/user-management",
   },
   {
+    from: "/thirdpartypasswordless/pre-built-ui/sign-out",
+    to: "/post-authentication/session-management/session-invalidation#user-sign-out",
+  },
+  {
+    from: "/thirdpartypasswordless/quickstart/backend-setup",
+    to: "/quickstart#2-integrate-the-backend-sdk",
+  },
+  {
+    from: "/thirdpartypasswordless/quickstart/frontend-setup",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
+    from: "/thirdpartypasswordless/quickstart/introduction",
+    to: "/quickstart",
+  },
+  {
+    from: "/thirdpartypasswordless/quickstart/next-steps",
+    to: "/quickstart#3-configure-the-core-service",
+  },
+  {
     from: "/thirdpartypasswordless/rate-limits",
     to: "/deployment/rate-limits",
+  },
+  {
+    from: "/thirdpartypasswordless/redwood/about",
+    to: "/integrations/overview",
   },
   {
     from: "/thirdpartypasswordless/scalability",
@@ -3684,6 +5020,74 @@ export const legacyRedirects = [
   {
     from: "/thirdpartypasswordless/sdks",
     to: "/references",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/about",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/appsync-integration",
+    to: "/integrations/aws-lambda/appsync-integration",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/frontend",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/jwt-authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/next-steps",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/session-verification",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/setup-api-gateway",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/setup-lambda",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-aws-lambda/setup-lambda-layer",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-netlify/about",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-netlify/auth-serverless",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-netlify/backend-config",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-netlify/frontend",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-netlify/next-steps",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-netlify/session-verification",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/thirdpartypasswordless/serverless/with-vercel/about",
+    to: "/integrations/vercel",
   },
   {
     from: "/thirdpartypasswordless/sms-delivery/about",
@@ -3712,6 +5116,38 @@ export const legacyRedirects = [
   {
     from: "/thirdpartypasswordless/sms-delivery/twilio/configure-twilio",
     to: "/platform-configuration/sms-delivery",
+  },
+  {
+    from: "/thirdpartypasswordless/supabase-intergration/about",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartypasswordless/supabase-intergration/backend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartypasswordless/supabase-intergration/backend-signup-override",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartypasswordless/supabase-intergration/frontend",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartypasswordless/supabase-intergration/policies",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartypasswordless/supabase-intergration/setup",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartypasswordless/supabase-intergration/supabase-client",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/thirdpartypasswordless/t4-app/about",
+    to: "/quickstart",
   },
   {
     from: "/thirdpartypasswordless/testing/testing-with-postman",
@@ -3854,6 +5290,10 @@ export const legacyRedirects = [
     to: "/additional-verification/user-roles/protecting-routes",
   },
   {
+    from: "/community/compatibility",
+    to: "/references/updating-supertokens#sdk-compatibility-table",
+  },
+  {
     from: "/passwordless/custom-ui/login-otp",
     to: "/authentication/passwordless/initial-setup",
   },
@@ -3862,8 +5302,16 @@ export const legacyRedirects = [
     to: "/authentication/social/initial-setup",
   },
   {
+    from: "/thirdpartypasswordless/introduction",
+    to: "/quickstart",
+  },
+  {
     from: "/passwordless/introduction",
     to: "/authentication/passwordless/introduction",
+  },
+  {
+    from: "/thirdpartyemailpassword/pre-built-ui/setup/core/aws-setup-with-stacksnap",
+    to: "/quickstart",
   },
   {
     from: "/thirdparty/custom-ui/init/frontend",
@@ -3886,6 +5334,10 @@ export const legacyRedirects = [
     to: "/authentication/social/initial-setup",
   },
   {
+    from: "/emailpassword/custom-ui/init/frontend",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
+  },
+  {
     from: "/migration",
     to: "/migration/overview",
   },
@@ -3896,6 +5348,18 @@ export const legacyRedirects = [
   {
     from: "/emailpassword/pre-built-ui/setup/dashboard",
     to: "/post-authentication/dashboard/introduction",
+  },
+  {
+    from: "/thirdpartypasswordless/custom-ui/thirdparty-login",
+    to: "/quickstart",
+  },
+  {
+    from: "/thirdpartyemailpassword/nextjs/app-directory/session-helpers",
+    to: "/integrations/nextjs/app-directory/about",
+  },
+  {
+    from: "/emailpassword/pre-built-ui/securing-routes",
+    to: "/quickstart#1-integrate-the-frontend-sdk",
   },
   {
     from: "/contribute/introduction",
@@ -4070,6 +5534,142 @@ export const legacyRedirects = [
     to: "/authentication/enterprise/subdomain-login",
   },
   {
+    from: "/authentication/enterprise/saml/saml-login",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/authentication/enterprise/saml/overview",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/authentication/enterprise/saml/with-boxyhq/flow-diagram",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/authentication/enterprise/saml/with-boxyhq/what-is-boxyhq",
+    to: "/authentication/enterprise/saml",
+  },
+  {
+    from: "/authentication/enterprise/saml/with-boxyhq/integration-steps",
+    to: "/authentication/enterprise/legacy-saml",
+  },
+  {
+    from: "/quickstart/integrations/vercel/about",
+    to: "/integrations/vercel",
+  },
+  {
+    from: "/quickstart/integrations/hasura/with-jwt",
+    to: "/integrations/hasura",
+  },
+  {
+    from: "/quickstart/integrations/capacitor/about",
+    to: "/integrations/overview",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/frontend",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/about",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/backend-config/setup-lambda",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/backend-config/setup-api-gateway",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/backend-config/setup-lambda-layer",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/next-steps",
+    to: "/integrations/aws-lambda/quickstart-guide",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/session-verification/using-jwt-authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/session-verification/using-lambda-authorizer",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/quickstart/integrations/aws-lambda/session-verification/using-session-verification",
+    to: "/integrations/aws-lambda/session-verification",
+  },
+  {
+    from: "/quickstart/integrations/supabase/supabase-setup",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/quickstart/integrations/supabase/supabase-client",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/quickstart/integrations/supabase/policies",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/quickstart/integrations/supabase/about",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/quickstart/integrations/supabase/frontend-changes",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/quickstart/integrations/supabase/backend-signup-override",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/quickstart/integrations/supabase/backend-changes",
+    to: "/integrations/supabase",
+  },
+  {
+    from: "/quickstart/integrations/redwoodjs/about",
+    to: "/integrations/overview",
+  },
+  {
+    from: "/quickstart/integrations/netlify/auth-serverless",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/quickstart/integrations/netlify/backend-config",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/quickstart/integrations/netlify/frontend",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/quickstart/integrations/netlify/about",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/quickstart/integrations/netlify/session-verification",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/quickstart/integrations/netlify/next-steps",
+    to: "/integrations/netlify",
+  },
+  {
+    from: "/quickstart/integrations/graphql/backend-setup",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/quickstart/integrations/graphql/making-requests",
+    to: "/integrations/graphql",
+  },
+  {
+    from: "/quickstart/integrations/nestjs/guide",
+    to: "/integrations/nestjs",
+  },
+  {
     from: "/authentication/unified-login/customizations/working-with-scopes",
     to: "/authentication/unified-login/work-with-scopes",
   },
@@ -4208,6 +5808,10 @@ export const legacyRedirects = [
   {
     from: "/post-authentication/session-management/security/access-token-blacklisting",
     to: "/post-authentication/session-management/advanced-workflows/access-token-blacklisting",
+  },
+  {
+    from: "/post-authentication/session-management/security/in-iframe",
+    to: "/post-authentication/session-management/advanced-workflows/in-iframe",
   },
   {
     from: "/post-authentication/session-management/security/anti-csrf",
@@ -4410,6 +6014,10 @@ export const legacyRedirects = [
     to: "/post-authentication/account-linking/introduction",
   },
   {
+    from: "/post-authentication/account-linking/adding-accounts-to-session",
+    to: "/post-authentication/account-linking/manual-account-linking",
+  },
+  {
     from: "/post-authentication/account-linking/security-considerations",
     to: "/post-authentication/account-linking/important-concepts",
   },
@@ -4530,6 +6138,10 @@ export const legacyRedirects = [
     to: "/references",
   },
   {
+    from: "/references/sdks/compatibility-table",
+    to: "/references/updating-supertokens#sdk-compatibility-table",
+  },
+  {
     from: "/references/sdks/user-context",
     to: "/references/backend-sdks/user-context",
   },
@@ -4637,6 +6249,22 @@ export const legacyRedirects = [
     from: "/references/testing-and-debugging/testing-with-postman",
     to: "/references/testing-and-debugging/api-testing",
   },
+  {
+    from: "/references/app-info",
+    to: "/references",
+  },
+  {
+    from: "/references/test",
+    to: "/#how-supertokens-works",
+  },
+  {
+    from: "/ios/supertokens.com/discord",
+    to: "https://supertokens.com/discord",
+  },
+  {
+    from: "/flutter/supertokens.com/discord",
+    to: "https://supertokens.com/discord",
+  },
 ];
 export const legacyRedirectDiagnostics = {
   ignored: [
@@ -4686,3242 +6314,6 @@ export const legacyRedirectDiagnostics = {
       target: "/docs/additional-verification/mfa/initial-setup",
     },
     {
-      from: "/docs/emailpassword/appinfo",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 103,
-      },
-      target: "/docs/references/index",
-    },
-    {
-      from: "/docs/emailpassword/architecture",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 104,
-      },
-      target: "/docs/references/how-supertokens-works",
-    },
-    {
-      from: "/docs/emailpassword/capacitor-integration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 112,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/emailpassword/common-customizations/account-linking/adding-accounts-to-session",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 116,
-      },
-      target: "/docs/post-authentication/account-linking/initial-setup",
-    },
-    {
-      from: "/docs/emailpassword/common-customizations/sessions/error-handling",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 348,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/error-handling",
-    },
-    {
-      from: "/docs/emailpassword/common-customizations/sessions/in-iframe",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 364,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/security",
-    },
-    {
-      from: "/docs/emailpassword/common-customizations/sessions/share-sessions-across-sub-domains",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 400,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/share-sessions-across-sub-domains",
-    },
-    {
-      from: "/docs/emailpassword/compatibility-table",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 504,
-      },
-      target: "/docs/references/compatibility-table",
-    },
-    {
-      from: "/docs/emailpassword/graphql-integration/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 536,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/emailpassword/graphql-integration/making-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 540,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/emailpassword/hasura-integration/with-jwt",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 544,
-      },
-      target: "/docs/quickstart/integrations/hasura",
-    },
-    {
-      from: "/docs/emailpassword/nestjs/guide",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 588,
-      },
-      target: "/docs/quickstart/integrations/nestjs",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 592,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/about",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 596,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/about",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 600,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/init",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 604,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/next-steps",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 608,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-route",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/server-components-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 612,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/server-components-requests",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/session-verification-middleware",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 616,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/session-verification-session-guard",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 620,
-      },
-      target:
-        "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 624,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/app-directory/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 628,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 632,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/init",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 636,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/next-steps",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 640,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-route",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/session-verification/in-api",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 644,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-api",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/session-verification/in-ssr",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 648,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 652,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/emailpassword/nextjs/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 656,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/emailpassword/pre-built-ui/setup/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 708,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/emailpassword/pre-built-ui/setup/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 712,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/emailpassword/pre-built-ui/sign-out",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 736,
-      },
-      target: "/docs/post-authentication/session-management/session-invalidation/sign-out",
-    },
-    {
-      from: "/docs/emailpassword/quickstart/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 740,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/emailpassword/quickstart/frontend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 744,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/emailpassword/quickstart/introduction",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 748,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/emailpassword/quickstart/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 752,
-      },
-      target: "/docs/quickstart/next-steps",
-    },
-    {
-      from: "/docs/emailpassword/redwood/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 760,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 769,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/appsync-integration",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 773,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/appsync-integration",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 777,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 781,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/jwt-authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 785,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 789,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 793,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/setup-api-gateway",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 797,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/setup-lambda",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 801,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-aws-lambda/setup-lambda-layer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 805,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-netlify/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 809,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-netlify/auth-serverless",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 813,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-netlify/backend-config",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 817,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-netlify/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 821,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-netlify/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 825,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-netlify/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 829,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/emailpassword/serverless/with-vercel/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 833,
-      },
-      target: "/docs/quickstart/integrations/vercel",
-    },
-    {
-      from: "/docs/emailpassword/supabase-intergration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 837,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/emailpassword/supabase-intergration/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 841,
-      },
-      target: "/docs/quickstart/integrations/supabase/backend",
-    },
-    {
-      from: "/docs/emailpassword/supabase-intergration/backend-signup-override",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 845,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/emailpassword/supabase-intergration/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 849,
-      },
-      target: "/docs/quickstart/integrations/supabase/frontend",
-    },
-    {
-      from: "/docs/emailpassword/supabase-intergration/policies",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 853,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/emailpassword/supabase-intergration/setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 857,
-      },
-      target: "/docs/quickstart/integrations/supabase/setup",
-    },
-    {
-      from: "/docs/emailpassword/supabase-intergration/supabase-client",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 861,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/mfa/email-sms-otp/embed",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 927,
-      },
-      target: "/docs/additional-verification/mfa/email-sms-otp/embed",
-    },
-    {
-      from: "/docs/mfa/totp/embed",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1011,
-      },
-      target: "/docs/additional-verification/mfa/totp/embed",
-    },
-    {
-      from: "/docs/mfa/with-email-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1023,
-      },
-      target: "/docs/additional-verification/mfa/with-email-verification",
-    },
-    {
-      from: "/docs/passwordless/appinfo",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1145,
-      },
-      target: "/docs/references/index",
-    },
-    {
-      from: "/docs/passwordless/capacitor-integration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1154,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/passwordless/common-customizations/account-linking/adding-accounts-to-session",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1158,
-      },
-      target: "/docs/post-authentication/account-linking/initial-setup",
-    },
-    {
-      from: "/docs/passwordless/common-customizations/sessions/error-handling",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1358,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/error-handling",
-    },
-    {
-      from: "/docs/passwordless/common-customizations/sessions/in-iframe",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1374,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/security",
-    },
-    {
-      from: "/docs/passwordless/common-customizations/sessions/share-sessions-across-sub-domains",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1410,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/share-sessions-across-sub-domains",
-    },
-    {
-      from: "/docs/passwordless/common-customizations/sessions/with-jwt/jwt-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1426,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/passwordless/compatibility-table",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1506,
-      },
-      target: "/docs/references/compatibility-table",
-    },
-    {
-      from: "/docs/passwordless/flow_diagram",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1534,
-      },
-      target: "/docs/references/how-supertokens-works",
-    },
-    {
-      from: "/docs/passwordless/graphql-integration/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1538,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/passwordless/graphql-integration/making-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1542,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/passwordless/hasura-integration/with-jwt",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1546,
-      },
-      target: "/docs/quickstart/integrations/hasura",
-    },
-    {
-      from: "/docs/passwordless/nestjs/guide",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1586,
-      },
-      target: "/docs/quickstart/integrations/nestjs",
-    },
-    {
-      from: "/docs/passwordless/nextjs/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1590,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/about",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1594,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/about",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1598,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/init",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1602,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/next-steps",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1606,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-route",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/server-components-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1610,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/server-components-requests",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/session-verification-middleware",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1614,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/session-verification-session-guard",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1618,
-      },
-      target:
-        "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1622,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/passwordless/nextjs/app-directory/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1626,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/passwordless/nextjs/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1630,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/init",
-    },
-    {
-      from: "/docs/passwordless/nextjs/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1634,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/next-steps",
-    },
-    {
-      from: "/docs/passwordless/nextjs/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1638,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-route",
-    },
-    {
-      from: "/docs/passwordless/nextjs/session-verification/in-api",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1642,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-api",
-    },
-    {
-      from: "/docs/passwordless/nextjs/session-verification/in-ssr",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1646,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
-    },
-    {
-      from: "/docs/passwordless/nextjs/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1650,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/passwordless/nextjs/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1654,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/passwordless/pre-built-ui/setup/core/saas-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1678,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/passwordless/pre-built-ui/sign-out",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1722,
-      },
-      target: "/docs/post-authentication/session-management/session-invalidation/sign-out",
-    },
-    {
-      from: "/docs/passwordless/pre-built-ui/setup/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1726,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/passwordless/pre-built-ui/setup/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1730,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/passwordless/quick-setup/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1734,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/passwordless/quickstart/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1738,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/passwordless/quickstart/frontend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1742,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/passwordless/quick-setup/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1746,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/passwordless/quickstart/introduction",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1750,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/passwordless/quickstart/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1754,
-      },
-      target: "/docs/quickstart/next-steps",
-    },
-    {
-      from: "/docs/passwordless/redwood/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1762,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1774,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/appsync-integration",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1778,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/appsync-integration",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1782,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1786,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/jwt-authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1790,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1794,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1798,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/setup-api-gateway",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1802,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/setup-lambda",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1806,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-aws-lambda/setup-lambda-layer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1810,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-netlify/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1814,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-netlify/auth-serverless",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1818,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-netlify/backend-config",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1822,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-netlify/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1826,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-netlify/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1830,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-netlify/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1834,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/passwordless/serverless/with-vercel/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1838,
-      },
-      target: "/docs/quickstart/integrations/vercel",
-    },
-    {
-      from: "/docs/passwordless/supabase-intergration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1870,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/passwordless/supabase-intergration/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1874,
-      },
-      target: "/docs/quickstart/integrations/supabase/backend",
-    },
-    {
-      from: "/docs/passwordless/supabase-intergration/backend-signup-override",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1878,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/passwordless/supabase-intergration/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1882,
-      },
-      target: "/docs/quickstart/integrations/supabase/frontend",
-    },
-    {
-      from: "/docs/passwordless/supabase-intergration/policies",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1886,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/passwordless/supabase-intergration/setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1890,
-      },
-      target: "/docs/quickstart/integrations/supabase/setup",
-    },
-    {
-      from: "/docs/passwordless/supabase-intergration/supabase-client",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 1894,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/session/appinfo",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2030,
-      },
-      target: "/docs/references/index",
-    },
-    {
-      from: "/docs/session/common-customizations/sessions/error-handling",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2119,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/error-handling",
-    },
-    {
-      from: "/docs/session/common-customizations/sessions/in-iframe",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2135,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/security",
-    },
-    {
-      from: "/docs/session/common-customizations/sessions/share-sessions-across-sub-domains",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2175,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/share-sessions-across-sub-domains",
-    },
-    {
-      from: "/docs/session/common-customizations/sessions/with-jwt/jwt-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2191,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/session/compatibility-table",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2203,
-      },
-      target: "/docs/references/compatibility-table",
-    },
-    {
-      from: "/docs/session/graphql-integration/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2207,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/session/graphql-integration/making-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2211,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/session/hasura-integration/with-jwt",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2215,
-      },
-      target: "/docs/quickstart/integrations/hasura",
-    },
-    {
-      from: "/docs/session/nestjs/guide",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2224,
-      },
-      target: "/docs/quickstart/integrations/nestjs",
-    },
-    {
-      from: "/docs/session/quick-setup/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2232,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/session/quick-setup/core/saas-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2236,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/session/quick-setup/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2260,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2270,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/appsync-integration",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2274,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/appsync-integration",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2278,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2282,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/jwt-authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2286,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2290,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2294,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/setup-api-gateway",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2298,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/setup-lambda",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2302,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/session/serverless/with-aws-lambda/setup-lambda-layer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2306,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/session/serverless/with-netlify/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2310,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/session/serverless/with-netlify/auth-serverless",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2314,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/session/serverless/with-netlify/backend-config",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2318,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/session/serverless/with-netlify/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2322,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/session/serverless/with-netlify/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2326,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/session/serverless/with-netlify/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2330,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/session/serverless/with-vercel/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2334,
-      },
-      target: "/docs/quickstart/integrations/vercel",
-    },
-    {
-      from: "/docs/thirdparty/appinfo",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2435,
-      },
-      target: "/docs/references/index",
-    },
-    {
-      from: "/docs/thirdparty/capacitor-integration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2444,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/account-linking/adding-accounts-to-session",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2448,
-      },
-      target: "/docs/post-authentication/account-linking/initial-setup",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/saml/saml-login",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2616,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/saml/what-is-saml",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2620,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/saml/with-boxyhq/flow-diagram",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2624,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/saml/with-boxyhq/integration-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2628,
-      },
-      target: "/docs/authentication/enterprise/saml/boxy-hq-guide",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/saml/with-boxyhq/what-is-boxyhq",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2632,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/sessions/error-handling",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2676,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/error-handling",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/sessions/in-iframe",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2692,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/security",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/sessions/share-sessions-across-sub-domains",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2728,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/share-sessions-across-sub-domains",
-    },
-    {
-      from: "/docs/thirdparty/common-customizations/sessions/with-jwt/jwt-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2744,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdparty/compatibility-table",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2816,
-      },
-      target: "/docs/references/compatibility-table",
-    },
-    {
-      from: "/docs/thirdparty/graphql-integration/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2844,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/thirdparty/graphql-integration/making-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2848,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/thirdparty/hasura-integration/with-jwt",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2852,
-      },
-      target: "/docs/quickstart/integrations/hasura",
-    },
-    {
-      from: "/docs/thirdparty/nestjs/guide",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2889,
-      },
-      target: "/docs/quickstart/integrations/nestjs",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2893,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/about",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2897,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/about",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2901,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/init",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2905,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/next-steps",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2909,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-route",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/server-components-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2913,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/server-components-requests",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/session-verification-middleware",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2917,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/session-verification-session-guard",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2921,
-      },
-      target:
-        "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2925,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/app-directory/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2929,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2933,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/init",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2937,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/next-steps",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2941,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-route",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/session-verification/in-api",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2945,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-api",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/session-verification/in-ssr",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2949,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2953,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/thirdparty/nextjs/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2957,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/thirdparty/pre-built-ui/setup/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2989,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/thirdparty/pre-built-ui/setup/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 2993,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/thirdparty/pre-built-ui/sign-out",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3033,
-      },
-      target: "/docs/post-authentication/session-management/session-invalidation/sign-out",
-    },
-    {
-      from: "/docs/thirdparty/quickstart/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3037,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/thirdparty/quickstart/frontend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3041,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/thirdparty/quickstart/introduction",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3045,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/thirdparty/quickstart/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3049,
-      },
-      target: "/docs/quickstart/next-steps",
-    },
-    {
-      from: "/docs/thirdparty/redwood/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3054,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3060,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/appsync-integration",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3064,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/appsync-integration",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3068,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3072,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/jwt-authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3076,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3080,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3084,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/setup-api-gateway",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3088,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/setup-lambda",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3092,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-aws-lambda/setup-lambda-layer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3096,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-netlify/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3100,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-netlify/auth-serverless",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3104,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-netlify/backend-config",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3108,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-netlify/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3112,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-netlify/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3116,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-netlify/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3120,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdparty/serverless/with-vercel/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3124,
-      },
-      target: "/docs/quickstart/integrations/vercel",
-    },
-    {
-      from: "/docs/thirdparty/supabase-intergration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3128,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdparty/supabase-intergration/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3132,
-      },
-      target: "/docs/quickstart/integrations/supabase/backend",
-    },
-    {
-      from: "/docs/thirdparty/supabase-intergration/backend-signup-override",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3136,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdparty/supabase-intergration/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3140,
-      },
-      target: "/docs/quickstart/integrations/supabase/frontend",
-    },
-    {
-      from: "/docs/thirdparty/supabase-intergration/policies",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3144,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdparty/supabase-intergration/setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3148,
-      },
-      target: "/docs/quickstart/integrations/supabase/setup",
-    },
-    {
-      from: "/docs/thirdparty/supabase-intergration/supabase-client",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3152,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/appinfo",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3290,
-      },
-      target: "/docs/references/index",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/capacitor-integration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3302,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/account-linking/adding-accounts-to-session",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3306,
-      },
-      target: "/docs/post-authentication/account-linking/initial-setup",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/saml/saml-login",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3526,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/saml/what-is-saml",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3530,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/flow-diagram",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3534,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/integration-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3538,
-      },
-      target: "/docs/authentication/enterprise/saml/boxy-hq-guide",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/what-is-boxyhq",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3542,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/sessions/error-handling",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3586,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/error-handling",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/sessions/in-iframe",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3602,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/security",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/sessions/share-sessions-across-sub-domains",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3638,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/share-sessions-across-sub-domains",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/common-customizations/sessions/with-jwt/jwt-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3654,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/compatibility-table",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3746,
-      },
-      target: "/docs/references/compatibility-table",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/graphql-integration/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3774,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/graphql-integration/making-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3778,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/hasura-integration/with-jwt",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3782,
-      },
-      target: "/docs/quickstart/integrations/hasura",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nestjs/guide",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3826,
-      },
-      target: "/docs/quickstart/integrations/nestjs",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3830,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/about",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3834,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/about",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3838,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/init",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3842,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/next-steps",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3846,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-route",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/server-components-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3850,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/server-components-requests",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/session-verification-middleware",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3854,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/session-verification-session-guard",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3858,
-      },
-      target:
-        "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3862,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3866,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3870,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/init",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3874,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/next-steps",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3878,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-route",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/session-verification/in-api",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3882,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-api",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/session-verification/in-ssr",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3886,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3890,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3894,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/pre-built-ui/setup/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3910,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/pre-built-ui/setup/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3914,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/pre-built-ui/sign-out",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3978,
-      },
-      target: "/docs/post-authentication/session-management/session-invalidation/sign-out",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/quickstart/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3982,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/quickstart/frontend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3986,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/quickstart/introduction",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3990,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/quickstart/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 3994,
-      },
-      target: "/docs/quickstart/next-steps",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/redwood/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4002,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4014,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/appsync-integration",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4018,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/appsync-integration",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4022,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4026,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/jwt-authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4030,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4034,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4038,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/setup-api-gateway",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4042,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/setup-lambda",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4046,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/setup-lambda-layer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4050,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4054,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/auth-serverless",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4058,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/backend-config",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4062,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4066,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4070,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4074,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/serverless/with-vercel/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4078,
-      },
-      target: "/docs/quickstart/integrations/vercel",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/supabase-intergration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4082,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/supabase-intergration/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4086,
-      },
-      target: "/docs/quickstart/integrations/supabase/backend",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/supabase-intergration/backend-signup-override",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4090,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/supabase-intergration/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4094,
-      },
-      target: "/docs/quickstart/integrations/supabase/frontend",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/supabase-intergration/policies",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4098,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/supabase-intergration/setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4102,
-      },
-      target: "/docs/quickstart/integrations/supabase/setup",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/supabase-intergration/supabase-client",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4106,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/t4-app/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4110,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/appinfo",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4250,
-      },
-      target: "/docs/references/index",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/capacitor-integration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4262,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/account-linking/adding-accounts-to-session",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4266,
-      },
-      target: "/docs/post-authentication/account-linking/initial-setup",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/saml/saml-login",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4458,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/saml/what-is-saml",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4462,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/saml/with-boxyhq/flow-diagram",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4466,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/saml/with-boxyhq/integration-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4470,
-      },
-      target: "/docs/authentication/enterprise/saml/boxy-hq-guide",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/saml/with-boxyhq/what-is-boxyhq",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4474,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/sessions/error-handling",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4518,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/error-handling",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/sessions/in-iframe",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4534,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/security",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/common-customizations/sessions/share-sessions-across-sub-domains",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4570,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/share-sessions-across-sub-domains",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/compatibility-table",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4678,
-      },
-      target: "/docs/references/compatibility-table",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/flow_diagram",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4706,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/graphql-integration/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4710,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/graphql-integration/making-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4714,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/hasura-integration/with-jwt",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4718,
-      },
-      target: "/docs/quickstart/integrations/hasura",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nestjs/guide",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4758,
-      },
-      target: "/docs/quickstart/integrations/nestjs",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4762,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/about",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4766,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/about",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4770,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/init",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4774,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/next-steps",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4778,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-route",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/server-components-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4782,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/server-components-requests",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/session-verification-middleware",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4786,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/session-verification-session-guard",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4790,
-      },
-      target:
-        "/docs/quickstart/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4794,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/app-directory/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4798,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/init",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4802,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/init",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4806,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/next-steps",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/protecting-route",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4810,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-route",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/session-verification/in-api",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4814,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-api",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/session-verification/in-ssr",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4818,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/setting-up-backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4822,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-backend",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/nextjs/setting-up-frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4826,
-      },
-      target: "/docs/quickstart/integrations/nextjs/pages-directory/setting-up-frontend",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/pre-built-ui/setup/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4838,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/pre-built-ui/setup/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4842,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/pre-built-ui/sign-out",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4906,
-      },
-      target: "/docs/post-authentication/session-management/session-invalidation/sign-out",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/quickstart/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4910,
-      },
-      target: "/docs/quickstart/backend-setup",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/quickstart/frontend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4914,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/quickstart/introduction",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4918,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/quickstart/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4922,
-      },
-      target: "/docs/quickstart/next-steps",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/redwood/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4930,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4942,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/appsync-integration",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4946,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/appsync-integration",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4950,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4954,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/jwt-authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4958,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4962,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4966,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/setup-api-gateway",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4970,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/setup-lambda",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4974,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/setup-lambda-layer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4978,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-netlify/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4982,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-netlify/auth-serverless",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4986,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-netlify/backend-config",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4990,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-netlify/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4994,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-netlify/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 4998,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-netlify/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5002,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/serverless/with-vercel/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5006,
-      },
-      target: "/docs/quickstart/integrations/vercel",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/supabase-intergration/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5038,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/supabase-intergration/backend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5042,
-      },
-      target: "/docs/quickstart/integrations/supabase/backend",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/supabase-intergration/backend-signup-override",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5046,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/supabase-intergration/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5050,
-      },
-      target: "/docs/quickstart/integrations/supabase/frontend",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/supabase-intergration/policies",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5054,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/supabase-intergration/setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5058,
-      },
-      target: "/docs/quickstart/integrations/supabase/setup",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/supabase-intergration/supabase-client",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5062,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/t4-app/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5066,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
       from: "/docs/unified-login/customizations/custom-ui",
       reason: "missing-target",
       sourcePosition: {
@@ -7938,438 +6330,6 @@ export const legacyRedirectDiagnostics = {
         line: 5134,
       },
       target: "/docs/authentication/unified-login/customizations/multi-tenancy",
-    },
-    {
-      from: "/docs/community/compatibility",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5218,
-      },
-      target: "/docs/references/compatibility-table",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/introduction",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5230,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/pre-built-ui/setup/core/aws-setup-with-stacksnap",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5238,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/emailpassword/custom-ui/init/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5262,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/thirdpartypasswordless/custom-ui/thirdparty-login",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5287,
-      },
-      target: "/docs/quickstart/introduction",
-    },
-    {
-      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/session-helpers",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5291,
-      },
-      target: "/docs/quickstart/integrations/nextjs/app-directory/about",
-    },
-    {
-      from: "/docs/emailpassword/pre-built-ui/securing-routes",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5295,
-      },
-      target: "/docs/quickstart/frontend-setup",
-    },
-    {
-      from: "/docs/authentication/enterprise/saml/saml-login",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5465,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/authentication/enterprise/saml/overview",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5469,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/authentication/enterprise/saml/with-boxyhq/flow-diagram",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5473,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/authentication/enterprise/saml/with-boxyhq/what-is-boxyhq",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5477,
-      },
-      target: "/docs/authentication/enterprise/saml/what-is-saml",
-    },
-    {
-      from: "/docs/authentication/enterprise/saml/with-boxyhq/integration-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5481,
-      },
-      target: "/docs/authentication/enterprise/saml/boxy-hq-guide",
-    },
-    {
-      from: "/docs/quickstart/integrations/vercel/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5485,
-      },
-      target: "/docs/quickstart/integrations/vercel",
-    },
-    {
-      from: "/docs/quickstart/integrations/hasura/with-jwt",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5489,
-      },
-      target: "/docs/quickstart/integrations/hasura",
-    },
-    {
-      from: "/docs/quickstart/integrations/capacitor/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5493,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5497,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5501,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/backend-config/setup-lambda",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5505,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/backend-config/setup-api-gateway",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5509,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/backend-config/setup-lambda-layer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5513,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5517,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/quickstart-guide",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/session-verification/using-jwt-authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5521,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/session-verification/using-lambda-authorizer",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5525,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/quickstart/integrations/aws-lambda/session-verification/using-session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5529,
-      },
-      target: "/docs/quickstart/integrations/aws-lambda/session-verification",
-    },
-    {
-      from: "/docs/quickstart/integrations/supabase/supabase-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5533,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/quickstart/integrations/supabase/supabase-client",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5537,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/quickstart/integrations/supabase/policies",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5541,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/quickstart/integrations/supabase/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5545,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/quickstart/integrations/supabase/frontend-changes",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5549,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/quickstart/integrations/supabase/backend-signup-override",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5553,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/quickstart/integrations/supabase/backend-changes",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5557,
-      },
-      target: "/docs/quickstart/integrations/supabase",
-    },
-    {
-      from: "/docs/quickstart/integrations/redwoodjs/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5561,
-      },
-      target: "/docs/quickstart/integrations/overview",
-    },
-    {
-      from: "/docs/quickstart/integrations/netlify/auth-serverless",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5565,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/quickstart/integrations/netlify/backend-config",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5569,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/quickstart/integrations/netlify/frontend",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5573,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/quickstart/integrations/netlify/about",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5577,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/quickstart/integrations/netlify/session-verification",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5581,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/quickstart/integrations/netlify/next-steps",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5585,
-      },
-      target: "/docs/quickstart/integrations/netlify",
-    },
-    {
-      from: "/docs/quickstart/integrations/graphql/backend-setup",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5589,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/quickstart/integrations/graphql/making-requests",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5593,
-      },
-      target: "/docs/quickstart/integrations/graphql",
-    },
-    {
-      from: "/docs/quickstart/integrations/nestjs/guide",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5597,
-      },
-      target: "/docs/quickstart/integrations/nestjs",
-    },
-    {
-      from: "/docs/post-authentication/session-management/security/in-iframe",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5745,
-      },
-      target: "/docs/post-authentication/session-management/advanced-workflows/security",
-    },
-    {
-      from: "/docs/post-authentication/account-linking/adding-accounts-to-session",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 5950,
-      },
-      target: "/docs/post-authentication/account-linking/initial-setup",
-    },
-    {
-      from: "/docs/references/sdks/compatibility-table",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 6075,
-      },
-      target: "/docs/references/compatibility-table",
-    },
-    {
-      from: "/docs/references/app-info",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 6187,
-      },
-      target: "/docs/references/index",
-    },
-    {
-      from: "/docs/references/test",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 6191,
-      },
-      target: "/docs/references/how-supertokens-works",
-    },
-    {
-      from: "/docs/ios/supertokens.com/discord",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 6195,
-      },
-      target: "/discord",
-    },
-    {
-      from: "/docs/flutter/supertokens.com/discord",
-      reason: "missing-target",
-      sourcePosition: {
-        column: 3,
-        line: 6199,
-      },
-      target: "/discord",
     },
   ],
   retained: [
@@ -8606,12 +6566,44 @@ export const legacyRedirectDiagnostics = {
       target: "/references",
     },
     {
+      from: "/docs/emailpassword/appinfo",
+      sourcePosition: {
+        column: 3,
+        line: 103,
+      },
+      target: "/references",
+    },
+    {
+      from: "/docs/emailpassword/architecture",
+      sourcePosition: {
+        column: 3,
+        line: 104,
+      },
+      target: "/#how-supertokens-works",
+    },
+    {
       from: "/docs/emailpassword/attack-protection-suite",
       sourcePosition: {
         column: 3,
         line: 108,
       },
       target: "/additional-verification/attack-protection-suite/introduction",
+    },
+    {
+      from: "/docs/emailpassword/capacitor-integration/about",
+      sourcePosition: {
+        column: 3,
+        line: 112,
+      },
+      target: "/integrations/overview",
+    },
+    {
+      from: "/docs/emailpassword/common-customizations/account-linking/adding-accounts-to-session",
+      sourcePosition: {
+        column: 3,
+        line: 116,
+      },
+      target: "/post-authentication/account-linking/manual-account-linking",
     },
     {
       from: "/docs/emailpassword/common-customizations/change-email-post-login",
@@ -9070,6 +7062,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
     },
     {
+      from: "/docs/emailpassword/common-customizations/sessions/error-handling",
+      sourcePosition: {
+        column: 3,
+        line: 348,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+    },
+    {
       from: "/docs/emailpassword/common-customizations/sessions/fetch-sessions-for-user",
       sourcePosition: {
         column: 3,
@@ -9092,6 +7092,14 @@ export const legacyRedirectDiagnostics = {
         line: 360,
       },
       target: "/post-authentication/session-management/session-invalidation",
+    },
+    {
+      from: "/docs/emailpassword/common-customizations/sessions/in-iframe",
+      sourcePosition: {
+        column: 3,
+        line: 364,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/in-iframe",
     },
     {
       from: "/docs/emailpassword/common-customizations/sessions/jwt-signing-key-rotation",
@@ -9156,6 +7164,14 @@ export const legacyRedirectDiagnostics = {
         line: 396,
       },
       target: "/additional-verification/session-verification/protect-api-routes",
+    },
+    {
+      from: "/docs/emailpassword/common-customizations/sessions/share-sessions-across-sub-domains",
+      sourcePosition: {
+        column: 3,
+        line: 400,
+      },
+      target: "/post-authentication/session-management/share-session-across-sub-domains",
     },
     {
       from: "/docs/emailpassword/common-customizations/sessions/ssr",
@@ -9358,6 +7374,14 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/email-password/implement-username-login",
     },
     {
+      from: "/docs/emailpassword/compatibility-table",
+      sourcePosition: {
+        column: 3,
+        line: 504,
+      },
+      target: "/references/updating-supertokens#sdk-compatibility-table",
+    },
+    {
       from: "/docs/emailpassword/custom-ui/forgot-password",
       sourcePosition: {
         column: 3,
@@ -9412,6 +7436,30 @@ export const legacyRedirectDiagnostics = {
         line: 532,
       },
       target: "/platform-configuration/email-delivery",
+    },
+    {
+      from: "/docs/emailpassword/graphql-integration/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 536,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/emailpassword/graphql-integration/making-requests",
+      sourcePosition: {
+        column: 3,
+        line: 540,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/emailpassword/hasura-integration/with-jwt",
+      sourcePosition: {
+        column: 3,
+        line: 544,
+      },
+      target: "/integrations/hasura",
     },
     {
       from: "/docs/emailpassword/mfa",
@@ -9492,6 +7540,150 @@ export const legacyRedirectDiagnostics = {
         line: 584,
       },
       target: "/authentication/enterprise/introduction",
+    },
+    {
+      from: "/docs/emailpassword/nestjs/guide",
+      sourcePosition: {
+        column: 3,
+        line: 588,
+      },
+      target: "/integrations/nestjs",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/about",
+      sourcePosition: {
+        column: 3,
+        line: 592,
+      },
+      target: "/integrations/nextjs/pages-directory/about",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/about",
+      sourcePosition: {
+        column: 3,
+        line: 596,
+      },
+      target: "/integrations/nextjs/app-directory/about",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/init",
+      sourcePosition: {
+        column: 3,
+        line: 600,
+      },
+      target: "/integrations/nextjs/app-directory/init",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 604,
+      },
+      target: "/integrations/nextjs/app-directory/next-steps",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 608,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-route",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/server-components-requests",
+      sourcePosition: {
+        column: 3,
+        line: 612,
+      },
+      target: "/integrations/nextjs/app-directory/server-components-requests",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/session-verification-middleware",
+      sourcePosition: {
+        column: 3,
+        line: 616,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/session-verification-session-guard",
+      sourcePosition: {
+        column: 3,
+        line: 620,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 624,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/app-directory/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 628,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-frontend",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/init",
+      sourcePosition: {
+        column: 3,
+        line: 632,
+      },
+      target: "/integrations/nextjs/pages-directory/init",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 636,
+      },
+      target: "/integrations/nextjs/pages-directory/next-steps",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 640,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-route",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/session-verification/in-api",
+      sourcePosition: {
+        column: 3,
+        line: 644,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/session-verification/in-ssr",
+      sourcePosition: {
+        column: 3,
+        line: 648,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 652,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/emailpassword/nextjs/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 656,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-frontend",
     },
     {
       from: "/docs/emailpassword/other-frameworks",
@@ -9590,6 +7782,22 @@ export const legacyRedirectDiagnostics = {
       target: "/deployment/self-host-supertokens",
     },
     {
+      from: "/docs/emailpassword/pre-built-ui/setup/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 708,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/emailpassword/pre-built-ui/setup/backend",
+      sourcePosition: {
+        column: 3,
+        line: 712,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
       from: "/docs/emailpassword/pre-built-ui/setup/user-management-dashboard/managing-user-roles-and-permissions",
       sourcePosition: {
         column: 3,
@@ -9630,12 +7838,60 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/dashboard/user-management",
     },
     {
+      from: "/docs/emailpassword/pre-built-ui/sign-out",
+      sourcePosition: {
+        column: 3,
+        line: 736,
+      },
+      target: "/post-authentication/session-management/session-invalidation#user-sign-out",
+    },
+    {
+      from: "/docs/emailpassword/quickstart/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 740,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
+      from: "/docs/emailpassword/quickstart/frontend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 744,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/emailpassword/quickstart/introduction",
+      sourcePosition: {
+        column: 3,
+        line: 748,
+      },
+      target: "/quickstart",
+    },
+    {
+      from: "/docs/emailpassword/quickstart/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 752,
+      },
+      target: "/quickstart#3-configure-the-core-service",
+    },
+    {
       from: "/docs/emailpassword/rate-limits",
       sourcePosition: {
         column: 3,
         line: 756,
       },
       target: "/deployment/rate-limits",
+    },
+    {
+      from: "/docs/emailpassword/redwood/about",
+      sourcePosition: {
+        column: 3,
+        line: 760,
+      },
+      target: "/integrations/overview",
     },
     {
       from: "/docs/emailpassword/scalability",
@@ -9652,6 +7908,198 @@ export const legacyRedirectDiagnostics = {
         line: 768,
       },
       target: "/references",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/about",
+      sourcePosition: {
+        column: 3,
+        line: 769,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/appsync-integration",
+      sourcePosition: {
+        column: 3,
+        line: 773,
+      },
+      target: "/integrations/aws-lambda/appsync-integration",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 777,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 781,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/jwt-authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 785,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 789,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 793,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/setup-api-gateway",
+      sourcePosition: {
+        column: 3,
+        line: 797,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/setup-lambda",
+      sourcePosition: {
+        column: 3,
+        line: 801,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-aws-lambda/setup-lambda-layer",
+      sourcePosition: {
+        column: 3,
+        line: 805,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-netlify/about",
+      sourcePosition: {
+        column: 3,
+        line: 809,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-netlify/auth-serverless",
+      sourcePosition: {
+        column: 3,
+        line: 813,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-netlify/backend-config",
+      sourcePosition: {
+        column: 3,
+        line: 817,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-netlify/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 821,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-netlify/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 825,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-netlify/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 829,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/emailpassword/serverless/with-vercel/about",
+      sourcePosition: {
+        column: 3,
+        line: 833,
+      },
+      target: "/integrations/vercel",
+    },
+    {
+      from: "/docs/emailpassword/supabase-intergration/about",
+      sourcePosition: {
+        column: 3,
+        line: 837,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/emailpassword/supabase-intergration/backend",
+      sourcePosition: {
+        column: 3,
+        line: 841,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/emailpassword/supabase-intergration/backend-signup-override",
+      sourcePosition: {
+        column: 3,
+        line: 845,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/emailpassword/supabase-intergration/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 849,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/emailpassword/supabase-intergration/policies",
+      sourcePosition: {
+        column: 3,
+        line: 853,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/emailpassword/supabase-intergration/setup",
+      sourcePosition: {
+        column: 3,
+        line: 857,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/emailpassword/supabase-intergration/supabase-client",
+      sourcePosition: {
+        column: 3,
+        line: 861,
+      },
+      target: "/integrations/supabase",
     },
     {
       from: "/docs/emailpassword/t4-app/about",
@@ -9780,6 +8228,14 @@ export const legacyRedirectDiagnostics = {
         line: 923,
       },
       target: "/additional-verification/mfa/backup-codes",
+    },
+    {
+      from: "/docs/mfa/email-sms-otp/embed",
+      sourcePosition: {
+        column: 3,
+        line: 927,
+      },
+      target: "/additional-verification/mfa/embed-the-prebuilt-ui",
     },
     {
       from: "/docs/mfa/email-sms-otp/otp-for-all-users",
@@ -9942,6 +8398,14 @@ export const legacyRedirectDiagnostics = {
       target: "/additional-verification/mfa/step-up-auth",
     },
     {
+      from: "/docs/mfa/totp/embed",
+      sourcePosition: {
+        column: 3,
+        line: 1011,
+      },
+      target: "/additional-verification/mfa/embed-the-prebuilt-ui",
+    },
+    {
       from: "/docs/mfa/totp/totp-for-all-users",
       sourcePosition: {
         column: 3,
@@ -9956,6 +8420,14 @@ export const legacyRedirectDiagnostics = {
         line: 1019,
       },
       target: "/additional-verification/mfa/totp/totp-for-opt-in-users",
+    },
+    {
+      from: "/docs/mfa/with-email-verification",
+      sourcePosition: {
+        column: 3,
+        line: 1023,
+      },
+      target: "/additional-verification/mfa/initial-setup#usage-with-email-verification",
     },
     {
       from: "/docs/microservice_auth/client-credentials",
@@ -10206,6 +8678,14 @@ export const legacyRedirectDiagnostics = {
       target: "/references",
     },
     {
+      from: "/docs/passwordless/appinfo",
+      sourcePosition: {
+        column: 3,
+        line: 1145,
+      },
+      target: "/references",
+    },
+    {
       from: "/docs/passwordless/architecture",
       sourcePosition: {
         column: 3,
@@ -10220,6 +8700,22 @@ export const legacyRedirectDiagnostics = {
         line: 1150,
       },
       target: "/additional-verification/attack-protection-suite/introduction",
+    },
+    {
+      from: "/docs/passwordless/capacitor-integration/about",
+      sourcePosition: {
+        column: 3,
+        line: 1154,
+      },
+      target: "/integrations/overview",
+    },
+    {
+      from: "/docs/passwordless/common-customizations/account-linking/adding-accounts-to-session",
+      sourcePosition: {
+        column: 3,
+        line: 1158,
+      },
+      target: "/post-authentication/account-linking/manual-account-linking",
     },
     {
       from: "/docs/passwordless/common-customizations/change-code-lifetime",
@@ -10614,6 +9110,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
     },
     {
+      from: "/docs/passwordless/common-customizations/sessions/error-handling",
+      sourcePosition: {
+        column: 3,
+        line: 1358,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+    },
+    {
       from: "/docs/passwordless/common-customizations/sessions/fetch-sessions-for-user",
       sourcePosition: {
         column: 3,
@@ -10636,6 +9140,14 @@ export const legacyRedirectDiagnostics = {
         line: 1370,
       },
       target: "/post-authentication/session-management/session-invalidation",
+    },
+    {
+      from: "/docs/passwordless/common-customizations/sessions/in-iframe",
+      sourcePosition: {
+        column: 3,
+        line: 1374,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/in-iframe",
     },
     {
       from: "/docs/passwordless/common-customizations/sessions/jwt-signing-key-rotation",
@@ -10702,6 +9214,14 @@ export const legacyRedirectDiagnostics = {
       target: "/additional-verification/session-verification/protect-api-routes",
     },
     {
+      from: "/docs/passwordless/common-customizations/sessions/share-sessions-across-sub-domains",
+      sourcePosition: {
+        column: 3,
+        line: 1410,
+      },
+      target: "/post-authentication/session-management/share-session-across-sub-domains",
+    },
+    {
       from: "/docs/passwordless/common-customizations/sessions/ssr",
       sourcePosition: {
         column: 3,
@@ -10724,6 +9244,14 @@ export const legacyRedirectDiagnostics = {
         line: 1422,
       },
       target: "/post-authentication/session-management/advanced-workflows/user-impersonation",
+    },
+    {
+      from: "/docs/passwordless/common-customizations/sessions/with-jwt/jwt-verification",
+      sourcePosition: {
+        column: 3,
+        line: 1426,
+      },
+      target: "/integrations/aws-lambda/session-verification",
     },
     {
       from: "/docs/passwordless/common-customizations/sessions/with-jwt/read-jwt",
@@ -10878,6 +9406,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/user-management/user-metadata",
     },
     {
+      from: "/docs/passwordless/compatibility-table",
+      sourcePosition: {
+        column: 3,
+        line: 1506,
+      },
+      target: "/references/updating-supertokens#sdk-compatibility-table",
+    },
+    {
       from: "/docs/passwordless/email-delivery/about",
       sourcePosition: {
         column: 3,
@@ -10924,6 +9460,38 @@ export const legacyRedirectDiagnostics = {
         line: 1530,
       },
       target: "/platform-configuration/email-delivery",
+    },
+    {
+      from: "/docs/passwordless/flow_diagram",
+      sourcePosition: {
+        column: 3,
+        line: 1534,
+      },
+      target: "/#how-supertokens-works",
+    },
+    {
+      from: "/docs/passwordless/graphql-integration/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 1538,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/passwordless/graphql-integration/making-requests",
+      sourcePosition: {
+        column: 3,
+        line: 1542,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/passwordless/hasura-integration/with-jwt",
+      sourcePosition: {
+        column: 3,
+        line: 1546,
+      },
+      target: "/integrations/hasura",
     },
     {
       from: "/docs/passwordless/mfa",
@@ -10998,6 +9566,150 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/enterprise/introduction",
     },
     {
+      from: "/docs/passwordless/nestjs/guide",
+      sourcePosition: {
+        column: 3,
+        line: 1586,
+      },
+      target: "/integrations/nestjs",
+    },
+    {
+      from: "/docs/passwordless/nextjs/about",
+      sourcePosition: {
+        column: 3,
+        line: 1590,
+      },
+      target: "/integrations/nextjs/pages-directory/about",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/about",
+      sourcePosition: {
+        column: 3,
+        line: 1594,
+      },
+      target: "/integrations/nextjs/app-directory/about",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/init",
+      sourcePosition: {
+        column: 3,
+        line: 1598,
+      },
+      target: "/integrations/nextjs/app-directory/init",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 1602,
+      },
+      target: "/integrations/nextjs/app-directory/next-steps",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 1606,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-route",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/server-components-requests",
+      sourcePosition: {
+        column: 3,
+        line: 1610,
+      },
+      target: "/integrations/nextjs/app-directory/server-components-requests",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/session-verification-middleware",
+      sourcePosition: {
+        column: 3,
+        line: 1614,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/session-verification-session-guard",
+      sourcePosition: {
+        column: 3,
+        line: 1618,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 1622,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/passwordless/nextjs/app-directory/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 1626,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-frontend",
+    },
+    {
+      from: "/docs/passwordless/nextjs/init",
+      sourcePosition: {
+        column: 3,
+        line: 1630,
+      },
+      target: "/integrations/nextjs/pages-directory/init",
+    },
+    {
+      from: "/docs/passwordless/nextjs/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 1634,
+      },
+      target: "/integrations/nextjs/pages-directory/next-steps",
+    },
+    {
+      from: "/docs/passwordless/nextjs/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 1638,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-route",
+    },
+    {
+      from: "/docs/passwordless/nextjs/session-verification/in-api",
+      sourcePosition: {
+        column: 3,
+        line: 1642,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+    },
+    {
+      from: "/docs/passwordless/nextjs/session-verification/in-ssr",
+      sourcePosition: {
+        column: 3,
+        line: 1646,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+    },
+    {
+      from: "/docs/passwordless/nextjs/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 1650,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/passwordless/nextjs/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 1654,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-frontend",
+    },
+    {
       from: "/docs/passwordless/other-frameworks",
       sourcePosition: {
         column: 3,
@@ -11036,6 +9748,14 @@ export const legacyRedirectDiagnostics = {
         line: 1674,
       },
       target: "/post-authentication/session-management/introduction",
+    },
+    {
+      from: "/docs/passwordless/pre-built-ui/setup/core/saas-setup",
+      sourcePosition: {
+        column: 3,
+        line: 1678,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
     },
     {
       from: "/docs/passwordless/pre-built-ui/setup/core/with-docker",
@@ -11118,12 +9838,92 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/dashboard/user-management",
     },
     {
+      from: "/docs/passwordless/pre-built-ui/sign-out",
+      sourcePosition: {
+        column: 3,
+        line: 1722,
+      },
+      target: "/post-authentication/session-management/session-invalidation#user-sign-out",
+    },
+    {
+      from: "/docs/passwordless/pre-built-ui/setup/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 1726,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/passwordless/pre-built-ui/setup/backend",
+      sourcePosition: {
+        column: 3,
+        line: 1730,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
+      from: "/docs/passwordless/quick-setup/backend",
+      sourcePosition: {
+        column: 3,
+        line: 1734,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
+      from: "/docs/passwordless/quickstart/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 1738,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
+      from: "/docs/passwordless/quickstart/frontend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 1742,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/passwordless/quick-setup/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 1746,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/passwordless/quickstart/introduction",
+      sourcePosition: {
+        column: 3,
+        line: 1750,
+      },
+      target: "/quickstart",
+    },
+    {
+      from: "/docs/passwordless/quickstart/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 1754,
+      },
+      target: "/quickstart#3-configure-the-core-service",
+    },
+    {
       from: "/docs/passwordless/rate-limits",
       sourcePosition: {
         column: 3,
         line: 1758,
       },
       target: "/deployment/rate-limits",
+    },
+    {
+      from: "/docs/passwordless/redwood/about",
+      sourcePosition: {
+        column: 3,
+        line: 1762,
+      },
+      target: "/integrations/overview",
     },
     {
       from: "/docs/passwordless/scalability",
@@ -11140,6 +9940,142 @@ export const legacyRedirectDiagnostics = {
         line: 1770,
       },
       target: "/references",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/about",
+      sourcePosition: {
+        column: 3,
+        line: 1774,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/appsync-integration",
+      sourcePosition: {
+        column: 3,
+        line: 1778,
+      },
+      target: "/integrations/aws-lambda/appsync-integration",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 1782,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 1786,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/jwt-authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 1790,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 1794,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 1798,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/setup-api-gateway",
+      sourcePosition: {
+        column: 3,
+        line: 1802,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/setup-lambda",
+      sourcePosition: {
+        column: 3,
+        line: 1806,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-aws-lambda/setup-lambda-layer",
+      sourcePosition: {
+        column: 3,
+        line: 1810,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-netlify/about",
+      sourcePosition: {
+        column: 3,
+        line: 1814,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-netlify/auth-serverless",
+      sourcePosition: {
+        column: 3,
+        line: 1818,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-netlify/backend-config",
+      sourcePosition: {
+        column: 3,
+        line: 1822,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-netlify/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 1826,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-netlify/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 1830,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-netlify/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 1834,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/passwordless/serverless/with-vercel/about",
+      sourcePosition: {
+        column: 3,
+        line: 1838,
+      },
+      target: "/integrations/vercel",
     },
     {
       from: "/docs/passwordless/sms-delivery/about",
@@ -11196,6 +10132,62 @@ export const legacyRedirectDiagnostics = {
         line: 1866,
       },
       target: "/platform-configuration/sms-delivery",
+    },
+    {
+      from: "/docs/passwordless/supabase-intergration/about",
+      sourcePosition: {
+        column: 3,
+        line: 1870,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/passwordless/supabase-intergration/backend",
+      sourcePosition: {
+        column: 3,
+        line: 1874,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/passwordless/supabase-intergration/backend-signup-override",
+      sourcePosition: {
+        column: 3,
+        line: 1878,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/passwordless/supabase-intergration/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 1882,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/passwordless/supabase-intergration/policies",
+      sourcePosition: {
+        column: 3,
+        line: 1886,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/passwordless/supabase-intergration/setup",
+      sourcePosition: {
+        column: 3,
+        line: 1890,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/passwordless/supabase-intergration/supabase-client",
+      sourcePosition: {
+        column: 3,
+        line: 1894,
+      },
+      target: "/integrations/supabase",
     },
     {
       from: "/docs/passwordless/t4-app/about",
@@ -11486,6 +10478,14 @@ export const legacyRedirectDiagnostics = {
       target: "/references",
     },
     {
+      from: "/docs/session/appinfo",
+      sourcePosition: {
+        column: 3,
+        line: 2030,
+      },
+      target: "/references",
+    },
+    {
       from: "/docs/session/architecture",
       sourcePosition: {
         column: 3,
@@ -11662,6 +10662,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
     },
     {
+      from: "/docs/session/common-customizations/sessions/error-handling",
+      sourcePosition: {
+        column: 3,
+        line: 2119,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+    },
+    {
       from: "/docs/session/common-customizations/sessions/fetch-sessions-for-user",
       sourcePosition: {
         column: 3,
@@ -11684,6 +10692,14 @@ export const legacyRedirectDiagnostics = {
         line: 2131,
       },
       target: "/post-authentication/session-management/session-invalidation",
+    },
+    {
+      from: "/docs/session/common-customizations/sessions/in-iframe",
+      sourcePosition: {
+        column: 3,
+        line: 2135,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/in-iframe",
     },
     {
       from: "/docs/session/common-customizations/sessions/jwt-signing-key-rotation",
@@ -11758,6 +10774,14 @@ export const legacyRedirectDiagnostics = {
       target: "/additional-verification/session-verification/protect-api-routes",
     },
     {
+      from: "/docs/session/common-customizations/sessions/share-sessions-across-sub-domains",
+      sourcePosition: {
+        column: 3,
+        line: 2175,
+      },
+      target: "/post-authentication/session-management/share-session-across-sub-domains",
+    },
+    {
       from: "/docs/session/common-customizations/sessions/ssr",
       sourcePosition: {
         column: 3,
@@ -11782,6 +10806,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/session-management/advanced-workflows/user-impersonation",
     },
     {
+      from: "/docs/session/common-customizations/sessions/with-jwt/jwt-verification",
+      sourcePosition: {
+        column: 3,
+        line: 2191,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
       from: "/docs/session/common-customizations/sessions/with-jwt/read-jwt",
       sourcePosition: {
         column: 3,
@@ -11796,6 +10828,38 @@ export const legacyRedirectDiagnostics = {
         line: 2199,
       },
       target: "/additional-verification/session-verification/with-websocket",
+    },
+    {
+      from: "/docs/session/compatibility-table",
+      sourcePosition: {
+        column: 3,
+        line: 2203,
+      },
+      target: "/references/updating-supertokens#sdk-compatibility-table",
+    },
+    {
+      from: "/docs/session/graphql-integration/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 2207,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/session/graphql-integration/making-requests",
+      sourcePosition: {
+        column: 3,
+        line: 2211,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/session/hasura-integration/with-jwt",
+      sourcePosition: {
+        column: 3,
+        line: 2215,
+      },
+      target: "/integrations/hasura",
     },
     {
       from: "/docs/session/introduction",
@@ -11814,12 +10878,36 @@ export const legacyRedirectDiagnostics = {
       target: "/migration/session-migration",
     },
     {
+      from: "/docs/session/nestjs/guide",
+      sourcePosition: {
+        column: 3,
+        line: 2224,
+      },
+      target: "/integrations/nestjs",
+    },
+    {
       from: "/docs/session/other-frameworks",
       sourcePosition: {
         column: 3,
         line: 2228,
       },
       target: "/references/backend-sdks/other-frameworks",
+    },
+    {
+      from: "/docs/session/quick-setup/backend",
+      sourcePosition: {
+        column: 3,
+        line: 2232,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
+      from: "/docs/session/quick-setup/core/saas-setup",
+      sourcePosition: {
+        column: 3,
+        line: 2236,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
     },
     {
       from: "/docs/session/quick-setup/core/with-docker",
@@ -11862,6 +10950,14 @@ export const legacyRedirectDiagnostics = {
       target: "/deployment/self-host-supertokens",
     },
     {
+      from: "/docs/session/quick-setup/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 2260,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
       from: "/docs/session/quick-setup/handling-session-tokens",
       sourcePosition: {
         column: 3,
@@ -11884,6 +10980,142 @@ export const legacyRedirectDiagnostics = {
         line: 2269,
       },
       target: "/references",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/about",
+      sourcePosition: {
+        column: 3,
+        line: 2270,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/appsync-integration",
+      sourcePosition: {
+        column: 3,
+        line: 2274,
+      },
+      target: "/integrations/aws-lambda/appsync-integration",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 2278,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 2282,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/jwt-authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 2286,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 2290,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 2294,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/setup-api-gateway",
+      sourcePosition: {
+        column: 3,
+        line: 2298,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/setup-lambda",
+      sourcePosition: {
+        column: 3,
+        line: 2302,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/session/serverless/with-aws-lambda/setup-lambda-layer",
+      sourcePosition: {
+        column: 3,
+        line: 2306,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/session/serverless/with-netlify/about",
+      sourcePosition: {
+        column: 3,
+        line: 2310,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/session/serverless/with-netlify/auth-serverless",
+      sourcePosition: {
+        column: 3,
+        line: 2314,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/session/serverless/with-netlify/backend-config",
+      sourcePosition: {
+        column: 3,
+        line: 2318,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/session/serverless/with-netlify/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 2322,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/session/serverless/with-netlify/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 2326,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/session/serverless/with-netlify/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 2330,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/session/serverless/with-vercel/about",
+      sourcePosition: {
+        column: 3,
+        line: 2334,
+      },
+      target: "/integrations/vercel",
     },
     {
       from: "/docs/session/testing/testing-with-postman",
@@ -12086,6 +11318,14 @@ export const legacyRedirectDiagnostics = {
       target: "/references",
     },
     {
+      from: "/docs/thirdparty/appinfo",
+      sourcePosition: {
+        column: 3,
+        line: 2435,
+      },
+      target: "/references",
+    },
+    {
       from: "/docs/thirdparty/architecture",
       sourcePosition: {
         column: 3,
@@ -12100,6 +11340,22 @@ export const legacyRedirectDiagnostics = {
         line: 2440,
       },
       target: "/additional-verification/attack-protection-suite/introduction",
+    },
+    {
+      from: "/docs/thirdparty/capacitor-integration/about",
+      sourcePosition: {
+        column: 3,
+        line: 2444,
+      },
+      target: "/integrations/overview",
+    },
+    {
+      from: "/docs/thirdparty/common-customizations/account-linking/adding-accounts-to-session",
+      sourcePosition: {
+        column: 3,
+        line: 2448,
+      },
+      target: "/post-authentication/account-linking/manual-account-linking",
     },
     {
       from: "/docs/thirdparty/common-customizations/account-linking/automatic-account-linking",
@@ -12430,6 +11686,46 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/social/add-multiple-clients-for-the-same-provider",
     },
     {
+      from: "/docs/thirdparty/common-customizations/saml/saml-login",
+      sourcePosition: {
+        column: 3,
+        line: 2616,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdparty/common-customizations/saml/what-is-saml",
+      sourcePosition: {
+        column: 3,
+        line: 2620,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdparty/common-customizations/saml/with-boxyhq/flow-diagram",
+      sourcePosition: {
+        column: 3,
+        line: 2624,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdparty/common-customizations/saml/with-boxyhq/integration-steps",
+      sourcePosition: {
+        column: 3,
+        line: 2628,
+      },
+      target: "/authentication/enterprise/legacy-saml",
+    },
+    {
+      from: "/docs/thirdparty/common-customizations/saml/with-boxyhq/what-is-boxyhq",
+      sourcePosition: {
+        column: 3,
+        line: 2632,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
       from: "/docs/thirdparty/common-customizations/sessions/about",
       sourcePosition: {
         column: 3,
@@ -12510,6 +11806,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
     },
     {
+      from: "/docs/thirdparty/common-customizations/sessions/error-handling",
+      sourcePosition: {
+        column: 3,
+        line: 2676,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+    },
+    {
       from: "/docs/thirdparty/common-customizations/sessions/fetch-sessions-for-user",
       sourcePosition: {
         column: 3,
@@ -12532,6 +11836,14 @@ export const legacyRedirectDiagnostics = {
         line: 2688,
       },
       target: "/post-authentication/session-management/session-invalidation",
+    },
+    {
+      from: "/docs/thirdparty/common-customizations/sessions/in-iframe",
+      sourcePosition: {
+        column: 3,
+        line: 2692,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/in-iframe",
     },
     {
       from: "/docs/thirdparty/common-customizations/sessions/jwt-signing-key-rotation",
@@ -12598,6 +11910,14 @@ export const legacyRedirectDiagnostics = {
       target: "/additional-verification/session-verification/protect-api-routes",
     },
     {
+      from: "/docs/thirdparty/common-customizations/sessions/share-sessions-across-sub-domains",
+      sourcePosition: {
+        column: 3,
+        line: 2728,
+      },
+      target: "/post-authentication/session-management/share-session-across-sub-domains",
+    },
+    {
       from: "/docs/thirdparty/common-customizations/sessions/ssr",
       sourcePosition: {
         column: 3,
@@ -12620,6 +11940,14 @@ export const legacyRedirectDiagnostics = {
         line: 2740,
       },
       target: "/post-authentication/session-management/advanced-workflows/user-impersonation",
+    },
+    {
+      from: "/docs/thirdparty/common-customizations/sessions/with-jwt/jwt-verification",
+      sourcePosition: {
+        column: 3,
+        line: 2744,
+      },
+      target: "/integrations/aws-lambda/session-verification",
     },
     {
       from: "/docs/thirdparty/common-customizations/sessions/with-jwt/read-jwt",
@@ -12758,6 +12086,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/user-management/user-metadata",
     },
     {
+      from: "/docs/thirdparty/compatibility-table",
+      sourcePosition: {
+        column: 3,
+        line: 2816,
+      },
+      target: "/references/updating-supertokens#sdk-compatibility-table",
+    },
+    {
       from: "/docs/thirdparty/email-delivery/about",
       sourcePosition: {
         column: 3,
@@ -12804,6 +12140,30 @@ export const legacyRedirectDiagnostics = {
         line: 2840,
       },
       target: "/platform-configuration/email-delivery",
+    },
+    {
+      from: "/docs/thirdparty/graphql-integration/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 2844,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/thirdparty/graphql-integration/making-requests",
+      sourcePosition: {
+        column: 3,
+        line: 2848,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/thirdparty/hasura-integration/with-jwt",
+      sourcePosition: {
+        column: 3,
+        line: 2852,
+      },
+      target: "/integrations/hasura",
     },
     {
       from: "/docs/thirdparty/mfa",
@@ -12878,6 +12238,150 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/enterprise/introduction",
     },
     {
+      from: "/docs/thirdparty/nestjs/guide",
+      sourcePosition: {
+        column: 3,
+        line: 2889,
+      },
+      target: "/integrations/nestjs",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/about",
+      sourcePosition: {
+        column: 3,
+        line: 2893,
+      },
+      target: "/integrations/nextjs/pages-directory/about",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/about",
+      sourcePosition: {
+        column: 3,
+        line: 2897,
+      },
+      target: "/integrations/nextjs/app-directory/about",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/init",
+      sourcePosition: {
+        column: 3,
+        line: 2901,
+      },
+      target: "/integrations/nextjs/app-directory/init",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 2905,
+      },
+      target: "/integrations/nextjs/app-directory/next-steps",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 2909,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-route",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/server-components-requests",
+      sourcePosition: {
+        column: 3,
+        line: 2913,
+      },
+      target: "/integrations/nextjs/app-directory/server-components-requests",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/session-verification-middleware",
+      sourcePosition: {
+        column: 3,
+        line: 2917,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/session-verification-session-guard",
+      sourcePosition: {
+        column: 3,
+        line: 2921,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 2925,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/app-directory/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 2929,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-frontend",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/init",
+      sourcePosition: {
+        column: 3,
+        line: 2933,
+      },
+      target: "/integrations/nextjs/pages-directory/init",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 2937,
+      },
+      target: "/integrations/nextjs/pages-directory/next-steps",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 2941,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-route",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/session-verification/in-api",
+      sourcePosition: {
+        column: 3,
+        line: 2945,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/session-verification/in-ssr",
+      sourcePosition: {
+        column: 3,
+        line: 2949,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 2953,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/thirdparty/nextjs/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 2957,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-frontend",
+    },
+    {
       from: "/docs/thirdparty/other-frameworks",
       sourcePosition: {
         column: 3,
@@ -12932,6 +12436,22 @@ export const legacyRedirectDiagnostics = {
         line: 2985,
       },
       target: "/deployment/self-host-supertokens",
+    },
+    {
+      from: "/docs/thirdparty/pre-built-ui/setup/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 2989,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/thirdparty/pre-built-ui/setup/backend",
+      sourcePosition: {
+        column: 3,
+        line: 2993,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
     },
     {
       from: "/docs/thirdparty/pre-built-ui/setup/core/without-docker",
@@ -13006,12 +12526,60 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/dashboard/user-management",
     },
     {
+      from: "/docs/thirdparty/pre-built-ui/sign-out",
+      sourcePosition: {
+        column: 3,
+        line: 3033,
+      },
+      target: "/post-authentication/session-management/session-invalidation#user-sign-out",
+    },
+    {
+      from: "/docs/thirdparty/quickstart/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 3037,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
+      from: "/docs/thirdparty/quickstart/frontend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 3041,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/thirdparty/quickstart/introduction",
+      sourcePosition: {
+        column: 3,
+        line: 3045,
+      },
+      target: "/quickstart",
+    },
+    {
+      from: "/docs/thirdparty/quickstart/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 3049,
+      },
+      target: "/quickstart#3-configure-the-core-service",
+    },
+    {
       from: "/docs/thirdparty/rate-limits",
       sourcePosition: {
         column: 3,
         line: 3053,
       },
       target: "/deployment/rate-limits",
+    },
+    {
+      from: "/docs/thirdparty/redwood/about",
+      sourcePosition: {
+        column: 3,
+        line: 3054,
+      },
+      target: "/integrations/overview",
     },
     {
       from: "/docs/thirdparty/scalability",
@@ -13028,6 +12596,198 @@ export const legacyRedirectDiagnostics = {
         line: 3059,
       },
       target: "/references",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/about",
+      sourcePosition: {
+        column: 3,
+        line: 3060,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/appsync-integration",
+      sourcePosition: {
+        column: 3,
+        line: 3064,
+      },
+      target: "/integrations/aws-lambda/appsync-integration",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 3068,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 3072,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/jwt-authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 3076,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 3080,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 3084,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/setup-api-gateway",
+      sourcePosition: {
+        column: 3,
+        line: 3088,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/setup-lambda",
+      sourcePosition: {
+        column: 3,
+        line: 3092,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-aws-lambda/setup-lambda-layer",
+      sourcePosition: {
+        column: 3,
+        line: 3096,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-netlify/about",
+      sourcePosition: {
+        column: 3,
+        line: 3100,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-netlify/auth-serverless",
+      sourcePosition: {
+        column: 3,
+        line: 3104,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-netlify/backend-config",
+      sourcePosition: {
+        column: 3,
+        line: 3108,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-netlify/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 3112,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-netlify/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 3116,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-netlify/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 3120,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdparty/serverless/with-vercel/about",
+      sourcePosition: {
+        column: 3,
+        line: 3124,
+      },
+      target: "/integrations/vercel",
+    },
+    {
+      from: "/docs/thirdparty/supabase-intergration/about",
+      sourcePosition: {
+        column: 3,
+        line: 3128,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdparty/supabase-intergration/backend",
+      sourcePosition: {
+        column: 3,
+        line: 3132,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdparty/supabase-intergration/backend-signup-override",
+      sourcePosition: {
+        column: 3,
+        line: 3136,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdparty/supabase-intergration/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 3140,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdparty/supabase-intergration/policies",
+      sourcePosition: {
+        column: 3,
+        line: 3144,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdparty/supabase-intergration/setup",
+      sourcePosition: {
+        column: 3,
+        line: 3148,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdparty/supabase-intergration/supabase-client",
+      sourcePosition: {
+        column: 3,
+        line: 3152,
+      },
+      target: "/integrations/supabase",
     },
     {
       from: "/docs/thirdparty/t4-app/about",
@@ -13310,6 +13070,14 @@ export const legacyRedirectDiagnostics = {
       target: "/references",
     },
     {
+      from: "/docs/thirdpartyemailpassword/appinfo",
+      sourcePosition: {
+        column: 3,
+        line: 3290,
+      },
+      target: "/references",
+    },
+    {
       from: "/docs/thirdpartyemailpassword/architecture",
       sourcePosition: {
         column: 3,
@@ -13324,6 +13092,22 @@ export const legacyRedirectDiagnostics = {
         line: 3298,
       },
       target: "/additional-verification/attack-protection-suite/introduction",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/capacitor-integration/about",
+      sourcePosition: {
+        column: 3,
+        line: 3302,
+      },
+      target: "/integrations/overview",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/common-customizations/account-linking/adding-accounts-to-session",
+      sourcePosition: {
+        column: 3,
+        line: 3306,
+      },
+      target: "/post-authentication/account-linking/manual-account-linking",
     },
     {
       from: "/docs/thirdpartyemailpassword/common-customizations/account-linking/automatic-account-linking",
@@ -13758,6 +13542,46 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/email-password/password-reset",
     },
     {
+      from: "/docs/thirdpartyemailpassword/common-customizations/saml/saml-login",
+      sourcePosition: {
+        column: 3,
+        line: 3526,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/common-customizations/saml/what-is-saml",
+      sourcePosition: {
+        column: 3,
+        line: 3530,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/flow-diagram",
+      sourcePosition: {
+        column: 3,
+        line: 3534,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/integration-steps",
+      sourcePosition: {
+        column: 3,
+        line: 3538,
+      },
+      target: "/authentication/enterprise/legacy-saml",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/common-customizations/saml/with-boxyhq/what-is-boxyhq",
+      sourcePosition: {
+        column: 3,
+        line: 3542,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
       from: "/docs/thirdpartyemailpassword/common-customizations/sessions/about",
       sourcePosition: {
         column: 3,
@@ -13838,6 +13662,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
     },
     {
+      from: "/docs/thirdpartyemailpassword/common-customizations/sessions/error-handling",
+      sourcePosition: {
+        column: 3,
+        line: 3586,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+    },
+    {
       from: "/docs/thirdpartyemailpassword/common-customizations/sessions/fetch-sessions-for-user",
       sourcePosition: {
         column: 3,
@@ -13860,6 +13692,14 @@ export const legacyRedirectDiagnostics = {
         line: 3598,
       },
       target: "/post-authentication/session-management/session-invalidation",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/common-customizations/sessions/in-iframe",
+      sourcePosition: {
+        column: 3,
+        line: 3602,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/in-iframe",
     },
     {
       from: "/docs/thirdpartyemailpassword/common-customizations/sessions/jwt-signing-key-rotation",
@@ -13926,6 +13766,14 @@ export const legacyRedirectDiagnostics = {
       target: "/additional-verification/session-verification/protect-api-routes",
     },
     {
+      from: "/docs/thirdpartyemailpassword/common-customizations/sessions/share-sessions-across-sub-domains",
+      sourcePosition: {
+        column: 3,
+        line: 3638,
+      },
+      target: "/post-authentication/session-management/share-session-across-sub-domains",
+    },
+    {
       from: "/docs/thirdpartyemailpassword/common-customizations/sessions/ssr",
       sourcePosition: {
         column: 3,
@@ -13948,6 +13796,14 @@ export const legacyRedirectDiagnostics = {
         line: 3650,
       },
       target: "/post-authentication/session-management/advanced-workflows/user-impersonation",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/common-customizations/sessions/with-jwt/jwt-verification",
+      sourcePosition: {
+        column: 3,
+        line: 3654,
+      },
+      target: "/integrations/aws-lambda/session-verification",
     },
     {
       from: "/docs/thirdpartyemailpassword/common-customizations/sessions/with-jwt/read-jwt",
@@ -14126,6 +13982,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/user-management/user-metadata",
     },
     {
+      from: "/docs/thirdpartyemailpassword/compatibility-table",
+      sourcePosition: {
+        column: 3,
+        line: 3746,
+      },
+      target: "/references/updating-supertokens#sdk-compatibility-table",
+    },
+    {
       from: "/docs/thirdpartyemailpassword/email-delivery/about",
       sourcePosition: {
         column: 3,
@@ -14172,6 +14036,30 @@ export const legacyRedirectDiagnostics = {
         line: 3770,
       },
       target: "/platform-configuration/email-delivery",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/graphql-integration/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 3774,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/graphql-integration/making-requests",
+      sourcePosition: {
+        column: 3,
+        line: 3778,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/hasura-integration/with-jwt",
+      sourcePosition: {
+        column: 3,
+        line: 3782,
+      },
+      target: "/integrations/hasura",
     },
     {
       from: "/docs/thirdpartyemailpassword/mfa",
@@ -14254,6 +14142,150 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/enterprise/introduction",
     },
     {
+      from: "/docs/thirdpartyemailpassword/nestjs/guide",
+      sourcePosition: {
+        column: 3,
+        line: 3826,
+      },
+      target: "/integrations/nestjs",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/about",
+      sourcePosition: {
+        column: 3,
+        line: 3830,
+      },
+      target: "/integrations/nextjs/pages-directory/about",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/about",
+      sourcePosition: {
+        column: 3,
+        line: 3834,
+      },
+      target: "/integrations/nextjs/app-directory/about",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/init",
+      sourcePosition: {
+        column: 3,
+        line: 3838,
+      },
+      target: "/integrations/nextjs/app-directory/init",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 3842,
+      },
+      target: "/integrations/nextjs/app-directory/next-steps",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 3846,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-route",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/server-components-requests",
+      sourcePosition: {
+        column: 3,
+        line: 3850,
+      },
+      target: "/integrations/nextjs/app-directory/server-components-requests",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/session-verification-middleware",
+      sourcePosition: {
+        column: 3,
+        line: 3854,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/session-verification-session-guard",
+      sourcePosition: {
+        column: 3,
+        line: 3858,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 3862,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 3866,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-frontend",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/init",
+      sourcePosition: {
+        column: 3,
+        line: 3870,
+      },
+      target: "/integrations/nextjs/pages-directory/init",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 3874,
+      },
+      target: "/integrations/nextjs/pages-directory/next-steps",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 3878,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-route",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/session-verification/in-api",
+      sourcePosition: {
+        column: 3,
+        line: 3882,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/session-verification/in-ssr",
+      sourcePosition: {
+        column: 3,
+        line: 3886,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 3890,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 3894,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-frontend",
+    },
+    {
       from: "/docs/thirdpartyemailpassword/other-frameworks",
       sourcePosition: {
         column: 3,
@@ -14276,6 +14308,22 @@ export const legacyRedirectDiagnostics = {
         line: 3906,
       },
       target: "/references/frontend-sdks/prebuilt-ui/ui-showcase",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/pre-built-ui/setup/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 3910,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/pre-built-ui/setup/backend",
+      sourcePosition: {
+        column: 3,
+        line: 3914,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
     },
     {
       from: "/docs/thirdpartyemailpassword/pre-built-ui/further-reading/email-verification",
@@ -14398,12 +14446,60 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/dashboard/user-management",
     },
     {
+      from: "/docs/thirdpartyemailpassword/pre-built-ui/sign-out",
+      sourcePosition: {
+        column: 3,
+        line: 3978,
+      },
+      target: "/post-authentication/session-management/session-invalidation#user-sign-out",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/quickstart/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 3982,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/quickstart/frontend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 3986,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/quickstart/introduction",
+      sourcePosition: {
+        column: 3,
+        line: 3990,
+      },
+      target: "/quickstart",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/quickstart/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 3994,
+      },
+      target: "/quickstart#3-configure-the-core-service",
+    },
+    {
       from: "/docs/thirdpartyemailpassword/rate-limits",
       sourcePosition: {
         column: 3,
         line: 3998,
       },
       target: "/deployment/rate-limits",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/redwood/about",
+      sourcePosition: {
+        column: 3,
+        line: 4002,
+      },
+      target: "/integrations/overview",
     },
     {
       from: "/docs/thirdpartyemailpassword/scalability",
@@ -14420,6 +14516,206 @@ export const legacyRedirectDiagnostics = {
         line: 4010,
       },
       target: "/references",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/about",
+      sourcePosition: {
+        column: 3,
+        line: 4014,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/appsync-integration",
+      sourcePosition: {
+        column: 3,
+        line: 4018,
+      },
+      target: "/integrations/aws-lambda/appsync-integration",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 4022,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 4026,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/jwt-authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 4030,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 4034,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 4038,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/setup-api-gateway",
+      sourcePosition: {
+        column: 3,
+        line: 4042,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/setup-lambda",
+      sourcePosition: {
+        column: 3,
+        line: 4046,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-aws-lambda/setup-lambda-layer",
+      sourcePosition: {
+        column: 3,
+        line: 4050,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/about",
+      sourcePosition: {
+        column: 3,
+        line: 4054,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/auth-serverless",
+      sourcePosition: {
+        column: 3,
+        line: 4058,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/backend-config",
+      sourcePosition: {
+        column: 3,
+        line: 4062,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 4066,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 4070,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-netlify/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 4074,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/serverless/with-vercel/about",
+      sourcePosition: {
+        column: 3,
+        line: 4078,
+      },
+      target: "/integrations/vercel",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/supabase-intergration/about",
+      sourcePosition: {
+        column: 3,
+        line: 4082,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/supabase-intergration/backend",
+      sourcePosition: {
+        column: 3,
+        line: 4086,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/supabase-intergration/backend-signup-override",
+      sourcePosition: {
+        column: 3,
+        line: 4090,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/supabase-intergration/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 4094,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/supabase-intergration/policies",
+      sourcePosition: {
+        column: 3,
+        line: 4098,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/supabase-intergration/setup",
+      sourcePosition: {
+        column: 3,
+        line: 4102,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/supabase-intergration/supabase-client",
+      sourcePosition: {
+        column: 3,
+        line: 4106,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/t4-app/about",
+      sourcePosition: {
+        column: 3,
+        line: 4110,
+      },
+      target: "/quickstart",
     },
     {
       from: "/docs/thirdpartyemailpassword/testing/testing-with-postman",
@@ -14694,6 +14990,14 @@ export const legacyRedirectDiagnostics = {
       target: "/references",
     },
     {
+      from: "/docs/thirdpartypasswordless/appinfo",
+      sourcePosition: {
+        column: 3,
+        line: 4250,
+      },
+      target: "/references",
+    },
+    {
       from: "/docs/thirdpartypasswordless/architecture",
       sourcePosition: {
         column: 3,
@@ -14708,6 +15012,22 @@ export const legacyRedirectDiagnostics = {
         line: 4258,
       },
       target: "/additional-verification/attack-protection-suite/introduction",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/capacitor-integration/about",
+      sourcePosition: {
+        column: 3,
+        line: 4262,
+      },
+      target: "/integrations/overview",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/common-customizations/account-linking/adding-accounts-to-session",
+      sourcePosition: {
+        column: 3,
+        line: 4266,
+      },
+      target: "/post-authentication/account-linking/manual-account-linking",
     },
     {
       from: "/docs/thirdpartypasswordless/common-customizations/account-linking/automatic-account-linking",
@@ -15086,6 +15406,46 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/social/add-multiple-clients-for-the-same-provider",
     },
     {
+      from: "/docs/thirdpartypasswordless/common-customizations/saml/saml-login",
+      sourcePosition: {
+        column: 3,
+        line: 4458,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/common-customizations/saml/what-is-saml",
+      sourcePosition: {
+        column: 3,
+        line: 4462,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/common-customizations/saml/with-boxyhq/flow-diagram",
+      sourcePosition: {
+        column: 3,
+        line: 4466,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/common-customizations/saml/with-boxyhq/integration-steps",
+      sourcePosition: {
+        column: 3,
+        line: 4470,
+      },
+      target: "/authentication/enterprise/legacy-saml",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/common-customizations/saml/with-boxyhq/what-is-boxyhq",
+      sourcePosition: {
+        column: 3,
+        line: 4474,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
       from: "/docs/thirdpartypasswordless/common-customizations/sessions/about",
       sourcePosition: {
         column: 3,
@@ -15166,6 +15526,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/session-management/advanced-workflows/disable-frontend-interceptors",
     },
     {
+      from: "/docs/thirdpartypasswordless/common-customizations/sessions/error-handling",
+      sourcePosition: {
+        column: 3,
+        line: 4518,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/customize-error-handling",
+    },
+    {
       from: "/docs/thirdpartypasswordless/common-customizations/sessions/fetch-sessions-for-user",
       sourcePosition: {
         column: 3,
@@ -15188,6 +15556,14 @@ export const legacyRedirectDiagnostics = {
         line: 4530,
       },
       target: "/post-authentication/session-management/session-invalidation",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/common-customizations/sessions/in-iframe",
+      sourcePosition: {
+        column: 3,
+        line: 4534,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/in-iframe",
     },
     {
       from: "/docs/thirdpartypasswordless/common-customizations/sessions/jwt-signing-key-rotation",
@@ -15252,6 +15628,14 @@ export const legacyRedirectDiagnostics = {
         line: 4566,
       },
       target: "/additional-verification/session-verification/protect-api-routes",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/common-customizations/sessions/share-sessions-across-sub-domains",
+      sourcePosition: {
+        column: 3,
+        line: 4570,
+      },
+      target: "/post-authentication/session-management/share-session-across-sub-domains",
     },
     {
       from: "/docs/thirdpartypasswordless/common-customizations/sessions/ssr",
@@ -15462,6 +15846,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/user-management/user-metadata",
     },
     {
+      from: "/docs/thirdpartypasswordless/compatibility-table",
+      sourcePosition: {
+        column: 3,
+        line: 4678,
+      },
+      target: "/references/updating-supertokens#sdk-compatibility-table",
+    },
+    {
       from: "/docs/thirdpartypasswordless/email-delivery/about",
       sourcePosition: {
         column: 3,
@@ -15508,6 +15900,38 @@ export const legacyRedirectDiagnostics = {
         line: 4702,
       },
       target: "/platform-configuration/email-delivery",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/flow_diagram",
+      sourcePosition: {
+        column: 3,
+        line: 4706,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/graphql-integration/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 4710,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/graphql-integration/making-requests",
+      sourcePosition: {
+        column: 3,
+        line: 4714,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/hasura-integration/with-jwt",
+      sourcePosition: {
+        column: 3,
+        line: 4718,
+      },
+      target: "/integrations/hasura",
     },
     {
       from: "/docs/thirdpartypasswordless/mfa",
@@ -15582,6 +16006,150 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/enterprise/introduction",
     },
     {
+      from: "/docs/thirdpartypasswordless/nestjs/guide",
+      sourcePosition: {
+        column: 3,
+        line: 4758,
+      },
+      target: "/integrations/nestjs",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/about",
+      sourcePosition: {
+        column: 3,
+        line: 4762,
+      },
+      target: "/integrations/nextjs/pages-directory/about",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/about",
+      sourcePosition: {
+        column: 3,
+        line: 4766,
+      },
+      target: "/integrations/nextjs/app-directory/about",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/init",
+      sourcePosition: {
+        column: 3,
+        line: 4770,
+      },
+      target: "/integrations/nextjs/app-directory/init",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 4774,
+      },
+      target: "/integrations/nextjs/app-directory/next-steps",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 4778,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-route",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/server-components-requests",
+      sourcePosition: {
+        column: 3,
+        line: 4782,
+      },
+      target: "/integrations/nextjs/app-directory/server-components-requests",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/session-verification-middleware",
+      sourcePosition: {
+        column: 3,
+        line: 4786,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-middleware",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/session-verification-session-guard",
+      sourcePosition: {
+        column: 3,
+        line: 4790,
+      },
+      target: "/integrations/nextjs/app-directory/protecting-backend/session-verification-session-guard",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 4794,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/app-directory/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 4798,
+      },
+      target: "/integrations/nextjs/app-directory/setting-up-frontend",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/init",
+      sourcePosition: {
+        column: 3,
+        line: 4802,
+      },
+      target: "/integrations/nextjs/pages-directory/init",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 4806,
+      },
+      target: "/integrations/nextjs/pages-directory/next-steps",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/protecting-route",
+      sourcePosition: {
+        column: 3,
+        line: 4810,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-route",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/session-verification/in-api",
+      sourcePosition: {
+        column: 3,
+        line: 4814,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-api",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/session-verification/in-ssr",
+      sourcePosition: {
+        column: 3,
+        line: 4818,
+      },
+      target: "/integrations/nextjs/pages-directory/protecting-backend/in-ssr",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/setting-up-backend",
+      sourcePosition: {
+        column: 3,
+        line: 4822,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-backend",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/nextjs/setting-up-frontend",
+      sourcePosition: {
+        column: 3,
+        line: 4826,
+      },
+      target: "/integrations/nextjs/pages-directory/setting-up-frontend",
+    },
+    {
       from: "/docs/thirdpartypasswordless/other-frameworks",
       sourcePosition: {
         column: 3,
@@ -15596,6 +16164,22 @@ export const legacyRedirectDiagnostics = {
         line: 4834,
       },
       target: "/post-authentication/post-login-redirect",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/pre-built-ui/setup/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 4838,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/pre-built-ui/setup/backend",
+      sourcePosition: {
+        column: 3,
+        line: 4842,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
     },
     {
       from: "/docs/thirdpartypasswordless/pre-built-ui/further-reading/email-verification",
@@ -15718,12 +16302,60 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/dashboard/user-management",
     },
     {
+      from: "/docs/thirdpartypasswordless/pre-built-ui/sign-out",
+      sourcePosition: {
+        column: 3,
+        line: 4906,
+      },
+      target: "/post-authentication/session-management/session-invalidation#user-sign-out",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/quickstart/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 4910,
+      },
+      target: "/quickstart#2-integrate-the-backend-sdk",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/quickstart/frontend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 4914,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/quickstart/introduction",
+      sourcePosition: {
+        column: 3,
+        line: 4918,
+      },
+      target: "/quickstart",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/quickstart/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 4922,
+      },
+      target: "/quickstart#3-configure-the-core-service",
+    },
+    {
       from: "/docs/thirdpartypasswordless/rate-limits",
       sourcePosition: {
         column: 3,
         line: 4926,
       },
       target: "/deployment/rate-limits",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/redwood/about",
+      sourcePosition: {
+        column: 3,
+        line: 4930,
+      },
+      target: "/integrations/overview",
     },
     {
       from: "/docs/thirdpartypasswordless/scalability",
@@ -15740,6 +16372,142 @@ export const legacyRedirectDiagnostics = {
         line: 4938,
       },
       target: "/references",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/about",
+      sourcePosition: {
+        column: 3,
+        line: 4942,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/appsync-integration",
+      sourcePosition: {
+        column: 3,
+        line: 4946,
+      },
+      target: "/integrations/aws-lambda/appsync-integration",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 4950,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 4954,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/jwt-authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 4958,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 4962,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 4966,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/setup-api-gateway",
+      sourcePosition: {
+        column: 3,
+        line: 4970,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/setup-lambda",
+      sourcePosition: {
+        column: 3,
+        line: 4974,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-aws-lambda/setup-lambda-layer",
+      sourcePosition: {
+        column: 3,
+        line: 4978,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-netlify/about",
+      sourcePosition: {
+        column: 3,
+        line: 4982,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-netlify/auth-serverless",
+      sourcePosition: {
+        column: 3,
+        line: 4986,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-netlify/backend-config",
+      sourcePosition: {
+        column: 3,
+        line: 4990,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-netlify/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 4994,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-netlify/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 4998,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-netlify/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 5002,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/serverless/with-vercel/about",
+      sourcePosition: {
+        column: 3,
+        line: 5006,
+      },
+      target: "/integrations/vercel",
     },
     {
       from: "/docs/thirdpartypasswordless/sms-delivery/about",
@@ -15796,6 +16564,70 @@ export const legacyRedirectDiagnostics = {
         line: 5034,
       },
       target: "/platform-configuration/sms-delivery",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/supabase-intergration/about",
+      sourcePosition: {
+        column: 3,
+        line: 5038,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/supabase-intergration/backend",
+      sourcePosition: {
+        column: 3,
+        line: 5042,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/supabase-intergration/backend-signup-override",
+      sourcePosition: {
+        column: 3,
+        line: 5046,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/supabase-intergration/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 5050,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/supabase-intergration/policies",
+      sourcePosition: {
+        column: 3,
+        line: 5054,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/supabase-intergration/setup",
+      sourcePosition: {
+        column: 3,
+        line: 5058,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/supabase-intergration/supabase-client",
+      sourcePosition: {
+        column: 3,
+        line: 5062,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/t4-app/about",
+      sourcePosition: {
+        column: 3,
+        line: 5066,
+      },
+      target: "/quickstart",
     },
     {
       from: "/docs/thirdpartypasswordless/testing/testing-with-postman",
@@ -16078,6 +16910,14 @@ export const legacyRedirectDiagnostics = {
       target: "/additional-verification/user-roles/protecting-routes",
     },
     {
+      from: "/docs/community/compatibility",
+      sourcePosition: {
+        column: 3,
+        line: 5218,
+      },
+      target: "/references/updating-supertokens#sdk-compatibility-table",
+    },
+    {
       from: "/docs/passwordless/custom-ui/login-otp",
       sourcePosition: {
         column: 3,
@@ -16094,12 +16934,28 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/social/initial-setup",
     },
     {
+      from: "/docs/thirdpartypasswordless/introduction",
+      sourcePosition: {
+        column: 3,
+        line: 5230,
+      },
+      target: "/quickstart",
+    },
+    {
       from: "/docs/passwordless/introduction",
       sourcePosition: {
         column: 3,
         line: 5234,
       },
       target: "/authentication/passwordless/introduction",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/pre-built-ui/setup/core/aws-setup-with-stacksnap",
+      sourcePosition: {
+        column: 3,
+        line: 5238,
+      },
+      target: "/quickstart",
     },
     {
       from: "/docs/thirdparty/custom-ui/init/frontend",
@@ -16142,6 +16998,14 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/social/initial-setup",
     },
     {
+      from: "/docs/emailpassword/custom-ui/init/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 5262,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
+    },
+    {
       from: "/docs/migration",
       sourcePosition: {
         column: 3,
@@ -16164,6 +17028,30 @@ export const legacyRedirectDiagnostics = {
         line: 5279,
       },
       target: "/post-authentication/dashboard/introduction",
+    },
+    {
+      from: "/docs/thirdpartypasswordless/custom-ui/thirdparty-login",
+      sourcePosition: {
+        column: 3,
+        line: 5287,
+      },
+      target: "/quickstart",
+    },
+    {
+      from: "/docs/thirdpartyemailpassword/nextjs/app-directory/session-helpers",
+      sourcePosition: {
+        column: 3,
+        line: 5291,
+      },
+      target: "/integrations/nextjs/app-directory/about",
+    },
+    {
+      from: "/docs/emailpassword/pre-built-ui/securing-routes",
+      sourcePosition: {
+        column: 3,
+        line: 5295,
+      },
+      target: "/quickstart#1-integrate-the-frontend-sdk",
     },
     {
       from: "/docs/contribute/introduction",
@@ -16510,6 +17398,278 @@ export const legacyRedirectDiagnostics = {
       target: "/authentication/enterprise/subdomain-login",
     },
     {
+      from: "/docs/authentication/enterprise/saml/saml-login",
+      sourcePosition: {
+        column: 3,
+        line: 5465,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/authentication/enterprise/saml/overview",
+      sourcePosition: {
+        column: 3,
+        line: 5469,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/authentication/enterprise/saml/with-boxyhq/flow-diagram",
+      sourcePosition: {
+        column: 3,
+        line: 5473,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/authentication/enterprise/saml/with-boxyhq/what-is-boxyhq",
+      sourcePosition: {
+        column: 3,
+        line: 5477,
+      },
+      target: "/authentication/enterprise/saml",
+    },
+    {
+      from: "/docs/authentication/enterprise/saml/with-boxyhq/integration-steps",
+      sourcePosition: {
+        column: 3,
+        line: 5481,
+      },
+      target: "/authentication/enterprise/legacy-saml",
+    },
+    {
+      from: "/docs/quickstart/integrations/vercel/about",
+      sourcePosition: {
+        column: 3,
+        line: 5485,
+      },
+      target: "/integrations/vercel",
+    },
+    {
+      from: "/docs/quickstart/integrations/hasura/with-jwt",
+      sourcePosition: {
+        column: 3,
+        line: 5489,
+      },
+      target: "/integrations/hasura",
+    },
+    {
+      from: "/docs/quickstart/integrations/capacitor/about",
+      sourcePosition: {
+        column: 3,
+        line: 5493,
+      },
+      target: "/integrations/overview",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 5497,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/about",
+      sourcePosition: {
+        column: 3,
+        line: 5501,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/backend-config/setup-lambda",
+      sourcePosition: {
+        column: 3,
+        line: 5505,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/backend-config/setup-api-gateway",
+      sourcePosition: {
+        column: 3,
+        line: 5509,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/backend-config/setup-lambda-layer",
+      sourcePosition: {
+        column: 3,
+        line: 5513,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 5517,
+      },
+      target: "/integrations/aws-lambda/quickstart-guide",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/session-verification/using-jwt-authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 5521,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/session-verification/using-lambda-authorizer",
+      sourcePosition: {
+        column: 3,
+        line: 5525,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/quickstart/integrations/aws-lambda/session-verification/using-session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 5529,
+      },
+      target: "/integrations/aws-lambda/session-verification",
+    },
+    {
+      from: "/docs/quickstart/integrations/supabase/supabase-setup",
+      sourcePosition: {
+        column: 3,
+        line: 5533,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/quickstart/integrations/supabase/supabase-client",
+      sourcePosition: {
+        column: 3,
+        line: 5537,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/quickstart/integrations/supabase/policies",
+      sourcePosition: {
+        column: 3,
+        line: 5541,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/quickstart/integrations/supabase/about",
+      sourcePosition: {
+        column: 3,
+        line: 5545,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/quickstart/integrations/supabase/frontend-changes",
+      sourcePosition: {
+        column: 3,
+        line: 5549,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/quickstart/integrations/supabase/backend-signup-override",
+      sourcePosition: {
+        column: 3,
+        line: 5553,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/quickstart/integrations/supabase/backend-changes",
+      sourcePosition: {
+        column: 3,
+        line: 5557,
+      },
+      target: "/integrations/supabase",
+    },
+    {
+      from: "/docs/quickstart/integrations/redwoodjs/about",
+      sourcePosition: {
+        column: 3,
+        line: 5561,
+      },
+      target: "/integrations/overview",
+    },
+    {
+      from: "/docs/quickstart/integrations/netlify/auth-serverless",
+      sourcePosition: {
+        column: 3,
+        line: 5565,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/quickstart/integrations/netlify/backend-config",
+      sourcePosition: {
+        column: 3,
+        line: 5569,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/quickstart/integrations/netlify/frontend",
+      sourcePosition: {
+        column: 3,
+        line: 5573,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/quickstart/integrations/netlify/about",
+      sourcePosition: {
+        column: 3,
+        line: 5577,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/quickstart/integrations/netlify/session-verification",
+      sourcePosition: {
+        column: 3,
+        line: 5581,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/quickstart/integrations/netlify/next-steps",
+      sourcePosition: {
+        column: 3,
+        line: 5585,
+      },
+      target: "/integrations/netlify",
+    },
+    {
+      from: "/docs/quickstart/integrations/graphql/backend-setup",
+      sourcePosition: {
+        column: 3,
+        line: 5589,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/quickstart/integrations/graphql/making-requests",
+      sourcePosition: {
+        column: 3,
+        line: 5593,
+      },
+      target: "/integrations/graphql",
+    },
+    {
+      from: "/docs/quickstart/integrations/nestjs/guide",
+      sourcePosition: {
+        column: 3,
+        line: 5597,
+      },
+      target: "/integrations/nestjs",
+    },
+    {
       from: "/docs/authentication/unified-login/customizations/working-with-scopes",
       sourcePosition: {
         column: 3,
@@ -16788,6 +17948,14 @@ export const legacyRedirectDiagnostics = {
         line: 5741,
       },
       target: "/post-authentication/session-management/advanced-workflows/access-token-blacklisting",
+    },
+    {
+      from: "/docs/post-authentication/session-management/security/in-iframe",
+      sourcePosition: {
+        column: 3,
+        line: 5745,
+      },
+      target: "/post-authentication/session-management/advanced-workflows/in-iframe",
     },
     {
       from: "/docs/post-authentication/session-management/security/anti-csrf",
@@ -17190,6 +18358,14 @@ export const legacyRedirectDiagnostics = {
       target: "/post-authentication/account-linking/introduction",
     },
     {
+      from: "/docs/post-authentication/account-linking/adding-accounts-to-session",
+      sourcePosition: {
+        column: 3,
+        line: 5950,
+      },
+      target: "/post-authentication/account-linking/manual-account-linking",
+    },
+    {
       from: "/docs/post-authentication/account-linking/security-considerations",
       sourcePosition: {
         column: 3,
@@ -17430,6 +18606,14 @@ export const legacyRedirectDiagnostics = {
       target: "/references",
     },
     {
+      from: "/docs/references/sdks/compatibility-table",
+      sourcePosition: {
+        column: 3,
+        line: 6075,
+      },
+      target: "/references/updating-supertokens#sdk-compatibility-table",
+    },
+    {
       from: "/docs/references/sdks/user-context",
       sourcePosition: {
         column: 3,
@@ -17645,6 +18829,38 @@ export const legacyRedirectDiagnostics = {
       },
       target: "/references/testing-and-debugging/api-testing",
     },
+    {
+      from: "/docs/references/app-info",
+      sourcePosition: {
+        column: 3,
+        line: 6187,
+      },
+      target: "/references",
+    },
+    {
+      from: "/docs/references/test",
+      sourcePosition: {
+        column: 3,
+        line: 6191,
+      },
+      target: "/#how-supertokens-works",
+    },
+    {
+      from: "/docs/ios/supertokens.com/discord",
+      sourcePosition: {
+        column: 3,
+        line: 6195,
+      },
+      target: "https://supertokens.com/discord",
+    },
+    {
+      from: "/docs/flutter/supertokens.com/discord",
+      sourcePosition: {
+        column: 3,
+        line: 6199,
+      },
+      target: "https://supertokens.com/discord",
+    },
   ],
 } as const;
 export const ignoredDuplicateLegacySources = [
@@ -17654,3 +18870,4 @@ export const ignoredDuplicateLegacySources = [
   "/docs/emailpassword/custom-ui/init/frontend",
   "/docs/additional-verification/mfa/frontend-setup",
 ] as const;
+export const configuredAliasLegacySources = [] as const;

@@ -106,11 +106,22 @@ test("proxies SDK latest entrypoints and their relative assets without changing 
   }
 });
 
-test("preserves representative legacy redirects and returns a real unknown-route failure", async ({ request }) => {
-  const legacy = await request.get("/docs/guides");
-  expect(legacy.ok()).toBe(true);
-  expect(new URL(legacy.url()).pathname).toBe("/docs");
+test("exposes configured, legacy, and external redirects directly", async ({ request }) => {
+  const cases = [
+    ["/docs/quickstart/frontend-setup", "/docs/quickstart#1-integrate-the-frontend-sdk"],
+    ["/docs/guides", "/docs"],
+    ["/docs/golang", "https://pkg.go.dev/github.com/supertokens/supertokens-golang"],
+  ] as const;
 
+  for (const [source, location] of cases) {
+    const response = await request.get(source, { maxRedirects: 0 });
+    expect(response.status(), source).toBeGreaterThanOrEqual(300);
+    expect(response.status(), source).toBeLessThan(400);
+    expect(response.headers().location, source).toBe(location);
+  }
+});
+
+test("returns a real unknown-route failure", async ({ request }) => {
   expect((await request.get("/docs/__microfrontend-smoke-missing__")).status()).toBe(404);
 });
 

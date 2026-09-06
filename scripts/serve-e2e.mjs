@@ -33,11 +33,9 @@ const contentTypes = {
 
 function redirectLocation(pathname, search, redirect) {
   const location = pathname.replace(redirect.pattern, redirect.location);
-  if (!search || location.includes("?")) return location;
-  const hashIndex = location.indexOf("#");
-  return hashIndex < 0
-    ? `${location}${search}`
-    : `${location.slice(0, hashIndex)}${search}${location.slice(hashIndex)}`;
+  const url = new URL(location, `http://${host}`);
+  if (search) url.search = search;
+  return /^https?:\/\//u.test(location) ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
 }
 
 async function resolveFile(pathname) {
@@ -67,6 +65,28 @@ async function resolveFile(pathname) {
   }
 }
 
+async function serveFile(request, response, file, status) {
+  const headers = { "Content-Type": contentTypes[extname(file)] ?? "application/octet-stream" };
+  if (request.method === "HEAD") {
+    response.writeHead(status, headers).end();
+    return;
+  }
+
+  const stream = createReadStream(file);
+  stream.on("error", (error) => {
+    console.error(error);
+    if (response.headersSent) response.destroy();
+    else
+      response
+        .writeHead(error.code === "ENOENT" ? 404 : 500)
+        .end(error.code === "ENOENT" ? "Not found" : "Internal server error");
+  });
+  stream.on("open", () => {
+    response.writeHead(status, headers);
+    stream.pipe(response);
+  });
+}
+
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", `http://${host}`);
@@ -84,33 +104,12 @@ const server = createServer(async (request, response) => {
     }
     const file = await resolveFile(pathname);
     if (!file) {
-      response.writeHead(404).end("Not found");
+      const notFound = await resolveFile("/404.html");
+      if (notFound) await serveFile(request, response, notFound, 404);
+      else response.writeHead(404).end(request.method === "HEAD" ? undefined : "Not found");
       return;
     }
-
-    if (request.method === "HEAD") {
-      response.writeHead(200, {
-        "Content-Type": contentTypes[extname(file)] ?? "application/octet-stream",
-      });
-      response.end();
-      return;
-    }
-
-    const stream = createReadStream(file);
-    stream.on("error", (error) => {
-      console.error(error);
-      if (response.headersSent) response.destroy();
-      else
-        response
-          .writeHead(error.code === "ENOENT" ? 404 : 500)
-          .end(error.code === "ENOENT" ? "Not found" : "Internal server error");
-    });
-    stream.on("open", () => {
-      response.writeHead(200, {
-        "Content-Type": contentTypes[extname(file)] ?? "application/octet-stream",
-      });
-      stream.pipe(response);
-    });
+    await serveFile(request, response, file, 200);
   } catch (error) {
     console.error(error);
     response.writeHead(500).end("Internal server error");
