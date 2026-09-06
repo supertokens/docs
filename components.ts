@@ -2,6 +2,7 @@ import { defineComponents } from "blume";
 
 import ApiRequestSnippet from "./components/ApiRequestSnippet.astro";
 import ApiReferenceDrawer from "./components/ApiReferenceDrawer.astro";
+import AnchoredHeading from "./components/AnchoredHeading.astro";
 import ConditionalContent from "./components/ConditionalContent.astro";
 import CodeGroup from "./components/CodeGroup.astro";
 import ContentOption from "./components/ContentOption.astro";
@@ -26,6 +27,7 @@ export default defineComponents({
     TableOfContents,
   },
   mdx: {
+    AnchoredHeading,
     ApiRequestSnippet,
     CodeGroup,
     ConditionalContent,

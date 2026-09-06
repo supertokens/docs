@@ -318,6 +318,24 @@ describe("selectionUrl", () => {
       "/docs?backend=python",
     );
   });
+
+  it("uses compact URL selections instead of conflicting storage", () => {
+    const conflictingStorage = memoryStorage({
+      "supertokens-docs:selection:backend-language": "nodejs",
+      "supertokens-docs:selection:frontend-custom-ui": "web",
+      "supertokens-docs:ui-type": "prebuilt",
+    });
+    const store = new DocsSelectionStore();
+    store.init(conflictingStorage);
+    store.hydrate(new URLSearchParams("q=BBJchGkoAC"));
+
+    expect(store.get("ui-type")).toBe("custom");
+    expect(store.get("frontend-custom-ui")).toBe("mobile");
+    expect(store.get("mobile-frameworks")).toBe("ios");
+    expect(store.get("backend-language")).toBe("python");
+    expect(store.get("python-frameworks")).toBe("django");
+    expect(store.get("package-managers")).toBe("pnpm");
+  });
 });
 
 describe("selectionQueryKey", () => {

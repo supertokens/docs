@@ -378,6 +378,11 @@ function storageKeyForSelection(key: DocsSelectionKey): string {
 }
 
 let selectionUrlStateInitialized = false;
+let selectionHashNavigationInitialized = false;
+let selectionHashScrollFrame: number | undefined;
+let selectionHashScrollTimer: number | undefined;
+let pendingSelectionHashReveal: string | undefined;
+const selectionHashSettleDelayMs = 500;
 
 const queryKeyAliases: Record<string, string> = {
   "backend-language": "backend",
@@ -689,6 +694,7 @@ export function readContextualQuery(
 
 export function initializeSelectionUrlState(): void {
   if (typeof window === "undefined") return;
+  initializeSelectionHashNavigation();
   if (selectionUrlStateInitialized) return;
   selectionUrlStateInitialized = true;
   let storage: Storage | undefined;
@@ -704,8 +710,12 @@ export function initializeSelectionUrlState(): void {
   });
   const hydrate = () => hydrateDocsSelection();
   const hydrateUrl = () => {
+    const hash = decodedSelectionHash();
+    const target = hash ? document.getElementById(hash) : null;
+    pendingSelectionHashReveal = target && !isSelectionContextVisible(target) ? hash : undefined;
     hydrate();
     window.dispatchEvent(new CustomEvent(selectionUrlStateEvent));
+    retryPendingSelectionHashReveal();
   };
   hydrate();
   window.addEventListener("popstate", hydrateUrl);
@@ -714,6 +724,68 @@ export function initializeSelectionUrlState(): void {
     window.dispatchEvent(new CustomEvent(selectionUrlStateEvent));
   });
   document.addEventListener("astro:page-load", hydrate);
+}
+
+function decodedSelectionHash(): string | undefined {
+  if (!window.location.hash) return;
+  try {
+    return decodeURIComponent(window.location.hash.slice(1));
+  } catch {
+    return;
+  }
+}
+
+function selectionHashTarget(): HTMLElement | null {
+  const id = decodedSelectionHash();
+  if (!id) return null;
+  const target = document.getElementById(id);
+  return target && isSelectionContextVisible(target) ? target : null;
+}
+
+export function scrollToSelectionHashTarget(): boolean {
+  const target = selectionHashTarget();
+  if (!target) return false;
+  target.scrollIntoView({ block: "start" });
+  return true;
+}
+
+function schedulePendingSelectionHashReveal(): void {
+  if (!pendingSelectionHashReveal) return;
+  if (selectionHashScrollFrame !== undefined) window.cancelAnimationFrame(selectionHashScrollFrame);
+  if (selectionHashScrollTimer !== undefined) window.clearTimeout(selectionHashScrollTimer);
+  selectionHashScrollTimer = window.setTimeout(() => {
+    selectionHashScrollTimer = undefined;
+    selectionHashScrollFrame = window.requestAnimationFrame(() => {
+      selectionHashScrollFrame = window.requestAnimationFrame(() => {
+        selectionHashScrollFrame = undefined;
+        const currentHash = decodedSelectionHash();
+        if (!currentHash || currentHash !== pendingSelectionHashReveal) {
+          pendingSelectionHashReveal = undefined;
+          return;
+        }
+        if (scrollToSelectionHashTarget()) pendingSelectionHashReveal = undefined;
+      });
+    });
+  }, selectionHashSettleDelayMs);
+}
+
+function revealSelectionHash(): void {
+  pendingSelectionHashReveal = decodedSelectionHash();
+  schedulePendingSelectionHashReveal();
+}
+
+function retryPendingSelectionHashReveal(): void {
+  schedulePendingSelectionHashReveal();
+}
+
+function initializeSelectionHashNavigation(): void {
+  if (selectionHashNavigationInitialized) return;
+  selectionHashNavigationInitialized = true;
+  revealSelectionHash();
+  window.addEventListener("hashchange", revealSelectionHash);
+  window.addEventListener("supertokens-docs:variant-content-updated", retryPendingSelectionHashReveal);
+  document.addEventListener("astro:page-load", revealSelectionHash);
+  document.addEventListener(selectionContentReadyEvent, retryPendingSelectionHashReveal);
 }
 
 export function readGlobalValue(

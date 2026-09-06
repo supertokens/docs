@@ -1,4 +1,4 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, readFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
@@ -6,6 +6,14 @@ import { extname, join, resolve, sep } from "node:path";
 const host = "127.0.0.1";
 const port = 4322;
 const root = resolve(".vercel/output/static");
+const outputConfig = JSON.parse(readFileSync(resolve(".vercel/output/config.json"), "utf8"));
+const filesystemBoundary = outputConfig.routes.findIndex((route) => route.handle === "filesystem");
+const redirectRoutes = filesystemBoundary < 0 ? outputConfig.routes : outputConfig.routes.slice(0, filesystemBoundary);
+const redirects = redirectRoutes.flatMap((route) =>
+  route.status >= 300 && route.status < 400 && route.headers?.Location
+    ? [{ location: route.headers.Location, pattern: new RegExp(route.src), status: route.status }]
+    : [],
+);
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -22,6 +30,15 @@ const contentTypes = {
   ".woff": "font/woff",
   ".woff2": "font/woff2",
 };
+
+function redirectLocation(pathname, search, redirect) {
+  const location = pathname.replace(redirect.pattern, redirect.location);
+  if (!search || location.includes("?")) return location;
+  const hashIndex = location.indexOf("#");
+  return hashIndex < 0
+    ? `${location}${search}`
+    : `${location.slice(0, hashIndex)}${search}${location.slice(hashIndex)}`;
+}
 
 async function resolveFile(pathname) {
   const candidate = resolve(root, `.${pathname}`);
@@ -52,7 +69,19 @@ async function resolveFile(pathname) {
 
 const server = createServer(async (request, response) => {
   try {
-    const pathname = decodeURIComponent(new URL(request.url ?? "/", `http://${host}`).pathname);
+    const url = new URL(request.url ?? "/", `http://${host}`);
+    const redirect = redirects.find(({ pattern }) => pattern.test(url.pathname));
+    if (redirect) {
+      response.writeHead(redirect.status, { Location: redirectLocation(url.pathname, url.search, redirect) }).end();
+      return;
+    }
+    let pathname;
+    try {
+      pathname = decodeURIComponent(url.pathname);
+    } catch {
+      response.writeHead(400).end("Bad request");
+      return;
+    }
     const file = await resolveFile(pathname);
     if (!file) {
       response.writeHead(404).end("Not found");
