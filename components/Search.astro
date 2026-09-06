@@ -11,6 +11,8 @@ const props = Astro.props;
   import { buildResult } from "blume/components/layout/search/types.ts";
   import type { IndexedDocument, SearchFn } from "blume/components/layout/search/types.ts";
 
+  import { initializeControlTooltip } from "./control-tooltip";
+
   const cache = new Map<string, string>();
   const cacheLimit = 8;
   const collapsedFilterCount = 4;
@@ -183,24 +185,28 @@ const props = Astro.props;
     filters.id ||= `blume-search-filters-${searchIndex + 1}`;
 
     const observer = new MutationObserver(update);
+    let previousActiveLaterIndex = -1;
     function update() {
       observer.disconnect();
       const pills = [...filters!.querySelectorAll<HTMLButtonElement>("button:not([data-st-filter-disclosure])")];
       filters!.querySelector("[data-st-filter-disclosure]")?.remove();
 
       if (pills.length > collapsedFilterCount) {
-        const expanded = filters!.dataset.filtersExpanded === "true";
-        const hasCollapsiblePill = pills.some(
-          (pill, index) => index >= collapsedFilterCount && !pill.classList.contains("bg-foreground"),
+        let expanded = filters!.dataset.filtersExpanded === "true";
+        const activeLaterIndex = pills.findIndex(
+          (pill, index) => index >= collapsedFilterCount && pill.classList.contains("bg-foreground"),
         );
+        if (expanded && activeLaterIndex >= 0 && activeLaterIndex !== previousActiveLaterIndex) {
+          filters!.dataset.filtersExpanded = "false";
+          expanded = false;
+        }
+        previousActiveLaterIndex = activeLaterIndex;
         for (const [index, pill] of pills.entries()) {
           const active = pill.classList.contains("bg-foreground");
-          pill.hidden = !expanded && index >= collapsedFilterCount && !active;
-        }
-
-        if (!expanded && !hasCollapsiblePill) {
-          observer.observe(filters!, { childList: true });
-          return;
+          const isCollapsedSelection = activeLaterIndex >= 0 && index === activeLaterIndex;
+          const collapsedLimit = activeLaterIndex >= 0 ? collapsedFilterCount - 1 : collapsedFilterCount;
+          pill.setAttribute("aria-pressed", String(active));
+          pill.hidden = !expanded && index >= collapsedLimit && !isCollapsedSelection;
         }
 
         const toggle = document.createElement("button");
@@ -226,12 +232,21 @@ const props = Astro.props;
     update();
   };
 
+  const initializeSearchTooltip = (search: BlumeSearchElement) => {
+    const trigger = search.querySelector<HTMLButtonElement>("[data-blume-search-open]");
+    if (!trigger) return;
+
+    const searchIndex = [...document.querySelectorAll("blume-search")].indexOf(search);
+    initializeControlTooltip(trigger, { id: `st-search-tooltip-${searchIndex + 1}` });
+  };
+
   const initializeRenderedPreviews = async () => {
     await customElements.whenDefined("blume-search");
     for (const element of document.querySelectorAll<BlumeSearchElement>("blume-search")) {
       const search = element;
       if (search.dataset.renderedPreviewInitialized) continue;
       search.dataset.renderedPreviewInitialized = "true";
+      initializeSearchTooltip(search);
       initializeFilterDisclosure(search);
 
       search.loaded = true;
