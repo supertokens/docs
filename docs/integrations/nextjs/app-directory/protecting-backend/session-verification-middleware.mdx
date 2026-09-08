@@ -1,0 +1,90 @@
+---
+title: Using Next.js Proxy
+description: Implement session verification in Next.js Proxy to manage user authentication and retrieve user IDs.
+sidebar:
+  order: 2
+---
+
+
+This method is an alternative method for using sessions in an API. If you are already using [session guards](./session-verification-session-guard), you can skip this step.
+If you are checking OAuth2 access tokens use your OAuth2/OIDC library instead of the SuperTokens Session SDK.
+
+## Setting up Proxy
+
+In Next.js 16, request interception uses `proxy.ts`. Earlier Next.js versions called this file `middleware.ts`. The Proxy checks for a session with `withSession` and forwards the user's ID to Route Handlers through an internal request header. You can forward other information in the same way.
+
+:::warning
+You cannot pass the full session container through Proxy because request headers can only contain strings. If you need the full session container in your APIs, use [session guards](./session-verification-session-guard).
+:::
+
+```tsx title="proxy.ts" check=false reason="Requires surrounding framework application context"
+import { withSession } from "supertokens-node/nextjs";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { ensureSuperTokensInit } from "./app/config/backend";
+
+ensureSuperTokensInit();
+
+export async function proxy(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+
+  if (requestHeaders.has("x-user-id")) {
+    console.warn("The FE tried to pass x-user-id, which is only supposed to be a backend internal header. Ignoring.");
+    requestHeaders.delete("x-user-id");
+  }
+
+  if (request.nextUrl.pathname.startsWith("/api/auth")) {
+    // SuperTokens exposes /api/auth/*, so do not run session verification for these routes.
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  return withSession(
+    request,
+    async (err, session) => {
+      if (err) {
+        console.error("Session verification failed", {
+          method: request.method,
+          pathname: request.nextUrl.pathname,
+        });
+        return new NextResponse("Internal server error", { status: 500 });
+      }
+      if (session !== undefined) {
+        requestHeaders.set("x-user-id", session.getUserId());
+      }
+
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    },
+    { sessionRequired: false },
+  );
+}
+
+export const config = {
+  matcher: "/api/:path*",
+};
+```
+
+## Fetching the user ID in your APIs
+
+Proxy runs for the API routes matched by `/api/:path*`. Route Handlers can read the information it forwards:
+
+```tsx title="app/api/userid/route.ts" check=false reason="Requires surrounding framework application context"
+import { NextResponse, NextRequest } from "next/server";
+import { ensureSuperTokensInit } from "../../config/backend";
+
+ensureSuperTokensInit();
+
+export function GET(request: NextRequest) {
+  const userId = request.headers.get("x-user-id");
+
+  // Proxy only adds the user ID if a session exists
+  if (userId === null) {
+    return new NextResponse("Authentication required", { status: 401 });
+  }
+
+  return NextResponse.json({
+    userId,
+  });
+}
+```
+
+This creates a `GET` request for the `/api/userid` route which returns the user ID of the currently signed-in user.

@@ -1,4 +1,6 @@
-# Title
+---
+title: Title
+---
 
 > The following template is taken from [The Good Docs Project](https://thegooddocsproject.dev/)
 > Some adjustments/clarifications have been made in the context of the **SuperTokens** docs.

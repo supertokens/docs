@@ -1,181 +1,124 @@
-import { readFile, writeFile } from "fs/promises";
-import { ensureDir, emptyDir } from "fs-extra";
-import path, { join } from "path";
-import glob from "glob";
-import { visit } from "unist-util-visit";
-import { compile } from "@mdx-js/mdx";
+import { createHash } from "node:crypto";
+import { realpath, writeFile } from "node:fs/promises";
+import path from "node:path";
 
-interface CodeBlock {
-  language: string;
-  languageFolder: string;
-  extension: string;
-  filePath: string;
-  value: string;
-}
+import { emptyDir, ensureDir } from "fs-extra";
 
-const LanguageFoldersMap = {
-  ts: "javascript",
-  tsx: "javascript",
-  typescript: "javascript",
-  js: "javascript",
-  javascript: "javascript",
-  go: "go",
-  py: "python",
-  python: "python",
-  kotlin: "kotlin",
-  swift: "swift",
-  dart: "dart",
-  php: "php",
-  java: "java",
-  csharp: "csharp",
-};
+import { getFenceMetadataViolations, isExcludedFromChecking } from "./code-blocks/exclusions";
+import { extractCodeBlocksFromPaths, resolveMarkdownSourcePaths, type ExtractedCodeBlock } from "./code-blocks/extract";
+import { compilableLanguageFolders } from "./code-blocks/languages";
 
-const LanguageExtensionsMap = {
-  ts: "ts",
-  tsx: "tsx",
-  typescript: "ts",
-  js: "js",
-  go: "go",
-  py: "py",
-  python: "py",
-  kotlin: "kt",
-  swift: "swift",
-  dart: "kt",
-  php: "php",
-  java: "java",
-  csharp: "cs",
-};
-
-const Replacements: Array<[string, string]> = [
+const replacements: Array<[string, string]> = [
   ["^{derived.pythonContactMethodImport}", "from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig"],
   ["^{derived.pythonContactMethodMethod}", "ContactEmailOnlyConfig"],
   ["^{derived.goPasswordlessContactMethodMethod}", "ContactMethodEmailConfig"],
   ["^{recipes.passwordless.contactMethod}", "EMAIL"],
   ["^{recipes.passwordless.flowType}", "MAGIC_LINK"],
 ];
-const SkipLanguages = ["text", "json", "bash", "html", "yaml", "sql", "batch"];
 
-async function writeCodeBlocks() {
-  const mdxFiles = glob.sync(path.join("./docs", `**/*.mdx`), { nodir: true });
+export interface WriteCodeBlocksOptions {
+  docsRoot?: string;
+  outputRoot?: string;
+  inputs?: readonly string[];
+}
 
-  const codeBlocks: CodeBlock[] = [];
-  for (const file of mdxFiles) {
-    const content = await readFile(file, "utf8");
-    const parsedContent = cleanMarkdownHeaders(content);
-
-    try {
-      await compile(parsedContent, {
-        remarkPlugins: [
-          () => (tree) => {
-            visit(tree, "code", (node: any) => {
-              const languageFolder = LanguageFoldersMap[node.lang];
-              const extension = LanguageExtensionsMap[node.lang];
-              if (SkipLanguages.includes(node.lang)) return;
-              if (!languageFolder || !extension) {
-                console.error(node.value);
-                throw new Error(`${node.lang} language not found`);
-              }
-              codeBlocks.push({
-                language: node.lang,
-                languageFolder,
-                extension,
-                value: node.value,
-                filePath: file,
-              });
-            });
-          },
-        ],
-        rehypePlugins: [],
-      });
-    } catch (e) {
-      console.error(`Unable to process ${file}`);
-      console.error(e);
-    }
+export function transformCodeBlock(block: ExtractedCodeBlock, relativePath: string): string {
+  if (block.definition.kind !== "compilable") {
+    throw new Error(`Cannot transform render-only ${block.language} block at ${block.sourcePath}:${block.sourceLine}`);
   }
 
-  const countOfSameLanguageBlocksInAFile: Record<string, number> = {};
+  let value = block.value;
 
-  let blockIndex = 0;
-  for (const block of codeBlocks) {
-    if (
-      block.value.startsWith("// exclude-from-type-checking") ||
-      block.value.startsWith("# exclude-from-type-checking")
-    )
-      continue;
-    blockIndex += 1;
-    const relativePath = path.relative("./docs", block.filePath);
-    const key = `${relativePath}/${block.languageFolder}`;
-    let numberOfCodeBlocksFromTheSameLanguageInAFile = countOfSameLanguageBlocksInAFile[key] || 1;
-    if (countOfSameLanguageBlocksInAFile[key]) {
-      numberOfCodeBlocksFromTheSameLanguageInAFile += 1;
+  if (block.language === "go") {
+    const segments = relativePath.replace(/\/+$/, "").split("/");
+    const lastFolderName = segments.at(-1) ?? "";
+    const nextToLastFolderName = segments.at(-2) ?? "";
+    const packageName = `${nextToLastFolderName.replaceAll("-", "_")}_${lastFolderName
+      .replaceAll("-", "_")
+      .replace(/\.mdx?$/, "")}`;
+    value = `package ${packageName}\n${value}`;
+  }
+
+  if (block.definition.folder === "javascript" && value.includes('<script lang="ts">')) {
+    value = value.replace('<script lang="ts">', "");
+    value = value.replace("</script>", "");
+    value = value.replace("<template>", "");
+    value = value.replace("</template>", "");
+    value = value.replace('<div id="supertokensui" />', "");
+  }
+
+  if (block.definition.folder === "javascript") {
+    value = `${value}\nexport {}`;
+    value = value.replace(/supertokens-web-js-script/g, "supertokens-web-js");
+    value = value.replace(/supertokens-website-script/g, "supertokens-website");
+    value = value.replace(/supertokens-auth-react-script/g, "supertokens-auth-react");
+  }
+
+  if (block.language === "kotlin") {
+    const sourceIdentity = `${relativePath.split(path.sep).join("/")}:${block.sourceLine}`;
+    const suffix = createHash("sha256").update(sourceIdentity).digest("hex").slice(0, 12);
+    value = value.replace("NetworkManager", `NetworkManager${suffix}`);
+    value = value.replace("MainApplication", `MainApplication${suffix}`);
+  }
+
+  for (const replacement of replacements) {
+    value = value.replaceAll(replacement[0], replacement[1]);
+  }
+
+  return value;
+}
+
+export async function writeCodeBlocks(options: WriteCodeBlocksOptions = {}): Promise<void> {
+  if (options.inputs?.length === 0) return;
+
+  const docsRoot = await realpath(path.resolve(options.docsRoot ?? path.join(process.cwd(), "docs")));
+  const outputRoot = options.outputRoot ?? path.join(process.cwd(), "scripts/code-type-checking");
+  const sourcePaths = await resolveMarkdownSourcePaths(options.inputs ?? [docsRoot]);
+  const relativePaths = new Map<string, string>();
+
+  for (const sourcePath of sourcePaths) {
+    const relativePath = path.relative(docsRoot, sourcePath);
+    if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+      throw new Error(`${sourcePath}: source must be inside ${docsRoot}`);
     }
-    countOfSameLanguageBlocksInAFile[key] = numberOfCodeBlocksFromTheSameLanguageInAFile;
+    relativePaths.set(sourcePath, relativePath);
+  }
+
+  const codeBlocks = await extractCodeBlocksFromPaths(sourcePaths);
+
+  for (const block of codeBlocks) {
+    const [metadataViolation] = getFenceMetadataViolations(block.meta);
+    if (metadataViolation) throw new Error(`${block.sourcePath}:${block.sourceLine}: ${metadataViolation}`);
+  }
+
+  await Promise.all(compilableLanguageFolders.map((folder) => emptyDir(path.join(outputRoot, folder, "snippets"))));
+
+  const counts: Record<string, number> = {};
+  for (const block of codeBlocks) {
+    if (block.definition.kind !== "compilable") continue;
+    if (isExcludedFromChecking(block)) continue;
+
+    const relativePath = relativePaths.get(block.sourcePath);
+    if (relativePath === undefined) throw new Error(`${block.sourcePath}: source path was not resolved`);
+    const key = `${relativePath}/${block.definition.folder}`;
+    const count = (counts[key] ?? 0) + 1;
+    counts[key] = count;
+
     const codeBlockFilePath = path.join(
-      "./scripts/code-type-checking/",
-      block.languageFolder,
+      outputRoot,
+      block.definition.folder,
       "snippets",
       relativePath,
-      `${numberOfCodeBlocksFromTheSameLanguageInAFile}/code-block.${block.extension}`,
+      `${count}-line-${block.sourceLine}`,
+      `code-block.${block.definition.extension}`,
     );
 
     await ensureDir(path.dirname(codeBlockFilePath));
-
-    // Generate unique package names for go folders
-    let parsedBlockValue = block.value;
-    if (block.language === "go") {
-      const cleanPath = relativePath.replace(/\/+$/, "");
-      const segments = cleanPath.split("/");
-      const lastFolderName = segments[segments.length - 1] || "";
-      const nextToLastFolderName = segments[segments.length - 2] || "";
-      const packageName = `${nextToLastFolderName.replaceAll("-", "_")}_${lastFolderName.replaceAll("-", "_").replace(".mdx", "")}`;
-      parsedBlockValue = `package ${packageName}\n${parsedBlockValue}`;
-    }
-
-    // Remove xml tags from vue files
-    if (block.languageFolder === "javascript" && parsedBlockValue.includes('<script lang="ts">')) {
-      parsedBlockValue = parsedBlockValue.replace('<script lang="ts">', "");
-      parsedBlockValue = parsedBlockValue.replace("</script>", "");
-      parsedBlockValue = parsedBlockValue.replace("<template>", "");
-      parsedBlockValue = parsedBlockValue.replace("</template>", "");
-      parsedBlockValue = parsedBlockValue.replace('<div id="supertokensui" />', "");
-    }
-
-    // Prevent typescript for complaining about vairables with the same name
-    if (block.languageFolder === "javascript") {
-      parsedBlockValue = `${parsedBlockValue}\nexport {}`;
-
-      // Overwrite "script" imports
-      parsedBlockValue = parsedBlockValue.replace(/supertokens-web-js-script/g, "supertokens-web-js");
-      parsedBlockValue = parsedBlockValue.replace(/supertokens-website-script/g, "supertokens-website");
-      parsedBlockValue = parsedBlockValue.replace(/supertokens-auth-react-script/g, "supertokens-auth-react");
-    }
-
-    // Generate unique class names for kotlin files
-    if (block.language === "kotlin") {
-      parsedBlockValue = parsedBlockValue.replace("NetworkManager", `NetworkManager${blockIndex}`);
-      parsedBlockValue = parsedBlockValue.replace("MainApplication", `MainApplication${blockIndex}`);
-    }
-
-    for (const replacement of Replacements) {
-      parsedBlockValue = parsedBlockValue.replaceAll(replacement[0], replacement[1]);
-    }
-
-    await writeFile(codeBlockFilePath, parsedBlockValue);
+    await writeFile(codeBlockFilePath, transformCodeBlock(block, relativePath));
   }
 }
 
-(async () => {
-  await writeCodeBlocks();
-})();
-
-// Removes custom header ids {#header-id} from the content
-function cleanMarkdownHeaders(markdown: string): string {
-  return markdown.replace(/^(#{1,6}\s+.*?)\s*(\{#[\w-]+\})?$/gm, "$1");
-}
-
-async function removeExistingSnippets() {
-  for (const languageFolder of Object.values(LanguageFoldersMap)) {
-    const folderPath = `./scripts/code-type-checking/${languageFolder}/snippets`;
-    await emptyDir(folderPath);
-  }
+if (import.meta.main) {
+  const inputs = process.argv.slice(2);
+  await writeCodeBlocks(inputs.length === 0 ? {} : { inputs });
 }

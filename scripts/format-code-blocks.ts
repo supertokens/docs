@@ -1,164 +1,66 @@
-import { readFile, writeFile } from "fs/promises";
-import { ensureDir, emptyDir } from "fs-extra";
-import path, { join } from "path";
-import { $, Glob, file, write } from "bun";
-import { execSync } from "child_process";
-import { visit } from "unist-util-visit";
-import { compile } from "@mdx-js/mdx";
+import { readFile, writeFile } from "node:fs/promises";
 
-const LanguageExtensionsMap = {
-  ts: "typescript",
-  tsx: "typescript",
-  go: "go",
-  py: "python",
-  python: "python",
-};
+import { isExcludedFromChecking } from "./code-blocks/exclusions";
+import { extractCodeBlocks, resolveMarkdownSourcePaths, type ExtractedCodeBlock } from "./code-blocks/extract";
+import { formatCodeBlockWithPrettier } from "./code-blocks/prettier";
 
-const DOCKER_CONTAINER_NAME = "code-formatter-container";
-const DOCKER_IMAGE_NAME = "code-formatter-image";
-
-type CodeBlock = {
-  filePath: string;
-  language: "typescript" | "go" | "python";
+interface Replacement {
+  start: number;
+  end: number;
   value: string;
-  position: {
-    start: { line: number; column: number; offset: number };
-    end: { line: number; column: number; offset: number };
-  };
-};
+}
 
-// TODO:
-// - Add option to only run on changed files
-// - Improve formatting perf
-(async () => {
-  const startPath = path.join(process.cwd(), "docs");
-  const glob = new Glob("**/*.mdx");
+function getContentOffsets(source: string, block: ExtractedCodeBlock): { start: number; end: number; indent: string } {
+  const fenceStart = block.position.start.offset;
+  const fenceEnd = block.position.end.offset;
+  const openingLineEnd = source.indexOf("\n", fenceStart);
+  const closingLineBreak = source.lastIndexOf("\n", fenceEnd - 1);
 
-  try {
-    // await startContainer();
-    for await (const filePath of glob.scan(startPath)) {
-      console.log(`Processing ${filePath}`);
-      const fullFilePath = path.join(startPath, filePath);
-      const codeBlocks = await getCodeBlocks(fullFilePath);
-      console.log(`Found ${codeBlocks.length} code blocks`);
-      if (!codeBlocks.length) continue;
-      console.log(`Formatting code blocks`);
-      await formatCodeBlock(codeBlocks);
-      console.log(`Writing file`);
-      await writeCodeBlocks(fullFilePath, codeBlocks);
-    }
-    await stopContainer();
-  } catch (error) {
-    console.error(error);
+  if (openingLineEnd === -1 || closingLineBreak < openingLineEnd) {
+    throw new Error(`${block.sourcePath}:${block.sourceLine}: could not locate code fence content`);
   }
-})();
 
-// This is not the fastest way to do this
-// Ended up writing to a file because of some issues with piping the snippets to the container
-async function formatCodeBlock(codeBlocks: CodeBlock[]) {
-  const snippetLocalPath = "./tmp/code-snippet";
-  const snippetContainerPath = "/tmp/code-snippet";
-  for (const codeBlock of codeBlocks) {
-    try {
-      const parsedCodeBlockValue = codeBlock.language === "go" ? `package main\n\n${codeBlock.value}` : codeBlock.value;
-      await write(snippetLocalPath, parsedCodeBlockValue);
-      execSync(`docker cp ${snippetLocalPath} ${DOCKER_CONTAINER_NAME}:${snippetContainerPath}`);
-      if (codeBlock.language === "go") {
-        execSync(`docker exec ${DOCKER_CONTAINER_NAME} gofmt ${snippetContainerPath}`);
-      } else if (codeBlock.language === "python") {
-        execSync(`docker exec ${DOCKER_CONTAINER_NAME} black ${snippetContainerPath} > /dev/null`);
-      } else if (codeBlock.language === "typescript") {
-        execSync(`docker exec ${DOCKER_CONTAINER_NAME} prettier --parser typescript --write ${snippetContainerPath}`);
-      }
+  const openingLineStart = source.lastIndexOf("\n", fenceStart - 1) + 1;
+  const indent = source.slice(openingLineStart, fenceStart);
+  return { start: openingLineEnd + 1, end: closingLineBreak + 1, indent };
+}
 
-      execSync(`docker cp ${DOCKER_CONTAINER_NAME}:${snippetContainerPath} ${snippetLocalPath}`);
-      let formattedCodeBlock = await file(snippetLocalPath).text();
-      formattedCodeBlock =
-        codeBlock.language === "go" ? formattedCodeBlock.replace("package main\n\n", "") : formattedCodeBlock;
-      codeBlock.value = formattedCodeBlock;
-    } catch (error) {
-      console.error(`Error formatting code block in ${codeBlock.filePath} ${codeBlock.language}`);
-      console.error(error);
-    }
+export async function formatCodeBlocksInSource(source: string, sourcePath: string): Promise<string> {
+  const blocks = await extractCodeBlocks(source, sourcePath);
+  const newline = source.includes("\r\n") ? "\r\n" : "\n";
+  const replacements: Replacement[] = [];
+
+  for (const block of blocks) {
+    if (isExcludedFromChecking(block) || block.value.trim().length === 0) continue;
+
+    const formatted = await formatCodeBlockWithPrettier(block.value, block.language, sourcePath);
+    if (formatted === undefined || formatted === block.value) continue;
+
+    const offsets = getContentOffsets(source, block);
+    const indented = formatted.replaceAll("\n", `${newline}${offsets.indent}`);
+    replacements.push({ start: offsets.start, end: offsets.end, value: `${offsets.indent}${indented}${newline}` });
+  }
+
+  let result = source;
+  for (const replacement of replacements.sort((left, right) => right.start - left.start)) {
+    result = result.slice(0, replacement.start) + replacement.value + result.slice(replacement.end);
+  }
+  return result;
+}
+
+export async function formatCodeBlockFile(sourcePath: string): Promise<void> {
+  const source = await readFile(sourcePath, "utf8");
+  const formatted = await formatCodeBlocksInSource(source, sourcePath);
+  if (formatted !== source) await writeFile(sourcePath, formatted);
+}
+
+export async function formatCodeBlockPaths(inputs?: readonly string[]): Promise<void> {
+  for (const sourcePath of await resolveMarkdownSourcePaths(inputs ?? ["docs"])) {
+    await formatCodeBlockFile(sourcePath);
   }
 }
 
-async function writeCodeBlocks(filePath: string, codeBlocks: CodeBlock[]) {
-  const fileContent = await file(filePath).text();
-  const fileLines = fileContent.split("\n");
-  const newFileLines: string[] = [];
-
-  const codeBlocksByStartLineNumber: Record<number, CodeBlock> = {};
-  for (const codeBlock of codeBlocks) {
-    if (codeBlocksByStartLineNumber[codeBlock.position.start.line]) {
-      throw new Error(`Duplicate code block found for ${codeBlock.filePath} at line ${codeBlock.position.start.line}`);
-    }
-    codeBlocksByStartLineNumber[codeBlock.position.start.line] = codeBlock;
-  }
-
-  let fileLineIndex = 0;
-  while (fileLineIndex < fileLines.length) {
-    const codeBlock = codeBlocksByStartLineNumber[fileLineIndex + 1];
-    if (!codeBlock) {
-      newFileLines.push(fileLines[fileLineIndex]);
-      fileLineIndex++;
-      continue;
-    }
-    const formattedCodeBlockLines = codeBlock.value.split("\n");
-    // The start backticks
-    newFileLines.push(fileLines[fileLineIndex]);
-    newFileLines.push(...formattedCodeBlockLines);
-    fileLineIndex += codeBlock.position.end.line - codeBlock.position.start.line;
-    // The end backticks
-    newFileLines.push(fileLines[fileLineIndex]);
-    fileLineIndex++;
-  }
-  await write(filePath, newFileLines.join("\n"));
-}
-
-async function startContainer() {
-  console.log("Starting Docker container...");
-  await $`docker run -d --name ${DOCKER_CONTAINER_NAME} ${DOCKER_IMAGE_NAME}`;
-}
-
-async function stopContainer() {
-  console.log("Stopping and removing Docker container...");
-  await $`docker stop ${DOCKER_CONTAINER_NAME}`;
-  await $`docker rm ${DOCKER_CONTAINER_NAME}`;
-}
-
-async function getCodeBlocks(filePath: string): Promise<CodeBlock[]> {
-  const content = await file(filePath).text();
-  const parsedContent = cleanMarkdownHeaders(content);
-  const codeBlocks: CodeBlock[] = [];
-  await compile(parsedContent, {
-    remarkPlugins: [
-      () => (tree) => {
-        visit(tree, "code", (node: any) => {
-          const language = LanguageExtensionsMap[node.lang];
-          if (!language) return;
-          codeBlocks.push({
-            filePath,
-            language,
-            value: node.value,
-            position: node.position,
-          });
-        });
-      },
-    ],
-    rehypePlugins: [],
-  });
-  return codeBlocks;
-}
-
-function cleanMarkdownHeaders(markdown: string): string {
-  return markdown
-    .split("\n")
-    .map((line) => {
-      if (line.startsWith("#")) {
-        line = line.replace(/\{.*?\}/g, "");
-      }
-      return line;
-    })
-    .join("\n");
+if (import.meta.main) {
+  const inputs = process.argv.slice(2);
+  await formatCodeBlockPaths(inputs.length === 0 ? undefined : inputs);
 }

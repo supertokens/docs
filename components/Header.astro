@@ -1,0 +1,163 @@
+---
+import data from "blume:data";
+import { withBase } from "blume/components/islands/base-path.ts";
+import { EN_UI } from "blume/core/i18n-ui.ts";
+import type { LocaleSwitchOption, Navigation } from "blume/core/types.ts";
+import Icon from "blume/components/Icon.astro";
+import LanguageSwitcher from "blume/components/layout/LanguageSwitcher.astro";
+import Logo from "blume/components/layout/Logo.astro";
+import { activeTabForRoute } from "blume/components/layout/nav-utils.ts";
+import NavSelector from "blume/components/layout/NavSelector.astro";
+import Ask from "./ask-ai/AskAI.astro";
+import Search from "./Search.astro";
+
+interface Props {
+  askEnabled?: boolean;
+  hasDrawer?: boolean;
+  hasSidebar?: boolean;
+  localeSwitch?: LocaleSwitchOption[];
+  logo?: { alt: string; href: string; text?: string } | null;
+  navStrings?: Record<string, string>;
+  navigation: Navigation;
+  route: string;
+  searchEnabled: boolean;
+  searchLocale?: string;
+  searchStrings?: Record<string, string>;
+  site: { title: string };
+  switcherStrings?: Record<string, string>;
+}
+
+const {
+  askEnabled = Boolean(data.config.ask),
+  hasDrawer = true,
+  hasSidebar = true,
+  localeSwitch,
+  logo,
+  navStrings,
+  navigation,
+  route,
+  searchEnabled,
+  searchLocale,
+  searchStrings,
+  site,
+  switcherStrings,
+} = Astro.props as Props;
+const n = { ...EN_UI.nav, ...navStrings };
+const activeTab = activeTabForRoute(navigation.tabs, route);
+const showNavToggle = hasDrawer && (hasSidebar || navigation.tabs.length > 0);
+const tabsNavClass = hasSidebar
+  ? "st-header-tabs hidden h-full items-center gap-1 md:flex"
+  : "st-header-tabs hidden h-full items-center gap-1 lg:flex";
+const iconButton =
+  "inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:size-9";
+const accessibleLogo = logo ? { ...logo, text: logo.text || site.title } : logo;
+const clickScript = `(()=>{const d=document.documentElement;const dr=()=>{const h=document.querySelector("[data-blume-header]");if(h){d.style.setProperty("--blume-drawer-top",h.getBoundingClientRect().bottom+"px");}};const sn=()=>{const drawer=document.querySelector("[data-blume-nav-drawer]");if(drawer&&!drawer.id){drawer.id="blume-nav-drawer";}const open=d.hasAttribute("data-blume-nav-open");document.querySelectorAll("[data-blume-header] [data-blume-nav-toggle]").forEach((button)=>{button.setAttribute("aria-expanded",String(open));button.setAttribute("aria-controls",drawer?.id||"blume-nav-drawer");});};const st=()=>{document.querySelectorAll("[data-blume-theme-toggle]").forEach((button)=>{const dark=d.dataset.theme==="dark";const label=dark?button.dataset.labelLight:button.dataset.labelDark;if(label){button.setAttribute("aria-label",label);button.setAttribute("title",label);}});};const si=()=>{sn();st();};document.addEventListener("click",(e)=>{const t=e.target.closest("[data-blume-theme-toggle]");if(t){const next=d.dataset.theme==="dark"?"light":"dark";const s=document.createElement("style");s.appendChild(document.createTextNode("*,*::before,*::after{transition:none!important}"));document.head.appendChild(s);d.dataset.theme=next;try{localStorage.setItem("blume-theme",next);}finally{window.getComputedStyle(d).opacity;setTimeout(()=>s.remove(),1);}st();}const n=e.target.closest("[data-blume-nav-toggle]");if(n){const open=d.toggleAttribute("data-blume-nav-open");if(open){dr();}d.style.overflow=open?"hidden":"";sn();}});addEventListener("resize",()=>{if(!d.hasAttribute("data-blume-nav-open")){return;}if(matchMedia("(min-width:64rem)").matches){d.removeAttribute("data-blume-nav-open");d.style.overflow="";sn();}else{dr();}});document.addEventListener("DOMContentLoaded",si,{once:true});document.addEventListener("astro:page-load",si);si();})();`;
+---
+
+<header class="sticky top-0 z-40 flex h-16 items-center gap-1 bg-background/90 px-2 backdrop-blur sm:gap-3 sm:px-4 md:px-6" data-blume-header>
+  {
+    showNavToggle && (
+      <button aria-controls="blume-nav-drawer" aria-expanded="false" aria-label={n.toggleNavigation} class={`${iconButton} shrink-0 lg:hidden`} data-blume-nav-toggle type="button">
+        <Icon name="menu" size={20} />
+      </button>
+    )
+  }
+  <div class="flex h-full min-w-0 items-center gap-1 sm:gap-3">
+    <div class="flex h-full min-w-0 items-center overflow-hidden" data-st-logo>
+      <Logo logo={accessibleLogo} site={site} />
+    </div>
+    {
+      navigation.selectors.length > 0 && (
+        <div class="hidden h-full items-center gap-1.5 sm:flex">
+          {navigation.selectors.map((selector) => <NavSelector route={route} selector={selector} />)}
+        </div>
+      )
+    }
+    {
+      navigation.tabs.length > 0 && (
+        <nav aria-label={n.sections} class={tabsNavClass}>
+          {navigation.tabs.map((tab) => (
+            <a
+              aria-current={tab === activeTab ? "page" : undefined}
+              class="st-header-tab inline-flex items-center rounded-full px-3 py-1.5 font-medium text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:text-foreground"
+              href={withBase(tab.href ?? tab.path)}
+              data-astro-prefetch="hover"
+            >
+              {tab.label}
+            </a>
+          ))}
+        </nav>
+      )
+    }
+  </div>
+  <div class="flex-1" />
+  {
+    localeSwitch && localeSwitch.length > 1 && (
+      <LanguageSwitcher
+        label={switcherStrings?.label ?? "Language"}
+        options={localeSwitch}
+        untranslatedLabel={switcherStrings?.untranslated ?? "Not translated"}
+      />
+    )
+  }
+  {
+    searchEnabled && (
+      <Search
+        askEnabled={askEnabled}
+        locale={searchLocale}
+        navigation={navigation}
+        popularPages={data.config.search.popular}
+        strings={searchStrings}
+      />
+    )
+  }
+  <div class="flex shrink-0 items-center gap-0 sm:gap-2">
+    <a aria-label="Go to SuperTokens Dashboard" class="st-header-dashboard" href="https://supertokens.com/dashboard">
+      <span class="max-sm:hidden">Dashboard</span>
+      <span aria-hidden="true" class="inline-flex sm:hidden"><Icon name="layout-dashboard" size={18} /></span>
+    </a>
+    <a aria-label="SuperTokens Core on GitHub" class={`${iconButton} max-sm:hidden`} href="https://github.com/supertokens/supertokens-core" rel="noreferrer" target="_blank">
+      <Icon name="github" size={18} />
+    </a>
+    <button aria-label={n.toggleTheme} class={`${iconButton} max-[359px]:hidden`} data-blume-theme-toggle data-label-dark="Switch to dark theme" data-label-light="Switch to light theme" type="button">
+      <span class="inline-flex dark:hidden"><Icon name="sun" size={18} /></span>
+      <span class="hidden dark:inline-flex"><Icon name="moon" size={18} /></span>
+    </button>
+    {askEnabled && <Ask />}
+  </div>
+</header>
+<script is:inline set:html={clickScript} />
+<script data-astro-rerun is:inline>
+  (function () {
+    var header = document.querySelector('[data-blume-header]');
+    if (!header) return;
+    var dashboard = header.querySelector('a[aria-label="Go to SuperTokens Dashboard"]');
+    if (dashboard) {
+      dashboard.addEventListener('click', function () {
+        window.posthog?.capture('docs_dashboard_cta_clicked');
+      });
+    }
+    var github = header.querySelector('a[aria-label="SuperTokens Core on GitHub"]');
+    if (github) {
+      github.addEventListener('click', function () {
+        window.posthog?.capture('docs_github_link_clicked');
+      });
+    }
+  })();
+</script>
+<script>
+  import { initializeCodeWrapToggles } from "./code-wrap-toggle";
+  import { initializeControlTooltip } from "./control-tooltip";
+
+  const initializeHeaderEnhancements = () => {
+    initializeCodeWrapToggles();
+    const dashboard = document.querySelector<HTMLElement>('[data-blume-header] a[aria-label="Go to SuperTokens Dashboard"]');
+    if (dashboard) initializeControlTooltip(dashboard, { id: "st-dashboard-tooltip", label: "Dashboard" });
+  };
+  const scheduleHeaderEnhancements = () => queueMicrotask(initializeHeaderEnhancements);
+
+  scheduleHeaderEnhancements();
+  document.addEventListener("DOMContentLoaded", scheduleHeaderEnhancements, { once: true });
+  document.addEventListener("astro:after-swap", scheduleHeaderEnhancements);
+  document.addEventListener("astro:page-load", scheduleHeaderEnhancements);
+</script>

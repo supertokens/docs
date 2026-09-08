@@ -1,12 +1,9 @@
 ---
 title: Tenant discovery
-hide_title: true
-sidebar_position: 5
 description: Automatically discover and route users to appropriate tenants based on their email domains
-page_type: tutorial
+sidebar:
+  order: 60
 ---
-
-# Tenant discovery
 
 ## Overview
 
@@ -15,13 +12,13 @@ The guide makes use of the plugins functionality which automatically discovers a
 
 ## How it works
 
-The plugin extracts the domain from user email addresses and to infer the tenant ID.
+The plugin extracts the domain from user email addresses to infer the tenant ID.
 For example, `user@company.com` would be routed to the `company` tenant.
 The system includes built-in protection against popular email providers and falls back to the `public` tenant when appropriate.
 
 ## Before you start
 
-The tenant discovery plugin supports only the `React` and `NodeJS` SDKs.
+The tenant discovery plugin supports only the React and Node.js SDKs.
 Support for other platforms is under active development.
 Besides initializing the plugin, you also have to configure multi-tenancy in your SuperTokens setup.
 
@@ -43,7 +40,8 @@ import TenantDiscoveryPlugin from "@supertokens-plugins/tenant-discovery-nodejs"
 
 SuperTokens.init({
   appInfo: {
-    // your app info
+    appName: "My app",
+    apiDomain: "https://api.example.com",
   },
   recipeList: [
     // your other recipes
@@ -54,7 +52,7 @@ SuperTokens.init({
         enableTenantListAPI: false, // Optional: defaults to false
       }),
     ],
-  }
+  },
 });
 ```
 
@@ -74,7 +72,9 @@ import TenantDiscoveryPlugin from "@supertokens-plugins/tenant-discovery-react";
 
 SuperTokens.init({
   appInfo: {
-    // your app info
+    appName: "My app",
+    apiDomain: "https://api.example.com",
+    websiteDomain: "https://example.com",
   },
   recipeList: [
     // your recipes
@@ -86,7 +86,7 @@ SuperTokens.init({
         extractTenantIdFromDomain: true, // Optional: defaults to true
       }),
     ],
-  }
+  },
 });
 ```
 
@@ -95,10 +95,19 @@ SuperTokens.init({
 With this configuration, when a user tries to sign in, the system automatically determines their tenant based on the email domain.
 Hence, you don't need to change anything else to make it work.
 
+:::warning[Tenant discovery is not tenant authorization]
+Tenant discovery routes an authentication attempt to an inferred tenant. An email domain does not prove that the user
+owns or belongs to an organization. Discovery does not enforce CORS or allowed browser origins, authorize access to
+business data, or provide complete tenant isolation. After authentication, verify the user's membership in the
+discovered tenant. On every business-data access, the backend must derive the tenant from trusted session data and
+enforce application-level tenant authorization. Do not use the submitted email domain or a browser-supplied tenant ID
+as authorization.
+:::
+
 <img
 	alt="Email authentication form"
 	width="700px"
-	src="/img/tenant-discovery-email-form.png"
+	src="/docs-assets/img/tenant-discovery-email-form.png"
 />
 
 
@@ -109,12 +118,8 @@ If you want to customize the user interface experience the plugin also provides 
 You can use the tenant selection interface accessible at `/tenant-discovery/select`.
 This page displays all available tenants and allows users to choose their organization before proceeding with authentication.
 
-:::info
-Keep in mind that you also need to enable the `tenant list` endpoint in your backend plugin configuration.
+:::info[Keep in mind that you also need to enable the `tenant list` endpoint in your backend plugin configuration.]
 :::
-
-####  
-
 
 ## Customization
 
@@ -141,13 +146,12 @@ TenantDiscoveryPlugin.init({
 
 Extend the list of restricted domains that should always use the `public` tenant:
 
-```typescript
+```typescript check=false reason="This example omits surrounding application and SuperTokens configuration."
 TenantDiscoveryPlugin.init({
   override: (originalImplementation) => ({
     ...originalImplementation,
     isRestrictedEmailDomain: (emailDomain: string) => {
-      return originalImplementation.isRestrictedEmailDomain(emailDomain) || 
-             emailDomain === "example.com";
+      return originalImplementation.isRestrictedEmailDomain(emailDomain) || emailDomain === "example.com";
     },
   }),
 });
@@ -157,18 +161,20 @@ TenantDiscoveryPlugin.init({
 
 To create a custom tenant discovery interface, use the `usePluginContext` hook:
 
-```typescript
+```tsx
+import { useState } from "react";
 import { usePluginContext } from "@supertokens-plugins/tenant-discovery-react";
 
 function CustomTenantDiscovery() {
   const { api, functions } = usePluginContext();
   const [email, setEmail] = useState("");
-  const [tenants, setTenants] = useState([]);
+  const [tenants, setTenants] = useState<Array<{ tenantId: string }>>([]);
 
   const handleEmailSubmit = async () => {
     const result = await api.tenantIdFromEmail(email);
     if (result.status === "OK") {
-      functions.setTenantId(result.tenant, email, true);
+      functions.setEmailId(email);
+      functions.setTenantId(result.tenant);
     }
   };
 
@@ -182,22 +188,14 @@ function CustomTenantDiscovery() {
   return (
     <div>
       <h2>Enter your email to find your organization</h2>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="user@company.com"
-      />
+      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@company.com" />
       <button onClick={handleEmailSubmit}>Continue</button>
-      
+
       <h3>Or choose from available organizations:</h3>
       <button onClick={loadTenants}>Load Organizations</button>
       {tenants.map((tenant) => (
-        <button
-          key={tenant.tenantId}
-          onClick={() => functions.setTenantId(tenant.tenantId, undefined, true)}
-        >
-          {tenant.tenantId === 'public' ? 'Personal Account' : tenant.tenantId}
+        <button key={tenant.tenantId} onClick={() => functions.setTenantId(tenant.tenantId)}>
+          {tenant.tenantId === "public" ? "Personal Account" : tenant.tenantId}
         </button>
       ))}
     </div>
@@ -209,10 +207,10 @@ function CustomTenantDiscovery() {
 
 Besides tenant discovery, you can also explore other enterprise authentication features:
 
-<ReferenceCard.Grid>
-  <ReferenceCard href="/docs/authentication/enterprise/initial-setup" label="Initial setup" />
-  <ReferenceCard href="/docs/authentication/enterprise/saml" label="SAML" />
-  <ReferenceCard href="/docs/authentication/enterprise/manage-tenants" label="Manage tenants" />
-  <ReferenceCard href="/docs/authentication/enterprise/manage-apps" label="Manage apps" />
-  <ReferenceCard href="/docs/references/plugins/introduction" label="Plugins References" />
-</ReferenceCard.Grid>
+<CardGroup cols={3}>
+  <Card title="Initial setup" href="/authentication/enterprise/initial-setup" />
+  <Card title="SAML" href="/authentication/enterprise/saml" />
+  <Card title="Manage tenants" href="/authentication/enterprise/manage-tenants" />
+  <Card title="Manage apps" href="/authentication/enterprise/manage-apps" />
+  <Card title="Plugins References" href="/references/plugins/introduction" />
+</CardGroup>

@@ -1,0 +1,97 @@
+---
+import { frameworkTabGroup, languageFrameworkGroup, tabGroupDefault, tabGroups } from "./tab-groups";
+
+interface Props {
+  framework?: string;
+  language?: string;
+}
+
+const { framework, language } = Astro.props;
+const frameworkGroup = framework
+  ? language
+    ? languageFrameworkGroup(language)
+    : frameworkTabGroup(framework)
+  : undefined;
+const languageValues = new Set<string>(Object.values(tabGroups["backend-language"].options));
+const frameworkValues = new Set<string>(frameworkGroup ? Object.values(tabGroups[frameworkGroup].options) : []);
+if (language && !languageValues.has(language)) {
+  throw new Error(`DynamicContent received unknown backend language "${language}".`);
+}
+if (framework && (!frameworkGroup || !frameworkValues.has(framework))) {
+  throw new Error(
+    `DynamicContent received framework "${framework}"${language ? ` for unsupported language "${language}"` : ""}.`,
+  );
+}
+const matchesDefaultLanguage = !language || tabGroupDefault("backend-language") === language;
+const matchesDefaultFramework =
+  !framework || (frameworkGroup ? tabGroupDefault(frameworkGroup) === framework : false);
+---
+
+<div
+  data-docs-dynamic-content
+  data-language={language}
+  data-framework={framework}
+  data-framework-group={frameworkGroup}
+  hidden={!(matchesDefaultLanguage && matchesDefaultFramework)}
+>
+  <slot />
+</div>
+
+<script>
+  import { tabGroupDefault, type TabGroup } from "./tab-groups";
+  import {
+    ensureQuery,
+    initializeSelectionUrlState,
+    isSelectionContextVisible,
+    readContextualQuery,
+    readStorage,
+    resolveSelection,
+    selectionEvent,
+    selectionStorageKey,
+    selectionUrlStateEvent,
+    valuesForSelectionGroup,
+    valuesForSelectionQuery,
+  } from "../lib/docs-selection";
+
+  const selectedValue = (group: TabGroup, contextIsVisible: boolean): string => {
+    const values = valuesForSelectionGroup(group);
+    const storedValue = readStorage(selectionStorageKey(group));
+    const fallbackValue = resolveSelection({
+      availableValues: values,
+      defaultValue: tabGroupDefault(group),
+      storedValue,
+    });
+    return (
+      readContextualQuery(group, values, valuesForSelectionQuery(group), contextIsVisible, fallbackValue) ||
+      fallbackValue ||
+      tabGroupDefault(group)
+    );
+  };
+
+  const updateDynamicContent = () => {
+    for (const content of document.querySelectorAll<HTMLElement>("[data-docs-dynamic-content]")) {
+      const { framework, frameworkGroup, language } = content.dataset;
+      const contextIsVisible = Boolean(content.parentElement && isSelectionContextVisible(content.parentElement));
+      const languageValue = selectedValue("backend-language", contextIsVisible);
+      if (contextIsVisible && language) ensureQuery("backend-language", languageValue);
+      const languageMatches = !language || languageValue === language;
+      const frameworkValue =
+        languageMatches && frameworkGroup
+          ? selectedValue(frameworkGroup as TabGroup, contextIsVisible)
+          : undefined;
+      if (contextIsVisible && frameworkValue) ensureQuery(frameworkGroup as TabGroup, frameworkValue);
+      const frameworkMatches =
+        languageMatches && (!framework || (Boolean(frameworkGroup) && frameworkValue === framework));
+      content.hidden = !(languageMatches && frameworkMatches);
+    }
+  };
+
+  updateDynamicContent();
+  initializeSelectionUrlState();
+  document.addEventListener("astro:page-load", updateDynamicContent);
+  window.addEventListener(selectionEvent, updateDynamicContent);
+  window.addEventListener(selectionUrlStateEvent, updateDynamicContent);
+  window.addEventListener("storage", (event) => {
+    if (event.key?.startsWith("supertokens-docs:selection:")) updateDynamicContent();
+  });
+</script>

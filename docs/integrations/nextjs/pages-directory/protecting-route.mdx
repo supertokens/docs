@@ -1,0 +1,112 @@
+---
+title: 4. Protecting a website route
+description: Protect website routes by requiring user authentication and redirecting unauthenticated users to login.
+sidebar:
+  order: 5
+---
+
+:::warning
+This information only applies when using **SuperTokens Session Access Tokens**.
+
+When implementing [Unified Login](/authentication/unified-login/introduction), check the authentication state using your OAuth2/OIDC library.
+:::
+
+<UITypeSwitch />
+
+<VariantContent storageKey="ui-type" value="prebuilt">
+
+Protecting a website route means that it cannot be accessed unless a user is signed in. A signed-out user is redirected to the login page.
+
+Let's say we want to protect the home page of your website (`/` route). In this case, we can edit the `/pages/index.tsx` file to add an auth wrapper around your `Home` component like so:
+
+```tsx title="pages/index.tsx" check=false reason="Requires surrounding framework application context"
+import React from "react";
+import { SessionAuth } from "supertokens-auth-react/recipe/session";
+import ProtectedPage from "./protectedPage";
+
+export default function Home() {
+  return (
+    // we protect ProtectedPage by wrapping it with SessionAuth
+    <SessionAuth>
+      <ProtectedPage />
+    </SessionAuth>
+  );
+}
+```
+
+:::tip[Test by navigating to `/`]
+You should be redirected to the login page. After that, sign in, and then visit `/` again. This time, there should be no redirection.
+:::
+
+</VariantContent>
+
+<VariantContent storageKey="ui-type" value="custom">
+
+Protecting a website route means that it cannot be accessed unless a user is signed in. A signed-out user is redirected to the login page.
+
+You can do this with the `doesSessionExist` function. This example assumes that your custom login page is at `/login`; change the path if your login page uses a different route.
+
+```tsx title="pages/index.tsx" check=false reason="Requires surrounding framework application context"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import Session from "supertokens-web-js/recipe/session";
+
+import ProtectedPage from "./protectedPage";
+
+type SessionStatus = "loading" | "authenticated" | "redirecting" | "error";
+
+export default function Home() {
+  const router = useRouter();
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("loading");
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkSession() {
+      try {
+        const sessionExists = await Session.doesSessionExist();
+        if (!active) {
+          return;
+        }
+
+        if (!sessionExists) {
+          setSessionStatus("redirecting");
+          const didNavigate = await router.replace("/login");
+          if (active && !didNavigate) {
+            setSessionStatus("error");
+          }
+          return;
+        }
+
+        setSessionStatus("authenticated");
+      } catch {
+        if (active) {
+          setSessionStatus("error");
+        }
+      }
+    }
+
+    void checkSession();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  if (sessionStatus === "error") {
+    return <div role="alert">Unable to verify your session. Please try again.</div>;
+  }
+
+  if (sessionStatus === "redirecting") {
+    return <div>Redirecting...</div>;
+  }
+
+  if (sessionStatus === "loading") {
+    return <div>Loading...</div>;
+  }
+
+  return <ProtectedPage />;
+}
+```
+
+</VariantContent>

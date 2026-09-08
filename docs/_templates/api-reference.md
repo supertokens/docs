@@ -1,4 +1,6 @@
-# API reference template
+---
+title: API reference template
+---
 
 > The following template is taken from [The Good Docs Project](https://www.thegooddocsproject.dev/template/api-reference)
 > Some adjustments/clarifications have been made in the context of the **SuperTokens** docs.

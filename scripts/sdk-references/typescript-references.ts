@@ -5,6 +5,10 @@ import { $ } from "bun";
 import { rm, writeFile, mkdir, exists } from "node:fs/promises";
 import { join } from "node:path";
 
+import { normalizeSidebarOrders } from "../blume/normalize-sidebar-orders";
+import { markGeneratedApiFencesInDirectory } from "./mark-generated-api-fences";
+import { normalizeMarkdownAnchors } from "./normalize-markdown-anchors";
+
 export type Repository = {
   url: string;
   version: string;
@@ -926,6 +930,9 @@ async function cloneRepository(repository: Repository, branch: string): Promise<
       })),
       repository.outputDir,
     );
+    await markGeneratedApiFencesInDirectory(repository.outputDir);
+    await normalizeMarkdownAnchors(repository.outputDir);
+    await normalizeSidebarOrders(repository.outputDir);
 
     await writeFile(join(repository.outputDir, "_category_.json"), JSON.stringify(repository.categoryJSON));
   }

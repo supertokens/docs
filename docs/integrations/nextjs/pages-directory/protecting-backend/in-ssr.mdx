@@ -1,0 +1,200 @@
+---
+title: 5b. Session verification in getServerSideProps
+description: Verify user sessions in Next.js using `getServerSideProps` for secure route access.
+sidebar:
+  order: 2
+---
+
+:::warning[OAuth2 token verification]
+Verify OAuth2 access tokens with your OAuth2/OIDC library instead of the SuperTokens Session SDK.
+:::
+
+:::note[This is applicable for when verifying a session in `getServerSideProps` or `getInitialProps`.]
+:::
+
+For this guide, we will assume that we want to pass the logged in user's ID as a prop to a protected route.
+
+## 1. Check the session in `getServerSideProps`
+
+```tsx
+import type { GetServerSidePropsContext } from "next";
+import { getSSRSession } from "supertokens-node/nextjs";
+
+export function createGetServerSideProps(ensureSuperTokensInit: () => void) {
+  return async function getServerSideProps(context: GetServerSidePropsContext) {
+    ensureSuperTokensInit();
+    const cookies = Object.entries(context.req.cookies).flatMap(([name, value]) =>
+      value === undefined ? [] : [{ name, value }],
+    );
+    const { accessTokenPayload, error } = await getSSRSession(cookies);
+
+    if (error) {
+      throw error;
+    }
+
+    if (accessTokenPayload === undefined) {
+      // This occurs if the token has expired or doesn't exist.
+      // Either way, sending this response prompts the frontend to attempt a session refresh.
+      //
+      // Case 1: Token doesn't exist
+      // - The refresh will fail, and the user will be redirected to the login page.
+      //
+      // Case 2: Token has expired
+      // - The client will call the refresh API and update the session tokens.
+
+      return { props: { fromSupertokens: "needs-refresh" } };
+      // or return {fromSupertokens: 'needs-refresh'} in case of getInitialProps
+    }
+
+    return {
+      props: { userId: accessTokenPayload.sub },
+    };
+
+    // or return { userId: accessTokenPayload.sub } in case of getInitialProps
+  };
+}
+```
+
+In your page module, import `ensureSuperTokensInit` from your application's backend configuration and export `getServerSideProps = createGetServerSideProps(ensureSuperTokensInit)`. This keeps session verification connected to the same SDK configuration as your authentication routes.
+
+:::warning[Use `getSSRSession` rather than `getSession` or `verifySession` here. The latter functions might update the session tokens, but server-side requests cannot propagate those updates through frontend request interceptors.]
+:::
+
+## 2. Doing manual refresh on the frontend
+
+<UITypeSwitch />
+
+<VariantContent storageKey="ui-type" value="prebuilt">
+
+- The following will refresh a session if needed, for all your website pages
+- This goes in the `/pages/_app.tsx` file
+
+```tsx title="/pages/_app.tsx"
+import { useEffect, useState } from "react";
+import Session from "supertokens-auth-react/recipe/session";
+import { redirectToAuth } from "supertokens-auth-react";
+import type { AppProps } from "next/app";
+
+function MyApp({ Component, pageProps }: AppProps<{ fromSupertokens: string }>) {
+  const [didError, setDidError] = useState(false);
+
+  useEffect(() => {
+    async function doRefresh() {
+      try {
+        if (await Session.attemptRefreshingSession()) {
+          // post session refreshing, we reload the page. This will
+          // send the new access token to the server, and then
+          // getServerSideProps will succeed
+          location.reload();
+        } else {
+          // the user's session has expired. So we redirect
+          // them to the login page
+          await redirectToAuth();
+        }
+      } catch {
+        setDidError(true);
+      }
+    }
+
+    if (pageProps.fromSupertokens === "needs-refresh") {
+      void doRefresh();
+    }
+  }, [pageProps.fromSupertokens]);
+
+  if (didError) {
+    return <p role="alert">Unable to refresh your session. Please reload the page.</p>;
+  }
+
+  if (pageProps.fromSupertokens === "needs-refresh") {
+    // in case the frontend needs to refresh, we show nothing.
+    // Alternatively, you can show a spinner.
+
+    return null;
+  }
+
+  // the below is already there by default
+  return <Component {...pageProps} />;
+}
+
+export default MyApp;
+```
+
+</VariantContent>
+
+<VariantContent storageKey="ui-type" value="custom">
+
+```tsx title="/pages/_app.tsx"
+import { useEffect, useState } from "react";
+import Session from "supertokens-web-js/recipe/session";
+import type { AppProps } from "next/app";
+
+function MyApp({ Component, pageProps }: AppProps<{ fromSupertokens: string }>) {
+  const [didError, setDidError] = useState(false);
+
+  useEffect(() => {
+    async function doRefresh() {
+      try {
+        if (await Session.attemptRefreshingSession()) {
+          // post session refreshing, we reload the page. This will
+          // send the new access token to the server, and then
+          // getServerSideProps will succeed
+          location.reload();
+        } else {
+          // the user's session has expired. So we redirect
+          // them to the login page
+
+          // redirect to login page
+          window.location.assign("/login");
+        }
+      } catch {
+        setDidError(true);
+      }
+    }
+
+    if (pageProps.fromSupertokens === "needs-refresh") {
+      void doRefresh();
+    }
+  }, [pageProps.fromSupertokens]);
+
+  if (didError) {
+    return <p role="alert">Unable to refresh your session. Please reload the page.</p>;
+  }
+
+  if (pageProps.fromSupertokens === "needs-refresh") {
+    // in case the frontend needs to refresh, we show nothing.
+    // Alternatively, you can show a spinner.
+
+    return null;
+  }
+
+  // the below is already there by default
+  return <Component {...pageProps} />;
+}
+
+export default MyApp;
+```
+
+</VariantContent>
+
+## 3. Consume the `userId` returned by getServerSideProps in your component
+
+On success, `getServerSideProps` returns
+```tsx check=false reason="Requires surrounding application context"
+{
+  props: {
+    userId: accessTokenPayload.sub,
+  },
+}
+```
+
+Therefore, the associated page can access the `userId` like:
+
+```tsx
+interface HomeProps {
+  userId: string;
+}
+
+export default function Home({ userId }: HomeProps) {
+  return <p>Your user ID is: {userId}</p>;
+}
+```

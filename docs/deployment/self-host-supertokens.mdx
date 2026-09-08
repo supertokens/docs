@@ -1,26 +1,27 @@
 ---
 title: Self-host SuperTokens
-hide_title: true
-sidebar_position: 1
-toc_max_heading_level: 4
-description: >-
-  Run SuperTokens on your infrastructure, control authentication data, and scale
-  as needed.
-page_type: tutorial 
-category: deployment
+description: Deploy SuperTokens Core privately with Docker or on a VM and connect PostgreSQL for persistent storage.
+sidebar:
+  order: 1
+---
+
+<Visibility for="agents">
+
+## Self-hosting summary
+
+- Deploy Core with its Docker image or directly on a VM.
+- Core 11.0.0 dropped MySQL and MongoDB support; an in-memory database is available for testing. Confirm the supported PostgreSQL range for your exact release.
+- Core listens on port 3567 by default. `/hello` normally performs a storage read, but rate-limited responses can return 200 without one; it is not a complete database-health or security check.
+- Docker accepts either `POSTGRESQL_CONNECTION_URI` or separate PostgreSQL host, port, database, username, and password variables.
+
+</Visibility>
+
+See how you can run **SuperTokens** in your own infrastructure.
+
 ---
 
 
-# Self-hosting SuperTokens
-
-<DescriptionText>
-  See how you can run **SuperTokens** in your own infrastructure.
-</DescriptionText>
-
-<Separator />
-
-
-## Overview 
+## Overview
 
 One of the main features of **SuperTokens** is that you can run it using your own resources.
 This way you have full control over the authentication data and you can scale based on your needs.
@@ -29,12 +30,21 @@ This way you have full control over the authentication data and you can scale ba
 
 To deploy the Core Service you must configure two things: the actual API and the database.
 - The core service can be deployed using a **Docker** image or directly inside your VM.
-- The supported database is **PostgreSQL**. The minimum required version is `13.0`.
-- The core service is a **trusted backend component**. Deploy it on a private network reachable only by your backend, and never expose it directly to the public internet or to your frontend. When it must be reachable more widely, protect it with an [API key](/docs/platform-configuration/supertokens-core/api-keys). See [Secure the core](#secure-the-core) for details.
+- The supported database is **PostgreSQL**. Confirm the supported version range for the exact Core/database-plugin release you select.
 
-:::info
-**SuperTokens Core** has dropped **MySQL** and **MongoDB** support with the `11.0.0` release.
-If you want to reference the old documentation, please [open this page](/docs/legacy/core/v10/self-host-supertokens).
+:::danger
+SuperTokens Core is a trusted backend component. It exposes APIs that can administer users, sessions, and tenants. Run
+Core and PostgreSQL on private networks reachable only by trusted backend services; never expose either directly to a
+browser or any client you do not trust. Core has no API key by default. Configure a generated API key, firewall/security-group
+rules, and TLS at a trusted proxy or load balancer as defense in depth. Tenant isolation must be enforced by your backend;
+a shared Core API key does not authorize an end user for a tenant. See [Secure the core](#secure-the-core) for details.
+:::
+
+The exact PostgreSQL support range and current Core/database artifact mapping are not established by this guide. Verify
+both for the immutable release selected for production.
+
+:::info[**SuperTokens Core** has dropped **MySQL** and **MongoDB** support with the `11.0.0` release.]
+If you want to reference the old documentation, please [open this page](/legacy/core/v10/self-host-supertokens).
 :::
 
 
@@ -43,89 +53,93 @@ If you want to reference the old documentation, please [open this page](/docs/le
 
 ### 1. Install SuperTokens core
 
-#### With docker
+#### With Docker
 
 
+Do not use an untagged image or `latest`. Select and verify an exact supported Core image, pin it by digest, and set it as
+`SUPERTOKENS_IMAGE`. For a local-only in-memory test, bind Core to `127.0.0.1`:
 
 ```bash
-docker run -p 3567:3567 -d supertokens/supertokens-postgresql:latest
+: "${SUPERTOKENS_IMAGE:?Set an immutable image reference such as repository:version@sha256:digest}"
+docker run -p 127.0.0.1:3567:3567 -d "$SUPERTOKENS_IMAGE"
 ```
 
-- To see all the environment variables available, please see [the README file](https://github.com/supertokens/supertokens-docker-postgresql/blob/master/README.md).
-- The above command starts the container with an in-memory database. This means you **do not need to connect it to PostgreSQL to test out SuperTokens**.
+Omitting PostgreSQL configuration starts the container with an in-memory database. Use this only for testing.
 
 
-#### Without docker
+#### Without Docker
 
 ##### 1. Download SuperTokens
 
 <Steps>
-  ## Visit the [open source download page](https://SuperTokens.com/use-oss).
-  ## Click on the "Binary" tab. 
-  ## Choose your database.
-  ## Download the SuperTokens zip file for your OS.
+<Step title="Visit the open source download page">
+Open the [open source download page](https://SuperTokens.com/use-oss).
+</Step>
+<Step title="Click on the Binary tab">
+</Step>
+<Step title="Choose your database">
+</Step>
+<Step title="Download the SuperTokens zip file for your OS">
+</Step>
 </Steps>
 
-Once downloaded, remove the zip, and you see a folder named `supertokens`.
+After downloading, verify the release checksum or signature and extract the archive. You should see a folder named `supertokens`.
 
 ##### 2. Install SuperTokens
 
-<OSTabs>
-<OSTabs.TabItem value="linux">
-
+<CodeGroup group="operating-system">
+<Tab title="Linux" value="linux">
 ```bash
-# sudo is required so that the supertokens 
+# sudo is required so that the supertokens
 # command can be added to your PATH variable.
 
 cd supertokens
 sudo ./install
 ```
-</OSTabs.TabItem>
-
-<OSTabs.TabItem value="mac">
-
+</Tab>
+<Tab title="Mac" value="mac">
 ```bash
 
 cd supertokens
 ./install
 
 ```
-:::caution
-You may get an error like `java cannot be opened because the developer cannot be verified`. To solve this, visit System Preferences > Security & Privacy > General Tab, and then click on the Allow button at the bottom. Then retry the command above.
-:::
-
-</OSTabs.TabItem>
-
-<OSTabs.TabItem value="windows">
-
+</Tab>
+<Tab title="Windows" value="windows">
 ```batch
 
-Rem run as an Administrator. This is required so that the supertokens 
+Rem run as an Administrator. This is required so that the supertokens
 Rem command can be added to your PATH.
 
 cd supertokens
 install.bat
 
 ```
-</OSTabs.TabItem>
-</OSTabs>
+</Tab>
+</CodeGroup>
 
-:::important
-After installing, you can delete the downloaded folder as you no longer need it.
+<DependentContent passive group="operating-system">
+<ContentOption title="Mac" value="mac">
+:::warning[You may get an error like `java cannot be opened because the developer cannot be verified`. To solve this, visit System Preferences > Security & Privacy > General Tab, and then click on the Allow button at the bottom. Then retry the command above.]
+:::
+</ContentOption>
+</DependentContent>
+
+:::note[After installing, you can delete the downloaded folder as you no longer need it.]
 
 Make any changes to the configuration in the `config.yaml` file in the installation directory, as specified in the output of the `supertokens --help` command.
 :::
 
-##### 3. Start the core service 
+##### 3. Start the core service
 
 Running the following command starts the service.
 ```bash
 supertokens start [--host=...] [--port=...]
 ```
-- The above command starts the container with an in-memory database.
+- The above command starts the Core service using the configured database.
 - To see all available options please run `supertokens start --help`
 
-:::info Tip
+:::info[Tip]
 To stop the service, run the following command:
 ```bash
 supertokens stop
@@ -133,102 +147,107 @@ supertokens stop
 :::
 
 
-### 2. Test that the service is running 
+### 2. Test that the service is running
 
 Open a browser and visit `http://localhost:3567/hello`. If you see a page that says `Hello` back, then the container started successfully!
 
 If you are having issues with starting the docker image, please feel free to reach out [over email](mailto:support@supertokens.com) or [via Discord](https://supertokens.com/discord).
 
 :::tip
-The `/hello` route checks whether the database connection is correctly set up and only returns a 200 status code if there is no issue.
-
-If you are using Kubernetes or docker swarm, this endpoint is perfect for doing readiness and liveness probes.
+`/hello` normally performs a storage read and returns an error if that read fails. However, after its request-rate limit is
+exhausted, it can return `200 Hello` without querying storage. It also deliberately requires no API key. Use it only as a
+basic process/readiness signal, not as proof of database health, API-key enforcement, or safe network exposure. Pair it
+with authenticated application checks and database monitoring; tune liveness separately to avoid restart loops.
 :::
 
 
+### 3. Connect the backend SDK with SuperTokens
 
-### 3. Connect the backend SDK with SuperTokens 
-
-- The default `port` for SuperTokens is `3567`. You can change this by binding a different port in the `docker run` command. For example, `docker run -p 8080:3567` runs SuperTokens on port `8080` on your machine.
+- The default port for SuperTokens is `3567`. Keep it private. For local testing, bind it only to `127.0.0.1`, for example `-p 127.0.0.1:8080:3567`.
 - The connection info goes in the `supertokens` object in the `init` function on your backend:
 
-<BackendTabs additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]}>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 
+const apiKey = process.env.SUPERTOKENS_API_KEY;
+if (apiKey === undefined || apiKey.length === 0) {
+  throw new Error("SUPERTOKENS_API_KEY is required");
+}
+
 supertokens.init({
-    // highlight-start
-    supertokens: {
-        connectionURI: "http://localhost:3567",
-        apiKey: "someKey" // OR can be undefined
-    },
-    // highlight-end
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: []
+  supertokens: {
+    connectionURI: "http://localhost:3567",
+    apiKey,
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [],
 });
 ```
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
-import "github.com/supertokens/supertokens-golang/supertokens"
+import (
+	"os"
+
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
 
 func main() {
+	apiKey := os.Getenv("SUPERTOKENS_API_KEY")
+	if apiKey == "" {
+		panic("SUPERTOKENS_API_KEY is required")
+	}
 	supertokens.Init(supertokens.TypeInput{
-        // highlight-start
 		Supertokens: &supertokens.ConnectionInfo{
 			ConnectionURI: "http://localhost:3567",
-			APIKey:        "someKey",
+			APIKey:        apiKey,
 		},
-        // highlight-end
 	})
 }
 
 ```
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
+import os
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
 from supertokens_python import init, InputAppInfo, SupertokensConfig
+
+api_key = os.environ["SUPERTOKENS_API_KEY"]
+if not api_key:
+    raise RuntimeError("SUPERTOKENS_API_KEY is required")
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    # highlight-start
     supertokens_config=SupertokensConfig(
         connection_uri='http://localhost:3567',
-        api_key='someKey'
+        api_key=api_key
     ),
-    # highlight-end
-    framework='...', # type: ignore
+    framework='...',
     recipe_list=[
       #...
    ]
 )
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
-
-:::caution Security
-The SuperTokens Core is a backend service, meant to be accessed only by your own backend through the backend SDKs. It must **not** be exposed directly to the public internet, to your frontend, or to end users. Any caller that can reach the Core can perform administrative operations on your users' data.
-
-- **No API key exists by default.** Whenever the Core is reachable by anything other than your backend, protect it with an [API key](/docs/platform-configuration/supertokens-core/api-keys).
-- **Prefer network isolation.** Deploy the Core on a private network (for example a VPC or an internal subnet) reachable only by your backend.
-- **Add further controls as needed:** restrict access by [IP address](/docs/platform-configuration/supertokens-core/ip-allow-deny) and serve traffic over [TLS/SSL](/docs/platform-configuration/supertokens-core/add-ssl-via-nginx).
+:::info[Configure the same generated secret in Core and every backend]
+Generate a key with `openssl rand -hex 32`, store it in your secret manager, and inject it as Core's `API_KEYS` and the
+`SUPERTOKENS_API_KEY` used by the backend. Never bake it into source code or an image. See the
+[API-key documentation](/platform-configuration/supertokens-core/api-keys) for validation and rotation.
 :::
 
 ### 4. Set up the database
 
 
-#### 4.1 Create a database {{optional}}
+#### 4.1 Create a database (optional)
 
 
 ```sql
@@ -239,49 +258,47 @@ CREATE DATABASE supertokens;
 You can skip this step if you want SuperTokens to write to your own database.
 In this case, you need to provide your database's name as shown in the step below.
 
-#### 4.2 Connect SuperTokens to your database 
+#### 4.2 Connect SuperTokens to your database
 
-##### With docker
+##### With Docker
 
 
-:::caution
-Host being `localhost` / `127.0.0.1` does not work in a docker image. Instead, please provide the database's local / public host name or IP address.
-
-You also need to make the database listen on all the IPs of the local machine.
-Edit the `postgresql.conf` configuration file and set the value of `listen_addresses` to `0.0.0.0`.
+:::warning
+Inside a container, `localhost` refers to that container. Attach Core and PostgreSQL to the same private Docker network,
+or use a private DNS name/interface. Configure PostgreSQL `listen_addresses`, `pg_hba.conf`, host firewall, and cloud
+security groups so that only Core can connect. Do not publish port 5432 or expose the database through a public address.
 :::
 
-:::caution
-It is important to use the `postgresql://` scheme designator in the PostgreSQL Connection URI. Using `postgres://` will lead to a startup error.
+:::warning[It is important to use the `postgresql://` scheme designator in the PostgreSQL Connection URI. Using `postgres://` will lead to a startup error.]
 :::
 
 ```bash
 
+: "${SUPERTOKENS_IMAGE:?Set an immutable Core image reference}"
+: "${SUPERTOKENS_API_KEY:?Set a generated Core API key}"
 docker run \
-    -p 3567:3567 \
-    // highlight-next-line
+    --network app-network \
     -e POSTGRESQL_CONNECTION_URI="postgresql://username:pass@host/dbName" \
-    -d supertokens/supertokens-postgresql
+    -e API_KEYS="$SUPERTOKENS_API_KEY" \
+    -d "$SUPERTOKENS_IMAGE"
 
 # OR
 
 docker run \
-    -p 3567:3567 \
-    // highlight-start
+    --network app-network \
     -e POSTGRESQL_USER="username" \
     -e POSTGRESQL_PASSWORD="password" \
 	-e POSTGRESQL_HOST="host" \
 	-e POSTGRESQL_PORT="5432" \
     -e POSTGRESQL_DATABASE_NAME="supertokens" \
-    // highlight-end
-    -d supertokens/supertokens-postgresql
+    -e API_KEYS="$SUPERTOKENS_API_KEY" \
+    -d "$SUPERTOKENS_IMAGE"
 ```
 
-:::tip
-You can also provide the table schema by setting the `POSTGRESQL_TABLE_SCHEMA` option.
+:::tip[You can also provide the table schema by setting the `POSTGRESQL_TABLE_SCHEMA` option.]
 :::
 
-##### Without docker
+##### Without Docker
 
 
 ```yaml
@@ -306,662 +323,63 @@ postgresql_database_name: "supertokens"
 You can also provide the table schema by setting the `postgresql_table_schema` option.
 
 
-
 :::info
-The required tables should create automatically if the database user has table creation permission.
-If not, you can create them manually using the following snippet.
-
-<Accordion>
-  ## Database tables
-
-```sql
-CREATE TABLE apps (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    created_at_time BIGINT,
-    CONSTRAINT apps_pkey PRIMARY KEY (app_id)
-);
-
-CREATE TABLE tenants (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    created_at_time BIGINT,
-    CONSTRAINT tenants_pkey PRIMARY KEY (app_id, tenant_id),
-    CONSTRAINT tenants_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX tenants_app_id_index ON tenants (app_id);
-
-CREATE TABLE tenant_configs (
-    connection_uri_domain VARCHAR(256) DEFAULT '' NOT NULL,
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    core_config TEXT,
-    email_password_enabled BOOLEAN,
-    passwordless_enabled BOOLEAN,
-    third_party_enabled BOOLEAN,
-    is_first_factors_null BOOLEAN,
-    CONSTRAINT tenant_configs_pkey PRIMARY KEY (connection_uri_domain, app_id, tenant_id)
-);
-
-CREATE TABLE tenant_thirdparty_providers (
-    connection_uri_domain VARCHAR(256) DEFAULT '' NOT NULL,
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    third_party_id VARCHAR(28) NOT NULL,
-    name VARCHAR(64),
-    authorization_endpoint TEXT,
-    authorization_endpoint_query_params TEXT,
-    token_endpoint TEXT,
-    token_endpoint_body_params TEXT,
-    user_info_endpoint TEXT,
-    user_info_endpoint_query_params TEXT,
-    user_info_endpoint_headers TEXT,
-    jwks_uri TEXT,
-    oidc_discovery_endpoint TEXT,
-    require_email BOOLEAN,
-    user_info_map_from_id_token_payload_user_id VARCHAR(64),
-    user_info_map_from_id_token_payload_email VARCHAR(64),
-    user_info_map_from_id_token_payload_email_verified VARCHAR(64),
-    user_info_map_from_user_info_endpoint_user_id VARCHAR(64),
-    user_info_map_from_user_info_endpoint_email VARCHAR(64),
-    user_info_map_from_user_info_endpoint_email_verified VARCHAR(64),
-    CONSTRAINT tenant_thirdparty_providers_pkey PRIMARY KEY (connection_uri_domain, app_id, tenant_id, third_party_id),
-    CONSTRAINT tenant_thirdparty_providers_tenant_id_fkey FOREIGN KEY (connection_uri_domain, app_id, tenant_id) REFERENCES public.tenant_configs(connection_uri_domain, app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE INDEX tenant_thirdparty_providers_tenant_id_index ON tenant_thirdparty_providers (connection_uri_domain, app_id, tenant_id);
-
-CREATE TABLE tenant_thirdparty_provider_clients (
-    connection_uri_domain VARCHAR(256) DEFAULT '' NOT NULL,
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    third_party_id VARCHAR(28) NOT NULL,
-    client_type VARCHAR(64) DEFAULT '' NOT NULL,
-    client_id VARCHAR(256) NOT NULL,
-    client_secret TEXT,
-    scope VARCHAR(128)[],
-    force_pkce BOOLEAN,
-    additional_config TEXT,
-    CONSTRAINT tenant_thirdparty_provider_clients_pkey PRIMARY KEY (connection_uri_domain, app_id, tenant_id, third_party_id, client_type),
-    CONSTRAINT tenant_thirdparty_provider_clients_third_party_id_fkey FOREIGN KEY (connection_uri_domain, app_id, tenant_id, third_party_id) REFERENCES public.tenant_thirdparty_providers(connection_uri_domain, app_id, tenant_id, third_party_id) ON DELETE CASCADE
-);
-
-CREATE INDEX tenant_thirdparty_provider_clients_third_party_id_index ON tenant_thirdparty_provider_clients (connection_uri_domain, app_id, tenant_id, third_party_id);
-
-CREATE TABLE tenant_first_factors (
-  connection_uri_domain VARCHAR(256) DEFAULT '' NOT NULL,
-  app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-  tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-  factor_id VARCHAR(128),
-  CONSTRAINT tenant_first_factors_pkey PRIMARY KEY (connection_uri_domain, app_id, tenant_id, factor_id),
-  CONSTRAINT tenant_first_factors_tenant_id_fkey FOREIGN KEY (connection_uri_domain, app_id, tenant_id) REFERENCES public.tenant_configs(connection_uri_domain, app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS tenant_first_factors_tenant_id_index ON tenant_first_factors (connection_uri_domain, app_id, tenant_id);
-
-CREATE TABLE tenant_required_secondary_factors (
-  connection_uri_domain VARCHAR(256) DEFAULT '' NOT NULL,
-  app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-  tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-  factor_id VARCHAR(128),
-  CONSTRAINT tenant_required_secondary_factors_pkey PRIMARY KEY (connection_uri_domain, app_id, tenant_id, factor_id),
-  CONSTRAINT tenant_required_secondary_factors_tenant_id_fkey FOREIGN KEY (connection_uri_domain, app_id, tenant_id) REFERENCES public.tenant_configs(connection_uri_domain, app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS tenant_default_required_factor_ids_tenant_id_index ON tenant_required_secondary_factors (connection_uri_domain, app_id, tenant_id);
-
-CREATE TABLE key_value (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    name VARCHAR(128) NOT NULL,
-    value TEXT,
-    created_at_time BIGINT,
-    CONSTRAINT key_value_pkey PRIMARY KEY (app_id, tenant_id, name),
-    CONSTRAINT key_value_tenant_id_fkey FOREIGN KEY (app_id, tenant_id) REFERENCES public.tenants(app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE INDEX key_value_tenant_id_index ON key_value (app_id, tenant_id);
-
-CREATE TABLE app_id_to_user_id (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    recipe_id VARCHAR(128) NOT NULL,
-    primary_or_recipe_user_id CHAR(36) NOT NULL,
-    is_linked_or_is_a_primary_user BOOLEAN NOT NULL DEFAULT FALSE,
-    CONSTRAINT app_id_to_user_id_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT app_id_to_user_id_primary_or_recipe_user_id_fkey FOREIGN KEY(app_id, primary_or_recipe_user_id) REFERENCES app_id_to_user_id (app_id, user_id) ON DELETE CASCADE,
-    CONSTRAINT app_id_to_user_id_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX app_id_to_user_id_app_id_index ON app_id_to_user_id (app_id);
-
-CREATE INDEX app_id_to_user_id_primary_user_id_index ON app_id_to_user_id (primary_or_recipe_user_id, app_id);
-
-CREATE TABLE all_auth_recipe_users (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    primary_or_recipe_user_id CHAR(36) NOT NULL,
-    is_linked_or_is_a_primary_user BOOLEAN NOT NULL DEFAULT FALSE,
-    recipe_id VARCHAR(128) NOT NULL,
-    time_joined BIGINT NOT NULL,
-    primary_or_recipe_user_time_joined BIGINT NOT NULL,
-    CONSTRAINT all_auth_recipe_users_pkey PRIMARY KEY (app_id, tenant_id, user_id),
-    CONSTRAINT all_auth_recipe_users_tenant_id_fkey FOREIGN KEY (app_id, tenant_id) REFERENCES public.tenants(app_id, tenant_id) ON DELETE CASCADE,
-    CONSTRAINT all_auth_recipe_users_primary_or_recipe_user_id_fkey FOREIGN KEY(app_id, primary_or_recipe_user_id) REFERENCES public.app_id_to_user_id (app_id, user_id) ON DELETE CASCADE,
-    CONSTRAINT all_auth_recipe_users_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES public.app_id_to_user_id(app_id, user_id) ON DELETE CASCADE
-);
-
-CREATE INDEX all_auth_recipe_users_pagination_index1 ON all_auth_recipe_users
-    (app_id, tenant_id, primary_or_recipe_user_time_joined DESC, primary_or_recipe_user_id DESC);
-
-CREATE INDEX all_auth_recipe_users_pagination_index2 ON all_auth_recipe_users
-    (app_id, tenant_id, primary_or_recipe_user_time_joined ASC, primary_or_recipe_user_id DESC);
-
-CREATE INDEX all_auth_recipe_users_pagination_index3 ON all_auth_recipe_users
-    (recipe_id, app_id, tenant_id, primary_or_recipe_user_time_joined DESC, primary_or_recipe_user_id DESC);
-
-
-CREATE INDEX all_auth_recipe_users_pagination_index4 ON all_auth_recipe_users
-    (recipe_id, app_id, tenant_id, primary_or_recipe_user_time_joined ASC, primary_or_recipe_user_id DESC);
-
-
-CREATE INDEX all_auth_recipe_users_primary_user_id_index ON all_auth_recipe_users
-    (primary_or_recipe_user_id, app_id);
-
-CREATE INDEX all_auth_recipe_users_recipe_id_index ON all_auth_recipe_users
-    (app_id, recipe_id, tenant_id);
-
-CREATE INDEX all_auth_recipe_user_id_index ON all_auth_recipe_users (app_id, user_id);
-
-CREATE INDEX all_auth_recipe_tenant_id_index ON all_auth_recipe_users (app_id, tenant_id);
-
-CREATE TABLE userid_mapping (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    supertokens_user_id character(36) NOT NULL,
-    external_user_id VARCHAR(128) NOT NULL,
-    external_user_id_info TEXT,
-    CONSTRAINT userid_mapping_external_user_id_key UNIQUE (app_id, external_user_id),
-    CONSTRAINT userid_mapping_pkey PRIMARY KEY (app_id, supertokens_user_id, external_user_id),
-    CONSTRAINT userid_mapping_supertokens_user_id_key UNIQUE (app_id, supertokens_user_id),
-    CONSTRAINT userid_mapping_supertokens_user_id_fkey FOREIGN KEY (app_id, supertokens_user_id) REFERENCES public.app_id_to_user_id(app_id, user_id) ON DELETE CASCADE
-);
-
-CREATE INDEX userid_mapping_supertokens_user_id_index ON userid_mapping (app_id, supertokens_user_id);
-
-CREATE TABLE dashboard_users (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    password_hash VARCHAR(256) NOT NULL,
-    time_joined BIGINT NOT NULL,
-    CONSTRAINT dashboard_users_email_key UNIQUE (app_id, email),
-    CONSTRAINT dashboard_users_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT dashboard_users_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX dashboard_users_app_id_index ON dashboard_users (app_id);
-
-CREATE TABLE dashboard_user_sessions (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    session_id character(36) NOT NULL,
-    user_id character(36) NOT NULL,
-    time_created BIGINT NOT NULL,
-    expiry BIGINT NOT NULL,
-    CONSTRAINT dashboard_user_sessions_pkey PRIMARY KEY (app_id, session_id),
-    CONSTRAINT dashboard_user_sessions_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES public.dashboard_users(app_id, user_id) ON UPDATE CASCADE ON DELETE CASCADE
-);
-
-CREATE INDEX dashboard_user_sessions_expiry_index ON dashboard_user_sessions (expiry);
-
-CREATE INDEX dashboard_user_sessions_user_id_index ON dashboard_user_sessions (app_id, user_id);
-
-CREATE TABLE session_access_token_signing_keys (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    created_at_time BIGINT NOT NULL,
-    value TEXT,
-    CONSTRAINT session_access_token_signing_keys_pkey PRIMARY KEY (app_id, created_at_time),
-    CONSTRAINT session_access_token_signing_keys_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX access_token_signing_keys_app_id_index ON session_access_token_signing_keys (app_id);
-
-CREATE TABLE session_info (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    session_handle VARCHAR(255) NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    refresh_token_hash_2 VARCHAR(128) NOT NULL,
-    session_data TEXT,
-    expires_at BIGINT NOT NULL,
-    created_at_time BIGINT NOT NULL,
-    jwt_user_payload TEXT,
-    use_static_key BOOLEAN NOT NULL,
-    CONSTRAINT session_info_pkey PRIMARY KEY (app_id, tenant_id, session_handle),
-    CONSTRAINT session_info_tenant_id_fkey FOREIGN KEY (app_id, tenant_id) REFERENCES public.tenants(app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE INDEX session_expiry_index ON session_info (expires_at);
-
-CREATE INDEX session_info_tenant_id_index ON session_info (app_id, tenant_id);
-
-CREATE TABLE user_last_active (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    last_active_time BIGINT,
-    CONSTRAINT user_last_active_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT user_last_active_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX user_last_active_app_id_index ON user_last_active (app_id);
-
-CREATE TABLE emailpassword_users (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    password_hash VARCHAR(256) NOT NULL,
-    time_joined BIGINT NOT NULL,
-    CONSTRAINT emailpassword_users_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT emailpassword_users_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES public.app_id_to_user_id(app_id, user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE emailpassword_user_to_tenant (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    CONSTRAINT emailpassword_user_to_tenant_email_key UNIQUE (app_id, tenant_id, email),
-    CONSTRAINT emailpassword_user_to_tenant_pkey PRIMARY KEY (app_id, tenant_id, user_id),
-    CONSTRAINT emailpassword_user_to_tenant_user_id_fkey FOREIGN KEY (app_id, tenant_id, user_id) REFERENCES public.all_auth_recipe_users(app_id, tenant_id, user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE emailpassword_pswd_reset_tokens (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    token VARCHAR(128) NOT NULL,
-    token_expiry BIGINT NOT NULL,
-    email VARCHAR(256),
-    CONSTRAINT emailpassword_pswd_reset_tokens_pkey PRIMARY KEY (app_id, user_id, token),
-    CONSTRAINT emailpassword_pswd_reset_tokens_token_key UNIQUE (token),
-    CONSTRAINT emailpassword_pswd_reset_tokens_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES public.app_id_to_user_id(app_id, user_id) ON UPDATE CASCADE ON DELETE CASCADE
-);
-
-CREATE INDEX emailpassword_password_reset_token_expiry_index ON emailpassword_pswd_reset_tokens (token_expiry);
-
-CREATE INDEX emailpassword_pswd_reset_tokens_user_id_index ON emailpassword_pswd_reset_tokens (app_id, user_id);
-
-CREATE TABLE emailverification_verified_emails (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    CONSTRAINT emailverification_verified_emails_pkey PRIMARY KEY (app_id, user_id, email),
-    CONSTRAINT emailverification_verified_emails_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX emailverification_verified_emails_app_id_index ON emailverification_verified_emails (app_id);
-
-CREATE TABLE emailverification_tokens (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    token VARCHAR(128) NOT NULL,
-    token_expiry BIGINT NOT NULL,
-    CONSTRAINT emailverification_tokens_pkey PRIMARY KEY (app_id, tenant_id, user_id, email, token),
-    CONSTRAINT emailverification_tokens_token_key UNIQUE (token),
-    CONSTRAINT emailverification_tokens_tenant_id_fkey FOREIGN KEY (app_id, tenant_id) REFERENCES public.tenants(app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE INDEX emailverification_tokens_index ON emailverification_tokens (token_expiry);
-
-CREATE INDEX emailverification_tokens_tenant_id_index ON emailverification_tokens (app_id, tenant_id);
-
-CREATE TABLE thirdparty_users (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    third_party_id VARCHAR(28) NOT NULL,
-    third_party_user_id VARCHAR(256) NOT NULL,
-    user_id character(36) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    time_joined BIGINT NOT NULL,
-    CONSTRAINT thirdparty_users_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT thirdparty_users_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES public.app_id_to_user_id(app_id, user_id) ON DELETE CASCADE
-);
-
-CREATE INDEX thirdparty_users_email_index ON thirdparty_users (app_id, email);
-
-CREATE INDEX thirdparty_users_thirdparty_user_id_index ON thirdparty_users (app_id, third_party_id, third_party_user_id);
-
-CREATE TABLE thirdparty_user_to_tenant (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    third_party_id VARCHAR(28) NOT NULL,
-    third_party_user_id VARCHAR(256) NOT NULL,
-    CONSTRAINT thirdparty_user_to_tenant_pkey PRIMARY KEY (app_id, tenant_id, user_id),
-    CONSTRAINT thirdparty_user_to_tenant_third_party_user_id_key UNIQUE (app_id, tenant_id, third_party_id, third_party_user_id),
-    CONSTRAINT thirdparty_user_to_tenant_user_id_fkey FOREIGN KEY (app_id, tenant_id, user_id) REFERENCES public.all_auth_recipe_users(app_id, tenant_id, user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE passwordless_users (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    email VARCHAR(256),
-    phone_number VARCHAR(256),
-    time_joined BIGINT NOT NULL,
-    CONSTRAINT passwordless_users_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT passwordless_users_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES public.app_id_to_user_id(app_id, user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE passwordless_user_to_tenant (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id character(36) NOT NULL,
-    email VARCHAR(256),
-    phone_number VARCHAR(256),
-    CONSTRAINT passwordless_user_to_tenant_email_key UNIQUE (app_id, tenant_id, email),
-    CONSTRAINT passwordless_user_to_tenant_phone_number_key UNIQUE (app_id, tenant_id, phone_number),
-    CONSTRAINT passwordless_user_to_tenant_pkey PRIMARY KEY (app_id, tenant_id, user_id),
-    CONSTRAINT passwordless_user_to_tenant_user_id_fkey FOREIGN KEY (app_id, tenant_id, user_id) REFERENCES public.all_auth_recipe_users(app_id, tenant_id, user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE passwordless_devices (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    device_id_hash character(44) NOT NULL,
-    email VARCHAR(256),
-    phone_number VARCHAR(256),
-    link_code_salt character(44) NOT NULL,
-    failed_attempts integer NOT NULL,
-    CONSTRAINT passwordless_devices_pkey PRIMARY KEY (app_id, tenant_id, device_id_hash),
-    CONSTRAINT passwordless_devices_tenant_id_fkey FOREIGN KEY (app_id, tenant_id) REFERENCES public.tenants(app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE INDEX passwordless_devices_email_index ON passwordless_devices (app_id, tenant_id, email);
-
-CREATE INDEX passwordless_devices_phone_number_index ON passwordless_devices (app_id, tenant_id, phone_number);
-
-CREATE INDEX passwordless_devices_tenant_id_index ON passwordless_devices (app_id, tenant_id);
-
-CREATE TABLE passwordless_codes (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    code_id character(36) NOT NULL,
-    device_id_hash character(44) NOT NULL,
-    link_code_hash character(44) NOT NULL,
-    created_at BIGINT NOT NULL,
-    CONSTRAINT passwordless_codes_link_code_hash_key UNIQUE (app_id, tenant_id, link_code_hash),
-    CONSTRAINT passwordless_codes_pkey PRIMARY KEY (app_id, tenant_id, code_id),
-    CONSTRAINT passwordless_codes_device_id_hash_fkey FOREIGN KEY (app_id, tenant_id, device_id_hash) REFERENCES public.passwordless_devices(app_id, tenant_id, device_id_hash) ON UPDATE CASCADE ON DELETE CASCADE
-);
-
-CREATE INDEX passwordless_codes_created_at_index ON passwordless_codes (app_id, tenant_id, created_at);
-
-CREATE INDEX passwordless_codes_device_id_hash_index ON passwordless_codes (app_id, tenant_id, device_id_hash);
-
-CREATE TABLE jwt_signing_keys (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    key_id VARCHAR(255) NOT NULL,
-    key_string TEXT NOT NULL,
-    algorithm VARCHAR(10) NOT NULL,
-    created_at BIGINT,
-    CONSTRAINT jwt_signing_keys_pkey PRIMARY KEY (app_id, key_id),
-    CONSTRAINT jwt_signing_keys_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX jwt_signing_keys_app_id_index ON jwt_signing_keys (app_id);
-
-CREATE TABLE user_metadata (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    user_metadata TEXT NOT NULL,
-    CONSTRAINT user_metadata_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT user_metadata_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX user_metadata_app_id_index ON user_metadata (app_id);
-
-CREATE TABLE roles (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    role VARCHAR(255) NOT NULL,
-    CONSTRAINT roles_pkey PRIMARY KEY (app_id, role),
-    CONSTRAINT roles_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX roles_app_id_index ON roles (app_id);
-
-CREATE TABLE role_permissions (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    role VARCHAR(255) NOT NULL,
-    permission VARCHAR(255) NOT NULL,
-    CONSTRAINT role_permissions_pkey PRIMARY KEY (app_id, role, permission),
-    CONSTRAINT role_permissions_role_fkey FOREIGN KEY (app_id, role) REFERENCES public.roles(app_id, role) ON DELETE CASCADE
-);
-
-CREATE INDEX role_permissions_permission_index ON role_permissions (app_id, permission);
-
-CREATE INDEX role_permissions_role_index ON role_permissions (app_id, role);
-
-CREATE TABLE user_roles (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    role VARCHAR(255) NOT NULL,
-    CONSTRAINT user_roles_pkey PRIMARY KEY (app_id, tenant_id, user_id, role),
-    CONSTRAINT user_roles_tenant_id_fkey FOREIGN KEY (app_id, tenant_id) REFERENCES public.tenants(app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE INDEX user_roles_role_index ON user_roles (app_id, tenant_id, role);
-
-CREATE INDEX user_roles_tenant_id_index ON user_roles (app_id, tenant_id);
-
-CREATE INDEX user_roles_app_id_role_index ON user_roles (app_id, role);
-
-CREATE TABLE totp_users (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    CONSTRAINT totp_users_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT totp_users_app_id_fkey FOREIGN KEY (app_id) REFERENCES public.apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX totp_users_app_id_index ON totp_users (app_id);
-
-CREATE TABLE totp_user_devices (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    device_name VARCHAR(256) NOT NULL,
-    secret_key VARCHAR(256) NOT NULL,
-    period integer NOT NULL,
-    skew integer NOT NULL,
-    verified BOOLEAN NOT NULL,
-    created_at BIGINT,
-    CONSTRAINT totp_user_devices_pkey PRIMARY KEY (app_id, user_id, device_name),
-    CONSTRAINT totp_user_devices_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES public.totp_users(app_id, user_id) ON DELETE CASCADE
-);
-
-CREATE INDEX totp_user_devices_user_id_index ON totp_user_devices (app_id, user_id);
-
-CREATE TABLE totp_used_codes (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id VARCHAR(128) NOT NULL,
-    code VARCHAR(8) NOT NULL,
-    is_valid BOOLEAN NOT NULL,
-    expiry_time_ms BIGINT NOT NULL,
-    created_time_ms BIGINT NOT NULL,
-    CONSTRAINT totp_used_codes_pkey PRIMARY KEY (app_id, tenant_id, user_id, created_time_ms),
-    CONSTRAINT totp_used_codes_tenant_id_fkey FOREIGN KEY (app_id, tenant_id) REFERENCES public.tenants(app_id, tenant_id) ON DELETE CASCADE,
-    CONSTRAINT totp_used_codes_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES public.totp_users(app_id, user_id) ON DELETE CASCADE
-);
-
-CREATE INDEX totp_used_codes_expiry_time_ms_index ON totp_used_codes (app_id, tenant_id, expiry_time_ms);
-
-CREATE INDEX totp_used_codes_tenant_id_index ON totp_used_codes (app_id, tenant_id);
-
-CREATE INDEX totp_used_codes_user_id_index ON totp_used_codes (app_id, user_id);
-
-CREATE TABLE IF NOT EXISTS bulk_import_users (
-    id CHAR(36),
-    app_id VARCHAR(64) NOT NULL DEFAULT 'public',
-    primary_user_id VARCHAR(36),
-    raw_data TEXT NOT NULL,
-    status VARCHAR(128) DEFAULT 'NEW',
-    error_msg TEXT,
-    created_at BIGINT NOT NULL, 
-    updated_at BIGINT NOT NULL, 
-    CONSTRAINT bulk_import_users_pkey PRIMARY KEY(app_id, id),
-    CONSTRAINT bulk_import_users__app_id_fkey FOREIGN KEY(app_id) REFERENCES apps(app_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS bulk_import_users_status_updated_at_index ON bulk_import_users (app_id, status, updated_at);
-
-CREATE INDEX IF NOT EXISTS bulk_import_users_pagination_index1 ON bulk_import_users (app_id, status, created_at DESC, id DESC);
- 
-CREATE INDEX IF NOT EXISTS bulk_import_users_pagination_index2 ON bulk_import_users (app_id, created_at DESC, id DESC);
-
-CREATE INDEX IF NOT EXISTS session_info_user_id_app_id_index ON session_info (user_id, app_id);
-
-CREATE INDEX IF NOT EXISTS emailverification_verified_emails_app_id_email_index ON emailverification_verified_emails
-(app_id, email);
-
-CREATE TABLE IF NOT EXISTS webauthn_account_recovery_tokens (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id CHAR(36) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    token VARCHAR(256) NOT NULL,
-    expires_at BIGINT NOT NULL,
-    CONSTRAINT webauthn_account_recovery_token_pkey PRIMARY KEY (app_id, tenant_id, user_id, token),
-    CONSTRAINT webauthn_account_recovery_token_user_id_fkey FOREIGN KEY (app_id, tenant_id, user_id) REFERENCES 
-    all_auth_recipe_users(app_id, tenant_id, user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS webauthn_credentials (
-    id VARCHAR(256) NOT NULL,
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    rp_id VARCHAR(256) NOT NULL,
-    user_id CHAR(36),
-    counter BIGINT NOT NULL,
-    public_key BYTEA NOT NULL,
-    transports TEXT NOT NULL,
-    created_at BIGINT NOT NULL,
-    updated_at BIGINT NOT NULL,
-    CONSTRAINT webauthn_credentials_pkey PRIMARY KEY (app_id, rp_id, id),
-    CONSTRAINT webauthn_credentials_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES webauthn_users
-    (app_id, user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS webauthn_generated_options (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public'NOT NULL,
-    id CHAR(36) NOT NULL,
-    challenge VARCHAR(256) NOT NULL,
-    email VARCHAR(256),
-    rp_id VARCHAR(256) NOT NULL,
-    rp_name VARCHAR(256) NOT NULL,
-    origin VARCHAR(256) NOT NULL,
-    expires_at BIGINT NOT NULL,
-    created_at BIGINT NOT NULL,
-    user_presence_required BOOLEAN DEFAULT false NOT NULL,
-    user_verification VARCHAR(12) DEFAULT 'preferred' NOT NULL,
-    CONSTRAINT webauthn_generated_options_pkey PRIMARY KEY (app_id, tenant_id, id),
-    CONSTRAINT webauthn_generated_options_tenant_id_fkey FOREIGN KEY (app_id, tenant_id) REFERENCES tenants
-    (app_id, tenant_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS webauthn_user_to_tenant (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    tenant_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id CHAR(36) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    CONSTRAINT webauthn_user_to_tenant_email_key UNIQUE (app_id, tenant_id, email),
-    CONSTRAINT webauthn_user_to_tenant_pkey PRIMARY KEY (app_id, tenant_id, user_id),
-    CONSTRAINT webauthn_user_to_tenant_user_id_fkey FOREIGN KEY (app_id, tenant_id, user_id) REFERENCES 
-    all_auth_recipe_users(app_id, tenant_id, user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS webauthn_users (
-    app_id VARCHAR(64) DEFAULT 'public' NOT NULL,
-    user_id CHAR(36) NOT NULL,
-    email VARCHAR(256) NOT NULL,
-    rp_id VARCHAR(256) NOT NULL,
-    time_joined BIGINT NOT NULL,
-    CONSTRAINT webauthn_users_pkey PRIMARY KEY (app_id, user_id),
-    CONSTRAINT webauthn_users_user_id_fkey FOREIGN KEY (app_id, user_id) REFERENCES app_id_to_user_id(app_id, 
-    user_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS webauthn_user_to_tenant_email_index ON webauthn_user_to_tenant (app_id, email);
-CREATE INDEX IF NOT EXISTS webauthn_user_challenges_expires_at_index ON webauthn_generated_options (app_id, tenant_id, expires_at);
-CREATE INDEX IF NOT EXISTS webauthn_credentials_user_id_index ON webauthn_credentials (user_id);
-CREATE INDEX IF NOT EXISTS webauthn_account_recovery_token_token_index ON webauthn_account_recovery_tokens (app_id, tenant_id, token);
-CREATE INDEX IF NOT EXISTS webauthn_account_recovery_token_expires_at_index ON webauthn_account_recovery_tokens (expires_at DESC);
-CREATE INDEX IF NOT EXISTS webauthn_account_recovery_token_email_index ON webauthn_account_recovery_tokens (app_id, tenant_id, email);
-
-
-```
-
-</Accordion>
-
+Core creates and migrates its required tables automatically when the database principal has DDL permission. Do not use a
+hand-copied schema: it can drift from the selected Core and database-plugin release. If your production principal cannot
+perform DDL, obtain a schema or migration artifact generated for the exact immutable release, apply it with a separate
+migration principal, and test Core startup before promotion.
 :::
 
 
-#### 4.3 Test the connection 
+#### 4.3 Test the connection
 
-To test, start SuperTokens and run the following query in your database
-
-```sql
-SELECT * FROM key_value;
-```
-If you see at least one row, it means that the connection has been successfully completed! 
+Start the exact Core release against a staging copy of the database and require startup/migration success. Then exercise
+an authenticated SDK operation. A query against one table does not prove that every required migration was applied.
 
 
-#### 4.4 Rename database tables {{optional}}
+#### 4.4 Rename database tables (optional)
 
-:::caution
-If you already have tables created by SuperTokens, and then you rename them, SuperTokens creates new tables. Please be sure to migrate the data from the existing one to the new one.
+:::warning[If you already have tables created by SuperTokens, and then you rename them, SuperTokens creates new tables. Please be sure to migrate the data from the existing one to the new one.]
 :::
 
-You can add a prefix to all table names that SuperTokens manages. This way, all will be renamed in a way that has no clashes with your tables. 
+You can add a prefix to all table names that SuperTokens manages. This way, all will be renamed in a way that has no clashes with your tables.
 
 For example, two tables created by SuperTokens have the names `emailpassword_users` and `thirdparty_users`. If you add a prefix to them (something like `"my_prefix"`), then the tables become `my_prefix_emailpassword_users` and `my_prefix_thirdparty_users`.
 
-<SelfHostingTabs>
-<SelfHostingTabs.TabItem value="with-docker">
-
+<CodeGroup group="docker">
+<Tab title="With Docker" value="with-docker">
 ```bash
 docker run \
-    -p 3567:3567 \
-    // highlight-next-line
-    -e POSTGRESQL_TABLE_NAMES_PREFIX="my_prefix" \ 
-    -d supertokens/supertokens-postgresql
+    --network app-network \
+    -e POSTGRESQL_TABLE_NAMES_PREFIX="my_prefix" \
+    -e API_KEYS="$SUPERTOKENS_API_KEY" \
+    -d "$SUPERTOKENS_IMAGE"
 ```
-</SelfHostingTabs.TabItem>
-
-<SelfHostingTabs.TabItem value="without-docker">
-
+</Tab>
+<Tab title="Without Docker" value="without-docker">
 ```yaml
 # You need to add the following to the config.yaml file.
 # The file path can be found by running the "supertokens --help" command
 
 postgresql_table_names_prefix: "my_prefix"
 ```
-</SelfHostingTabs.TabItem>
-</SelfHostingTabs>
+</Tab>
+</CodeGroup>
 
 
 ### 5. Add license keys
 
 To access some features in your self-hosted service you must use **license keys**.
-You can sign up on [**SuperTokens**](https://supertokens.com/auth) to receive one. 
+You can sign up on [**SuperTokens**](https://supertokens.com/auth) to receive one.
 
 Once you have the license key you need to manually add it to your **SuperTokens Core Instance**.
 To do this you have to call the Core API with the following request:
 
-```bash title="Add License Key" showAppTypeSelect
-curl --location --request PUT ^{coreInfo.uri}/ee/license \
+```bash title="Add License Key"
+curl --location --request PUT "${CORE_API_ENDPOINT:?Set the private Core endpoint}/ee/license" \
      --header 'Content-Type: application/json' \
-     --header 'api-key: ^{coreInfo.key}' \
-     --data-raw '{ "licenseKey": "<YOUR_LICENSE_KEY>" }'
+     --header "api-key: ${SUPERTOKENS_API_KEY:?Set the Core API key}" \
+     --data-raw "{ \"licenseKey\": \"${SUPERTOKENS_LICENSE_KEY:?Set the license key}\" }"
 
 ```
 
@@ -972,68 +390,6 @@ The SuperTokens Core exposes administrative operations over its API — creating
 This trust model means the Core must be treated like your database: reachable only by your own backend, never by untrusted clients.
 
 - **Isolate the network.** Run the Core on a private network or subnet that only your backend can reach. This is the primary protection and applies regardless of any other setting.
-- **Set an API key.** If the Core can be reached by anything beyond your backend, configure an [API key](/docs/platform-configuration/supertokens-core/api-keys). Note that within a single deployment all callers share the same key; an API key is therefore not a substitute for network isolation between tenants.
-- **Restrict by IP and use TLS.** Optionally limit access by [IP address](/docs/platform-configuration/supertokens-core/ip-allow-deny) and terminate [TLS/SSL](/docs/platform-configuration/supertokens-core/add-ssl-via-nginx) in front of the Core.
-- **Enforce tenant scoping in your backend.** Sessions and other objects carry their tenant as a signed claim. When an action is restricted to a specific tenant, verify the tenant in your backend rather than relying on the URL the request arrived on.
-
-## References
-
-### Docker compose file
-
-
-
-```bash
-version: '3'
-
-services:
-  # Note: If you are assigning a custom name to your db service on the line below, make sure it does not contain underscores
-  db:
-    image: 'postgres:latest'
-    environment:
-      POSTGRES_USER: supertokens_user 
-      POSTGRES_PASSWORD: somePassword 
-      POSTGRES_DB: supertokens
-    ports:
-      - 5432:5432
-    networks:
-      - app_network
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'supertokens_user', '-d', 'supertokens']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  supertokens:
-    image: supertokens/supertokens-postgresql:latest
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - 3567:3567
-    environment:
-      POSTGRESQL_CONNECTION_URI: "postgresql://supertokens_user:somePassword@db:5432/supertokens"
-    networks:
-      - app_network
-    restart: unless-stopped
-    healthcheck:
-      test: >
-        bash -c 'exec 3<>/dev/tcp/127.0.0.1/3567 && echo -e "GET /hello HTTP/1.1\r\nhost: 127.0.0.1:3567\r\nConnection: close\r\n\r\n" >&3 && cat <&3 | grep "Hello"'
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-networks:
-  app_network:
-    driver: bridge
-```
-
-
-:::important
-If you are running the backend process that integrates with the backend SDK as part of the docker compose file as well, make sure to use `http://supertokens:3567` as the connection URI instead of `http://localhost:3567`.
-:::
-
-### Helm charts for Kubernetes
-
-- For [PostgreSQL image](https://github.com/supertokens/supertokens-docker-postgresql/tree/master/helm-chart)
-
+- **Set an API key.** No API key exists by default, so any caller that can reach an unprotected Core can perform administrative operations. Configure a generated [API key](/platform-configuration/supertokens-core/api-keys) as defense in depth. Core supports multiple keys for rotation, but these are not per-tenant authorization credentials and do not replace network isolation.
+- **Restrict by IP and use TLS.** Limit access with firewall/security-group rules and, optionally, Core's [IP allow/deny configuration](/platform-configuration/supertokens-core/ip-allow-deny). Terminate [TLS/SSL](/platform-configuration/supertokens-core/add-ssl-via-nginx) at a trusted proxy or load balancer.
+- **Enforce tenant scoping in your backend.** For session-authenticated requests restricted to a specific tenant, verify the session and check that its tenant matches the required tenant. Authorize access to tenant-specific resources in your backend; do not rely on the URL alone.

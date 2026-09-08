@@ -1,19 +1,16 @@
 ---
 title: Initial setup
-hide_title: true
-toc_max_heading_level: 4
-sidebar_position: 3
-description: >-
-  Configure your application for multi-factor authentication with account
-  linking and tenant-specific configurations.
-page_type: tutorial
-recipe: mfa
-category: multi-factor-authentication
+description: Configure your application for multi-factor authentication with account linking and tenant-specific configurations.
+sidebar:
+  order: 30
 ---
 
-
-# Initial setup
-
+<Prompt
+  description="Design and implement MFA for an existing application."
+  actions={["copy"]}
+>
+Design and implement SuperTokens MFA in this application. Inspect the existing recipes, tenant model, and deployment type first. Ask which first factors, second factors, and enforcement policy are required if they cannot be inferred. Check managed-service and SDK support, configure account linking, tenant-specific factors, email verification dependencies, frontend and backend recipes, and protected routes. Do not commit secrets. Validate first-factor login, second-factor enrollment, challenge completion, recovery, and route protection with the relevant tests and build.
+</Prompt>
 
 ## Overview
 
@@ -25,14 +22,14 @@ The following guide shows you how to implement a basic setup while also covering
 <PaidFeatureCallout />
 
 These instructions assume that you already have some knowledge of MFA.
-If you are not familiar with terms like authentication factors and challenges, please go through the [MFA concepts page](/docs/additional-verification/mfa/important-concepts).
+If you are not familiar with terms like authentication factors and challenges, please go through the [MFA concepts page](/additional-verification/mfa/important-concepts).
 
 If you plan to use the `otp-email` factor as a form of email verification, you also need to initialize the `emailverification` recipe in `REQUIRED` mode on the backend.
 This configuration ensures that the email verification process passes only if the originally provided email has been verified.
 
 ## Steps
 
-<TenantType.Switch />
+<TenantTypeSwitch />
 
 ### 1. Set up the backend 
 
@@ -40,67 +37,71 @@ This configuration ensures that the email verification process passes only if th
 
 MFA requires account linking to be active. You can enable it in the following way:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
-import SuperTokens, { User, RecipeUserId, } from "supertokens-node";
+import SuperTokens, { User, RecipeUserId } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import AccountLinking from "supertokens-node/recipe/accountlinking"
+import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
 import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
 
 SuperTokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // ...
-        // highlight-start
-        AccountLinking.init({
-            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                if (session === undefined) {
-                    // we do not want to do first factor account linking by default. To enable that,
-                    // please see the automatic account linking docs in the recipe docs for your first factor.
-                    return {
-                        shouldAutomaticallyLink: false
-                    };
-                }
-                if (user === undefined || session.getUserId() === user.id) {
-                    // if it comes here, it means that a session exists, and we are trying to link the 
-                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
-                    // linking here.
-                    return {
-                        shouldAutomaticallyLink: true,
-                        shouldRequireVerification: false
-                    }
-                }
-                return {
-                    shouldAutomaticallyLink: false
-                };
-            }
-        }),
-        // highlight-end
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // ...
+    AccountLinking.init({
+      shouldDoAutomaticAccountLinking: async (
+        newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId },
+        user: User | undefined,
+        session: SessionContainerInterface | undefined,
+        tenantId: string,
+        userContext: UserContext,
+      ) => {
+        if (session === undefined) {
+          // we do not want to do first factor account linking by default. To enable that,
+          // please see the automatic account linking docs in the recipe docs for your first factor.
+          return {
+            shouldAutomaticallyLink: false,
+          };
+        }
+        if (user === undefined || session.getUserId() === user.id) {
+          // if it comes here, it means that a session exists, and we are trying to link the
+          // newAccountInfo to the session user, which means it's an MFA flow, so we enable
+          // linking here.
+          return {
+            shouldAutomaticallyLink: true,
+            shouldRequireVerification: true,
+          };
+        }
+        return {
+          shouldAutomaticallyLink: false,
+        };
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
 from supertokens_python.recipe import accountlinking
 from supertokens_python.types import User
@@ -125,7 +126,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the 
         # account_info to the session user, which means it's an MFA flow, so we enable 
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
     
     return ShouldNotAutomaticallyLink()
 
@@ -139,89 +140,88 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework='...', # type: ignore
+    framework='...', 
     recipe_list=[
         accountlinking.init(should_do_automatic_account_linking=should_do_automatic_account_linking)
     ],
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 - The above snippet enables auto account linking only during the second factor and not for the first factor login. This means that if a user has an email password account, and then they login via Google (with the same email), those two accounts are not linked. However, if the second factor for logging in is email or phone OTP, then that passwordless account links to the first factor login method of that session.
-- Notice that `shouldRequireVerification: false` configures account linking. It means that the second factor can connect to the first factor even though the first factor is not verified. If you want to do email verification of the first factor before setting up the second factor (for example if the first factor is email password, and the second is phone OTP), then you can set this boolean to `true`, and also init the email verification recipe on the frontend and backend in `REQUIRED` mode.
-- If you also want to enable first factor automatic account linking, see [this link](/docs/post-authentication/account-linking/automatic-account-linking).
+- `shouldRequireVerification: true` prevents an unverified login method from being linked. Passwordless OTP completion verifies the email address or phone number before the SDK attempts second-factor linking, so this does not block the OTP flow. Keep the callback session-bound as shown; do not return automatic linking for first-factor requests without a session.
+- If you also want to enable first factor automatic account linking, see [this link](/post-authentication/account-linking/automatic-account-linking).
 
-:::important
-Account linking is a paid feature, and you need to generate a license key to enable it. Enabling the MFA feature also enables account linking automatically, meaning you don't need to check the account linking feature.
+:::note[Account linking is also a paid feature. Enabling MFA enables the account-linking capability required by this flow, so you do not need to enable both features separately.]
 :::
 
 #### 1.2 Configure the first factors
 
 
-<TenantType.SingleTenantContent>
+<VariantContent storageKey="tenant-type" value="single">
 
-We start by initializing the MFA recipe on the backend and specifying the list of first factors using their [factor IDs](/docs/additional-verification/mfa/important-concepts#factors). You still have to initialize all the auth recipes in the `recipeList`, and configure them based on your needs.
+We start by initializing the MFA recipe on the backend and specifying the list of first factors using their [factor IDs](/additional-verification/mfa/important-concepts#factors). You still have to initialize all the auth recipes in the `recipeList`, and configure them based on your needs.
 
 For example, the code below initializes `thirdparty`, `emailpassword` and `passwordless` recipes and sets the `firstFactor` array to be `["emailpassword", "thirdparty"]`. This means that email password and social login appear to the user as the first factor (using the `thirdparty` + `emailpassword` recipe), and `passwordless` serves as the second factor.
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import supertokens from "supertokens-node";
-import ThirdParty from "supertokens-node/recipe/thirdparty"
-import EmailPassword from "supertokens-node/recipe/emailpassword"
-import Passwordless from "supertokens-node/recipe/passwordless"
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // ...
-        // highlight-start
-        ThirdParty.init({
-            //...
-        }),
-        EmailPassword.init({
-            //...
-        }),
-        Passwordless.init({
-            contactMethod: "EMAIL",
-            flowType: "USER_INPUT_CODE"
-        }),
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ]
-        })
-        // highlight-end
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // ...
+    ThirdParty.init({
+      //...
+    }),
+    EmailPassword.init({
+      //...
+    }),
+    Passwordless.init({
+      contactMethod: "EMAIL",
+      flowType: "USER_INPUT_CODE",
+    }),
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import emailpassword, multifactorauth, thirdparty, passwordless
+from supertokens_python.recipe import (
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+)
 from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import FactorIds
 
@@ -234,70 +234,67 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework='...', # type: ignore
+    framework='...', 
     recipe_list=[
+        session.init(),
         emailpassword.init(),
         thirdparty.init(),
-        multifactorauth.init(),
         passwordless.init(contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"),
         multifactorauth.init(first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY])
     ],
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 Other combinations of first factors exists. For example, if you want passwordless as the first factor, then you would init the passwordless recipe and add `"passwordless"` in the `firstFactors` array.
 
-</TenantType.SingleTenantContent>
+</VariantContent>
 
-<TenantType.MultiTenantContent>
+<VariantContent storageKey="tenant-type" value="multi">
 
 
 For a multi-tenancy setup, where each tenant can have a different set of first factors, you can leave the `firstFactors` array as `undefined` in the `MultiFactorAuth.init`. Configure the `firstFactors` on a per-tenant basis when creating or updating a tenant as shown below:
 
-<BackendTabs additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]}>
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+<ContentOption title="Dashboard" value="dashboard">
+<img src="/docs-assets/img/dashboard/tenant-management/ep-enabled.png" alt="Email Password enabled"/>
 
-<BackendTabs.TabItem value="nodejs">
+In the above setting, Email Password is active in the **Login Methods** section. This means that users who login to this tenant can only use email password as the first factor. Later on, the configuration for passwordless as a second factor for this tenant appears.
 
+By default, no login methods activate for a tenant.
+</ContentOption>
+</DependentContent>
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import Multitenancy from "supertokens-node/recipe/multitenancy";
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 async function createNewTenant() {
-    let resp = await Multitenancy.createOrUpdateTenant("customer1", {
-        firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD]
-    });
+  let resp = await Multitenancy.createOrUpdateTenant("customer1", {
+    firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD],
+  });
 
-    if (resp.createdNew) {
-        // Tenant created successfully
-    } else {
-        // Existing tenant's config was modified.
-    }
+  if (resp.createdNew) {
+    // Tenant created successfully
+  } else {
+    // Existing tenant's config was modified.
+  }
 }
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-`firstFactors` includes only `"emailpassword"`. This means that users who login to this tenant can only use email password as the first factor. Later on, the configuration for passwordless as a second factor for this tenant appears.
-
-:::important
-- If you do not configure `firstFactors` array on a tenant configuration, then no factors activate for that tenant by default.
-- To remove the `firstFactors` configuration for a tenant, you can pass a `null` value for the `firstFactors` key in the tenant configuration. For that tenant, this makes SuperTokens default to the `firstFactors` array in the `MultiFactorAuth.init` from the backend `init` configuration.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-<PythonSyncAsyncCard>
-<PythonSyncAsyncCard.Content value="asyncio">
-
+</Tab>
+<Tab title="Python" value="python">
+<DependentContent group="python-io-style" label="I/O style">
+<ContentOption title="Asyncio" value="asyncio">
 ```python
 from supertokens_python.recipe.multitenancy.asyncio import create_or_update_tenant
 from supertokens_python.recipe.multitenancy.interfaces import TenantConfigCreateOrUpdate
@@ -316,10 +313,8 @@ async def create_new_tenant():
         # Existing tenant's config was modified
         pass
 ```
-
-</PythonSyncAsyncCard.Content>
-<PythonSyncAsyncCard.Content value="syncio">
-
+</ContentOption>
+<ContentOption title="Syncio" value="syncio">
 ```python
 from supertokens_python.recipe.multitenancy.syncio import create_or_update_tenant
 from supertokens_python.recipe.multitenancy.interfaces import TenantConfigCreateOrUpdate
@@ -338,15 +333,11 @@ def create_new_tenant():
         # Existing tenant's config was modified
         pass
 ```
-
-</PythonSyncAsyncCard.Content>
-</PythonSyncAsyncCard>
-
-</BackendTabs.TabItem>
-
-<BackendTabs.TabItem value="curl">
-
-```bash showAppTypeSelect
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="cURL" value="curl">
+```bash
 curl --location --request PUT 'http://localhost:3567/recipe/multitenancy/tenant/v2' \
 --header 'api-key: YOUR_API_KEY' \
 --header 'Content-Type: application/json' \
@@ -355,116 +346,115 @@ curl --location --request PUT 'http://localhost:3567/recipe/multitenancy/tenant/
     "firstFactors": ["emailpassword"]
 }'
 ```
+</Tab>
+<Tab title="Dashboard" value="dashboard">
 
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="backend-language">
+<ContentOption title="Node.js" value="nodejs">
 `firstFactors` includes only `"emailpassword"`. This means that users who login to this tenant can only use email password as the first factor. Later on, the configuration for passwordless as a second factor for this tenant appears.
 
-:::important
-- If you do not configure `firstFactors` array on a tenant configuration, then no factors activate for that tenant by default.
+:::note[- If you do not configure `firstFactors` array on a tenant configuration, then no factors activate for that tenant by default.]
+
 - To remove the `firstFactors` configuration for a tenant, you can pass a `null` value for the `firstFactors` key in the tenant configuration. For that tenant, this makes SuperTokens default to the `firstFactors` array in the `MultiFactorAuth.init` from the backend `init` configuration.
 :::
+</ContentOption>
+<ContentOption title="cURL" value="curl">
+`firstFactors` includes only `"emailpassword"`. This means that users who login to this tenant can only use email password as the first factor. Later on, the configuration for passwordless as a second factor for this tenant appears.
 
-</BackendTabs.TabItem>
+:::note[- If you do not configure `firstFactors` array on a tenant configuration, then no factors activate for that tenant by default.]
 
-<BackendTabs.TabItem value="dashboard" className="tab-with-background">
+- To remove the `firstFactors` configuration for a tenant, you can pass a `null` value for the `firstFactors` key in the tenant configuration. For that tenant, this makes SuperTokens default to the `firstFactors` array in the `MultiFactorAuth.init` from the backend `init` configuration.
+:::
+</ContentOption>
+</DependentContent>
 
-<img src="/img/dashboard/tenant-management/ep-enabled.png" alt="Email Password enabled"/>
-
-In the above setting, Email Password is active in the **Login Methods** section. This means that users who login to this tenant can only use email password as the first factor. Later on, the configuration for passwordless as a second factor for this tenant appears.
-
-By default, no login methods activate for a tenant.
-
-</BackendTabs.TabItem>
-
-</BackendTabs>
-
-</TenantType.MultiTenantContent>
+</VariantContent>
 
 #### 1.3 Configure the second factor
 
 This section explains how to configure SuperTokens such that a second factor is necessary for all users during sign up and during sign in. TOTP serves as an example for the second factor.
 
 
-<TenantType.SingleTenantContent>
+<VariantContent storageKey="tenant-type" value="single">
 
 The following code snippet accomplishes this:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
-import SuperTokens, { User, RecipeUserId, } from "supertokens-node";
+import SuperTokens, { User, RecipeUserId } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdParty from "supertokens-node/recipe/thirdparty"
-import EmailPassword from "supertokens-node/recipe/emailpassword"
-import Passwordless from "supertokens-node/recipe/passwordless"
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
-import totp from "supertokens-node/recipe/totp"
-import AccountLinking from "supertokens-node/recipe/accountlinking"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import totp from "supertokens-node/recipe/totp";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
 import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
 
-
 SuperTokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // ...
-        ThirdParty.init({
-            //...
-        }),
-        EmailPassword.init({
-            //...
-        }),
-        Passwordless.init({
-            contactMethod: "EMAIL",
-            flowType: "USER_INPUT_CODE"
-        }),
-        totp.init(),
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            // highlight-start
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        getMFARequirementsForAuth: async function (input) {
-                            return [MultiFactorAuth.FactorIds.TOTP]
-                        }
-                    }
-                }
-            }
-            // highlight-end
-        })
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // ...
+    ThirdParty.init({
+      //...
+    }),
+    EmailPassword.init({
+      //...
+    }),
+    Passwordless.init({
+      contactMethod: "EMAIL",
+      flowType: "USER_INPUT_CODE",
+    }),
+    totp.init(),
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              return [MultiFactorAuth.FactorIds.TOTP];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
 from supertokens_python.recipe import (
     emailpassword,
     multifactorauth,
-    thirdparty,
     passwordless,
+    session,
+    thirdparty,
+    totp,
 )
 from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig
@@ -502,14 +492,15 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
+        session.init(),
         emailpassword.init(),
         thirdparty.init(),
-        multifactorauth.init(),
         passwordless.init(
             contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
         ),
+        totp.init(),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
@@ -517,9 +508,8 @@ init(
     ],
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 In the above snippet, you configure email password and social login as the first factor, followed by TOTP as the second factor.
 
@@ -531,67 +521,67 @@ In the above example, `"totp"` returns as a required factor for all users. Howev
 The output of this function can be more complex than a `string[]`. You can also return an object which tells SuperTokens that any one of the factors must satisfy: 
 
 <Accordion>
+<AccordionItem title="Require one of multiple factors">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
-## Require one of multiple factors
-
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import supertokens from "supertokens-node";
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // ...
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        getMFARequirementsForAuth: async function (input) {
-                            // highlight-start
-                            return [{
-                                oneOf: [
-                                    MultiFactorAuth.FactorIds.TOTP,
-                                    MultiFactorAuth.FactorIds.OTP_EMAIL
-                                ]
-                            }]
-                            // highlight-end
-                        }
-                    }
-                }
-            }
-        })
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // ...
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              return [
+                {
+                  oneOf: [MultiFactorAuth.FactorIds.TOTP, MultiFactorAuth.FactorIds.OTP_EMAIL],
+                },
+              ];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth
+from supertokens_python.recipe import (
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+    totp,
+)
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig
 from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
 from typing import Dict, Any, Callable, Awaitable, List
@@ -610,7 +600,6 @@ def override_functions(original_implementation: RecipeInterface):
         required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
         user_context: Dict[str, Any],
     ) -> MFARequirementList:
-        # highlight-next-line
         return [FactorIds.TOTP, FactorIds.OTP_EMAIL]
 
     original_implementation.get_mfa_requirements_for_auth = (
@@ -628,8 +617,15 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
+        ),
+        totp.init(),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
@@ -637,70 +633,70 @@ init(
     ],
 )
 ```
+</Tab>
+</CodeGroup>
+</AccordionItem>
+<AccordionItem title="Require multiple factors in any order">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
-</BackendTabs.TabItem>
-</BackendTabs>
-
-## Require multiple factors in any order
-
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import supertokens from "supertokens-node";
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // ...
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        getMFARequirementsForAuth: async function (input) {
-                            // highlight-start
-                            return [{
-                                allOfInAnyOrder: [
-                                    MultiFactorAuth.FactorIds.TOTP,
-                                    MultiFactorAuth.FactorIds.OTP_EMAIL
-                                ]
-                            }]
-                            // highlight-end
-                        }
-                    }
-                }
-            }
-        })
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // ...
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              return [
+                {
+                  allOfInAnyOrder: [MultiFactorAuth.FactorIds.TOTP, MultiFactorAuth.FactorIds.OTP_EMAIL],
+                },
+              ];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth
+from supertokens_python.recipe import (
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+    totp,
+)
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig
 from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
 from typing import Dict, Any, Callable, Awaitable, List
@@ -719,7 +715,6 @@ def override_functions(original_implementation: RecipeInterface):
         required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
         user_context: Dict[str, Any],
     ) -> MFARequirementList:
-        # highlight-next-line
         return [{"allOfInAnyOrder": [FactorIds.TOTP, FactorIds.OTP_EMAIL]}]
 
     original_implementation.get_mfa_requirements_for_auth = (
@@ -737,8 +732,15 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
+        ),
+        totp.init(),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
@@ -746,73 +748,76 @@ init(
     ],
 )
 ```
+</Tab>
+</CodeGroup>
+</AccordionItem>
+<AccordionItem title="Require multiple factors in a specific order">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
-</BackendTabs.TabItem>
-</BackendTabs>
-
-## Require multiple factors in a specific order
-
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import supertokens from "supertokens-node";
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // ...
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        getMFARequirementsForAuth: async function (input) {
-                            // highlight-start
-                            let currentCompletedFactors = MultiFactorAuth.MultiFactorAuthClaim.getValueFromPayload(input.accessTokenPayload)
-                            if (MultiFactorAuth.FactorIds.TOTP in currentCompletedFactors.c) {
-                                // this means the totp factor is completed
-                                return [MultiFactorAuth.FactorIds.OTP_EMAIL]
-                            } else {
-                                // this means we have not finished totp yet, and we want 
-                                // to do that right after first factor login
-                                return [MultiFactorAuth.FactorIds.TOTP]
-                            }
-                            // highlight-end
-                        }
-                    }
-                }
-            }
-        })
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // ...
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              let currentCompletedFactors = MultiFactorAuth.MultiFactorAuthClaim.getValueFromPayload(
+                input.accessTokenPayload,
+              );
+              if (MultiFactorAuth.FactorIds.TOTP in currentCompletedFactors.c) {
+                // this means the totp factor is completed
+                return [MultiFactorAuth.FactorIds.OTP_EMAIL];
+              } else {
+                // this means we have not finished totp yet, and we want
+                // to do that right after first factor login
+                return [MultiFactorAuth.FactorIds.TOTP];
+              }
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth
+from supertokens_python.recipe import (
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+    totp,
+)
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig
 from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
 from typing import Dict, Any, Callable, Awaitable, List
@@ -834,7 +839,6 @@ def override_functions(original_implementation: RecipeInterface):
         required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
         user_context: Dict[str, Any],
     ) -> MFARequirementList:
-        # highlight-start
         current_completed_factors = MultiFactorAuthClaim.get_value_from_payload(
             access_token_payload
         )
@@ -845,7 +849,6 @@ def override_functions(original_implementation: RecipeInterface):
             # this means we have not finished totp yet, and we want
             # to do that right after first factor login
             return [FactorIds.TOTP]
-        # highlight-end
 
     original_implementation.get_mfa_requirements_for_auth = (
         get_mfa_requirements_for_auth
@@ -862,8 +865,15 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
+        ),
+        totp.init(),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
@@ -871,65 +881,64 @@ init(
     ],
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
-
+</Tab>
+</CodeGroup>
+</AccordionItem>
 </Accordion>
 
 <br />
 
-:::note no-title
-You can return an empty array from `getMFARequirementsForAuth` if you don't want any further MFA done for the current user.
+:::note[You can return an empty array from `getMFARequirementsForAuth` if you don't want any further MFA done for the current user.]
 :::
 
-</TenantType.SingleTenantContent>
+</VariantContent>
 
-<TenantType.MultiTenantContent>
+<VariantContent storageKey="tenant-type" value="multi">
 
 For a multi tenant setup, you can configure a list of secondary factors when creating / modifying a tenant as shown below:
 
-<BackendTabs additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]}>
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+<ContentOption title="Dashboard" value="dashboard">
+<img src="/docs-assets/img/dashboard/tenant-management/otp-email-enabled.png" alt="OTP - Email enabled"/>
 
-<BackendTabs.TabItem value="nodejs">
+As shown above, you turn on `OTP - Email` in the **Secondary Factors** section which means that all users who log into that tenant must complete `otp-email` as a second factor.
 
+You can also turn off all factors to have no secondary factors required for the tenant.
+
+If you turn on more than one factor, it means that the user must complete any one of factors that are active. If you want to have a different behavior for the tenant, you can achieve that by overriding the `getMFARequirementsForAuth` function as shown below:
+</ContentOption>
+</DependentContent>
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import Multitenancy from "supertokens-node/recipe/multitenancy";
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 async function createNewTenant() {
-    let resp = await Multitenancy.createOrUpdateTenant("customer1", {
-        firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD],
-        requiredSecondaryFactors: [MultiFactorAuth.FactorIds.OTP_EMAIL]
-    });
+  let resp = await Multitenancy.createOrUpdateTenant("customer1", {
+    firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD],
+    requiredSecondaryFactors: [MultiFactorAuth.FactorIds.OTP_EMAIL],
+  });
 
-    if (resp.createdNew) {
-        // Tenant created successfully
-    } else {
-        // Existing tenant's config was modified.
-    }
+  if (resp.createdNew) {
+    // Tenant created successfully
+  } else {
+    // Existing tenant's config was modified.
+  }
 }
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-In the above code, you add a property called `requiredSecondaryFactors` for a tenant whose value is a `string[]`. You add `otp-email` as a factor ID above which means that all users who log into that tenant must complete `otp-email` as a second factor.
-
-To remove the `requiredSecondaryFactors` configuration for a tenant, you can pass a `null` value for the `requiredSecondaryFactors` key in the tenant configuration.
-
-If you add more than one item in this array, it means that the user must complete any one of factors mentioned in the array. If you want to have a different behavior for the tenant, you can achieve that by overriding the `getMFARequirementsForAuth` function as shown below:
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-<PythonSyncAsyncCard>
-<PythonSyncAsyncCard.Content value="asyncio">
-
+</Tab>
+<Tab title="Python" value="python">
+<DependentContent group="python-io-style" label="I/O style">
+<ContentOption title="Asyncio" value="asyncio">
 ```python
 from supertokens_python.recipe.multitenancy.asyncio import create_or_update_tenant
 from supertokens_python.recipe.multitenancy.interfaces import TenantConfigCreateOrUpdate
@@ -951,10 +960,8 @@ async def create_new_tenant():
         # Existing tenant's config was modified
         pass
 ```
-
-</PythonSyncAsyncCard.Content>
-<PythonSyncAsyncCard.Content value="syncio">
-
+</ContentOption>
+<ContentOption title="Syncio" value="syncio">
 ```python
 from supertokens_python.recipe.multitenancy.syncio import create_or_update_tenant
 from supertokens_python.recipe.multitenancy.interfaces import TenantConfigCreateOrUpdate
@@ -976,14 +983,10 @@ def create_new_tenant():
         # Existing tenant's config was modified
         pass
 ```
-
-</PythonSyncAsyncCard.Content>
-</PythonSyncAsyncCard>
-
-</BackendTabs.TabItem>
-
-<BackendTabs.TabItem value="curl">
-
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="cURL" value="curl">
 ```bash
 curl --location --request PUT 'http://localhost:3567/recipe/multitenancy/tenant/v2' \
 --header 'api-key: YOUR_API_KEY' \
@@ -994,85 +997,88 @@ curl --location --request PUT 'http://localhost:3567/recipe/multitenancy/tenant/
     "requiredSecondaryFactors": ["otp-email"]
 }'
 ```
+</Tab>
+<Tab title="Dashboard" value="dashboard">
 
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="backend-language">
+<ContentOption title="Node.js" value="nodejs">
+In the above code, you add a property called `requiredSecondaryFactors` for a tenant whose value is a `string[]`. You add `otp-email` as a factor ID above which means that all users who log into that tenant must complete `otp-email` as a second factor.
+
+To remove the `requiredSecondaryFactors` configuration for a tenant, you can pass a `null` value for the `requiredSecondaryFactors` key in the tenant configuration.
+
+If you add more than one item in this array, it means that the user must complete any one of factors mentioned in the array. If you want to have a different behavior for the tenant, you can achieve that by overriding the `getMFARequirementsForAuth` function as shown below:
+</ContentOption>
+<ContentOption title="cURL" value="curl">
 In the above code, you add a property called `requiredSecondaryFactors` for a tenant whose value is a `string[]`. You add `otp-email` as a factor ID above which means that all users who log into that tenant must complete `otp-email` as a second factor.
 
 To remove the `requiredSecondaryFactors` configuration for a tenant, you can turn off all the toggles.
 
 If you add more than one item in this array, it means that the user must complete any one of factors mentioned in the array. If you want to have a different behavior for the tenant, you can achieve that by overriding the `getMFARequirementsForAuth` function as shown below:
+</ContentOption>
+</DependentContent>
 
-</BackendTabs.TabItem>
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
-<BackendTabs.TabItem value="dashboard" className="tab-with-background">
-
-<img src="/img/dashboard/tenant-management/otp-email-enabled.png" alt="OTP - Email enabled"/>
-
-As shown above, you turn on `OTP - Email` in the **Secondary Factors** section which means that all users who log into that tenant must complete `otp-email` as a second factor.
-
-You can also turn off all factors to have no secondary factors required for the tenant.
-
-If you turn on more than one factor, it means that the user must complete any one of factors that are active. If you want to have a different behavior for the tenant, you can achieve that by overriding the `getMFARequirementsForAuth` function as shown below:
-
-
-</BackendTabs.TabItem>
-
-</BackendTabs>
-
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import supertokens from "supertokens-node";
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // ...
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        getMFARequirementsForAuth: async function (input) {
-                            // highlight-start
-                            return [{
-                                allOfInAnyOrder: await input.requiredSecondaryFactorsForTenant
-                            }]
-                            // highlight-end
-                        }
-                    }
-                }
-            }
-        })
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // ...
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              return [
+                {
+                  allOfInAnyOrder: await input.requiredSecondaryFactorsForTenant,
+                },
+              ];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth
+from supertokens_python.recipe import (
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+)
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig
 from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
 from typing import Dict, Any, Callable, Awaitable, List
@@ -1091,9 +1097,7 @@ def override_functions(original_implementation: RecipeInterface):
         required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
         user_context: Dict[str, Any],
     ) -> MFARequirementList:
-        # highlight-start
         return [{"allOfInAnyOrder": await required_secondary_factors_for_tenant()}]
-        # highlight-end
 
     original_implementation.get_mfa_requirements_for_auth = (
         get_mfa_requirements_for_auth
@@ -1110,8 +1114,14 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
+        ),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
@@ -1119,46 +1129,47 @@ init(
     ],
 )
 ```
+</Tab>
+<Tab title="cURL" value="curl">
 
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 Notice that the input to the function contains the `requiredSecondaryFactorsForTenant` array. This would be the same list that you passed to the tenant configuration when creating / modifying the tenant as shown in the previous steps.
 
-</TenantType.MultiTenantContent>
+</VariantContent>
 
-#### 1.4 Remove the second factor requirement {{optional}}
+#### 1.4 Remove the second factor requirement (optional)
 
 Instead of configuring a factor for all users in your app, or for all users within a tenant, you may want to implement a flow in which users do MFA only if they have enabled it for themselves. Here, users may also want to choose what factors they would like to enable for themselves.
 
 This flow allows users to configure their MFA preferences in the settings page in your app's frontend. A pre-built UI for this is not yet provided, but in this section, we explain the setup on the backend.
 
-You want to start by creating an API that does [session verification](/docs/additional-verification/session-verification/protect-api-routes), and then enable the desired factor for the user. For example, if the user wants to enable TOTP, then you would call the following function in your API:
+You want to start by creating an API that does [session verification](/additional-verification/session-verification/protect-api-routes), and then enable the desired factor for the user. For example, if the user wants to enable TOTP, then you would call the following function in your API:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 async function enableMFAForUser(userId: string) {
-    await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(userId, MultiFactorAuth.FactorIds.TOTP)
+  await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(userId, MultiFactorAuth.FactorIds.TOTP);
 }
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-<PythonSyncAsyncCard>
-<PythonSyncAsyncCard.Content value="asyncio">
-
+</Tab>
+<Tab title="Python" value="python">
+<DependentContent group="python-io-style" label="I/O style">
+<ContentOption title="Asyncio" value="asyncio">
 ```python
 from supertokens_python.recipe.multifactorauth.asyncio import add_to_required_secondary_factors_for_user
 from supertokens_python.recipe.multifactorauth.types import FactorIds
@@ -1168,10 +1179,8 @@ async def enable_mfa_for_user(user_id: str):
         user_id, FactorIds.TOTP
     )
 ```
-
-</PythonSyncAsyncCard.Content>
-<PythonSyncAsyncCard.Content value="syncio">
-
+</ContentOption>
+<ContentOption title="Syncio" value="syncio">
 ```python
 from supertokens_python.recipe.multifactorauth.syncio import add_to_required_secondary_factors_for_user
 from supertokens_python.recipe.multifactorauth.types import FactorIds
@@ -1181,70 +1190,65 @@ def enable_mfa_for_user(user_id: str):
         user_id, FactorIds.TOTP
     )
 ```
-
-</PythonSyncAsyncCard.Content>
-</PythonSyncAsyncCard>
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
 The effect of the above function call is that in the default implementation of `getMFARequirementsForAuth`, the factors specifically enabled for the input user are considered. By default, if you add multiple factors for a user ID, then it would require them to complete any one of those secondary factors during login.
 
 If you want to change the default behavior from "any one of" to something else (like "all of"), you can do this by overriding the `getMFARequirementsForAuth` function:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import supertokens from "supertokens-node";
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // ...
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        // highlight-start
-                        getMFARequirementsForAuth: async function (input) {
-                            return [{
-                                allOfInAnyOrder: await input.requiredSecondaryFactorsForUser
-                            }]
-                        }
-                        // highlight-end
-                    }
-                }
-            }
-        })
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // ...
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              return [
+                {
+                  allOfInAnyOrder: await input.requiredSecondaryFactorsForUser,
+                },
+              ];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
 from supertokens_python.recipe import multifactorauth
 from supertokens_python.recipe.multifactorauth.types import FactorIds, OverrideConfig
@@ -1265,9 +1269,7 @@ def override_functions(original_implementation: RecipeInterface):
         required_secondary_factors_for_tenant: Callable[[], Awaitable[List[str]]],
         user_context: Dict[str, Any],
     ) -> MFARequirementList:
-        # highlight-start
         return [{"allOfInAnyOrder": await required_secondary_factors_for_user()}]
-        # highlight-end
 
     original_implementation.get_mfa_requirements_for_auth = (
         get_mfa_requirements_for_auth
@@ -1284,7 +1286,7 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
@@ -1293,49 +1295,47 @@ init(
     ],
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 Once you call the `addToRequiredSecondaryFactorsForUser` function for a user, SuperTokens stores this preference in the user metadata JSON of the user. For example, if you add `"totp"` as a required secondary factor for a user, this preference is stored in the metadata JSON as:
 
 ```json
 {
-    "_supertokens": {
-        "requiredSecondaryFactors": ["totp"]
-    }
+  "_supertokens": {
+    "requiredSecondaryFactors": ["totp"]
+  }
 }
 ```
 
-You can view this JSON on the [user details page of the user management dashboard](/docs/post-authentication/dashboard/user-management) and modify it manually if you like.
+You can view this JSON on the [user details page of the user management dashboard](/post-authentication/dashboard/user-management) and modify it manually if you like.
 
 To know the factors that a user has enabled, you can use the following function:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 async function isTotpEnabledForUser(userId: string) {
-    let factors = await MultiFactorAuth.getRequiredSecondaryFactorsForUser(userId)
-    return factors.includes(MultiFactorAuth.FactorIds.TOTP)
+  let factors = await MultiFactorAuth.getRequiredSecondaryFactorsForUser(userId);
+  return factors.includes(MultiFactorAuth.FactorIds.TOTP);
 }
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-<PythonSyncAsyncCard>
-<PythonSyncAsyncCard.Content value="asyncio">
-
+</Tab>
+<Tab title="Python" value="python">
+<DependentContent group="python-io-style" label="I/O style">
+<ContentOption title="Asyncio" value="asyncio">
 ```python
 from supertokens_python.recipe.multifactorauth.asyncio import get_required_secondary_factors_for_user
 from supertokens_python.recipe.multifactorauth.types import FactorIds
@@ -1346,10 +1346,8 @@ async def is_totp_enabled_for_user(user_id: str):
     )
     return FactorIds.TOTP in factors
 ```
-
-</PythonSyncAsyncCard.Content>
-<PythonSyncAsyncCard.Content value="syncio">
-
+</ContentOption>
+<ContentOption title="Syncio" value="syncio">
 ```python
 from supertokens_python.recipe.multifactorauth.syncio import get_required_secondary_factors_for_user
 from supertokens_python.recipe.multifactorauth.types import FactorIds
@@ -1360,42 +1358,39 @@ def is_totp_enabled_for_user(user_id: str):
     )
     return FactorIds.TOTP in factors
 ```
-
-</PythonSyncAsyncCard.Content>
-</PythonSyncAsyncCard>
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
 Using the above function, you can build your settings page on the frontend which displays the existing enabled factors for the user. Allow users to enable or disable factors as they like.
 
 Once you have enabled a factor for a user, you take them to that factor setup screen if they have not previously already setup the factor. To know if a factor is setup, you can call the following function (on the backend): 
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 async function isTotpSetupForUser(userId: string) {
-    let factors = await MultiFactorAuth.getFactorsSetupForUser(userId)
-    return factors.includes(MultiFactorAuth.FactorIds.TOTP)
+  let factors = await MultiFactorAuth.getFactorsSetupForUser(userId);
+  return factors.includes(MultiFactorAuth.FactorIds.TOTP);
 }
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-<PythonSyncAsyncCard>
-<PythonSyncAsyncCard.Content value="asyncio">
-
+</Tab>
+<Tab title="Python" value="python">
+<DependentContent group="python-io-style" label="I/O style">
+<ContentOption title="Asyncio" value="asyncio">
 ```python
 from supertokens_python.recipe.multifactorauth.asyncio import get_factors_setup_for_user
 from supertokens_python.recipe.multifactorauth.types import FactorIds
@@ -1406,10 +1401,8 @@ async def is_totp_enabled_for_user(user_id: str):
     )
     return FactorIds.TOTP in factors
 ```
-
-</PythonSyncAsyncCard.Content>
-<PythonSyncAsyncCard.Content value="syncio">
-
+</ContentOption>
+<ContentOption title="Syncio" value="syncio">
 ```python
 from supertokens_python.recipe.multifactorauth.syncio import get_factors_setup_for_user
 from supertokens_python.recipe.multifactorauth.types import FactorIds
@@ -1420,21 +1413,18 @@ def is_totp_enabled_for_user(user_id: str):
     )
     return FactorIds.TOTP in factors
 ```
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
-</PythonSyncAsyncCard.Content>
-</PythonSyncAsyncCard>
-
-</BackendTabs.TabItem>
-</BackendTabs>
-
-Or you can call the [`MFAInfo` endpoint](/docs/additional-verification/mfa/initial-setup#the-mfa-info-endpoint) from the frontend which returns information indicating which factors have already been setup for the user and which not.
+Or you can call the [`MFAInfo` endpoint](/additional-verification/mfa/initial-setup#the-mfa-info-endpoint) from the frontend which returns information indicating which factors have already been setup for the user and which not.
 
 A factor is considered setup if the user has gone through that factor's flow at least once. For example, if the user has created and verified a TOTP device, only then does the `getFactorsSetupForUser` function return `totp` as part of the array. Likewise, if the user has completed `otp-email` or `link-email` once, only then do these factors become a part of the returned array. Let's take two examples:
 - The first time the user enables TOTP, then the result of `getFactorsSetupForUser` does not contain `"totp"`. You should redirect the user to the TOTP setup screen. Once they add and verify a device, then `getFactorsSetupForUser` returns `["totp"]` even if they later disable TOTP from the settings page and re-enable it.
 - Let's say that the first factor for a user is `emailpassword`, and the second factor is `otp-email`. Once they sign up, SuperTokens already knows the email for the user, when they are doing the `otp-email` step, then they are not asked to enter their email again (that is, an OTP is directly sent to them). However, until they actually complete the OTP flow, `getFactorsSetupForUser` does not return `["otp-email"]` as part of the output.
 
-:::caution
-In the edge case that a factor is active for a user, but they sign out before setting it up, then when they login next, SuperTokens still asks them to complete the factor at that time. If SuperTokens doesn't have the required information (like no TOTP device for TOTP auth), then users need to set up a device at that point in time.
+:::warning[In the edge case that a factor is active for a user, but they sign out before setting it up, then when they login next, SuperTokens still asks them to complete the factor at that time. If SuperTokens doesn't have the required information (like no TOTP device for TOTP auth), then users need to set up a device at that point in time.]
 
 If you would like to change how this works and only want users to set up their factor via the settings page, and not during sign in, you can do this by overriding the `getMFARequirementsForAuth` function, which takes as an input the list of factors that are setup for the current user.
 :::
@@ -1444,11 +1434,11 @@ The subsequent sections in this doc walk through frontend setup, and also specif
 
 ### 2. Set up the frontend
 
-<UIType.Switch />
+<UITypeSwitch />
 
-<UIType.PrebuiltUIContent>
+<VariantContent storageKey="ui-type" value="prebuilt">
 
-<TenantType.SingleTenantContent>
+<VariantContent storageKey="tenant-type" value="single">
 
 The pre-built UI provides support for the following MFA methods:
 - TOTP
@@ -1458,115 +1448,106 @@ If you want other types of MFA (like magic links, or password), please consider 
 
 We start by initialising the MFA recipe on the frontend and providing the list of first factors as shown below:
 
-<FrontendPrebuiltUITabs>
-
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
-
-```tsx
-import supertokens from "supertokens-auth-react"
-import EmailPassword from "supertokens-auth-react/recipe/emailpassword"
-import Passwordless from "supertokens-auth-react/recipe/passwordless"
-import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
-
-supertokens.init({
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "...",
-    },
-    recipeList: [
-        EmailPassword.init( /* ... */),
-        Passwordless.init({
-             contactMethod: "EMAIL_OR_PHONE",
-        }),
-        // highlight-start
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ]
-        })
-        // highlight-end
-    ]
-})
-```
-
-</FrontendPrebuiltUITabs.TabItem>
-
-<FrontendPrebuiltUITabs.TabItem value="angular">
-
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="Angular" value="angular">
 You need to make changes to the auth route configuration, as well as to the `supertokens-web-js` SDK configuration at the root of your application:
 
 This change is in your auth route configuration.
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="frontend-prebuilt-ui">
+<Tab title="Reactjs" value="reactjs">
 ```tsx
-// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
-import {init as supertokensUIInit} from "supertokens-auth-react-script";
-import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword"
-import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless"
-import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
+import supertokens from "supertokens-auth-react";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth";
 
-supertokensUIInit({
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "...",
-    },
-    recipeList: [
-        supertokensUIEmailPassword.init( /* ... */),
-        supertokensUIPasswordless.init({
-             contactMethod: "EMAIL_OR_PHONE",
-        }),
-        // highlight-start
-        supertokensUIMultiFactorAuth.init({
-            firstFactors: [
-                supertokensUIMultiFactorAuth.FactorIds.EMAILPASSWORD,
-                supertokensUIMultiFactorAuth.FactorIds.THIRDPARTY
-            ]
-        })
-        // highlight-end
-    ]
-})
-```
-
-This change goes in the `supertokens-web-js` SDK configuration at the root of your application:
-
-```tsx
-import SuperTokens from 'supertokens-web-js';
-import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
-import Session from 'supertokens-web-js/recipe/session'
-
-SuperTokens.init({
-    appInfo: {
-        apiDomain: "...",
-        apiBasePath: "...",
-        appName: "...",
-    },
-    recipeList: [
-        Session.init(),
-        MultiFactorAuth.init()
-    ],
+supertokens.init({
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    EmailPassword.init(/* ... */),
+    Passwordless.init({
+      contactMethod: "EMAIL_OR_PHONE",
+    }),
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+    }),
+  ],
 });
 ```
+</Tab>
+<Tab title="Angular" value="angular">
+```tsx check=false reason="script-tag example relies on globals provided by loaded SuperTokens bundles"
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
 
-</FrontendPrebuiltUITabs.TabItem>
+supertokensUIInit({
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    supertokensUIEmailPassword.init(/* ... */),
+    supertokensUIPasswordless.init({
+      contactMethod: "EMAIL_OR_PHONE",
+    }),
+    supertokensUIMultiFactorAuth.init({
+      firstFactors: [
+        supertokensUIMultiFactorAuth.FactorIds.EMAILPASSWORD,
+        supertokensUIMultiFactorAuth.FactorIds.THIRDPARTY,
+      ],
+    }),
+  ],
+});
+```
+</Tab>
+</CodeGroup>
 
-</FrontendPrebuiltUITabs>
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="Angular" value="angular">
+This change goes in the `supertokens-web-js` SDK configuration at the root of your application:
+</ContentOption>
+</DependentContent>
 
-In the above snippet, `thirdparty` and email password are configured as first factors. The second factor is determined [on the backend](/docs/additional-verification/mfa/initial-setup#1-set-up-the-backend), based on the boolean value of  [`v` in the MFA claim in the session](/docs/additional-verification/mfa/important-concepts#factors). If the `v` is `false` in the session, it means that there are still factors pending before the user has completed login. In this case, the frontend SDK calls the `MFAInfo` endpoint (see more about this later) on the backend which returns the list of factors (`string[]`) that the user must complete next. For example: 
+<CodeGroup passive group="frontend-prebuilt-ui">
+<Tab title="Angular" value="angular">
+```tsx
+import SuperTokens from "supertokens-web-js";
+import MultiFactorAuth from "supertokens-web-js/recipe/multifactorauth";
+import Session from "supertokens-web-js/recipe/session";
+
+SuperTokens.init({
+  appInfo: {
+    apiDomain: "...",
+    apiBasePath: "...",
+    appName: "...",
+  },
+  recipeList: [Session.init(), MultiFactorAuth.init()],
+});
+```
+</Tab>
+</CodeGroup>
+
+In the above snippet, `thirdparty` and email password are configured as first factors. The second factor is determined [on the backend](/additional-verification/mfa/initial-setup#1-set-up-the-backend), based on the boolean value of  [`v` in the MFA claim in the session](/additional-verification/mfa/important-concepts#factors). If the `v` is `false` in the session, it means that there are still factors pending before the user has completed login. In this case, the frontend SDK calls the `MFAInfo` endpoint (see more about this later) on the backend which returns the list of factors (`string[]`) that the user must complete next. For example: 
 - If the next array is `["otp-email"]`, then the user sees the enter OTP screen for the email associated with the first factor login.
 - If the `n` array has multiple items, the user sees a [factor chooser screen](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
 - If the `next` is empty, it means that:
     - A misconfiguration exists on the backend. This would show an access denied screen to the user. OR;
     - Another claim needs to satisfy first (like email verification), before the next MFA challenge can display. This can happen if you configure the `backend`'s `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email has been verified.
 
-If you notice, in the above code snippet, `Passwordless.init` is also included, and this handles cases where the second factor is `otp-email` or `otp-sms`. For TOTP, a different recipe is used as shown later in this guide.
+If you notice, in the above code snippet, `Passwordless.init` is also included, and this handles cases where the second factor is `otp-email` or `otp-phone`. For TOTP, a different recipe is used as shown later in this guide.
 
-</TenantType.SingleTenantContent>
+</VariantContent>
 
-<TenantType.MultiTenantContent>
+<VariantContent storageKey="tenant-type" value="multi">
 
-For a multi-factor setup, the first factors are selected based on [the configuration of the tenant](./backend-setup#multi-tenant-setup). Each tenant has a `firstFactors` array configuration which determines the login options shown for that tenant. For MFA, the login options are determined by the [`requiredSecondaryFactors` configuration on the tenant](./backend-setup#multi-tenant-setup-1), or based on the customisations for `getMFARequirementsForAuth` on the backend.
+For a multi-factor setup, the first factors are selected based on [the configuration of the tenant](/additional-verification/mfa/initial-setup#12-configure-the-first-factors). Each tenant has a `firstFactors` array configuration which determines the login options shown for that tenant. For MFA, the login options are determined by the [`requiredSecondaryFactors` configuration on the tenant](/additional-verification/mfa/initial-setup#13-configure-the-second-factor), or based on the customisations for `getMFARequirementsForAuth` on the backend.
 
 To tell the frontend to dynamically load the factors based on the tenant, four things need to supply:
 - The current `tenantId`
@@ -1574,144 +1555,130 @@ To tell the frontend to dynamically load the factors based on the tenant, four t
 - Add `MultiFactorAuth.init` to the recipe list without any configured `firstFactors`
 - Init all the recipes that can be possibly used by any tenant as the first or second factor.
 
-<FrontendPrebuiltUITabs>
-
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
-
-```tsx
-import supertokens from "supertokens-auth-react"
-import EmailPassword from "supertokens-auth-react/recipe/emailpassword"
-import Passwordless from "supertokens-auth-react/recipe/passwordless"
-import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth"
-import Multitenancy from "supertokens-auth-react/recipe/multitenancy"
-
-supertokens.init({
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "...",
-    },
-    // highlight-next-line
-    usesDynamicLoginMethods: true,
-    recipeList: [
-        Multitenancy.init({
-            override: {
-                functions: (oI) => {
-                    return {
-                        ...oI,
-                        // highlight-start
-                        getTenantId: (input) => {
-                            // Implement the following based on the UX flow you want for
-                            // tenant discovery
-                            return "TODO.."
-                        }
-                        // highlight-end
-                    }
-                }
-            }
-        }),
-        EmailPassword.init( /* ... */),
-        Passwordless.init({
-            contactMethod: "EMAIL_OR_PHONE",
-        }),
-        // highlight-start
-        MultiFactorAuth.init()
-        // highlight-end
-    ]
-})
-```
-
-</FrontendPrebuiltUITabs.TabItem>
-
-<FrontendPrebuiltUITabs.TabItem value="angular">
-
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="Angular" value="angular">
 You need to make changes to the auth route configuration, as well as to the `supertokens-web-js` SDK configuration at the root of your application:
 
 This change is in your auth route configuration.
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="frontend-prebuilt-ui">
+<Tab title="Reactjs" value="reactjs">
 ```tsx
-// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
-import {init as supertokensUIInit} from "supertokens-auth-react-script";
-import supertokensUIEmailPassword from "supertokens-auth-react-script/recipe/emailpassword"
-import supertokensUIPasswordless from "supertokens-auth-react-script/recipe/passwordless"
-import supertokensUIMultiFactorAuth from "supertokens-auth-react-script/recipe/multifactorauth"
-import supertokensUIMultitenancy from "supertokens-auth-react-script/recipe/multitenancy"
+import supertokens from "supertokens-auth-react";
+import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+import MultiFactorAuth from "supertokens-auth-react/recipe/multifactorauth";
+import Multitenancy from "supertokens-auth-react/recipe/multitenancy";
 
-supertokensUIInit({
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "...",
-    },
-    // highlight-next-line
-    usesDynamicLoginMethods: true,
-    recipeList: [
-        supertokensUIMultitenancy.init({
-            override: {
-                functions: (oI) => {
-                    return {
-                        ...oI,
-                        // highlight-start
-                        getTenantId: (input) => {
-                            // Implement the following based on the UX flow you want for
-                            // tenant discovery
-                            return "TODO.."
-                        }
-                        // highlight-end
-                    }
-                }
-            }
-        }),
-        supertokensUIEmailPassword.init( /* ... */),
-        supertokensUIPasswordless.init({
-            contactMethod: "EMAIL_OR_PHONE",
-        }),
-        // highlight-start
-        supertokensUIMultiFactorAuth.init()
-        // highlight-end
-    ]
-})
-```
-
-This change goes in the `supertokens-web-js` SDK configuration at the root of your application:
-
-```tsx
-import SuperTokens from 'supertokens-web-js';
-import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
-import Session from 'supertokens-web-js/recipe/session'
-
-SuperTokens.init({
-    appInfo: {
-        apiDomain: "...",
-        apiBasePath: "...",
-        appName: "...",
-    },
-    recipeList: [
-        Session.init(),
-        MultiFactorAuth.init()
-    ],
+supertokens.init({
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  usesDynamicLoginMethods: true,
+  recipeList: [
+    Multitenancy.init({
+      override: {
+        functions: (oI) => {
+          return {
+            ...oI,
+            getTenantId: (input) => {
+              // Implement the following based on the UX flow you want for
+              // tenant discovery
+              return "TODO..";
+            },
+          };
+        },
+      },
+    }),
+    EmailPassword.init(/* ... */),
+    Passwordless.init({
+      contactMethod: "EMAIL_OR_PHONE",
+    }),
+    MultiFactorAuth.init(),
+  ],
 });
 ```
+</Tab>
+<Tab title="Angular" value="angular">
+```tsx check=false reason="script-tag example relies on globals provided by loaded SuperTokens bundles"
+// this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
 
-</FrontendPrebuiltUITabs.TabItem>
+supertokensUIInit({
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  usesDynamicLoginMethods: true,
+  recipeList: [
+    supertokensUIMultitenancy.init({
+      override: {
+        functions: (oI) => {
+          return {
+            ...oI,
+            getTenantId: (input) => {
+              // Implement the following based on the UX flow you want for
+              // tenant discovery
+              return "TODO..";
+            },
+          };
+        },
+      },
+    }),
+    supertokensUIEmailPassword.init(/* ... */),
+    supertokensUIPasswordless.init({
+      contactMethod: "EMAIL_OR_PHONE",
+    }),
+    supertokensUIMultiFactorAuth.init(),
+  ],
+});
+```
+</Tab>
+</CodeGroup>
 
-</FrontendPrebuiltUITabs>
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="Angular" value="angular">
+This change goes in the `supertokens-web-js` SDK configuration at the root of your application:
+</ContentOption>
+</DependentContent>
+
+<CodeGroup passive group="frontend-prebuilt-ui">
+<Tab title="Angular" value="angular">
+```tsx
+import SuperTokens from "supertokens-web-js";
+import MultiFactorAuth from "supertokens-web-js/recipe/multifactorauth";
+import Session from "supertokens-web-js/recipe/session";
+
+SuperTokens.init({
+  appInfo: {
+    apiDomain: "...",
+    apiBasePath: "...",
+    appName: "...",
+  },
+  recipeList: [Session.init(), MultiFactorAuth.init()],
+});
+```
+</Tab>
+</CodeGroup>
 
 - In the above code snippet, `ThirdPartyEmailPassword` and `Passwordless` are included as the auth methods. This works for a variety of use cases like:
-    - The first factor for any tenant can be third party or email password login, and the second factor can be passwordless login (`otp-email` or `otp-sms`).
+    - The first factor for any tenant can be third party or email password login, and the second factor can be passwordless login (`otp-email` or `otp-phone`).
     - The first factor for any tenant can be email password, with, or without a second factor (like `otp-email`)..
     - The first factor for any tenant can be third party, with, or without a second factor (like `otp-email`)..
     - The first factor for any tenant can be passwordless login (with magic link), with or without a second factor (like `otp-email`).
     - You can even change `passwordles.init` to using `thirdpartypasswordless.init` if you want to have the first factor for any tenant to be `thirdparty` or passwordless login, with or without a second factor (like `otp-email`).
 - The `MultiFactorAuth` is configured without any configured `firstFactors` because the frontend is set to dynamically load the first factors based on the tenant. Therefore, `usesDynamicLoginMethods: true` is included in the `SuperTokens.init` call.
-- The `Multitenancy` is configured as well, and a skeleton for `getTenantId` is provided. You need to implement this function based on the UX flow desired for tenant discovery. For example, [here is a common UX flow in which the tenant ID is determined based on the current sub domain](/docs/authentication/enterprise/subdomain-login).
+- The `Multitenancy` is configured as well, and a skeleton for `getTenantId` is provided. You need to implement this function based on the UX flow desired for tenant discovery. For example, [here is a common UX flow in which the tenant ID is determined based on the current sub domain](/authentication/enterprise/subdomain-login).
 
-:::important
-- If you do initialize the `firstFactors` array for `MultiFactorAuth.init()` on the frontend, it is not considered when `usesDynamicLoginMethods: true` is included.
-- If the tenant doesn't have the `firstFactors` array set, then the list of first factors that appear is determined by the [login methods that are enabled in that tenant's configuration](/docs/multi-tenancy/new-tenant).
+:::note[- If you do initialize the `firstFactors` array for `MultiFactorAuth.init()` on the frontend, it is not considered when `usesDynamicLoginMethods: true` is included.]
+- If the tenant doesn't have the `firstFactors` array set, then the list of first factors that appear is determined by the [login methods that are enabled in that tenant's configuration](/authentication/enterprise/manage-tenants#create-a-new-tenant).
 :::
 
-The second factor for a tenant is selected based on the [`secondaryFactors` configuration for the tenant](./backend-setup#multi-tenant-setup-1), or based on any custom implementation for the `getMFARequirementsForAuth` function. If the current user has specific MFA methods enabled for them, those are also shown as options as well. Overall, the list of secondary factors is used to build the `next` array returned from the `MFAInfo` endpoint (see more about this later). For example: 
+The second factor for a tenant is selected based on the [`secondaryFactors` configuration for the tenant](/additional-verification/mfa/initial-setup#13-configure-the-second-factor), or based on any custom implementation for the `getMFARequirementsForAuth` function. If the current user has specific MFA methods enabled for them, those are also shown as options as well. Overall, the list of secondary factors is used to build the `next` array returned from the `MFAInfo` endpoint (see more about this later). For example: 
 - If the next array is `["otp-email"]`, then the user sees the enter OTP screen for the email associated with the first factor login.
 - If the `n` array has multiple items, the user sees a [factor chooser screen](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/mfa-chooser--multiple-factors) using which they can decide which factor they want to continue with.
 - If the `next` is empty, it means that:
@@ -1720,7 +1687,7 @@ The second factor for a tenant is selected based on the [`secondaryFactors` conf
 
 In the subsequent sections, specific MFA setup examples are given for your reference.
 
-</TenantType.MultiTenantContent>
+</VariantContent>
 
 #### Usage with email verification 
 
@@ -1729,94 +1696,86 @@ For example, if the user has email password as the first factor, and then TOTP a
 
 To switch the order such that email verification happens after the secondary factors of MFA, follow the next code snippet.
 
-<FrontendPrebuiltUITabs>
-
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
-
+<CodeGroup group="frontend-prebuilt-ui">
+<Tab title="Reactjs" value="reactjs">
 ```tsx
-import supertokens from "supertokens-auth-react"
+import supertokens from "supertokens-auth-react";
 import EmailVerification from "supertokens-auth-react/recipe/emailverification";
 import Session from "supertokens-auth-react/recipe/session";
 
 supertokens.init({
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "...",
-    },
-    recipeList: [
-        // other recipes...
-        EmailVerification.init({
-            mode: "REQUIRED",
-        }),
-        Session.init({
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        // highlight-start
-                        getGlobalClaimValidators: (input) => {
-                            let emailVerificationClaimValidator = input.claimValidatorsAddedByOtherRecipes.find(v => v.id === EmailVerification.EmailVerificationClaim.id)!;
-                            let filteredValidators = input.claimValidatorsAddedByOtherRecipes.filter(v => v.id !== EmailVerification.EmailVerificationClaim.id);
-                            return [...filteredValidators, emailVerificationClaimValidator];
-                        }
-                        // highlight-end
-                    }
-                }
-            }
-        })
-    ]
-})
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // other recipes...
+    EmailVerification.init({
+      mode: "REQUIRED",
+    }),
+    Session.init({
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getGlobalClaimValidators: (input) => {
+              let emailVerificationClaimValidator = input.claimValidatorsAddedByOtherRecipes.find(
+                (v) => v.id === EmailVerification.EmailVerificationClaim.id,
+              )!;
+              let filteredValidators = input.claimValidatorsAddedByOtherRecipes.filter(
+                (v) => v.id !== EmailVerification.EmailVerificationClaim.id,
+              );
+              return [...filteredValidators, emailVerificationClaimValidator];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
-
-In the snippet above, the `getGlobalClaimValidators` function in the Session recipe is overridden to add the email verification validator at the end of the returned validators array. This ensures that post the first factor sign up, the first validator that fails is the MFA one which redirects the user to complete the MFA factors.
-
-</FrontendPrebuiltUITabs.TabItem>
-
-<FrontendPrebuiltUITabs.TabItem value="angular">
-
-```tsx
+</Tab>
+<Tab title="Angular" value="angular">
+```tsx check=false reason="script-tag example relies on globals provided by loaded SuperTokens bundles"
 // this goes in the auth route config of your frontend app (once the pre-built UI script has been loaded)
-import {init as supertokensUIInit} from "supertokens-auth-react-script";
-import supertokensUIEmailVerification from "supertokens-auth-react-script/recipe/emailverification";
-import supertokensUISession from "supertokens-auth-react-script/recipe/session";
 
 supertokensUIInit({
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "...",
-    },
-    recipeList: [
-        // other recipes...
-        supertokensUIEmailVerification.init({
-            mode: "REQUIRED",
-        }),
-        supertokensUISession.init({
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        // highlight-start
-                        getGlobalClaimValidators: (input) => {
-                            let emailVerificationClaimValidator = input.claimValidatorsAddedByOtherRecipes.find(v => v.id === supertokensUIEmailVerification.EmailVerificationClaim.id)!;
-                            let filteredValidators = input.claimValidatorsAddedByOtherRecipes.filter(v => v.id !== supertokensUIEmailVerification.EmailVerificationClaim.id);
-                            return [...filteredValidators, emailVerificationClaimValidator];
-                        }
-                        // highlight-end
-                    }
-                }
-            }
-        })
-    ]
-})
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // other recipes...
+    supertokensUIEmailVerification.init({
+      mode: "REQUIRED",
+    }),
+    supertokensUISession.init({
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getGlobalClaimValidators: (input) => {
+              let emailVerificationClaimValidator = input.claimValidatorsAddedByOtherRecipes.find(
+                (v) => v.id === supertokensUIEmailVerification.EmailVerificationClaim.id,
+              )!;
+              let filteredValidators = input.claimValidatorsAddedByOtherRecipes.filter(
+                (v) => v.id !== supertokensUIEmailVerification.EmailVerificationClaim.id,
+              );
+              return [...filteredValidators, emailVerificationClaimValidator];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+</CodeGroup>
 
 In the snippet above, the `getGlobalClaimValidators` function in the Session recipe is overridden to add the email verification validator at the end of the returned validators array. This ensures that post the first factor sign up, the first validator that fails is the MFA one which redirects the user to complete the MFA factors.
-
-</FrontendPrebuiltUITabs.TabItem>
-
-</FrontendPrebuiltUITabs>
 
 
 #### Handle misconfigurations
@@ -1834,45 +1793,46 @@ Sometimes, users may end up seeing [an access denied screen](https://master--657
 
 You can override this component in the following way:
 
-<FrontendPrebuiltUITabs>
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="Angular" value="angular">
+:::warning[You cannot override the pre-built UI in non react apps yet.]
+:::
+</ContentOption>
+</DependentContent>
 
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
-
-<Question
-    question="Do you use react-router-dom?">
-<Answer title="Yes">
-
+<CodeGroup group="frontend-prebuilt-ui">
+<Tab title="Reactjs" value="reactjs">
+<DependentContent group="react-router" label="Do you use react-router-dom?">
+<ContentOption title="With React Router" value="yes">
 ```tsx
 import React from "react";
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { SessionComponentsOverrideProvider } from "supertokens-auth-react/recipe/session";
 
 function App() {
-    return (
-        <SuperTokensWrapper>
-            <SessionComponentsOverrideProvider
-                components={{
-                    SessionAccessDenied_Override: ({ DefaultComponent, ...props }) => {
-                        return (
-                            <div>
-                                Access denied!
-                                {props.error === undefined ? null : props.error}
-                            </div>
-                        );
-                    },
-                }}>
-                {/* Rest of the JSX */}
-            </SessionComponentsOverrideProvider>
-        </SuperTokensWrapper>
-    );
+  return (
+    <SuperTokensWrapper>
+      <SessionComponentsOverrideProvider
+        components={{
+          SessionAccessDenied_Override: ({ DefaultComponent, ...props }) => {
+            return (
+              <div>
+                Access denied!
+                {props.error === undefined ? null : props.error}
+              </div>
+            );
+          },
+        }}
+      >
+        {/* Rest of the JSX */}
+      </SessionComponentsOverrideProvider>
+    </SuperTokensWrapper>
+  );
 }
 export default App;
 ```
-
-</Answer>
-
-<Answer title="No">
-
+</ContentOption>
+<ContentOption title="Without React Router" value="no">
 ```tsx
 import React from "react";
 import { SuperTokensWrapper } from "supertokens-auth-react";
@@ -1880,64 +1840,59 @@ import { getRoutingComponent, canHandleRoute } from "supertokens-auth-react/ui";
 import { SessionComponentsOverrideProvider } from "supertokens-auth-react/recipe/session";
 
 function App() {
-    if(canHandleRoute([/*...*/])){
-        return (
-            <SessionComponentsOverrideProvider
-                components={{
-                    SessionAccessDenied_Override: ({ DefaultComponent, ...props }) => {
-                        return (
-                            <div>
-                                Access denied!
-                                {props.error === undefined ? null : props.error}
-                            </div>
-                        );
-                    },
-                }}>
-                {getRoutingComponent([/*...*/])}
-            </SessionComponentsOverrideProvider>
-        )
-    }
+  if (
+    canHandleRoute([
+      /*...*/
+    ])
+  ) {
     return (
-        <SuperTokensWrapper>
-            {/* Rest of the JSX */}
-        </SuperTokensWrapper>
+      <SessionComponentsOverrideProvider
+        components={{
+          SessionAccessDenied_Override: ({ DefaultComponent, ...props }) => {
+            return (
+              <div>
+                Access denied!
+                {props.error === undefined ? null : props.error}
+              </div>
+            );
+          },
+        }}
+      >
+        {getRoutingComponent([
+          /*...*/
+        ])}
+      </SessionComponentsOverrideProvider>
     );
+  }
+  return <SuperTokensWrapper>{/* Rest of the JSX */}</SuperTokensWrapper>;
 }
 export default App;
 ```
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="Angular" value="angular">
 
-</Answer>
-
-</Question>
-
-</FrontendPrebuiltUITabs.TabItem>
-
-<FrontendPrebuiltUITabs.TabItem value="angular">
-
-:::caution
-You cannot override the pre-built UI in non react apps yet.
-:::
-
-</FrontendPrebuiltUITabs.TabItem>
-
-</FrontendPrebuiltUITabs>
+</Tab>
+</CodeGroup>
 
 
-</UIType.PrebuiltUIContent>
+</VariantContent>
 
 
-<UIType.CustomUIContent>
+<VariantContent storageKey="ui-type" value="custom">
+
 
 After the first factor sign in is over, to know the next auth challenge, the frontend should rely on the session's access token payload MFA claim's `n` array. For example, the access token payload may have the following content:
 
 ```json
 {
-    "st-mfa": {
-        "c": {
-            "emailpassword": 1702877939,
-        },
-        "v": false
-    }
+  "st-mfa": {
+    "c": {
+      "emailpassword": 1702877939
+    },
+    "v": false
+  }
 }
 ```
 
@@ -1945,170 +1900,136 @@ This means that the user has completed the email password login, and that there 
 
 #### 1.1 Initialize the MFA recipe 
 
-<FrontendCustomUITabs>
 
-<FrontendCustomUITabs.TabItem value="web">
 
-<NpmOrScriptsCard>
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+:::success[This step is not applicable for mobile apps. Please continue reading.]
+:::
+</ContentOption>
+</DependentContent>
 
-<NpmOrScriptsCard.Content value="npm">
-
+<CodeGroup group="frontend-custom-ui">
+<Tab title="Web" value="web">
+<DependentContent group="install-method" label="Installation method">
+<ContentOption title="npm" value="npm">
 ```tsx
-import SuperTokens from 'supertokens-web-js';
-import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import SuperTokens from "supertokens-web-js";
+import MultiFactorAuth from "supertokens-web-js/recipe/multifactorauth";
 
 SuperTokens.init({
-    appInfo: {
-        apiDomain: "...",
-        apiBasePath: "...",
-        appName: "...",
-    },
-    recipeList: [
-        // other recipes...
-        // highlight-next-line
-        MultiFactorAuth.init()
-    ],
+  appInfo: {
+    apiDomain: "...",
+    apiBasePath: "...",
+    appName: "...",
+  },
+  recipeList: [
+    // other recipes...
+    MultiFactorAuth.init(),
+  ],
 });
 ```
-
-</NpmOrScriptsCard.Content>
-
-<NpmOrScriptsCard.Content value="scripts">
-
-```tsx
-import supertokens from "supertokens-web-js-script";
-import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
+</ContentOption>
+<ContentOption title="Script tag" value="script-tag">
+```tsx check=false reason="script-tag example relies on globals provided by loaded SuperTokens bundles"
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        apiBasePath: "...",
-        appName: "...",
-    },
-    recipeList: [
-        // other recipes...
-        // highlight-next-line
-        supertokensMultiFactorAuth.init()
-    ],
+  appInfo: {
+    apiDomain: "...",
+    apiBasePath: "...",
+    appName: "...",
+  },
+  recipeList: [
+    // other recipes...
+    supertokensMultiFactorAuth.init(),
+  ],
 });
 ```
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="Mobile" value="mobile">
 
-</NpmOrScriptsCard.Content>
+</Tab>
+</CodeGroup>
 
 
-</NpmOrScriptsCard>
-
-</FrontendCustomUITabs.TabItem>
-
-<FrontendCustomUITabs.TabItem value="mobile">
-
-:::success
-This step is not applicable for mobile apps. Please continue reading.
-:::
-
-</FrontendCustomUITabs.TabItem>
-
-</FrontendCustomUITabs>
 
 #### 1.2 Add the MFA flow
 
 The overall lifecycle of a factor post sign in is as follows:
 
 <Steps>
-
-## Asking for the first factor
-
+<Step title="Asking for the first factor">
 This is the same as setting up a recipe per the other recipe guides. Please follow those.
-
-## Checking the `v` boolean value in the MFA claim
-
+</Step>
+<Step title="Checking the v boolean value in the MFA claim">
 After the first factor is complete, the frontend needs to check if there are any pending MFA challenges. This can be done by reading the `v` claim from the session as shown below:
 
-<FrontendCustomUITabs uiType="custom">
 
-<FrontendCustomUITabs.TabItem value="web">
 
-<NpmOrScriptsCard>
-
-<NpmOrScriptsCard.Content value="npm">
-
+<CodeGroup group="frontend-custom-ui">
+<Tab title="Web" value="web">
+<DependentContent group="install-method" label="Installation method">
+<ContentOption title="npm" value="npm">
 ```tsx
-import MultiFactorAuth from 'supertokens-web-js/recipe/multifactorauth';
+import MultiFactorAuth from "supertokens-web-js/recipe/multifactorauth";
 import Session from "supertokens-web-js/recipe/session";
 
 async function isAllMFACompleted() {
-    if (await Session.doesSessionExist()) {
-        let mfaClaim = await Session.getClaimValue({
-            claim: MultiFactorAuth.MultiFactorAuthClaim
-        });
-        if (mfaClaim === undefined) {
-            // this can happen during migration where the session is an older one
-            // that was created before MFA was introduced on the backend
-            return true;
-        } else {
-            return mfaClaim.v
-        }
+  if (await Session.doesSessionExist()) {
+    let mfaClaim = await Session.getClaimValue({
+      claim: MultiFactorAuth.MultiFactorAuthClaim,
+    });
+    if (mfaClaim === undefined) {
+      // this can happen during migration where the session is an older one
+      // that was created before MFA was introduced on the backend
+      return true;
     } else {
-        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+      return mfaClaim.v;
     }
+  } else {
+    throw new Error("Illegal function call: For first factor setup, you do not need to call this function");
+  }
 }
 ```
-
-</NpmOrScriptsCard.Content>
-
-<NpmOrScriptsCard.Content value="scripts">
-
-```tsx
-import supertokensMultiFactorAuth from 'supertokens-web-js-script/recipe/multifactorauth';
-import supertokensSession from "supertokens-web-js-script/recipe/session";
+</ContentOption>
+<ContentOption title="Script tag" value="script-tag">
+```tsx check=false reason="script-tag example relies on globals provided by loaded SuperTokens bundles"
 async function isAllMFACompleted() {
-    if (await supertokensSession.doesSessionExist()) {
-        let mfaClaim = await supertokensSession.getClaimValue({
-            claim: supertokensMultiFactorAuth.MultiFactorAuthClaim
-        });
-        if (mfaClaim === undefined) {
-            // this can happen during migration where the session is an older one
-            // that was created before MFA was introduced on the backend
-            return true;
-        } else {
-            return mfaClaim.v
-        }
+  if (await supertokensSession.doesSessionExist()) {
+    let mfaClaim = await supertokensSession.getClaimValue({
+      claim: supertokensMultiFactorAuth.MultiFactorAuthClaim,
+    });
+    if (mfaClaim === undefined) {
+      // this can happen during migration where the session is an older one
+      // that was created before MFA was introduced on the backend
+      return true;
     } else {
-        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+      return mfaClaim.v;
     }
+  } else {
+    throw new Error("Illegal function call: For first factor setup, you do not need to call this function");
+  }
 }
 ```
-
-</NpmOrScriptsCard.Content>
-
-
-</NpmOrScriptsCard>
-
-</FrontendCustomUITabs.TabItem>
-
-<FrontendCustomUITabs.TabItem value="mobile">
-
-<MobileFrameworksCard>
-
-<MobileFrameworksCard.Content value="reactnative">
-
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="Mobile" value="mobile">
+<DependentContent group="mobile-frameworks" label="Mobile framework">
+<ContentOption title="ReactNative" value="reactnative">
 ```tsx
-import SuperTokens from 'supertokens-react-native';
+import SuperTokens from "supertokens-react-native";
 
 async function isAllMFACompleted() {
-    if (await SuperTokens.doesSessionExist()) {
-
-        // highlight-start
-        let isMFACompleted: boolean = (await SuperTokens.getAccessTokenPayloadSecurely())["st-mfa"].v;
-        return isMFACompleted
-        // highlight-end
-    }
+  if (await SuperTokens.doesSessionExist()) {
+    let isMFACompleted: boolean = (await SuperTokens.getAccessTokenPayloadSecurely())["st-mfa"].v;
+    return isMFACompleted;
+  }
 }
 ```
-
-</MobileFrameworksCard.Content>
-
-<MobileFrameworksCard.Content value="android">
-
+</ContentOption>
+<ContentOption title="Android" value="android">
 ```kotlin
 import android.app.Application
 import com.supertokens.session.SuperTokens
@@ -2122,11 +2043,8 @@ class MainApplication: Application() {
     }
 }
 ```
-
-</MobileFrameworksCard.Content>
-
-<MobileFrameworksCard.Content value="ios">
-
+</ContentOption>
+<ContentOption title="iOS" value="ios">
 ```swift
 import UIKit
 import SuperTokensIOS
@@ -2147,11 +2065,8 @@ fileprivate class ViewController: UIViewController {
     }
 }
 ```
-
-</MobileFrameworksCard.Content>
-
-<MobileFrameworksCard.Content value="flutter">
-
+</ContentOption>
+<ContentOption title="Flutter" value="flutter">
 ```dart
 import 'package:supertokens_flutter/supertokens.dart';
 
@@ -2170,30 +2085,27 @@ Future<bool> isAllMFACompleted() async {
   return false; // Return false if "st-mfa" is not present or "v" is not found
 }
 ```
-
-</MobileFrameworksCard.Content>
-
-</MobileFrameworksCard>
-
-</FrontendCustomUITabs.TabItem>
-
-</FrontendCustomUITabs>
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
 
-## Checking the `next` array
-Once it is verified that MFA is still pending, the list of factors the user must do next needs to be retrieved. This can be done by calling the [MFA Info endpoint](#mfa-info-endpoint) which returns a list of next (`string[]`) factors:
+</Step>
+<Step title="Checking the next array">
+Once it is verified that MFA is still pending, the list of factors the user must do next needs to be retrieved. This can be done by calling the [MFA Info endpoint](#the-mfa-info-endpoint) which returns a list of next (`string[]`) factors:
 - If there are multiple values in this array, then the frontend needs to show these options to the user and ask them to pick one of them.
 - If there is only one item, then the UI can directly ask the user to complete that factor.
 - If this array is empty, then:
     - A misconfiguration exists on the backend. This would show an access denied screen to the user. OR;
     - Another claim needs to satisfy first (like email verification), before the next MFA challenge can display. This can happen if you configure the `backend`'s `checkAllowedToSetupFactorElseThrowInvalidClaimError` function to not allow a factor setup until the email has been verified.
-
-## Checking for factor setup
+</Step>
+<Step title="Checking for factor setup">
 Once the user has picked a specific factor (or if `next` contains only one item), you need to check if that factor has already been setup for that user. A factor is setup already if:
 - For `totp`: The user has already added a `totp` device and verified it.
 - For `otp-email`: The user has a passwordless `loginMethod` that has an email associated with it.
 - For `link-email`: The user has a passwordless `loginMethod` that has an email associated with it. Note that this is not a valid secondary factor, but is a valid first factor.
-- For `otp-sms`: The user has a passwordless `loginMethod` that has a phone number associated with it.
+- For `otp-phone`: The user has a passwordless `loginMethod` that has a phone number associated with it.
 - For `link-phone`: The user has a passwordless `loginMethod` that has a phone number associated with it. Note that this is not a valid secondary factor, but is a value first factor.
 - For `emailpassword`: The user has an email password `loginMethod`.
 - For `thirdparty`: The user has a third party `loginMethod`.
@@ -2201,22 +2113,22 @@ Once the user has picked a specific factor (or if `next` contains only one item)
 If the user has the factor already setup, you can skip the setup step and directly ask them for the challenge:
 - For `totp`: Ask them to enter the OTP.
 - For `otp-email`: Send them an email with the OTP, and ask them to enter the OTP.
-- For `otp-sms`: Send them an SMS with the OTP, and ask them to enter the OTP.
+- For `otp-phone`: Send them an SMS with the OTP, and ask them to enter the OTP.
 - For `emailpassword`: Ask them to enter their password.
 - For `thirdparty`: Ask them to login using the third party provider.
 
 In case the user does not have the factor setup, you need to ask them to set it up first:
 - For `totp`: Ask them to scan the QR code and enter the TOTP to verify the device.
 - For `otp-email`: Ask them to enter their email and send them an email with the OTP. Once they enter the OTP, a passwordless user is created and associated with their user object. Note that if you already have the user's email from another login method (see later), you do not need to ask them to enter their email again. In that way, it would be similar to as if the factor is already setup, but technically, it is not.
-- For `otp-sms`: Ask them to enter their phone number and send them an SMS with the OTP. Once they enter the OTP, a passwordless user is created and associated with their user object. Note that if you already have the user's phone number from another login method (see later), you do not need to ask them to enter their phone number again. In that way, it would be similar to as if the factor is already setup, but technically, it is not.
+- For `otp-phone`: Ask them to enter their phone number and send them an SMS with the OTP. Once they enter the OTP, a passwordless user is created and associated with their user object. Note that if you already have the user's phone number from another login method (see later), you do not need to ask them to enter their phone number again. In that way, it would be similar to as if the factor is already setup, but technically, it is not.
 - For `emailpassword`: Ask them to enter their email and password. Once they enter the password, an email password user is created and associated with their user object. Note that if you already have the user's email from another login method (see later), you do not need to ask them to enter their email again. In that way, it would be similar to as if the factor is already setup, but technically, it is not. Here you would be calling the sign up API, vs in the other case (where the factor is already setup), you would be calling the sign in API.
 - For `thirdparty`: Ask them to login using the third party provider. Once they login, a third party user is created and associated with their user object.
 
-In the later guides of this recipe, the use cases are described. If you want to know the status of any factor, you can get that by calling the [MFA Info endpoint](#mfa-info-endpoint).
-
+In the later guides of this recipe, the use cases are described. If you want to know the status of any factor, you can get that by calling the [MFA Info endpoint](#the-mfa-info-endpoint).
+</Step>
 </Steps>
 
-</UIType.CustomUIContent>
+</VariantContent>
 
 
 ## References 
@@ -2231,131 +2143,125 @@ This is an important endpoint which can be utilized to:
 
 Our pre-built UI uses this API automatically, but you can also always call this API manually if you are building a custom UI:
 
-<FrontendCustomUITabs>
 
-<FrontendCustomUITabs.TabItem value="web">
 
-<NpmOrScriptsCard>
 
-<NpmOrScriptsCard.Content value="npm">
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+Call the following API when you want to know the status of any factor. Notice that the API call requires the session's access token as an input (this should be included by the frontend SDK automatically):
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="frontend-custom-ui">
+<Tab title="Web" value="web">
+<DependentContent group="install-method" label="Installation method">
+<ContentOption title="npm" value="npm">
 ```tsx
-import MultifactorAuth from "supertokens-web-js/recipe/multifactorauth"
-import Session from "supertokens-web-js/recipe/session"
+import MultifactorAuth from "supertokens-web-js/recipe/multifactorauth";
+import Session from "supertokens-web-js/recipe/session";
 
 async function fetchMFAInfo() {
-    if (await Session.doesSessionExist()) {
-        try {
-            let mfaInfo = await MultifactorAuth.resyncSessionAndFetchMFAInfo()
-            let factorEmails = mfaInfo.emails;
-            let factorPhoneNumbers = mfaInfo.phoneNumbers;
+  if (await Session.doesSessionExist()) {
+    try {
+      let mfaInfo = await MultifactorAuth.resyncSessionAndFetchMFAInfo();
+      let factorEmails = mfaInfo.emails;
+      let factorPhoneNumbers = mfaInfo.phoneNumbers;
 
-            let emailsForOTPEmail = factorEmails["otp-email"];
-            let phoneNumbersForOTPSms = factorEmails["otp-sms"];
-            let isTotpSetup = mfaInfo.factors.alreadySetup.includes("totp");
-            let isOTPEmailSetup = mfaInfo.factors.alreadySetup.includes("otp-email");
-            let isOTPSmsSetup = mfaInfo.factors.alreadySetup.includes("otp-sms");
-            let next = mfaInfo.factors.next;
+      let emailsForOTPEmail = factorEmails["otp-email"];
+      let phoneNumbersForOTPPhone = factorPhoneNumbers["otp-phone"];
+      let isTotpSetup = mfaInfo.factors.alreadySetup.includes("totp");
+      let isOTPEmailSetup = mfaInfo.factors.alreadySetup.includes("otp-email");
+      let isOTPPhoneSetup = mfaInfo.factors.alreadySetup.includes("otp-phone");
+      let next = mfaInfo.factors.next;
 
-            let factorsAllowedToBeSetup = mfaInfo.factors.allowedToSetup;
-        } catch (err: any) {
-            if (err.isSuperTokensGeneralError === true) {
-                // this may be a custom error message sent from the API by you.
-                window.alert(err.message);
-            } else {
-                window.alert("Oops! Something went wrong.");
-            }
-        }
-    } else {
-        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+      let factorsAllowedToBeSetup = mfaInfo.factors.allowedToSetup;
+    } catch (err: any) {
+      if (err.isSuperTokensGeneralError === true) {
+        // this may be a custom error message sent from the API by you.
+        window.alert(err.message);
+      } else {
+        window.alert("Oops! Something went wrong.");
+      }
     }
+  } else {
+    throw new Error("Illegal function call: For first factor setup, you do not need to call this function");
+  }
 }
 ```
-
-</NpmOrScriptsCard.Content>
-
-<NpmOrScriptsCard.Content value="scripts">
-
-```tsx
-import supertokensMultiFactorAuth from "supertokens-web-js-script/recipe/multifactorauth"
-import supertokensSession from "supertokens-web-js-script/recipe/session"
+</ContentOption>
+<ContentOption title="Script tag" value="script-tag">
+```tsx check=false reason="script-tag example relies on globals provided by loaded SuperTokens bundles"
 async function fetchMFAInfo() {
-    if (await supertokensSession.doesSessionExist()) {
-        try {
-            let mfaInfo = await supertokensMultiFactorAuth.resyncSessionAndFetchMFAInfo()
-            let factorEmails = mfaInfo.emails;
-            let factorPhoneNumbers = mfaInfo.phoneNumbers;
+  if (await supertokensSession.doesSessionExist()) {
+    try {
+      let mfaInfo = await supertokensMultiFactorAuth.resyncSessionAndFetchMFAInfo();
+      let factorEmails = mfaInfo.emails;
+      let factorPhoneNumbers = mfaInfo.phoneNumbers;
 
-            let emailsForOTPEmail = factorEmails["otp-email"];
-            let phoneNumbersForOTPSms = factorEmails["otp-sms"];
-            let isTotpSetup = mfaInfo.factors.alreadySetup.includes("totp");
-            let isOTPEmailSetup = mfaInfo.factors.alreadySetup.includes("otp-email");
-            let isOTPSmsSetup = mfaInfo.factors.alreadySetup.includes("otp-sms");
-            let next = mfaInfo.factors.next;
+      let emailsForOTPEmail = factorEmails["otp-email"];
+      let phoneNumbersForOTPPhone = factorPhoneNumbers["otp-phone"];
+      let isTotpSetup = mfaInfo.factors.alreadySetup.includes("totp");
+      let isOTPEmailSetup = mfaInfo.factors.alreadySetup.includes("otp-email");
+      let isOTPPhoneSetup = mfaInfo.factors.alreadySetup.includes("otp-phone");
+      let next = mfaInfo.factors.next;
 
-            let factorsAllowedToBeSetup = mfaInfo.factors.allowedToSetup;
-        } catch (err: any) {
-            if (err.isSuperTokensGeneralError === true) {
-                // this may be a custom error message sent from the API by you.
-                window.alert(err.message);
-            } else {
-                window.alert("Oops! Something went wrong.");
-            }
-        }
-    } else {
-        throw new Error("Illegal function call: For first factor setup, you do not need to call this function")
+      let factorsAllowedToBeSetup = mfaInfo.factors.allowedToSetup;
+    } catch (err: any) {
+      if (err.isSuperTokensGeneralError === true) {
+        // this may be a custom error message sent from the API by you.
+        window.alert(err.message);
+      } else {
+        window.alert("Oops! Something went wrong.");
+      }
     }
+  } else {
+    throw new Error("Illegal function call: For first factor setup, you do not need to call this function");
+  }
 }
 ```
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="Mobile" value="mobile">
+```bash
+curl --location --request PUT '<YOUR_API_DOMAIN>/auth/mfa/info' \
+--header 'Authorization: Bearer ...'
+```
+</Tab>
+</CodeGroup>
 
-</NpmOrScriptsCard.Content>
-
-</NpmOrScriptsCard>
-
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Web" value="web">
 - In the above code snippet, the list of factors which the user must complete next (in the `next` array) is retrieved along with all the relevant information to know what state each factor is in to decide if the user should be prompted to setup the factor (for example create a new TOTP device), or solve the auth challenge instead (for example, showing the enter TOTP screen).
 - The function is called `resyncSessionAndFetchMFAInfo` because it does two things:
     - fetches the MFA info that you can consume to know the `next` array and what state each factor is in.
     - resynchronizes the value of the `v` and `c` in the session's MFA claim.
+</ContentOption>
+</DependentContent>
 
 
-</FrontendCustomUITabs.TabItem>
-
-<FrontendCustomUITabs.TabItem value="mobile">
-
-<AppInfoForm />
-
-Call the following API when you want to know the status of any factor. Notice that the API call requires the session's access token as an input (this should be included by the frontend SDK automatically):
-
-```bash
-curl --location --request PUT '^{appInfo.apiDomain}^{appInfo.apiBasePath}/mfa/info' \
---header 'Authorization: Bearer ...'
-```
-
-</FrontendCustomUITabs.TabItem>
-
-</FrontendCustomUITabs>
 
 - The structure of the raw JSON response is as follows:
     ```json
     {
-        "status": "OK",
-        "factors": {
-            "alreadySetup": ["totp", "otp-email", "..."],
-            "allowedToSetup": ["otp-sms", "otp-email", "..."],
-            "next": ["otp-sms", "..."]
-        },
-        "emails": {
-            "otp-email": ["user1@example.com", "user2@example.com"],
-            "link-email": ["user1@example.com", "user2@example.com"],
-        },
-        "phoneNumbers": {
-            "otp-sms": ["+1234567890", "+1098765432"],
-            "link-phone": ["+1234567890", "+1098765432"],
-        },
+      "status": "OK",
+      "factors": {
+        "alreadySetup": ["totp", "otp-email", "..."],
+        "allowedToSetup": ["otp-phone", "otp-email", "..."],
+        "next": ["otp-phone", "..."]
+      },
+      "emails": {
+        "otp-email": ["user1@example.com", "user2@example.com"],
+        "link-email": ["user1@example.com", "user2@example.com"]
+      },
+      "phoneNumbers": {
+        "otp-phone": ["+1234567890", "+1098765432"],
+        "link-phone": ["+1234567890", "+1098765432"]
+      }
     }
     ```
 
-    - `factors.alreadySetup` is an array that contains all factors that have been setup by the user. If the current factor is a part of this array, it means that you can directly take the user to the factor challenge screen. If your factor depends on an email or phone number (like in the case of `otp-sms` or `otp-email`), then you can find the email to send the code to in the `emails` or `phoneNumbers` object in the response with the key as the current factor ID.
+    - `factors.alreadySetup` is an array that contains all factors that have been setup by the user. If the current factor is a part of this array, it means that you can directly take the user to the factor challenge screen. If your factor depends on an email or phone number (like in the case of `otp-phone` or `otp-email`), then you can find the email or phone number in the `emails` or `phoneNumbers` object in the response, keyed by the current factor ID.
     - `factors.allowedToSetup` is an array that contains all factors that the user can setup at this point. This is not that useful during the sign in process, but may be useful post sign in if you want to know what are the factors that the user can setup at any point in time. 
     - `emails` is an object in which the key are all the factor IDs supported by SuperTokens (and any custom factor ID added by you). The values against each of the keys is a list of emails that can be utilized to complete the factor. The first email (index 0) in the list is the preferred email to use for the factor. The order is determined based on the first factor chosen by the user, and if the factor was already setup or not.
 
@@ -2373,87 +2279,84 @@ curl --location --request PUT '^{appInfo.apiDomain}^{appInfo.apiBasePath}/mfa/in
             - Another claim needs to satisfy first (like email verification), before the next MFA challenge can display. This can happen if you configure the `checkAllowedToSetupFactorElseThrowInvalidClaimError` function, on the backend, to not allow a factor setup until the email is verified.
 
 
-
-
 ### Handle support cases
 
 Some situations exist in which users may be locked out of their accounts and would need you to do certain steps to unlock their accounts.
 These cases are:
 
-<Accordion px="3">
-
-## `ERR_CODE_009`
+<Accordion>
+<AccordionItem title="ERRCODE009">
 - This can happen when the second factor is `emailpassword`:
     - API Path is `/signin POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_IN_NOT_ALLOWED",
-            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_009)"
+          "status": "SIGN_IN_NOT_ALLOWED",
+          "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_009)"
         }
         ```
 - This can happen if the email password account you are trying to do MFA with is not verified.
-
-## `ERR_CODE_010`
+</AccordionItem>
+<AccordionItem title="ERRCODE010">
 - This can happen when the second factor is `emailpassword`:
     - API Path is `/signin POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_IN_NOT_ALLOWED",
-            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_010)"
+          "status": "SIGN_IN_NOT_ALLOWED",
+          "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_010)"
         }
         ```
 - This can happen if the email password account you are trying to do MFA with is already linked to another primary user that is not equal to the session user.
-
-## `ERR_CODE_011`
+</AccordionItem>
+<AccordionItem title="ERRCODE011">
 - This can happen when the second factor is `emailpassword`:
     - API Path is `/signin POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_IN_NOT_ALLOWED",
-            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_011)"
+          "status": "SIGN_IN_NOT_ALLOWED",
+          "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_011)"
         }
         ```
 - This can happen if the email password account you are trying to do MFA cannot link to the session user because there already exists another primary user with the same email.
-
-## `ERR_CODE_012`
+</AccordionItem>
+<AccordionItem title="ERRCODE012">
 - This can happen when the second factor is `emailpassword`:
     - API Path is `/signin POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_IN_NOT_ALLOWED",
-            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_012)"
+          "status": "SIGN_IN_NOT_ALLOWED",
+          "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_012)"
         }
         ```
 - To link the email password user with the session user, it must be confirmed that the session user is a primary user. However, that can fail if there exists another primary user with the same email as the session user, and in this case, this error is sent to the frontend.
-
-## `ERR_CODE_013`
+</AccordionItem>
+<AccordionItem title="ERRCODE013">
 - This can happen when the second factor is `emailpassword`:
     - API Path is `/signup POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_UP_NOT_ALLOWED",
-            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_013)"
+          "status": "SIGN_UP_NOT_ALLOWED",
+          "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_013)"
         }
         ```
 - An example scenario of when in the following scenario:
     - A user signs up with their phone number and OTP
     - Post sign up, they are prompted to add their email and a password for the account. In this case, since the entered email is not verified, this error will display.
 
-- To resolve this, it is advised to change the flow to first ask the user to go through the email OTP flow post the first factor sign up, and then add a password to the account. This way, the email will be verified. 
-
-## `ERR_CODE_014`
+- To resolve this, it is advised to change the flow to first ask the user to go through the email OTP flow post the first factor sign up, and then add a password to the account. This way, the email will be verified.
+</AccordionItem>
+<AccordionItem title="ERRCODE014">
 - This can happen when the second factor is `emailpassword`:
     - API Path is `/signup POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_UP_NOT_ALLOWED",
-            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_014)"
+          "status": "SIGN_UP_NOT_ALLOWED",
+          "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_014)"
         }
         ```
 - An example scenario of when in the following scenario:
@@ -2462,15 +2365,15 @@ These cases are:
     - The user logs out, and then creates a social login account with email `e1`. Then, they are prompted to add a password to this account. Since an email password account with `e1` already exists, SuperTokens will try and link that to this new account, but fail, since the email password account with `e1` is already a primary user.
 
 - To resolve this, it is advised to manually link the `e1` social login account with the `e1` email password account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
-
-## `ERR_CODE_015`
+</AccordionItem>
+<AccordionItem title="ERRCODE015">
 - This can happen when the second factor is `emailpassword`:
     - API Path is `/signup POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_UP_NOT_ALLOWED",
-            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_015)"
+          "status": "SIGN_UP_NOT_ALLOWED",
+          "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_015)"
         }
         ```
 - An example scenario of when in the following scenario:
@@ -2480,15 +2383,15 @@ These cases are:
     - This will cause this type of error since the linking of the new social login and email account will fail since there already exists another primary user with the same (`e1`) email.
 
 - To resolve this, it is advised not allowing users to specify an email when asking them to add a password for their account.
-
-## `ERR_CODE_016`
+</AccordionItem>
+<AccordionItem title="ERRCODE016">
 - This can happen when the second factor is `emailpassword`:
     - API Path is `/signup POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_UP_NOT_ALLOWED",
-            "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_016)"
+          "status": "SIGN_UP_NOT_ALLOWED",
+          "reason": "Cannot sign up due to security reasons. Please contact support. (ERR_CODE_016)"
         }
         ```
 - An example scenario of when in the following scenario:
@@ -2497,42 +2400,43 @@ These cases are:
     - The user logs out and creates another social login account with email `e1` (say `GitHub`), and then tries and adds a password to this account with email `e1`. Here, SuperTokens will try and make the `GitHub` login a primary user, but fail, since the email `e1` is already a primary user (with Google login). 
 
 - To resolve this, it is advised to manually link the `e1` `GitHub` social login account with the `e1` Google social login account. Or you can enable automatic account linking for first factor and this way, the above scenario will not happen.
-
-## `ERR_CODE_017`
+</AccordionItem>
+<AccordionItem title="ERRCODE017">
 - This can happen when the second factor relies on the passwordless recipe.
     - API Path is `/signinup/code/consume POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_IN_UP_NOT_ALLOWED",
-            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_017)"
+          "status": "SIGN_IN_UP_NOT_ALLOWED",
+          "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_017)"
         }
         ```
 - This can happen when the passwordless account is trying to link to the account of the first factor, but it can't because the passwordless account is already linked with another primary user.
-
-## `ERR_CODE_018`
+</AccordionItem>
+<AccordionItem title="ERRCODE018">
 - This can happen when the second factor relies on the passwordless recipe.
     - API Path is `/signinup/code/consume POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_IN_UP_NOT_ALLOWED",
-            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_018)"
+          "status": "SIGN_IN_UP_NOT_ALLOWED",
+          "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_018)"
         }
         ```
 - This can happen when the passwordless account is trying to link to the account of the first factor, but it can't because there exists another primary user with the same email as the passwordless account.
-
-## `ERR_CODE_019`
+</AccordionItem>
+<AccordionItem title="ERRCODE019">
 - This can happen when the second factor relies on the passwordless recipe.
     - API Path is `/signinup/code POST` or `/signinup/code/consume POST`.
     - Output JSON:
         ```json
         {
-            "status": "SIGN_IN_UP_NOT_ALLOWED",
-            "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_019)"
+          "status": "SIGN_IN_UP_NOT_ALLOWED",
+          "reason": "Cannot sign in / up due to security reasons. Please contact support. (ERR_CODE_019)"
         }
         ```
 - This can happen when the passwordless account is trying to link to the account of the first factor, but, the first factor account cannot become a primary user because there exists another account with the same email as the first factor user account which is already primary.
+</AccordionItem>
 </Accordion>
 
 
@@ -2562,11 +2466,10 @@ SuperTokens enforces that a user has completed all the required factors by keepi
 
 ## See also
 
-<ReferenceCard.Grid>
-  <ReferenceCard href="/docs/additional-verification/mfa/email-sms-otp/otp-for-all-users" label="Email & SMS OTP" />
-  <ReferenceCard href="/docs/additional-verification/mfa/totp/totp-for-all-users" label="TOTP" />
-  <ReferenceCard href="/docs/additional-verification/mfa/step-up-auth" label="Step-up Authentication" />
-  <ReferenceCard href="/docs/additional-verification/mfa/backup-codes" label="Backup Codes" />
-  <ReferenceCard href="/docs/additional-verification/mfa/protect-routes" label="Protect Routes with MFA" />
-</ReferenceCard.Grid>
-
+<CardGroup cols={3}>
+  <Card title="Email &amp; SMS OTP" href="/additional-verification/mfa/email-sms-otp/otp-for-all-users" />
+  <Card title="TOTP" href="/additional-verification/mfa/totp/totp-for-all-users" />
+  <Card title="Step-up Authentication" href="/additional-verification/mfa/step-up-auth" />
+  <Card title="Backup Codes" href="/additional-verification/mfa/backup-codes" />
+  <Card title="Protect Routes with MFA" href="/additional-verification/mfa/protect-routes" />
+</CardGroup>

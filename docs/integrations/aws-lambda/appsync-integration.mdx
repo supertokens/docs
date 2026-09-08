@@ -1,0 +1,83 @@
+---
+title: AppSync integration
+description: Integrate SuperTokens with AppSync through an API Gateway Lambda authorizer.
+sidebar:
+  order: 6
+---
+
+## Overview
+
+A Lambda authorizer configured as described in the [authorizer guide](/integrations/aws-lambda/session-verification#using-lambda-authorizers)
+can protect GraphQL HTTP operations sent from API Gateway to AppSync.
+
+:::warning
+This architecture is not implementation-ready without a deployed IaC fixture. The exact service-integration path,
+required `Host`/`Content-Type` handling, request and response mappings, GraphQL errors, and cookie behavior must be tested
+for the selected API Gateway type. It does not proxy AppSync real-time WebSocket subscriptions.
+:::
+
+## Before you start
+
+Configure SuperTokens in AWS Lambda by following the [AWS Lambda integration guide](/integrations/aws-lambda/quickstart-guide).
+
+## Steps
+
+### 1. Set up AppSync authorization
+
+Use `AWS_IAM` authorization so API Gateway signs requests with its execution role. Grant that role only
+`appsync:GraphQL` for the root fields this integration needs:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "appsync:GraphQL",
+      "Resource": [
+        "arn:aws:appsync:<REGION>:<ACCOUNT_ID>:apis/<API_ID>/types/Query/fields/<QUERY_FIELD>",
+        "arn:aws:appsync:<REGION>:<ACCOUNT_ID>:apis/<API_ID>/types/Mutation/fields/<MUTATION_FIELD>"
+      ]
+    }
+  ]
+}
+```
+
+Do not attach `AWSAppSyncInvokeFullAccess`; it includes broad read/list access and wildcard resources. This architecture
+uses IAM exclusively for the API Gateway-to-AppSync hop and does not inject shared credentials into integration headers.
+
+### 2. Configure API Gateway with the authorizer
+
+Follow the [authorizer guide](/integrations/aws-lambda/session-verification#using-lambda-authorizers) to create `/auth`
+and `/graphql` resources. Point `/auth` to the Lambda function that handles the auth APIs and require the Lambda
+authorizer on `POST /graphql`.
+
+Configure `POST /graphql` as an AWS service integration that invokes only the target AppSync GraphQL API with the
+least-privilege execution role above. Do not infer the current console's service, subdomain, or path-override values from
+this page. Capture them in reproducible IaC and prove the generated request reaches the target API before publishing the
+integration.
+
+### 3. Set up integration headers
+
+- Set the integration request's `x-user-id` header from `context.authorizer.principalId`. This must overwrite any
+  client-supplied `x-user-id`; never pass the incoming identity header through.
+- Set the required `Content-Type` for the GraphQL request and map the request body without changing the GraphQL
+  document or variables. Verify these mappings in the IaC E2E fixture.
+
+### 4. Consume the context in resolvers
+
+In a VTL resolver, read the mapped user ID with:
+
+```text
+$context.request.headers.get("x-user-id")
+```
+
+Treat this value as trusted only after an E2E test proves API Gateway overwrites a spoofed client header after successful
+authorization. Use it for application-level ownership checks; the execution role limits which root fields API Gateway
+can invoke, but does not implement per-user authorization inside a resolver. See the [resolver context documentation](https://docs.aws.amazon.com/appsync/latest/devguide/resolver-context-reference.html#access-request-headers).
+
+### 5. Validate the deployed integration
+
+The required IaC fixture must cover valid, missing, expired, and invalid sessions; a spoofed `x-user-id`; IAM denial for
+fields outside the allowed field list; request and response body mappings; GraphQL errors; and browser CORS behavior.
+AppSync subscriptions use a separate real-time WebSocket endpoint and are outside this HTTP proxy design.

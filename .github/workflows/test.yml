@@ -1,48 +1,235 @@
 name: Test
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
+    inputs:
+      full:
+        description: Check all documentation code blocks
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      full:
+        description: Check all documentation code blocks
+        type: boolean
+        default: false
   pull_request:
     paths:
-      - "docs/**"
+      - "docs/**/*.md"
+      - "docs/**/*.mdx"
+      - "scripts/format-code-blocks.ts"
+      - "scripts/write-code-blocks.ts"
+      - "scripts/check-code-blocks.*"
+      - "scripts/code-blocks/**"
+      - "scripts/code-type-checking/**"
+      - "lib/api-request-snippets.ts"
+      - "lib/api-request-snippets.test.ts"
+      - "components/ApiRequestSnippet.astro"
+      - "openapi/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vitest.config.ts"
+      - "tsconfig.json"
+      - ".github/workflows/**"
 
 jobs:
-  write-code-blocks:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      full: ${{ steps.changes.outputs.full }}
+      docs: ${{ steps.changes.outputs.docs }}
+      has-docs: ${{ steps.changes.outputs.has-docs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed documentation
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          REQUEST_FULL: ${{ inputs.full }}
+        shell: bash
+        run: |
+          full=false
+          : > /tmp/changed-docs
+
+          if [[ "$REQUEST_FULL" == "true" ]]; then
+            full=true
+          elif [[ -n "$BASE_SHA" ]]; then
+            while IFS= read -r -d '' file; do
+              case "$file" in
+                docs/*.md|docs/*.mdx)
+                  if [[ -f "$file" ]]; then
+                    printf '%s\0' "$file" >> /tmp/changed-docs
+                  fi
+                  ;;
+                scripts/format-code-blocks.ts|scripts/write-code-blocks.ts|scripts/check-code-blocks.*|scripts/code-blocks/*|scripts/code-type-checking/*|lib/api-request-snippets.ts|lib/api-request-snippets.test.ts|components/ApiRequestSnippet.astro|openapi/*|package.json|package-lock.json|vitest.config.ts|tsconfig.json|.github/workflows/*)
+                  full=true
+                  ;;
+              esac
+            done < <(git diff --name-only -z "$BASE_SHA"...HEAD)
+          fi
+
+          docs=$(jq -Rsc 'split("\u0000") | map(select(length > 0))' /tmp/changed-docs)
+          docs_count=$(jq 'length' <<< "$docs")
+          if (( docs_count > 100 || ${#docs} > 50000 )); then
+            full=true
+            docs='[]'
+          fi
+
+          if [[ "$docs" == "[]" ]]; then
+            has_docs=false
+          else
+            has_docs=true
+          fi
+
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "docs=$docs" >> "$GITHUB_OUTPUT"
+          echo "has-docs=$has_docs" >> "$GITHUB_OUTPUT"
+
+  infrastructure:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: Pin npm
+        run: npm install --global npm@11.17.0
+
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
       - name: Install Dependencies
-        run: bun install
+        run: npm ci
+
+      - name: Test Code Snippet Infrastructure
+        run: npm test -- --run scripts/code-blocks lib/api-request-snippets.test.ts
+
+  lint-code-blocks:
+    needs: changes
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.has-docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: Pin npm
+        run: npm install --global npm@11.17.0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint Code Snippets
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          CHANGED_DOCS: ${{ needs.changes.outputs.docs }}
+        shell: bash
+        run: |
+          if [[ "$FULL" == "true" ]]; then
+            npm run lint:code-blocks
+          else
+            mapfile -d '' files < <(jq -j '.[] + "\u0000"' <<< "$CHANGED_DOCS")
+            npm run lint:code-blocks -- "${files[@]}"
+          fi
+
+  write-code-blocks:
+    needs: changes
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.has-docs == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.snippets.outputs.matrix }}
+      has-snippets: ${{ steps.snippets.outputs.has-snippets }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: Pin npm
+        run: npm install --global npm@11.17.0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install Dependencies
+        run: npm ci
 
       - name: Write Code Snippets
-        run: bun run write-code-blocks
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          CHANGED_DOCS: ${{ needs.changes.outputs.docs }}
+        shell: bash
+        run: |
+          if [[ "$FULL" == "true" ]]; then
+            npm run write-code-blocks
+          else
+            mapfile -d '' files < <(jq -j '.[] + "\u0000"' <<< "$CHANGED_DOCS")
+            npm run write-code-blocks -- "${files[@]}"
+          fi
 
-      - name: Upload Code Type Checking Scripts
+      - name: Build language matrix
+        id: snippets
+        shell: bash
+        run: |
+          languages=()
+          for language in javascript go python swift php java csharp; do
+            directory="scripts/code-type-checking/$language/snippets"
+            if [[ -d "$directory" ]] && find "$directory" -type f -print -quit | grep -q .; then
+              languages+=("$language")
+            fi
+          done
+
+          matrix=$(printf '%s\n' "${languages[@]}" | jq -Rsc 'split("\n") | map(select(length > 0)) | {language: .}')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if (( ${#languages[@]} > 0 )); then
+            echo "has-snippets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-snippets=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Code Type Checking Snippets
+        if: steps.snippets.outputs.has-snippets == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: code-blocks
-          path: scripts/code-type-checking
+          path: |
+            scripts/code-type-checking/javascript/snippets
+            scripts/code-type-checking/go/snippets
+            scripts/code-type-checking/python/snippets
+            scripts/code-type-checking/swift/snippets
+            scripts/code-type-checking/php/snippets
+            scripts/code-type-checking/java/snippets
+            scripts/code-type-checking/csharp/snippets
+          if-no-files-found: error
           retention-days: 1
 
   code-type-checking:
     needs: write-code-blocks
+    if: needs.write-code-blocks.outputs.has-snippets == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
-      matrix:
-        language:
-          - javascript
-          - go
-          - python
-          - swift
-          - php
-          - java
-          - csharp
-          # TODO: Check kotlin issues
-          # - kotlin
+      matrix: ${{ fromJSON(needs.write-code-blocks.outputs.matrix) }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download Code Blocks
         uses: actions/download-artifact@v4
         with:
@@ -52,5 +239,9 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Check code snippets for ${{ matrix.language }}
-        working-directory: ./scripts/code-type-checking/${{ matrix.language }}
-        run: docker build -t code-check-${{ matrix.language }} .
+        uses: docker/build-push-action@v6
+        with:
+          context: scripts/code-type-checking/${{ matrix.language }}
+          push: false
+          cache-from: type=gha,scope=code-type-checking-${{ matrix.language }}
+          cache-to: type=gha,mode=max,scope=code-type-checking-${{ matrix.language }}
