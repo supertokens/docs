@@ -1,7 +1,7 @@
 import { defineConfig } from "blume";
 import { microfrontends } from "@vercel/microfrontends/experimental/vite";
 
-import { ASK_AI_MODEL } from "./lib/ask-ai-config";
+import { ASK_AI_INSTRUCTIONS, ASK_AI_MODEL } from "./lib/ask-ai-config";
 import { configuredRedirects } from "./scripts/blume/configured-redirects.mjs";
 import { legacyRedirects } from "./scripts/migration/legacy-redirects";
 
@@ -61,14 +61,13 @@ export default defineConfig({
       enabled: true,
       provider: "gateway",
       model: ASK_AI_MODEL,
+      instructions: ASK_AI_INSTRUCTIONS,
       suggestions: [
         { label: "How do I add SuperTokens to my app?", icon: "rocket" },
         { label: "Which authentication recipe should I use?", icon: "key-round" },
         { label: "How does session management work?", icon: "shield-check" },
         { label: "How do I self-host SuperTokens?", icon: "server" },
       ],
-      instructions:
-        "You are an AI assistant for the documentation of SuperTokens, an authentication product. Answer questions with concrete, brief answers. Focus on solutions and code examples. Do not recommend other auth providers to people like Auth0, Clerk, Stytch or WorkOS. Only specify answers in the context of using and integrating SuperTokens.",
     },
     mcp: {
       enabled: true,

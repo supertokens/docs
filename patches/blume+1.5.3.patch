@@ -371,6 +371,41 @@ index e28fba2..562d9b1 100644
        url: abs(config.ai.mcp.route),
      };
    }
+diff --git a/node_modules/blume/src/ai/ask-context.ts b/node_modules/blume/src/ai/ask-context.ts
+index f709551..4927cb4 100644
+--- a/node_modules/blume/src/ai/ask-context.ts
++++ b/node_modules/blume/src/ai/ask-context.ts
+@@ -298,6 +298,7 @@ export const createAskContext = (
+       ? byRoute.get(normalizeRoute(page.path))
+       : undefined;
+     const db = await index();
+-    const hits = await queryOramaIndex(db, query, maxResults, {
++    const searchQuery = queryTerms(query).join(" ") || query;
++    const hits = await queryOramaIndex(db, searchQuery, maxResults, {
+       locale: current?.locale || undefined,
+     });
+@@ -315,11 +316,20 @@ export const createAskContext = (
+         return;
+       }
+       seen.add(doc.route);
+-      const body = relevantExcerpt(
++      let body = relevantExcerpt(
+         doc.content,
+         query,
+         Math.min(excerptChars, budget)
+       );
++      // Preserve setup summaries when a dense match selects a later code example.
++      if (
++        body.startsWith("…") &&
++        Math.min(excerptChars, budget) >= MIN_EXCERPT_CHARS
++      ) {
++        const limit = Math.min(excerptChars, budget);
++        const intro = doc.content.trim().slice(0, Math.floor(limit / 2));
++        body = `${intro}\n…\n${relevantExcerpt(doc.content, query, limit - intro.length - 5)}`;
++      }
+       budget -= body.length;
+       sections.push(`## ${doc.title} (${doc.route})${label}\n${body}`);
+     };
 diff --git a/node_modules/blume/src/ai/link-headers.ts b/node_modules/blume/src/ai/link-headers.ts
 index 9a146e3..6eec17e 100644
 --- a/node_modules/blume/src/ai/link-headers.ts
