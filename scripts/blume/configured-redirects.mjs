@@ -2,24 +2,40 @@ import { openApiRedirects } from "./openapi-redirects.mjs";
 
 export const configuredRedirects = [
   {
+    from: "/references/backend-sdks/supertokens-nodejs/package",
+    to: "https://sdk-references.supertokens.com/nodejs/latest/modules.html",
+  },
+  {
+    from: "/references/frontend-sdks/supertokens-auth-react/package",
+    to: "https://sdk-references.supertokens.com/auth-react/latest/modules.html",
+  },
+  {
+    from: "/references/frontend-sdks/supertokens-web-js",
+    to: "https://sdk-references.supertokens.com/web-js/latest/modules.html",
+  },
+  {
+    from: "/references/frontend-sdks/supertokens-web-js/package",
+    to: "https://sdk-references.supertokens.com/web-js/latest/modules.html",
+  },
+  {
     from: "/references/backend-sdks/supertokens-nodejs",
-    to: "/references/backend-sdks/supertokens-nodejs/package",
+    to: "https://sdk-references.supertokens.com/nodejs/latest/modules.html",
   },
   {
     from: "/references/backend-sdks/supertokens-nodejs/index",
-    to: "/references/backend-sdks/supertokens-nodejs/package",
+    to: "https://sdk-references.supertokens.com/nodejs/latest/modules.html",
   },
   {
     from: "/references/frontend-sdks/supertokens-auth-react",
-    to: "/references/frontend-sdks/supertokens-auth-react/package",
+    to: "https://sdk-references.supertokens.com/auth-react/latest/modules.html",
   },
   {
     from: "/references/frontend-sdks/supertokens-auth-react/index",
-    to: "/references/frontend-sdks/supertokens-auth-react/package",
+    to: "https://sdk-references.supertokens.com/auth-react/latest/modules.html",
   },
   {
     from: "/references/frontend-sdks/supertokens-web-js/index",
-    to: "/references/frontend-sdks/supertokens-web-js/package",
+    to: "https://sdk-references.supertokens.com/web-js/latest/modules.html",
   },
   { from: "/migration/rownd/overview", to: "/migration/rownd/migration-steps" },
   { from: "/migration/rownd/backend-setup", to: "/migration/rownd/sdk-integration-guide" },

@@ -15,6 +15,7 @@ export const optionPresentations: Record<string, OptionPresentation> = {
   web: { icon: MonitorIcon },
   mobile: { icon: SmartphoneIcon },
   reactjs: { logo: "img/logos/react.svg" },
+  javascript: { logo: "img/icons/js.svg" },
   angular: { logo: "img/logos/angular.svg" },
   vue: { logo: "img/logos/vue.svg" },
   reactnative: { logo: "img/icons/react.svg" },
