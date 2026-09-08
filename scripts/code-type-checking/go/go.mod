@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/supertokens/supertokens-golang v0.26.0
+	golang.org/x/oauth2 v0.21.0
 )
 
 require (

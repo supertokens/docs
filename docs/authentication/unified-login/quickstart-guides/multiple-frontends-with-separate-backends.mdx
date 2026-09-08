@@ -955,6 +955,21 @@ passport-oauth2 generates and consumes its state and PKCE verifier in the initia
 Use [golang.org/x/oauth2](https://pkg.go.dev/golang.org/x/oauth2) with a one-time, server-side transaction store. The store must key each transaction by the initiating application session ID; `Consume` must atomically read and delete it.
 
 ```go
+import (
+  "context"
+  "crypto/rand"
+  "crypto/subtle"
+  "encoding/base64"
+  "encoding/json"
+  "errors"
+  "io"
+  "net/http"
+  "net/url"
+  "strings"
+
+  "golang.org/x/oauth2"
+)
+
 type OAuthTransaction struct {
   State    string
   Verifier string
@@ -1000,6 +1015,28 @@ type AppSession struct {
   Token    *oauth2.Token
 }
 
+type OAuthTransactionStore interface {
+  Put(sessionID string, transaction OAuthTransaction) error
+  Consume(sessionID string) (OAuthTransaction, bool)
+}
+
+type AppSessionStore interface {
+  Put(sessionID string, session AppSession) error
+}
+
+type OAuthApp struct {
+  Config                   *oauth2.Config
+  IntrospectionURL         string
+  ExpectedIssuer           string
+  ExpectedAudience         string
+  RequiredScopes           []string
+  Transactions             OAuthTransactionStore
+  Sessions                 AppSessionStore
+  ResolveAllowedTenant     func(*http.Request) (string, error)
+  ApplicationSessionID     func(*http.Request) string
+  RotateApplicationSession func(http.ResponseWriter, *http.Request) (string, error)
+}
+
 func randomURLSafeToken(size int) (string, error) {
   value := make([]byte, size)
   if _, err := rand.Read(value); err != nil {
@@ -1008,12 +1045,12 @@ func randomURLSafeToken(size int) (string, error) {
   return base64.RawURLEncoding.EncodeToString(value), nil
 }
 
-func introspectAndValidateTenant(ctx context.Context, accessToken, expectedTenant string) error {
+func (app *OAuthApp) introspectAndValidateTenant(ctx context.Context, accessToken, expectedTenant string) error {
   form := url.Values{
     "token": {accessToken},
-    "scope": {strings.Join(requiredScopes, " ")},
+    "scope": {strings.Join(app.RequiredScopes, " ")},
   }
-  request, err := http.NewRequestWithContext(ctx, http.MethodPost, introspectionURL, strings.NewReader(form.Encode()))
+  request, err := http.NewRequestWithContext(ctx, http.MethodPost, app.IntrospectionURL, strings.NewReader(form.Encode()))
   if err != nil {
     return err
   }
@@ -1032,27 +1069,31 @@ func introspectAndValidateTenant(ctx context.Context, accessToken, expectedTenan
   if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&tokenInfo); err != nil {
     return err
   }
-  if !tokenInfo.Active || !tokenInfo.Audience.Contains(expectedAudience) || tokenInfo.TenantID != expectedTenant || tokenInfo.ClientID != oauthConfig.ClientID || tokenInfo.Issuer != expectedIssuer {
+  if !tokenInfo.Active || !tokenInfo.Audience.Contains(app.ExpectedAudience) || tokenInfo.TenantID != expectedTenant || tokenInfo.ClientID != app.Config.ClientID || tokenInfo.Issuer != app.ExpectedIssuer {
     return errors.New("OAuth token does not match the login transaction")
   }
   return nil
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
+func (app *OAuthApp) Login(w http.ResponseWriter, r *http.Request) {
   state, err := randomURLSafeToken(32)
   if err != nil {
     http.Error(w, "login unavailable", http.StatusInternalServerError)
     return
   }
-  tenantID := resolveAllowedTenant(r)
+  tenantID, err := app.ResolveAllowedTenant(r)
+  if err != nil {
+    http.Error(w, "invalid tenant", http.StatusBadRequest)
+    return
+  }
   verifier := oauth2.GenerateVerifier()
   transaction := OAuthTransaction{State: state, Verifier: verifier, TenantID: tenantID}
-  if err := oauthTransactions.Put(applicationSessionID(r), transaction); err != nil {
+  if err := app.Transactions.Put(app.ApplicationSessionID(r), transaction); err != nil {
     http.Error(w, "login unavailable", http.StatusInternalServerError)
     return
   }
 
-  authURL := oauthConfig.AuthCodeURL(
+  authURL := app.Config.AuthCodeURL(
     state,
     oauth2.S256ChallengeOption(verifier),
     oauth2.SetAuthURLParam("tenant_id", tenantID),
@@ -1060,35 +1101,40 @@ func login(w http.ResponseWriter, r *http.Request) {
   http.Redirect(w, r, authURL, http.StatusFound)
 }
 
-func callback(w http.ResponseWriter, r *http.Request) {
-  transaction, ok := oauthTransactions.Consume(applicationSessionID(r))
+func (app *OAuthApp) Callback(w http.ResponseWriter, r *http.Request) {
+  transaction, ok := app.Transactions.Consume(app.ApplicationSessionID(r))
   providedState := r.URL.Query().Get("state")
   if !ok || subtle.ConstantTimeCompare([]byte(transaction.State), []byte(providedState)) != 1 {
     http.Error(w, "invalid OAuth state", http.StatusBadRequest)
     return
   }
 
-  token, err := oauthConfig.Exchange(r.Context(), r.URL.Query().Get("code"), oauth2.VerifierOption(transaction.Verifier))
+  token, err := app.Config.Exchange(r.Context(), r.URL.Query().Get("code"), oauth2.VerifierOption(transaction.Verifier))
   if err != nil {
     http.Error(w, "code exchange failed", http.StatusBadRequest)
     return
   }
-  if err := introspectAndValidateTenant(r.Context(), token.AccessToken, transaction.TenantID); err != nil {
+  if err := app.introspectAndValidateTenant(r.Context(), token.AccessToken, transaction.TenantID); err != nil {
     http.Error(w, "token validation failed", http.StatusUnauthorized)
     return
   }
 
-  newSessionID, err := rotateApplicationSession(w, r)
+  newSessionID, err := app.RotateApplicationSession(w, r)
   if err != nil {
     http.Error(w, "session creation failed", http.StatusInternalServerError)
     return
   }
-  applicationSessionStore.Put(newSessionID, AppSession{TenantID: transaction.TenantID, Token: token})
+  if err := app.Sessions.Put(newSessionID, AppSession{TenantID: transaction.TenantID, Token: token}); err != nil {
+    http.Error(w, "session creation failed", http.StatusInternalServerError)
+    return
+  }
   http.Redirect(w, r, "/", http.StatusFound)
 }
 ```
 
-The snippet uses `crypto/rand`, `encoding/base64`, and the standard HTTP/JSON packages. Set `introspectionURL` to `<YOUR_API_DOMAIN>/auth/oauth/introspect`, `expectedIssuer` to the exact configured issuer, `expectedAudience` to this resource server, and `requiredScopes` to its scopes. Core 12.1.1 introspection can return `aud` as a JSON string or array; `Audience.UnmarshalJSON` handles both and the callback requires the configured audience before creating a session. The released `tenant_id` authorization parameter selects the tenant, and introspection returns its signed `tId`. Only the rotated opaque session ID reaches the browser.
+Create an `OAuthApp` with your OAuth client configuration, server-side stores, and application session helpers, then register its `Login` and `Callback` methods as HTTP handlers. `ResolveAllowedTenant` must reject tenants outside your allowlist. `ApplicationSessionID` must identify the initiating server-side session, and `RotateApplicationSession` must invalidate the old session and issue a new opaque session ID. `Transactions.Consume` must atomically read and delete an unexpired transaction; return `false` for missing or expired transactions.
+
+Set `IntrospectionURL` to `<YOUR_API_DOMAIN>/auth/oauth/introspect`, `ExpectedIssuer` to the exact configured issuer, `ExpectedAudience` to this resource server, and `RequiredScopes` to its scopes. Core 12.1.1 introspection can return `aud` as a JSON string or array; `Audience.UnmarshalJSON` handles both and the callback requires the configured audience before creating a session. The released `tenant_id` authorization parameter selects the tenant, and introspection returns its signed `tId`. Only the rotated opaque session ID reaches the browser.
 </ContentOption>
 <ContentOption title="Python" value="python">
 Use [Authlib](https://docs.authlib.org/) with a one-time server-side transaction store. These functions are framework-agnostic; connect `redirect`, `request_url`, and the session helpers to your framework.
