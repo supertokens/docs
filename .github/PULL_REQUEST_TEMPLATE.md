@@ -9,9 +9,10 @@
 
 ## Checklist
 
-- [ ] Algolia search needs to be updated? (If there is a new sub docs project, then yes)
-- [ ] Sitemap needs to be updated? (If there is a new sub docs project, then yes)
-- [ ] Checked for broken links? (Run `cd v3 && npm run build`)
+- [ ] Ran `npm run build`
+- [ ] Ran `npm run typecheck`
+- [ ] Ran `npm test`
+- [ ] Checked changed routes and redirects
 - [ ] Changes required to the demo apps corresponding to the docs?
 
 ## Remaining TODOs for this PR

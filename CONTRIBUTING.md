@@ -5,10 +5,8 @@ This guide provides all the information needed to set up, build, and contribute 
 
 ## Overview
 
-The documentation project relies on the [Docusaurus](https://docusaurus.io/) framework to transform `MDX` files into an actual static website. MDX allows us to embed React components in the content, unlocking rich, interactive documentation experiences.
-
-That being said, there are several things that are added on top of the Docusaurus utilities in order to adjust the tooling to our needs.
-Those are presented throughout this document.
+The documentation site uses [Blume](https://useblume.dev/) to build Markdown and MDX into a static website.
+Blume provides file-based navigation, local search, OpenAPI references, and built-in documentation components.
 
 ## How to run the project
 
@@ -16,14 +14,14 @@ Those are presented throughout this document.
 
 To work with the documentation project locally, ensure you have the following tools installed:
 
-- [Node.js](https://nodejs.org/en/download/) (version 18 or higher)
+- [Node.js](https://nodejs.org/en/download/) 22.12 or newer
 
 ### Setup Steps
 
-1. Install the dependencies:
+1. Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 2. Start the development server:
@@ -32,39 +30,33 @@ npm install
 npm run start
 ```
 
+Vercel deploys previews and production from this repository. Production sets the public origin from Vercel's deployment environment; set `DOCS_PUBLIC_ORIGIN` only when a non-Vercel build needs canonical URLs and a sitemap.
+
 ## Project Structure
 
-The two main directories where you will work are:
+The main directories are:
 
-- `docs`: This is where the actual content sits. All the `.mdx` files are located here.
-- `src`: This is where you will find the React components and the custom logic used in the website's functionality.
+- `docs`: Documentation content and colocated `meta.ts` navigation files.
+- `components`: Astro components registered for use in MDX.
+- `islands`: Interactive React components.
+- `openapi`: CDI and FDI OpenAPI specifications.
+- `public`: Static assets.
 
 Below is a breakdown of the main directories and files in the project:
 
 ```
-├── docs                     # The actual documentation pages
-│   ├── _templates           # Templates that can be used as a starting point for new docs
-│   ├── _blocks              # Reusable MDX blocks
-│   └── [section-name]
-│       └── _category_.json  # Info about how the folder will be shown in the left sidebar
-├── src                      # The business logic of the website
-│   ├── components
-│   ├── context
-│   ├── css
-│   ├── hooks
-│   ├── lib
-│   ├── plugins              # Plugins used by docusaurus during the build process
-│   └── theme                # Docusaurus components that get adjusted by us
+├── docs                     # Documentation pages and meta.ts navigation
+├── components               # Astro MDX components
+├── islands                  # Interactive React components
+├── openapi                  # CDI and FDI specifications
+├── public                   # Static assets
 ├── scripts
-├── sidebars.ts
-└── docusaurus.config.ts
+└── blume.config.ts
 ```
 
 ### Routing
 
-The project uses file based routing so it's pretty straightforward to determine the actual path of a page.
-Each subfolder has a `_category_.json` file that specifies the name of the sidebar category and the order of the pages inside that category.
-Additionally, each MDX file has a `sidebar_position` property that specifies the order of the page inside the sidebar category.
+The project uses file-based routing. Use a folder's `meta.ts` to configure category navigation and `sidebar.order` in page frontmatter to order pages.
 
 #### Where to place a new page
 
@@ -158,6 +150,18 @@ But there are exceptions to most rules.
 - Avoid opinions, criticisms, or personal commentary.
 - Focus on presenting information that helps the user achieve their goals.
 
+### Code group height
+
+Code blocks and `CodeGroup` examples are fully expanded by default. For an unusually long group, use the local
+`maxHeight` extension sparingly:
+
+```mdx
+<CodeGroup maxHeight="24rem">{/* titled fences, Tab content, or dependent content */}</CodeGroup>
+```
+
+The value must be a non-negative number followed by `px`, `rem`, `em`, `vh`, `dvh`, `svh`, or `lvh`. Printed code
+always expands to its full height.
+
 ## How to test your changes
 
 ### Prerequisites
@@ -183,7 +187,7 @@ npm install -g bun
 
 #### Docker
 
-Used to run the code block validation and formatting.
+Used to build the language-specific code block checkers.
 For install instructions check the [guide](https://docs.docker.com/get-docker/).
 
 ### Testing Steps
@@ -192,14 +196,52 @@ For install instructions check the [guide](https://docs.docker.com/get-docker/).
 
 Use the following commands to perform linting checks on the entire project:
 
-- `npm run lint:prettier`: Runs prettier on the `ts` files.
+- `npm run lint:prettier`: Formats supported files with Prettier.
+- `npm run lint:prettier:check`: Checks formatting without changing files.
+- `npm run lint:code-blocks -- [path...]`: Checks registered languages, empty blocks, numeric highlight metadata, exclusion markers, and supported Prettier formatting without changing files. Paths can be files or directories; the command defaults to all files in `docs`.
 - `npm run lint:vale`: Runs Vale on Markdown files and high-signal typo rules on TSX files.
+- `npm run validate`: Runs strict navigation and link validation.
+- `npm run build`: Regenerates the route manifest and builds the site.
 
 #### Validating code blocks
 
-Run `npm run check-code-blocks <language>` to validate all the code blocks for a particular language.
+Use these commands for code blocks in Markdown and MDX files:
 
-Code block validation is done in two steps:
+- `npm run format-code-blocks [path...]`: Formats supported fenced TypeScript, JavaScript, JSON, YAML, and HTML. Paths can be files or directories; the command defaults to `docs`.
+- `npm run write-code-blocks -- [path...]`: Extracts compilable code blocks from `.md` and `.mdx` files. Paths can be files or directories; the command defaults to all files in `docs`. It fails when a fence has a missing or unknown language.
+- `npm run check-code-blocks <language>`: Builds the Docker checker for the language. Validation runs as part of the image build; the image is not run afterward.
 
-- First, we extract all the code blocks from the `MDX` files and save them in the `/scripts/code-type-checking/<language>/snippets` folder.
-- Then, we load the code in a Docker image and run it to validate the code. This way we do not have to deal with installing different dependencies for different languages.
+#### Continuous integration
+
+For pull requests, code-block CI checks only changed documentation files and the languages generated from them. Changes to checker or test infrastructure trigger a full check, as do changes affecting more than 100 documentation files or a changed-file path list larger than 50 KB. Linting, infrastructure tests, and extraction run in parallel as their dependencies allow; language checks run after extraction.
+
+Set the repository variable `RUN_FULL_CODE_BLOCK_CHECKS=true` to run full code-block checks before the GitHub Build job in the non-pull-request deployment flow. If Vercel deploys directly from Git, configure Vercel to require the GitHub Build check externally.
+
+Run linting and extraction before a language checker so it does not validate stale snippets:
+
+```sh
+npm run lint:code-blocks
+npm run write-code-blocks
+npm run check-code-blocks javascript
+```
+
+Checker names are `javascript`, `go`, `python`, `kotlin`, `swift`, `dart`, `php`, `java`, and `csharp`. TypeScript and JavaScript fences both use the `javascript` checker.
+
+Generated snippets are stored under `scripts/code-type-checking/<language>/snippets`, preserving the source path and including the fence's source line in each generated path.
+
+For an intentionally non-standalone snippet, add `check=false` and a non-empty, quoted reason to the code fence. This excludes it from formatting and type checking:
+
+````md
+```ts check=false reason="Requires application context"
+const app = getApplicationInstance();
+```
+````
+
+An exclusion must contain exactly one unquoted `check=false` and exactly one closed, double-quoted, non-empty `reason`. Reason text may contain ASCII letters, numbers, spaces, and `. , ; : ! ? ( ) / _ + -`. Braces, quotes, backslashes, control characters, and newlines are not allowed because fence metadata is passed to Shiki.
+
+The lint and snippet writer reject malformed, duplicate, contradictory, or unsupported metadata. Invalid metadata does not skip formatting or extraction. Do not use this escape hatch for standalone snippets that can be made valid.
+
+Legacy exclusions using one of these exact comments as the first content line remain supported:
+
+- `// exclude-from-type-checking`
+- `# exclude-from-type-checking`

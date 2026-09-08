@@ -1,0 +1,185 @@
+---
+title: 6. Making requests from Server Components
+description: Learn to make API requests from server components using access tokens in Next.js.
+sidebar:
+  order: 7
+---
+
+Let's modify the Home page from the [route protection step](/integrations/nextjs/app-directory/protecting-route) to call this API.
+
+<UITypeSwitch />
+
+<VariantContent storageKey="ui-type" value="prebuilt">
+
+```tsx title="app/components/home.tsx" check=false reason="Requires surrounding framework application context"
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getSSRSession } from "supertokens-node/nextjs";
+
+import { TryRefreshComponent } from "./tryRefreshClientComponent";
+import { SessionAuthForNextJS } from "./sessionAuthForNextJS";
+import { appInfo } from "../config/appInfo";
+import { ensureSuperTokensInit } from "../config/backend";
+
+ensureSuperTokensInit();
+
+async function getAccessToken() {
+  const cookiesStore = await cookies();
+  return cookiesStore.get("sAccessToken")?.value;
+}
+
+export async function HomePage() {
+  const cookieStore = await cookies();
+  const { accessTokenPayload, hasToken, error } = await getSSRSession(cookieStore.getAll());
+  const accessToken = await getAccessToken();
+
+  if (error) {
+    console.error("Unable to read the SSR session", { component: "HomePage" });
+    return <div role="alert">Unable to verify your session. Please try again.</div>;
+  }
+
+  // `accessTokenPayload` is undefined if the session does not exist or has expired
+  if (accessTokenPayload === undefined) {
+    if (!hasToken) {
+      /**
+       * This means that the user is not logged in. If you want to display some other UI in this
+       * case, you can do so here.
+       */
+      return redirect("/auth");
+    }
+
+    /**
+     * This means that the session does not exist but we have session tokens for the user. In this case
+     * the `TryRefreshComponent` will try to refresh the session.
+     *
+     * To learn about why the 'key' attribute is required refer to: https://github.com/supertokens/supertokens-node/issues/826#issuecomment-2092144048
+     */
+    return <TryRefreshComponent key={Date.now()} />;
+  }
+
+  const userInfoResponse = await fetch(new URL("/api/user", appInfo.websiteDomain), {
+    headers: {
+      /**
+       * We read the access token from the cookies and use it as a Bearer token when
+       * making network requests.
+       */
+      Authorization: "Bearer " + accessToken,
+    },
+  });
+
+  let message = "";
+
+  if (userInfoResponse.status === 200) {
+    message = `Your user id is: ${accessTokenPayload.sub}`;
+  } else if (userInfoResponse.status === 500) {
+    message = "Something went wrong";
+  } else if (userInfoResponse.status === 401) {
+    // The TryRefreshComponent will try to refresh the session
+    // To learn about why the 'key' attribute is required refer to: https://github.com/supertokens/supertokens-node/issues/826#issuecomment-2092144048
+    return <TryRefreshComponent key={Date.now()} />;
+  } else if (userInfoResponse.status === 403) {
+    // SessionAuthForNextJS will redirect based on which claim is invalid
+    return <SessionAuthForNextJS />;
+  }
+
+  // You can use `userInfoResponse` to read the user's session information
+
+  return (
+    <SessionAuthForNextJS>
+      <div>{message}</div>
+    </SessionAuthForNextJS>
+  );
+}
+```
+
+We read the access token of the user from cookies. We can then send the access token as a header to the API. When the API calls `withSession` it will try to read the access token from the headers and if a session exists it will return the session information.
+
+</VariantContent>
+
+<VariantContent storageKey="ui-type" value="custom">
+
+```tsx title="app/components/home.tsx" check=false reason="Requires surrounding framework application context"
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getSSRSession } from "supertokens-node/nextjs";
+
+import { TryRefreshComponent } from "./tryRefreshClientComponent";
+import { appInfo } from "../config/appInfo";
+import { ensureSuperTokensInit } from "../config/backend";
+
+ensureSuperTokensInit();
+
+async function getAccessToken() {
+  const cookiesStore = await cookies();
+  return cookiesStore.get("sAccessToken")?.value;
+}
+
+export async function HomePage() {
+  const cookieStore = await cookies();
+  const { accessTokenPayload, hasToken, error } = await getSSRSession(cookieStore.getAll());
+  const accessToken = await getAccessToken();
+
+  if (error) {
+    console.error("Unable to read the SSR session", { component: "HomePage" });
+    return <div role="alert">Unable to verify your session. Please try again.</div>;
+  }
+
+  // `accessTokenPayload` is undefined if the session does not exist or has expired
+  if (accessTokenPayload === undefined) {
+    if (!hasToken) {
+      /**
+       * This means that the user is not logged in. If you want to display some other UI in this
+       * case, you can do so here.
+       */
+      return redirect("/auth");
+    }
+
+    /**
+     * This means that the session does not exist but we have session tokens for the user. In this case
+     * the `TryRefreshComponent` will try to refresh the session.
+     *
+     * To learn about why the 'key' attribute is required refer to: https://github.com/supertokens/supertokens-node/issues/826#issuecomment-2092144048
+     */
+    return <TryRefreshComponent key={Date.now()} />;
+  }
+
+  const userInfoResponse = await fetch(new URL("/api/user", appInfo.websiteDomain), {
+    headers: {
+      /**
+       * We read the access token from the cookies and use it as a Bearer token when
+       * making network requests.
+       */
+      Authorization: "Bearer " + accessToken,
+    },
+  });
+
+  let message = "";
+
+  if (userInfoResponse.status === 200) {
+    message = `Your user id is: ${accessTokenPayload.sub}`;
+  } else if (userInfoResponse.status === 500) {
+    message = "Something went wrong";
+  } else if (userInfoResponse.status === 401) {
+    // The TryRefreshComponent will try to refresh the session
+    // To learn about why the 'key' attribute is required refer to: https://github.com/supertokens/supertokens-node/issues/826#issuecomment-2092144048
+    return <TryRefreshComponent key={Date.now()} />;
+  } else if (userInfoResponse.status === 403) {
+    /**
+     * This means that one of the session claims is invalid. You should redirect the user to
+     * the appropriate page depending on which claim is invalid.
+     */
+    return <div>Invalid Session Claims</div>;
+  }
+
+  // You can use `userInfoResponse` to read the user's session information
+
+  return <div>{message}</div>;
+}
+```
+
+APIs that require sessions will return status:
+
+- `401` if there is no valid session or if the session has expired. In this case, we return the `TryRefreshComponent` component, which tries to refresh the session or redirects to the login page if the session can't be refreshed.
+- `403` if one or more session claims fail validation. In this case, check which session claim failed and redirect the user accordingly. For example, refer to [protecting routes with email verification](/additional-verification/email-verification/protecting-routes) to check the email verification claim.
+
+</VariantContent>

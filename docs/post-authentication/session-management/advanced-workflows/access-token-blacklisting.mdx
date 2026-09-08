@@ -1,45 +1,46 @@
 ---
 title: Blacklist access tokens
-hide_title: true
-sidebar_position: 7
-description: >-
-  Enable immediate session revocation by implementing access token blacklisting
-  with database checks.
-page_type: guide
-recipe: session
-category: session-management
+description: Enable immediate session revocation by implementing access token blacklisting with database checks.
+sidebar:
+  order: 70
 ---
-
-
-# Blacklist access tokens
 
 ## Overview
 
 By default, session verification is stateless.
 This means that SuperTokens does not check that the session actually exists in the database, and only verifies the session by checking its signature.
-Whilst this makes session verifications fast, it also means that if you revoke a session, the user can still use it until the access token expires.
+Although this makes session verification fast, it also means that if you revoke a session, the user can still use its access token until the token expires.
 
-If you want session verifications to fail immediately after revoking the session, you should force the session to check against the database.
-Since you can use this feature on a per API basis, we recommend that you only use it for non-GET APIs since only those are state changing.
+If verification must fail immediately after session revocation, force an authoritative database check.
+You can enable this per API. Choose endpoints based on the sensitivity of the data or action and your threat model, not
+the HTTP method. A confidential `GET` endpoint can require immediate revocation just as much as a state-changing endpoint.
 
 ## Before you start
 
-:::caution
-For managed service users, please check [the rate limit policy](/docs/deployment/rate-limits) before implementing this feature. If you suspect that you might breach the free limit you can:
-- [Email support](mailto:support@supertokens.com) to increase your rate limit.
-- Use the `checkDatabase` flag only on certain important APIs. For example, omit using it in any `GET` API as those are not state changing.
-- Implement your own method for keeping track of revoked access tokens by using a cache like Redis.
+:::warning
+Database-backed verification adds a Core request to each protected API call. Managed service users should check the
+[current rate limit policy](/deployment/rate-limits) for their plan before enabling it broadly. Apply `checkDatabase` to
+every endpoint that requires immediate revocation, including sensitive read endpoints, and capacity-plan for that traffic.
 :::
 
 ---
 
-## Using `Verify Session` 
+## Using `Verify Session`
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-<NodeFrameworksCard>
-<NodeFrameworksCard.Content value="express">
+<DependentContent passive group="backend-language">
+<ContentOption title="Node.js" value="nodejs">
+<DependentContent passive group="node-frameworks">
+<ContentOption title="Next.js" value="nextjs">
+<NextjsRouterTypeSelect />
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+<DependentContent group="node-frameworks" label="Node.js framework">
+<ContentOption title="Express" value="express">
 ```tsx
 import express from "express";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
@@ -47,17 +48,13 @@ import { SessionRequest } from "supertokens-node/framework/express";
 
 let app = express();
 
-// highlight-start
 app.post("/like-comment", verifySession({ checkDatabase: true }), (req: SessionRequest, res) => {
-    let userId = req.session!.getUserId();
-    // highlight-end
-    //....
+  let userId = req.session!.getUserId();
+  //....
 });
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="hapi">
-
+</ContentOption>
+<ContentOption title="Hapi" value="hapi">
 ```tsx
 import Hapi from "@hapi/hapi";
 import { verifySession } from "supertokens-node/recipe/session/framework/hapi";
@@ -66,26 +63,23 @@ import { SessionRequest } from "supertokens-node/framework/hapi";
 let server = Hapi.server({ port: 8000 });
 
 server.route({
-    path: "/like-comment",
-    method: "post",
-    //highlight-start
-    options: {
-        pre: [
-            {
-                method: verifySession({ checkDatabase: true })
-            },
-        ],
-    },
-    handler: async (req: SessionRequest, res) => {
-        let userId = req.session!.getUserId();
-        //highlight-end
-        //...
-    }
-})
+  path: "/like-comment",
+  method: "post",
+  options: {
+    pre: [
+      {
+        method: verifySession({ checkDatabase: true }),
+      },
+    ],
+  },
+  handler: async (req: SessionRequest, res) => {
+    let userId = req.session!.getUserId();
+    //...
+  },
+});
 ```
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="fastify">
-
+</ContentOption>
+<ContentOption title="Fastify" value="fastify">
 ```tsx
 import Fastify from "fastify";
 import { verifySession } from "supertokens-node/recipe/session/framework/fastify";
@@ -93,35 +87,32 @@ import { SessionRequest } from "supertokens-node/framework/fastify";
 
 let fastify = Fastify();
 
-//highlight-start
-fastify.post("/like-comment", {
+fastify.post(
+  "/like-comment",
+  {
     preHandler: verifySession({ checkDatabase: true }),
-}, (req: SessionRequest, res) => {
+  },
+  (req: SessionRequest, res) => {
     let userId = req.session!.getUserId();
-    //highlight-end
     //....
-});
+  },
+);
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="awsLambda">
-
+</ContentOption>
+<ContentOption title="Aws Lambda" value="aws-lambda">
 ```tsx
 import { verifySession } from "supertokens-node/recipe/session/framework/awsLambda";
 import { SessionEventV2 } from "supertokens-node/framework/awsLambda";
 
 async function likeComment(awsEvent: SessionEventV2) {
-    let userId = awsEvent.session!.getUserId();
-    //....
-};
+  let userId = awsEvent.session!.getUserId();
+  //....
+}
 
-//highlight-next-line
 exports.handler = verifySession(likeComment, { checkDatabase: true });
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="koa">
-
+</ContentOption>
+<ContentOption title="Koa" value="koa">
 ```tsx
 import KoaRouter from "koa-router";
 import { verifySession } from "supertokens-node/recipe/session/framework/koa";
@@ -129,17 +120,13 @@ import { SessionContext } from "supertokens-node/framework/koa";
 
 let router = new KoaRouter();
 
-//highlight-start
 router.post("/like-comment", verifySession({ checkDatabase: true }), (ctx: SessionContext, next) => {
-    let userId = ctx.session!.getUserId();
-    //highlight-end
-    //....
+  let userId = ctx.session!.getUserId();
+  //....
 });
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="loopback">
-
+</ContentOption>
+<ContentOption title="LoopBack" value="loopback">
 ```tsx
 import { inject, intercept } from "@loopback/core";
 import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
@@ -147,105 +134,65 @@ import { verifySession } from "supertokens-node/recipe/session/framework/loopbac
 import { SessionContext } from "supertokens-node/framework/loopback";
 
 class LikeComment {
-    //highlight-start
-    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
-    @post("/like-comment")
-    @intercept(verifySession({ checkDatabase: true }))
-    @response(200)
-    handler() {
-        let userId = (this.ctx as SessionContext).session!.getUserId();
-        //highlight-end
-        //....
-    }
+  constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) {}
+  @post("/like-comment")
+  @intercept(verifySession({ checkDatabase: true }))
+  @response(200)
+  handler() {
+    let userId = (this.ctx as SessionContext).session!.getUserId();
+    //....
+  }
 }
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="nextjs">
-
-<NodeFrameworksCard.HeaderCustomActions>
-  <NextjsRouterTypeSelect />
-</NodeFrameworksCard.HeaderCustomActions>
-
+</ContentOption>
+<ContentOption title="Next.js" value="nextjs">
 <ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
 
 ```tsx
-import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { superTokensNextWrapper } from "supertokens-node/nextjs";
 import { verifySession } from "supertokens-node/recipe/session/framework/express";
 import { SessionRequest } from "supertokens-node/framework/express";
 
-// highlight-start
 export default async function likeComment(req: SessionRequest, res: any) {
-    await superTokensNextWrapper(
-        async (next) => {
-            await verifySession({ checkDatabase: true })(req, res, next);
-        },
-        req,
-        res
-    )
+  await superTokensNextWrapper(
+    async (next) => {
+      await verifySession({ checkDatabase: true })(req, res, next);
+    },
+    req,
+    res,
+  );
 
-    let userId = req.session!.getUserId();
-    // highlight-end
-    //....
+  let userId = req.session!.getUserId();
+  //....
 }
 ```
 
 </ConditionalContent>
-<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
-
-```tsx
-import { NextResponse, NextRequest } from "next/server";
-import SuperTokens from "supertokens-node";
-import { withSession } from "supertokens-node/nextjs";
-// @ts-ignore
-import { backendConfig } from "@/app/config/backend";
-
-SuperTokens.init(backendConfig());
-
-export function POST(request: NextRequest) {
-    return withSession(request, async (err, session) => {
-        if (err) {
-            return NextResponse.json(err, { status: 500 });
-        }
-        let userId = session!.getUserId();
-        //....
-        return NextResponse.json({})
-    }, { checkDatabase: true });
-}
-```
-
-</ConditionalContent>
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="nestjs">
-
-```tsx
+</ContentOption>
+<ContentOption title="Nestjs" value="nestjs">
+```tsx check=false reason="Requires surrounding framework application context"
 import { Controller, Post, UseGuards, Session } from "@nestjs/common";
 import { SessionContainer } from "supertokens-node/recipe/session";
-// @ts-ignore
-import { AuthGuard } from './auth/auth.guard';
+import { AuthGuard } from "./auth/auth.guard";
 
 @Controller()
 export class ExampleController {
-  @Post('example')
+  @Post("example")
   @UseGuards(new AuthGuard({ checkDatabase: true })) // For more information about this guard please read our NestJS guide.
   async postExample(@Session() session: SessionContainer): Promise<boolean> {
-    //highlight-start
     let userId = session.getUserId();
 
-    //highlight-end
     //....
     return true;
   }
 }
 ```
-</NodeFrameworksCard.Content>
-</NodeFrameworksCard>
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-<GoFrameworksCard>
-<GoFrameworksCard.Content value="HTTP">
-
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="Go" value="go">
+<DependentContent group="go-frameworks" label="Go framework">
+<ContentOption title="HTTP" value="http">
 ```go
 import (
 	"fmt"
@@ -274,10 +221,8 @@ func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(userID)
 }
 ```
-
-</GoFrameworksCard.Content>
-<GoFrameworksCard.Content value="gin">
-
+</ContentOption>
+<ContentOption title="Gin" value="gin">
 ```go
 import (
 	"fmt"
@@ -320,10 +265,8 @@ func likeCommentAPI(c *gin.Context) {
 	fmt.Println(userID)
 }
 ```
-
-</GoFrameworksCard.Content>
-<GoFrameworksCard.Content value="chi">
-
+</ContentOption>
+<ContentOption title="Chi" value="chi">
 ```go
 import (
 	"fmt"
@@ -353,10 +296,8 @@ func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(userID)
 }
 ```
-
-</GoFrameworksCard.Content>
-<GoFrameworksCard.Content value="mux">
-
+</ContentOption>
+<ContentOption title="Mux" value="mux">
 ```go
 import (
 	"fmt"
@@ -386,57 +327,46 @@ func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(userID)
 }
 ```
-
-</GoFrameworksCard.Content>
-</GoFrameworksCard>
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-<PythonFrameworksCard>
-<PythonFrameworksCard.Content value="fastapi">
-
-```python
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="Python" value="python">
+<DependentContent group="python-frameworks" label="Python framework">
+<ContentOption title="FastAPI" value="fastapi">
+```python check=false reason="Requires surrounding framework application context"
 from fastapi import Depends
 
 from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.session.framework.fastapi import verify_session
 
 
-# highlight-start
-@app.post('/like_comment') # type: ignore
+@app.post('/like_comment')
 async def like_comment(session: SessionContainer = Depends(verify_session(check_database=True))):
     user_id = session.get_user_id()
-    # highlight-end
 
     print(user_id)
 ```
-
-</PythonFrameworksCard.Content>
-<PythonFrameworksCard.Content value="flask">
-
-```python
+</ContentOption>
+<ContentOption title="Flask" value="flask">
+```python check=false reason="Requires surrounding framework application context"
 from flask import g
 
 from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.session.framework.flask import verify_session
 
 
-# highlight-start
-@app.route('/update-jwt', methods=['POST']) # type: ignore
+@app.route('/update-jwt', methods=['POST'])
 @verify_session(check_database=True)
 def like_comment():
-    session: SessionContainer = g.supertokens # type: ignore
+    session: SessionContainer = g.supertokens
 
     user_id = session.get_user_id()
-    # highlight-end
 
     print(user_id)
 ```
-
-</PythonFrameworksCard.Content>
-<PythonFrameworksCard.Content value="django">
-
-```python
+</ContentOption>
+<ContentOption title="Django" value="django">
+```python check=false reason="Requires surrounding application context"
 from typing import cast
 
 from django.http import HttpRequest
@@ -445,32 +375,73 @@ from supertokens_python.recipe.session import SessionContainer
 from supertokens_python.recipe.session.framework.django.asyncio import verify_session
 
 
-# highlight-start
 @verify_session(check_database=True)
 async def like_comment(request: HttpRequest):
-    session: SessionContainer = cast(SessionContainer, request.supertokens) # type: ignore
+    session: SessionContainer = cast(SessionContainer, request.supertokens)
 
     user_id = session.get_user_id()
-    # highlight-end
 
     print(user_id)
 ```
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
-</PythonFrameworksCard.Content>
-</PythonFrameworksCard>
+<CodeGroup passive group="backend-language">
+<Tab title="Node.js" value="nodejs">
+<DependentContent group="node-frameworks" label="Node.js framework">
+<ContentOption title="Next.js" value="nextjs">
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
 
-</BackendTabs.TabItem>
-</BackendTabs>
+```tsx check=false reason="Requires surrounding framework application context"
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+  return withSession(
+    request,
+    async (err, session) => {
+      if (err) {
+        return NextResponse.json(err, { status: 500 });
+      }
+      let userId = session!.getUserId();
+      //....
+      return NextResponse.json({});
+    },
+    { checkDatabase: true },
+  );
+}
+```
+
+</ConditionalContent>
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
 ---
 
 ## Using `Get Session`
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-<NodeFrameworksCard>
-<NodeFrameworksCard.Content value="express">
+<DependentContent passive group="backend-language">
+<ContentOption title="Node.js" value="nodejs">
+<DependentContent passive group="node-frameworks">
+<ContentOption title="Next.js" value="nextjs">
+<NextjsRouterTypeSelect />
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+<DependentContent group="node-frameworks" label="Node.js framework">
+<ContentOption title="Express" value="express">
 ```tsx
 import express from "express";
 import Session from "supertokens-node/recipe/session";
@@ -478,24 +449,22 @@ import Session from "supertokens-node/recipe/session";
 let app = express();
 
 app.post("/like-comment", async (req, res, next) => {
-    try {
-        let session = await Session.getSession(req, res, { checkDatabase: true })
+  try {
+    let session = await Session.getSession(req, res, { checkDatabase: true });
 
-        if (session !== undefined) {
-            let userId = session.getUserId();
-        } else {
-            // user is not logged in...
-        }
-        //....
-    } catch (err) {
-        next(err);
+    if (session !== undefined) {
+      let userId = session.getUserId();
+    } else {
+      // user is not logged in...
     }
+    //....
+  } catch (err) {
+    next(err);
+  }
 });
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="hapi">
-
+</ContentOption>
+<ContentOption title="Hapi" value="hapi">
 ```tsx
 import Hapi from "@hapi/hapi";
 import Session from "supertokens-node/recipe/session";
@@ -503,25 +472,24 @@ import Session from "supertokens-node/recipe/session";
 let server = Hapi.server({ port: 8000 });
 
 server.route({
-    path: "/like-comment",
-    method: "post",
+  path: "/like-comment",
+  method: "post",
 
-    handler: async (req, res) => {
-        let session = await Session.getSession(req, res, { checkDatabase: true })
+  handler: async (req, res) => {
+    let session = await Session.getSession(req, res, { checkDatabase: true });
 
-        if (session !== undefined) {
-            let userId = session.getUserId();
-        } else {
-            // user is not logged in...
-        }
-
-        //...
+    if (session !== undefined) {
+      let userId = session.getUserId();
+    } else {
+      // user is not logged in...
     }
-})
-```
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="fastify">
 
+    //...
+  },
+});
+```
+</ContentOption>
+<ContentOption title="Fastify" value="fastify">
 ```tsx
 import Fastify from "fastify";
 import Session from "supertokens-node/recipe/session";
@@ -529,44 +497,39 @@ import Session from "supertokens-node/recipe/session";
 let fastify = Fastify();
 
 fastify.post("/like-comment", async (req, res) => {
-    let session = await Session.getSession(req, res, { checkDatabase: true })
+  let session = await Session.getSession(req, res, { checkDatabase: true });
 
-    if (session !== undefined) {
-        let userId = session.getUserId();
-    } else {
-        // user is not logged in...
-    }
-    //....
+  if (session !== undefined) {
+    let userId = session.getUserId();
+  } else {
+    // user is not logged in...
+  }
+  //....
 });
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="awsLambda">
-
+</ContentOption>
+<ContentOption title="Aws Lambda" value="aws-lambda">
 ```tsx
 import Session from "supertokens-node/recipe/session";
 import { middleware } from "supertokens-node/framework/awsLambda";
 import { SessionEvent } from "supertokens-node/framework/awsLambda";
 
 async function likeComment(awsEvent: SessionEvent) {
-    let session = await Session.getSession(awsEvent, awsEvent, { checkDatabase: true })
+  let session = await Session.getSession(awsEvent, awsEvent, { checkDatabase: true });
 
-    if (session !== undefined) {
-        let userId = session.getUserId();
-    } else {
-        // user is not logged in...
-    }
+  if (session !== undefined) {
+    let userId = session.getUserId();
+  } else {
+    // user is not logged in...
+  }
 
-    //....
-};
+  //....
+}
 
-//highlight-next-line
 exports.handler = middleware(likeComment);
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="koa">
-
+</ContentOption>
+<ContentOption title="Koa" value="koa">
 ```tsx
 import KoaRouter from "koa-router";
 import Session from "supertokens-node/recipe/session";
@@ -574,106 +537,71 @@ import Session from "supertokens-node/recipe/session";
 let router = new KoaRouter();
 
 router.post("/like-comment", async (ctx, next) => {
-    let session = await Session.getSession(ctx, ctx, { checkDatabase: true })
+  let session = await Session.getSession(ctx, ctx, { checkDatabase: true });
 
-    if (session !== undefined) {
-        let userId = session.getUserId();
-    } else {
-        // user is not logged in...
-    }
+  if (session !== undefined) {
+    let userId = session.getUserId();
+  } else {
+    // user is not logged in...
+  }
 
-    //....
+  //....
 });
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="loopback">
-
+</ContentOption>
+<ContentOption title="LoopBack" value="loopback">
 ```tsx
 import { inject } from "@loopback/core";
 import { RestBindings, MiddlewareContext, post, response } from "@loopback/rest";
 import Session from "supertokens-node/recipe/session";
 
 class LikeComment {
+  constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) {}
+  @post("/like-comment")
+  @response(200)
+  async handler() {
+    let session = await Session.getSession(this.ctx, this.ctx, { checkDatabase: true });
 
-    constructor(@inject(RestBindings.Http.CONTEXT) private ctx: MiddlewareContext) { }
-    @post("/like-comment")
-    @response(200)
-    async handler() {
-        let session = await Session.getSession(this.ctx, this.ctx, { checkDatabase: true })
-
-        if (session !== undefined) {
-            let userId = session.getUserId();
-        } else {
-            // user is not logged in...
-        }
-
-        //....
+    if (session !== undefined) {
+      let userId = session.getUserId();
+    } else {
+      // user is not logged in...
     }
+
+    //....
+  }
 }
 ```
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="nextjs">
-
-<NodeFrameworksCard.HeaderCustomActions>
-  <NextjsRouterTypeSelect />
-</NodeFrameworksCard.HeaderCustomActions>
-
+</ContentOption>
+<ContentOption title="Next.js" value="nextjs">
 <ConditionalContent propertyName="nextjsRouterType" condition="pages-router">
 
 ```tsx
-import { superTokensNextWrapper } from 'supertokens-node/nextjs'
+import { superTokensNextWrapper } from "supertokens-node/nextjs";
 import Session from "supertokens-node/recipe/session";
 import { SessionRequest } from "supertokens-node/framework/express";
 
 export default async function likeComment(req: SessionRequest, res: any) {
-    let session = await superTokensNextWrapper(
-        async (next) => {
-            return await Session.getSession(req, res, { checkDatabase: true });
-        },
-        req,
-        res
-    )
+  let session = await superTokensNextWrapper(
+    async (next) => {
+      return await Session.getSession(req, res, { checkDatabase: true });
+    },
+    req,
+    res,
+  );
 
-    if (session !== undefined) {
-        let userId = session.getUserId();
-    } else {
-        // user is not logged in...
-    }
-    //....
+  if (session !== undefined) {
+    let userId = session.getUserId();
+  } else {
+    // user is not logged in...
+  }
+  //....
 }
 ```
 
 </ConditionalContent>
-<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
-
-```tsx
-import { NextResponse, NextRequest } from "next/server";
-import SuperTokens from "supertokens-node";
-import { withSession } from "supertokens-node/nextjs";
-// @ts-ignore
-import { backendConfig } from "@/app/config/backend";
-
-SuperTokens.init(backendConfig());
-
-export function POST(request: NextRequest) {
-    return withSession(request, async (err, session) => {
-        if (err) {
-            return NextResponse.json(err, { status: 500 });
-        }
-        let userId = session!.getUserId();
-        //....
-        return NextResponse.json({})
-    }, { checkDatabase: true });
-}
-```
-
-</ConditionalContent>
-
-</NodeFrameworksCard.Content>
-<NodeFrameworksCard.Content value="nestjs">
-
+</ContentOption>
+<ContentOption title="Nestjs" value="nestjs">
 ```tsx
 import { Controller, Post, UseGuards, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
@@ -681,28 +609,25 @@ import Session from "supertokens-node/recipe/session";
 
 @Controller()
 export class ExampleController {
-  @Post('example')
+  @Post("example")
   async postExample(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<boolean> {
-    //highlight-start
     // This should be done inside a parameter decorator, for more information please read our NestJS guide.
-    const session = await Session.getSession(req, res, { checkDatabase: true })
+    const session = await Session.getSession(req, res, { checkDatabase: true });
 
     if (session !== undefined) {
       const userId = session.getUserId();
     } else {
       // user is not logged in...
     }
-    //highlight-end
     //....
     return true;
   }
 }
 ```
-</NodeFrameworksCard.Content>
-</NodeFrameworksCard>
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"fmt"
@@ -735,21 +660,18 @@ func likeCommentAPI(w http.ResponseWriter, r *http.Request) {
     }
 }
 ```
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-<PythonFrameworksCard>
-<PythonFrameworksCard.Content value="fastapi">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+<DependentContent group="python-frameworks" label="Python framework">
+<ContentOption title="FastAPI" value="fastapi">
+```python check=false reason="Requires surrounding framework application context"
 from fastapi import Request
 
 from supertokens_python.recipe.session.asyncio import get_session
 
 
-@app.post('/like-comment') # type: ignore
+@app.post('/like-comment')
 async def like_comment(request: Request):
-    # highlight-next-line
     session = await get_session(request, check_database=True)
 
     if session is not None:
@@ -758,19 +680,16 @@ async def like_comment(request: Request):
     else:
        pass # user is not logged in
 ```
-
-</PythonFrameworksCard.Content>
-<PythonFrameworksCard.Content value="flask">
-
-```python
+</ContentOption>
+<ContentOption title="Flask" value="flask">
+```python check=false reason="Requires surrounding framework application context"
 from flask.wrappers import Request
 
 from supertokens_python.recipe.session.syncio import get_session
 
 
-@app.route('/like-comment', methods=['POST']) # type: ignore
+@app.route('/like-comment', methods=['POST'])
 def like_comment(request: Request):
-    # highlight-next-line
     session = get_session(request, check_database=True)
 
     if session is not None:
@@ -779,10 +698,8 @@ def like_comment(request: Request):
     else:
         pass # user is not logged in
 ```
-
-</PythonFrameworksCard.Content>
-<PythonFrameworksCard.Content value="django">
-
+</ContentOption>
+<ContentOption title="Django" value="django">
 ```python
 from django.http import HttpRequest
 
@@ -790,7 +707,6 @@ from supertokens_python.recipe.session.asyncio import get_session
 
 
 async def like_comment(request: HttpRequest):
-    # highlight-next-line
     session = await get_session(request, check_database=True)
 
     if session is not None:
@@ -799,9 +715,43 @@ async def like_comment(request: HttpRequest):
     else:
         pass # user is not logged in
 ```
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
-</PythonFrameworksCard.Content>
-</PythonFrameworksCard>
+<CodeGroup passive group="backend-language">
+<Tab title="Node.js" value="nodejs">
+<DependentContent group="node-frameworks" label="Node.js framework">
+<ContentOption title="Next.js" value="nextjs">
+<ConditionalContent propertyName="nextjsRouterType" condition="app-router">
 
-</BackendTabs.TabItem>
-</BackendTabs>
+```tsx check=false reason="Requires surrounding framework application context"
+import { NextResponse, NextRequest } from "next/server";
+import SuperTokens from "supertokens-node";
+import { withSession } from "supertokens-node/nextjs";
+import { backendConfig } from "@/app/config/backend";
+
+SuperTokens.init(backendConfig());
+
+export function POST(request: NextRequest) {
+  return withSession(
+    request,
+    async (err, session) => {
+      if (err) {
+        return NextResponse.json(err, { status: 500 });
+      }
+      let userId = session!.getUserId();
+      //....
+      return NextResponse.json({});
+    },
+    { checkDatabase: true },
+  );
+}
+```
+
+</ConditionalContent>
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>

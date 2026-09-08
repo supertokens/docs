@@ -1,110 +1,115 @@
 ---
-id: old-sdk-to-new
 title: Migration from an older SuperTokens SDK to a newer one
-hide_title: true
-sidebar_position: 3
-description: >-
-  Upgrade your SuperTokens SDK to enable MFA, ensuring compatibility and smooth
-  transition for existing users.
-page_type: guide
-recipe: mfa
-category: multi-factor-authentication
+description: Upgrade your SuperTokens SDK to enable MFA, ensuring compatibility and smooth transition for existing users.
+sidebar:
+  order: 3
+  hidden: true
 ---
 
-
-# Migration from an older SuperTokens SDK to a newer one
-
 This section is applicable to those who want to enable MFA for the first time and are already using SuperTokens in production. The following are the steps you need to take:
-- Make sure that you have updated your SuperTokens core, backend SDK and frontend SDK that supports MFA (you can find these versions in the CHANGELOG.md files in their respective GitHub repository). Make sure to read the migration guide for each of the breaking version upgrades. You should aim to get your existing feature set working with the new version of SuperTokens before you enable MFA.
+- Make sure that you have updated your SuperTokens core, backend SDK and frontend SDK that supports MFA (you can find these versions in the CHANGELOG files in their respective GitHub repository). Make sure to read the migration guide for each of the breaking version upgrades. You should aim to get your existing feature set working with the new version of SuperTokens before you enable MFA.
 - Follow the backend and frontend setup we have in this guide along with the factor specific setup (TOTP or email / SMS OTP).
 
 ## If enabling MFA for all users at once
 
-If you have enabled MFA for all users, then existing logged in users will asked to complete the secondary factor as soon as they visit your app / website once you have pushed the changes to production. This happens because their existing session is modified to add the MFA claim into it, however, the `v` value in the claim will be `false` since they have not completed MFA yet. This would fail the validators on the frontend which would redirect the user to the MFA login screen.
+If you have enabled MFA for all users, then existing logged in users will be asked to complete the secondary factor as soon as they visit your app / website once you have pushed the changes to production. This happens because their existing session is modified to add the MFA claim into it, however, the `v` value in the claim will be `false` since they have not completed MFA yet. This would fail the validators on the frontend which would redirect the user to the MFA login screen.
 
-If you have clients like mobile apps, which take time to upgrade across your entire user base, then you may want to remove the global MFA validator on the backend and make it run only when you know that the request is coming from an updated client:
+If you have clients like mobile apps, which take time to upgrade across your entire user base, you can temporarily exempt a server-managed migration cohort from the global MFA validator:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+The application helper used below must look up eligibility in application-owned server-side storage. Bind each record to the authenticated user and session or to a registered device. Return `false` if the identity or binding is missing, invalid, expired, or outside the cohort. Also return `false` for sensitive operations, such as account recovery, credential changes, payments, or administrative actions, so that they always require MFA step-up.
 
+You may use the exact legacy `client-version` value (`1.0` in this example) only as one input when enrolling the user, session, or device into the server-side cohort. Enrollment must also satisfy server-verified migration policy; the client-controlled header must not create an eligibility record by itself or authorize an exemption at request time. Missing, malformed, and unknown values must not create an enrollment. Set an expiry on every record and a migration sunset date when you will require version `2.0` and remove the exception.
+
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import Session from "supertokens-node/recipe/session";
 import { ClaimValidationResult } from "supertokens-node/recipe/session/types";
-import SuperTokens, { getRequestFromUserContext } from "supertokens-node";
+import SuperTokens, { RecipeUserId } from "supertokens-node";
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
-import { UserContext } from "supertokens-node/types"
+import { UserContext } from "supertokens-node/types";
+
+async function isMfaMigrationExemptionEligible(input: {
+  tenantId: string;
+  userId: string;
+  recipeUserId: RecipeUserId;
+  userContext: UserContext;
+}): Promise<boolean> {
+  // Replace this with the server-side lookup described above. Throwing here
+  // ensures that an unimplemented lookup cannot disable MFA.
+  throw new Error("MFA migration cohort lookup is not implemented");
+}
 
 SuperTokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        // other recipes..
-        Session.init({
-            override: {
-                functions: (originalImplementation) => {
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    // other recipes..
+    Session.init({
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getGlobalClaimValidators: (input) => {
+              // We remove the existing default MFA validator which checks that
+              // the client has finished MFA.
+              let newValidatorsArray = input.claimValidatorsAddedByOtherRecipes.filter(
+                (v) => v.id !== MultiFactorAuth.MultiFactorAuthClaim.key,
+              );
+
+              // We create an instance of the default validator that is added
+              // by SuperTokens so that we can make modifications to it
+              let originalValidator =
+                MultiFactorAuth.MultiFactorAuthClaim.validators.hasCompletedMFARequirementsForAuth();
+
+              // We create a custom validator based on the default validator
+              let customValidator = {
+                ...originalValidator,
+                validate: async (payload: any, userContext: UserContext): Promise<ClaimValidationResult> => {
+                  if (
+                    await isMfaMigrationExemptionEligible({
+                      tenantId: input.tenantId,
+                      userId: input.userId,
+                      recipeUserId: input.recipeUserId,
+                      userContext,
+                    })
+                  ) {
                     return {
-                        ...originalImplementation,
-                        // highlight-start
-                        getGlobalClaimValidators: (input) => {
-                            // We remove the existing default MFA validator which checks that
-                            // the client has finished MFA.
-                            let newValidatorsArray = input.claimValidatorsAddedByOtherRecipes.filter(v => v.id !== MultiFactorAuth.MultiFactorAuthClaim.key);
+                      isValid: true,
+                    };
+                  }
 
-                            // We create an instance of the default validator that is added
-                            // by SuperTokens so that we can make modificationts to it
-                            let originalValidator = MultiFactorAuth.MultiFactorAuthClaim.validators.hasCompletedMFARequirementsForAuth();
+                  // for newer clients, we call the original validate function
+                  // which will check the claim value in the session.
+                  return originalValidator.validate(payload, userContext);
+                },
+              };
 
-                            // We create a custom validator based on the default validator
-                            let customValidator = {
-                                ...originalValidator,
-                                validate: async (payload: any, userContext: UserContext): Promise<ClaimValidationResult> => {
-                                    // We only want to run the validation check
-                                    // if we know that the client is not an older one.
-                                    // In this example, we do this based on the header
-                                    // in the API request, but the logic here can be
-                                    // anything that you like.
-                                    let request = getRequestFromUserContext(userContext);
-                                    if (request !== undefined) {
-                                        let isOlderClient = request.getHeaderValue("clilent-version") !== "2.0";
-                                        if (isOlderClient) {
-                                            // we return true early for older clients.
-                                            return {
-                                                isValid: true
-                                            }
-                                        }
-                                    }
-
-                                    // for newer clients, we call the original validate function
-                                    // which will check the claim value in the session.
-                                    return originalValidator.validate(payload, userContext);
-                                }
-                            }
-
-                            return [customValidator, ...newValidatorsArray];
-                        }
-                        // highlight-end
-                    }
-                }
-            }
-        })
-    ]
-})
+              return [customValidator, ...newValidatorsArray];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
 from supertokens_python.recipe import session
 from supertokens_python.recipe.session.utils import InputOverrideConfig
@@ -118,7 +123,17 @@ from supertokens_python.types import RecipeUserId
 from supertokens_python.recipe.multifactorauth.multi_factor_auth_claim import (
     MultiFactorAuthClaim,
 )
-from supertokens_python import get_request_from_user_context
+
+
+async def is_mfa_migration_exemption_eligible(
+    tenant_id: str,
+    user_id: str,
+    recipe_user_id: RecipeUserId,
+    user_context: Dict[str, Any],
+) -> bool:
+    # Replace this with the server-side lookup described above. Raising here
+    # ensures that an unimplemented lookup cannot disable MFA.
+    raise NotImplementedError("MFA migration cohort lookup is not implemented")
 
 
 def override_functions(
@@ -149,13 +164,13 @@ def override_functions(
         async def custom_validate(
             payload: Any, user_context: Dict[str, Any]
         ) -> ClaimValidationResult:
-            # Check if the client is an older one based on the header
-            request = get_request_from_user_context(user_context)
-            if request is not None:
-                is_older_client = request.get_header("client-version") != "2.0"
-                if is_older_client:
-                    # Return true early for older clients
-                    return ClaimValidationResult(is_valid=True)
+            if await is_mfa_migration_exemption_eligible(
+                tenant_id,
+                user_id,
+                recipe_user_id,
+                user_context,
+            ):
+                return ClaimValidationResult(is_valid=True)
 
             # For newer clients, call the original validate function
             return await original_validator_validate_func(payload, user_context)
@@ -178,18 +193,13 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
         session.init(override=InputOverrideConfig(functions=override_functions))
     ],
 )
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
-
-The code above will still result in the MFA claim being added to all sessions, with the `v` boolean in it being `false`, however, for older clients, we will not run the validator that checks if the `v` value is true on the backend since those clients have no way to show the MFA UI without updating the app.
-
-:::caution
-You want to add the above exception only for a certain amount of time until you force all users to update their mobile app. This is because the exception method can be used as a way for malicious users to bypass MFA by spoofing that they are using an older client.
-:::
+The code above still adds the MFA claim to all sessions with its `v` boolean set to `false`. It skips backend validation only when the application confirms that the authenticated user and session or registered device belongs to the temporary migration cohort. Apply the original validator to every sensitive operation, regardless of cohort membership.

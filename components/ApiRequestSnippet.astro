@@ -1,0 +1,174 @@
+---
+import specs from "blume:openapi";
+import CodeBlock from "blume/components/content/CodeBlock.astro";
+import {
+  mergeParameters,
+  type ParameterLike,
+  resolveComponentRef,
+  type SchemaLike,
+} from "blume/components/openapi/helpers.ts";
+import { operationModel } from "blume/components/openapi/operation-model.ts";
+import { buildRequest, defaultValues, paramKey } from "blume/components/openapi/request.ts";
+import {
+  effectiveSecurity,
+  resolveSecurity,
+  type SecurityRequirementLike,
+  type SecuritySchemeLike,
+} from "blume/components/openapi/security.ts";
+import { withBase } from "blume/components/islands/base-path.ts";
+
+import { buildApiRequestSnippetLanguages } from "../lib/api-request-snippets";
+import SelectionGroup from "./SelectionGroup.astro";
+import Tab from "./Tab.astro";
+
+interface Props {
+  body?: JsonObject;
+  curlConfig?: string;
+  operationId: string;
+  path?: Record<string, string>;
+  query?: Record<string, string>;
+  source: "cdi" | "fdi";
+}
+
+type JsonValue = boolean | null | number | string | JsonValue[] | JsonObject;
+
+interface JsonObject {
+  [key: string]: JsonValue;
+}
+
+interface MediaTypeLike {
+  schema?: SchemaLike;
+  example?: unknown;
+  examples?: Record<string, { value?: unknown }>;
+}
+
+interface RequestBodyLike {
+  $ref?: string;
+  content?: Record<string, MediaTypeLike>;
+}
+
+interface OperationLike {
+  parameters?: ParameterLike[];
+  requestBody?: RequestBodyLike;
+  security?: SecurityRequirementLike[];
+}
+
+const { body, curlConfig, operationId, path = {}, query = {}, source } = Astro.props;
+const sourceTokens = {
+  cdi: "references-cdi",
+  fdi: "references-fdi",
+} as const;
+const sourceToken = sourceTokens[source];
+if (!sourceToken) {
+  throw new Error(`[ApiRequestSnippet] Invalid OpenAPI source "${source}" for operation "${operationId}".`);
+}
+const spec = specs[sourceToken];
+if (!spec) {
+  throw new Error(`[ApiRequestSnippet] OpenAPI source "${sourceToken}" was not found.`);
+}
+const ref = Object.values(spec?.operations ?? {}).find((candidate) => candidate.operationId === operationId);
+if (!ref) {
+  throw new Error(`[ApiRequestSnippet] Operation "${operationId}" was not found in "${sourceToken}".`);
+}
+const doc = (spec?.document ?? {}) as {
+  paths?: Record<string, Record<string, unknown> & { parameters?: ParameterLike[] }>;
+  components?: {
+    schemas?: Record<string, SchemaLike>;
+    parameters?: Record<string, ParameterLike>;
+    requestBodies?: Record<string, RequestBodyLike>;
+    securitySchemes?: Record<string, SecuritySchemeLike>;
+  };
+  security?: SecurityRequirementLike[];
+};
+const pathItem = ref ? doc.paths?.[ref.path] : undefined;
+const operation = (pathItem && ref ? pathItem[ref.method] : undefined) as OperationLike | undefined;
+if (!operation) {
+  throw new Error(
+    `[ApiRequestSnippet] Operation "${operationId}" points to missing ${ref.method.toUpperCase()} ${ref.path}.`,
+  );
+}
+const components = doc.components ?? {};
+const parameters = mergeParameters(pathItem?.parameters, operation?.parameters, components);
+const resolvedRequestBody = operation.requestBody
+  ? resolveComponentRef(operation.requestBody, components, "requestBodies")
+  : undefined;
+const requestBody = resolvedRequestBody
+  ? {
+      ...resolvedRequestBody,
+      content: Object.fromEntries(
+        Object.entries(resolvedRequestBody.content ?? {}).map(([contentType, media]) => [
+          contentType,
+          {
+            ...media,
+            example: media.example ?? media.examples?.default?.value,
+          },
+        ]),
+      ),
+    }
+  : undefined;
+const security = resolveSecurity(
+  effectiveSecurity(operation?.security, doc.security),
+  doc.components?.securitySchemes,
+);
+const model = operationModel({
+  method: ref.method,
+  parameters,
+  path: ref.path,
+  requestBody,
+  schemas: doc.components?.schemas ?? {},
+  security,
+  servers: [{ url: source === "cdi" ? "<CORE_API_ENDPOINT>" : "<YOUR_API_DOMAIN>" }],
+});
+const values = defaultValues(model);
+if (body !== undefined) {
+  values.body = JSON.stringify(body, null, 2);
+}
+for (const [name, value] of Object.entries(query)) {
+  const parameter = model.params.find((candidate) => candidate.in === "query" && candidate.name === name);
+  if (!parameter) {
+    throw new Error(
+      `[ApiRequestSnippet] Query override "${name}" is not declared by operation "${operationId}".`,
+    );
+  }
+  values.params[paramKey(parameter)] = value;
+}
+const sample = buildRequest(model, values);
+for (const [name, value] of Object.entries(path)) {
+  const placeholder = `{${name}}`;
+  if (!sample.url.includes(placeholder)) {
+    throw new Error(`[ApiRequestSnippet] Path override "${name}" is not present in operation "${operationId}".`);
+  }
+  sample.url = sample.url.replaceAll(placeholder, encodeURIComponent(value));
+}
+
+const languages = buildApiRequestSnippetLanguages({ curlConfig });
+const namespace = `api-request-${crypto.randomUUID()}`;
+const embedRoute = withBase(`/docs/api-reference-embed/${source}/${ref.key}`);
+const specRoute = withBase(`/docs/api-spec/${source}.json`);
+---
+
+<div class="api-request-snippet not-prose">
+  <SelectionGroup control="select" label="Language" showOptionMarks={false}>
+    <a
+      aria-controls="api-reference-drawer"
+      aria-haspopup="dialog"
+      aria-label={`API Reference: ${ref.summary}`}
+      class="st-api-reference-action"
+      data-api-reference-embed-href={embedRoute}
+      data-api-reference-spec-href={specRoute}
+      data-api-reference-title={ref.summary}
+      data-api-reference-trigger
+      href={ref.route}
+      slot="accessory"
+    >
+      API Reference
+    </a>
+    {
+      languages.map((language) => (
+        <Tab id={`${namespace}-${language.id}`} title={language.label} value={language.id}>
+          <CodeBlock code={language.build(sample)} icons={false} lang={language.lang} />
+        </Tab>
+      ))
+    }
+  </SelectionGroup>
+</div>

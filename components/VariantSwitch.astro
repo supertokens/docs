@@ -1,0 +1,210 @@
+---
+import { Code2Icon, LayoutTemplateIcon } from "lucide-react";
+
+interface Option {
+  description?: string;
+  icon?: "code-2" | "layout-template";
+  label: string;
+  value: string;
+}
+
+interface Props {
+  storageKey: string;
+  options: Option[];
+  defaultValue: string;
+  label: string;
+}
+
+const { storageKey, options, defaultValue, label } = Astro.props;
+const switchId = crypto.randomUUID();
+const optionIcons = {
+  "code-2": Code2Icon,
+  "layout-template": LayoutTemplateIcon,
+};
+---
+
+<fieldset class="variant-switch" data-variant-switch={storageKey} data-default-value={defaultValue}>
+  <legend>{label}</legend>
+  <div class="variant-options">
+    {
+      options.map((option) => {
+        const Icon = option.icon ? optionIcons[option.icon] : undefined;
+        return (
+          <label>
+            <input
+              type="radio"
+              name={`${storageKey}-${switchId}`}
+              value={option.value}
+              checked={option.value === defaultValue}
+            />
+            <span class="variant-option">
+              {Icon && (
+                <span class="variant-option-icon" aria-hidden="true">
+                  <Icon />
+                </span>
+              )}
+              <span class="variant-option-copy">
+                <span class="variant-option-label">{option.label}</span>
+                {option.description && <span class="variant-option-description">{option.description}</span>}
+              </span>
+            </span>
+          </label>
+        );
+      })
+    }
+  </div>
+</fieldset>
+
+<script>
+  import {
+    dispatchVariant,
+    initializeSelectionUrlState,
+    readCanonicalQuery,
+    readStorage,
+    resolveSelection,
+    selectionUrlStateEvent,
+    variantEvent,
+    variantStorageKey,
+    writeStorage,
+  } from "../lib/docs-selection";
+
+  const setSwitchValue = (key: string, value: string) => {
+    for (const fieldset of document.querySelectorAll<HTMLFieldSetElement>(`[data-variant-switch="${key}"]`)) {
+      const input = fieldset.querySelector<HTMLInputElement>(`input[value="${CSS.escape(value)}"]`);
+      if (input) input.checked = true;
+    }
+  };
+
+  const initializeVariantSwitches = () => {
+    for (const fieldset of document.querySelectorAll<HTMLFieldSetElement>("[data-variant-switch]")) {
+      const initialized = fieldset.dataset.initialized === "true";
+      fieldset.dataset.initialized = "true";
+      const key = fieldset.dataset.variantSwitch;
+      if (!key) continue;
+
+      const values = [...fieldset.querySelectorAll<HTMLInputElement>('input[type="radio"]')].map((input) => input.value);
+      const storageKey = variantStorageKey(key);
+      const storedValue = readStorage(storageKey);
+      const fallback = fieldset.dataset.defaultValue || values[0];
+      const pageValues = [...document.querySelectorAll<HTMLElement>(`[data-variant-content="${key}"]`)]
+        .map((element) => element.dataset.variantValue)
+        .filter((item): item is string => Boolean(item));
+      const queryValue = readCanonicalQuery(key, pageValues.length > 0 ? pageValues : values);
+      const value = resolveSelection({ availableValues: values, defaultValue: fallback, queryValue, storedValue });
+      if (!value) continue;
+
+      setSwitchValue(key, value);
+      if (queryValue === value) writeStorage(storageKey, value);
+
+      if (!initialized) {
+        fieldset.addEventListener("change", (event) => {
+          const input = event.target;
+          if (!(input instanceof HTMLInputElement) || input.type !== "radio") return;
+          setSwitchValue(key, input.value);
+          dispatchVariant(key, input.value);
+        });
+      }
+    }
+  };
+
+  initializeVariantSwitches();
+  initializeSelectionUrlState();
+  document.addEventListener("astro:page-load", initializeVariantSwitches);
+  window.addEventListener(variantEvent, (event) => {
+    const detail = (event as CustomEvent<{ key: string; value: string }>).detail;
+    if (detail) setSwitchValue(detail.key, detail.value);
+  });
+  window.addEventListener(selectionUrlStateEvent, initializeVariantSwitches);
+</script>
+
+<style>
+  .variant-switch {
+    border: 0;
+    margin-block: 1rem;
+    padding: 0;
+  }
+
+  .variant-switch legend {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .variant-options {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+
+  .variant-options label {
+    cursor: pointer;
+    position: relative;
+  }
+
+  .variant-options input {
+    height: 1px;
+    opacity: 0;
+    position: absolute;
+    width: 1px;
+  }
+
+  .variant-option {
+    align-items: center;
+    background: var(--blume-background);
+    border: 1px solid var(--blume-border);
+    border-radius: 0.5rem;
+    display: flex;
+    gap: 0.75rem;
+    height: 100%;
+    padding: 0.75rem 1rem;
+  }
+
+  .variant-option-icon {
+    align-items: center;
+    border: 1px solid var(--blume-border);
+    border-radius: 0.25rem;
+    display: flex;
+    flex: 0 0 1.75rem;
+    height: 1.75rem;
+    justify-content: center;
+    width: 1.75rem;
+  }
+
+  .variant-option-icon svg {
+    height: 1rem;
+    width: 1rem;
+  }
+
+  .variant-option-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .variant-option-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .variant-option-description {
+    color: var(--blume-muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-top: 0.125rem;
+  }
+
+  .variant-options input:checked + .variant-option {
+    border-color: var(--blume-accent);
+    box-shadow: inset 0 0 0 1px var(--blume-accent);
+  }
+
+  .variant-options input:checked + .variant-option .variant-option-label,
+  .variant-options input:checked + .variant-option .variant-option-icon {
+    color: var(--blume-accent);
+  }
+
+  .variant-options input:focus-visible + .variant-option {
+    outline: 2px solid var(--blume-accent);
+    outline-offset: 2px;
+  }
+</style>

@@ -1,30 +1,24 @@
 ---
 title: SAML
-hide_title: true
-sidebar_position: 10
-toc_max_heading_level: 4
 description: Add SAML authentication to your application
-page_type: tutorial
-recipe: thirdparty
-category: enterprise-login
+sidebar:
+  order: 100
 ---
-
-# SAML Setup 
 
 ## Overview
 
 The following guide shows you how to configure SAML with your SuperTokens integration.
 `SAML`, or Security Assertion Markup Language, is an open protocol that exchanges information between the authentication server and the client application.
 
-### How it works?
+### How does it work?
 
-Your `SAML` identity provider has a metadata file (`.xml`) that you or your end users need to upload to the `SAML` client.
+Your SAML identity provider (IdP) has a metadata file (`.xml`) that you or your end users need to upload to the SAML service provider (SP).
 
 The `.xml` metadata file contains (amongst other things):
-- A unique entity ID that you must keep private. The `SAML` provider uses this to identify your application.
+- A unique entity ID that identifies the IdP. It is an identifier, not a secret, and may be shared as part of SAML metadata.
 - A public certificate that verifies the signature attached to the incoming `SAML` response.
 This ensures the response is coming from the expected Identity Provider.
-- Information about where to redirect the end user to when they click on the login button in your application. 
+- Information about where to redirect the end user to when they click on the login button in your application.
 This URL is to a website controlled by the `SAML` provider and asks the end user for their credentials.
 
 
@@ -32,23 +26,18 @@ This URL is to a website controlled by the `SAML` provider and asks the end user
 
 <PaidFeatureCallout />
 
-These instructions assume that you already have gone through the main [quickstart guide](/docs/quickstart/introduction).
-If you have skipped that page please follow the tutorial and return here once you're done.
-
-
-:::warning no-title
-You need to use a SuperTokens core that is at least on version `11.3`.
-The feature is only available with the `Node.js` SDK.
-Support for `Python` and `Golang` is in active development.
+:::warning[Use a current, patched SuperTokens Core]
+SAML requires Core `12.0` or later. The feature is available in the Node.js and Python SDKs while Go is not currently supported.
 :::
+
 
 
 ## Steps
 
-### 1. Get the SAML metadata from your Identity Provider
+### 1. Get the SAML metadata from your identity provider
 
-Before configuring SuperTokens, you need to obtain the SAML metadata XML from your Identity Provider (IDP).
-This is typically available in your IDP's admin console as a downloadable XML file or a metadata URL.
+Before configuring SuperTokens, you need to obtain the SAML metadata XML from your identity provider (IdP).
+This is typically available in your IdP's admin console as a downloadable XML file or a metadata URL.
 
 Common locations for metadata:
 - **Azure AD**: Enterprise Applications > Your App > Single sign-on > Federation Metadata XML
@@ -57,38 +46,66 @@ Common locations for metadata:
 
 ### 2. Initialize the SAML recipe in the backend SDK
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```typescript
-import { SuperTokens } from "supertokens-node";
+import SuperTokens from "supertokens-node";
 import Saml from "supertokens-node/recipe/saml";
 
 SuperTokens.init({
-    supertokens: {
-        connectionURI: "<SUPERTOKENS_CONNECTION_URI>",
-        apiKey: "<SUPERTOKENS_API_KEY>",
-    },
-    appInfo: {
-        appName: "App name",
-        apiDomain: "<API_DOMAIN>",
-        websiteDomain: "<WEBSITE_DOMAIN>",
-    },
-    recipeList: [
-        // other recipes
-        Saml.init(),
-    ]
+  supertokens: {
+    connectionURI: "<SUPERTOKENS_CONNECTION_URI>",
+    apiKey: "<SUPERTOKENS_API_KEY>",
+  },
+  appInfo: {
+    appName: "App name",
+    apiDomain: "<API_DOMAIN>",
+    websiteDomain: "<WEBSITE_DOMAIN>",
+  },
+  recipeList: [
+    // other recipes
+    Saml.init(),
+  ],
 });
-
 ```
+</Tab>
+<Tab title="Python" value="python">
+```python
+from supertokens_python import InputAppInfo, SupertokensConfig, init
+from supertokens_python.recipe import saml
+
+
+init(
+    supertokens_config=SupertokensConfig(
+        connection_uri="<SUPERTOKENS_CONNECTION_URI>",
+        api_key="<SUPERTOKENS_API_KEY>",
+    ),
+    app_info=InputAppInfo(
+        app_name="App name",
+        api_domain="<API_DOMAIN>",
+        website_domain="<WEBSITE_DOMAIN>",
+    ),
+    framework="fastapi",
+    recipe_list=[
+        # Other recipes
+        saml.init(),
+    ],
+)
+```
+</Tab>
+</CodeGroup>
 
 ### 3. Create a new SAML client
 
 Use the metadata XML obtained in step 1 to create a SAML client.
 The `redirectURIs` should point to your application's callback URL where users will be redirected after authentication.
 
-:::info no-title
-This step assumes that you previously have created a SuperTokens tenant.
-If you have not, please follow the [initial setup guide](/docs/authentication/enterprise/initial-setup).
+:::info[This step assumes that you previously have created a SuperTokens tenant.]
+If you have not, please follow the [initial setup guide](/authentication/enterprise/initial-setup).
 :::
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```typescript
 import Saml from "supertokens-node/recipe/saml";
 
@@ -104,11 +121,36 @@ async function createSamlClient() {
     enableRequestSigning: true,
   });
 
-  // Save the clientId for use in the ThirdParty provider configuration
-  console.log("Client ID:", result.clientId);
+  if (result.status === "OK") {
+    // Save the clientId for use in the ThirdParty provider configuration
+    console.log("Client ID:", result.clientId);
+  }
 }
-
 ```
+</Tab>
+<Tab title="Python" value="python">
+```python
+from supertokens_python.recipe.saml.asyncio import create_or_update_client
+
+
+async def create_saml_client():
+    result = await create_or_update_client(
+        tenant_id="<TENANT_ID>",
+        client_id="<CLIENT_ID>",
+        client_secret="<CLIENT_SECRET>",
+        redirect_uris=["https://your-app.com/auth/callback"],
+        default_redirect_uri="https://your-app.com/auth/callback",
+        metadata_xml="<METADATA_XML_FROM_IDP>",
+        allow_idp_initiated_login=True,
+        enable_request_signing=True,
+    )
+
+    if result.status == "OK":
+        # Save the client ID for use in the ThirdParty provider configuration
+        print("Client ID:", result.client.client_id)
+```
+</Tab>
+</CodeGroup>
 
 
 | Name                   | Type                | Description                                                                                                            | Required |
@@ -124,67 +166,130 @@ async function createSamlClient() {
 | `userContext`            | `Record<string, any>` | An optional object containing additional context or metadata for the operation.                                        | No       |
 
 
-### 4. Configure your Identity Provider
+### 4. Configure your identity provider
 
-After creating the SAML client, you need to configure your Identity Provider with your application's Service Provider (SP) details.
+After creating the SAML client, you need to configure your identity provider with your application's service provider (SP) details.
 
-On the IDP side, configure the following properties:
-- **Entity ID**: Should match the `saml_sp_entity_id` value used in your [tenant configuration](/docs/authentication/enterprise/manage-tenants#update-a-tenant). The default value is `https://saml.supertokens.com`. 
-- **ACS URL** (Assertion Consumer Service URL): `<API_DOMAIN>/auth/<TENANT_ID>saml/callback`
+On the IdP side, configure the following properties:
+- **Entity ID**: Should match the `saml_sp_entity_id` value used in your [tenant configuration](/authentication/enterprise/manage-tenants#update-a-tenant). The default value is `https://saml.supertokens.com`.
+- **ACS URL** (Assertion Consumer Service URL): `<API_DOMAIN>/auth/`&lt;TENANT_ID&gt;`/saml/callback`
 
 ### 5. Add the ThirdParty provider
 
 Update your SuperTokens initialization to include the ThirdParty recipe with your SAML provider.
 The `thirdPartyId` must start with `saml-` followed by your custom identifier.
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```typescript
-import { SuperTokens } from "supertokens-node";
+import SuperTokens from "supertokens-node";
 import Saml from "supertokens-node/recipe/saml";
 import ThirdParty from "supertokens-node/recipe/thirdparty";
 
 SuperTokens.init({
-    supertokens: {
-        connectionURI: "<SUPERTOKENS_CONNECTION_URI>",
-        apiKey: "<SUPERTOKENS_API_KEY>",
-    },
-    appInfo: {
-        appName: "App name",
-        apiDomain: "<API_DOMAIN>",
-        websiteDomain: "<WEBSITE_DOMAIN>",
-    },
-    recipeList: [
-        Saml.init(),
-        ThirdParty.init({
-            signInAndUpFeature: {
-                providers: [
-                    {
-                        config: {
-                            // Name that will be shown on the login page
-                            name: "Azure SAML",
-                            // Must start with "saml-"
-                            thirdPartyId: "saml-azure",
-                            clients: [
-                                {
-                                    // The clientId from step 3
-                                    clientId: "<CLIENT_ID>",
-                                },
-                            ],
-                        },
-                    }
-                ],
+  supertokens: {
+    connectionURI: "<SUPERTOKENS_CONNECTION_URI>",
+    apiKey: "<SUPERTOKENS_API_KEY>",
+  },
+  appInfo: {
+    appName: "App name",
+    apiDomain: "<API_DOMAIN>",
+    websiteDomain: "<WEBSITE_DOMAIN>",
+  },
+  recipeList: [
+    Saml.init(),
+    ThirdParty.init({
+      signInAndUpFeature: {
+        providers: [
+          {
+            config: {
+              // Name that will be shown on the login page
+              name: "Azure SAML",
+              // Must start with "saml-"
+              thirdPartyId: "saml-azure",
+              clients: [
+                {
+                  // The clientId from step 3
+                  clientId: "<CLIENT_ID>",
+                },
+              ],
             },
-        }),
-    ]
+          },
+        ],
+      },
+    }),
+  ],
 });
-
 ```
+</Tab>
+<Tab title="Python" value="python">
+```python
+from supertokens_python import InputAppInfo, SupertokensConfig, init
+from supertokens_python.recipe import saml, thirdparty
+from supertokens_python.recipe.thirdparty import (
+    ProviderClientConfig,
+    ProviderConfig,
+    ProviderInput,
+    SignInAndUpFeature,
+)
+
+
+init(
+    supertokens_config=SupertokensConfig(
+        connection_uri="<SUPERTOKENS_CONNECTION_URI>",
+        api_key="<SUPERTOKENS_API_KEY>",
+    ),
+    app_info=InputAppInfo(
+        app_name="App name",
+        api_domain="<API_DOMAIN>",
+        website_domain="<WEBSITE_DOMAIN>",
+    ),
+    framework="fastapi",
+    recipe_list=[
+        saml.init(),
+        thirdparty.init(
+            sign_in_and_up_feature=SignInAndUpFeature(
+                providers=[
+                    ProviderInput(
+                        config=ProviderConfig(
+                            # Must start with "saml-"
+                            third_party_id="saml-azure",
+                            # Name shown on the login page
+                            name="Azure SAML",
+                            clients=[
+                                ProviderClientConfig(
+                                    # The client ID from step 3
+                                    client_id="<CLIENT_ID>",
+                                )
+                            ],
+                        )
+                    )
+                ]
+            )
+        ),
+    ],
+)
+```
+</Tab>
+</CodeGroup>
+
+### 6. Test rejection paths before production
+
+Use an isolated test tenant and test IdP to verify that invalid SAML responses fail closed. At minimum, confirm that authentication is rejected for:
+
+- A response that has neither a valid response signature nor a valid signature on every assertion, including an assertion modified after signing and a response containing a duplicate or wrapping assertion.
+- An assertion with a future `NotBefore` value or an expired `NotOnOrAfter` value.
+
+Core `12.1.1` is not expected to reject a mismatched `Response.Destination`, and its audience validation is insufficient for responses containing multiple assertions. If a trusted upstream validator supplies the missing controls, test destination and per-assertion audience rejection at that layer before production.
+
+Do not disable signature or time-condition validation to make negative tests pass. Keep failure details in server-side logs and return a generic authentication error to the browser.
 
 
 ## See also
 
-<ReferenceCard.Grid>
-  <ReferenceCard href="/docs/authentication/enterprise/common-domain-login" label="Implement common domain login" />
-  <ReferenceCard href="/docs/authentication/enterprise/subdomain-login" label="Implement subdomain login" />
-  <ReferenceCard href="/docs/authentication/enterprise/manage-tenants" label="Manage tenants" />
-  <ReferenceCard href="/docs/authentication/enterprise/manage-apps" label="Manage apps" />
-</ReferenceCard.Grid>
+<CardGroup cols={3}>
+  <Card title="Implement common domain login" href="/authentication/enterprise/common-domain-login" />
+  <Card title="Implement subdomain login" href="/authentication/enterprise/subdomain-login" />
+  <Card title="Manage tenants" href="/authentication/enterprise/manage-tenants" />
+  <Card title="Manage apps" href="/authentication/enterprise/manage-apps" />
+</CardGroup>

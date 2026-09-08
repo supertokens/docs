@@ -1,0 +1,356 @@
+---
+import BlumeSearch from "blume/components/layout/Search.astro";
+
+const props = Astro.props;
+---
+
+<BlumeSearch {...props} />
+
+<script>
+  import { create, insertMultiple, search as searchIndex } from "@orama/orama";
+  import { buildResult } from "blume/components/layout/search/types.ts";
+  import type { IndexedDocument, SearchFn } from "blume/components/layout/search/types.ts";
+
+  import { initializeControlTooltip } from "./control-tooltip";
+
+  const cache = new Map<string, string>();
+  const cacheLimit = 8;
+  const collapsedFilterCount = 4;
+  const previewSizeLimit = 1_000_000;
+  const basePath = new URL(import.meta.env.BASE_URL, window.location.origin).pathname;
+  const sdkReferencePrefixes = [
+    "/references/backend-sdks/supertokens-nodejs",
+    "/references/frontend-sdks/supertokens-auth-react",
+    "/references/frontend-sdks/supertokens-web-js",
+  ];
+
+  interface BlumeSearchElement extends HTMLElement {
+    clearPreview: () => void;
+    input: HTMLInputElement;
+    loaded: boolean;
+    searchFn: SearchFn | null;
+  }
+
+  const cachePreview = (url: string, article: string) => {
+    cache.delete(url);
+    cache.set(url, article);
+    if (cache.size > cacheLimit) cache.delete(cache.keys().next().value);
+  };
+
+  const selectedUrl = (search: HTMLElement) =>
+    search.querySelector<HTMLAnchorElement>("[data-blume-search-results] a.bg-muted")?.href;
+
+  const isPreviewVisible = (preview: HTMLElement) => preview.getClientRects().length > 0;
+
+  const isInternalArticle = (url: URL) => url.origin === window.location.origin && url.pathname.startsWith(basePath);
+
+  const resultPriority = (url: string) => {
+    if (!url.startsWith("/references/")) return 0;
+    if (url.startsWith("/references/fdi/") || url.startsWith("/references/cdi/")) return 2;
+    if (sdkReferencePrefixes.some((prefix) => url === prefix || url.startsWith(`${prefix}/`))) return 3;
+    return 1;
+  };
+
+  let prioritizedSearch: Promise<SearchFn> | undefined;
+
+  const createPrioritizedSearch = async (): Promise<SearchFn> => {
+    const indexUrl = new URL("blume-search.json", new URL(import.meta.env.BASE_URL, window.location.origin));
+    const response = await fetch(indexUrl);
+    if (!response.ok) throw new Error("Unable to load the search index");
+
+    const documents = (await response.json()) as IndexedDocument[];
+    const database = create({
+      schema: {
+        content: "string",
+        description: "string",
+        locale: "enum",
+        route: "string",
+        title: "string",
+      },
+    });
+    await insertMultiple(database, documents);
+    return async (query, options) => {
+      const results = await searchIndex(database, {
+        boost: { description: 2, title: 3 },
+        limit: documents.length,
+        properties: ["title", "description", "content"],
+        term: query,
+        ...(options?.locale ? { where: { locale: { eq: options.locale } } } : {}),
+      });
+      const matches = results.hits.map((hit) => hit.document as unknown as IndexedDocument);
+      matches.sort((left, right) => resultPriority(left.route) - resultPriority(right.route));
+      return buildResult(matches as IndexedDocument[], query, options?.section);
+    };
+  };
+
+  const safeUrl = (value: string, sourceUrl: string) => {
+    try {
+      const url = new URL(value, sourceUrl);
+      if (["http:", "https:", "mailto:", "tel:"].includes(url.protocol)) return url.href;
+    } catch {
+      // Drop malformed URLs from rendered Markdown rather than retaining them as attributes.
+    }
+    return undefined;
+  };
+
+  const sanitizeArticle = (html: string, sourceUrl: string) => {
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const article = parsed.querySelector<HTMLElement>("#blume-content article");
+    if (!article) throw new Error("Search result does not contain an article");
+
+    article
+      .querySelectorAll(
+        "script, style, noscript, iframe, object, embed, form, button, input, select, textarea, astro-island, base, link, meta, svg, math, template",
+      )
+      .forEach((element) => element.remove());
+    for (const element of article.querySelectorAll<HTMLElement>("*")) {
+      element.removeAttribute("id");
+      element.removeAttribute("style");
+      element.removeAttribute("autofocus");
+      for (const attribute of [...element.attributes]) {
+        if (attribute.name.startsWith("on") || attribute.name === "srcset") element.removeAttribute(attribute.name);
+      }
+      for (const attribute of ["href", "src", "action", "formaction", "poster", "xlink:href"]) {
+        const value = element.getAttribute(attribute);
+        if (!value) continue;
+        const normalized = safeUrl(value, sourceUrl);
+        if (normalized) element.setAttribute(attribute, normalized);
+        else element.removeAttribute(attribute);
+      }
+    }
+    return article.innerHTML;
+  };
+
+  const responseText = async (response: Response) => {
+    if (!response.body) return "";
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let size = 0;
+    let text = "";
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > previewSizeLimit) {
+          await reader.cancel();
+          throw new Error("Page preview is too large");
+        }
+        text += decoder.decode(value, { stream: true });
+      }
+      return text + decoder.decode();
+    } finally {
+      reader.releaseLock();
+    }
+  };
+
+  const highlightPreview = (container: HTMLElement, query: string) => {
+    const tokens = query
+      .trim()
+      .split(/\s+/u)
+      .filter(Boolean)
+      .map((token) => token.replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`));
+    if (tokens.length === 0) return;
+
+    const pattern = new RegExp(`(${tokens.join("|")})`, "giu");
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const nodes: Text[] = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+    for (const node of nodes) {
+      const text = node.nodeValue || "";
+      pattern.lastIndex = 0;
+      if (!pattern.test(text)) {
+        continue;
+      }
+      const fragment = document.createDocumentFragment();
+      for (const [index, segment] of text.split(pattern).entries()) {
+        if (index % 2 === 1) {
+          const mark = document.createElement("mark");
+          mark.textContent = segment;
+          fragment.appendChild(mark);
+        } else {
+          fragment.append(segment);
+        }
+      }
+      node.replaceWith(fragment);
+    }
+  };
+
+  const initializeFilterDisclosure = (search: BlumeSearchElement) => {
+    const filters = search.querySelector<HTMLElement>("[data-blume-search-filters]");
+    if (!filters || filters.dataset.filterDisclosureInitialized) return;
+    filters.dataset.filterDisclosureInitialized = "true";
+    const searchIndex = [...document.querySelectorAll("blume-search")].indexOf(search);
+    filters.id ||= `blume-search-filters-${searchIndex + 1}`;
+
+    const observer = new MutationObserver(update);
+    let previousActiveLaterIndex = -1;
+    function update() {
+      observer.disconnect();
+      const pills = [...filters!.querySelectorAll<HTMLButtonElement>("button:not([data-st-filter-disclosure])")];
+      filters!.querySelector("[data-st-filter-disclosure]")?.remove();
+
+      if (pills.length > collapsedFilterCount) {
+        let expanded = filters!.dataset.filtersExpanded === "true";
+        const activeLaterIndex = pills.findIndex(
+          (pill, index) => index >= collapsedFilterCount && pill.classList.contains("bg-foreground"),
+        );
+        if (expanded && activeLaterIndex >= 0 && activeLaterIndex !== previousActiveLaterIndex) {
+          filters!.dataset.filtersExpanded = "false";
+          expanded = false;
+        }
+        previousActiveLaterIndex = activeLaterIndex;
+        for (const [index, pill] of pills.entries()) {
+          const active = pill.classList.contains("bg-foreground");
+          const isCollapsedSelection = activeLaterIndex >= 0 && index === activeLaterIndex;
+          const collapsedLimit = activeLaterIndex >= 0 ? collapsedFilterCount - 1 : collapsedFilterCount;
+          pill.setAttribute("aria-pressed", String(active));
+          pill.hidden = !expanded && index >= collapsedLimit && !isCollapsedSelection;
+        }
+
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "st-search-filters-toggle";
+        toggle.dataset.stFilterDisclosure = "";
+        toggle.setAttribute("aria-controls", filters!.id);
+        toggle.setAttribute("aria-expanded", String(expanded));
+        toggle.setAttribute("aria-label", expanded ? "Show fewer search filters" : "Show more search filters");
+        toggle.textContent = expanded ? "Less" : "More";
+        toggle.addEventListener("click", () => {
+          filters!.dataset.filtersExpanded = String(!expanded);
+          update();
+          filters!.querySelector<HTMLButtonElement>("[data-st-filter-disclosure]")?.focus();
+        });
+        filters!.append(toggle);
+      } else {
+        for (const pill of pills) pill.hidden = false;
+      }
+      observer.observe(filters!, { childList: true });
+    }
+
+    update();
+  };
+
+  const initializeSearchTooltip = (search: BlumeSearchElement) => {
+    const trigger = search.querySelector<HTMLButtonElement>("[data-blume-search-open]");
+    if (!trigger) return;
+
+    const searchIndex = [...document.querySelectorAll("blume-search")].indexOf(search);
+    initializeControlTooltip(trigger, { id: `st-search-tooltip-${searchIndex + 1}` });
+  };
+
+  const initializeRenderedPreviews = async () => {
+    await customElements.whenDefined("blume-search");
+    for (const element of document.querySelectorAll<BlumeSearchElement>("blume-search")) {
+      const search = element;
+      if (search.dataset.renderedPreviewInitialized) continue;
+      search.dataset.renderedPreviewInitialized = "true";
+      initializeSearchTooltip(search);
+      initializeFilterDisclosure(search);
+
+      search.loaded = true;
+      search.searchFn = async (query, options) => {
+        const searchFn = await (prioritizedSearch ??= createPrioritizedSearch());
+        return searchFn(query, options);
+      };
+
+      const preview = search.querySelector<HTMLElement>("[data-blume-search-preview]");
+      const dialog = search.querySelector<HTMLDialogElement>("[data-blume-search-dialog]");
+      if (!preview || !dialog) continue;
+
+      let controller: AbortController | undefined;
+      let failedUrl: string | undefined;
+      let loadingUrl: string | undefined;
+      let requestId = 0;
+
+      const originalClearPreview = search.clearPreview.bind(search);
+      search.clearPreview = () => {
+        requestId += 1;
+        controller?.abort();
+        loadingUrl = undefined;
+        preview.removeAttribute("aria-busy");
+        delete preview.dataset.renderedPreviewUrl;
+        originalClearPreview();
+      };
+
+      const renderSelectedArticle = async () => {
+        const href = selectedUrl(search);
+        if (!href || !dialog.open || !isPreviewVisible(preview)) return;
+
+        const url = new URL(href, window.location.href);
+        const hasRenderedArticle = Boolean(preview.querySelector(":scope > [data-blume-rendered-search-preview]"));
+        if (
+          !isInternalArticle(url) ||
+          (preview.dataset.renderedPreviewUrl === url.href && hasRenderedArticle) ||
+          loadingUrl === url.href ||
+          failedUrl === url.href
+        )
+          return;
+
+        controller?.abort();
+        controller = new AbortController();
+        const currentRequest = ++requestId;
+        const fallback = preview.innerHTML;
+        loadingUrl = url.href;
+        preview.dataset.renderedPreviewUrl = url.href;
+        preview.setAttribute("aria-busy", "true");
+        preview.replaceChildren(Object.assign(document.createElement("p"), { className: "m-0 text-muted-foreground text-sm", textContent: "Loading page preview…" }));
+
+        try {
+          let article = cache.get(url.href);
+          if (!article) {
+            const response = await fetch(url.href, {
+              headers: { Accept: "text/html" },
+              signal: controller.signal,
+            });
+            const responseUrl = new URL(response.url);
+            const contentType = response.headers.get("content-type") || "";
+            if (!response.ok || !contentType.includes("text/html") || !isInternalArticle(responseUrl)) {
+              throw new Error("Unable to load page preview");
+            }
+            article = sanitizeArticle(await responseText(response), responseUrl.href);
+            cachePreview(url.href, article);
+          }
+          if (currentRequest !== requestId || !dialog.open || preview.dataset.renderedPreviewUrl !== url.href) return;
+          const renderedArticle = document.createElement("div");
+          renderedArticle.dataset.blumeRenderedSearchPreview = "";
+          renderedArticle.className = "prose max-w-none [&_mark]:rounded-sm [&_mark]:bg-accent/25 [&_mark]:text-inherit";
+          renderedArticle.innerHTML = article;
+          highlightPreview(renderedArticle, search.input.value);
+          preview.replaceChildren(renderedArticle);
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          if (currentRequest === requestId && preview.dataset.renderedPreviewUrl === url.href) {
+            failedUrl = url.href;
+            preview.innerHTML = fallback;
+            delete preview.dataset.renderedPreviewUrl;
+          }
+        } finally {
+          if (currentRequest === requestId) {
+            loadingUrl = undefined;
+            preview.removeAttribute("aria-busy");
+          }
+        }
+      };
+
+      const observer = new MutationObserver(() => queueMicrotask(renderSelectedArticle));
+      observer.observe(preview, { childList: true });
+      search.input.addEventListener("input", () => {
+        failedUrl = undefined;
+      });
+      dialog.addEventListener("close", () => controller?.abort());
+
+      // Track when the search dialog is opened
+      const dialogOpenObserver = new MutationObserver(() => {
+        if (dialog.open) {
+          (window as Window & { posthog?: { capture: (event: string) => void } }).posthog?.capture("docs_search_opened");
+        }
+      });
+      dialogOpenObserver.observe(dialog, { attributes: true, attributeFilter: ["open"] });
+    }
+  };
+
+  initializeRenderedPreviews();
+  document.addEventListener("astro:page-load", initializeRenderedPreviews);
+</script>

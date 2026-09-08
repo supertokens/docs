@@ -1,0 +1,454 @@
+---
+import type { CodeGroupProps } from "blume/components";
+import BlumeCodeGroup from "blume/components/content/CodeGroup.astro";
+
+import PrimaryTabController from "../islands/PrimaryTabController";
+import CodeOptionController from "../islands/CodeOptionController";
+import { validateCodeGroupMaxHeight, type CodeGroupMaxHeight } from "./code-group";
+import { tabGroupControl, tabGroupDefault, tabGroupLabel, tabGroups, type TabGroup } from "./tab-groups";
+
+interface Props extends CodeGroupProps {
+  control?: "select" | "tabs";
+  group?: TabGroup;
+  label?: string;
+  maxHeight?: CodeGroupMaxHeight;
+  passive?: boolean;
+  secondaryControls?: string;
+  showOptionMarks?: boolean;
+}
+
+const {
+  control: requestedControl,
+  group,
+  label,
+  maxHeight,
+  passive = false,
+  secondaryControls,
+  showOptionMarks = true,
+  ...props
+} = Astro.props as Props;
+const validatedMaxHeight = validateCodeGroupMaxHeight(maxHeight);
+const control = requestedControl ?? (group ? tabGroupControl(group) : "tabs");
+const wrapperId = `docs-selection-group-${crypto.randomUUID()}`;
+const accessoryHostId = `${wrapperId}-accessory`;
+const hasPrimarySelect = control === "select";
+const componentProps = {
+  dropdown: group || hasPrimarySelect ? false : props.dropdown,
+  tabValues: group ? JSON.stringify(tabGroups[group].options) : undefined,
+};
+---
+
+<div
+  id={wrapperId}
+  class="st-selection-group st-tab-group st-code-group"
+  data-docs-selection-group={group}
+  data-docs-selection-passive={passive ? "true" : undefined}
+  data-docs-secondary-controls={secondaryControls}
+  data-docs-code-max-height={validatedMaxHeight}
+  data-docs-selection-accessory-host-id={accessoryHostId}
+  data-docs-selection-control={control}
+  data-docs-tab-group={group}
+  data-docs-tab-control={control}
+  data-docs-tab-passive={passive ? "true" : undefined}
+  data-docs-tab-accessory-host-id={accessoryHostId}
+  hidden={passive ? true : undefined}
+  style={validatedMaxHeight ? `--st-code-group-max-height: ${validatedMaxHeight}` : undefined}
+>
+  <div
+    id={accessoryHostId}
+    class="st-tab-accessory-host"
+    data-docs-selection-accessory-host
+    data-docs-tab-accessory-host
+  >
+    <slot name="accessory" />
+  </div>
+  {
+    hasPrimarySelect ? (
+      <PrimaryTabController
+        client:load
+        defaultValue={group ? tabGroupDefault(group) : undefined}
+        group={group}
+        label={label ?? (group ? tabGroupLabel(group) : "Example")}
+        passive={passive}
+        showOptionMarks={showOptionMarks}
+        wrapperId={wrapperId}
+      />
+    ) : null
+  }
+  <BlumeCodeGroup {...componentProps}>
+    <slot />
+  </BlumeCodeGroup>
+  <CodeOptionController client:load passive={passive && !secondaryControls} wrapperId={wrapperId} />
+</div>
+
+<script>
+  import { tabGroupDefault, tabValue, type TabGroup } from "./tab-groups";
+  import {
+    activateSelection,
+    directPanels,
+    dispatchSelection,
+    ensureQuery,
+    hydrateDocsSelection,
+    initializeSelectionUrlState,
+    isSelectionContextVisible,
+    readContextualQuery,
+    readStorage,
+    removeStorage,
+    resolveSelection,
+    resolveSelectionState,
+    selectionEvent,
+    selectionContentReadyEvent,
+    selectionReadyEvent,
+    selectionStorageKey,
+    selectionUrlStateEvent,
+    variantEvent,
+    type SelectionDetail,
+    valuesForSelectionGroup,
+    valuesForSelectionQuery,
+    writeStorage,
+  } from "../lib/docs-selection";
+
+  const codeSurfaceSelector = "pre, figure";
+
+  const saveActiveSelection = (wrapper: HTMLElement, group: TabGroup) => {
+    const value = directPanels(wrapper).find((panel) => !panel.classList.contains("hidden"))?.dataset.tabId;
+    if (value) dispatchSelection(group, value);
+  };
+
+  const surfaceIsVisible = (surface: HTMLElement, wrapper: HTMLElement) => {
+    for (let element: HTMLElement | null = surface; element && element !== wrapper; element = element.parentElement) {
+      if (element.hidden || element.classList.contains("hidden")) return false;
+    }
+    return true;
+  };
+
+  const updateCodeGroupState = (wrapper: HTMLElement) => {
+    const activePanel = directPanels(wrapper).find((panel) => !panel.classList.contains("hidden"));
+    const surfaces = activePanel
+      ? [
+          ...(activePanel.matches(codeSurfaceSelector) ? [activePanel] : []),
+          ...activePanel.querySelectorAll<HTMLElement>(codeSurfaceSelector),
+        ]
+      : [];
+    const hasCode = surfaces.some((surface) => {
+      surface.dataset.docsCodeSurface = "true";
+      return surfaceIsVisible(surface, wrapper);
+    });
+    wrapper.toggleAttribute("data-docs-code-empty", !hasCode);
+    wrapper.hidden = wrapper.dataset.docsSelectionPassive === "true" && !hasCode;
+  };
+
+  const updateCodeGroups = () => {
+    queueMicrotask(() => {
+      for (const wrapper of document.querySelectorAll<HTMLElement>(".st-code-group")) {
+        updateCodeGroupState(wrapper);
+      }
+    });
+  };
+
+  const canonicalizeVisibleSelectionGroups = () => {
+    for (const wrapper of document.querySelectorAll<HTMLElement>("[data-docs-selection-group]")) {
+      const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
+      if (!group || !isSelectionContextVisible(wrapper)) continue;
+      const groupValues = valuesForSelectionGroup(group);
+      const fallbackValue = resolveSelection({
+        availableValues: groupValues,
+        defaultValue: tabGroupDefault(group),
+        storedValue: readStorage(selectionStorageKey(group)),
+      });
+      let queryValue = readContextualQuery(
+        group,
+        groupValues,
+        valuesForSelectionQuery(group),
+        true,
+        fallbackValue,
+      );
+      const value = resolveSelection({
+        availableValues: groupValues,
+        defaultValue: tabGroupDefault(group),
+        queryValue,
+        storedValue: readStorage(selectionStorageKey(group)),
+      });
+      if (value) ensureQuery(group, value);
+    }
+  };
+
+  const activateLocalSelection = (wrapper: HTMLElement, value: string, hideWhenUnavailable = false) => {
+    const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
+    const panels = directPanels(wrapper);
+    const availableValues = panels.map((panel) => panel.dataset.tabId).filter((candidate): candidate is string => Boolean(candidate));
+    const activated = activateSelection(wrapper, value);
+    if (activated || !group) {
+      wrapper.toggleAttribute("data-docs-selection-unavailable", !activated);
+      return activated;
+    }
+    const fallback = resolveSelection({ availableValues, defaultValue: tabGroupDefault(group) });
+    wrapper.toggleAttribute("data-docs-selection-unavailable", true);
+    if (hideWhenUnavailable || wrapper.dataset.docsSelectionPassive === "true") {
+      for (const panel of panels) panel.classList.add("hidden");
+      return false;
+    }
+    return fallback ? activateSelection(wrapper, fallback) : false;
+  };
+
+  const initializeSelectionGroups = async () => {
+    await customElements.whenDefined("blume-tabs");
+
+    for (const wrapper of document.querySelectorAll<HTMLElement>(".st-selection-group")) {
+      if (wrapper.dataset.selectionInitialized) continue;
+      wrapper.dataset.selectionInitialized = "true";
+
+      const accessoryHost = wrapper.querySelector<HTMLElement>(":scope > [data-docs-selection-accessory-host]");
+      const tabHeader = wrapper.querySelector<HTMLElement>(":scope > blume-tabs > div");
+      if (accessoryHost && tabHeader && accessoryHost.parentElement !== tabHeader) tabHeader.append(accessoryHost);
+
+      const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
+      if (!group) continue;
+      const tabs = wrapper.querySelector<HTMLElement>(":scope > blume-tabs");
+      if (tabs?.dataset.codeGroupInvalid === "true") {
+        wrapper.dataset.docsCodeGroupInvalid = "true";
+        wrapper.dataset.groupSelectionReady = "true";
+        document.dispatchEvent(new CustomEvent(selectionReadyEvent, { detail: { wrapperId: wrapper.id } }));
+        continue;
+      }
+
+      for (const panel of directPanels(wrapper)) {
+        const value = panel.dataset.title ? tabValue(group, panel.dataset.title) : undefined;
+        if (value) panel.dataset.tabId = value;
+      }
+
+      const values = new Set(directPanels(wrapper).map((panel) => panel.dataset.tabId).filter(Boolean));
+      const storedValue = readStorage(selectionStorageKey(group));
+      const legacyValue = readStorage(`docusaurus.tab.${group}`);
+      const platformStorageKey = "supertokens-docs:platform-type";
+      const migratedValue = group === "frontend-custom-ui" ? readStorage(platformStorageKey) : null;
+      if (group === "frontend-custom-ui" && migratedValue !== null) {
+        if (valuesForSelectionGroup(group).includes(migratedValue)) {
+          writeStorage(selectionStorageKey(group), migratedValue);
+        }
+        removeStorage(platformStorageKey);
+      }
+      const contextIsVisible = isSelectionContextVisible(wrapper);
+      const groupValues = valuesForSelectionGroup(group);
+      const fallbackValue = resolveSelection({
+        availableValues: groupValues,
+        defaultValue: tabGroupDefault(group),
+        legacyValue,
+        migratedValue,
+        storedValue,
+      });
+      let queryValue = readContextualQuery(
+        group,
+        groupValues,
+        valuesForSelectionQuery(group),
+        contextIsVisible,
+        fallbackValue,
+      );
+      const canonicalValue = queryValue || fallbackValue;
+      if (!queryValue && canonicalValue && contextIsVisible) {
+        ensureQuery(group, canonicalValue);
+        queryValue = canonicalValue;
+      }
+      const resolution = resolveSelectionState({
+        availableValues: values,
+        defaultValue: tabGroupDefault(group),
+        legacyValue,
+        migratedValue,
+        queryAvailableValues: valuesForSelectionQuery(group),
+        queryValue,
+        storedValue,
+      });
+      if (!resolution.value) continue;
+
+      if (queryValue && !values.has(queryValue)) {
+        activateLocalSelection(wrapper, queryValue, wrapper.dataset.docsSelectionPassive === "true");
+      } else if (wrapper.dataset.docsSelectionPassive === "true" && resolution.unavailableStoredValue && storedValue) {
+        activateLocalSelection(wrapper, storedValue);
+      } else {
+        activateLocalSelection(wrapper, resolution.value);
+        wrapper.toggleAttribute(
+          "data-docs-selection-unavailable",
+          resolution.unavailableStoredValue || Boolean(queryValue && !values.has(queryValue)),
+        );
+      }
+      if (contextIsVisible && resolution.shouldPersist) writeStorage(selectionStorageKey(group), resolution.value);
+      wrapper.dataset.groupSelectionReady = "true";
+      document.dispatchEvent(new CustomEvent(selectionReadyEvent, { detail: { wrapperId: wrapper.id } }));
+
+      const persistSelection = (event: Event) => {
+        const trigger = event.target instanceof Element ? event.target.closest<HTMLElement>('[role="tab"]') : null;
+        const tabs = wrapper.querySelector(":scope > blume-tabs");
+        if (!trigger || !tabs || trigger.closest("blume-tabs") !== tabs) return;
+        if (event instanceof KeyboardEvent && !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        queueMicrotask(() => saveActiveSelection(wrapper, group));
+      };
+
+      wrapper.addEventListener("click", persistSelection);
+      wrapper.addEventListener("keydown", persistSelection);
+    }
+    canonicalizeVisibleSelectionGroups();
+    hydrateDocsSelection();
+    updateCodeGroups();
+  };
+
+  if (document.documentElement.dataset.supertokensSelectionGroupsInitialized !== "true") {
+    document.documentElement.dataset.supertokensSelectionGroupsInitialized = "true";
+    document.addEventListener("astro:page-load", initializeSelectionGroups);
+    window.addEventListener(selectionEvent, (event) => {
+      const detail = (event as CustomEvent<SelectionDetail>).detail;
+      if (!detail) return;
+      for (const wrapper of document.querySelectorAll<HTMLElement>(
+        `[data-docs-selection-group="${detail.group}"]`,
+      )) {
+        activateLocalSelection(wrapper, detail.value, wrapper.dataset.docsSelectionPassive === "true");
+      }
+      updateCodeGroups();
+    });
+    window.addEventListener("storage", (event) => {
+      const prefix = "supertokens-docs:selection:";
+      if (!event.key?.startsWith(prefix) || !event.newValue) return;
+      const group = event.key.slice(prefix.length);
+      for (const wrapper of document.querySelectorAll<HTMLElement>(`[data-docs-selection-group="${group}"]`)) {
+        const values = directPanels(wrapper).map((panel) => panel.dataset.tabId).filter(Boolean);
+        const queryAvailableValues = valuesForSelectionQuery(group as TabGroup);
+        const contextIsVisible = isSelectionContextVisible(wrapper);
+        const groupValues = valuesForSelectionGroup(group as TabGroup);
+        const fallbackValue = resolveSelection({
+          availableValues: groupValues,
+          defaultValue: tabGroupDefault(group as TabGroup),
+          storedValue: event.newValue,
+        });
+        let queryValue = readContextualQuery(
+          group,
+          groupValues,
+          queryAvailableValues,
+          contextIsVisible,
+          fallbackValue,
+        );
+        if (!queryValue && contextIsVisible && fallbackValue) {
+          ensureQuery(group, fallbackValue);
+          queryValue = fallbackValue;
+        }
+        const value = resolveSelection({
+          availableValues: values,
+          queryAvailableValues,
+          queryValue,
+          storedValue: event.newValue,
+        });
+        if (value) activateLocalSelection(wrapper, value, wrapper.dataset.docsSelectionPassive === "true");
+      }
+      updateCodeGroups();
+    });
+    window.addEventListener(selectionUrlStateEvent, () => {
+      for (const wrapper of document.querySelectorAll<HTMLElement>("[data-docs-selection-group]")) {
+        const group = wrapper.dataset.docsSelectionGroup as TabGroup | undefined;
+        if (!group) continue;
+        const values = directPanels(wrapper).map((panel) => panel.dataset.tabId).filter(Boolean);
+        const storedValue = readStorage(selectionStorageKey(group));
+        const queryAvailableValues = valuesForSelectionQuery(group);
+        const contextIsVisible = isSelectionContextVisible(wrapper);
+        const groupValues = valuesForSelectionGroup(group);
+        const fallbackValue = resolveSelection({
+          availableValues: groupValues,
+          defaultValue: tabGroupDefault(group),
+          storedValue,
+        });
+        let queryValue = readContextualQuery(
+          group,
+          groupValues,
+          queryAvailableValues,
+          contextIsVisible,
+          fallbackValue,
+        );
+        if (!queryValue && contextIsVisible && fallbackValue) {
+          ensureQuery(group, fallbackValue);
+          queryValue = fallbackValue;
+        }
+        const resolution = resolveSelectionState({
+          availableValues: values,
+          defaultValue: tabGroupDefault(group),
+          queryAvailableValues,
+          queryValue,
+          storedValue,
+        });
+        if (!resolution.value) continue;
+        activateLocalSelection(wrapper, resolution.value, wrapper.dataset.docsSelectionPassive === "true");
+        wrapper.toggleAttribute(
+          "data-docs-selection-unavailable",
+          resolution.unavailableStoredValue || Boolean(queryValue && !values.includes(queryValue)),
+        );
+        if (isSelectionContextVisible(wrapper) && resolution.shouldPersist) {
+          writeStorage(selectionStorageKey(group), resolution.value);
+        }
+      }
+      updateCodeGroups();
+    });
+    window.addEventListener(variantEvent, () => {
+      queueMicrotask(() => {
+        canonicalizeVisibleSelectionGroups();
+        hydrateDocsSelection();
+        updateCodeGroups();
+      });
+    });
+    document.addEventListener(selectionContentReadyEvent, () => {
+      queueMicrotask(() => {
+        canonicalizeVisibleSelectionGroups();
+        hydrateDocsSelection();
+        updateCodeGroups();
+      });
+    });
+  }
+
+  initializeSelectionUrlState();
+  initializeSelectionGroups();
+</script>
+
+<style is:global>
+  .st-code-group[data-docs-selection-passive="true"]:not([data-docs-passive-code-resolved]) {
+    display: none;
+  }
+
+  .st-code-group:not([data-docs-selection-passive="true"]):not([data-selection-initialized])
+    > blume-tabs
+    > [data-blume-tab-content]
+    > :is(pre, figure, [data-blume-tab-panel]):not(:first-child) {
+    display: none;
+  }
+
+  .st-code-group[data-docs-code-empty] > blume-tabs > [data-blume-tab-content] {
+    display: none;
+  }
+
+  .st-code-group[data-docs-selection-passive="true"]:not([data-selection-initialized]):has(
+      > blume-tabs > [data-blume-tab-content] > [data-blume-tab-panel]:first-child:not(:has(pre, figure))
+    ) {
+    display: none;
+  }
+
+  .st-code-group:not([data-docs-selection-passive="true"]):not([data-selection-initialized]):has(
+      > blume-tabs > [data-blume-tab-content] > [data-blume-tab-panel]:first-child:not(:has(pre, figure))
+    )
+    > blume-tabs
+    > [data-blume-tab-content] {
+    display: none;
+  }
+
+  .st-code-group .st-dependent-content,
+  .st-code-group .st-content-option {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .st-code-group .st-content-option > :is(pre, figure):first-of-type {
+    margin-top: 0;
+  }
+
+  .st-code-group .st-content-option > :is(pre, figure):last-of-type {
+    margin-bottom: 0;
+  }
+
+  .st-code-group :is([data-blume-tab-panel]:is(pre, figure), [data-blume-tab-panel] :is(pre, figure)) {
+    border-radius: 0;
+  }
+</style>

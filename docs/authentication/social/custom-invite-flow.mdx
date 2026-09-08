@@ -1,97 +1,105 @@
 ---
 title: Implement a custom invite flow
-hide_title: true
-sidebar_position: 8
-description: >-
-  Implement an allow list for third-party sign-ups using the SuperTokens user
-  metadata recipe.
-page_type: guide
-recipe: thirdparty
-category: thirdparty
+description: Implement a list of approved email addresses for third-party sign-ups using the SuperTokens user metadata recipe.
+sidebar:
+  order: 8
 ---
-
-
-# Implement a custom invite flow
 
 ## Overview
 
-This guide shows you how to disable public sign ups to allow only certain people to access your app.
-From a third-party login perspective, you need to maintain an allow list of emails and validate the users based on it. 
+This guide shows you how to disable public sign-ups to allow only certain people to access your app.
+For third-party login, maintain a list of approved email addresses and validate users against it.
 
 ## Before you start
 
 The tutorial assumes that you already have a working application integrated with **SuperTokens**.
-If you have not, please check the [Quickstart Guide](/docs/quickstart/introduction). 
+If you have not, please check the [Quickstart Guide](/quickstart).
 
 ### Prerequisites
 
-This guide uses the `UserMetadata` recipe to store the allow list.
-You need to [enable it](/docs/post-authentication/user-management/user-metadata) in the SDK initialization step.
+This guide uses the `UserMetadata` recipe to store the list of approved email addresses.
+You need to [enable it](/post-authentication/user-management/user-metadata) in the SDK initialization step.
 
 ## Steps
 
-### 1. Implement the allow list
+### 1. Implement the approved email list
 
-You can store this list in your own database, or use the metadata feature provided by SuperTokens to store this.
-This may seem like a strange use case of the user metadata recipe provided, but it works.
+You can store this list in your own database or use the metadata feature provided by SuperTokens.
 
-The following code samples show you how to save the allow list in the user metadata.
+The following code samples show you how to save the approved email list in user metadata.
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
-import UserMetadata from "supertokens-node/recipe/usermetadata"
+import UserMetadata from "supertokens-node/recipe/usermetadata";
 
-async function addEmailToAllowlist(email: string) {
-    let existingData = await UserMetadata.getUserMetadata("emailAllowList");
-    let allowList: string[] = existingData.metadata.allowList || [];
-    allowList = [...allowList, email];
-    await UserMetadata.updateUserMetadata("emailAllowList", {
-        allowList
-    });
+function allowlistKey(tenantId: string) {
+  return `emailAllowList:${tenantId}`;
 }
 
-async function isEmailAllowed(email: string) {
-    let existingData = await UserMetadata.getUserMetadata("emailAllowList");
-    let allowList: string[] = existingData.metadata.allowList || [];
-    return allowList.includes(email);
+async function addEmailToAllowlist(tenantId: string, email: string) {
+  let existingData = await UserMetadata.getUserMetadata(allowlistKey(tenantId));
+  let allowList: string[] = existingData.metadata.allowList || [];
+  allowList = [...allowList, email];
+  await UserMetadata.updateUserMetadata(allowlistKey(tenantId), {
+    allowList,
+  });
+}
+
+async function isEmailAllowed(tenantId: string, email: string) {
+  let existingData = await UserMetadata.getUserMetadata(allowlistKey(tenantId));
+  let allowList: string[] = existingData.metadata.allowList || [];
+  return allowList.includes(email);
 }
 ```
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
-import "github.com/supertokens/supertokens-golang/recipe/usermetadata"
+import (
+	"fmt"
 
-func addEmailToAllowlist(email string) error {
-	existingData, err := usermetadata.GetUserMetadata("emailAllowList")
+	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
+)
+
+func allowlistKey(tenantID string) string {
+	return fmt.Sprintf("emailAllowList:%s", tenantID)
+}
+
+func getAllowList(metadata map[string]interface{}) []string {
+	allowList := []string{}
+	rawAllowList, ok := metadata["allowList"].([]interface{})
+	if !ok {
+		return allowList
+	}
+
+	for _, value := range rawAllowList {
+		email, ok := value.(string)
+		if ok {
+			allowList = append(allowList, email)
+		}
+	}
+	return allowList
+}
+
+func addEmailToAllowlist(tenantID string, email string) error {
+	existingData, err := usermetadata.GetUserMetadata(allowlistKey(tenantID))
 	if err != nil {
 		return err
 	}
-	allowList := []string{}
-	allowListFromMetadata, ok := existingData["allowList"].([]string)
-	if ok {
-		allowList = allowListFromMetadata
-	}
+	allowList := getAllowList(existingData)
 	allowList = append(allowList, email)
-	_, err = usermetadata.UpdateUserMetadata("emailAllowList", map[string]interface{}{
+	_, err = usermetadata.UpdateUserMetadata(allowlistKey(tenantID), map[string]interface{}{
 		"allowList": allowList,
 	})
 	return err
 }
 
-func isEmailAllowed(email string) (bool, error) {
-	existingData, err := usermetadata.GetUserMetadata("emailAllowList")
+func isEmailAllowed(tenantID string, email string) (bool, error) {
+	existingData, err := usermetadata.GetUserMetadata(allowlistKey(tenantID))
 	if err != nil {
 		return false, err
 	}
-	allowList := []string{}
-	allowListFromMetadata, ok := existingData["allowList"].([]string)
-	if ok {
-		allowList = allowListFromMetadata
-	}
+	allowList := getAllowList(existingData)
 	for _, allowedEmail := range allowList {
 		if allowedEmail == email {
 			return true, nil
@@ -100,10 +108,8 @@ func isEmailAllowed(email string) (bool, error) {
 	return false, nil
 }
 ```
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
+</Tab>
+<Tab title="Python" value="python">
 ```python
 from typing import List
 
@@ -113,90 +119,117 @@ from supertokens_python.recipe.usermetadata.asyncio import (
 )
 
 
-async def add_email_to_allow_list(email: str):
-    metadataResult = await get_user_metadata("emailAllowList")
+def allowlist_key(tenant_id: str):
+    return f"emailAllowList:{tenant_id}"
+
+
+async def add_email_to_allow_list(tenant_id: str, email: str):
+    metadataResult = await get_user_metadata(allowlist_key(tenant_id))
     allow_list: List[str] = metadataResult.metadata["allowList"] if "allowList" in metadataResult.metadata else []
     allow_list.append(email)
-    await update_user_metadata("emailAllowList", {
+    await update_user_metadata(allowlist_key(tenant_id), {
         "allowList": allow_list
     })
 
-async def is_email_allowed(email: str):
-    metadataResult = await get_user_metadata("emailAllowList")
+async def is_email_allowed(tenant_id: str, email: str):
+    metadataResult = await get_user_metadata(allowlist_key(tenant_id))
     allow_list: List[str] = metadataResult.metadata["allowList"] if "allowList" in metadataResult.metadata else []
     return email in allow_list
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
-
-:::info Multi Tenancy
-For a multi tenant setup, you can even store an allow list per tenant.
-This setup allows limiting sign ups for different emails for different tenants.
-If doing this, pass in the tenantID to the functions above, which you can obtain from the input to the API overrides shown below.
-:::
 
 ### 2. Check if the email is allowed
 
-Update the backend SDK API function to only allow sign up requests from users that are on the allow list.
-To do this you need to use the check functions from the previous code snippet.
+Update the backend SDK API function to only allow sign-up requests from users whose email addresses are on the approved list.
+Use the check functions from the previous code snippet.
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+The overrides reject a provider response without an email before the SDK can generate a synthetic email for a provider
+configured not to require one.
 
-```tsx
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx check=false reason="This example omits surrounding application and SuperTokens configuration."
 import ThirdParty from "supertokens-node/recipe/thirdparty";
 import supertokens from "supertokens-node";
-declare let isEmailAllowed: (email: string) => Promise<boolean> // REMOVE_FROM_OUTPUT
+
+class SignUpNotAllowedError extends Error {}
 
 ThirdParty.init({
-    override: {
-        functions: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                signInUp: async function (input) {
-                    let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
-                        email: input.email
-                    });
-                    if (existingUsers.length === 0) {
-                        // this means that the email is new and is a sign up
-                        if (!(await isEmailAllowed(input.email))) {
-                            // email is not in allow list, so we disallow
-                            throw new Error("No sign up")
-                        }
-                    }
-                    // We allow the sign in / up operation
-                    return originalImplementation.signInUp(input);
-                }
+  override: {
+    functions: (originalImplementation) => {
+      return {
+        ...originalImplementation,
+        signInUp: async function (input) {
+          let existingUsers = await supertokens.listUsersByAccountInfo(input.tenantId, {
+            thirdParty: {
+              id: input.thirdPartyId,
+              userId: input.thirdPartyUserId,
+            },
+          });
+          if (existingUsers.length === 0) {
+            if (!input.isVerified) {
+              throw new SignUpNotAllowedError();
             }
+            if (!(await isEmailAllowed(input.tenantId, input.email))) {
+              throw new SignUpNotAllowedError();
+            }
+          }
+          return originalImplementation.signInUp(input);
         },
-        apis: (originalImplementation) => {
-            return {
-                ...originalImplementation,
-                signInUpPOST: async function (input) {
-                    try {
-                        return await originalImplementation.signInUpPOST!(input);
-                    } catch (err: any) {
-                        if (err.message === "No sign up") {
-                            // this error was thrown from our function override above.
-                            // so we send a useful message to the user
-                            return {
-                                status: "GENERAL_ERROR",
-                                message: "Sign ups are disabled. Please contact the admin."
-                            }
-                        }
-                        throw err;
-                    }
-                }
+      };
+    },
+    apis: (originalImplementation) => {
+      return {
+        ...originalImplementation,
+        signInUpPOST: async function (input) {
+          try {
+            const provider = input.provider;
+            const providerWithEmailCheck =
+              provider.type === "oauth2"
+                ? {
+                    ...provider,
+                    getUserInfo: async (getUserInfoInput: Parameters<typeof provider.getUserInfo>[0]) => {
+                      const userInfo = await provider.getUserInfo(getUserInfoInput);
+                      if (userInfo.email === undefined) {
+                        throw new SignUpNotAllowedError();
+                      }
+                      return userInfo;
+                    },
+                  }
+                : {
+                    ...provider,
+                    getUserInfo: async (getUserInfoInput: Parameters<typeof provider.getUserInfo>[0]) => {
+                      const userInfo = await provider.getUserInfo(getUserInfoInput);
+                      if (userInfo.email === undefined) {
+                        throw new SignUpNotAllowedError();
+                      }
+                      return userInfo;
+                    },
+                  };
+
+            return await originalImplementation.signInUpPOST!({
+              ...input,
+              provider: providerWithEmailCheck,
+            });
+          } catch (err: unknown) {
+            if (err instanceof SignUpNotAllowedError) {
+              return {
+                status: "GENERAL_ERROR",
+                message: "Sign-ups are disabled. Please contact the admin.",
+              };
             }
-        }
-    }
-})
+            throw err;
+          }
+        },
+      };
+    },
+  },
+});
 ```
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"errors"
@@ -206,53 +239,55 @@ import (
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
 
-func isEmailAllowed(email string) (bool, error) {
-	// ... from previous code snippet
-	return false, nil
-}
+var errSignUpNotAllowed = errors.New("sign up not allowed")
 
 func main() {
 	thirdparty.Init(&tpmodels.TypeInput{
 		Override: &tpmodels.OverrideStruct{
-			Functions: func(originalImplementation tpmodels.RecipeInterface) tpmodels.RecipeInterface {
-				ogThirdPartySignInUp := *originalImplementation.SignInUp
-
-				(*originalImplementation.SignInUp) = func(thirdPartyID, thirdPartyUserID, email string, oAuthTokens map[string]interface{}, rawUserInfoFromProvider tpmodels.TypeRawUserInfoFromProvider, tenantId string, userContext supertokens.UserContext) (tpmodels.SignInUpResponse, error) {
-					existingUsers, err := thirdparty.GetUsersByEmail(tenantId, email)
-					if err != nil {
-						return tpmodels.SignInUpResponse{}, err
-					}
-
-					if len(existingUsers) == 0 {
-						// this means that the email is new and is a sign up
-						allowed, err := isEmailAllowed(email)
-						if err != nil {
-							return tpmodels.SignInUpResponse{}, err
-						}
-						if !allowed {
-							return tpmodels.SignInUpResponse{}, errors.New("No sign up")
-						}
-					}
-					// We allow the sign in / up operation
-					return ogThirdPartySignInUp(thirdPartyID, thirdPartyUserID, email, oAuthTokens, rawUserInfoFromProvider, tenantId, userContext)
-				}
-
-				return originalImplementation
-			},
-
 			APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
 				originalSignInUpPOST := *originalImplementation.SignInUpPOST
 
 				(*originalImplementation.SignInUpPOST) = func(provider *tpmodels.TypeProvider, input tpmodels.TypeSignInUpInput, tenantId string, options tpmodels.APIOptions, userContext supertokens.UserContext) (tpmodels.SignInUpPOSTResponse, error) {
+					providerWithInviteCheck := *provider
+					originalGetUserInfo := provider.GetUserInfo
+					providerWithInviteCheck.GetUserInfo = func(oAuthTokens tpmodels.TypeOAuthTokens, userContext supertokens.UserContext) (tpmodels.TypeUserInfo, error) {
+						userInfo, err := originalGetUserInfo(oAuthTokens, userContext)
+						if err != nil {
+							return tpmodels.TypeUserInfo{}, err
+						}
 
-					resp, err := originalSignInUpPOST(provider, input, tenantId, options, userContext)
+						if userInfo.Email == nil {
+							return tpmodels.TypeUserInfo{}, errSignUpNotAllowed
+						}
 
-					if err.Error() == "No sign up" {
-						// this error was thrown from our function override above.
-						// so we send a useful message to the user
+						existingUser, err := thirdparty.GetUserByThirdPartyInfo(tenantId, provider.ID, userInfo.ThirdPartyUserId, userContext)
+						if err != nil {
+							return tpmodels.TypeUserInfo{}, err
+						}
+
+						if existingUser == nil {
+							if !userInfo.Email.IsVerified {
+								return tpmodels.TypeUserInfo{}, errSignUpNotAllowed
+							}
+
+							allowed, err := isEmailAllowed(tenantId, userInfo.Email.ID)
+							if err != nil {
+								return tpmodels.TypeUserInfo{}, err
+							}
+							if !allowed {
+								return tpmodels.TypeUserInfo{}, errSignUpNotAllowed
+							}
+						}
+
+						return userInfo, nil
+					}
+
+					resp, err := originalSignInUpPOST(&providerWithInviteCheck, input, tenantId, options, userContext)
+
+					if errors.Is(err, errSignUpNotAllowed) {
 						return tpmodels.SignInUpPOSTResponse{
 							GeneralError: &supertokens.GeneralErrorResponse{
-								Message: "Sign ups are disabled. Please contact the admin.",
+								Message: "Sign-ups are disabled. Please contact the admin.",
 							},
 						}, nil
 					}
@@ -266,11 +301,10 @@ func main() {
 	})
 }
 ```
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="This example omits surrounding application and SuperTokens configuration."
+from copy import copy
 from typing import Any, Dict, Optional, Union
 
 from supertokens_python import InputAppInfo, init
@@ -283,14 +317,22 @@ from supertokens_python.recipe.thirdparty.interfaces import (
     RecipeInterface,
 )
 from supertokens_python.recipe.thirdparty.provider import Provider, RedirectUriInfo
-from supertokens_python.recipe.thirdparty.types import RawUserInfoFromProvider
+from supertokens_python.recipe.thirdparty.types import (
+    RawUserInfoFromProvider,
+    ThirdPartyInfo,
+    UserInfo,
+)
 from supertokens_python.types import GeneralErrorResponse
 from supertokens_python.types.base import AccountInfoInput
 
 
-async def is_email_allowed(email: str):
+async def is_email_allowed(tenant_id: str, email: str):
     # from previous code snippet..
     return False
+
+
+class SignUpNotAllowedError(Exception):
+    pass
 
 
 def override_thirdparty_functions(original_implementation: RecipeInterface):
@@ -309,13 +351,20 @@ def override_thirdparty_functions(original_implementation: RecipeInterface):
         user_context: Dict[str, Any],
     ):
         existing_users = await list_users_by_account_info(
-            tenant_id, AccountInfoInput(email=email)
+            tenant_id,
+            AccountInfoInput(
+                third_party=ThirdPartyInfo(
+                    third_party_user_id=third_party_user_id,
+                    third_party_id=third_party_id,
+                )
+            ),
         )
         if len(existing_users) == 0:
-            if not await is_email_allowed(email):
-                raise Exception("No sign up")
+            if not is_verified:
+                raise SignUpNotAllowedError()
+            if not await is_email_allowed(tenant_id, email):
+                raise SignUpNotAllowedError()
 
-        # this means this email is new so we allow sign up
         return await original_thirdparty_sign_in_up(
             third_party_id,
             third_party_user_id,
@@ -328,7 +377,6 @@ def override_thirdparty_functions(original_implementation: RecipeInterface):
             tenant_id,
             user_context,
         )
-        raise Exception("No sign up")
 
     original_implementation.sign_in_up = thirdparty_sign_in_up
 
@@ -348,9 +396,26 @@ def override_thirdparty_apis(original_implementation: APIInterface):
         api_options: APIOptions,
         user_context: Dict[str, Any],
     ):
+        provider_with_email_check = copy(provider)
+        original_get_user_info = provider.get_user_info
+
+        async def get_user_info_with_email_check(
+            oauth_tokens: Dict[str, Any], user_context: Dict[str, Any]
+        ) -> UserInfo:
+            user_info = await original_get_user_info(oauth_tokens, user_context)
+            if user_info.email is None:
+                raise SignUpNotAllowedError()
+            return user_info
+
+        setattr(
+            provider_with_email_check,
+            "get_user_info",
+            get_user_info_with_email_check,
+        )
+
         try:
             return await original_sign_in_up_post(
-                provider,
+                provider_with_email_check,
                 redirect_uri_info,
                 oauth_tokens,
                 session,
@@ -359,12 +424,10 @@ def override_thirdparty_apis(original_implementation: APIInterface):
                 api_options,
                 user_context,
             )
-        except Exception as e:
-            if str(e) == "No sign up":
-                return GeneralErrorResponse(
-                    "Seems like you already have an account with another method. Please use that instead."
-                )
-            raise e
+        except SignUpNotAllowedError:
+            return GeneralErrorResponse(
+                "Sign-ups are disabled. Please contact the admin."
+            )
 
     original_implementation.sign_in_up_post = thirdparty_sign_in_up_post
     return original_implementation
@@ -372,7 +435,7 @@ def override_thirdparty_apis(original_implementation: APIInterface):
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    framework="...",  # type: ignore
+    framework="...",
     recipe_list=[
         thirdparty.init(
             override=thirdparty.InputOverrideConfig(
@@ -382,17 +445,15 @@ init(
     ],
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
-
+</Tab>
+</CodeGroup>
 
 
 ## See also
 
-<ReferenceCard.Grid>
-  <ReferenceCard href="/docs/authentication/social/custom-providers" label="Built-in providers" />
-  <ReferenceCard href="/docs/authentication/social/custom-providers" label="Custom providers" />
-  <ReferenceCard href="/docs/authentication/social/add-multiple-clients-for-the-same-provider" label="Multiple clients on the same provider" />
-  <ReferenceCard href="/docs/authentication/social/hooks-and-overrides" label="Hooks and overrides" />
-</ReferenceCard.Grid>
+<CardGroup cols={3}>
+  <Card title="Built-in providers" href="/authentication/social/custom-providers" />
+  <Card title="Custom providers" href="/authentication/social/custom-providers" />
+  <Card title="Multiple clients on the same provider" href="/authentication/social/add-multiple-clients-for-the-same-provider" />
+  <Card title="Hooks and overrides" href="/authentication/social/hooks-and-overrides" />
+</CardGroup>

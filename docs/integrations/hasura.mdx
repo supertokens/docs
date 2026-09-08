@@ -1,0 +1,389 @@
+---
+title: Hasura
+description: Learn how to use SuperTokens with Hasura
+sidebar:
+  icon: /docs-assets/img/logos/hasura.svg
+  order: 40
+---
+
+## Before you start
+
+The tutorial assumes that you already have a working application integrated with **SuperTokens**.
+If you have not, please check the [Quickstart Guide](/quickstart).
+
+Using SuperTokens with Hasura requires you to host your own API layer that uses our Backend SDK.
+If you do not want to host your own server you can use a serverless environment to achieve this.
+
+:::warning[This guide only applies to scenarios which involve **SuperTokens Session Access Tokens**.]
+
+If you are implementing either, [**Unified Login**](/authentication/unified-login/introduction) or [**Microservice Authentication**](/authentication/m2m/introduction), features that make use of **OAuth2 Access Tokens**, please check the [separate page](/authentication/unified-login/verify-tokens) that shows you how to verify those types of tokens.
+:::
+
+
+## Steps
+
+### 1. Expose the access token to the frontend
+
+For cookie based auth, the access token is not available on the frontend by default.
+In order to expose it, you need to set the `exposeAccessTokenToFrontendInCookieBasedAuth` config to `true`.
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init({
+      exposeAccessTokenToFrontendInCookieBasedAuth: true,
+    }),
+  ],
+});
+```
+</Tab>
+<Tab title="Go" value="go">
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				ExposeAccessTokenToFrontendInCookieBasedAuth: true,
+			}),
+		},
+	})
+}
+```
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+
+init(
+    app_info=InputAppInfo(
+        api_domain="...", app_name="...", website_domain="..."),
+    framework='...',
+    recipe_list=[
+        session.init(
+            expose_access_token_to_frontend_in_cookie_based_auth=True,
+        )
+    ]
+)
+```
+</Tab>
+</CodeGroup>
+
+### 2. Add custom claims to the JWT
+
+Hasura requires claims to be set in a specific way, read the [official documentation](https://hasura.io/docs/latest/graphql/core/auth/authentication/jwt.html) to know more.
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx
+import SuperTokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init({
+      exposeAccessTokenToFrontendInCookieBasedAuth: true,
+      override: {
+        functions: function (originalImplementation) {
+          return {
+            ...originalImplementation,
+            createNewSession: async function (input) {
+              input.accessTokenPayload = {
+                ...input.accessTokenPayload,
+                "https://hasura.io/jwt/claims": {
+                  "x-hasura-user-id": input.userId,
+                  "x-hasura-default-role": "user",
+                  "x-hasura-allowed-roles": ["user"],
+                },
+              };
+
+              return originalImplementation.createNewSession(input);
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
+```
+</Tab>
+<Tab title="Go" value="go">
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			session.Init(&sessmodels.TypeInput{
+				ExposeAccessTokenToFrontendInCookieBasedAuth: true,
+				Override: &sessmodels.OverrideStruct{
+					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+
+						originalCreateNewSession := *originalImplementation.CreateNewSession
+
+						(*originalImplementation.CreateNewSession) = func(userID string, accessTokenPayload map[string]interface{}, sessionDataInDatabase map[string]interface{}, disableAntiCsrf *bool, tenantId string, userContext supertokens.UserContext) (sessmodels.SessionContainer, error) {
+							if accessTokenPayload == nil {
+								accessTokenPayload = map[string]interface{}{}
+							}
+
+							hasuraClaims := map[string]interface{}{
+								"x-hasura-user-id":       userID,
+								"x-hasura-default-role":  "user",
+								"x-hasura-allowed-roles": []string{"user"},
+							}
+
+							accessTokenPayload["https://hasura.io/jwt/claims"] = hasuraClaims
+
+							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
+						}
+
+						return originalImplementation
+					},
+				},
+			}),
+		},
+	})
+}
+```
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import session
+from supertokens_python.recipe.session.interfaces import RecipeInterface
+from typing import Dict, Optional, Any
+from supertokens_python.types import RecipeUserId
+
+
+def override_functions(original_implementation: RecipeInterface):
+    original_implementation_create_new_session = (
+        original_implementation.create_new_session
+    )
+
+    async def create_new_session(
+        user_id: str,
+        recipe_user_id: RecipeUserId,
+        access_token_payload: Optional[Dict[str, Any]],
+        session_data_in_database: Optional[Dict[str, Any]],
+        disable_anti_csrf: Optional[bool],
+        tenant_id: str,
+        user_context: Dict[str, Any],
+    ):
+
+        if access_token_payload is None:
+            access_token_payload = {}
+
+        access_token_payload["https://hasura.io/jwt/claims"] = {
+            "x-hasura-user-id": user_id,
+            "x-hasura-default-role": "user",
+            "x-hasura-allowed-roles": ["user"],
+        }
+
+        return await original_implementation_create_new_session(
+            user_id,
+            recipe_user_id,
+            access_token_payload,
+            session_data_in_database,
+            disable_anti_csrf,
+            tenant_id,
+            user_context,
+        )
+
+    original_implementation.create_new_session = create_new_session
+    return original_implementation
+
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework="...",
+    recipe_list=[
+        session.init(
+            override=session.InputOverrideConfig(functions=override_functions),
+            expose_access_token_to_frontend_in_cookie_based_auth=True,
+        )
+    ],
+)
+```
+</Tab>
+</CodeGroup>
+
+### 3. Configure Hasura environment variables
+
+:::info
+Read the [official documentation](https://hasura.io/docs/latest/graphql/core/auth/authentication/jwt.html#configuring-jwt-mode) to know about setting the JWT secret environment variable on Hasura
+:::
+
+To use JWT based authentication, Hasura requires setting environment variables when configuring your app.
+With SuperTokens this can be done in 2 ways:
+
+#### Using the JWKS endpoint
+
+When configuring Hasura, you can set the `jwk_url` property.
+
+```json
+{
+  "jwk_url": "<YOUR_API_DOMAIN>//auth/jwt/jwks.json"
+}
+```
+
+You can get the JWKS URL for your backend by using the method explained [here](/additional-verification/session-verification/protect-api-routes#using-a-jwt-verification-library)
+
+#### Using a key string
+
+Hasura let's you provide a PEM string in the configuration.
+Refer to [this page](/additional-verification/session-verification/protect-api-routes#with-the-public-key-string) to learn how to get a public key as a string. You can then use that key string in the Hasura config:
+
+```json
+{
+  "type": "RS256",
+  "key": "CERTIFICATE_STRING"
+}
+```
+
+### 4. Check for claim values in Hasura
+
+Some checks like if the email is verified, or if 2FA is completed are stored as claim values in the JWT.
+You should check for the values of these claims in your GraphQL functions wherever required.
+For example, if one of your GraphQL functions requires that the user's email is verified, then it should check for the JWT payload's `st-ev` claim value to be `{v: true, t:...}`, else it should reject the request.
+
+You can also use a [custom Hasura authorizer webhook](https://hasura.io/docs/latest/auth/authentication/webhook/) to check for the values of these claims depending on your app's requirements.
+
+This is required because SuperTokens issues JWTs immediately after the user signs up / logs in, regardless of if all the authorisation checks pass or not.
+Functions exposed by our SDK like `verifySession` or `getSession` do these authorisation checks on their own, but since these functions are not used in the Hasura flow, you will have to check them on your own.
+
+### 5. Make requests to Hasura
+
+#### 5.1 Get the JWT on the frontend
+
+
+
+
+
+<CodeGroup group="frontend-custom-ui">
+<Tab title="Web" value="web">
+<DependentContent group="install-method" label="Installation method">
+<ContentOption title="npm" value="npm">
+```tsx
+import Session from "supertokens-web-js/recipe/session";
+
+async function getToken(): Promise<void> {
+  const accessToken = await Session.getAccessToken();
+  console.log(accessToken);
+}
+```
+</ContentOption>
+<ContentOption title="Script tag" value="script-tag">
+```tsx check=false reason="Requires SDK globals from surrounding application"
+async function getToken(): Promise<void> {
+  const accessToken = await supertokensSession.getAccessToken();
+  console.log(accessToken);
+}
+```
+</ContentOption>
+</DependentContent>
+</Tab>
+<Tab title="Mobile" value="mobile">
+<DependentContent group="mobile-frameworks" label="Mobile framework">
+<ContentOption title="ReactNative" value="reactnative">
+```tsx
+import SuperTokens from "supertokens-react-native";
+
+async function getToken(): Promise<void> {
+  const accessToken = await SuperTokens.getAccessToken();
+  console.log(accessToken);
+}
+```
+</ContentOption>
+<ContentOption title="Android" value="android">
+```kotlin
+import android.app.Application
+import com.supertokens.session.SuperTokens
+
+class MainApplication: Application() {
+    fun getToken(): String {
+        return SuperTokens.getAccessToken(applicationContext)
+    }
+}
+```
+</ContentOption>
+<ContentOption title="iOS" value="ios">
+```swift
+import UIKit
+import SuperTokensIOS
+
+fileprivate class ViewController: UIViewController {
+    func getToken() -> String? {
+        return SuperTokens.getAccessToken()
+    }
+}
+```
+</ContentOption>
+<ContentOption title="Flutter" value="flutter">
+```dart
+import 'package:supertokens_flutter/supertokens.dart';
+
+Future<String?> getToken() async {
+    return await SuperTokens.getAccessToken();
+}
+```
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
+
+
+
+#### 5.2 Make an HTTP requests
+
+```tsx
+import axios from "axios";
+
+async function makeRequest() {
+  let url = "...";
+  let jwt = "..."; // Refer to step 5.a
+  let response = await axios.get(url, {
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+    },
+  });
+}
+```
+
+## Local development
+
+
+If you are using Hasura cloud and testing your backend APIs in your local environment, JWT verification will fail because Hasura will not be able to query the JWKS endpoint (because the cloud can not query your local environment i.e localhost, 127.0.0.1).
+
+To solve this problem you will need to expose your locally hosted backend APIs to the internet. For example you can use [ngrok](https://ngrok.com/).
+After that, you need to configure Hasura to use the `<ngrokURL>//auth/jwt/jwks.json` as the JWKS endpoint (explained in [step 3](#3-configure-hasura-environment-variables)).

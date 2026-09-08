@@ -1,0 +1,365 @@
+<dialog
+  aria-labelledby="api-reference-drawer-title"
+  class="m-0 ml-auto h-dvh max-h-none w-full max-w-[72rem] border-0 border-border border-l bg-transparent p-0 backdrop:bg-black/50"
+  data-api-reference-drawer
+  id="api-reference-drawer"
+>
+  <div class="flex h-full min-h-0 flex-col bg-background text-foreground">
+    <header class="flex shrink-0 items-center gap-3 border-border border-b px-4 py-3 sm:px-6">
+      <div class="min-w-0 flex-1">
+        <p class="m-0 text-muted-foreground text-xs">API reference</p>
+        <h2 class="m-0 truncate font-semibold text-base" id="api-reference-drawer-title" data-api-reference-title>
+          API schema and response details
+        </h2>
+      </div>
+      <button
+        class="group inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-md border border-border px-3 font-medium text-sm transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+        data-api-reference-full-page
+        type="button"
+      >
+        <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+          <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+        </svg>
+        Open Page
+      </button>
+      <button
+        class="group inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-md border border-border px-3 font-medium text-sm transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+        data-api-reference-copy-spec
+        type="button"
+      >
+        <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+          <rect height="13" rx="2" stroke="currentColor" stroke-width="2" width="13" x="9" y="9"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+        </svg>
+        <span class="group-data-[copied]:hidden">Copy</span>
+        <span class="hidden group-data-[copied]:inline">Copied</span>
+      </button>
+      <button
+        aria-label="Close API reference"
+        class="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        data-api-reference-close
+        type="button"
+      >
+        <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+          <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+        </svg>
+      </button>
+    </header>
+    <div class="relative min-h-0 flex-1" data-api-reference-frames></div>
+  </div>
+</dialog>
+
+<script>
+  import { copyText, createCopyFlash } from "blume/components/copy-feedback.ts";
+
+  interface ApiReferenceState {
+    canonicalUrl: string | null;
+    generation: number;
+    loadingTimeout: number | null;
+    selectedUrl: string | null;
+    specUrl: string | null;
+    trigger: HTMLAnchorElement | null;
+  }
+
+  const state: ApiReferenceState = {
+    canonicalUrl: null,
+    generation: 0,
+    loadingTimeout: null,
+    selectedUrl: null,
+    specUrl: null,
+    trigger: null,
+  };
+
+  let triggerObserver: IntersectionObserver | null = null;
+  const specRequests = new Map<string, Promise<string | null>>();
+  const specTextCache = new Map<string, string>();
+
+  const drawer = () => document.querySelector<HTMLDialogElement>("#api-reference-drawer");
+
+  const triggerFromSource = (source: EventTarget | null) =>
+    source instanceof Element ? source.closest<HTMLAnchorElement>("[data-api-reference-trigger]") : null;
+
+  const cancelPendingLoad = (currentDrawer: HTMLDialogElement | null) => {
+    if (state.loadingTimeout === null) return;
+
+    window.clearTimeout(state.loadingTimeout);
+    state.loadingTimeout = null;
+    state.generation++;
+    state.trigger?.removeAttribute("aria-busy");
+    if (state.selectedUrl) {
+      const pendingFrame = [...(currentDrawer?.querySelectorAll<HTMLIFrameElement>("[data-api-reference-frame]") ?? [])].find(
+        (frame) => frame.dataset.apiReferenceUrl === state.selectedUrl,
+      );
+      if (!pendingFrame?.dataset.loaded && !pendingFrame?.dataset.apiReferencePreloaded) pendingFrame?.remove();
+    }
+    state.canonicalUrl = null;
+    state.selectedUrl = null;
+    state.specUrl = null;
+    state.trigger = null;
+  };
+
+  const flashCopiedSpec = createCopyFlash((copied) => {
+    const copy = drawer()?.querySelector<HTMLButtonElement>("[data-api-reference-copy-spec]");
+    copy?.toggleAttribute("data-copied", copied);
+  }, "OpenAPI spec copied");
+
+  const preloadSpec = (specUrl: string) => {
+    const cached = specTextCache.get(specUrl);
+    if (cached !== undefined) return Promise.resolve(cached);
+
+    const pending = specRequests.get(specUrl);
+    if (pending) return pending;
+
+    const request = fetch(specUrl)
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const text = await response.text();
+        specTextCache.set(specUrl, text);
+        return text;
+      })
+      .catch(() => null)
+      .finally(() => {
+        specRequests.delete(specUrl);
+      });
+    specRequests.set(specUrl, request);
+    return request;
+  };
+
+  const copySpec = async (button: HTMLButtonElement) => {
+    const specUrl = state.specUrl;
+    if (!specUrl) return;
+
+    const cached = specTextCache.get(specUrl);
+    if (cached !== undefined) {
+      if (await copyText(cached)) flashCopiedSpec();
+      return;
+    }
+
+    button.disabled = true;
+    try {
+      const text = await preloadSpec(specUrl);
+      if (text !== null && (await copyText(text))) flashCopiedSpec();
+    } finally {
+      button.disabled = false;
+    }
+  };
+
+  const ensureFrame = (currentDrawer: HTMLDialogElement, url: URL, fetchPriority: "high" | "low") => {
+    const container = currentDrawer.querySelector<HTMLElement>("[data-api-reference-frames]");
+    if (!container) return null;
+
+    const existing = [...container.querySelectorAll<HTMLIFrameElement>("[data-api-reference-frame]")].find(
+      (frame) => frame.dataset.apiReferenceUrl === url.href,
+    );
+    if (existing) {
+      if (fetchPriority === "high") existing.fetchPriority = "high";
+      return existing;
+    }
+
+    const frame = document.createElement("iframe");
+    frame.className = "absolute inset-0 h-full w-full border-0 bg-background";
+    frame.dataset.apiReferenceFrame = "";
+    frame.dataset.apiReferenceUrl = url.href;
+    frame.fetchPriority = fetchPriority;
+    if (fetchPriority === "low") frame.dataset.apiReferencePreloaded = "true";
+    frame.hidden = true;
+    frame.setAttribute("aria-hidden", "true");
+    frame.addEventListener("load", () => {
+      frame.dataset.loaded = "true";
+    });
+    frame.src = url.href;
+    container.append(frame);
+    return frame;
+  };
+
+  const preloadFromSource = (source: EventTarget | null, fetchPriority: "high" | "low" = "low") => {
+    const link = triggerFromSource(source);
+    const currentDrawer = drawer();
+    const embedHref = link?.dataset.apiReferenceEmbedHref;
+    if (!link?.isConnected || !currentDrawer || !embedHref) return null;
+
+    const embedUrl = new URL(embedHref, window.location.href);
+    if (embedUrl.origin !== window.location.origin) return null;
+
+    const frame = ensureFrame(currentDrawer, embedUrl, fetchPriority);
+    return frame ? { embedUrl, frame, link } : null;
+  };
+
+  const observeTriggers = () => {
+    triggerObserver?.disconnect();
+    triggerObserver = null;
+    if (!("IntersectionObserver" in window)) return;
+
+    triggerObserver = new IntersectionObserver(
+      (entries, observer) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          preloadFromSource(entry.target);
+          observer.unobserve(entry.target);
+        }
+      },
+      { rootMargin: "100% 0px" },
+    );
+    for (const link of document.querySelectorAll<HTMLAnchorElement>("[data-api-reference-trigger]")) {
+      triggerObserver.observe(link);
+    }
+  };
+
+  const showFrame = (
+    currentDrawer: HTMLDialogElement,
+    frame: HTMLIFrameElement,
+    embedUrl: URL,
+    generation: number,
+  ) => {
+    if (generation !== state.generation || state.selectedUrl !== embedUrl.href || !frame.isConnected) return;
+
+    if (state.loadingTimeout !== null) window.clearTimeout(state.loadingTimeout);
+    state.loadingTimeout = null;
+    state.trigger?.removeAttribute("aria-busy");
+
+    for (const candidate of currentDrawer.querySelectorAll<HTMLIFrameElement>("[data-api-reference-frame]")) {
+      const active = candidate === frame;
+      candidate.hidden = !active;
+      candidate.toggleAttribute("aria-hidden", !active);
+    }
+
+    if (!currentDrawer.open) currentDrawer.showModal();
+    currentDrawer.querySelector<HTMLButtonElement>("[data-api-reference-close]")?.focus();
+  };
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (!(event.target instanceof Element)) return;
+
+      const currentDrawer = drawer();
+      const close = event.target.closest<HTMLElement>("[data-api-reference-close]");
+      if (close && currentDrawer) {
+        currentDrawer.close();
+        return;
+      }
+
+      const fullPage = event.target.closest<HTMLButtonElement>("[data-api-reference-full-page]");
+      if (fullPage && state.canonicalUrl) {
+        window.location.assign(state.canonicalUrl);
+        return;
+      }
+
+      const copy = event.target.closest<HTMLButtonElement>("[data-api-reference-copy-spec]");
+      if (copy) {
+        void copySpec(copy);
+        return;
+      }
+
+      const link = triggerFromSource(event.target);
+      if (!link) {
+        if (!currentDrawer?.open) cancelPendingLoad(currentDrawer);
+        return;
+      }
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        link.target ||
+        link.hasAttribute("download")
+      ) {
+        if (!currentDrawer?.open) cancelPendingLoad(currentDrawer);
+        return;
+      }
+
+      const canonicalUrl = new URL(link.href, window.location.href);
+      if (!currentDrawer || canonicalUrl.origin !== window.location.origin) return;
+
+      const title = currentDrawer.querySelector<HTMLElement>("[data-api-reference-title]");
+      const specHref = link.dataset.apiReferenceSpecHref;
+      if (!title || !specHref) return;
+      const specUrl = new URL(specHref, window.location.href);
+      if (specUrl.origin !== window.location.origin) return;
+
+      cancelPendingLoad(currentDrawer);
+      const preload = preloadFromSource(link, "high");
+      if (!preload) return;
+      const { embedUrl, frame } = preload;
+
+      event.preventDefault();
+      state.trigger = link;
+      state.canonicalUrl = canonicalUrl.href;
+      state.selectedUrl = embedUrl.href;
+      state.specUrl = specUrl.href;
+      void preloadSpec(specUrl.href);
+      link.setAttribute("aria-busy", "true");
+      const generation = ++state.generation;
+      const operationTitle = link.dataset.apiReferenceTitle || "API schema and response details";
+      title.textContent = operationTitle;
+      frame.title = `API reference: ${operationTitle}`;
+
+      const open = () => showFrame(currentDrawer, frame, embedUrl, generation);
+      if (frame.dataset.loaded) open();
+      else {
+        frame.addEventListener("load", open, { once: true });
+        state.loadingTimeout = window.setTimeout(() => cancelPendingLoad(currentDrawer), 15_000);
+      }
+    },
+    true,
+  );
+
+  document.addEventListener("click", (event) => {
+    const currentDrawer = drawer();
+    if (event.target === currentDrawer) currentDrawer.close();
+  });
+
+  document.addEventListener("focusin", (event) => {
+    if (state.loadingTimeout !== null && event.target !== state.trigger) cancelPendingLoad(drawer());
+    preloadFromSource(event.target);
+  });
+
+  document.addEventListener("pointerover", (event) => preloadFromSource(event.target));
+
+  document.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "touch") preloadFromSource(event.target);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || state.loadingTimeout === null) return;
+    const trigger = state.trigger;
+    cancelPendingLoad(drawer());
+    if (trigger?.isConnected) trigger.focus();
+  });
+
+  document.addEventListener(
+    "close",
+    (event) => {
+      if (event.target !== drawer()) return;
+      if (state.trigger?.isConnected) state.trigger.focus();
+      if (state.loadingTimeout !== null) window.clearTimeout(state.loadingTimeout);
+      state.loadingTimeout = null;
+      state.trigger?.removeAttribute("aria-busy");
+      state.trigger = null;
+      state.canonicalUrl = null;
+      state.selectedUrl = null;
+      state.specUrl = null;
+      state.generation++;
+    },
+    true,
+  );
+
+  document.addEventListener("astro:before-swap", () => {
+    triggerObserver?.disconnect();
+    triggerObserver = null;
+    cancelPendingLoad(drawer());
+    state.generation++;
+    state.canonicalUrl = null;
+    state.selectedUrl = null;
+    state.specUrl = null;
+    state.trigger = null;
+    const currentDrawer = drawer();
+    if (currentDrawer?.open) currentDrawer.close();
+    currentDrawer?.querySelector("[data-api-reference-frames]")?.replaceChildren();
+  });
+
+  document.addEventListener("astro:page-load", observeTriggers);
+  observeTriggers();
+</script>

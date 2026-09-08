@@ -1,19 +1,52 @@
-name: Deploy
-run-name: Deploy to ${{ github.ref_name == 'master' && 'the production website' || 'a preview website' }}
+name: Build
 
 on:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: Shared preview URL to smoke test after the build
+        type: string
+        required: false
   pull_request:
     paths:
       - "docs/**"
-      - "static/**"
-      - "src/**"
+      - "components/**"
+      - "islands/**"
+      - "lib/**"
+      - "pages/**"
+      - "openapi/**"
+      - "public/**"
+      - "e2e/**"
+      - "e2e-preview/**"
+      - "scripts/blume/**"
+      - "scripts/migration/**"
+      - "scripts/serve-e2e.mjs"
+      - "blume.config.ts"
+      - "components.ts"
+      - "microfrontends.jsonc"
+      - "theme.css"
+      - "tsconfig.json"
+      - "vercel.json"
+      - "playwright.config.ts"
+      - "playwright.preview.config.ts"
+      - ".github/workflows/deploy.yml"
       - "package-lock.json"
+      - "package.json"
   push:
     branches:
       - master
 
 jobs:
+  # Direct Vercel Git deployments must require this GitHub Build check when the repository-variable gate is enabled.
+  full-code-block-checks:
+    if: vars.RUN_FULL_CODE_BLOCK_CHECKS == 'true' && github.event_name != 'pull_request'
+    uses: ./.github/workflows/test.yml
+    with:
+      full: true
+
   build:
+    needs: full-code-block-checks
+    if: always() && (needs.full-code-block-checks.result == 'success' || needs.full-code-block-checks.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,50 +54,48 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22.12"
           cache: "npm"
           cache-dependency-path: "package-lock.json"
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build Docusaurus Site
+      - name: Validate generated routes
+        run: |
+          npm run routes:manifest
+          git diff --exit-code -- scripts/blume/route-manifest.json scripts/blume/openapi-redirects.mjs
+
+      - name: Test redirect generation
+        run: npm test -- --run scripts/migration
+
+      - name: Build Blume site
         run: npm run build
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Test documentation feedback regressions
+        run: >-
+          npx playwright test --workers=1
+          e2e/theme-consistency.spec.ts
+          e2e/image-sizing.spec.ts
+          e2e/mobile-search-controls.spec.ts
+          e2e/quickstart-deep-links.spec.ts
+          e2e/table-of-contents.spec.ts
+          e2e/homepage-capabilities.spec.ts
+          e2e/legacy-redirects.spec.ts
+          e2e/custom-404.spec.ts
+
+      - name: Test shared preview
+        if: github.event_name == 'workflow_dispatch' && inputs.preview_url != ''
+        env:
+          MFE_PREVIEW_URL: ${{ inputs.preview_url }}
+        run: npm run test:preview-smoke
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: docusaurus-build
-          path: build
+          name: blume-build
+          path: dist
           retention-days: 1
-
-  trigger:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set STAGE environment variable
-        shell: bash
-        run: |
-          if [[ "${{ github.ref_name }}" == "master" ]]; then
-            STAGE="production"
-          else
-            STAGE="preview"
-          fi
-
-          echo "STAGE=$STAGE" >> $GITHUB_ENV
-
-      - name: Trigger the backend website CI
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.BACKEND_WEBSITE_TOKEN }}
-          script: |
-            github.rest.actions.createWorkflowDispatch({
-                owner: 'supertokens',
-                repo: 'supertokens-backend-website',
-                workflow_id: 'release-documentation-changes.yml',
-                ref: 'master',
-                inputs: {
-                  "run-id": `${{ github.run_id }}`,
-                  "stage":  "${{ env.STAGE }}",
-                }
-              })

@@ -1,19 +1,15 @@
 ---
 title: SMS delivery
-hide_title: true
-sidebar_position: 5
 description: Customize SMS delivery process.
-page_type: guide
-category: platform-configuration
+sidebar:
+  order: 5
 ---
-
-
-# SMS Delivery 
 
 ## Overview
 
 SuperTokens sends SMS in different authentication scenarios.
-The method applies to the `Passwordless` and `MFA` recipes.
+SMS delivery is configured by the `Passwordless` recipe. Phone OTP can be used as an MFA factor, but the `MFA` recipe
+does not expose a separate SMS-delivery configuration.
 
 The following page shows you how to configure the SMS delivery method and adjust the content that gets sent to your users.
 
@@ -21,22 +17,28 @@ The following page shows you how to configure the SMS delivery method and adjust
 
 ### Default method
 
-If you provide no configuration for SMS delivery, the backend SDK sends SMSs by talking to SuperTokens servers on `https://api.supertokens.com`.
-This applies to both self hosted and managed services.
+If you provide no configuration for SMS delivery, the Passwordless recipe uses the backend SDK's built-in service at
+`https://api.supertokens.com/0/services/sms`. This applies whether the Core is self-hosted or managed.
 
-:::info Important
-- This is a free service and is globally rate limited. This is not suitable for production use. If you do not receive an SMS using this method, then the SDK prints the SMS content on the terminal.
-- We do not log / store any of the info sent to the API that sends out emails on behalf of your app.
+:::info[Important]
+- Do not depend on the built-in service for production delivery. Its quota and availability are service policy, not an SDK contract.
+- When the service returns HTTP 429, released SDK fallback implementations treat that response as terminal and print the message input. This can include the phone number, OTP, magic link, and code lifetime.
 - You cannot customize the SMS content when using this method. If you want to customize the content, please see one of the other methods in this section.
 :::
 
-### Twilio 
+:::caution[Sensitive fallback logs]
+OTP codes and magic links are authentication secrets. Prevent production fallback logs from reaching shared consoles or
+third-party log pipelines. If you must retain them for testing, restrict access, redact the phone number and secret values,
+set a short retention period, and verify deletion. Prefer configuring Twilio or a custom service before production so a
+quota response cannot expose message content through this fallback.
+:::
+
+### Twilio
 
 Using this method, you can provide your own Twilio account details to the backend SDK, and the SMS is sent using those.
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 import Passwordless from "supertokens-node/recipe/passwordless";
@@ -44,40 +46,36 @@ import Session from "supertokens-node/recipe/session";
 import { TwilioService } from "supertokens-node/recipe/passwordless/smsdelivery";
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Passwordless.init({
-            flowType: "USER_INPUT_CODE",
-            contactMethod: "PHONE",
-            // highlight-start
-            smsDelivery: {
-                service: new TwilioService({
-                    twilioSettings: {
-                        accountSid: "...",
-                        authToken: "...",
-                        opts: {
-                            // optionally extra config to pass to Twilio client
-                        },
-
-                        // give either from or messagingServiceSid
-                        from: "...",
-                        messagingServiceSid: "...",
-                    },
-                })
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Passwordless.init({
+      flowType: "USER_INPUT_CODE",
+      contactMethod: "PHONE",
+      smsDelivery: {
+        service: new TwilioService({
+          twilioSettings: {
+            accountSid: "...",
+            authToken: "...",
+            opts: {
+              // optionally extra config to pass to Twilio client
             },
-            // highlight-end
+
+            // Use exactly one sender option. This example uses from.
+            from: "...",
+          },
         }),
-        Session.init()
-    ]
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"github.com/supertokens/supertokens-golang/ingredients/smsdelivery"
@@ -88,53 +86,49 @@ import (
 
 func main() {
 
-	// highlight-start
 	smsService, err := passwordless.MakeTwilioService(smsdelivery.TwilioServiceConfig{
 		Settings: smsdelivery.TwilioSettings{
 			AccountSid: "...",
 			AuthToken:  "...",
-			// Pass only one of From or MessagingServiceSid
-			From:                "...",
-			MessagingServiceSid: "...",
+			// Use exactly one sender option. This example uses From.
+			From: "...",
 		},
 	})
 	if err != nil {
 		panic(err)
 	}
-	// highlight-end
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
-				// highlight-start
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Service: smsService,
 				},
-				// highlight-end
 			}),
 		},
 	})
 }
 
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig, TwilioSettings
 
 
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
         passwordless.init(
-            contact_config="",  # type: ignore # REMOVE_FROM_OUTPUT
-            flow_type="USER_INPUT_CODE",  # REMOVE_FROM_OUTPUT
-            # highlight-start
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(
                 service=passwordless.TwilioService(
                     twilio_settings=TwilioSettings(
@@ -144,82 +138,57 @@ init(
                             # Optional configs to pass to twilio client
                         },
 
-                        # give either from_ or messaging_service_sid
+                        # Use exactly one sender option. This example uses from_.
                         from_="...",
-                        messaging_service_sid="...",
                     )
                 )
             )
-            # highlight-end
         )
     ]
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 To learn about how to customize the SMS templates, please see the next section.
 
-### SuperTokens SMS Service
+### SuperTokens SMS service
 
-Using this method, SuperTokens sends messages to your users automatically.
-Use this method if:
-- You are already using the managed service. This is the quickest way to set up SMS sending.
-- You want to take advantage of some SMS sending optimizations we do over time:
-    - Reduce SMS cost by picking a local SMS service based on the destination country.
-    - Fight spam / misuse of SMS.
+The backend SDKs also expose an API-key-based `SuperTokensSMSService`. It calls an external SMS endpoint directly and can
+be used whether your Core is self-hosted or managed. Availability, pricing, credits, quotas, sender identity, key issuance,
+and the Dashboard workflow are mutable service policy. Confirm them in your current Dashboard or contract before adopting
+this option; they are not guaranteed by the released SDK interface.
 
-:::important
-This is a paid service and charges apply for every SMS based on the cost incurred.
-New users receive $10 worth of credits.
-:::
+If you have been issued an SMS API key, set it in the backend SDK configuration:
 
-#### 1. Get the SMS API key
-
-<Steps>
-  ## Sign up on SuperTokens.com
-  ## Create a new development `env`
-  ## Scroll down and create a new production `env` (it takes a few minutes to create one)
-  ## Once the production `env` is set up, you can find your SMS API key under the setup section:
-</Steps>
-
-<img src="/img/passwordless/sms-api-key.png" alt="SMS API key screen"/>
-
-#### 2. Set the SMS API key in the backend SDK configuration
-
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 import Passwordless from "supertokens-node/recipe/passwordless";
 import Session from "supertokens-node/recipe/session";
-import { SupertokensService } from "supertokens-node/recipe/passwordless/smsdelivery"
+import { SupertokensService } from "supertokens-node/recipe/passwordless/smsdelivery";
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Passwordless.init({
-            flowType: "USER_INPUT_CODE",
-            contactMethod: "PHONE",
-            // highlight-start
-            smsDelivery: {
-                service: new SupertokensService("<SMS API KEY GOES HERE>")
-            },
-            // highlight-end
-        }),
-        Session.init()
-    ]
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Passwordless.init({
+      flowType: "USER_INPUT_CODE",
+      contactMethod: "PHONE",
+      smsDelivery: {
+        service: new SupertokensService("<SMS API KEY GOES HERE>"),
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"github.com/supertokens/supertokens-golang/ingredients/smsdelivery"
@@ -232,95 +201,90 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
-				// highlight-start
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Service: passwordless.MakeSupertokensSMSService("<SMS API KEY GOES HERE>"),
 				},
-				// highlight-end
 			}),
 		},
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig
 
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
         passwordless.init(
-            contact_config="",  # type: ignore # REMOVE_FROM_OUTPUT
-            flow_type="USER_INPUT_CODE",  # REMOVE_FROM_OUTPUT
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(
                 service=passwordless.SuperTokensSMSService("<SMS API KEY GOES HERE>"))
         )
     ]
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 ### Custom method
 
 This method allows you to send messages however you like.
 The input to the send function consists of SMS template variables, allowing you to create the content of the SMS as well.
 Use this method if you are:
-- Using a third party SMS service that is **not** Twilio.
+- Using a third-party SMS service that is **not** Twilio.
 - You want to use another delivery method like WhatsApp or Facebook Messenger.
 - You want to do some custom spam protection before sending the SMS.
 - You already have an SMS sending infrastructure and want to use that.
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 import Passwordless from "supertokens-node/recipe/passwordless";
 import Session from "supertokens-node/recipe/session";
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Passwordless.init({
-            flowType: "USER_INPUT_CODE",
-            contactMethod: "PHONE",
-            // highlight-start
-            smsDelivery: {
-                override: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        sendSms: async function ({
-                            codeLifetime, // amount of time the code is alive for (in MS)
-                            phoneNumber,
-                            urlWithLinkCode, // magic link
-                            userInputCode, // OTP
-                        }) {
-                            // TODO: create and send SMS
-                        }
-                    }
-                }
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Passwordless.init({
+      flowType: "USER_INPUT_CODE",
+      contactMethod: "PHONE",
+      smsDelivery: {
+        override: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            sendSms: async function ({
+              codeLifetime, // amount of time the code is alive for (in MS)
+              phoneNumber,
+              urlWithLinkCode, // magic link
+              userInputCode, // OTP
+            }) {
+              // TODO: create and send SMS
             },
-            // highlight-end
-        }),
-        Session.init()
-    ]
+          };
+        },
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"fmt"
@@ -335,7 +299,8 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
-				// highlight-start
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Override: func(originalImplementation smsdelivery.SmsDeliveryInterface) smsdelivery.SmsDeliveryInterface {
 
@@ -360,25 +325,23 @@ func main() {
 						return originalImplementation
 					},
 				},
-				// highlight-end
 			}),
 		},
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe.passwordless.types import SMSDeliveryOverrideInput, SMSTemplateVars
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from typing import Dict, Any
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig
 
 
 def custom_sms_deliver(original_implementation: SMSDeliveryOverrideInput) -> SMSDeliveryOverrideInput:
-    # highlight-start
     async def send_sms(template_vars: SMSTemplateVars, user_context: Dict[str, Any]) -> None:
         # amount of time the code is alive for (in MS)
         _ = template_vars.code_life_time
@@ -387,35 +350,35 @@ def custom_sms_deliver(original_implementation: SMSDeliveryOverrideInput) -> SMS
         ____ = template_vars.user_input_code  # OTP
 
         # TODO: create and send SMS...
-    # highlight-end
     original_implementation.send_sms = send_sms
     return original_implementation
 
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
         passwordless.init(
-            contact_config="",  # type: ignore # REMOVE_FROM_OUTPUT
-            flow_type="USER_INPUT_CODE",  # REMOVE_FROM_OUTPUT
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(override=custom_sms_deliver)
         )
     ]
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 If you call the original implementation function for `sendSms`, it uses the service that you have configured. If you have not configured any service, it uses the default service.
 
-:::info Important
+:::info[Important]
 When using this callback, you must manage sending the SMS yourself.
 :::
 
-:::important Error Management
-To handle failures and other types of issues in the `sendSms` function throw an error. The SDK catches any exception through an upper level error handler. This error is then propagated if this is through an API call or otherwise logged.
+:::note[Error Management]
+Throw or return an error from `sendSms` when delivery fails. API-triggered delivery can propagate it through the SDK's
+error handler; non-API calls may log it. Do not include phone numbers, OTPs, magic links, provider credentials, or complete
+provider responses in exceptions or logs.
 :::
 
 ## SMS Customization
@@ -427,80 +390,76 @@ You can see the default SMS content:
 
 To change the content of the default SMS templates, you can override the `getContent` function in the `smsDelivery` object.
 It allows you to return an object that has the following properties:
-- `body`: This is the email's body. This can be HTML or text as well.
+- `body`: The SMS message body.
 - `toPhoneNumber`: The phone number where the SMS is sent to.
 
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
-```tsx
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx check=false reason="Requires surrounding application context"
 import supertokens from "supertokens-node";
 import Passwordless from "supertokens-node/recipe/passwordless";
 import Session from "supertokens-node/recipe/session";
 import { TwilioService } from "supertokens-node/recipe/passwordless/smsdelivery";
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Passwordless.init({
-            flowType: "USER_INPUT_CODE",
-            contactMethod: "PHONE",
-            smsDelivery: {
-                service: new TwilioService({
-                    // @ts-ignore
-                    twilioSettings: { /*...*/ },
-                    // highlight-start
-                    override: (originalImplementation) => {
-                        return {
-                            ...originalImplementation,
-                            getContent: async function ({
-                                isFirstFactor,
-                                codeLifetime, // amount of time the code is alive for (in MS)
-                                phoneNumber,
-                                urlWithLinkCode, // magic link
-                                userInputCode, // OTP
-                            }) {
-                                if (isFirstFactor) {
-                                    // send some custom SMS content
-                                    return {
-                                        toPhoneNumber: phoneNumber,
-                                        body: "SMS BODY"
-                                    }
-                                } else {
-                                    // for second factor, urlWithLinkCode will always be
-                                    // undefined since we only support OTP based for second factor
-                                    return {
-                                        toPhoneNumber: phoneNumber,
-                                        body: "SMS BODY"
-                                    }
-                                }
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Passwordless.init({
+      flowType: "USER_INPUT_CODE",
+      contactMethod: "PHONE",
+      smsDelivery: {
+        service: new TwilioService({
+          twilioSettings: {
+            /*...*/
+          },
+          override: (originalImplementation) => {
+            return {
+              ...originalImplementation,
+              getContent: async function ({
+                isFirstFactor,
+                codeLifetime, // amount of time the code is alive for (in MS)
+                phoneNumber,
+                urlWithLinkCode, // magic link
+                userInputCode, // OTP
+              }) {
+                if (isFirstFactor) {
+                  // send some custom SMS content
+                  return {
+                    toPhoneNumber: phoneNumber,
+                    body: "SMS BODY",
+                  };
+                } else {
+                  // for second factor, urlWithLinkCode will always be
+                  // undefined since we only support OTP based for second factor
+                  return {
+                    toPhoneNumber: phoneNumber,
+                    body: "SMS BODY",
+                  };
+                }
 
-                                // You can even call the original implementation and
-                                // modify its content:
+                // You can even call the original implementation and
+                // modify its content:
 
-                                /*let originalContent = await originalImplementation.getContent(input)
+                /*let originalContent = await originalImplementation.getContent(input)
                                 originalContent.body = "My custom body";
                                 return originalContent;*/
-
-                            }
-                        }
-                    }
-                    // highlight-end
-                })
-            }
+              },
+            };
+          },
         }),
-        Session.init()
-    ]
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"fmt"
@@ -512,7 +471,6 @@ import (
 )
 
 func main() {
-	// highlight-start
 	smsService, err := passwordless.MakeTwilioService(smsdelivery.TwilioServiceConfig{
 		Settings: smsdelivery.TwilioSettings{ /* ... */ },
 		Override: func(originalImplementation smsdelivery.TwilioInterface) smsdelivery.TwilioInterface {
@@ -533,15 +491,15 @@ func main() {
 				fmt.Println(urlWithLinkCode)
 				fmt.Println(userInputCode)
 
-				// send some custom email content
+				// send custom SMS content
 				return smsdelivery.SMSContent{
 					Body:          "SMS BODY",
 					ToPhoneNumber: phoneNumber,
 				}, nil
 
-				// Or you can call the original implemenation and change its content:
+				// Or call the original implementation and change its content:
 				/*
-				   originalResponse, err := originalGetContent(input, userContex)
+				   originalResponse, err := originalGetContent(input, userContext)
 				   if err != nil {
 				       return smsdelivery.SMSContent{}, nil
 				   }
@@ -556,27 +514,26 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// highlight-end
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
-				// highlight-start
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Service: smsService,
 				},
-				// highlight-end
 			}),
 		},
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from supertokens_python.recipe.passwordless.types import TwilioOverrideInput, SMSTemplateVars
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig, SMSContent, TwilioSettings
 from typing import Dict, Any
@@ -586,7 +543,6 @@ def custom_sms_content_override(original_implementation: TwilioOverrideInput) ->
 
     # original_get_content = original_implementation.get_content
 
-    # highlight-start
     async def get_content(template_vars: SMSTemplateVars, user_context: Dict[str, Any]) -> SMSContent:
         # amount of time the code is alive for (in MS)
         _ = template_vars.code_life_time
@@ -594,15 +550,14 @@ def custom_sms_content_override(original_implementation: TwilioOverrideInput) ->
         __ = template_vars.url_with_link_code  # magic link
         ___ = template_vars.user_input_code  # OTP
 
-        # send some custom email content
-        return SMSContent(body="EMAIL BODY", to_phone=phone_number)
+        # send custom SMS content
+        return SMSContent(body="SMS BODY", to_phone=phone_number)
 
         # you can even call the original implementation and modify that
 
         # original_content = await original_get_content(template_vars, user_context)
         # original_content.body = "My custom body"
         # return original_content
-    # highlight-end
 
     original_implementation.get_content = get_content
     return original_implementation
@@ -611,80 +566,73 @@ def custom_sms_content_override(original_implementation: TwilioOverrideInput) ->
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
         passwordless.init(
-            contact_config="",  # type: ignore # REMOVE_FROM_OUTPUT
-            flow_type="USER_INPUT_CODE",  # REMOVE_FROM_OUTPUT
-            # highlight-start
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(
                 service=passwordless.TwilioService(
-                    # type: ignore
-                    twilio_settings=TwilioSettings(...),  # type: ignore
+
+                    twilio_settings=TwilioSettings(...),
                     override=custom_sms_content_override
                 )
             )
-            # highlight-end
         )
     ]
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 
 ## Overrides
 
 You can use the override functionality to trigger any kind of behavior before and after SMS sending.
 This can include things like:
-- Logging 
+- Logging
 - Spam protection actions
-- Modifying the email template variables before sending the emails
+- Modifying the SMS template variables before sending messages
 
 
-<BackendTabs additionalValues={[{label: "Curl", value: "curl"}, {label: "Dashboard", value: "dashboard"}]}>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 import Passwordless from "supertokens-node/recipe/passwordless";
 import Session from "supertokens-node/recipe/session";
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Passwordless.init({
-            flowType: "USER_INPUT_CODE",
-            contactMethod: "PHONE",
-            // highlight-start
-            smsDelivery: {
-                override: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        sendSms: async function (input) {
-                            // TODO: before sending SMS
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Passwordless.init({
+      flowType: "USER_INPUT_CODE",
+      contactMethod: "PHONE",
+      smsDelivery: {
+        override: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            sendSms: async function (input) {
+              // TODO: before sending SMS
 
-                            await originalImplementation.sendSms(input)
+              await originalImplementation.sendSms(input);
 
-                            // TODO: after sending SMS
-                        }
-                    }
-                }
+              // TODO: after sending SMS
             },
-            // highlight-end
-        }),
-        Session.init()
-    ]
+          };
+        },
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"github.com/supertokens/supertokens-golang/ingredients/smsdelivery"
@@ -697,7 +645,8 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			passwordless.Init(plessmodels.TypeInput{
-				// highlight-start
+				ContactMethodPhone: plessmodels.ContactMethodPhoneConfig{Enabled: true},
+				FlowType:           "USER_INPUT_CODE",
 				SmsDelivery: &smsdelivery.TypeInput{
 					Override: func(originalImplementation smsdelivery.SmsDeliveryInterface) smsdelivery.SmsDeliveryInterface {
 
@@ -718,19 +667,18 @@ func main() {
 						return originalImplementation
 					},
 				},
-				// highlight-end
 			}),
 		},
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe.passwordless.types import SMSDeliveryOverrideInput, SMSTemplateVars
 from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactPhoneOnlyConfig
 from typing import Dict, Any
 from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig
 
@@ -738,14 +686,12 @@ from supertokens_python.ingredients.smsdelivery.types import SMSDeliveryConfig
 def custom_sms_deliver(original_implementation: SMSDeliveryOverrideInput) -> SMSDeliveryOverrideInput:
     original_send_sms = original_implementation.send_sms
 
-    # highlight-start
     async def send_sms(template_vars: SMSTemplateVars, user_context: Dict[str, Any]) -> None:
         # TODO: before sending SMS
 
         await original_send_sms(template_vars, user_context)
 
         # TODO: after sending SMS
-    # highlight-end
 
     original_implementation.send_sms = send_sms
     return original_implementation
@@ -754,16 +700,15 @@ def custom_sms_deliver(original_implementation: SMSDeliveryOverrideInput) -> SMS
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
         passwordless.init(
-            contact_config="",  # type: ignore # REMOVE_FROM_OUTPUT
-            flow_type="USER_INPUT_CODE",  # REMOVE_FROM_OUTPUT
+            contact_config=ContactPhoneOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
             sms_delivery=SMSDeliveryConfig(override=custom_sms_deliver)
         )
     ]
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>

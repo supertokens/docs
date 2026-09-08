@@ -1,0 +1,68 @@
+---
+import specs from "blume:openapi";
+import Operation from "blume/components/openapi/Operation.astro";
+import "blume:theme";
+
+interface Props {
+  operationKey: string;
+  source: string;
+  title: string;
+}
+
+export function getStaticPaths() {
+  const embedSources = [
+    { route: "cdi", source: "references-cdi" },
+    { route: "fdi", source: "references-fdi" },
+  ] as const;
+
+  return embedSources.flatMap(({ route, source }) => {
+    const spec = specs[source];
+    if (!spec) throw new Error(`[api-reference-embed] OpenAPI source "${source}" was not found.`);
+
+    return Object.values(spec.operations).map((operation) => ({
+      params: { operation: operation.key, source: route },
+      props: { operationKey: operation.key, source, title: operation.summary },
+    }));
+  });
+}
+
+const { operationKey, source, title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <meta content="noindex, nofollow" name="robots" />
+    <title>{title} API reference</title>
+    <script is:inline>
+      const applyTheme = () => {
+        let theme;
+        try {
+          theme = window.parent.document.documentElement.dataset.theme;
+        } catch {}
+        theme ||=
+          localStorage.getItem("blume-theme") ||
+          (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.dataset.theme = theme;
+      };
+
+      applyTheme();
+      try {
+        if (window.parent !== window) {
+          const observer = new MutationObserver(applyTheme);
+          observer.observe(window.parent.document.documentElement, {
+            attributeFilter: ["data-theme"],
+          });
+          window.addEventListener("pagehide", () => observer.disconnect(), { once: true });
+        }
+      } catch {}
+    </script>
+  </head>
+  <body class="m-0 bg-background font-sans text-foreground antialiased">
+    <main class="min-h-dvh p-4 sm:p-6">
+      <Operation id={operationKey} source={source} />
+    </main>
+  </body>
+</html>

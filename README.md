@@ -12,6 +12,17 @@ This repository hosts the source files for the project's documentation. Our goal
 
 You can view the live documentation at [https://supertokens.com/docs](https://supertokens.com/docs).
 
+## Microfrontend migration
+
+The docs-side migration implementation and remaining cutover blockers are tracked in
+[`docs-microfrontend-migration-plan.md`](./docs-microfrontend-migration-plan.md). `blume.config.ts` owns the Vercel
+microfrontends Vite plugin configuration. The `blume@1.5.3` patch only exposes configured plugins to generated Astro and
+adds framework behavior needed for namespaced assets and endpoints; it does not own plugin selection.
+
+The local `microfrontends.jsonc` copy is contract-tested but the authoritative configuration remains in
+`backend-api/apps/saas-dashboard-ui`. Shared-preview acceptance requires `MFE_PREVIEW_URL`; external SDK rewrite
+credential forwarding is an explicit blocker before cutover, not a docs-code workaround.
+
 ## Contributing
 
 **SuperTokens** provides an extensive authentication and authorization solution for various platforms and languages.

@@ -1,33 +1,22 @@
 ---
-id: otp-for-opt-in-users
 title: OTP for specific users
-hide_title: true
-sidebar_position: 2
-description: >-
-  Implement MFA policy for specific users using OTP via email or SMS based on
-  defined criteria.
-page_type: guide
-recipe: mfa
-category: multi-factor-authentication
+description: Implement MFA policy for specific users using OTP via email or SMS based on defined criteria.
+sidebar:
+  order: 2
 ---
 
-
-# OTP for specific users
-
-:::important
+:::note
 Before reading the below, please first go through the setup for [OTP for all users](./otp-for-all-users) to understand the basics of how MFA with OTP works, and then come back here.
 :::
 
 This page shows how to implement an MFA policy that requires certain users to do the OTP challenge via email or SMS. You can decide which users based on any criteria. For example:
-- Only users that have an `admin` role require to do OTP; OR
+- Only users that have an `admin` role are required to complete OTP; OR
 - Only users that have enabled OTP on their account require to do OTP; OR
 - Only users that have a paid account require to do OTP.
 
-Whatever the criteria is, the steps to implementing this type of a flow is the same.
+Whatever the criteria, the steps for implementing this type of flow are the same.
 
-:::note
-Assume that the first factor is email password or social login, but the same set of steps applies to other first factor types as well.
-:::
+<PaidFeatureCallout />
 
 ## Single tenant setup
 
@@ -38,110 +27,119 @@ Assume that the first factor is email password or social login, but the same set
 
 To start with, configure the backend in the following way:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
-import supertokens, { User, RecipeUserId, } from "supertokens-node";
+import supertokens, { User, RecipeUserId } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdParty from "supertokens-node/recipe/thirdparty"
-import EmailPassword from "supertokens-node/recipe/emailpassword"
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
-import Passwordless from "supertokens-node/recipe/passwordless"
-import Session from "supertokens-node/recipe/session"
-import UserRoles from "supertokens-node/recipe/userroles"
-import AccountLinking from "supertokens-node/recipe/accountlinking"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
 import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Session.init(),
-        UserRoles.init(),
-        ThirdParty.init({
-            //...
-        }),
-        EmailPassword.init({
-            //...
-        }),
-        // highlight-start
-        Passwordless.init({
-            contactMethod: "EMAIL",
-            flowType: "USER_INPUT_CODE"
-        }),
-        AccountLinking.init({
-            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                if (session === undefined) {
-                    // we do not want to do first factor account linking by default. To enable that,
-                    // please see the automatic account linking docs in the recipe docs for your first factor.
-                    return {
-                        shouldAutomaticallyLink: false
-                    };
-                }
-                if (user === undefined || session.getUserId() === user.id) {
-                    // if it comes here, it means that a session exists, and we are trying to link the 
-                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
-                    // linking here.
-                    return {
-                        shouldAutomaticallyLink: true,
-                        shouldRequireVerification: false
-                    }
-                }
-                return {
-                    shouldAutomaticallyLink: false
-                };
-            }
-        }),
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            // highlight-start
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        getMFARequirementsForAuth: async function (input) {
-                            let roles = await UserRoles.getRolesForUser(input.tenantId, (await input.user).id)
-                            if (roles.roles.includes("admin")) {
-                                // we only want otp-email for admins
-                                return [MultiFactorAuth.FactorIds.OTP_EMAIL]
-                            } else {
-                                // no MFA for non admin users.
-                                return []
-                            }
-                        }
-                    }
-                }
-            }
-            // highlight-end
-        })
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init(),
+    UserRoles.init(),
+    ThirdParty.init({
+      //...
+    }),
+    EmailPassword.init({
+      //...
+    }),
+    Passwordless.init({
+      contactMethod: "EMAIL",
+      flowType: "USER_INPUT_CODE",
+    }),
+    AccountLinking.init({
+      shouldDoAutomaticAccountLinking: async (
+        newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId },
+        user: User | undefined,
+        session: SessionContainerInterface | undefined,
+        tenantId: string,
+        userContext: UserContext,
+      ) => {
+        if (session === undefined) {
+          // we do not want to do first factor account linking by default. To enable that,
+          // please see the automatic account linking docs in the recipe docs for your first factor.
+          return {
+            shouldAutomaticallyLink: false,
+          };
+        }
+        if (user === undefined || session.getUserId() === user.id) {
+          // if it comes here, it means that a session exists, and we are trying to link the
+          // newAccountInfo to the session user, which means it's an MFA flow, so we enable
+          // linking here.
+          return {
+            shouldAutomaticallyLink: true,
+            shouldRequireVerification: true,
+          };
+        }
+        return {
+          shouldAutomaticallyLink: false,
+        };
+      },
+    }),
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              let roles = await UserRoles.getRolesForUser(input.tenantId, (await input.user).id);
+              if (roles.roles.includes("admin")) {
+                // we only want otp-email for admins
+                return [MultiFactorAuth.FactorIds.OTP_EMAIL];
+              } else {
+                // no MFA for non-admin users.
+                return [];
+              }
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+    userroles,
+)
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
     OverrideConfig,
@@ -176,7 +174,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the
         # new_account_info to the session user, which means it's an MFA flow, so we enable
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
 
     return ShouldNotAutomaticallyLink()
 
@@ -217,139 +215,152 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
-        multifactorauth.init(
-            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
-            override=OverrideConfig(functions=override_functions),
+        session.init(),
+        userroles.init(),
+        emailpassword.init(),
+        thirdparty.init(),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
         ),
         accountlinking.init(
             should_do_automatic_account_linking=should_do_automatic_account_linking
         ),
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
+            override=OverrideConfig(functions=override_functions),
+        ),
     ],
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 Override the `getMFARequirementsForAuth` function to indicate that `otp-email` applies only to users with the `admin` role. You can also have any other criteria here.
-
-
-
 
 
 #### Example 2: Ask for OTP only for users that have enabled OTP on their account
 
 To start with, configure the backend in the following way:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
-import supertokens, { User, RecipeUserId, } from "supertokens-node";
+import supertokens, { User, RecipeUserId } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdParty from "supertokens-node/recipe/thirdparty"
-import EmailPassword from "supertokens-node/recipe/emailpassword"
-import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth"
-import Passwordless from "supertokens-node/recipe/passwordless"
-import Session from "supertokens-node/recipe/session"
-import AccountLinking from "supertokens-node/recipe/accountlinking"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import Session from "supertokens-node/recipe/session";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
 import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Session.init(),
-        ThirdParty.init({
-            //...
-        }),
-        EmailPassword.init({
-            //...
-        }),
-        // highlight-start
-        Passwordless.init({
-            contactMethod: "EMAIL",
-            flowType: "USER_INPUT_CODE",
-            override: {
-                apis: (oI) => {
-                    return {
-                        ...oI,
-                        consumeCodePOST: async function (input) {
-                            let response = await oI.consumeCodePOST!(input);
-                            if (response.status === "OK" && input.session !== undefined) {
-                                // We do this only if a session exists, which means that it's not being called for first factor login.
-                                
-                                // OTP challenge completed successfully. We save that this user has enabled otp-email in the user metadata.
-                                // The multifactorauth recipe will pick this value up next time the user is trying to login, and
-                                // ask them to enter the OTP code.
-                                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(input.session.getUserId(), MultiFactorAuth.FactorIds.OTP_EMAIL);
-                            }
-                            return response;
-                        }
-                    }
-                }
-            }
-        }),
-        AccountLinking.init({
-            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                if (session === undefined) {
-                    // we do not want to do first factor account linking by default. To enable that,
-                    // please see the automatic account linking docs in the recipe docs for your first factor.
-                    return {
-                        shouldAutomaticallyLink: false
-                    };
-                }
-                if (user === undefined || session.getUserId() === user.id) {
-                    // if it comes here, it means that a session exists, and we are trying to link the 
-                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
-                    // linking here.
-                    return {
-                        shouldAutomaticallyLink: true,
-                        shouldRequireVerification: false
-                    }
-                }
-                return {
-                    shouldAutomaticallyLink: false
-                };
-            }
-        }),
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ]
-        })
-        // highlight-end
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init(),
+    ThirdParty.init({
+      //...
+    }),
+    EmailPassword.init({
+      //...
+    }),
+    Passwordless.init({
+      contactMethod: "EMAIL",
+      flowType: "USER_INPUT_CODE",
+      override: {
+        apis: (oI) => {
+          return {
+            ...oI,
+            consumeCodePOST: async function (input) {
+              let response = await oI.consumeCodePOST!(input);
+              if (response.status === "OK" && input.session !== undefined) {
+                // We do this only if a session exists, which means that it's not being called for first factor login.
+
+                // OTP challenge completed successfully. We save that this user has enabled otp-email in the user metadata.
+                // The multifactorauth recipe will pick this value up next time the user is trying to login, and
+                // ask them to enter the OTP code.
+                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(
+                  input.session.getUserId(),
+                  MultiFactorAuth.FactorIds.OTP_EMAIL,
+                );
+              }
+              return response;
+            },
+          };
+        },
+      },
+    }),
+    AccountLinking.init({
+      shouldDoAutomaticAccountLinking: async (
+        newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId },
+        user: User | undefined,
+        session: SessionContainerInterface | undefined,
+        tenantId: string,
+        userContext: UserContext,
+      ) => {
+        if (session === undefined) {
+          // we do not want to do first factor account linking by default. To enable that,
+          // please see the automatic account linking docs in the recipe docs for your first factor.
+          return {
+            shouldAutomaticallyLink: false,
+          };
+        }
+        if (user === undefined || session.getUserId() === user.id) {
+          // if it comes here, it means that a session exists, and we are trying to link the
+          // newAccountInfo to the session user, which means it's an MFA flow, so we enable
+          // linking here.
+          return {
+            shouldAutomaticallyLink: true,
+            shouldRequireVerification: true,
+          };
+        }
+        return {
+          shouldAutomaticallyLink: false,
+        };
+      },
+    }),
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+)
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
 )
-from supertokens_python.recipe.multifactorauth.interfaces import RecipeInterface
 from supertokens_python.recipe.session.interfaces import SessionContainer
 from supertokens_python.recipe.accountlinking.types import (
     AccountInfoWithRecipeIdAndUserId,
@@ -358,9 +369,8 @@ from supertokens_python.recipe.accountlinking.types import (
 )
 from supertokens_python.types import User
 from typing import Dict, Any, Optional, Union
-from supertokens_python.recipe import passwordless
 from supertokens_python.recipe.passwordless.interfaces import (
-    RecipeInterface,
+    RecipeInterface as PasswordlessRecipeInterface,
     ConsumeCodeOkResult,
 )
 from supertokens_python.recipe.multifactorauth.asyncio import (
@@ -385,12 +395,12 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the
         # new_account_info to the session user, which means it's an MFA flow, so we enable
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
 
     return ShouldNotAutomaticallyLink()
 
 
-def override_functions(original_implementation: RecipeInterface):
+def override_functions(original_implementation: PasswordlessRecipeInterface):
     original_consume_code = original_implementation.consume_code
 
     async def consume_code(
@@ -434,46 +444,47 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
         passwordless.init(
             contact_config=passwordless.ContactEmailOnlyConfig(),
             flow_type="USER_INPUT_CODE",
             override=passwordless.InputOverrideConfig(functions=override_functions),
         ),
-        multifactorauth.init(
-            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
-        ),
         accountlinking.init(
             should_do_automatic_account_linking=should_do_automatic_account_linking
+        ),
+        multifactorauth.init(
+            first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
         ),
     ],
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 - Initialize the multi-factor auth recipe here without any override to `getMFARequirementsForAuth`. The default implementation of this function already checks what factors a user has enabled and returns those. All that is needed is to mark `otp-email` as enabled for a user as soon as they have completed the OTP challenge successfully. This happens in the `consumeCodePOST` API override as shown above. Once the code is consumed successfully, mark the `otp-email` factor as enabled for the user, and the next time they login, they will be asked to complete the OTP challenge.
 - Notice that before calling `addToRequiredSecondaryFactorsForUser`, check if there is an input session or not. Only call `addToRequiredSecondaryFactorsForUser` function if there is a session which indicates that the user has finished some first factor already.
 
 
-
 In both of the examples above, notice that the Passwordless recipe initializes in the `recipeList`. In this example, only email-based OTP is enabled, set the `contactMethod` to `EMAIL` and `flowType` to `USER_INPUT_CODE` (that is, OTP). If instead, you want to use phone SMS-based OTP, set the contact method to `PHONE`. If you want to give users both options, or for some users use email, and for others use phone, set `contactMethod` to `EMAIL_OR_PHONE`.
 
-We have also enabled the account linking feature since it's required for MFA to work. The above enables account linking for second factor only, but if you also want to enable it for first factor, see [this section](/docs/post-authentication/account-linking/automatic-account-linking).
+We have also enabled the account linking feature since it's required for MFA to work. The above enables account linking for second factor only, but if you also want to enable it for first factor, see [this section](/post-authentication/account-linking/automatic-account-linking).
 
-Notice that `shouldRequireVerification: false` configures account linking. It means that the second factor can link to the first factor even though the first factor is not verified. If you want to do email verification of the first factor before setting up the second factor (for example if the first factor is email password, and the second is phone OTP), then set this boolean to `true`, and also init the email verification recipe on the frontend and backend in `REQUIRED` mode.
+`shouldRequireVerification: true` prevents an unverified login method from being linked. Passwordless OTP completion verifies the email address or phone number before the SDK attempts second-factor linking, so this does not block the OTP flow. Keep the callback session-bound as shown; do not return automatic linking for first-factor requests without a session.
 
 Once the user finishes the first factor (for example, with `emailpassword`), their session access token payload looks like this (for those that require OTP):
 ```json
 {
-    "st-mfa": {
-        "c": {
-            "emailpassword": 1702877939,
-        },
-        "v": false
-    }
+  "st-mfa": {
+    "c": {
+      "emailpassword": 1702877939
+    },
+    "v": false
+  }
 }
 ```
 
@@ -481,20 +492,19 @@ The `v` being `false` indicates that there are still factors that are pending. A
 
 ```json
 {
-    "st-mfa": {
-        "c": {
-            "emailpassword": 1702877939,
-            "otp-email": 1702877999
-        },
-        "v": true
-    }
+  "st-mfa": {
+    "c": {
+      "emailpassword": 1702877939,
+      "otp-email": 1702877999
+    },
+    "v": true
+  }
 }
 ```
 
-Indicating that the user has finished all required factors, and should access the app.
+This indicates that the user has finished all required factors and should be allowed to access the app.
 
-:::caution
-If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again.
+:::warning[If you are already using `Passwordless` or `ThirdPartyPasswordless` in your app as a first factor, you do not need to explicitly initialize the Passwordless recipe again.]
 :::
 
 ### Frontend setup
@@ -509,30 +519,30 @@ The second part, which is only applicable in case you want to allow users to ena
 - When the user navigates to their settings page, you can show them if OTP challenge is active or not.
 - If enabled, you can allow them to disable it, or vice versa.
 
-To know if the user has enabled OTP, you can make an API your backend which calls the following function:
+To know if the user has enabled OTP, you can create an API on your backend that calls the following function:
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 async function isOTPEmailEnabledForUser(userId: string) {
-    let factors = await MultiFactorAuth.getRequiredSecondaryFactorsForUser(userId)
-    return factors.includes(MultiFactorAuth.FactorIds.OTP_EMAIL)
+  let factors = await MultiFactorAuth.getRequiredSecondaryFactorsForUser(userId);
+  return factors.includes(MultiFactorAuth.FactorIds.OTP_EMAIL);
 }
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
+</Tab>
+<Tab title="Python" value="python">
 ```python
 from supertokens_python.recipe.multifactorauth.asyncio import get_required_secondary_factors_for_user
 from supertokens_python.recipe.multifactorauth.types import FactorIds
@@ -541,37 +551,36 @@ async def is_otp_email_factor_enabled_for_user(user_id: str) -> bool:
     factors = await get_required_secondary_factors_for_user(user_id, {})
     return FactorIds.OTP_EMAIL in factors
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
+If the user wants to enable or disable `otp-email`, you can create an API on your backend that calls the following function:
 
-If the user wants to enable or disable otp-email for them, you can make an API on your backend which calls the following function:
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
 import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
 
 async function enableMFAForUser(userId: string) {
-    await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(userId, MultiFactorAuth.FactorIds.OTP_EMAIL)
+  await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(userId, MultiFactorAuth.FactorIds.OTP_EMAIL);
 }
 
 async function disableMFAForUser(userId: string) {
-    await MultiFactorAuth.removeFromRequiredSecondaryFactorsForUser(userId, MultiFactorAuth.FactorIds.OTP_EMAIL)
+  await MultiFactorAuth.removeFromRequiredSecondaryFactorsForUser(userId, MultiFactorAuth.FactorIds.OTP_EMAIL);
 }
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
+</Tab>
+<Tab title="Python" value="python">
 ```python
 from supertokens_python.recipe.multifactorauth.asyncio import (
     add_to_required_secondary_factors_for_user,
@@ -586,12 +595,10 @@ async def enable_mfa_for_user(user_id: str) -> None:
 async def disable_mfa_for_user(user_id: str) -> None:
     await remove_from_required_secondary_factors_for_user(user_id, FactorIds.OTP_EMAIL)
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
-
-:::note
-If instead you want to work with `otp-phone`, you can replace `otp-email` with `otp-phone` in the above snippets. Also make sure that the `contactMethod` configures to `PHONE` in the Passwordless recipe on the frontend (for pre-built UI) and backend.
+:::note[If instead you want to work with `otp-phone`, you can replace `otp-email` with `otp-phone` in the above snippets. Also make sure that the `contactMethod` configures to `PHONE` in the Passwordless recipe on the frontend (for pre-built UI) and backend.]
 :::
 
 
@@ -604,110 +611,122 @@ However, if you want OTP to be active for a specific user, for a specific tenant
 
 #### Example 1: Only enable OTP for users that have an `admin` role
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
-import supertokens, { User, RecipeUserId, } from "supertokens-node";
+import supertokens, { User, RecipeUserId } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdParty from "supertokens-node/recipe/thirdparty"
-import EmailPassword from "supertokens-node/recipe/emailpassword"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
 
-import MultiFactorAuth from "supertokens-node/recipe/multifactorauth"
-import Passwordless from "supertokens-node/recipe/passwordless"
-import Session from "supertokens-node/recipe/session"
-import UserRoles from "supertokens-node/recipe/userroles"
-import AccountLinking from "supertokens-node/recipe/accountlinking"
+import MultiFactorAuth from "supertokens-node/recipe/multifactorauth";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import Session from "supertokens-node/recipe/session";
+import UserRoles from "supertokens-node/recipe/userroles";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
 import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Session.init(),
-        UserRoles.init(),
-        ThirdParty.init({
-            //...
-        }),
-        EmailPassword.init({
-            //...
-        }),
-        // highlight-next-line
-        Passwordless.init({
-            contactMethod: "EMAIL",
-            flowType: "USER_INPUT_CODE"
-        }),
-        AccountLinking.init({
-            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                if (session === undefined) {
-                    // we do not want to do first factor account linking by default. To enable that,
-                    // please see the automatic account linking docs in the recipe docs for your first factor.
-                    return {
-                        shouldAutomaticallyLink: false
-                    };
-                }
-                if (user === undefined || session.getUserId() === user.id) {
-                    // if it comes here, it means that a session exists, and we are trying to link the 
-                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
-                    // linking here.
-                    return {
-                        shouldAutomaticallyLink: true,
-                        shouldRequireVerification: false
-                    }
-                }
-                return {
-                    shouldAutomaticallyLink: false
-                };
-            }
-        }),
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        getMFARequirementsForAuth: async function (input) {
-                            let roles = await UserRoles.getRolesForUser(input.tenantId, (await input.user).id)
-                            // highlight-next-line
-                            if (roles.roles.includes("admin") && (await input.requiredSecondaryFactorsForTenant).includes(MultiFactorAuth.FactorIds.OTP_EMAIL)) {
-                                // we only want otp-email for admins
-                                return [MultiFactorAuth.FactorIds.OTP_EMAIL]
-                            } else {
-                                // no MFA for non admin users.
-                                return []
-                            }
-                        }
-                    }
-                }
-            }
-        })
-    ]
-})
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init(),
+    UserRoles.init(),
+    ThirdParty.init({
+      //...
+    }),
+    EmailPassword.init({
+      //...
+    }),
+    Passwordless.init({
+      contactMethod: "EMAIL",
+      flowType: "USER_INPUT_CODE",
+    }),
+    AccountLinking.init({
+      shouldDoAutomaticAccountLinking: async (
+        newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId },
+        user: User | undefined,
+        session: SessionContainerInterface | undefined,
+        tenantId: string,
+        userContext: UserContext,
+      ) => {
+        if (session === undefined) {
+          // we do not want to do first factor account linking by default. To enable that,
+          // please see the automatic account linking docs in the recipe docs for your first factor.
+          return {
+            shouldAutomaticallyLink: false,
+          };
+        }
+        if (user === undefined || session.getUserId() === user.id) {
+          // if it comes here, it means that a session exists, and we are trying to link the
+          // newAccountInfo to the session user, which means it's an MFA flow, so we enable
+          // linking here.
+          return {
+            shouldAutomaticallyLink: true,
+            shouldRequireVerification: true,
+          };
+        }
+        return {
+          shouldAutomaticallyLink: false,
+        };
+      },
+    }),
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              let roles = await UserRoles.getRolesForUser(input.tenantId, (await input.user).id);
+              if (
+                roles.roles.includes("admin") &&
+                (await input.requiredSecondaryFactorsForTenant).includes(MultiFactorAuth.FactorIds.OTP_EMAIL)
+              ) {
+                // we only want otp-email for admins
+                return [MultiFactorAuth.FactorIds.OTP_EMAIL];
+              } else {
+                // no MFA for non-admin users.
+                return [];
+              }
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking, passwordless
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+    userroles,
+)
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
     OverrideConfig,
@@ -743,7 +762,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the
         # new_account_info to the session user, which means it's an MFA flow, so we enable
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
 
     return ShouldNotAutomaticallyLink()
 
@@ -787,150 +806,163 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
+        session.init(),
+        userroles.init(),
+        emailpassword.init(),
+        thirdparty.init(),
         passwordless.init(
             contact_config=ContactEmailOnlyConfig(), flow_type="USER_INPUT_CODE"
+        ),
+        accountlinking.init(
+            should_do_automatic_account_linking=should_do_automatic_account_linking
         ),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
         ),
-        accountlinking.init(
-            should_do_automatic_account_linking=should_do_automatic_account_linking
-        ),
     ],
 )
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
-
-- The implementation of `shouldRequireOTPEmailForTenant` is entirely up to you.
-
+- This override requires `otp-email` only when the user has the `admin` role and the tenant's `requiredSecondaryFactors` includes `otp-email`.
 
 
 #### Example 2: Ask for OTP only for users that have enabled OTP on their account
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
+<DependentContent passive group="backend-language">
+<ContentOption title="Go" value="go">
+:::note[At the moment this feature is not supported through the Go SDK.]
+:::
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```ts
-import supertokens, { User, RecipeUserId, } from "supertokens-node";
+import supertokens, { User, RecipeUserId } from "supertokens-node";
 import { UserContext } from "supertokens-node/types";
-import ThirdParty from "supertokens-node/recipe/thirdparty"
-import EmailPassword from "supertokens-node/recipe/emailpassword"
-import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth"
-import Passwordless from "supertokens-node/recipe/passwordless"
-import Session from "supertokens-node/recipe/session"
-import AccountLinking from "supertokens-node/recipe/accountlinking"
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+import EmailPassword from "supertokens-node/recipe/emailpassword";
+import MultiFactorAuth, { MultiFactorAuthClaim } from "supertokens-node/recipe/multifactorauth";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import Session from "supertokens-node/recipe/session";
+import AccountLinking from "supertokens-node/recipe/accountlinking";
 import { AccountInfoWithRecipeId } from "supertokens-node/recipe/accountlinking/types";
 import { SessionContainerInterface } from "supertokens-node/recipe/session/types";
 
 supertokens.init({
-    supertokens: {
-        connectionURI: "..."
-    },
-    appInfo: {
-        appName: "...",
-        apiDomain: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        Session.init(),
-        ThirdParty.init({
-            //...
-        }),
-        EmailPassword.init({
-            //...
-        }),
-        Passwordless.init({
-            contactMethod: "EMAIL",
-            flowType: "USER_INPUT_CODE",
-            override: {
-                apis: (oI) => {
-                    return {
-                        ...oI,
-                        consumeCodePOST: async function (input) {
-                            let response = await oI.consumeCodePOST!(input);
-                            if (response.status === "OK" && input.session !== undefined) {
-                                // We do this only if a session exists, which means that it's not being called for first factor login.
-                                
-                                // OTP challenge completed successfully. We save that this user has enabled otp-email in the user metadata.
-                                // The multifactorauth recipe will pick this value up next time the user is trying to login, and
-                                // ask them to enter the OTP code.
-                                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(input.session.getUserId(), MultiFactorAuth.FactorIds.OTP_EMAIL);
-                            }
-                            return response;
-                        }
-                    }
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    appName: "...",
+    apiDomain: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    Session.init(),
+    ThirdParty.init({
+      //...
+    }),
+    EmailPassword.init({
+      //...
+    }),
+    Passwordless.init({
+      contactMethod: "EMAIL",
+      flowType: "USER_INPUT_CODE",
+      override: {
+        apis: (oI) => {
+          return {
+            ...oI,
+            consumeCodePOST: async function (input) {
+              let response = await oI.consumeCodePOST!(input);
+              if (response.status === "OK" && input.session !== undefined) {
+                // We do this only if a session exists, which means that it's not being called for first factor login.
+
+                // OTP challenge completed successfully. We save that this user has enabled otp-email in the user metadata.
+                // The multifactorauth recipe will pick this value up next time the user is trying to login, and
+                // ask them to enter the OTP code.
+                await MultiFactorAuth.addToRequiredSecondaryFactorsForUser(
+                  input.session.getUserId(),
+                  MultiFactorAuth.FactorIds.OTP_EMAIL,
+                );
+              }
+              return response;
+            },
+          };
+        },
+      },
+    }),
+    AccountLinking.init({
+      shouldDoAutomaticAccountLinking: async (
+        newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId },
+        user: User | undefined,
+        session: SessionContainerInterface | undefined,
+        tenantId: string,
+        userContext: UserContext,
+      ) => {
+        if (session === undefined) {
+          // we do not want to do first factor account linking by default. To enable that,
+          // please see the automatic account linking docs in the recipe docs for your first factor.
+          return {
+            shouldAutomaticallyLink: false,
+          };
+        }
+        if (user === undefined || session.getUserId() === user.id) {
+          // if it comes here, it means that a session exists, and we are trying to link the
+          // newAccountInfo to the session user, which means it's an MFA flow, so we enable
+          // linking here.
+          return {
+            shouldAutomaticallyLink: true,
+            shouldRequireVerification: true,
+          };
+        }
+        return {
+          shouldAutomaticallyLink: false,
+        };
+      },
+    }),
+    MultiFactorAuth.init({
+      firstFactors: [MultiFactorAuth.FactorIds.EMAILPASSWORD, MultiFactorAuth.FactorIds.THIRDPARTY],
+      override: {
+        functions: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            getMFARequirementsForAuth: async function (input) {
+              if ((await input.requiredSecondaryFactorsForUser).includes(MultiFactorAuth.FactorIds.OTP_EMAIL)) {
+                if ((await input.requiredSecondaryFactorsForTenant).includes(MultiFactorAuth.FactorIds.OTP_EMAIL)) {
+                  return [MultiFactorAuth.FactorIds.OTP_EMAIL];
                 }
-            }
-        }),
-        AccountLinking.init({
-            shouldDoAutomaticAccountLinking: async (newAccountInfo: AccountInfoWithRecipeId & { recipeUserId?: RecipeUserId }, user: User | undefined, session: SessionContainerInterface | undefined, tenantId: string, userContext: UserContext) => {
-                if (session === undefined) {
-                    // we do not want to do first factor account linking by default. To enable that,
-                    // please see the automatic account linking docs in the recipe docs for your first factor.
-                    return {
-                        shouldAutomaticallyLink: false
-                    };
-                }
-                if (user === undefined || session.getUserId() === user.id) {
-                    // if it comes here, it means that a session exists, and we are trying to link the 
-                    // newAccountInfo to the session user, which means it's an MFA flow, so we enable 
-                    // linking here.
-                    return {
-                        shouldAutomaticallyLink: true,
-                        shouldRequireVerification: false
-                    }
-                }
-                return {
-                    shouldAutomaticallyLink: false
-                };
-            }
-        }),
-        MultiFactorAuth.init({
-            firstFactors: [
-                MultiFactorAuth.FactorIds.EMAILPASSWORD,
-                MultiFactorAuth.FactorIds.THIRDPARTY
-            ],
-            // highlight-start
-            override: {
-                functions: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        getMFARequirementsForAuth: async function (input) {
-                            if ((await input.requiredSecondaryFactorsForUser).includes(MultiFactorAuth.FactorIds.OTP_EMAIL)) {
-                                if ((await input.requiredSecondaryFactorsForTenant).includes(MultiFactorAuth.FactorIds.OTP_EMAIL)) {
-                                    return [MultiFactorAuth.FactorIds.OTP_EMAIL]
-                                }
-                            }
-                            // no otp-email required for input.user, with the input.tenant.
-                            return []
-                        }
-                    }
-                }
-            }
-            // highlight-end
-        })
-    ]
-})
+              }
+              // no otp-email required for input.user, with the input.tenant.
+              return [];
+            },
+          };
+        },
+      },
+    }),
+  ],
+});
 ```
+</Tab>
+<Tab title="Go" value="go">
 
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
-:::note
-At the moment this feature is not supported through the Go SDK.
-:::
-
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="framework placeholder must be replaced for the target Python server"
 from supertokens_python import init, InputAppInfo, SupertokensConfig
-from supertokens_python.recipe import multifactorauth, accountlinking, passwordless
+from supertokens_python.recipe import (
+    accountlinking,
+    emailpassword,
+    multifactorauth,
+    passwordless,
+    session,
+    thirdparty,
+)
 from supertokens_python.recipe.multifactorauth.types import (
     FactorIds,
     OverrideConfig,
@@ -973,7 +1005,7 @@ async def should_do_automatic_account_linking(
         # If it comes here, it means that a session exists, and we are trying to link the
         # new_account_info to the session user, which means it's an MFA flow, so we enable
         # linking here.
-        return ShouldAutomaticallyLink(should_require_verification=False)
+        return ShouldAutomaticallyLink(should_require_verification=True)
 
     return ShouldNotAutomaticallyLink()
 
@@ -1048,29 +1080,30 @@ init(
     supertokens_config=SupertokensConfig(
         connection_uri="...",
     ),
-    framework="...",  # type: ignore
+    framework="...",  
     recipe_list=[
+        session.init(),
+        emailpassword.init(),
+        thirdparty.init(),
         passwordless.init(
             contact_config=ContactEmailOnlyConfig(),
             flow_type="USER_INPUT_CODE",
             override=passwordless.InputOverrideConfig(apis=passwordless_override),
         ),
+        accountlinking.init(
+            should_do_automatic_account_linking=should_do_automatic_account_linking
+        ),
         multifactorauth.init(
             first_factors=[FactorIds.EMAILPASSWORD, FactorIds.THIRDPARTY],
             override=OverrideConfig(functions=override_functions),
         ),
-        accountlinking.init(
-            should_do_automatic_account_linking=should_do_automatic_account_linking
-        ),
     ],
 )
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
-
-An override for `getMFARequirementsForAuth` is available, which checks if otp-email is active for the user, and also considers the `tenantId` to decide if this user should go through the otp-email flow while logging into this tenant. The implementation of `shouldRequireOTPEmailForTenant` is entirely up to you.
-
+The `getMFARequirementsForAuth` override requires `otp-email` only when it is enabled for the user and the tenant's `requiredSecondaryFactors` includes `otp-email`. This lets the same user require OTP in selected tenants only.
 
 
 ### Frontend setup
@@ -1084,7 +1117,6 @@ See the section on [protecting frontend and backend routes](../protect-routes).
 ## Email / SMS sending and design
 By default, the email template used for otp-email login is [as shown here](https://github.com/SuperTokens/email-sms-templates?tab=readme-ov-file#otp-login), and the default SMS template is [as shown here](https://github.com/SuperTokens/email-sms-templates?tab=readme-ov-file#otp-login-1). The method for sending them is via an email and SMS sending service that is available.
 
-If you would like to learn more about this, or change the content of the email, or the method by which they send, checkout the email / SMS delivery section in the recipe docs:
-- [Email delivery configuration](/docs/platform-configuration/email-delivery)
-- [SMS delivery configuration](/docs/platform-configuration/sms-delivery)
-
+If you would like to learn more about this, change the content of the email, or change the method by which messages are sent, check out the email / SMS delivery section in the recipe docs:
+- [Email delivery configuration](/platform-configuration/email-delivery)
+- [SMS delivery configuration](/platform-configuration/sms-delivery)

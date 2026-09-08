@@ -1,121 +1,79 @@
 ---
 title: Add SSL via NGINX
-hide_title: true
-sidebar_position: 5
-description: >-
-  Set up SSL for secure SuperTokens Core connections using NGINX as a reverse
-  proxy.
-page_type: guide
-category: platform-configuration
+description: Set up SSL for secure SuperTokens Core connections using NGINX as a reverse proxy.
+sidebar:
+  order: 5
 ---
-
-# Add SSL via nginx
 
 ## Overview
 
-This section guides you through setting up SSL via Nginx to query the SuperTokens Core with a secure connection.
+SuperTokens Core does not terminate TLS. This guide configures NGINX as a trusted TLS edge and redirects HTTP traffic to
+HTTPS.
 
 ## Before you start
 
-:::caution no-title
-This page is only relevant if you are self hosting SuperTokens. 
+:::warning
+This page is only relevant if you are self-hosting SuperTokens.
 :::
 
-This guide assumes you have already installed Nginx on your server.
+This guide assumes NGINX is installed and Core listens on `127.0.0.1:3567`.
+
+:::danger
+Bind Core's port 3567 to `127.0.0.1` or a private network and block it from public ingress. If clients can connect to Core
+directly, they can bypass TLS and controls enforced by NGINX. Core is a trusted backend component and must never be
+directly reachable by browsers or clients you do not trust.
+:::
 
 ## Steps
 
-The following example guide runs SuperTokens `localhost:3567`
+### 1. Obtain a certificate
 
-### 1. Reverse proxy the SuperTokens core with nginx
-
-The SuperTokens core does not support SSL, and Nginx is needed as a reverse proxy to set up a secure connection.
-
-Start by opening the default Nginx site configuration file in a code editor. This file resides at:
-  - Linux: `/etc/nginx/sites-available/default`.
-  - Mac: `/usr/local/etc/nginx/sites-available/default`.
-  - Windows: `C:\nginx\conf\nginx.conf`. 
-
-In the configuration, scroll down to the `server` directive.
-
-- By default it should look like this:
-
-  ```text title="/etc/nginx/sites-available/default"
-  server {
-    listen       80;
-    server_name  localhost;
-    ...
-  }
-  ```
-
-- Configure the `server` directive by adding the `location` directive with the following values:
-
-  ```text title="/etc/nginx/sites-available/default"
-  server {
-    listen       80;
-    server_name  localhost;
-    // highlight-start
-    location / {
-      proxy_pass http://localhost:3567;
-      proxy_http_version 1.1;
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection 'upgrade';
-      proxy_set_header Host $host;
-      proxy_cache_bypass $http_upgrade;
-    }
-    // highlight-end
-  }
-  ```
-
-The `location` directive tells Nginx what to do with the incoming request, `proxy_pass` points the redirect to `localhost:3567`.
-
-- Test and apply the changes to Nginx by running the following command:
-
-  ```bash
-  nginx -t && service nginx restart
-  ```
-
-We can use the `/hello` API of the SuperTokens core to test the connection.
-
-Navigate to `http://localhost/hello` and check if it gives a valid response from the core.
-
-### 2. Set up SSL
-
-Obtain a digital certificate to enable a secure connection with a user's browser.
-
-Self-signed certificates will be used since development is local. However, certificate authorities like [Let's Encrypt](https://letsencrypt.org/) can also generate valid certificates.
-
-- Run the following command to generate a self signed certificate using OpenSSL:
-
-  ```bash
-  openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/nginx/ssl/server.key -out /etc/nginx/ssl/server.crt
-  ```
-
-- Set the values `ssl_certificate` and `ssl_certificate_key` in the Nginx configuration to specify the locations of the newly generated certificates.
-
-  ```text title="/etc/nginx/sites-available/default"
-  server {
-    listen       80;
-    listen       443 ssl;
-    server_name  localhost;
-    // highlight-start
-    ssl_certificate  /etc/nginx/ssl/server.crt;
-    ssl_certificate_key /etc/nginx/ssl/server.key;
-    // highlight-end
-    location / {
-      proxy_pass http://localhost:3000;
-      proxy_http_version 1.1;
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection 'upgrade';
-      proxy_set_header Host $host;
-      proxy_cache_bypass $http_upgrade;
-    }
-  }
-  ```
-
-- Run the test and restart commands to test and apply your changes:
+For a local test only, create a self-signed certificate:
 
 ```bash
-nginx -t && service nginx restart
+sudo install -d -m 700 /etc/nginx/ssl
+sudo openssl req -x509 -nodes -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/server.key \
+  -out /etc/nginx/ssl/server.crt \
+  -subj "/CN=localhost"
 ```
 
+Use a CA-issued certificate valid for the production hostname in production.
+
+### 2. Configure NGINX
+
+Add separate HTTP and HTTPS server blocks. Replace `localhost` and certificate paths with production values when needed.
+
+```text title="/etc/nginx/sites-available/default"
+server {
+  listen 80;
+  server_name localhost;
+  return 301 https://$server_name$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name localhost;
+
+  ssl_certificate /etc/nginx/ssl/server.crt;
+  ssl_certificate_key /etc/nginx/ssl/server.key;
+
+  location / {
+    proxy_pass http://127.0.0.1:3567;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+  }
+}
+```
+
+Test and apply the configuration:
+
+```bash
+sudo nginx -t
+sudo service nginx reload
+```
+
+Verify that `http://localhost/hello` redirects to HTTPS and `https://localhost/hello` reaches Core. `/hello` is
+unauthenticated and is only a basic process/storage signal; success does not prove API-key enforcement or that direct port
+3567 is private. Test externally that port 3567 is unreachable, and test a protected Core API with no, wrong, and current
+API keys.

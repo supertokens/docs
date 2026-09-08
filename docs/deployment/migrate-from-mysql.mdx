@@ -1,17 +1,30 @@
-# Migrate from MySQL to PostgreSQL
+---
+title: Migrate from MySQL to PostgreSQL
+---
 
-## Overview
-
-This tutorial shows you how to migrate your **SuperTokens** database from **MySQL** to **PostgreSQL**.
-The migration involves exporting data from MySQL, setting up a PostgreSQL database with the same schema version, and importing the data with proper format conversions.
+This is a legacy migration path. The released schemas verified for this page are the matching MySQL and PostgreSQL
+Core `10.1.4` images, which use storage interface `7.1`. Current Core releases use a newer storage interface. Do not
+assume that schemas from different Core versions are compatible, and never use an unpinned image tag for this work.
 
 ## Before you start
 
-The tutorial assumes the following:
+Treat this as a manual, high-risk database migration. Plan and validate the procedure with your SuperTokens support contact or a maintainer
+who understands the released Core storage schemas. Do not test it directly on production data.
 
-- You have access to both your `MySQL` and `PostgreSQL` databases
-- Both databases are running on the same version of **SuperTokens Core**
-- You have administrative privileges on both databases
+Do not begin the production migration until the following are true:
+
+- Record the exact source Core image tag, storage schema version, database name, schema, and custom table prefix.
+- Initialize the PostgreSQL schema with the exact same Core version and the same custom table prefix. Upgrade Core only
+  as a separate, subsequently tested operation.
+- Use a new target with no pre-existing SuperTokens application data. Never merge the source into a target that has
+  accepted writes.
+- Keep both databases and Core instances on private networks. Do not expose either database or Core publicly during the
+  migration.
+- Prove that a MySQL backup can be restored before the maintenance window. After writes stop, take the final source
+  backup. Also define how the PostgreSQL target will be reset if an attempt fails.
+- Schedule a write outage. Stop every Core and other process that can write to the source, and keep the target Core
+  stopped during import and validation.
+- Define an explicit rollback point and keep MySQL as the authoritative database until every acceptance check passes.
 
 ## Steps
 
@@ -42,7 +55,7 @@ mysqldump supertokens --fields-terminated-by ','  --fields-enclosed-by '"' --fie
 
 If you do not have permissions to write to the database filesystem you can use the following python script to export tables one by one:
 <Accordion>
-## Export script
+<AccordionItem title="Export script">
 ```python
 #!/usr/bin/env python3
 import subprocess
@@ -120,6 +133,7 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+</AccordionItem>
 </Accordion>
 :::
 
@@ -130,12 +144,12 @@ This creates CSV files for all tables in the `/var/lib/mysql-files/` directory.
 The `webauthn_credentials` table requires special handling because of the data type used to store the `public_key` field.
 
 ```sql
-SELECT id, app_id, rp_id, user_id, counter, HEX(public_key) AS public_key, transports, created_at, updated_at 
-FROM webauthn_credentials 
-INTO OUTFILE '/var/lib/mysql-files/webauthn_credentials_hex.txt' 
-FIELDS TERMINATED BY ',' 
-OPTIONALLY ENCLOSED BY '"' 
-ESCAPED BY '\\' 
+SELECT id, app_id, rp_id, user_id, counter, HEX(public_key) AS public_key, transports, created_at, updated_at
+FROM webauthn_credentials
+INTO OUTFILE '/var/lib/mysql-files/webauthn_credentials_hex.txt'
+FIELDS TERMINATED BY ','
+OPTIONALLY ENCLOSED BY '"'
+ESCAPED BY '\\'
 LINES TERMINATED BY '\n';
 ```
 
@@ -166,15 +180,15 @@ The *With Order* shows you how to import everything one by one without triggerin
 
 For most tables, you can import the data directly.
 
-<Tabs>
-<TabItem value="without-order" label="Without specifying column order">
+<CodeGroup group="import-column-order">
+<Tab value="without-order" title="Without specifying column order">
 ```sql
-COPY <table_name> FROM '/pg-data-host/<table_name>.csv' 
+COPY <table_name> FROM '/pg-data-host/<table_name>.csv'
 CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
 ```
-</TabItem>
+</Tab>
 
-<TabItem value="with-order" label="With specifying column order">
+<Tab value="with-order" title="With specifying column order">
 ```bash
 #!/bin/bash
 
@@ -262,9 +276,9 @@ echo ""
 echo "Import complete!"
 
 ```
-</TabItem>
+</Tab>
 
-</Tabs>
+</CodeGroup>
 
 
 #### 5.3 Handle the third-party provider clients table
@@ -272,9 +286,7 @@ echo "Import complete!"
 The `tenant_thirdparty_provider_clients` table requires special handling.
 You need to do this to differences between the `MySQL` `JSON` and `PostgreSQL` `text[]` formats.
 
-<Steps>
-
-## Create a staging table
+##### 5.3.1 Create a staging table
 
 ```sql
 CREATE TABLE tenant_thirdparty_provider_clients_raw (
@@ -291,14 +303,14 @@ CREATE TABLE tenant_thirdparty_provider_clients_raw (
 );
 ```
 
-## Import data into the staging table:
+##### 5.3.2 Import data into the staging table
 
 ```sql
-COPY tenant_thirdparty_provider_clients_raw FROM '/host/tenant_thirdparty_provider_clients.txt' 
+COPY tenant_thirdparty_provider_clients_raw FROM '/host/tenant_thirdparty_provider_clients.txt'
 CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
 ```
 
-## Convert and insert into the final table:
+##### 5.3.3 Convert and insert into the final table
 
 ```sql
 INSERT INTO tenant_thirdparty_provider_clients (
@@ -314,15 +326,11 @@ SELECT
 FROM tenant_thirdparty_provider_clients_raw;
 ```
 
-</Steps>
-
 #### 5.4 Handle the WebAuthn credentials table
 
 The `webauthn_credentials` table requires conversion from MySQL Binary Large Object, `BLOB`, to PostgreSQL Binary Data, `BYTEA` format.
 
-<Steps>
-
-## Create a staging table
+##### 5.4.1 Create a staging table
 
 ```sql
 CREATE TABLE IF NOT EXISTS webauthn_credentials_staging (
@@ -338,34 +346,32 @@ CREATE TABLE IF NOT EXISTS webauthn_credentials_staging (
 );
 ```
 
-## Import the hexadecimal data
+##### 5.4.2 Import the hexadecimal data
 
 ```sql
-COPY webauthn_credentials_staging FROM '/host/webauthn_credentials_hex.txt' 
+COPY webauthn_credentials_staging FROM '/host/webauthn_credentials_hex.txt'
 CSV DELIMITER ',' QUOTE '"' ESCAPE '\' NULL as '\N';
 ```
 
-## Convert and insert into the final table
+##### 5.4.3 Convert and insert into the final table
 
 ```sql
 INSERT INTO webauthn_credentials (
    id, app_id, rp_id, user_id, counter, public_key, transports, created_at, updated_at
 )
-SELECT 
-   id, app_id, rp_id, user_id, counter, 
-   decode(public_key, 'hex'), 
-   transports, created_at, updated_at 
+SELECT
+   id, app_id, rp_id, user_id, counter,
+   decode(public_key, 'hex'),
+   transports, created_at, updated_at
 FROM webauthn_credentials_staging;
 ```
-
-</Steps>
 
 
 #### 5.5 Delete the staging tables
 
 Delete the two temporary tables.
 
-```
+```sql
 DROP TABLE webauthn_credentials_staging;
 DROP TABLE tenant_thirdparty_provider_clients_raw;
 ```
@@ -464,6 +470,3 @@ fi
 ```
 
 If the numbers match, you have successfully migrated your SuperTokens data from `MySQL` to `PostgreSQL` :tada:
-
-
-

@@ -1,19 +1,27 @@
 ---
-title: Email delivery
-hide_title: true
-sidebar_position: 3
-description: Customize email delivery methods.
-page_type: guide
-category: platform-configuration
+title: Configure Email Delivery
+description: Send SuperTokens emails through the default service, your own SMTP server and domain, or a custom delivery implementation.
+sidebar:
+  order: 3
 ---
 
+<Visibility for="agents">
 
-# Email delivery 
+## Email delivery summary
+
+- Email delivery is owned by the `EmailPassword`, `EmailVerification`, `Passwordless`, and `WebAuthn` recipes. `AccountLinking` does not configure delivery.
+- Without configuration, each recipe uses its built-in delivery service. The endpoint and failure behavior differ by recipe and SDK; this service does not support template customization.
+- Configure your own SMTP server to send from your domain and optionally customize the subject and template.
+- For complete control, provide a custom delivery implementation or override `sendEmail`.
+
+</Visibility>
 
 ## Overview
 
 SuperTokens sends emails in different authentication scenarios.
-The method applies in the `EmailPassword`, `Passwordless`, and `AccountLinking` recipes.
+Email delivery is configured on the recipe that generates the message: `EmailPassword` for password resets,
+`EmailVerification`, `Passwordless` for email codes and links, and `WebAuthn` for account-recovery emails.
+The `AccountLinking` recipe does not own an email-delivery configuration.
 
 The following page shows you how to configure the email delivery method and adjust the content that gets sent to your users.
 
@@ -21,82 +29,95 @@ The following page shows you how to configure the email delivery method and adju
 
 ### Default service
 
-If you provide no configuration for email delivery, the backend SDK sends emails by talking to the servers on `https://api.supertokens.com`
-This applies to both self hosted and managed services.
+If you provide no email-delivery configuration, the recipe uses the backend SDK's built-in delivery service. This applies
+whether the Core is self-hosted or managed. Do not allow the external delivery endpoints from a single hostname: released
+recipes use both `api.supertokens.io` and `api.supertokens.com`.
 
-:::important
-- No info sent to the API that sends out emails on behalf of your app is logged or stored.
-- The system sends emails using `noreply@supertokens.io` email ID. If you want to use your own domain, please see one of the other methods in this section.
-- You cannot customize the email template when using this method. If you want to customize the emails, please see one of the other methods in this section.
-- Emails sent via the service are free and may land up in user's spam due to the high number of apps that use the service. If you want to avoid this, we recommend using one of the other methods mentioned in this section.
+:::note
+The built-in service does not support template customization. Configure SMTP or a custom delivery implementation when
+you need to control the sender, content, delivery guarantees, or data-processing terms.
+:::
+
+:::caution[Failure behavior differs]
+Do not treat the built-in service as a durable queue. In Node.js 24.0.3, Passwordless awaits delivery, while several other
+email flows suppress built-in-service failures outside serverless environments. If delivery is security-critical, provide
+your own service, await its result, monitor failures, and make retries idempotent.
 :::
 
 ---
 
 ### SMTP service
 
-Using this method, you can provide your own SMTP server's configuration and the system sends the emails using those.
+Using this method, you can provide your own SMTP server configuration and the system sends emails through it.
 Use this method if you want to:
 - Send emails using your own domain.
 - Optionally customize the default email template and subject.
 
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
 import { SMTPService } from "supertokens-node/recipe/emailpassword/emaildelivery";
-import EmailVerification from "supertokens-node/recipe/emailverification"
+import EmailVerification from "supertokens-node/recipe/emailverification";
 import { SMTPService as EmailVerificationSMTPService } from "supertokens-node/recipe/emailverification/emaildelivery";
+import Passwordless from "supertokens-node/recipe/passwordless";
+import { SMTPService as PasswordlessSMTPService } from "supertokens-node/recipe/passwordless/emaildelivery";
+import WebAuthn from "supertokens-node/recipe/webauthn";
+import { SMTPService as WebAuthnSMTPService } from "supertokens-node/recipe/webauthn/emaildelivery";
 
-// highlight-start
-let smtpSettings = {
-    host: "...",
-    authUsername: "...", // this is optional. In case not given, from.email will be used
-    password: "...",
-    port: 465,
-    from: {
-        name: "...",
-        email: "...",
-    },
-    secure: true
-}
-// highlight-end
+const smtpSettings = {
+  host: "...",
+  authUsername: "...", // this is optional. In case not given, from.email will be used
+  password: "...",
+  port: 465,
+  from: {
+    name: "...",
+    email: "...",
+  },
+  secure: true,
+};
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        EmailPassword.init({
-            // highlight-start
-            emailDelivery: {
-                service: new SMTPService({smtpSettings})
-            },
-            // highlight-end
-        }),
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    EmailPassword.init({
+      emailDelivery: {
+        service: new SMTPService({ smtpSettings }),
+      },
+    }),
 
-        // if email verification is enabled..
-        EmailVerification.init({
-            mode: "OPTIONAL",
-            // highlight-start
-            emailDelivery: {
-                service: new EmailVerificationSMTPService({smtpSettings})
-            }
-            // highlight-end
-        }),
-        Session.init()
-    ]
+    // if email verification is enabled..
+    EmailVerification.init({
+      mode: "OPTIONAL",
+      emailDelivery: {
+        service: new EmailVerificationSMTPService({ smtpSettings }),
+      },
+    }),
+    Passwordless.init({
+      contactMethod: "EMAIL",
+      flowType: "USER_INPUT_CODE",
+      emailDelivery: {
+        service: new PasswordlessSMTPService({ smtpSettings }),
+      },
+    }),
+    WebAuthn.init({
+      emailDelivery: {
+        service: new WebAuthnSMTPService({ smtpSettings }),
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
@@ -104,13 +125,13 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword/epmodels"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 
-	"crypto/tls"
 )
 
 func main() {
-	// highlight-start
 	smtpUsername := "..."
 	smtpSettings := emaildelivery.SMTPSettings{
 		Host: "...",
@@ -121,52 +142,51 @@ func main() {
 		Port:     465,
 		Username: &smtpUsername, // this is optional. In case not given, from.email will be used
 		Password: "...",
-		Secure:   false,
+		Secure:   true,
 
-		// this is optional. TLS config is used if Secure is set to true, or server supports STARTTLS
-		// if not provided, the SDK will use a default config
-		TLSConfig: &tls.Config{
-			// ...
-		},
 	}
-	// highlight-end
 
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			emailpassword.Init(&epmodels.TypeInput{
-				// highlight-start
 				EmailDelivery: &emaildelivery.TypeInput{
 					Service: emailpassword.MakeSMTPService(emaildelivery.SMTPServiceConfig{
 						Settings: smtpSettings,
 					}),
 				},
-				// highlight-end
 			}),
 
 			// if email verification is enabled
 			emailverification.Init(evmodels.TypeInput{
-				// highlight-start
 				EmailDelivery: &emaildelivery.TypeInput{
 					Service: emailverification.MakeSMTPService(emaildelivery.SMTPServiceConfig{
 						Settings: smtpSettings,
 					}),
 				},
-				// highlight-end
+			}),
+			passwordless.Init(plessmodels.TypeInput{
+				ContactMethodEmail: plessmodels.ContactMethodEmailConfig{Enabled: true},
+				FlowType:          "USER_INPUT_CODE",
+				EmailDelivery: &emaildelivery.TypeInput{
+					Service: passwordless.MakeSMTPService(emaildelivery.SMTPServiceConfig{
+						Settings: smtpSettings,
+					}),
+				},
 			}),
 		},
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
 from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig, SMTPSettingsFrom, SMTPSettings
 from supertokens_python.recipe import emailverification
+from supertokens_python.recipe import passwordless
+from supertokens_python.recipe.passwordless import ContactEmailOnlyConfig
 
-# highlight-start
 smtp_settings = SMTPSettings(
     host="...",
     port=465,
@@ -175,110 +195,112 @@ smtp_settings = SMTPSettings(
         email="..."
     ),
     password="...",
-    secure=False,
+    secure=True,
     username="..." # this is optional. In case not given, from_.email will be used
 )
-# highlight-end
 
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
         emailpassword.init(
-            # highlight-start
             email_delivery=EmailDeliveryConfig(
                 service=emailpassword.SMTPService(
                     smtp_settings=smtp_settings
                 )
             )
-            # highlight-end
         ),
 
         # If email verification is enabled
         emailverification.init(
             mode="OPTIONAL",
-            # highlight-start
             email_delivery=EmailDeliveryConfig(
                 service=emailverification.SMTPService(
                     smtp_settings=smtp_settings
                 )
             )
-            # highlight-end
+        ),
+        passwordless.init(
+            contact_config=ContactEmailOnlyConfig(),
+            flow_type="USER_INPUT_CODE",
+            email_delivery=EmailDeliveryConfig(
+                service=passwordless.SMTPService(smtp_settings=smtp_settings)
+            )
         )
     ]
 )
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
+Port 465 conventionally uses implicit TLS, so the examples set `secure`/`Secure` to `true`. For STARTTLS, use the port
+specified by your provider (commonly 587) and set `secure`/`Secure` to `false`; the connection starts without encryption
+and is then upgraded. Never disable certificate or hostname verification. Node.js 24.0.3 exports a WebAuthn SMTP template
+service. Python 0.31.3 and Go 0.26.0 accept WebAuthn email-delivery implementations but do not export a public,
+recipe-specific WebAuthn SMTP template service; configure a WebAuthn delivery override in those SDKs instead of importing
+an internal module or reusing another recipe's template service.
 
 ### Custom method
 
 This method allows you to define your own email sending abstraction.
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
-import EmailVerification from "supertokens-node/recipe/emailverification"
+import EmailVerification from "supertokens-node/recipe/emailverification";
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        EmailPassword.init({
-            // highlight-start
-            emailDelivery: {
-                override: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        sendEmail: async function (input) {
-                            // TODO: create and send password reset email
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    EmailPassword.init({
+      emailDelivery: {
+        override: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            sendEmail: async function (input) {
+              // TODO: create and send password reset email
 
-                            // Or use the original implementation which calls the default service,
-                            // or a service that you may have specified in the emailDelivery object.
-                            return originalImplementation.sendEmail(input);
-                        }
-                    }
-                }
+              // Or use the original implementation which calls the default service,
+              // or a service that you may have specified in the emailDelivery object.
+              return originalImplementation.sendEmail(input);
             },
-            // highlight-end
-        }),
+          };
+        },
+      },
+    }),
 
-        // if email verification is enabled
-        EmailVerification.init({
-            mode: "OPTIONAL",
-            // highlight-start
-            emailDelivery: {
-                override: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        sendEmail: async function (input) {
-                            // TODO: create and send email verification email
+    // if email verification is enabled
+    EmailVerification.init({
+      mode: "OPTIONAL",
+      emailDelivery: {
+        override: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            sendEmail: async function (input) {
+              // TODO: create and send email verification email
 
-                            // Or use the original implementation which calls the default service,
-                            // or a service that you may have specified in the emailDelivery object.
-                            return originalImplementation.sendEmail(input);
-                        }
-                    }
-                }
+              // Or use the original implementation which calls the default service,
+              // or a service that you may have specified in the emailDelivery object.
+              return originalImplementation.sendEmail(input);
             },
-            // highlight-end
-        }),
-        Session.init()
-    ]
+          };
+        },
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
@@ -293,7 +315,6 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			emailpassword.Init(&epmodels.TypeInput{
-				// highlight-start
 				EmailDelivery: &emaildelivery.TypeInput{
 					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
 						originalSendEmail := *originalImplementation.SendEmail
@@ -309,13 +330,11 @@ func main() {
 						return originalImplementation
 					},
 				},
-				// highlight-end
 			}),
 
 			// if email verification is enabled
 			emailverification.Init(evmodels.TypeInput{
 				Mode: evmodels.ModeRequired,
-				// highlight-start
 				EmailDelivery: &emaildelivery.TypeInput{
 					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
 						originalSendEmail := *originalImplementation.SendEmail
@@ -331,16 +350,14 @@ func main() {
 						return originalImplementation
 					},
 				},
-				// highlight-end
 			}),
 		},
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe.emailpassword.types import EmailDeliveryOverrideInput, EmailTemplateVars
 from supertokens_python.recipe import emailpassword
@@ -358,7 +375,7 @@ def custom_email_deliver(original_implementation: EmailDeliveryOverrideInput) ->
         # Or use the original implementation which calls the default service,
         # or a service that you may have specified in the email_delivery object.
         return await original_send_email(template_vars, user_context)
-    
+
     original_implementation.send_email = send_email
     return original_implementation
 
@@ -378,31 +395,30 @@ def custom_emailverification_delivery(original_implementation: EVEmailDeliveryOv
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
          emailpassword.init(
-            # highlight-next-line
             email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
         ),
 
         # If email verification is enabled
         emailverification.init(
             mode="OPTIONAL",
-            # highlight-next-line
             email_delivery=EmailDeliveryConfig(override=custom_emailverification_delivery))
     ]
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 If you call the original implementation function for `sendEmail`, it uses the service that you have configured. If you have not configured any service, it uses the default service.
 
 Using this method, you can, for example, have your custom way of sending email verification emails, but use the default or SMTP service to send the reset password emails.
 
-:::important Error Management
-To handle failures and other types of issues in the `sendEmail` function throw an error. The SDK catches any exception through an upper level error handler. This error is then propagated if this is through an API call or otherwise logged.
+:::note[Error management]
+Throw or return an error from your custom `sendEmail` implementation when delivery fails. API-triggered delivery can
+propagate the error through the SDK's error handler; non-API calls may log it. This does not describe every recipe's
+built-in service behavior; see the warning under [Default service](#default-service).
 :::
 
 ---
@@ -410,8 +426,8 @@ To handle failures and other types of issues in the `sendEmail` function throw a
 ## Email content customization
 
 You can access the default email UI through the following links:
-- Default [email verification template](/docs/references/frontend-sdks/prebuilt-ui/ui-showcase#email-verification) and its [source code](https://github.com/supertokens/email-sms-templates/blob/master/email-html/email-verification.html).
-- Default [password reset template](/docs/references/frontend-sdks/prebuilt-ui/ui-showcase#password-reset) and its [source code](https://github.com/supertokens/email-sms-templates/blob/master/email-html/password-reset.html).
+- Default [email verification template](/references/frontend-sdks/prebuilt-ui/ui-showcase#email-verification) and its [source code](https://github.com/supertokens/email-sms-templates/blob/master/email-html/email-verification.html).
+- Default [password reset template](/references/frontend-sdks/prebuilt-ui/ui-showcase#password-reset) and its [source code](https://github.com/supertokens/email-sms-templates/blob/master/email-html/password-reset.html).
 
 To change the content you can create a custom `SMTPService` like and update the property which builds the content.
 The method allows you to return an object that has the following properties:
@@ -420,85 +436,81 @@ The method allows you to return an object that has the following properties:
 - `subject`: This is the subject of the email to send.
 - `toEmail`: The system sends the email to this email.
 
-Other information like which email ID to send from appears in the `smtpSettings` object.
+Other information like which email address to send from appears in the `smtpSettings` object.
 
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
-```tsx
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx check=false reason="Requires surrounding application context"
 import supertokens from "supertokens-node";
 import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
 import { SMTPService } from "supertokens-node/recipe/emailpassword/emaildelivery";
-import EmailVerification from "supertokens-node/recipe/emailverification"
+import EmailVerification from "supertokens-node/recipe/emailverification";
 import { SMTPService as EmailVerificationSMTPService } from "supertokens-node/recipe/emailverification/emaildelivery";
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        EmailPassword.init({
-            emailDelivery: {
-                service: new SMTPService({
-                    // @ts-ignore
-                    smtpSettings: { /*...*/ },
-                    // highlight-start
-                    override: (originalImplementation) => {
-                        return {
-                            ...originalImplementation,
-                            getContent: async function (input) {
-                                // password reset content
-                                let { passwordResetLink, user } = input;
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    EmailPassword.init({
+      emailDelivery: {
+        service: new SMTPService({
+          smtpSettings: {
+            /*...*/
+          },
+          override: (originalImplementation) => {
+            return {
+              ...originalImplementation,
+              getContent: async function (input) {
+                // password reset content
+                let { passwordResetLink, user } = input;
 
-                                // you can even call the original implementation and modify that
-                                let originalContent = await originalImplementation.getContent(input)
-                                originalContent.subject = "My custom subject";
-                                return originalContent;
-                            }
-                        }
-                    }
-                    // highlight-end
-                })
-            }
+                // you can even call the original implementation and modify that
+                let originalContent = await originalImplementation.getContent(input);
+                originalContent.subject = "My custom subject";
+                return originalContent;
+              },
+            };
+          },
         }),
+      },
+    }),
 
-        // if email verification is enabled
-        EmailVerification.init({
-            mode: "OPTIONAL",
-            emailDelivery: {
-                service: new EmailVerificationSMTPService({
-                    // @ts-ignore
-                    smtpSettings: { /*...*/ },
-                    // highlight-start
-                    override: (originalImplementation) => {
-                        return {
-                            ...originalImplementation,
-                            getContent: async function (input) {
-                                // email verification content
-                                let { emailVerifyLink, user } = input;
+    // if email verification is enabled
+    EmailVerification.init({
+      mode: "OPTIONAL",
+      emailDelivery: {
+        service: new EmailVerificationSMTPService({
+          smtpSettings: {
+            /*...*/
+          },
+          override: (originalImplementation) => {
+            return {
+              ...originalImplementation,
+              getContent: async function (input) {
+                // email verification content
+                let { emailVerifyLink, user } = input;
 
-                                // you can even call the original implementation and modify that
-                                let originalContent = await originalImplementation.getContent(input)
-                                originalContent.subject = "My custom subject";
-                                return originalContent;
-                            }
-                        }
-                    }
-                    // highlight-end
-                })
-            }
+                // you can even call the original implementation and modify that
+                let originalContent = await originalImplementation.getContent(input);
+                originalContent.subject = "My custom subject";
+                return originalContent;
+              },
+            };
+          },
         }),
-        Session.init()
-    ]
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"fmt"
@@ -515,12 +527,10 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			emailpassword.Init(&epmodels.TypeInput{
-				// REMOVE_FROM_OUTPUT
 				EmailDelivery: &emaildelivery.TypeInput{
 					Service: emailpassword.MakeSMTPService(emaildelivery.SMTPServiceConfig{
 						Settings: emaildelivery.SMTPSettings{ /* ... */ },
 
-						// highlight-start
 						Override: func(originalImplementation emaildelivery.SMTPInterface) emaildelivery.SMTPInterface {
 							originalGetContent := *originalImplementation.GetContent
 
@@ -542,7 +552,6 @@ func main() {
 
 							return originalImplementation
 						},
-						// highlight-end
 					}),
 				},
 			}),
@@ -553,7 +562,6 @@ func main() {
 					Service: emailverification.MakeSMTPService(emaildelivery.SMTPServiceConfig{
 						Settings: emaildelivery.SMTPSettings{ /* ... */ },
 
-						// highlight-start
 						Override: func(originalImplementation emaildelivery.SMTPInterface) emaildelivery.SMTPInterface {
 							originalGetContent := *originalImplementation.GetContent
 
@@ -575,7 +583,6 @@ func main() {
 
 							return originalImplementation
 						},
-						// highlight-end
 					}),
 				},
 			}),
@@ -583,10 +590,9 @@ func main() {
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe import emailpassword
 from supertokens_python.ingredients.emaildelivery.types import EmailDeliveryConfig, EmailContent, SMTPSettings
@@ -598,7 +604,6 @@ from supertokens_python.recipe import emailverification
 def custom_smtp_content_override(original_implementation: SMTPOverrideInput) -> SMTPOverrideInput:
     original_get_content = original_implementation.get_content
 
-    # highlight-start
     async def get_content(template_vars: EmailTemplateVars, user_context: Dict[str, Any]) -> EmailContent:
         # password reset content
         _ = template_vars.password_reset_link
@@ -608,7 +613,6 @@ def custom_smtp_content_override(original_implementation: SMTPOverrideInput) -> 
         original_content = await original_get_content(template_vars, user_context)
         original_content.subject = "My custom subject"
         return original_content
-    # highlight-end
 
     original_implementation.get_content = get_content
     return original_implementation
@@ -616,7 +620,6 @@ def custom_smtp_content_override(original_implementation: SMTPOverrideInput) -> 
 def custom_smtp_email_verification_content_override(original_implementation: EVSMTPOverrideInput) -> EVSMTPOverrideInput:
     original_get_content = original_implementation.get_content
 
-    # highlight-start
     async def get_content(template_vars: EVEmailTemplateVars, user_context: Dict[str, Any]) -> EmailContent:
         # email verification content
         _ = template_vars.email_verify_link
@@ -626,7 +629,6 @@ def custom_smtp_email_verification_content_override(original_implementation: EVS
         original_content = await original_get_content(template_vars, user_context)
         original_content.subject = "My custom subject"
         return original_content
-    # highlight-end
 
     original_implementation.get_content = get_content
     return original_implementation
@@ -635,109 +637,98 @@ def custom_smtp_email_verification_content_override(original_implementation: EVS
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
         emailpassword.init(
-            # highlight-start
             email_delivery=EmailDeliveryConfig(
                 service=emailpassword.SMTPService(
-                    smtp_settings=SMTPSettings(...),  # type: ignore
+                    smtp_settings=SMTPSettings(...),
                     override=custom_smtp_content_override
                 )
             )
-            # highlight-end
         ),
 
         # If email verification is enabled
         emailverification.init(
             mode="OPTIONAL",
-            # highlight-start
             email_delivery=EmailDeliveryConfig(
                 service=emailverification.SMTPService(
-                    smtp_settings=SMTPSettings(...),  # type: ignore
+                    smtp_settings=SMTPSettings(...),
                     override=custom_smtp_email_verification_content_override
                 )
             )
-            # highlight-end
         )
     ]
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>
 
 
 ## Overrides
 
 You can use the override functionality to trigger any kind of behavior before and after email sending.
 This can include things like:
-- Logging 
+- Logging
 - Spam protection actions
 - Modifying the email template variables before sending the emails
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
-import EmailVerification from "supertokens-node/recipe/emailverification"
+import EmailVerification from "supertokens-node/recipe/emailverification";
 
 supertokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        EmailPassword.init({
-            // highlight-start
-            emailDelivery: {
-                override: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        sendEmail: async function (input) {
-                            // TODO: run some logic before sending the email
-                            
-                            await originalImplementation.sendEmail(input);
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    EmailPassword.init({
+      emailDelivery: {
+        override: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            sendEmail: async function (input) {
+              // TODO: run some logic before sending the email
 
-                            // TODO: run some logic post sending the email
-                        }
-                    }
-                }
+              await originalImplementation.sendEmail(input);
+
+              // TODO: run some logic post sending the email
             },
-            // highlight-end
-        }),
+          };
+        },
+      },
+    }),
 
-        // if email verification is enabled
-        EmailVerification.init({
-            mode: "OPTIONAL",
-            // highlight-start
-            emailDelivery: {
-                override: (originalImplementation) => {
-                    return {
-                        ...originalImplementation,
-                        sendEmail: async function (input) {
-                            // TODO: run some logic before sending the email
-                            
-                            await originalImplementation.sendEmail(input);
+    // if email verification is enabled
+    EmailVerification.init({
+      mode: "OPTIONAL",
+      emailDelivery: {
+        override: (originalImplementation) => {
+          return {
+            ...originalImplementation,
+            sendEmail: async function (input) {
+              // TODO: run some logic before sending the email
 
-                            // TODO: run some logic post sending the email
-                        }
-                    }
-                }
+              await originalImplementation.sendEmail(input);
+
+              // TODO: run some logic post sending the email
             },
-            // highlight-end
-        }),
-        Session.init()
-    ]
+          };
+        },
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
 import (
 	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
@@ -752,7 +743,6 @@ func main() {
 	supertokens.Init(supertokens.TypeInput{
 		RecipeList: []supertokens.Recipe{
 			emailpassword.Init(&epmodels.TypeInput{
-				// highlight-start
 				EmailDelivery: &emaildelivery.TypeInput{
 					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
 						originalSendEmail := *originalImplementation.SendEmail
@@ -772,13 +762,11 @@ func main() {
 						return originalImplementation
 					},
 				},
-				// highlight-end
 			}),
 
 			// if email verification is enabled
 			emailverification.Init(evmodels.TypeInput{
 				Mode: evmodels.ModeRequired,
-				// highlight-start
 				EmailDelivery: &emaildelivery.TypeInput{
 					Override: func(originalImplementation emaildelivery.EmailDeliveryInterface) emaildelivery.EmailDeliveryInterface {
 						originalSendEmail := *originalImplementation.SendEmail
@@ -798,16 +786,14 @@ func main() {
 						return originalImplementation
 					},
 				},
-				// highlight-end
 			}),
 		},
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
-
-```python
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
 from supertokens_python import init, InputAppInfo
 from supertokens_python.recipe.emailpassword.types import EmailDeliveryOverrideInput, EmailTemplateVars
 from supertokens_python.recipe import emailpassword
@@ -826,7 +812,7 @@ def custom_email_deliver(original_implementation: EmailDeliveryOverrideInput) ->
 
         # TODO: run some logic after sending the email
         return resp
-    
+
     original_implementation.send_email = send_email
     return original_implementation
 
@@ -849,21 +835,18 @@ def custom_emailverification_delivery(original_implementation: EVEmailDeliveryOv
 init(
     app_info=InputAppInfo(
         api_domain="...", app_name="...", website_domain="..."),
-    framework='...',  # type: ignore
+    framework='...',
     recipe_list=[
          emailpassword.init(
-            # highlight-next-line
             email_delivery=EmailDeliveryConfig(override=custom_email_deliver)
         ),
 
         # If email verification is enabled
         emailverification.init(
             mode="OPTIONAL",
-            # highlight-next-line
             email_delivery=EmailDeliveryConfig(override=custom_emailverification_delivery))
     ]
 )
 ```
-
-</BackendTabs.TabItem>
-</BackendTabs>
+</Tab>
+</CodeGroup>

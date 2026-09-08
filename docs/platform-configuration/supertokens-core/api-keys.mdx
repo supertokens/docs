@@ -1,130 +1,183 @@
 ---
-title: Add API Keys
-hide_title: true
-sidebar_position: 1
-description: >-
-  Authenticate backend SDK requests to SuperTokens core by adding API keys to
-  configuration.
-page_type: guide
-category: platform-configuration
+title: API Keys
+description: Require API keys for backend SDK requests to a self-hosted Core and rotate multiple keys without downtime.
+sidebar:
+  order: 1
 ---
 
+<Visibility for="agents">
 
-# Add API keys
+## API key summary
+
+- SuperTokens Core requires no API key by default. After you configure one, every backend SDK request must provide a matching key or Core returns HTTP 401.
+- Configure multiple keys as a comma-separated value to rotate keys gradually across backend systems.
+- Every key must be at least 20 characters and contain only alphanumeric characters, `=`, or `-`.
+
+</Visibility>
 
 ## Overview
 
 
-The backend SDK uses API keys to authenticate requests to the SuperTokens core.
+The backend SDK uses API keys to authenticate requests to SuperTokens Core.
 
-By default, there is no API key required. If you add an API key to the core's configuration or use the managed service, you need to add it to your backend SDK code. Otherwise, the core throws a `401` error.
+By default, there is no API key required. After you configure one, every backend SDK must send a matching key or Core responds with HTTP 401.
 
-:::caution
-Running without an API key is only safe when the Core is on a private network reachable exclusively by your backend. If the Core can be reached from anywhere else, configure an API key — and ideally also restrict access by [IP address](/docs/platform-configuration/supertokens-core/ip-allow-deny) and serve traffic over [TLS/SSL](/docs/platform-configuration/supertokens-core/add-ssl-via-nginx). Any caller that can reach the Core can perform administrative operations on your users' data. See [Secure the core](/docs/deployment/self-host-supertokens#secure-the-core).
+:::danger
+Core is a trusted backend component with APIs that can administer users and sessions. Keep Core on a private network that
+is reachable only by your backend services. Never expose it directly to browsers or clients you do not trust. An API key
+is defense in depth, not a replacement for network isolation. Use TLS if the key crosses a network you do not trust.
+
+Without an API key, any caller that can reach Core can perform administrative operations on your users' data. Configure
+an API key, restrict access by [IP address](/platform-configuration/supertokens-core/ip-allow-deny), and serve traffic over
+[TLS/SSL](/platform-configuration/supertokens-core/add-ssl-via-nginx). See [Secure the core](/deployment/self-host-supertokens#secure-the-core).
 :::
 
 ## Before you start
 
-:::caution no-title
-This page is only relevant if you are self hosting SuperTokens. 
+:::warning
+This page is only relevant if you are self-hosting SuperTokens.
 :::
 
 ## Steps
 
 ### 1. Add the key to the core instance
 
-You can set the API by updating the instance parameters.
-
-<SelfHostingTabs>
-<SelfHostingTabs.TabItem value="with-docker">
+Generate a high-entropy key and store it in your deployment's secret manager. For example:
 
 ```bash
- docker run \
-    -p 3567:3567 \
-    -e API_KEYS=<TO_DO> \ 
-    -d supertokens/supertokens-<db_name>
+openssl rand -hex 32
 ```
-</SelfHostingTabs.TabItem>
 
-<SelfHostingTabs.TabItem value="without-docker">
+The command prints a 64-character key that satisfies Core's character restrictions. Store it as
+`SUPERTOKENS_API_KEY` in your deployment's secret manager. Do not commit it to source control, logs, shell history, or an
+image layer. Set `SUPERTOKENS_IMAGE` to an immutable, verified image reference rather than an untagged image or `latest`.
 
+<CodeGroup group="docker">
+<Tab title="With Docker" value="with-docker">
+```bash
+: "${SUPERTOKENS_IMAGE:?Set an immutable Core image reference}"
+: "${SUPERTOKENS_API_KEY:?Load a generated Core API key from secret storage}"
+if [[ ! "$SUPERTOKENS_API_KEY" =~ ^[A-Za-z0-9=-]{20,}(,[A-Za-z0-9=-]{20,})*$ ]]; then
+  echo "SUPERTOKENS_API_KEY must contain one or more valid comma-separated Core API keys" >&2
+  exit 1
+fi
+
+docker run \
+    --network app-network \
+    -e API_KEYS="$SUPERTOKENS_API_KEY" \
+    -d "$SUPERTOKENS_IMAGE"
+```
+</Tab>
+<Tab title="Without Docker" value="without-docker">
 ```yaml
 # You need to add the following to the config.yaml file.
 # The file path can be found by running the "supertokens --help" command
+# Replace this entire placeholder from secret storage before starting Core.
+# Core rejects the literal placeholder because underscores are not valid API-key characters.
 
-api_keys:
+api_keys: "<REQUIRED_SUPERTOKENS_API_KEY>"
 ```
-</SelfHostingTabs.TabItem>
-</SelfHostingTabs>
+</Tab>
+</CodeGroup>
 
 - The format of the value is `key1,key2,key3`.
-- Keys can only contain `=`, `-` and alpha-numeric (including capital) chars.
-- Each key must have a minimum length of 20 chars
-- An example value is `"Akjnv3iunvsoi8=-sackjij3ncisds,asnj9=asdcda-OI982JIUN=-a"`. Notice the `,` in the string which separates the two keys `"Akjnv3iunvsoi8=-sackjij3ncisds"` and `"asnj9=asdcda-OI982JIUN=-a"`. In the backend SDK, you should only provide one of these keys.
+- Keys can only contain `=`, `-`, and alphanumeric characters.
+- Each key must have a minimum length of 20 characters. This is a syntax requirement, not an entropy recommendation.
+- Each backend sends only one key. Core can accept multiple independently generated keys separated by commas.
 
-:::info
-The reason for having multiple API keys is that it allows for key rotation to occur gradually if you have multiple backend systems querying the core.
-:::
+Keep the Core and backend secret records separate, even if both workloads expose their value as
+`SUPERTOKENS_API_KEY`. During rotation, the Core record contains `old-key,new-key`; each backend secret record contains
+exactly one of those keys.
 
 ### 2. Add the key to your backend code
 
-Update the backend SDK initialization code to include the API key.
+Inject one key currently accepted by Core into each backend as `SUPERTOKENS_API_KEY`.
 
-<BackendTabs>
-<BackendTabs.TabItem value="nodejs">
-
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
 ```tsx
 import supertokens from "supertokens-node";
 
+const apiKey = process.env.SUPERTOKENS_API_KEY;
+if (apiKey === undefined || apiKey.length === 0) {
+  throw new Error("SUPERTOKENS_API_KEY is required");
+}
+
 supertokens.init({
-    supertokens: {
-        connectionURI: "<CONNECTION_URI>",
-        // highlight-next-line
-        apiKey: "<API_KEY>"
-   },
-   appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-   recipeList: []
+  supertokens: {
+    connectionURI: "<CONNECTION_URI>",
+    apiKey,
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [],
 });
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="go">
-
+</Tab>
+<Tab title="Go" value="go">
 ```go
-import "github.com/supertokens/supertokens-golang/supertokens"
+import (
+	"os"
+
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
 
 func main() {
+	apiKey := os.Getenv("SUPERTOKENS_API_KEY")
+	if apiKey == "" {
+		panic("SUPERTOKENS_API_KEY is required")
+	}
 	supertokens.Init(supertokens.TypeInput{
 		Supertokens: &supertokens.ConnectionInfo{
 			ConnectionURI: "<CONNECTION_URI>",
-			//highlight-next-line
-			APIKey: "<API_KEY>",
+			APIKey: apiKey,
 		},
 	})
 }
 ```
-</BackendTabs.TabItem>
-<BackendTabs.TabItem value="python">
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="Partial configuration example"
+import os
 
-```python
 from supertokens_python import init, InputAppInfo, SupertokensConfig
+
+api_key = os.environ["SUPERTOKENS_API_KEY"]
+if not api_key:
+    raise RuntimeError("SUPERTOKENS_API_KEY is required")
 
 init(
     app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
     supertokens_config=SupertokensConfig(
         connection_uri='<CONNECTION_URI>',
-        # highlight-next-line
-        api_key='<API_KEY>'
+        api_key=api_key
     ),
-    framework='...', # type: ignore
+    framework='...',
     recipe_list=[
       #...
    ]
 )
 ```
+</Tab>
+</CodeGroup>
 
-</BackendTabs.TabItem>
-</BackendTabs>
+### 3. Rotate a key safely
+
+Use an overlap period so that Core never rejects a backend that has not been updated yet:
+
+1. Generate a new independent key and store it in secret storage. Keep the old key active.
+2. Set Core's `API_KEYS` value to `old-key,new-key`, deploy or restart every Core instance, and explicitly test a protected
+   API with each key from a trusted network. Do not continue unless both work.
+3. Rotate all backends to the new key. Use a staged deployment where possible. Monitor backend request failures, the HTTP
+   401 rate in Core or edge telemetry, and deployment health throughout the change. Core does not identify which matching
+   key was used, so use controlled old-key and new-key probes to verify both paths during the overlap.
+4. Confirm every backend is healthy on the new key and that no planned rollback still depends on the old key. Then remove
+   the old key from Core and deploy every Core instance. Verify the new key works and the old key now receives HTTP 401.
+5. Retain the old key securely for a defined rollback window, but do not leave it active in Core. A rollback must first
+   re-add the old key to Core, verify both keys, and only then roll back a backend. Destroy the old key after the window.
+
+Never replace the old key in Core before all Core instances accept the new key, and never remove it while any backend
+still uses it.

@@ -1,12 +1,9 @@
 ---
 title: Progressive profiling
-hide_title: true
-sidebar_position: 6
 description: Gradually collect user information through customizable multi-step forms using the progressive profiling plugin
-page_type: tutorial
+sidebar:
+  order: 80
 ---
-
-# Progressive profiling
 
 ## Overview
 
@@ -26,10 +23,10 @@ The progressive profiling plugin supports only the `React` and `NodeJS` SDKs.
 Support for other platforms is under active development.
 
 The implementation is in early stages and APIs might change.
-For more information on how plugins work refer to the [references page](/docs/references/plugins/introduction).
+For more information on how plugins work refer to the [references page](/references/plugins/introduction).
 
 You need to start from a working **SuperTokens** setup.
-If you haven't done that already, please refer to the [Quickstart Guides](/docs/quickstart/introduction).
+If you haven't done that already, please refer to the [Quickstart Guides](/quickstart).
 
 ## Steps
 
@@ -49,7 +46,8 @@ import ProgressiveProfilingPlugin from "@supertokens-plugins/progressive-profili
 
 SuperTokens.init({
   appInfo: {
-    // your app info
+    appName: "My App",
+    apiDomain: "https://api.example.com",
   },
   recipeList: [
     // your recipes (Session recipe is required)
@@ -139,7 +137,7 @@ The plugin supports the following field types:
 | `url` | URL input with validation | Website, social profiles |
 | `image-url` | Image URL input with preview | Profile picture, logo |
 
-:::info no-title
+:::info
 The plugin provides built-in validation for form fields:
 - **Required Fields**: Automatically validates that required fields are not empty
 - **Field Type Validation**: Ensures values match the expected field type
@@ -161,7 +159,9 @@ import ProgressiveProfilingPlugin from "@supertokens-plugins/progressive-profili
 
 SuperTokens.init({
   appInfo: {
-    // your app info
+    appName: "My App",
+    apiDomain: "https://api.example.com",
+    websiteDomain: "https://example.com",
   },
   recipeList: [
     // your recipes
@@ -191,7 +191,7 @@ Try to authenticate and check if you get sent to the new form.
 <img
 	alt="Progressive profiling setup interface"
 	width="700px"
-	src="/img/progressive-profiling.png"
+	src="/docs-assets/img/progressive-profiling.png"
 />
 
 
@@ -203,7 +203,7 @@ By default, the plugin stores profile data using the `User Metadata` recipe.
 You can also implement your custom storage solution by overriding the `defaultStorageHandlerSetFields` and `defaultStorageHandlerGetFields` functions.
 
 
-```typescript
+```typescript check=false reason="Partial configuration example"
 import SuperTokens from "supertokens-node";
 import ProgressiveProfilingPlugin from "@supertokens-plugins/progressive-profiling-nodejs";
 
@@ -250,37 +250,38 @@ SuperTokens.init({
             ],
           },
         ],
-	override: (oI) => ({
-	  ...oI,
-	  defaultStorageHandlerSetFields: ({ pluginFormFields, data, session, userContext }) => {
-	    const userId = session.getUserId(userContext);
-	    const profile = pluginFormFields.reduce(
-	      (acc, field) => {
-		const newValue = data.find((d) => d.fieldId === field.id)?.value;
-		const existingValue = existingProfile?.[field.id];
-		return {
-		  ...acc,
-		  [field.id]: newValue ?? existingValue ?? field.defaultValue,
-		};
-	      },
-	      { ...existingProfile }
-	    );
+        override: (oI) => ({
+          ...oI,
+          defaultStorageHandlerSetFields: async ({ pluginFormFields, data, session, userContext }) => {
+            const userId = session.getUserId(userContext);
+            const existingProfile = await customGetProfileData(userId);
+            const profile = pluginFormFields.reduce(
+              (acc, field) => {
+                const newValue = data.find((d) => d.fieldId === field.id)?.value;
+                const existingValue = existingProfile?.[field.id];
+                return {
+                  ...acc,
+                  [field.id]: newValue ?? existingValue ?? field.defaultValue,
+                };
+              },
+              { ...existingProfile },
+            );
 
-	    // Implement your own logic for storing profile data
-	    await customSetProfileData(userId, profile);
-	  },
-	  defaultStorageHandlerGetFields: ({ pluginFormFields, session, userContext }) => {
-	    const userId = session.getUserId(userContext);
-	    // Implement your own logic for fetching profile data
-	    const existingProfile = await customGetProfileData(userId);
+            // Implement your own logic for storing profile data
+            await customSetProfileData(userId, profile);
+          },
+          defaultStorageHandlerGetFields: ({ pluginFormFields, session, userContext }) => {
+            const userId = session.getUserId(userContext);
+            // Implement your own logic for fetching profile data
+            const existingProfile = await customGetProfileData(userId);
 
-	    return pluginFormFields.map((field) => ({
-	      sectionId: field.sectionId,
-	      fieldId: field.id,
-	      value: existingProfile[field.id] ?? field.defaultValue,
-	    });
-	  },
-	}),
+            return pluginFormFields.map((field) => ({
+              sectionId: field.sectionId,
+              fieldId: field.id,
+              value: existingProfile[field.id] ?? field.defaultValue,
+            }));
+          },
+        }),
       }),
     ],
   },
@@ -290,9 +291,9 @@ SuperTokens.init({
 ### User interface
 
 To create your own UI you can use the `usePluginContext` hook.
-It exposes an interface which you can use to interface with the endpoints exposed by the backend plugin. 
+It exposes an interface which you can use to interface with the endpoints exposed by the backend plugin.
 
-```typescript
+```tsx check=false reason="Requires surrounding application context"
 import { usePluginContext } from "@supertokens-plugins/progressive-profiling-react";
 
 function CustomProfileComponent() {
@@ -325,15 +326,15 @@ function CustomProfileComponent() {
 }
 ```
 
-:::info pre-built UI
-You can integrate the pre-built UI into other pages/components by importing the `ProgressiveProfilingWrapper` component:
+:::info[pre-built UI]
+You can integrate the pre-built UI into other pages/components by importing the `UserProfileWrapper` component:
 
-```typescript
-import { ProgressiveProfilingWrapper } from “@supertokens-plugins/progressive-profiling-react”;
+```tsx
+import { UserProfileWrapper } from "@supertokens-plugins/progressive-profiling-react";
 function MyApp() {
   return (
     <div>
-      <ProgressiveProfilingWrapper />
+      <UserProfileWrapper />
     </div>
   );
 }
@@ -341,12 +342,11 @@ function MyApp() {
 :::
 
 
-
 ### Form fields validation
 
 To change the default validation behavior you can override the `validateField` function:
 
-```ts
+```ts check=false reason="Partial configuration example"
 import SuperTokens from "supertokens-node";
 import ProgressiveProfilingPlugin from "@supertokens-plugins/progressive-profiling-nodejs";
 
@@ -393,54 +393,38 @@ SuperTokens.init({
             ],
           },
         ],
-	override: (oI) => ({
-	  ...oI,
-	  validateField: ({ field, value }) => {
-	    // Custom logic to validate field values
-	    if(field.required && value === "") {
-	      return "Field is required";
-	    }
+        override: (oI) => ({
+          ...oI,
+          validateField: ({ field, value }) => {
+            // Custom logic to validate field values
+            if (field.required && value === "") {
+              return "Field is required";
+            }
 
-	    // Return undefined if validation passes
-	    return undefined;
-	  },
-	}),
+            // Return undefined if validation passes
+            return undefined;
+          },
+        }),
       }),
     ],
   },
 });
-
 ```
 
 ## Next steps
 
 Besides progressive profiling, you can also explore other user management features:
 
-<ReferenceCard.Grid>
-  <ReferenceCard href="/docs/post-authentication/user-management/user-banning">
-    <ReferenceCard.Title>
-      User Banning
-    </ReferenceCard.Title>
-    <ReferenceCard.Description>
-      Implement user banning functionality to restrict access.
-    </ReferenceCard.Description>
-  </ReferenceCard>
+<CardGroup cols={3}>
+  <Card title="User Banning" href="/post-authentication/user-management/user-banning">
+Implement user banning functionality to restrict access.
+</Card>
 
-  <ReferenceCard href="/docs/additional-verification/user-roles/introduction">
-    <ReferenceCard.Title>
-      User Roles
-    </ReferenceCard.Title>
-    <ReferenceCard.Description>
-      Implement role-based access control for your users.
-    </ReferenceCard.Description>
-  </ReferenceCard>
+  <Card title="User Roles" href="/additional-verification/user-roles/introduction">
+Implement role-based access control for your users.
+</Card>
 
-  <ReferenceCard href="/docs/references/plugins/introduction">
-    <ReferenceCard.Title>
-     Plugins Reference 
-    </ReferenceCard.Title>
-    <ReferenceCard.Description>
-     General information on how plugins work.
-    </ReferenceCard.Description>
-  </ReferenceCard>
-</ReferenceCard.Grid>
+  <Card title="Plugins Reference" href="/references/plugins/introduction">
+General information on how plugins work.
+</Card>
+</CardGroup>

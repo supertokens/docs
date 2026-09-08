@@ -1,470 +1,709 @@
 ---
-title: Initial Setup
-hide_title: true
-sidebar_position: 2
-description: >-
-  Authenticate using SuperTokens with ThirdParty Providers, creating a custom or
-  prebuilt login flow.
-page_type: tutorial 
-recipe: thirdparty
-category: thirdparty
+title: Set Up Social Login
+description: Integrate Google, Apple, and other OAuth providers with ThirdParty and Session recipes, callback routes, and prebuilt or custom UI.
+sidebar:
+  label: Initial Setup
+  order: 2
 ---
 
-import ReactRouterCallout from "/docs/_blocks/react-router-callout.mdx";
-import FrontendCustomUIMobileAccessTokenFlow from "./_blocks/frontend-custom-ui-mobile-access-token-flow.mdx"
-import FrontendCustomUIMobileAuthorizationCodeFlow from "./_blocks/frontend-custom-ui-mobile-authorization-code-flow.mdx"
-import FrontendCustomUIWebAuthorizationCodeFlow from "./_blocks/frontend-custom-ui-web-authorization-code-flow.mdx"
-import BackendSDKInit from "./_blocks/backend-sdk-init.mdx"
-import BackendProviderInit from "./_blocks/backend-providers-init.mdx"
+<Visibility for="agents">
 
-# Initial setup
+## Social login integration summary
+
+- Configure the ThirdParty and Session recipes on the frontend and backend. With the prebuilt UI, add the required providers to its frontend provider list; with a custom UI, select the provider when starting authorization. Configure provider credentials on the backend, load secrets from environment variables or a secret manager, and keep them out of source control.
+- For Google, use `thirdPartyId: "google"`, provide the Google client ID and secret, and use the same frontend callback URL throughout the flow. A conventional callback is `/auth/callback/google`; call `signInAndUp` when that page loads.
+- For Apple, use `thirdPartyId: "apple"` and provide the client ID, key ID, private key, and team ID. Apple sends a form POST to the backend callback instead of redirecting directly to the frontend.
+- For Apple, set `redirectURIOnProviderDashboard` to the backend callback and `frontendRedirectURI` to the frontend callback page, which completes authentication by calling `signInAndUp`.
+
+</Visibility>
+
+<Prompt
+  description="Add social login providers to an existing application."
+  actions={["copy"]}
+>
+Add SuperTokens social login to this existing application. Inspect the project stack and existing recipes, then ask which providers are required if they cannot be inferred. Configure the frontend and backend ThirdParty and Session recipes, provider client IDs, callback URLs, auth routes, and environment variables. Keep client secrets out of source control, preserve existing conventions, and validate successful login, denied consent, callback failures, and session creation.
+</Prompt>
 
 ## Overview
 
 This page shows you how to authenticate, using **ThirdParty Providers**, with **SuperTokens**.
 The tutorial creates a login flow, rendered by either the **Prebuilt UI** components or by your own **Custom UI**.
 
-## Before you start
-
-:::important
-
-These instructions assume that you already have gone through the main [quickstart guide](/docs/quickstart/introduction).
-If you have skipped that page please follow the tutorial and return here once you're done.
-
-:::
-
 ## Steps
 
-<UIType.Switch />
+<UITypeSwitch />
 
-<UIType.PrebuiltUIContent>
+<VariantContent storageKey="ui-type" value="prebuilt">
 
 ### 1. Initialize the frontend SDK
 
 
-<FrontendPrebuiltUITabs showMobileTab>
-  <FrontendPrebuiltUITabs.TabItem value="reactjs">
-
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="React" value="reactjs">
 #### 1.1 Add the `ThirdParty` recipe in your main configuration file.
+</ContentOption>
+</DependentContent>
 
+<CodeGroup group="frontend-prebuilt-ui">
+<Tab title="React" value="reactjs">
 ```tsx
-import React from 'react';
+import React from "react";
 
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
-// highlight-next-line
-import ThirdParty, {Github, Google, Facebook, Apple} from "supertokens-auth-react/recipe/thirdparty";
+import ThirdParty, { Github, Google, Facebook, Apple } from "supertokens-auth-react/recipe/thirdparty";
 import Session from "supertokens-auth-react/recipe/session";
 
 SuperTokens.init({
-    appInfo: { 
-        // learn more about this on https://supertokens.com/docs/references/frontend-sdks/reference#sdk-configuration
-        appName: "^{appInfo.appName}",
-        apiDomain: "^{appInfo.apiDomain}",
-        websiteDomain: "^{appInfo.websiteDomain}",
-        apiBasePath: "^{appInfo.apiBasePath}",
-        websiteBasePath: "^{appInfo.websiteBasePath}",
-    },
-    recipeList: [
-// highlight-start
-        ThirdParty.init({
-            signInAndUpFeature: {
-                providers: [
-                    Github.init(),
-                    Google.init(),
-                    Facebook.init(),
-                    Apple.init(),
-                ]
-            }
-        }),
-    // highlight-end
-        Session.init()
-    ]
+  appInfo: {
+    // learn more about this on https://supertokens.com/docs/references/frontend-sdks/reference#sdk-configuration
+    appName: "<YOUR_APP_NAME>",
+    apiDomain: "<YOUR_API_DOMAIN>",
+    websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+    apiBasePath: "/auth",
+    websiteBasePath: "/auth",
+  },
+  recipeList: [
+    ThirdParty.init({
+      signInAndUpFeature: {
+        providers: [Github.init(), Google.init(), Facebook.init(), Apple.init()],
+      },
+    }),
+    Session.init(),
+  ],
 });
 ```
+</Tab>
+</CodeGroup>
 
-
-
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="React" value="reactjs">
 #### 1.2 Include the pre-built UI components in your application.
 
 In order for the **pre-built UI** to render inside your application, you have to specify which routes show the authentication components.
 The **React SDK** uses [**React Router**](https://reactrouter.com/en/main) under the hood to achieve this.
 Based on whether you already use this package or not in your project, there are two different ways of configuring the routes.
+</ContentOption>
+</DependentContent>
 
-<Question question="Do you use react-router-dom?" defaultAnswer="Yes">
-  <Answer title="Yes">
+<CodeGroup passive group="frontend-prebuilt-ui" secondaryControls="react-router">
+<Tab title="React" value="reactjs">
+<DependentContent group="react-router" label="Do you use react-router-dom?">
+<ContentOption title="With React Router" value="yes">
 ```tsx
-import React from 'react';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link
-} from "react-router-dom";
+import React from "react";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 
-// highlight-next-line
-import { ThirdPartyPreBuiltUI } from 'supertokens-auth-react/recipe/thirdparty/prebuiltui';
+import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui";
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import * as reactRouterDom from "react-router-dom";
 
 class App extends React.Component {
-    render() {
-        return (
-            <SuperTokensWrapper>
-                <BrowserRouter>
-                    <Routes>
-                        {/*This renders the login UI on the ^{appInfo.websiteBasePath} route*/}
-                        // highlight-next-line
-                        {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [ThirdPartyPreBuiltUI])}
-                        {/*Your app routes*/}
-                    </Routes>
-                </BrowserRouter>
-            </SuperTokensWrapper>
-        );
-    }
+  render() {
+    return (
+      <SuperTokensWrapper>
+        <BrowserRouter>
+          <Routes>
+            {/*This renders the login UI on the /auth route*/}
+            {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [ThirdPartyPreBuiltUI])}
+            {/*Your app routes*/}
+          </Routes>
+        </BrowserRouter>
+      </SuperTokensWrapper>
+    );
+  }
 }
 ```
-
-        <ReactRouterCallout />
-  </Answer>
-  <Answer title="No">
-
+</ContentOption>
+<ContentOption title="Without React Router" value="no">
 ```tsx
-import React from 'react';
+import React from "react";
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
-// highlight-next-line
-import { ThirdPartyPreBuiltUI } from 'supertokens-auth-react/recipe/thirdparty/prebuiltui';
+import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui";
 import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
 
 class App extends React.Component {
-    render() {
-        // highlight-start
-        if (canHandleRoute([ThirdPartyPreBuiltUI])) {
-            // This renders the login UI on the ^{appInfo.websiteBasePath} route
-            return getRoutingComponent([ThirdPartyPreBuiltUI])
-        }
-        // highlight-end
-
-        return (
-            <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>
-        );
+  render() {
+    if (canHandleRoute([ThirdPartyPreBuiltUI])) {
+      // This renders the login UI on the /auth route
+      return getRoutingComponent([ThirdPartyPreBuiltUI]);
     }
 
+    return <SuperTokensWrapper>{/*Your app*/}</SuperTokensWrapper>;
+  }
 }
 ```
-  </Answer>
-</Question>
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
-  </FrontendPrebuiltUITabs.TabItem>
-  <FrontendPrebuiltUITabs.TabItem value="angular">
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="React" value="reactjs">
+<DependentContent passive group="react-router">
+<ContentOption title="With React Router" value="yes">
+:::note[If you are using `useRoutes`, `createBrowserRouter` or have routes defined in a different file, you need to adjust the code sample.]
+Please see [this issue](https://github.com/supertokens/supertokens-auth-react/issues/581#issuecomment-1246998493) for further details.
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
 
-Add the `ThirdParty` recipe in your `AuthComponent`.
+<CodeGroup passive group="frontend-prebuilt-ui">
+<Tab title="React" value="reactjs">
+<DependentContent group="react-router" label="Do you use react-router-dom?">
+<ContentOption title="With React Router" value="yes">
+```tsx
+import React from "react";
 
-    ```tsx title="/app/auth/auth.component.ts"
-    import {init as supertokensUIInit} from "supertokens-auth-react-script";
-    import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty";
-    import supertokensUISession from "supertokens-auth-react-script/recipe/session";
-    import { Component, OnDestroy, AfterViewInit, Renderer2, Inject } from "@angular/core";
-    import { DOCUMENT } from "@angular/common";
+import { BrowserRouter, useRoutes } from "react-router-dom";
+import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
+import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
+import * as reactRouterDom from "react-router-dom";
 
-    @Component({
-        selector: "app-auth",
-        template: '<div id="supertokensui"></div>',
-    })
-    export class AuthComponent implements OnDestroy, AfterViewInit {
+function AppRoutes() {
+  const authRoutes = getSuperTokensRoutesForReactRouterDom(reactRouterDom, [
+    /* Add your UI recipes here e.g. EmailPasswordPrebuiltUI, PasswordlessPrebuiltUI, ThirdPartyPrebuiltUI */
+  ]);
 
-        constructor(
-            private renderer: Renderer2,
-            @Inject(DOCUMENT) private document: Document
-        ) { }
+  const routes = useRoutes([
+    ...authRoutes.map((route) => route.props),
+    // Include the rest of your app routes
+  ]);
 
-        ngAfterViewInit() {
-            this.loadScript('^{prebuiltUIVersion}');
-        }
+  return routes;
+}
 
-        ngOnDestroy() {
-            // Remove the script when the component is destroyed
-            const script = this.document.getElementById('supertokens-script');
-            if (script) {
-                script.remove();
-            }
-        }
+function App() {
+  return (
+    <SuperTokensWrapper>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </SuperTokensWrapper>
+  );
+}
+```
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
-        private loadScript(src: string) {
-            const script = this.renderer.createElement('script');
-            script.type = 'text/javascript';
-            script.src = src;
-            script.id = 'supertokens-script';
-            script.onload = () => {
-                supertokensUIInit({
-                    appInfo: {
-                        // learn more about this on https://supertokens.com/docs/references/frontend-sdks/reference#sdk-configuration
-                        appName: "^{appInfo.appName}",
-                        apiDomain: "^{appInfo.apiDomain}",
-                        websiteDomain: "^{appInfo.websiteDomain}",
-                        apiBasePath: "^{appInfo.apiBasePath}",
-                        websiteBasePath: "^{appInfo.websiteBasePath}",
-                    },
-                    recipeList: [
-// highlight-start
-                        supertokensUIThirdParty.init({
-                            signInAndUpFeature: {
-                                providers: [
-                                    supertokensUIThirdParty.Github.init(),
-                                    supertokensUIThirdParty.Google.init(),
-                                    supertokensUIThirdParty.Facebook.init(),
-                                    supertokensUIThirdParty.Apple.init(),
-                                ]
-                            }
-                        }),
-// highlight-end
-                        supertokensUISession.init(),
-                    ],
-                });
-            }
-            this.renderer.appendChild(this.document.body, script);
-        }
-    }
-    ```
+<DependentContent passive group="frontend-prebuilt-ui">
+<ContentOption title="React" value="reactjs">
+<DependentContent passive group="react-router">
+<ContentOption title="With React Router" value="yes">
+:::
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
 
-
-  </FrontendPrebuiltUITabs.TabItem>
-  <FrontendPrebuiltUITabs.TabItem value="vue">
-
-
-Add the `ThirdParty` recipe in your `AuthView` file.
-
-    ```tsx
-    import {init as supertokensUIInit} from "supertokens-auth-react-script";
-    import supertokensUIThirdParty from "supertokens-auth-react-script/recipe/thirdparty";
-    import supertokensUISession from "supertokens-auth-react-script/recipe/session";
-    <script lang="ts">
-        import { defineComponent, onMounted, onUnmounted } from 'vue';
-        export default defineComponent({
-            setup() {
-                const loadScript = (src: string) => {
-                    const script = document.createElement('script');
-                    script.type = 'text/javascript';
-                    script.src = src;
-                    script.id = 'supertokens-script';
-                    script.onload = () => {
-                        supertokensUIInit({
-                            appInfo: {
-                                // learn more about this on https://supertokens.com/docs/references/frontend-sdks/reference#sdk-configuration 
-                                appName: "^{appInfo.appName}",
-                                apiDomain: "^{appInfo.apiDomain}",
-                                websiteDomain: "^{appInfo.websiteDomain}",
-                                apiBasePath: "^{appInfo.apiBasePath}",
-                                websiteBasePath: "^{appInfo.websiteBasePath}",
-                            },
-                            recipeList: [
-// highlight-start
-                                supertokensUIThirdParty.init({
-                                    signInAndUpFeature: {
-                                        providers: [
-                                            supertokensUIThirdParty.Github.init(),
-                                            supertokensUIThirdParty.Google.init(),
-                                            supertokensUIThirdParty.Facebook.init(),
-                                            supertokensUIThirdParty.Apple.init(),
-                                        ]
-                                    }
-                                }),
-// highlight-end
-                                supertokensUISession.init(),
-                            ],
-                        });
-                    };
-                    document.body.appendChild(script);
-                };
-
-                onMounted(() => {
-                    loadScript('^{prebuiltUIVersion}');
-                });
-
-                onUnmounted(() => {
-                    const script = document.getElementById('supertokens-script');
-                    if (script) {
-                        script.remove();
-                    }
-                });
-            },
-        });
-    </script>
-
-    <template>
-        <div id="supertokensui" />
-    </template>
-    ```
-
-
-  </FrontendPrebuiltUITabs.TabItem>
-
-</FrontendPrebuiltUITabs>
-
-#### Change the button style 
+#### Change the button style
 
 On the frontend, you can provide a button component to the in-built providers defining your own UI. The component you add is clickable by default.
 
-<FrontendPrebuiltUITabs>
-<FrontendPrebuiltUITabs.TabItem value="reactjs">
-
+<CodeGroup group="frontend-prebuilt-ui">
+<Tab title="React" value="reactjs">
 ```tsx
 import SuperTokens from "supertokens-auth-react";
-import ThirdParty, {Google, Github, Facebook, Apple} from "supertokens-auth-react/recipe/thirdparty";
+import ThirdParty, { Google, Github, Facebook, Apple } from "supertokens-auth-react/recipe/thirdparty";
 SuperTokens.init({
-    appInfo: {
-        apiDomain: "...",
-        appName: "...",
-        websiteDomain: "..."
-    },
-    recipeList: [
-        ThirdParty.init({
-            signInAndUpFeature: {
-                // highlight-start
-                providers: [
-                    Github.init({
-                        buttonComponent: (props: {name: string}) => <div></div>
-                    }),
-                    Google.init({
-                        buttonComponent: (props: {name: string}) => <div></div>
-                    }),
-                    Facebook.init({
-                        buttonComponent: (props: {name: string}) => <div></div>
-                    }),
-                    Apple.init({
-                        buttonComponent: (props: {name: string}) => <div></div>
-                    }),
-                ], 
-                // highlight-end
-                // ...
-            },
-            // ...
-        }),
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    ThirdParty.init({
+      signInAndUpFeature: {
+        providers: [
+          Github.init({
+            buttonComponent: (props: { name: string }) => <div></div>,
+          }),
+          Google.init({
+            buttonComponent: (props: { name: string }) => <div></div>,
+          }),
+          Facebook.init({
+            buttonComponent: (props: { name: string }) => <div></div>,
+          }),
+          Apple.init({
+            buttonComponent: (props: { name: string }) => <div></div>,
+          }),
+        ],
         // ...
-    ]
+      },
+      // ...
+    }),
+    // ...
+  ],
 });
 ```
-</FrontendPrebuiltUITabs.TabItem>
-
-<FrontendPrebuiltUITabs.TabItem value="angular">
-
-:::caution
-This is impossible for non-react apps at the moment. Please use custom UI instead for the sign-in form.
-:::
-
-</FrontendPrebuiltUITabs.TabItem>
-</FrontendPrebuiltUITabs>
+</Tab>
+</CodeGroup>
 
 ### 2. Initialize the backend SDK
 
-<BackendSDKInit />
+You have to initialize the **Backend Software Development Kit (SDK)** alongside the code that starts your server.
+The init call includes [configuration details](/references/backend-sdks/reference#sdk-configuration) for your app. It specifies how the backend connects to the **SuperTokens Core**, as well as the **Recipes** used in your setup.
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx title="Backend SDK Init"
+import supertokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+supertokens.init({
+  // Replace this with the framework you are using
+  framework: "express",
+  supertokens: {
+    // We use try.supertokens for demo purposes.
+    // At the end of the tutorial we will show you how to create
+    // your own SuperTokens core instance and then update your config.
+    connectionURI: "https://try.supertokens.io",
+    // apiKey: <YOUR_API_KEY>
+  },
+  appInfo: {
+    // learn more about this on https://supertokens.com/docs/references/backend-sdks/reference#sdk-configuration
+    appName: "<YOUR_APP_NAME>",
+    apiDomain: "<YOUR_API_DOMAIN>",
+    websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+    apiBasePath: "/auth",
+    websiteBasePath: "/auth",
+  },
+  recipeList: [
+    ThirdParty.init({
+      /*TODO: See next step*/
+    }),
+    Session.init(),
+  ],
+});
+```
+</Tab>
+<Tab title="Python" value="python">
+```python title="Backend SDK Init"
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import thirdparty, session
+
+init(
+    app_info=InputAppInfo(
+        app_name="<YOUR_APP_NAME>",
+        api_domain="<YOUR_API_DOMAIN>",
+        website_domain="<YOUR_WEBSITE_DOMAIN>",
+        api_base_path="/auth",
+        website_base_path="/auth"
+    ),
+    supertokens_config=SupertokensConfig(
+        # We use try.supertokens for demo purposes.
+        # At the end of the tutorial we will show you how to create
+        # your own SuperTokens core instance and then update your config.
+        connection_uri="https://try.supertokens.io",
+        # api_key: <YOUR_API_KEY>
+    ),
+    framework='fastapi',
+    recipe_list=[
+        session.init(), # initializes session features
+        thirdparty.init(
+           # TODO: See next step
+        )
+    ],
+    mode='asgi' # use wsgi if you are running using gunicorn
+)
+```
+</Tab>
+<Tab title="Go" value="go">
+```go title="Backend SDK Init"
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+  apiBasePath := "/auth"
+  websiteBasePath := "/auth"
+  err := supertokens.Init(supertokens.TypeInput{
+    Supertokens: &supertokens.ConnectionInfo{
+          // We use try.supertokens for demo purposes.
+          // At the end of the tutorial we will show you how to create
+          // your own SuperTokens core instance and then update your config.
+          ConnectionURI: "https://try.supertokens.io",
+          // APIKey: <YOUR_API_KEY>
+    },
+    AppInfo: supertokens.AppInfo{
+            AppName: "<YOUR_APP_NAME>",
+            APIDomain: "<YOUR_API_DOMAIN>",
+            WebsiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+            APIBasePath: &apiBasePath,
+            WebsiteBasePath: &websiteBasePath,
+    },
+    RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{/*TODO: See next step*/}),
+      session.Init(nil), // initializes session features
+    },
+  })
+
+	if err != nil {
+		panic(err.Error())
+	}
+}
+```
+</Tab>
+</CodeGroup>
 
 ### 3. Add the authentication providers
 
-<BackendProviderInit />
+Populate the `providers` array with the third-party authentication providers that you want.
 
-</UIType.PrebuiltUIContent>
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
 
-<UIType.CustomUIContent>
+SuperTokens.init({
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    ThirdParty.init({
+      signInAndUpFeature: {
+        // Load these credentials from environment variables or a secret manager.
+        providers: [
+          {
+            config: {
+              thirdPartyId: "google",
+              clients: [
+                {
+                  clientId: "<GOOGLE_CLIENT_ID>",
+                  clientSecret: "<GOOGLE_CLIENT_SECRET>",
+                },
+              ],
+            },
+          },
+          {
+            config: {
+              thirdPartyId: "github",
+              clients: [
+                {
+                  clientId: "<GITHUB_CLIENT_ID>",
+                  clientSecret: "<GITHUB_CLIENT_SECRET>",
+                },
+              ],
+            },
+          },
+          {
+            config: {
+              thirdPartyId: "apple",
+              clients: [
+                {
+                  clientId: "<APPLE_CLIENT_ID>",
+                  additionalConfig: {
+                    keyId: "<APPLE_KEY_ID>",
+                    privateKey: "<APPLE_PRIVATE_KEY>",
+                    teamId: "<APPLE_TEAM_ID>",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    }),
+    // ...
+  ],
+});
+```
+</Tab>
+<Tab title="Go" value="go">
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	// Inside supertokens.Init
+	thirdparty.Init(&tpmodels.TypeInput{
+		SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
+			Providers: []tpmodels.ProviderInput{
+				// Load these credentials from environment variables or a secret manager.
+				{
+					Config: tpmodels.ProviderConfig{
+						ThirdPartyId: "google",
+						Clients: []tpmodels.ProviderClientConfig{
+							{
+								ClientID: "<GOOGLE_CLIENT_ID>",
+								ClientSecret: "<GOOGLE_CLIENT_SECRET>",
+							},
+						},
+					},
+				},
+				{
+					Config: tpmodels.ProviderConfig{
+						ThirdPartyId: "github",
+						Clients: []tpmodels.ProviderClientConfig{
+							{
+								ClientID:     "<GITHUB_CLIENT_ID>",
+								ClientSecret: "<GITHUB_CLIENT_SECRET>",
+							},
+						},
+					},
+				},
+				{
+					Config: tpmodels.ProviderConfig{
+						ThirdPartyId: "apple",
+						Clients: []tpmodels.ProviderClientConfig{
+							{
+								ClientID: "<APPLE_CLIENT_ID>",
+								AdditionalConfig: map[string]interface{}{
+									"keyId":      "<APPLE_KEY_ID>",
+									"privateKey": "<APPLE_PRIVATE_KEY>",
+									"teamId":     "<APPLE_TEAM_ID>",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+```
+</Tab>
+<Tab title="Python" value="python">
+```python
+from supertokens_python.recipe.thirdparty.provider import ProviderInput, ProviderConfig, ProviderClientConfig
+from supertokens_python.recipe import thirdparty
+
+# Inside init
+thirdparty.init(
+    sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[
+        # Load these credentials from environment variables or a secret manager.
+        ProviderInput(
+            config=ProviderConfig(
+                third_party_id="google",
+                clients=[
+                    ProviderClientConfig(
+                        client_id="<GOOGLE_CLIENT_ID>",
+                        client_secret="<GOOGLE_CLIENT_SECRET>",
+                    ),
+                ],
+            ),
+        ),
+        ProviderInput(
+            config=ProviderConfig(
+                third_party_id="github",
+                clients=[
+                    ProviderClientConfig(
+                        client_id="<GITHUB_CLIENT_ID>",
+                        client_secret="<GITHUB_CLIENT_SECRET>",
+                    )
+                ],
+            ),
+        ),
+        ProviderInput(
+            config=ProviderConfig(
+                third_party_id="apple",
+                clients=[
+                    ProviderClientConfig(
+                        client_id="<APPLE_CLIENT_ID>",
+                        additional_config={
+                            "keyId": "<APPLE_KEY_ID>",
+                            "privateKey": "<APPLE_PRIVATE_KEY>",
+                            "teamId": "<APPLE_TEAM_ID>"
+                        },
+                    ),
+                ],
+            ),
+        ),
+    ])
+)
+```
+</Tab>
+</CodeGroup>
+
+
+:::note[Replace every credential placeholder with credentials for your own provider application.]
+Load secrets from environment variables or a secret manager. Do not commit client secrets or Apple private keys to source control.
+Read the list of [built-in providers](/authentication/social/built-in-providers-config) that also includes information on how to generate your own keys.
+To add a provider that is not listed, you can follow the guide on [setting up custom providers](/authentication/social/custom-providers).
+:::
+
+
+#### Set OAuth scopes
+
+To add additional OAuth scopes when accessing your third-party provider, add them to the configuration when initializing the backend `SDK`.
+
+For example, if you are using Google as your third-party provider, you can add an additional scope as follows:
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    ThirdParty.init({
+      signInAndUpFeature: {
+        providers: [
+          {
+            config: {
+              thirdPartyId: "google",
+              clients: [
+                {
+                  clientId: "TODO: GOOGLE_CLIENT_ID",
+                  clientSecret: "TODO: GOOGLE_CLIENT_SECRET",
+                  scope: ["scope1", "scope2"],
+                },
+              ],
+            },
+          },
+        ],
+      },
+    }),
+  ],
+});
+```
+</Tab>
+<Tab title="Go" value="go">
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{
+				SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
+					Providers: []tpmodels.ProviderInput{
+						{
+							Config: tpmodels.ProviderConfig{
+								ThirdPartyId: "google",
+								Clients: []tpmodels.ProviderClientConfig{
+									{
+										ClientID:     "TODO: GOOGLE_CLIENT_ID",
+										ClientSecret: "TODO: GOOGLE_CLIENT_SECRET",
+										Scope: []string{
+											"scope1", "scope2",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		},
+	})
+}
+```
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="This example omits surrounding application and SuperTokens configuration."
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty import ProviderInput, ProviderConfig, ProviderClientConfig, SignInAndUpFeature
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...',
+    recipe_list=[
+        thirdparty.init(
+
+            sign_in_and_up_feature=SignInAndUpFeature(
+                providers=[
+                    ProviderInput(
+                        config=ProviderConfig(
+                            third_party_id="google",
+                            clients=[
+                                ProviderClientConfig(
+                                    client_id="GOOGLE_CLIENT_ID",
+                                    client_secret="GOOGLE_CLIENT_SECRET",
+                                    scope=["scope1", "scope2"]
+                                ),
+                            ],
+                        ),
+                    ),
+                ]
+            )
+        )
+    ]
+)
+```
+</Tab>
+</CodeGroup>
+
+:::note[Along with your custom scopes, also add scopes that ask for the user's email and its verification status. For example, with Google, this scope is `"https://www.googleapis.com/auth/userinfo.email"`.]
+:::
+
+</VariantContent>
+
+<VariantContent storageKey="ui-type" value="custom">
+
 
 ### 1. Initialize the frontend SDK
 
 Call the SDK init function at the start of your application.
-The invocation includes the [main configuration details](/docs/references/frontend-sdks/reference#sdk-configuration), as well as the **recipes** that you are using in your setup.
-
-<FrontendCustomUITabs>
-<FrontendCustomUITabs.TabItem value="web">
-
-<NpmOrScriptsCard>
-<NpmOrScriptsCard.Content value="npm">
+The invocation includes the [main configuration details](/references/frontend-sdks/reference#sdk-configuration), as well as the **recipes** that you are using in your setup.
 
 
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+<DependentContent passive group="mobile-frameworks">
+<ContentOption title="Android" value="android">
+Add the `SuperTokens.init` function call at the start of your application.
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
+
+<CodeGroup group="frontend-custom-ui">
+<Tab title="Web" value="web">
 ```tsx
-import SuperTokens from 'supertokens-web-js';
-import Session from 'supertokens-web-js/recipe/session';
+import SuperTokens from "supertokens-web-js";
+import Session from "supertokens-web-js/recipe/session";
 import ThirdParty from "supertokens-web-js/recipe/thirdparty";
 
 SuperTokens.init({
-    appInfo: {
-        apiDomain: "^{appInfo.apiDomain}",
-        apiBasePath: "^{appInfo.apiBasePath}",
-        appName: "...",
-    },
-    recipeList: [
-        // highlight-next-line
-        ThirdParty.init(),
-        Session.init(),
-    ],
+  appInfo: {
+    apiDomain: "<YOUR_API_DOMAIN>",
+    apiBasePath: "/auth",
+    appName: "...",
+  },
+  recipeList: [ThirdParty.init(), Session.init()],
 });
 ```
-
-
-</NpmOrScriptsCard.Content>
-
-<NpmOrScriptsCard.Content value="scripts">
-
-<NpmOrScriptsCard.Section>
-
-First, you need to add the recipe script tag.
-
-```html
-<script src="^{webJsVersions.thirdparty}"></script>
-```
-
-You can initialize the SDK.
-
-</NpmOrScriptsCard.Section>
-
-
+</Tab>
+<Tab title="Mobile" value="mobile">
+<DependentContent group="mobile-frameworks" label="Mobile framework">
+<ContentOption title="React Native" value="reactnative">
 ```tsx
-import supertokens from "supertokens-web-js-script";
-import supertokensSession from "supertokens-web-js-script/recipe/session";
-import supertokensThirdParty from 'supertokens-web-js-script/recipe/thirdparty';
-supertokens.init({
-    appInfo: {
-        apiDomain: "^{appInfo.apiDomain}",
-        apiBasePath: "^{appInfo.apiBasePath}",
-        appName: "...",
-    },
-    recipeList: [
-        supertokensSession.init(),
-        // highlight-next-line
-        supertokensThirdParty.init(),
-    ],
-});
-```
-
-</NpmOrScriptsCard.Content>
-
-</NpmOrScriptsCard>
-
-</FrontendCustomUITabs.TabItem>
-
-<FrontendCustomUITabs.TabItem value="mobile">
-
-<MobileFrameworksCard>
-
-<MobileFrameworksCard.Content value="reactnative">
-
-
-
-```tsx
-import SuperTokens from 'supertokens-react-native';
+import SuperTokens from "supertokens-react-native";
 
 SuperTokens.init({
-    apiDomain: "^{appInfo.apiDomain}",
-    apiBasePath: "^{appInfo.apiBasePath}",
+  apiDomain: "<YOUR_API_DOMAIN>",
+  apiBasePath: "/auth",
 });
 ```
-
-
-</MobileFrameworksCard.Content>
-
-<MobileFrameworksCard.Content value="android">
-
-
-Add the `SuperTokens.init` function call at the start of your application.
-
+</ContentOption>
+<ContentOption title="Android" value="android">
 ```kotlin
 import android.app.Application
 import com.supertokens.session.SuperTokens
@@ -472,32 +711,26 @@ import com.supertokens.session.SuperTokens
 class MainApplication: Application() {
     override fun onCreate() {
         super.onCreate()
-        
-        SuperTokens.Builder(this, "^{appInfo.apiDomain}")
-            .apiBasePath("^{appInfo.apiBasePath}")
+
+        SuperTokens.Builder(this, "<YOUR_API_DOMAIN>")
+            .apiBasePath("/auth")
             .build()
     }
 }
 ```
-
-
-</MobileFrameworksCard.Content>
-
-<MobileFrameworksCard.Content value="ios">
-
-
-
+</ContentOption>
+<ContentOption title="iOS" value="ios">
 ```swift
 import UIKit
 import SuperTokensIOS
 
 fileprivate class ApplicationDelegate: UIResponder, UIApplicationDelegate {
-    
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         do {
             try SuperTokens.initialize(
-                apiDomain: "^{appInfo.apiDomain}",
-                apiBasePath: "^{appInfo.apiBasePath}"
+                apiDomain: "<YOUR_API_DOMAIN>",
+                apiBasePath: "/auth"
             )
         } catch SuperTokensError.initError(let message) {
             // TODO: Handle initialization error
@@ -507,45 +740,37 @@ fileprivate class ApplicationDelegate: UIResponder, UIApplicationDelegate {
 
         return true
     }
-    
+
 }
 ```
-
-
-</MobileFrameworksCard.Content>
-
-<MobileFrameworksCard.Content value="flutter">
-
+</ContentOption>
+<ContentOption title="Flutter" value="flutter">
 ```dart
 import 'package:supertokens_flutter/supertokens.dart';
 
 void main() {
     SuperTokens.init(
-        apiDomain: "^{appInfo.apiDomain}",
-        apiBasePath: "^{appInfo.apiBasePath}",
+        apiDomain: "<YOUR_API_DOMAIN>",
+        apiBasePath: "/auth",
     );
 }
 ```
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
 
 
-</MobileFrameworksCard.Content>
-
-</MobileFrameworksCard>
-
-</FrontendCustomUITabs.TabItem>
-
-</FrontendCustomUITabs>
 
 
 ### 2. Add the login UI
 
-The **ThirdParty** flow involves creating a UI element that allows the user to initiate the login process.
-This occurs through a separate button for each provider that you have configured. You can have a look at the [UI implementation](https://master--6571be2867f75556541fde98.chromatic.com/?path=/story/thirdparty-auth--sign-in-up) to get a better idea.
+The **ThirdParty** flow involves creating a button for each configured provider so that the user can initiate login.
 
 
 After the user clicks one of those buttons the actions that you need to take differ based on which type of authentication scenario you are using:
 
-- **Authorization Code** 
+- **Authorization Code**
 
 This option can either involve a **Client Secret** configured on the backend or rely on **Proof Key for Code Exchange (PKCE)** exchange.
 The difference between the two is that the first option uses a private secret, on the backend, to get the access token.
@@ -555,91 +780,1377 @@ Regardless of which authentication type you are using, in the end, the access to
 - **OAuth/Access Tokens**
 
 This option only applies to mobile/desktop apps.
-The frontend obtains the Access Token and then sends it to the backend.
+The frontend obtains the access token and then sends it to the backend.
 SuperTokens then fetches user info using the access token and logs them in.
 
 
-<Tabs
-  defaultValue="authorization-code"
-  values={[
-    { label: "Authorization Code", value: "authorization-code"},
-    { label: "OAuth/Access Token", value: "token"}
-  ]}
-  lazy={true}
->
-  <TabItem value="authorization-code">
-    <FrontendCustomUITabs>
-      <FrontendCustomUITabs.TabItem value="web">
-        <FrontendCustomUIWebAuthorizationCodeFlow />
-      </FrontendCustomUITabs.TabItem>
-      <FrontendCustomUITabs.TabItem value="mobile">
-        <FrontendCustomUIMobileAuthorizationCodeFlow />
-      </FrontendCustomUITabs.TabItem>
-    </FrontendCustomUITabs>
-  </TabItem>
-  <TabItem value="token">
-    <FrontendCustomUITabs>
-      <FrontendCustomUITabs.TabItem value="web">
-    :::info
+#### Authorization Code
 
-    This flow is not applicable for web apps.
+      <DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Web" value="web">
+##### Redirecting to a social/single sign-on provider
 
-    :::
-      </FrontendCustomUITabs.TabItem>
-      <FrontendCustomUITabs.TabItem value="mobile">
-        <FrontendCustomUIMobileAccessTokenFlow />
-      </FrontendCustomUITabs.TabItem>
-  </FrontendCustomUITabs>
-</TabItem>
+The first step is to fetch the URL on which the user authenticates. You can do this by querying the backend API exposed by SuperTokens (as shown below). The backend SDK automatically appends the right query params to the URL (like scope, client ID etc).
 
-</Tabs>
+After getting the URL, redirect the user there. In the code below, an example of login with Google appears:
+</ContentOption>
+<ContentOption title="Mobile" value="mobile">
+##### Sign in with Apple example
+
+<DependentContent passive group="mobile-frameworks">
+<ContentOption title="React Native" value="reactnative">
+###### Fetching the authorization code on the frontend
+
+For React Native apps, set up the [react-native-apple-authentication library](https://github.com/invertase/react-native-apple-authentication). Follow its `README`, and request the email scope when your application uses email identity. Apple may return the user's actual address or a private relay address, and the native credential may include it only on the first authorization.
+
+Once the integration is complete, call `appleAuth.performRequest` on iOS or `appleAuthAndroid.signIn` on Android. Send the one-time authorization code to your backend as shown in the next step.
+
+A full example of this is available in [the example app](https://github.com/supertokens/supertokens-react-native/blob/master/examples/with-thirdparty/apple.ts).
+
+If you use Expo, you can use the [expo-apple-authentication](https://docs.expo.dev/versions/latest/sdk/apple-authentication/) library instead (note that this library only works on iOS).
+</ContentOption>
+<ContentOption title="Android" value="android">
+###### Fetching the authorization code on the frontend
+
+:::info[At the moment this flow is not supported on Android.]
+:::
+</ContentOption>
+<ContentOption title="iOS" value="ios">
+###### Fetching the authorization code on the frontend
+
+For iOS, use the native Sign in with Apple flow, then send the authorization code to SuperTokens. You can see a full example of this in the `onAppleClicked` function in [the example app](https://github.com/supertokens/supertokens-ios/blob/master/examples/with-thirdparty/with-thirdparty/LoginScreen/LoginScreenViewController.swift).
+</ContentOption>
+<ContentOption title="Flutter" value="flutter">
+###### Fetching the authorization code on the frontend
+
+For Flutter, use the [`sign_in_with_apple`](https://pub.dev/packages/sign_in_with_apple) package. Make sure to follow the prerequisite steps to get the package setup. After setup, use the snippet below to trigger the apple sign-in flow. You can see a full example of this in the `loginWithApple` function in [the example app](https://github.com/supertokens/supertokens-flutter/blob/master/examples/with-thirdparty/lib/screens/login.dart).
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
+
+<CodeGroup group="frontend-custom-ui">
+<Tab title="Web" value="web">
+```tsx
+import { getAuthorisationURLWithQueryParamsAndSetState } from "supertokens-web-js/recipe/thirdparty";
+
+async function googleSignInClicked() {
+  try {
+    const authUrl = await getAuthorisationURLWithQueryParamsAndSetState({
+      thirdPartyId: "google",
+
+      // This is where Google should redirect the user back after login or error.
+      // Configure this URL on the Google provider dashboard as well.
+      frontendRedirectURI: "https://<YOUR_WEBSITE_DOMAIN>/auth/callback/google",
+    });
+
+    /*
+        Example value of authUrl: https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount?scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&access_type=offline&include_granted_scopes=true&response_type=code&client_id=<GOOGLE_CLIENT_ID>&state=5a489996a28cafc83ddff&redirect_uri=https%3A%2F%2Fsupertokens.io%2Fdev%2Foauth%2Fredirect-to-app&flowName=GeneralOAuthFlow
+        */
+
+    // Redirect the user to Google for authentication.
+    window.location.assign(authUrl);
+  } catch (err: any) {
+    if (err.isSuperTokensGeneralError === true) {
+      // this may be a custom error message sent from the API by you.
+      window.alert(err.message);
+    } else {
+      window.alert("Oops! Something went wrong.");
+    }
+  }
+}
+```
+</Tab>
+<Tab title="Mobile" value="mobile">
+<DependentContent group="mobile-frameworks" label="Mobile framework">
+<ContentOption title="iOS" value="ios">
+```swift
+import UIKit
+import AuthenticationServices
+
+fileprivate class ViewController: UIViewController, ASAuthorizationControllerPresentationContextProviding, ASAuthorizationControllerDelegate {
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return view.window!
+    }
+
+    func loginWithApple() {
+        let authorizationRequest = ASAuthorizationAppleIDProvider().createRequest()
+        authorizationRequest.requestedScopes = [.email, .fullName]
+
+        let authorizationController = ASAuthorizationController(authorizationRequests: [authorizationRequest])
+
+        authorizationController.presentationContextProvider = self
+        authorizationController.delegate = self
+        authorizationController.performRequests()
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let credential: ASAuthorizationAppleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+            let authorizationCode = credential.authorizationCode,
+            let authorizationCodeString = String(data: authorizationCode, encoding: .utf8) else { return }
+
+        let email = credential.email
+        let firstName = credential.fullName?.givenName
+        let lastName = credential.fullName?.familyName
+
+        // Send the required authorization code and any profile values Apple returned to the backend.
+        // Persist first-login profile values if your application needs them; Apple may omit them later.
+    }
+}
+```
+</ContentOption>
+<ContentOption title="Flutter" value="flutter">
+```dart
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+
+Future<String> createAppleMobileTransaction() async {
+  final response = await http.post(
+    Uri.parse("<YOUR_API_DOMAIN>/apple-mobile-transactions"),
+    headers: {
+      "Authorization": "Bearer <YOUR_APP_SESSION_TOKEN>",
+      "Content-Type": "application/json",
+      "X-App-Installation-ID": "<YOUR_APP_INSTALLATION_ID>",
+    },
+    body: jsonEncode({
+      "appType": "android",
+      "clientType": "<APPLE_ANDROID_CLIENT_TYPE>",
+    }),
+  );
+  if (response.statusCode != 201) {
+    throw StateError("Could not create Apple login transaction");
+  }
+
+  return jsonDecode(response.body)["transactionId"] as String;
+}
+
+void loginWithApple() async {
+  try {
+    String? transactionId;
+    if (Platform.isAndroid) {
+      transactionId = await createAppleMobileTransaction();
+      // Keep a copy in memory until the callback returns.
+    }
+
+    var credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+        ],
+        state: transactionId,
+        // Required for Android only
+        webAuthenticationOptions: WebAuthenticationOptions(
+            clientId: "<CLIENT_ID>",
+            redirectUri: Uri.parse(
+            "<API_DOMAIN>/<API_BASE_PATH>/callback/apple",
+            ),
+        ),
+    );
+
+    String authorizationCode = credential.authorizationCode;
+    String? idToken = credential.identityToken;
+    String? email = credential.email;
+    String? firstname = credential.givenName;
+    String? lastName = credential.familyName;
+
+    if (transactionId != null && credential.state != transactionId) {
+      throw StateError("Apple login transaction mismatch");
+    }
+
+    // Send the user information and auth code to the backend. Refer to the next step.
+  } catch (e) {
+    // Sign in aborted or failed
+  }
+}
+```
+</ContentOption>
+<ContentOption title="React Native" value="reactnative">
+
+</ContentOption>
+<ContentOption title="Android" value="android">
+
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
+
+Apple may return the user's email and full name only the first time the user authorizes your app. Treat those fields as
+optional, but require the one-time authorization code. If your application needs the profile values, store them during
+the first successful login rather than requiring Apple to return them again.
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Web" value="web">
+##### Handling the auth callback on your frontend
+
+Once the third-party provider redirects your user back to your app, you need to consume the information to sign in the user. This requires you to:
+
+- Set up a route in your app that handles this callback. It's recommended to use something like `https://<YOUR_WEBSITE_DOMAIN>/auth/callback/google` (for Google). Regardless of what you make this path, remember to use that same path when calling the `getAuthorisationURLWithQueryParamsAndSetState` function in the first step.
+
+- On that route, call the following function on page load
+</ContentOption>
+<ContentOption title="Mobile" value="mobile">
+###### Additional steps for Android
+
+For Android, a way for the web login flow to redirect back to the app is also needed. By default, the API provided by the backend `SDKs` redirects to the website domain you provide when initializing the `SDK`. The API can be overridden to redirect to the app instead. For example, if using the Node.js `SDK`:
+
+Before starting authorization, have the mobile app request an Apple login transaction from an application endpoint on
+your backend. This is not a SuperTokens API. Generate at least 256 random bits, prefix the identifier with
+`mobile.`, and store only the opaque identifier server-side with:
+
+- the app and configured SuperTokens `clientType`;
+- the exact Apple callback URL and an allowlisted app deep-link target;
+- a hash of the initiating app installation, authenticated session, or browser context when one is available; and
+- an expiry no more than five minutes in the future.
+
+Return the identifier to the initiating app over HTTPS and pass it through the provider's `state` field. The
+`sign_in_with_apple` API exposes `state` but no separate transaction field, so `state` transports this app-defined,
+namespaced transaction identifier. Do not treat SuperTokens' web state as this mobile transaction. The app must also
+compare the returned identifier with the value it stored locally before sending the authorization code to `/signinup`.
+Generate the random portion with `crypto.randomBytes(32)` in Node.js, `crypto/rand.Read` in Go, or
+`secrets.token_urlsafe(32)` in Python. Never accept a callback or deep-link URI directly from the mobile request; select
+both from a server-side allowlist for the requested app and client type.
+
+At the Apple callback, reject a missing state. Values in the `mobile.` namespace must be consumed with one atomic
+database operation that verifies every binding and expiry. Reject invalid, mismatched, expired, or previously consumed
+transactions; never fall back to the web handler for one of these failures. Non-mobile state values can be passed to the
+original SuperTokens web handler.
+
+For example, the application transaction store can atomically consume a PostgreSQL row with:
+
+```sql
+DELETE FROM apple_login_transactions
+WHERE id = $1
+  AND app_type = $2
+  AND client_type = $3
+  AND expected_callback = $4
+  AND expires_at > CURRENT_TIMESTAMP
+RETURNING app_redirect_uri, initiating_context_hash;
+```
+
+Create `id` as a primary key and never reinsert an identifier. The delete and validation must be one database statement,
+not a read followed by a delete. The `consumeAppleMobileTransaction` functions referenced below are application code
+that execute this query and return the stored, allowlisted redirect URI; they are not SuperTokens SDK APIs.
+Apple's provider POST does not contain the originating app's local context. Bind that context when creating the row,
+redirect only to the stored target, and require the app to compare the returned transaction identifier with its locally
+stored value before continuing. For browser flows, keep using the SuperTokens web state and original callback handler.
+
+**Node.js**
+
+<DependentContent passive group="mobile-frameworks">
+<ContentOption title="Flutter" value="flutter">
+In the snippet above for Android, you need an additional `webAuthenticationOptions` property when signing in with Apple.
+This is because on Android the library uses the web login flow and requires the client ID and redirection URI.
+The `redirectUri` property here is the URL to which Apple makes a `POST` request after the user has logged in.
+The SuperTokens backend SDKs provide an API for this at `<API_DOMAIN>/`&lt;API_BASE_PATH&gt;`/callback/apple`.
+Set the app-defined transaction identifier as the `state` argument to `SignInWithApple.getAppleIDCredential` before
+starting authorization.
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
+
+<CodeGroup passive group="frontend-custom-ui">
+<Tab title="Web" value="web">
+```tsx
+import { signInAndUp } from "supertokens-web-js/recipe/thirdparty";
+
+async function handleGoogleCallback() {
+  try {
+    const response = await signInAndUp();
+
+    if (response.status === "OK") {
+      console.log(response.user);
+      if (response.createdNewRecipeUser && response.user.loginMethods.length === 1) {
+        // sign up successful
+      } else {
+        // sign in successful
+      }
+      window.location.assign("/home");
+    } else if (response.status === "SIGN_IN_UP_NOT_ALLOWED") {
+      // the reason string is a user friendly message
+      // about what went wrong. It can also contain a support code which users
+      // can tell you so you know why their sign in / up was not allowed.
+      window.alert(response.reason);
+    } else {
+      // The provider did not supply the email identity required by this configuration.
+      window.alert("No email provided by social login. Please use another form of login");
+      window.location.assign("/auth"); // redirect back to login page
+    }
+  } catch (err: any) {
+    if (err.isSuperTokensGeneralError === true) {
+      // this may be a custom error message sent from the API by you.
+      window.alert(err.message);
+    } else {
+      window.alert("Oops! Something went wrong.");
+    }
+  }
+}
+```
+</Tab>
+<Tab title="Mobile" value="mobile">
+```tsx
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+ThirdParty.init({
+  override: {
+    apis: (original) => {
+      return {
+        ...original,
+        appleRedirectHandlerPOST: async (input) => {
+          if (original.appleRedirectHandlerPOST === undefined) {
+            throw Error("Should never come here");
+          }
+
+          const transactionId = input.formPostInfoFromProvider.state;
+          if (typeof transactionId !== "string" || transactionId.length === 0) {
+            input.options.res.setStatusCode(400);
+            input.options.res.sendHTMLResponse("Invalid Apple login transaction");
+            return;
+          }
+
+          if (!transactionId.startsWith("mobile.")) {
+            return await original.appleRedirectHandlerPOST(input);
+          }
+
+          const transaction = await consumeAppleMobileTransaction({
+            id: transactionId,
+            appType: "android",
+            clientType: "<APPLE_ANDROID_CLIENT_TYPE>",
+            expectedCallback: "<YOUR_API_DOMAIN>/auth/callback/apple",
+          });
+
+          if (transaction === undefined) {
+            input.options.res.setStatusCode(400);
+            input.options.res.sendHTMLResponse("Invalid Apple login transaction");
+            return;
+          }
+
+          const query = new URLSearchParams();
+          for (const [key, value] of Object.entries(input.formPostInfoFromProvider)) {
+            query.set(key, `${value}`);
+          }
+
+          const redirectUrl = `${transaction.appRedirectURI}?${query.toString()}#Intent;package=YOUR.PACKAGE.IDENTIFIER;scheme=signinwithapple;end`;
+          input.options.res.setHeader("Location", redirectUrl, false);
+          input.options.res.setStatusCode(303);
+          input.options.res.sendHTMLResponse("");
+        },
+      };
+    },
+  },
+});
+```
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Web" value="web">
+:::note[On success, the backend sends back session tokens as part of the response headers which are automatically handled by the frontend SDK.]
+:::
+
+##### Special case for login with Apple
+
+Unlike other providers, Apple does not redirect your user back to your frontend app. Instead, it redirects the user to your backend with a `FORM POST` request. This means that the URL you configure on Apple's dashboard should point to your backend API layer. Here, **middleware** handles the request and redirects the user to your frontend app. Your frontend app should then call the `signInAndUp` API on that page as shown previously.
+
+To tell SuperTokens which frontend route to redirect the user back to, set the `frontendRedirectURI` to the frontend route. Also, set the `redirectURIOnProviderDashboard` to point to your backend API route, to which Apple sends a `POST` request.
+
+Follow Apple's official [Configure Sign in with Apple for the web](https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web/) guide when creating the Services ID and registering the return URL.
+</ContentOption>
+<ContentOption title="Mobile" value="mobile">
+**Go**
+</ContentOption>
+</DependentContent>
+
+<CodeGroup passive group="frontend-custom-ui">
+<Tab title="Web" value="web">
+```tsx
+import { getAuthorisationURLWithQueryParamsAndSetState } from "supertokens-web-js/recipe/thirdparty";
+
+async function appleSignInClicked() {
+  try {
+    const authUrl = await getAuthorisationURLWithQueryParamsAndSetState({
+      thirdPartyId: "apple",
+
+      frontendRedirectURI: "https://<YOUR_WEBSITE_DOMAIN>/auth/callback/apple", // This is an example callback URL on your frontend. You can use another path as well.
+      redirectURIOnProviderDashboard: "<YOUR_API_DOMAIN>/auth/callback/apple", // Configure this URL on the Apple developer dashboard.
+    });
+
+    // Redirect the user to Apple for authentication.
+    window.location.assign(authUrl);
+  } catch (err: any) {
+    if (err.isSuperTokensGeneralError === true) {
+      // this may be a custom error message sent from the API by you.
+      window.alert(err.message);
+    } else {
+      window.alert("Oops! Something went wrong.");
+    }
+  }
+}
+```
+</Tab>
+<Tab title="Mobile" value="mobile">
+```go
+import (
+	"net/http"
+	"net/url"
+	"strings"
+
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	thirdparty.Init(&tpmodels.TypeInput{
+		Override: &tpmodels.OverrideStruct{
+			APIs: func(originalImplementation tpmodels.APIInterface) tpmodels.APIInterface {
+				originalAppleRedirectPost := *originalImplementation.AppleRedirectHandlerPOST
+
+				*originalImplementation.AppleRedirectHandlerPOST = func(formPostInfoFromProvider map[string]interface{}, options tpmodels.APIOptions, userContext *map[string]interface{}) error {
+					transactionID, ok := formPostInfoFromProvider["state"].(string)
+					if !ok || transactionID == "" {
+						http.Error(options.Res, "Invalid Apple login transaction", http.StatusBadRequest)
+						return nil
+					}
+
+					if !strings.HasPrefix(transactionID, "mobile.") {
+						return originalAppleRedirectPost(formPostInfoFromProvider, options, userContext)
+					}
+
+					transaction, err := consumeAppleMobileTransaction(
+						transactionID,
+						"android",
+						"<APPLE_ANDROID_CLIENT_TYPE>",
+						"<YOUR_API_DOMAIN>/auth/callback/apple",
+					)
+					if err != nil {
+						http.Error(options.Res, "Invalid Apple login transaction", http.StatusBadRequest)
+						return nil
+					}
+
+					queryParams := url.Values{}
+					for key, value := range formPostInfoFromProvider {
+						if stringValue, ok := value.(string); ok {
+							queryParams.Set(key, stringValue)
+						}
+					}
+
+					redirectURI := transaction.AppRedirectURI + "?" + queryParams.Encode() + "#Intent;package=YOUR.PACKAGE.IDENTIFIER;scheme=signinwithapple;end"
+					options.Res.Header().Set("Location", redirectURI)
+					options.Res.WriteHeader(http.StatusSeeOther)
+					return nil
+				}
+
+				return originalImplementation
+			},
+		},
+	})
+}
+```
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Web" value="web">
+:::info[If you are using the **Authorization Code Grant** flow with **PKCE** you do **not** need to provide a client secret during backend init.]
+This only works for providers which support the [PKCE flow](https://oauth.net/2/pkce/).
+
+:::
+</ContentOption>
+<ContentOption title="Mobile" value="mobile">
+**Python**
+</ContentOption>
+</DependentContent>
+
+<CodeGroup passive group="frontend-custom-ui">
+<Tab title="Mobile" value="mobile">
+```python
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty.interfaces import APIInterface, APIOptions
+from typing import Dict, Any
+from urllib.parse import urlencode
+
+def override_thirdparty_apis(original_implementation: APIInterface):
+    original_apple_redirect_post = original_implementation.apple_redirect_handler_post
+
+    async def apple_redirect_handler_post(
+        form_post_info: Dict[str, Any],
+        api_options: APIOptions,
+        user_context: Dict[str, Any]
+    ):
+        transaction_id = form_post_info.get("state")
+        if not isinstance(transaction_id, str) or not transaction_id:
+            api_options.response.set_status_code(400)
+            api_options.response.set_html_content("Invalid Apple login transaction")
+            return
+
+        if not transaction_id.startswith("mobile."):
+            return await original_apple_redirect_post(form_post_info, api_options, user_context)
+
+        transaction = await consume_apple_mobile_transaction(
+            id=transaction_id,
+            app_type="android",
+            client_type="<APPLE_ANDROID_CLIENT_TYPE>",
+            expected_callback="<YOUR_API_DOMAIN>/auth/callback/apple",
+        )
+        if transaction is None:
+            api_options.response.set_status_code(400)
+            api_options.response.set_html_content("Invalid Apple login transaction")
+            return
+
+        redirect_url = transaction.app_redirect_uri + "?" + urlencode(form_post_info) + "#Intent;package=YOUR.PACKAGE.IDENTIFIER;scheme=signinwithapple;end"
+        api_options.response.set_header("Location", redirect_url)
+        api_options.response.set_status_code(303)
+        api_options.response.set_html_content("")
+
+    original_implementation.apple_redirect_handler_post = apple_redirect_handler_post
+    return original_implementation
+
+thirdparty.init(
+    override=thirdparty.InputOverrideConfig(
+        apis=override_thirdparty_apis
+    ),
+)
+```
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+In the code above, the `appleRedirectHandlerPOST` API rejects missing state. The explicit `mobile.` namespace selects the mobile flow; absence of state never does. A namespaced value must match and atomically consume a bound transaction before the handler redirects to the allowlisted deep link. Any transaction failure returns `400` instead of falling back to the web flow. Other non-empty values remain SuperTokens web state and go to the original handler. Follow the `sign_in_with_apple` README to configure the Android deep link.
+
+###### Calling the `signinup` API to consume the authorization code
+
+Once you have the authorization code from the auth provider, you need to call the `/signinup` API exposed by the backend `SDK` as shown below:
+</ContentOption>
+</DependentContent>
+
+<CodeGroup passive group="frontend-custom-ui">
+<Tab title="Mobile" value="mobile">
+```bash
+curl --location --request POST '<YOUR_API_DOMAIN>/auth/signinup' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+    "thirdPartyId": "apple",
+    "clientType": "...",
+    "redirectURIInfo": {
+        "redirectURIOnProviderDashboard": "<YOUR_API_DOMAIN>/auth/callback/apple",
+        "redirectURIQueryParams": {
+            "code": "...",
+            "user": {
+                "name":{
+                    "firstName":"...",
+                    "lastName":"..."
+                },
+                "email":"..."
+            }
+        }
+    }
+}'
+```
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+:::note[- On iOS, the client ID set in the backend should be the same as the bundle identifier for your app.]
+
+- The `clientType` input is optional and required only if you initialize more than one client in the provider on the backend (See the "Social / `SSO` login for both, web and mobile apps" section below).
+- On iOS, `redirectURIOnProviderDashboard` doesn't matter and its value can be a universal link configured for your app.
+- On Android, the `redirectURIOnProviderDashboard` should match the one configured on the Apple developer dashboard.
+- The `user` object contains optional first-login information provided by Apple. Omit `user`, `name`, or `email` when Apple does not return those values; always send the authorization code.
+:::
+
+The response body from the API call has a `status` property in it:
+
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: The provider did not return the email identity required by this configuration. Ask the user to choose another sign-in method. Do not invent an email address without first defining a stable, provider-specific identity and an [account-linking policy](/post-authentication/account-linking/important-concepts): synthetic addresses can create duplicate accounts, link the wrong identities, and invalidate assumptions that an email belongs to or was verified by the user.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overridden the backend API to send back a custom error message which should display on the frontend.
+- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen during automatic account linking or during `MFA`. The `reason` prop that's in the response body contains a support code using which you can see why the sign in / up was not allowed.
+
+:::note[On success, the backend sends back session tokens as part of the response headers which are automatically handled by the frontend `SDK` for you.]
+:::
+
+##### Sign in with Google example
+
+<DependentContent passive group="mobile-frameworks">
+<ContentOption title="React Native" value="reactnative">
+###### Fetching the authorization code on the frontend
+
+This involves setting up the [@react-native-google-signin/google-signin](https://github.com/react-native-google-signin/google-signin) in your app. See their `README` for steps on how to integrate their `SDK` into your application. The minimum scope required by SuperTokens is the one that gives the user's email.
+
+Once you configure the library, use `GoogleSignin.configure` and `GoogleSignin.signIn` to trigger the login flow and sign the user in with Google. Refer to [the example app](https://github.com/supertokens/supertokens-react-native/blob/master/examples/with-thirdparty/google.ts) to see the full code for this.
+</ContentOption>
+<ContentOption title="Android" value="android">
+###### Fetching the authorization code on the frontend
+
+Follow the [official Google Sign In guide](https://developers.google.com/identity/sign-in/android/start-integrating) to set up their library and sign the user in with Google. Fetch the authorization code from the Google sign-in result. For a full example, refer to the `signInWithGoogle` function in [the example app](https://github.com/supertokens/supertokens-android/blob/master/examples/with-thirdparty/app/src/main/java/com/supertokens/supertokensexample/LoginActivity.kt).
+</ContentOption>
+<ContentOption title="iOS" value="ios">
+###### Fetching the authorization code on the frontend
+
+For iOS, use the `GoogleSignIn` library. Follow the [official guide](https://developers.google.com/identity/sign-in/ios/start-integrating) to set up the library and sign the user in with Google. Use the result of Google sign-in to get the authorization code. For a full example, refer to the `onGoogleCliked` function in [the example app](https://github.com/supertokens/supertokens-ios/blob/master/examples/with-thirdparty/with-thirdparty/LoginScreen/LoginScreenViewController.swift).
+</ContentOption>
+<ContentOption title="Flutter" value="flutter">
+###### Fetching the authorization code on the frontend
+
+For Flutter, use the [`google_sign_in`](https://pub.dev/packages/google_sign_in) package. Make sure to follow the prerequisite steps to get the package setup. After setup, use the snippet below to trigger the Google sign-in flow. For a full example, refer to the `loginWithGoogle` in [the example app](https://github.com/supertokens/supertokens-flutter/blob/master/examples/with-thirdparty/lib/screens/login.dart).
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
+
+<CodeGroup passive group="frontend-custom-ui">
+<Tab title="Mobile" value="mobile">
+<DependentContent group="mobile-frameworks" label="Mobile framework">
+<ContentOption title="React Native" value="reactnative">
+```tsx
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+
+export const performGoogleSignIn = async (): Promise<boolean> => {
+  GoogleSignin.configure({
+    webClientId: "GOOGLE_WEB_CLIENT_ID",
+    iosClientId: "GOOGLE_IOS_CLIENT_ID",
+  });
+
+  try {
+    const response = await GoogleSignin.signIn({});
+    const authCode = response.data?.serverAuthCode;
+
+    // Refer to step 2
+
+    return true;
+  } catch (e) {
+    console.log("Google sign in failed with error", e);
+  }
+
+  return false;
+};
+```
+</ContentOption>
+<ContentOption title="Android" value="android">
+```kotlin
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.util.Log
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import android.content.Intent
+
+class LoginActivity : AppCompatActivity() {
+    private lateinit var googleResultLauncher: ActivityResultLauncher<Intent>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        googleResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            onGoogleResultReceived(it)
+        }
+    }
+
+    private fun signInWithGoogle() {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestServerAuthCode("GOOGLE_WEB_CLIENT_ID")
+            .requestEmail()
+            .build()
+
+        val googleClient = GoogleSignIn.getClient(this, gso)
+        val signInIntent = googleClient.signInIntent
+
+        googleResultLauncher.launch(signInIntent)
+    }
+
+    private fun onGoogleResultReceived(it: ActivityResult) {
+        val task = GoogleSignIn.getSignedInAccountFromIntent(it.data)
+        val account = task.result
+        val authCode = account.serverAuthCode
+
+        // Refer to step 2
+    }
+}
+```
+</ContentOption>
+<ContentOption title="iOS" value="ios">
+```swift
+import UIKit
+import GoogleSignIn
+
+fileprivate class LoginScreenViewController: UIViewController {
+    @IBAction func onGoogleCliked() {
+        GIDSignIn.sharedInstance.signIn(withPresenting: self) { signInResult, error in
+            guard error == nil else { return }
+
+            guard let authCode: String = signInResult?.serverAuthCode as? String else {
+                print("Google login did not return an authorization code")
+                return
+            }
+
+            // Refer to step 2
+        }
+    }
+}
+```
+</ContentOption>
+<ContentOption title="Flutter" value="flutter">
+```dart
+import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:io';
+
+Future<void> loginWithGoogle() async {
+    GoogleSignIn googleSignIn;
+
+    if (Platform.isAndroid) {
+      googleSignIn = GoogleSignIn(
+        serverClientId: "GOOGLE_WEB_CLIENT_ID",
+        scopes: [
+          'email',
+        ],
+      );
+    } else {
+      googleSignIn = GoogleSignIn(
+        clientId: "GOOGLE_IOS_CLIENT_ID",
+        serverClientId: "GOOGLE_WEB_CLIENT_ID",
+        scopes: [
+          'email',
+        ],
+      );
+    }
+
+    GoogleSignInAccount? account = await googleSignIn.signIn();
+
+    if (account == null) {
+        print("Google sign in was aborted");
+        return;
+    }
+
+    String? authCode = account.serverAuthCode;
+
+    if (authCode == null) {
+        print("Google sign in did not return a server auth code");
+        return;
+    }
+
+    // Refer to step 2
+  }
+```
+</ContentOption>
+</DependentContent>
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+###### Step 2) Calling the `signinup` API to consume the authorization code
+
+Once you have the authorization code from the auth provider, you need to call the `signinup` API exposed by the backend `SDK` as shown below:
+</ContentOption>
+</DependentContent>
+
+<CodeGroup passive group="frontend-custom-ui">
+<Tab title="Mobile" value="mobile">
+```bash
+curl --location --request POST '<YOUR_API_DOMAIN>/auth/signinup' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+    "thirdPartyId": "google",
+    "clientType": "...",
+    "redirectURIInfo": {
+        "redirectURIOnProviderDashboard": "",
+        "redirectURIQueryParams": {
+            "code": "...",
+        }
+    }
+}'
+```
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+:::note[When calling the API exposed by the SuperTokens backend `SDK`, pass an empty string for `redirectURIOnProviderDashboard`.]
+The native login flow using the authorization code does not involve any redirection on the frontend.
+:::
+
+The response body from the API call has a `status` property in it:
+
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: The provider did not return the email identity required by this configuration. Ask the user to choose another sign-in method. Do not invent an email address without first defining a stable, provider-specific identity and an [account-linking policy](/post-authentication/account-linking/important-concepts): synthetic addresses can create duplicate accounts, link the wrong identities, and invalidate assumptions that an email belongs to or was verified by the user.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overridden the backend API to send back a custom error message which should display on the frontend.
+- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen during automatic account linking or during `MFA`. The `reason` prop that's in the response body contains a support code using which you can see why the sign in / up was not allowed.
+
+:::note[On success, the backend sends back session tokens as part of the response headers which are automatically handled by the frontend `SDK` for you.]
+:::
+
+##### Authorization code grant flow with `PKCE`
+
+This is similar to the first one, except that you do **not** need to provide a client secret during backend init.
+This flow only works for providers which support the [`PKCE` flow](https://oauth.net/2/pkce/).
+
+###### Calling the `signinup` API to consume the authorization code
+
+Once you have the authorization code and `PKCE` verifier from the auth provider, you need to call the `/signinup` API exposed by the backend `SDK` as shown below:
+
+<DependentContent passive group="mobile-frameworks">
+<ContentOption title="React Native" value="reactnative">
+###### Fetching the authorization code on the frontend
+
+You can use the [react native auth library](https://github.com/FormidableLabs/react-native-app-auth) to also return the `PKCE` code verifier along with the authorization code. Achieve this by setting the `usePKCE` boolean to `true` and also by setting the `skipCodeExchange` to `true` when configuring the react native auth library.
+</ContentOption>
+<ContentOption title="Android" value="android">
+###### Fetching the authorization code on the frontend
+
+You can use the [AppAuth-Android](https://github.com/openid/AppAuth-Android) library to use the `PKCE` flow by using the `setCodeVerifier` method when creating a `AuthorizationRequest`.
+</ContentOption>
+<ContentOption title="iOS" value="ios">
+###### Fetching the authorization code on the frontend
+
+You can use the [AppAuth-iOS](https://github.com/openid/AppAuth-iOS) library to use the `PKCE` flow.
+</ContentOption>
+<ContentOption title="Flutter" value="flutter">
+###### Fetching the authorization code on the frontend
+
+You can use [`flutter_appauth`](https://pub.dev/packages/flutter_appauth) to use the `PKCE` flow by providing a `codeVerifier` when you call the `appAuth.token` function.
+</ContentOption>
+</DependentContent>
+</ContentOption>
+</DependentContent>
+
+<CodeGroup passive group="frontend-custom-ui">
+<Tab title="Mobile" value="mobile">
+```bash
+curl --location --request POST '<YOUR_API_DOMAIN>/auth/signinup' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "thirdPartyId": "THIRD_PARTY_ID",
+    "clientType": "...",
+    "redirectURIInfo": {
+        "redirectURIOnProviderDashboard": "REDIRECT_URI",
+        "redirectURIQueryParams": {
+            "code": "...",
+        },
+        "pkceCodeVerifier": "..."
+    }
+}'
+```
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+:::note[- Replace `THIRD_PARTY_ID` with the provider id. The provider id must match the one you configure in the backend when initializing SuperTokens.]
+
+- `REDIRECT_URI` must exactly match the value you configure on the providers dashboard.
+:::
+
+The response body from the API call has a `status` property in it:
+
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: The provider did not return the email identity required by this configuration. Ask the user to choose another sign-in method. Do not invent an email address without first defining a stable, provider-specific identity and an [account-linking policy](/post-authentication/account-linking/important-concepts): synthetic addresses can create duplicate accounts, link the wrong identities, and invalidate assumptions that an email belongs to or was verified by the user.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overridden the backend API to send back a custom error message which should display on the frontend.
+- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen during automatic account linking or during `MFA`. The `reason` prop that's in the response body contains a support code using which you can see why the sign in / up was not allowed.
+
+:::note[On success, the backend sends back session tokens as part of the response headers which are automatically handled by the frontend `SDK` for you.]
+:::
+</ContentOption>
+</DependentContent>
+
+#### OAuth/Access Tokens
+
+      <DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Web" value="web">
+:::info[This flow is not applicable for web apps.]
+
+:::
+</ContentOption>
+<ContentOption title="Mobile" value="mobile">
+##### Fetching the OAuth/Access tokens on the frontend
+
+1. Sign in with the social provider. The minimum required scope is the one that provides access to the user's email. You can use any library to sign in with the social provider.
+2. Get the access token on the frontend if it is available.
+3. Get the id token from the sign in result if it is available.
+
+:::note[You need to provide either the access token or the id token, or both in step 2, depending on what is available.]
+:::
+
+##### Calling the `signinup` API to use the OAuth tokens
+
+Once you have the `access_token` or the `id_token` from the auth provider, you need to call the `/signinup` API exposed by the backend `SDK` as shown below:
+</ContentOption>
+</DependentContent>
+
+<CodeGroup group="frontend-custom-ui">
+<Tab title="Web" value="web">
+
+</Tab>
+<Tab title="Mobile" value="mobile">
+```bash
+curl --location --request POST '<YOUR_API_DOMAIN>/auth/signinup' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+    "thirdPartyId": "google",
+    "clientType": "...",
+    "oAuthTokens": {
+        "access_token": "...",
+        "id_token": "..."
+    },
+}'
+```
+</Tab>
+</CodeGroup>
+
+<DependentContent passive group="frontend-custom-ui">
+<ContentOption title="Mobile" value="mobile">
+:::note[- The `clientType` input is optional, and you need it only if you have initialised more than one client in the provider on the backend (See the "Social / Single Sign-On login for both, web and mobile apps" section below).]
+
+- If you have the `id_token`, you can send that along with the `access_token`.
+:::
+
+The response body from the API call has a `status` property in it:
+
+- `status: "OK"`: User sign in / up was successful. The response also contains more information about the user, for example their user ID, and if it was a new user or existing user.
+- `status: "NO_EMAIL_GIVEN_BY_PROVIDER"`: The provider did not return the email identity required by this configuration. Ask the user to choose another sign-in method. Do not invent an email address without first defining a stable, provider-specific identity and an [account-linking policy](/post-authentication/account-linking/important-concepts): synthetic addresses can create duplicate accounts, link the wrong identities, and invalidate assumptions that an email belongs to or was verified by the user.
+- `status: "GENERAL_ERROR"`: This is only possible if you have overridden the backend API to send back a custom error message which should display on the frontend.
+- `status: "SIGN_IN_UP_NOT_ALLOWED"`: This can happen during automatic account linking or during `MFA`. The `reason` prop that's in the response body contains a support code using which you can see why the sign in / up was not allowed.
+
+:::note[On success, the backend sends back session tokens as part of the response headers which are automatically handled by the frontend `SDK` for you.]
+:::
+</ContentOption>
+</DependentContent>
 
 ### 3. Initialize the backend SDK
 
-<BackendSDKInit />
+You have to initialize the **Backend Software Development Kit (SDK)** alongside the code that starts your server.
+The init call includes [configuration details](/references/backend-sdks/reference#sdk-configuration) for your app. It specifies how the backend connects to the **SuperTokens Core**, as well as the **Recipes** used in your setup.
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx title="Backend SDK Init"
+import supertokens from "supertokens-node";
+import Session from "supertokens-node/recipe/session";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+supertokens.init({
+  // Replace this with the framework you are using
+  framework: "express",
+  supertokens: {
+    // We use try.supertokens for demo purposes.
+    // At the end of the tutorial we will show you how to create
+    // your own SuperTokens core instance and then update your config.
+    connectionURI: "https://try.supertokens.io",
+    // apiKey: <YOUR_API_KEY>
+  },
+  appInfo: {
+    // learn more about this on https://supertokens.com/docs/references/backend-sdks/reference#sdk-configuration
+    appName: "<YOUR_APP_NAME>",
+    apiDomain: "<YOUR_API_DOMAIN>",
+    websiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+    apiBasePath: "/auth",
+    websiteBasePath: "/auth",
+  },
+  recipeList: [
+    ThirdParty.init({
+      /*TODO: See next step*/
+    }),
+    Session.init(),
+  ],
+});
+```
+</Tab>
+<Tab title="Python" value="python">
+```python title="Backend SDK Init"
+from supertokens_python import init, InputAppInfo, SupertokensConfig
+from supertokens_python.recipe import thirdparty, session
+
+init(
+    app_info=InputAppInfo(
+        app_name="<YOUR_APP_NAME>",
+        api_domain="<YOUR_API_DOMAIN>",
+        website_domain="<YOUR_WEBSITE_DOMAIN>",
+        api_base_path="/auth",
+        website_base_path="/auth"
+    ),
+    supertokens_config=SupertokensConfig(
+        # We use try.supertokens for demo purposes.
+        # At the end of the tutorial we will show you how to create
+        # your own SuperTokens core instance and then update your config.
+        connection_uri="https://try.supertokens.io",
+        # api_key: <YOUR_API_KEY>
+    ),
+    framework='fastapi',
+    recipe_list=[
+        session.init(), # initializes session features
+        thirdparty.init(
+           # TODO: See next step
+        )
+    ],
+    mode='asgi' # use wsgi if you are running using gunicorn
+)
+```
+</Tab>
+<Tab title="Go" value="go">
+```go title="Backend SDK Init"
+import (
+	"github.com/supertokens/supertokens-golang/recipe/session"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+  apiBasePath := "/auth"
+  websiteBasePath := "/auth"
+  err := supertokens.Init(supertokens.TypeInput{
+    Supertokens: &supertokens.ConnectionInfo{
+          // We use try.supertokens for demo purposes.
+          // At the end of the tutorial we will show you how to create
+          // your own SuperTokens core instance and then update your config.
+          ConnectionURI: "https://try.supertokens.io",
+          // APIKey: <YOUR_API_KEY>
+    },
+    AppInfo: supertokens.AppInfo{
+            AppName: "<YOUR_APP_NAME>",
+            APIDomain: "<YOUR_API_DOMAIN>",
+            WebsiteDomain: "<YOUR_WEBSITE_DOMAIN>",
+            APIBasePath: &apiBasePath,
+            WebsiteBasePath: &websiteBasePath,
+    },
+    RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{/*TODO: See next step*/}),
+      session.Init(nil), // initializes session features
+    },
+  })
+
+	if err != nil {
+		panic(err.Error())
+	}
+}
+```
+</Tab>
+</CodeGroup>
 
 ### 4. Add the authentication providers
 
-<BackendProviderInit />
+Populate the `providers` array with the third-party authentication providers that you want.
 
-</UIType.CustomUIContent>
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+SuperTokens.init({
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    ThirdParty.init({
+      signInAndUpFeature: {
+        // Load these credentials from environment variables or a secret manager.
+        providers: [
+          {
+            config: {
+              thirdPartyId: "google",
+              clients: [
+                {
+                  clientId: "<GOOGLE_CLIENT_ID>",
+                  clientSecret: "<GOOGLE_CLIENT_SECRET>",
+                },
+              ],
+            },
+          },
+          {
+            config: {
+              thirdPartyId: "github",
+              clients: [
+                {
+                  clientId: "<GITHUB_CLIENT_ID>",
+                  clientSecret: "<GITHUB_CLIENT_SECRET>",
+                },
+              ],
+            },
+          },
+          {
+            config: {
+              thirdPartyId: "apple",
+              clients: [
+                {
+                  clientId: "<APPLE_CLIENT_ID>",
+                  additionalConfig: {
+                    keyId: "<APPLE_KEY_ID>",
+                    privateKey: "<APPLE_PRIVATE_KEY>",
+                    teamId: "<APPLE_TEAM_ID>",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    }),
+    // ...
+  ],
+});
+```
+</Tab>
+<Tab title="Go" value="go">
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+)
+
+func main() {
+	// Inside supertokens.Init
+	thirdparty.Init(&tpmodels.TypeInput{
+		SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
+			Providers: []tpmodels.ProviderInput{
+				// Load these credentials from environment variables or a secret manager.
+				{
+					Config: tpmodels.ProviderConfig{
+						ThirdPartyId: "google",
+						Clients: []tpmodels.ProviderClientConfig{
+							{
+								ClientID: "<GOOGLE_CLIENT_ID>",
+								ClientSecret: "<GOOGLE_CLIENT_SECRET>",
+							},
+						},
+					},
+				},
+				{
+					Config: tpmodels.ProviderConfig{
+						ThirdPartyId: "github",
+						Clients: []tpmodels.ProviderClientConfig{
+							{
+								ClientID:     "<GITHUB_CLIENT_ID>",
+								ClientSecret: "<GITHUB_CLIENT_SECRET>",
+							},
+						},
+					},
+				},
+				{
+					Config: tpmodels.ProviderConfig{
+						ThirdPartyId: "apple",
+						Clients: []tpmodels.ProviderClientConfig{
+							{
+								ClientID: "<APPLE_CLIENT_ID>",
+								AdditionalConfig: map[string]interface{}{
+									"keyId":      "<APPLE_KEY_ID>",
+									"privateKey": "<APPLE_PRIVATE_KEY>",
+									"teamId":     "<APPLE_TEAM_ID>",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+```
+</Tab>
+<Tab title="Python" value="python">
+```python
+from supertokens_python.recipe.thirdparty.provider import ProviderInput, ProviderConfig, ProviderClientConfig
+from supertokens_python.recipe import thirdparty
+
+# Inside init
+thirdparty.init(
+    sign_in_and_up_feature=thirdparty.SignInAndUpFeature(providers=[
+        # Load these credentials from environment variables or a secret manager.
+        ProviderInput(
+            config=ProviderConfig(
+                third_party_id="google",
+                clients=[
+                    ProviderClientConfig(
+                        client_id="<GOOGLE_CLIENT_ID>",
+                        client_secret="<GOOGLE_CLIENT_SECRET>",
+                    ),
+                ],
+            ),
+        ),
+        ProviderInput(
+            config=ProviderConfig(
+                third_party_id="github",
+                clients=[
+                    ProviderClientConfig(
+                        client_id="<GITHUB_CLIENT_ID>",
+                        client_secret="<GITHUB_CLIENT_SECRET>",
+                    )
+                ],
+            ),
+        ),
+        ProviderInput(
+            config=ProviderConfig(
+                third_party_id="apple",
+                clients=[
+                    ProviderClientConfig(
+                        client_id="<APPLE_CLIENT_ID>",
+                        additional_config={
+                            "keyId": "<APPLE_KEY_ID>",
+                            "privateKey": "<APPLE_PRIVATE_KEY>",
+                            "teamId": "<APPLE_TEAM_ID>"
+                        },
+                    ),
+                ],
+            ),
+        ),
+    ])
+)
+```
+</Tab>
+</CodeGroup>
+
+
+:::note[Replace every credential placeholder with credentials for your own provider application.]
+Load secrets from environment variables or a secret manager. Do not commit client secrets or Apple private keys to source control.
+Read the list of [built-in providers](/authentication/social/built-in-providers-config) that also includes information on how to generate your own keys.
+To add a provider that is not listed, you can follow the guide on [setting up custom providers](/authentication/social/custom-providers).
+:::
+
+
+#### Set OAuth scopes
+
+To add additional OAuth scopes when accessing your third-party provider, add them to the configuration when initializing the backend `SDK`.
+
+For example, if you are using Google as your third-party provider, you can add an additional scope as follows:
+
+<CodeGroup group="backend-language">
+<Tab title="Node.js" value="nodejs">
+```tsx
+import SuperTokens from "supertokens-node";
+import ThirdParty from "supertokens-node/recipe/thirdparty";
+
+SuperTokens.init({
+  supertokens: {
+    connectionURI: "...",
+  },
+  appInfo: {
+    apiDomain: "...",
+    appName: "...",
+    websiteDomain: "...",
+  },
+  recipeList: [
+    ThirdParty.init({
+      signInAndUpFeature: {
+        providers: [
+          {
+            config: {
+              thirdPartyId: "google",
+              clients: [
+                {
+                  clientId: "TODO: GOOGLE_CLIENT_ID",
+                  clientSecret: "TODO: GOOGLE_CLIENT_SECRET",
+                  scope: ["scope1", "scope2"],
+                },
+              ],
+            },
+          },
+        ],
+      },
+    }),
+  ],
+});
+```
+</Tab>
+<Tab title="Go" value="go">
+```go
+import (
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
+	"github.com/supertokens/supertokens-golang/supertokens"
+)
+
+func main() {
+	supertokens.Init(supertokens.TypeInput{
+		RecipeList: []supertokens.Recipe{
+			thirdparty.Init(&tpmodels.TypeInput{
+				SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
+					Providers: []tpmodels.ProviderInput{
+						{
+							Config: tpmodels.ProviderConfig{
+								ThirdPartyId: "google",
+								Clients: []tpmodels.ProviderClientConfig{
+									{
+										ClientID:     "TODO: GOOGLE_CLIENT_ID",
+										ClientSecret: "TODO: GOOGLE_CLIENT_SECRET",
+										Scope: []string{
+											"scope1", "scope2",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		},
+	})
+}
+```
+</Tab>
+<Tab title="Python" value="python">
+```python check=false reason="This example omits surrounding application and SuperTokens configuration."
+from supertokens_python import init, InputAppInfo
+from supertokens_python.recipe import thirdparty
+from supertokens_python.recipe.thirdparty import ProviderInput, ProviderConfig, ProviderClientConfig, SignInAndUpFeature
+
+init(
+    app_info=InputAppInfo(api_domain="...", app_name="...", website_domain="..."),
+    framework='...',
+    recipe_list=[
+        thirdparty.init(
+
+            sign_in_and_up_feature=SignInAndUpFeature(
+                providers=[
+                    ProviderInput(
+                        config=ProviderConfig(
+                            third_party_id="google",
+                            clients=[
+                                ProviderClientConfig(
+                                    client_id="GOOGLE_CLIENT_ID",
+                                    client_secret="GOOGLE_CLIENT_SECRET",
+                                    scope=["scope1", "scope2"]
+                                ),
+                            ],
+                        ),
+                    ),
+                ]
+            )
+        )
+    ]
+)
+```
+</Tab>
+</CodeGroup>
+
+:::note[Along with your custom scopes, also add scopes that ask for the user's email and its verification status. For example, with Google, this scope is `"https://www.googleapis.com/auth/userinfo.email"`.]
+:::
+
+</VariantContent>
 
 
 ## Next steps
 
 Having completed the main setup, you can explore more advanced topics related to the **ThirdParty** recipe.
 
-<ReferenceCard.Grid>
-  <ReferenceCard href="/docs/authentication/social/built-in-providers-config">
-    <ReferenceCard.Title>
-      Built-in Providers
-    </ReferenceCard.Title>
-    <ReferenceCard.Description>
-      Read more about the common providers exposed by the recipe.
-    </ReferenceCard.Description>
-  </ReferenceCard>
-  <ReferenceCard href="/docs/authentication/social/custom-providers">
-    <ReferenceCard.Title>
-      Custom Providers
-    </ReferenceCard.Title>
-    <ReferenceCard.Description>
-      See how you can create your own custom provider.
-    </ReferenceCard.Description>
-  </ReferenceCard>
-  <ReferenceCard href="/docs/authentication/social/custom-invite-flow">
-    <ReferenceCard.Title>
-      Custom Invite Flow
-    </ReferenceCard.Title>
-    <ReferenceCard.Description>
-      Disable public sign ups and use your own invite flow.
-    </ReferenceCard.Description>
-  </ReferenceCard>
-  <ReferenceCard href="/docs/authentication/social/hooks-and-overrides">
-    <ReferenceCard.Title>
-      Hooks and Overrides
-    </ReferenceCard.Title>
-    <ReferenceCard.Description>
-      Add custom logic after the logs in or signs up.
-    </ReferenceCard.Description>
-  </ReferenceCard>
-</ReferenceCard.Grid>
+<CardGroup cols={3}>
+  <Card title="Built-in Providers" href="/authentication/social/built-in-providers-config">
+Read more about the common providers exposed by the recipe.
+</Card>
+  <Card title="Custom Providers" href="/authentication/social/custom-providers">
+See how you can create your own custom provider.
+</Card>
+  <Card title="Custom Invite Flow" href="/authentication/social/custom-invite-flow">
+Disable public sign ups and use your own invite flow.
+</Card>
+  <Card title="Hooks and Overrides" href="/authentication/social/hooks-and-overrides">
+Add custom logic after the logs in or signs up.
+</Card>
+</CardGroup>
