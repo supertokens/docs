@@ -20,41 +20,42 @@ For this guide, we will assume that we want to pass the logged in user's ID as a
 import type { GetServerSidePropsContext } from "next";
 import { getSSRSession } from "supertokens-node/nextjs";
 
-import { ensureSuperTokensInit } from "../config/backendConfig";
+export function createGetServerSideProps(ensureSuperTokensInit: () => void) {
+  return async function getServerSideProps(context: GetServerSidePropsContext) {
+    ensureSuperTokensInit();
+    const cookies = Object.entries(context.req.cookies).flatMap(([name, value]) =>
+      value === undefined ? [] : [{ name, value }],
+    );
+    const { accessTokenPayload, error } = await getSSRSession(cookies);
 
-ensureSuperTokensInit();
+    if (error) {
+      throw error;
+    }
 
-export async function getServerSideProps(context: GetServerSidePropsContext) {
-  const cookies = Object.entries(context.req.cookies).flatMap(([name, value]) =>
-    value === undefined ? [] : [{ name, value }],
-  );
-  const { accessTokenPayload, error } = await getSSRSession(cookies);
+    if (accessTokenPayload === undefined) {
+      // This occurs if the token has expired or doesn't exist.
+      // Either way, sending this response prompts the frontend to attempt a session refresh.
+      //
+      // Case 1: Token doesn't exist
+      // - The refresh will fail, and the user will be redirected to the login page.
+      //
+      // Case 2: Token has expired
+      // - The client will call the refresh API and update the session tokens.
 
-  if (error) {
-    throw error;
-  }
+      return { props: { fromSupertokens: "needs-refresh" } };
+      // or return {fromSupertokens: 'needs-refresh'} in case of getInitialProps
+    }
 
-  if (accessTokenPayload === undefined) {
-    // This occurs if the token has expired or doesn't exist.
-    // Either way, sending this response prompts the frontend to attempt a session refresh.
-    //
-    // Case 1: Token doesn't exist
-    // - The refresh will fail, and the user will be redirected to the login page.
-    //
-    // Case 2: Token has expired
-    // - The client will call the refresh API and update the session tokens.
+    return {
+      props: { userId: accessTokenPayload.sub },
+    };
 
-    return { props: { fromSupertokens: "needs-refresh" } };
-    // or return {fromSupertokens: 'needs-refresh'} in case of getInitialProps
-  }
-
-  return {
-    props: { userId: accessTokenPayload.sub },
+    // or return { userId: accessTokenPayload.sub } in case of getInitialProps
   };
-
-  // or return { userId: accessTokenPayload.sub } in case of getInitialProps
 }
 ```
+
+In your page module, import `ensureSuperTokensInit` from your application's backend configuration and export `getServerSideProps = createGetServerSideProps(ensureSuperTokensInit)`. This keeps session verification connected to the same SDK configuration as your authentication routes.
 
 :::warning[Use `getSSRSession` rather than `getSession` or `verifySession` here. The latter functions might update the session tokens, but server-side requests cannot propagate those updates through frontend request interceptors.]
 :::
