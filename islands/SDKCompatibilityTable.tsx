@@ -68,7 +68,7 @@ export default function SDKCompatibilityTable() {
     setIsLoadingCompatibility(true);
 
     request<Compatibility>(
-      `/compatibility?driver=${encodeURIComponent(backend)}&frontend=${encodeURIComponent(frontend)}`,
+      `/compatibility?driver=${encodeURIComponent(backend)}&frontend=${encodeURIComponent(frontend)}&plugin=&planType=FREE`,
       controller.signal,
     )
       .then((result) => {

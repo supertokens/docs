@@ -27,7 +27,7 @@ describe("microfrontend routing", () => {
     expect(docs.packageName).toBe("@supertokens/docs");
     expect(docs.assetPrefix).toBe("docs-assets");
     expect(docs.routing).toEqual([
-      { group: "docs", flag: "docs-microfrontend", paths: ["/docs/:path*"] },
+      { group: "docs", paths: ["/docs/:path*"] },
       { group: "docs-assets", paths: ["/docs-assets/:path*"] },
     ]);
   });
