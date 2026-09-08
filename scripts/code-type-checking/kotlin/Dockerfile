@@ -5,6 +5,4 @@ WORKDIR /app
 
 COPY . .
 
-COPY snippets/* ./app/src/main/java/com/example/myapplication
-
-RUN ./gradlew build
+RUN sh ./validate-kotlin.sh

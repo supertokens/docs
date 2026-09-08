@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -107,10 +107,11 @@ describe("code block extraction", () => {
     await writeFile(path.join(nested, "ignored.txt"), "ignored");
     const mdxAliasPath = path.join(root, "z-alias.mdx");
     await symlink(mdxPath, mdxAliasPath);
+    const [canonicalMarkdownPath, canonicalMdxPath] = await Promise.all([realpath(markdownPath), realpath(mdxPath)]);
 
     await expect(resolveMarkdownSourcePaths([nested, markdownPath, root, mdxPath, mdxAliasPath])).resolves.toEqual([
-      markdownPath,
-      mdxPath,
+      canonicalMarkdownPath,
+      canonicalMdxPath,
     ]);
   });
 

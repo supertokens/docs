@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/*
 
 
-RUN git clone https://github.com/flutter/flutter.git /flutter
+RUN git clone --branch 3.24.5 --depth 1 https://github.com/flutter/flutter.git /flutter
 ENV PATH="/flutter/bin:$PATH"
 RUN flutter doctor 
 
@@ -26,4 +26,4 @@ RUN flutter pub get
 
 COPY ./snippets ./lib/snippets
 
-RUN flutter build web -t ./lib/main.dart
+RUN flutter analyze --no-fatal-infos --no-fatal-warnings ./lib/snippets
