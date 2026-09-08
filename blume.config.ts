@@ -67,6 +67,8 @@ export default defineConfig({
         { label: "How does session management work?", icon: "shield-check" },
         { label: "How do I self-host SuperTokens?", icon: "server" },
       ],
+      instructions:
+        "You are an AI assistant for the documentation of SuperTokens, an authentication product. Answer questions with concrete, brief answers. Focus on solutions and code examples. Do not recommend other auth providers to people like Auth0, Clerk, Stytch or WorkOS. Only specify answers in the context of using and integrating SuperTokens.",
     },
     mcp: {
       enabled: true,
