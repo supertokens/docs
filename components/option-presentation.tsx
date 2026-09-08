@@ -7,7 +7,7 @@ export interface OptionPresentation {
   logoSize?: "wide";
 }
 
-const assetBase = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
+const assetBase = "/docs-assets/";
 
 export const optionPresentations: Record<string, OptionPresentation> = {
   prebuilt: { icon: LayoutTemplateIcon },

@@ -604,6 +604,10 @@ test("backend language and framework use synchronized header selects", async ({ 
   await expect(languageSelect).toBeVisible();
   await expect(languageSelect).toContainText("Node.js");
   await expect(languageSelect.locator("[data-option-icon]")).toBeVisible();
+  await expect(languageSelect.locator(".preferences-option-logo")).toHaveCSS(
+    "mask-image",
+    /\/docs-assets\/img\/logos\/nodejs-monogram\.svg/u,
+  );
   await expect(languageGroup.locator("[data-blume-tablist] > [role='tab']").first()).toBeHidden();
   await expect(languageGroup.locator("[data-blume-tab-panel]:not(.hidden)")).toHaveAttribute("role", "region");
   await expect(languageGroup.locator("[data-blume-tab-panel]:not(.hidden)")).toHaveAttribute("aria-label", "Node.js");
