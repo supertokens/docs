@@ -36,6 +36,10 @@ describe("microfrontend routing", () => {
     expect(vercel.rewrites.filter(({ source }) => source.startsWith("/docs-assets/"))).toEqual([]);
   });
 
+  it("keeps Ask AI at its public route for Astro request matching", () => {
+    expect(vercel.rewrites.some(({ source }) => source === "/docs/api/ask")).toBe(false);
+  });
+
   it("proxies every SDK namespace and redirects roots through latest", () => {
     for (const [sdk, entrypoint] of Object.entries(sdkEntrypoints)) {
       expect(vercel.redirects).toContainEqual({
@@ -53,7 +57,6 @@ describe("microfrontend routing", () => {
   it("serves the advertised API catalog while leaving MCP well-known ownership to the dashboard", () => {
     expect(vercel.rewrites).toEqual(
       expect.arrayContaining([
-        { source: "/docs/api/ask", destination: "/api/ask" },
         { source: "/docs/llms.txt", destination: "/llms.txt" },
         { source: "/docs/llms-full.txt", destination: "/llms-full.txt" },
         { source: "/docs/agent-readability.json", destination: "/agent-readability.json" },

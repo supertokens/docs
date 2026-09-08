@@ -36,7 +36,9 @@ test("serves machine-readable docs endpoints", async ({ request }) => {
   }
 
   expect((await request.get("/docs/integrate-with-ai.md")).ok()).toBe(true);
-  expect((await request.get("/docs/api/ask")).status()).toBe(405);
+  const invalidAskRequest = await request.post("/docs/api/ask", { data: {} });
+  expect(invalidAskRequest.status()).toBe(400);
+  expect(await invalidAskRequest.text()).toContain("Invalid request:");
   expect((await request.get("/docs/mcp")).status()).toBe(405);
 });
 

@@ -1,5 +1,5 @@
 diff --git a/node_modules/blume/dist/cli/index.js b/node_modules/blume/dist/cli/index.js
-index 86b5ac9..a713ff1 100755
+index 86b5ac9..2216d41 100755
 --- a/node_modules/blume/dist/cli/index.js
 +++ b/node_modules/blume/dist/cli/index.js
 @@ -3269,7 +3269,7 @@ var buildApiCatalog = (config) => {
@@ -68,6 +68,15 @@ index 86b5ac9..a713ff1 100755
      // Everything hydration can reach must be part of the dev dep optimizer's
      // FIRST run. The Vite root is the generated runtime, so user pages,
      // islands, and aliased components live outside it and are only crawled
+@@ -4123,7 +4128,7 @@ const provider = createOpenAICompatible({
+     modelExpr = `provider(${JSON.stringify(backend.model)})`;
+   }
+   if (grounded) {
+-    imports.push('import { createAskContext } from "blume/ai/ask-context.ts";', 'import askData from "../../generated/ask-data.json";');
++    imports.push('import { createAskContext } from "blume/ai/ask-context.ts";', `import askData from ${JSON.stringify(options?.dataImport ?? "../../generated/ask-data.json")};`);
+     const groundFields = [];
+     if (instructions) {
+       groundFields.push(`instructions: ${JSON.stringify(instructions)}`);
 @@ -10042,6 +10047,7 @@ var publicJwkSchema = z2.record(z2.string(), z2.unknown()).superRefine((jwk, ctx
    }
  });
@@ -251,6 +260,23 @@ index 86b5ac9..a713ff1 100755
    ]);
  };
  var planPlaygroundProxy = (config, srcDir) => ({
+@@ -19153,11 +19211,14 @@ var writeAskFiles = async (project, srcDir, write) => {
+     return;
+   }
+   const grounded = ask.provider !== "inkeep";
++  const endpointFile = join28(srcDir, "pages", withBasePath(project.config.basePath, "/api/ask").slice(1) + ".ts");
++  const dataFile = join28(srcDir, "generated", "ask-data.json");
+   if (grounded) {
+-    await write(join28(srcDir, "generated", "ask-data.json"), `${JSON.stringify(await buildAskData(project))}
++    await write(dataFile, `${JSON.stringify(await buildAskData(project))}
+ `);
+   }
+-  await write(join28(srcDir, "pages", "api", "ask.ts"), askEndpointTemplate(resolveAskBackend(ask), grounded, {
++  await write(endpointFile, askEndpointTemplate(resolveAskBackend(ask), grounded, {
++    dataImport: relative14(dirname11(endpointFile), dataFile),
+     instructions: ask.instructions,
+     retrieval: ask.retrieval
+   }));
 diff --git a/node_modules/blume/dist/types/core/config-input.d.ts b/node_modules/blume/dist/types/core/config-input.d.ts
 index 6084a0c..9fa2792 100644
 --- a/node_modules/blume/dist/types/core/config-input.d.ts
@@ -435,7 +461,7 @@ index bf13cb5..35e122c 100644
        headers,
        status: response.status,
 diff --git a/node_modules/blume/src/astro/generate.ts b/node_modules/blume/src/astro/generate.ts
-index 185a200..77c5ed5 100644
+index 185a200..8766cc7 100644
 --- a/node_modules/blume/src/astro/generate.ts
 +++ b/node_modules/blume/src/astro/generate.ts
 @@ -22,7 +22,7 @@ import { askBackendRuntimeDep, resolveAskBackend } from "../ai/ask.ts";
@@ -585,8 +611,33 @@ index 185a200..77c5ed5 100644
    ]);
  };
  
+@@ -1536,15 +1569,22 @@ const writeAskFiles = async (
+     return;
+   }
+   const grounded = ask.provider !== "inkeep";
++  const endpointFile = join(
++    srcDir,
++    "pages",
++    withBasePath(project.config.basePath, "/api/ask").slice(1) + ".ts"
++  );
++  const dataFile = join(srcDir, "generated", "ask-data.json");
+   if (grounded) {
+     await write(
+-      join(srcDir, "generated", "ask-data.json"),
++      dataFile,
+       `${JSON.stringify(await buildAskData(project))}\n`
+     );
+   }
+   await write(
+-    join(srcDir, "pages", "api", "ask.ts"),
++    endpointFile,
+     askEndpointTemplate(resolveAskBackend(ask), grounded, {
++      dataImport: relative(dirname(endpointFile), dataFile),
+       instructions: ask.instructions,
+       retrieval: ask.retrieval,
+     })
 diff --git a/node_modules/blume/src/astro/templates.ts b/node_modules/blume/src/astro/templates.ts
-index d4656c7..2ca1f63 100644
+index d4656c7..7bbd985 100644
 --- a/node_modules/blume/src/astro/templates.ts
 +++ b/node_modules/blume/src/astro/templates.ts
 @@ -352,6 +352,7 @@ const renderIntegrationBridge = (
@@ -641,6 +692,23 @@ index d4656c7..2ca1f63 100644
      // Everything hydration can reach must be part of the dev dep optimizer's
      // FIRST run. The Vite root is the generated runtime, so user pages,
      // islands, and aliased components live outside it and are only crawled
+@@ -901,5 +907,7 @@ const ASK_FALLBACK_PROMPT =
+ /** The `ai.ask` values the generated endpoint has to carry with it. */
+ export interface AskEndpointOptions {
++  /** Grounding snapshot import, relative to the generated endpoint. */
++  dataImport?: string;
+   /** `ai.ask.instructions` — extra system-prompt text. */
+   instructions?: string;
+   /** `ai.ask.retrieval` — how much documentation each question carries. */
+@@ -955,7 +963,7 @@ export const askEndpointTemplate = (
+   if (grounded) {
+     imports.push(
+       'import { createAskContext } from "blume/ai/ask-context.ts";',
+-      'import askData from "../../generated/ask-data.json";'
++      `import askData from ${JSON.stringify(options?.dataImport ?? "../../generated/ask-data.json")};`
+     );
+     const groundFields: string[] = [];
+     if (instructions) {
 diff --git a/node_modules/blume/src/components/content/CodeGroup.astro b/node_modules/blume/src/components/content/CodeGroup.astro
 index d9e7412..838dc06 100644
 --- a/node_modules/blume/src/components/content/CodeGroup.astro

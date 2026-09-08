@@ -85,7 +85,7 @@ describe("generated legacy redirect matrix", () => {
       vercel.redirects.length +
       vercel.rewrites.length +
       vercel.headers.length;
-    expect(routeCount).toBe(1878);
+    expect(routeCount).toBe(1877);
     expect(routeCount).toBeLessThanOrEqual(1900);
     expect(2048 - routeCount).toBeGreaterThanOrEqual(148);
   });
