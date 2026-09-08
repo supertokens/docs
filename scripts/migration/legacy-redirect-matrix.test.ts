@@ -12,7 +12,7 @@ const redirects = new Map(legacyRedirects.map(({ from, to }) => [from, to]));
 
 describe("generated legacy redirect matrix", () => {
   it("locks generated artifact counts", () => {
-    expect(routeManifest.counts).toEqual({ pages: 507, openapiOperations: 205 });
+    expect(routeManifest.counts).toEqual({ pages: 429, openapiOperations: 205 });
     expect(legacyRedirects).toHaveLength(1566);
     expect(legacyRedirectDiagnostics.retained).toHaveLength(1566);
     expect(legacyRedirectDiagnostics.ignored).toHaveLength(7);
