@@ -5,7 +5,7 @@ import { ASK_AI_MODEL } from "./lib/ask-ai-config";
 import { configuredRedirects } from "./scripts/blume/configured-redirects.mjs";
 import { legacyRedirects } from "./scripts/migration/legacy-redirects";
 
-const publicOrigin = process.env.DOCS_PUBLIC_ORIGIN;
+const publicOrigin = process.env.DOCS_PUBLIC_ORIGIN ?? "https://supertokens.com";
 const posthogToken = process.env.PUBLIC_POSTHOG_PROJECT_TOKEN ?? process.env.POSTHOG_PROJECT_TOKEN;
 const posthogHost = process.env.PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST;
 export default defineConfig({
@@ -88,7 +88,7 @@ export default defineConfig({
   deployment: {
     output: "server",
     adapter: "vercel",
-    ...(publicOrigin ? { site: publicOrigin } : {}),
+    site: publicOrigin,
   },
   seo: {
     agentReadability: true,

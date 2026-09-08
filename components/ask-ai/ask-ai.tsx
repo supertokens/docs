@@ -831,12 +831,6 @@ const AskAI = ({
           <Glyph path={icons.arrowUp} />
         </button>
       </form>
-      {posthogEnabled && (
-        <p className="shrink-0 border-border border-t px-4 py-2 text-[0.7rem] text-muted-foreground">
-          Questions and answers are logged to improve the documentation. Do not include passwords, API keys, tokens,
-          personal data, or other secrets.
-        </p>
-      )}
     </aside>
   );
 

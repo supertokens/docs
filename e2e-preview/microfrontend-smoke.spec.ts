@@ -78,18 +78,18 @@ test("keeps dashboard-owned MCP discovery separate from the docs child", async (
   }
 });
 
-test("proxies SDK latest entrypoints and their relative assets without changing the public URL", async ({ page }) => {
-  for (const path of [
-    "/docs/nodejs/latest/modules.html",
-    "/docs/python/latest/index.html",
-    "/docs/auth-react/latest/modules.html",
-    "/docs/web-js/latest/modules.html",
-    "/docs/website/latest/modules.html",
-    "/docs/react-native/latest/modules.html",
-    "/docs/android/latest/index.html",
-    "/docs/ios/latest/index.html",
-    "/docs/flutter/latest/index.html",
-  ]) {
+for (const path of [
+  "/docs/nodejs/latest/modules.html",
+  "/docs/python/latest/index.html",
+  "/docs/auth-react/latest/modules.html",
+  "/docs/web-js/latest/modules.html",
+  "/docs/website/latest/modules.html",
+  "/docs/react-native/latest/modules.html",
+  "/docs/android/latest/index.html",
+  "/docs/ios/latest/index.html",
+  "/docs/flutter/latest/index.html",
+]) {
+  test(`proxies ${path} and its relative assets without changing the public URL`, async ({ page }) => {
     const response = await page.goto(path);
     expect(response?.ok(), path).toBe(true);
     expect(new URL(page.url()).pathname).toBe(path);
@@ -99,14 +99,20 @@ test("proxies SDK latest entrypoints and their relative assets without changing 
       .evaluateAll((elements) =>
         elements.map((element) => element.getAttribute("href") ?? element.getAttribute("src")).filter(Boolean),
       );
-    for (const assetUrl of assetUrls) {
-      const resolved = new URL(assetUrl as string, page.url());
-      if (resolved.origin === new URL(page.url()).origin) {
-        expect((await page.request.get(resolved.toString())).ok(), resolved.toString()).toBe(true);
-      }
-    }
-  }
-});
+    const pageUrl = new URL(page.url());
+    const sameOriginAssets = new Set(
+      assetUrls
+        .map((assetUrl) => new URL(assetUrl as string, pageUrl))
+        .filter((url) => url.origin === pageUrl.origin)
+        .map((url) => url.href),
+    );
+    await Promise.all(
+      [...sameOriginAssets].map(async (url) => {
+        expect((await page.request.get(url)).ok(), url).toBe(true);
+      }),
+    );
+  });
+}
 
 test("exposes configured, legacy, and external redirects directly", async ({ request }) => {
   const cases = [
