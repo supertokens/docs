@@ -843,20 +843,67 @@ A secure implementation must:
 <ContentOption title="Node.js" value="nodejs">
 With [passport-oauth2](https://www.passportjs.org/packages/passport-oauth2/), state protection and PKCE are opt-in. Configure both. Install server-side Express session middleware before Passport; do not use a client-side cookie session store. This example uses the separately registered `client_secret_post` client described in step 2.
 
-```javascript
+```typescript
+import express, { type Request } from "express";
+import session, { type Session, type SessionData, type Store } from "express-session";
+import passport from "passport";
+import OAuth2Strategy from "passport-oauth2";
+
+interface OAuthTransaction {
+  tenantId: string;
+}
+
+interface OAuthResult {
+  tenantId: string;
+  oauthTokens: {
+    accessToken: string;
+    refreshToken: string;
+  };
+}
+
+interface ApplicationSessionStore {
+  set(sessionId: string, result: OAuthResult): void;
+}
+
+type ApplicationSession = Session &
+  Partial<SessionData> & {
+    oauthTransaction?: OAuthTransaction;
+  };
+
 const CLIENT_ID = "<PASSPORT_CLIENT_ID>";
 const EXPECTED_AUDIENCE = "<YOUR_APPLICATION_RESOURCE_SERVER>";
 const EXPECTED_ISSUER = "<YOUR_CONFIGURED_ISSUER>";
 const REQUIRED_SCOPES = ["<custom_scope_1>"];
 const INTROSPECTION_URL = "<YOUR_API_DOMAIN>/auth/oauth/introspect";
 
+const app = express();
+const serverSideSessionStore = app.get("serverSideSessionStore") as Store;
+const applicationSessionStore = app.get("applicationSessionStore") as ApplicationSessionStore;
+
+function mustGetEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
+function resolveAllowedTenant(req: Request): string {
+  const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : "public";
+  const allowedTenants = mustGetEnv("ALLOWED_TENANT_IDS").split(",");
+  if (!allowedTenants.includes(tenantId)) throw new Error("Invalid tenant");
+  return tenantId;
+}
+
+function getApplicationSession(req: Request): ApplicationSession {
+  return req.session as unknown as ApplicationSession;
+}
+
 class SuperTokensOAuth2Strategy extends OAuth2Strategy {
-  authorizationParams(options) {
+  authorizationParams(options: { tenantId?: string }): { tenant_id: string | undefined } {
     return { tenant_id: options.tenantId };
   }
 }
 
-async function introspectAndValidateTenant(accessToken, expectedTenant) {
+async function introspectAndValidateTenant(accessToken: string, expectedTenant: string) {
   const response = await fetch(INTROSPECTION_URL, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -864,7 +911,14 @@ async function introspectAndValidateTenant(accessToken, expectedTenant) {
   });
   if (!response.ok) throw new Error("OAuth introspection failed");
 
-  const tokenInfo = await response.json();
+  const tokenInfo = (await response.json()) as {
+    active?: boolean;
+    aud?: string | string[];
+    tId?: string;
+    client_id?: string;
+    iss?: string;
+    sub?: string;
+  };
   const audiences = Array.isArray(tokenInfo.aud) ? tokenInfo.aud : [tokenInfo.aud];
   if (
     tokenInfo.active !== true ||
@@ -875,6 +929,8 @@ async function introspectAndValidateTenant(accessToken, expectedTenant) {
   ) {
     throw new Error("OAuth token does not match the login transaction");
   }
+  if (typeof tokenInfo.sub !== "string") throw new Error("OAuth subject missing");
+  return tokenInfo;
 }
 
 app.use(
@@ -904,12 +960,13 @@ passport.use(
     },
     async (req, accessToken, refreshToken, params, profile, done) => {
       try {
-        const transaction = req.session.oauthTransaction;
-        delete req.session.oauthTransaction;
+        const applicationSession = getApplicationSession(req);
+        const transaction = applicationSession.oauthTransaction;
+        delete applicationSession.oauthTransaction;
         if (transaction === undefined) throw new Error("OAuth transaction missing");
 
-        await introspectAndValidateTenant(accessToken, transaction.tenantId);
-        const user = await resolveUserFromOAuthTokens(accessToken, refreshToken);
+        const tokenInfo = await introspectAndValidateTenant(accessToken, transaction.tenantId);
+        const user = { id: tokenInfo.sub };
         done(null, user, {
           oauthTokens: { accessToken, refreshToken },
           tenantId: transaction.tenantId,
@@ -923,18 +980,19 @@ passport.use(
 
 app.get("/login", (req, res, next) => {
   const tenantId = resolveAllowedTenant(req);
-  req.session.oauthTransaction = { tenantId };
-  passport.authenticate("oauth2", { tenantId })(req, res, next);
+  getApplicationSession(req).oauthTransaction = { tenantId };
+  const options = { tenantId } as passport.AuthenticateOptions & { tenantId: string };
+  passport.authenticate("oauth2", options)(req, res, next);
 });
 
 app.get("/oauth/callback", (req, res, next) => {
-  passport.authenticate("oauth2", { session: false }, (error, user, info) => {
+  const completeAuthentication = (error: unknown, user: Express.User | false | null, info: OAuthResult | undefined) => {
     if (error || !user) return next(error ?? new Error("OAuth login failed"));
     if (!info?.oauthTokens || typeof info.tenantId !== "string") {
       return next(new Error("OAuth transaction result missing"));
     }
 
-    req.session.regenerate((regenerateError) => {
+    getApplicationSession(req).regenerate((regenerateError) => {
       if (regenerateError) return next(regenerateError);
       req.logIn(user, (loginError) => {
         if (loginError) return next(loginError);
@@ -945,7 +1003,8 @@ app.get("/oauth/callback", (req, res, next) => {
         res.redirect("/");
       });
     });
-  })(req, res, next);
+  };
+  passport.authenticate("oauth2", { session: false }, completeAuthentication)(req, res, next);
 });
 ```
 
@@ -1141,10 +1200,71 @@ Use [Authlib](https://docs.authlib.org/) with a one-time server-side transaction
 
 ```python
 import secrets
+from typing import Dict, Mapping, Optional, Protocol, TypedDict, cast
 
 import requests
 from authlib.common.security import generate_token
-from authlib.integrations.requests_client import OAuth2Session
+from authlib.integrations.requests_client import OAuth2Session  # pyright: ignore[reportMissingTypeStubs]
+
+CLIENT_ID = "<CLIENT_ID>"
+CLIENT_SECRET = "<CLIENT_SECRET>"
+AUTHORIZATION_URL = "<YOUR_API_DOMAIN>/auth/oauth/auth"
+TOKEN_URL = "<YOUR_API_DOMAIN>/auth/oauth/token"
+INTROSPECTION_URL = "<YOUR_API_DOMAIN>/auth/oauth/introspect"
+CALLBACK_URL = "https://<YOUR_APPLICATION_DOMAIN>/oauth/callback"
+EXPECTED_ISSUER = "<YOUR_CONFIGURED_ISSUER>"
+EXPECTED_AUDIENCE = "<YOUR_APPLICATION_RESOURCE_SERVER>"
+SCOPES = ["offline_access", "<custom_scope_1>", "<custom_scope_2>"]
+REQUIRED_SCOPES = ["<custom_scope_1>"]
+
+
+class OAuthTransaction(TypedDict):
+    state: str
+    verifier: str
+    tenant_id: str
+
+
+class ApplicationSession(TypedDict):
+    tenant_id: str
+    oauth_token: Mapping[str, object]
+
+
+class TransactionStore(Protocol):
+    def put(self, session_id: str, transaction: OAuthTransaction) -> None: ...
+
+    def consume(self, session_id: str) -> Optional[OAuthTransaction]: ...
+
+
+class ApplicationSessionStore(Protocol):
+    def put(self, session_id: str, session: ApplicationSession) -> None: ...
+
+
+class InvalidOAuthState(ValueError):
+    pass
+
+
+def resolve_allowed_tenant() -> str:
+    raise NotImplementedError
+
+
+def application_session_id() -> str:
+    raise NotImplementedError
+
+
+def request_query_parameter(name: str) -> Optional[str]:
+    raise NotImplementedError
+
+
+def request_url() -> str:
+    raise NotImplementedError
+
+
+def rotate_application_session() -> str:
+    raise NotImplementedError
+
+
+def redirect(url: str) -> str:
+    raise NotImplementedError
 
 
 def introspect_and_validate_tenant(access_token: str, expected_tenant: str) -> None:
@@ -1168,7 +1288,7 @@ def introspect_and_validate_tenant(access_token: str, expected_tenant: str) -> N
         raise ValueError("OAuth token does not match the login transaction")
 
 
-def login():
+def login(transaction_store: TransactionStore) -> str:
     client = OAuth2Session(
         CLIENT_ID,
         CLIENT_SECRET,
@@ -1179,10 +1299,13 @@ def login():
     )
     verifier = generate_token(48)
     tenant_id = resolve_allowed_tenant()
-    authorization_url, state = client.create_authorization_url(
-        AUTHORIZATION_URL,
-        code_verifier=verifier,
-        tenant_id=tenant_id,
+    authorization_url, state = cast(
+        tuple[str, str],
+        client.create_authorization_url(  # pyright: ignore[reportUnknownMemberType]
+            AUTHORIZATION_URL,
+            code_verifier=verifier,
+            tenant_id=tenant_id,
+        ),
     )
     transaction_store.put(
         application_session_id(),
@@ -1191,7 +1314,10 @@ def login():
     return redirect(authorization_url)
 
 
-def callback():
+def callback(
+    transaction_store: TransactionStore,
+    application_session_store: ApplicationSessionStore,
+) -> str:
     # consume atomically reads and deletes the initiating session's transaction
     transaction = transaction_store.consume(application_session_id())
     provided_state = request_query_parameter("state") or ""
@@ -1208,12 +1334,18 @@ def callback():
         redirect_uri=CALLBACK_URL,
         code_challenge_method="S256",
     )
-    token = client.fetch_token(
-        TOKEN_URL,
-        authorization_response=request_url(),
-        code_verifier=transaction["verifier"],
+    token = cast(
+        Dict[str, object],
+        client.fetch_token(  # pyright: ignore[reportUnknownMemberType]
+            TOKEN_URL,
+            authorization_response=request_url(),
+            code_verifier=transaction["verifier"],
+        ),
     )
-    introspect_and_validate_tenant(token["access_token"], transaction["tenant_id"])
+    access_token = token.get("access_token")
+    if not isinstance(access_token, str):
+        raise ValueError("OAuth access token missing")
+    introspect_and_validate_tenant(access_token, transaction["tenant_id"])
 
     new_session_id = rotate_application_session()
     application_session_store.put(
