@@ -1,10 +1,16 @@
 ---
+import data from "blume:data";
+import { joinBase } from "blume/components/islands/base-path.ts";
 import BlumeSearch from "blume/components/layout/Search.astro";
+import { withBasePath } from "blume/core/base-path.ts";
 
 const props = Astro.props;
+const indexUrl = joinBase(import.meta.env.BASE_URL, withBasePath(data.config.basePath, "/blume-search.json").slice(1));
 ---
 
-<BlumeSearch {...props} />
+<div class="contents" data-st-search-index-url={indexUrl}>
+  <BlumeSearch {...props} />
+</div>
 
 <script>
   import { create, insertMultiple, search as searchIndex } from "@orama/orama";
@@ -53,8 +59,7 @@ const props = Astro.props;
 
   let prioritizedSearch: Promise<SearchFn> | undefined;
 
-  const createPrioritizedSearch = async (): Promise<SearchFn> => {
-    const indexUrl = new URL("blume-search.json", new URL(import.meta.env.BASE_URL, window.location.origin));
+  const createPrioritizedSearch = async (indexUrl: string): Promise<SearchFn> => {
     const response = await fetch(indexUrl);
     if (!response.ok) throw new Error("Unable to load the search index");
 
@@ -245,13 +250,15 @@ const props = Astro.props;
     for (const element of document.querySelectorAll<BlumeSearchElement>("blume-search")) {
       const search = element;
       if (search.dataset.renderedPreviewInitialized) continue;
+      const indexUrl = search.closest<HTMLElement>("[data-st-search-index-url]")?.dataset.stSearchIndexUrl;
+      if (!indexUrl) continue;
       search.dataset.renderedPreviewInitialized = "true";
       initializeSearchTooltip(search);
       initializeFilterDisclosure(search);
 
       search.loaded = true;
       search.searchFn = async (query, options) => {
-        const searchFn = await (prioritizedSearch ??= createPrioritizedSearch());
+        const searchFn = await (prioritizedSearch ??= createPrioritizedSearch(indexUrl));
         return searchFn(query, options);
       };
 
