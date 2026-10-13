@@ -36,6 +36,10 @@ describe("microfrontend routing", () => {
     expect(vercel.rewrites.filter(({ source }) => source.startsWith("/docs-assets/"))).toEqual([]);
   });
 
+  it("exposes the Blume-generated sitemap under the docs microfrontend prefix", () => {
+    expect(vercel.rewrites).toContainEqual({ source: "/docs/sitemap.xml", destination: "/sitemap.xml" });
+  });
+
   it("keeps Ask AI at its public route for Astro request matching", () => {
     expect(vercel.rewrites.some(({ source }) => source === "/docs/api/ask")).toBe(false);
   });
