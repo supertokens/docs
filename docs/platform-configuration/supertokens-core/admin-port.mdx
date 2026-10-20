@@ -1,0 +1,143 @@
+---
+title: Serve health checks on an admin port
+description: Run liveness checks and control-plane routes on a separate SuperTokens Core port with its own thread pool.
+sidebar:
+  order: 3
+---
+
+## Overview
+
+SuperTokens Core can open a second port, the admin port, with its own request thread pool.
+Liveness checks and control-plane routes on that port keep responding when the main port's thread pool is busy with
+application traffic.
+
+The admin port requires Core `12.4.0` or later.
+
+## Before you start
+
+:::warning
+This page is only relevant if you are self-hosting SuperTokens.
+If you use the managed service, SuperTokens runs the core and its health checks for you.
+:::
+
+:::caution[The admin port is not a separate security boundary]
+The admin port applies the same `api_keys` and IP filter rules as the main port, binds to the same `host`, and has no
+credential of its own.
+It serves sensitive routes, such as `/ee/license`, which sets the license key, and `/global-request-stats`.
+Expose it only to the network where your orchestrator and control plane run.
+:::
+
+---
+
+## Enable the admin port
+
+Set `admin_port` to a port that differs from the main `port` (default `3567`).
+If you don't set it, Core runs a single port and serves every route on it.
+
+<CodeGroup group="docker">
+<Tab title="With Docker" value="with-docker">
+```bash
+docker run \
+    -p 3567:3567 \
+    -p 3568:3568 \
+    -e SUPERTOKENS_ADMIN_PORT=3568 \
+    -d "$SUPERTOKENS_IMAGE"
+```
+</Tab>
+<Tab title="Without Docker" value="without-docker">
+```yaml
+# You need to add the following to the config.yaml file.
+# The file path can be found by running the "supertokens --help" command
+
+admin_port: 3568
+```
+</Tab>
+</CodeGroup>
+
+| Configuration | Environment variable | Default | Description |
+| --- | --- | --- | --- |
+| `admin_port` | `SUPERTOKENS_ADMIN_PORT` | not set | Port of the admin connector. Must be between 1 and 65535 and differ from `port`. |
+| `admin_max_server_pool_size` | `ADMIN_MAX_SERVER_POOL_SIZE` | `5` | Maximum number of threads for requests on the admin port. Must be at least 1. |
+
+Requests on the admin port don't count toward the request pool of the main port, and the
+[concurrency cap](/deployment/rate-limits#concurrency-cap-per-connection-uri-domain) doesn't apply to them.
+
+---
+
+## Which routes each port serves
+
+With the admin port enabled, each route belongs to one of three groups:
+
+| Route | Main port | Admin port |
+| --- | --- | --- |
+| `/livez`, `/global-request-stats` | No | Yes |
+| `/hello`, `/ee/license`, `/ee/featureflag` | Yes | Yes |
+| All other routes | Yes | No |
+
+A request for a route on a port that doesn't serve it gets a `404` response.
+
+`/global-request-stats` requires one of the base configuration's `api_keys`; an app's own API key doesn't unlock it.
+
+---
+
+## Health checks
+
+Use the two health check routes for different purposes:
+
+- `GET /livez` is a liveness check. It returns `200 OK` without reading the database, without an API key, and without a
+  `cdi-version` header. Point your container's liveness probe at `/livez` on the admin port, so that a slow database or a
+  busy main port doesn't get a healthy process restarted.
+- `GET /hello` reads from the database and works as a readiness check. See
+  [Self-host SuperTokens](/deployment/self-host-supertokens#2-test-that-the-service-is-running) for its limits.
+
+For example, in Kubernetes:
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /livez
+    port: 3568
+readinessProbe:
+  httpGet:
+    path: /hello
+    port: 3567
+```
+
+---
+
+## Change which port serves a route
+
+Use these configurations to move a route to the admin port or to serve it on both ports:
+
+| Configuration | Environment variable | Description |
+| --- | --- | --- |
+| `admin_only_paths` | `ADMIN_ONLY_PATHS` | Comma-separated API paths to serve only on the admin port. |
+| `admin_preferred_paths` | `ADMIN_PREFERRED_PATHS` | Comma-separated API paths to serve on both ports. |
+
+<CodeGroup group="docker">
+<Tab title="With Docker" value="with-docker">
+```bash
+docker run \
+    -p 3567:3567 \
+    -p 3568:3568 \
+    -e SUPERTOKENS_ADMIN_PORT=3568 \
+    -e ADMIN_ONLY_PATHS="/ee/license" \
+    -d "$SUPERTOKENS_IMAGE"
+```
+</Tab>
+<Tab title="Without Docker" value="without-docker">
+```yaml
+# You need to add the following to the config.yaml file.
+# The file path can be found by running the "supertokens --help" command
+
+admin_port: 3568
+admin_only_paths: "/ee/license"
+```
+</Tab>
+</CodeGroup>
+
+Core refuses to start if:
+
+- One of the paths doesn't match a Core API path.
+- The same path appears in both lists.
+- `admin_port` is not set.

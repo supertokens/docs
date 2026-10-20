@@ -38,6 +38,8 @@ This is independent to the rate limit described above, and cannot change.
 ## For self hosted
 
 The SuperTokens core has no rate limit other than for the `/hello` API (which is 5 requests per second per app).
+You can optionally cap concurrent requests per connection URI domain, as described in
+[Concurrency cap per connection URI domain](#concurrency-cap-per-connection-uri-domain).
 You are free to add rate limits to the core by using [a reverse proxy like Nginx](https://www.nginx.com/blog/rate-limiting-nginx/).
 
 If you want to implement rate limiting policy similar to the managed service described above, add the following to your `http` and `server` block in the `nginx.conf` file:
@@ -75,3 +77,58 @@ http {
 ```
 
 In the above, the core adds a rate limit per app per IP address.
+
+### Concurrency cap per connection URI domain
+
+The concurrency cap requires Core `12.4.0` or later and is off by default.
+
+A connection URI domain is the host name that backends use to reach the core.
+A self-hosted core usually has a single one, which all its apps share.
+
+The cap limits how many requests from one connection URI domain the core processes at the same time, so that one domain
+can't take all the threads of the request pool (`max_server_pool_size`).
+The core enforces it only while the pool is close to full:
+
+- While more than `concurrency_cap_reserved_pool_percent` of the pool's threads are free, the core rejects no request.
+- Once fewer threads are free, a request that would take its connection URI domain above
+  `max_concurrent_requests_per_cud` requests in flight gets an immediate `429` response with a `Retry-After: 1` header,
+  instead of a thread.
+
+For example, with `max_server_pool_size: 10` and the default reserve of 25%, the core keeps 2 threads in reserve and
+enforces the cap once more than 8 requests are in flight.
+
+Only requests that pass the API key check for an app that exists under the connection URI domain count toward its cap.
+Requests to routes without an API key check, such as `/hello` and `/.well-known/jwks.json`, and requests for an app that
+doesn't exist count toward the pool's usage but are never capped.
+Requests on the [admin port](/platform-configuration/supertokens-core/admin-port) don't count at all.
+
+| Configuration | Environment variable | Default | Description |
+| --- | --- | --- | --- |
+| `max_concurrent_requests_per_cud` | `MAX_CONCURRENT_REQUESTS_PER_CUD` | `0` | Maximum concurrent requests per connection URI domain. `0` turns the cap off. Can't exceed `max_server_pool_size`. |
+| `concurrency_cap_reserved_pool_percent` | `CONCURRENCY_CAP_RESERVED_POOL_PERCENT` | `25` | Share of `max_server_pool_size`, in percent, kept free before the cap applies. Must be between 1 and 100. `100` enforces the cap at all times. |
+
+<CodeGroup group="docker">
+<Tab title="With Docker" value="with-docker">
+```bash
+docker run \
+    -p 3567:3567 \
+    -e MAX_SERVER_POOL_SIZE=20 \
+    -e MAX_CONCURRENT_REQUESTS_PER_CUD=8 \
+    -d "$SUPERTOKENS_IMAGE"
+```
+</Tab>
+<Tab title="Without Docker" value="without-docker">
+```yaml
+# You need to add the following to the config.yaml file.
+# The file path can be found by running the "supertokens --help" command
+
+max_server_pool_size: 20
+max_concurrent_requests_per_cud: 8
+```
+</Tab>
+</CodeGroup>
+
+The backend SDK retries requests that get a `429` response.
+The core's `/requests/stats` API reports `concurrentRequestsRejected`, the number of an app's requests that got a `429`
+from the cap, and `concurrentRequestsInFlight`, which covers the whole connection URI domain, so every app on the same
+domain reports the same value.
