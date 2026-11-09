@@ -285,6 +285,69 @@ Core `12.1.1` is not expected to reject a mismatched `Response.Destination`, and
 Do not disable signature or time-condition validation to make negative tests pass. Keep failure details in server-side logs and return a generic authentication error to the browser.
 
 
+## Map identity provider attributes
+
+By default, SuperTokens picks the user ID and email from the SAML assertion with built-in rules. If your identity
+provider sends them in other claims, or you want the user's first and last name, set an `attributeMapping` on the SAML
+client. It requires Core `12.5.0` or later.
+
+The backend SDKs don't pass `attributeMapping` yet, so set it by calling the core directly. The request replaces the
+whole client, so send the client's other fields as well:
+
+```bash
+curl --location --request PUT '<CORE_API_ENDPOINT>/<TENANT_ID>/recipe/saml/clients' \
+--header 'api-key: <YOUR_API_KEY>' \
+--header 'Content-Type: application/json; charset=utf-8' \
+--data-raw '{
+  "clientId": "<CLIENT_ID>",
+  "redirectURIs": ["https://your-app.com/auth/callback"],
+  "defaultRedirectURI": "https://your-app.com/auth/callback",
+  "metadataXML": "<METADATA_XML_FROM_IDP>",
+  "attributeMapping": {
+    "userId": ["employeeId", "NameID"],
+    "email": ["mail"],
+    "firstName": ["givenName"],
+    "lastName": ["sn"]
+  }
+}'
+```
+
+Each key is optional and takes an ordered list of 1 to 10 claim names. For each field, SuperTokens uses the first claim
+in the list that is present with a non-blank value. `NameID` stands for the assertion's Subject NameID. For `email`,
+a `NameID` only counts if it contains `@`. Claim names match exactly, so they can't have leading or trailing spaces.
+An invalid mapping is rejected with a `400` that names the key.
+
+| Key         | Used as                                    | Default when the key is left out                                                                                                                 |
+| ----------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `userId`    | The user's ID from the identity provider   | `NameID`, `http://schemas.microsoft.com/identity/claims/objectidentifier`, `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name`          |
+| `email`     | The user's email                           | `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`, `mail`, `email`, `NameID`                                                   |
+| `firstName` | `firstName` in the user info               | None: only returned when mapped                                                                                                                  |
+| `lastName`  | `lastName` in the user info                | None: only returned when mapped                                                                                                                  |
+
+The mapping is returned by the client's `PUT` response and by `GET <CORE_API_ENDPOINT>/<TENANT_ID>/recipe/saml/clients/list`.
+The core's BoxyHQ-compatible legacy endpoint `/recipe/saml/legacy/userinfo` uses the same mapping for the `id` it
+returns.
+
+:::warning[Changing `userId` changes your users' IDs]
+SuperTokens identifies a SAML user by the ID it takes from the assertion. If you change `attributeMapping.userId` on
+a client that already has users, the same people get a different ID at their next sign-in, and SuperTokens treats them
+as new users. Set it before users sign in, or plan a migration.
+:::
+
+Clients without an `attributeMapping` keep the built-in rules unchanged. If those rules would give a client a different
+user ID or email than the default lists above (for example, because the assertion's `NameID` is empty), the core logs a
+warning with the app, tenant, client and field, but never the claim values. Use it to check whether a client needs a
+mapping before you set one.
+
+### Update a client that has an attribute mapping
+
+Once a client has an `attributeMapping` or `acsURLs`, a `PUT` that leaves the key out doesn't clear it:
+
+- From CDI `5.8`, leaving out a key that's set is rejected with a `400`. Send the current value to keep it, or
+  `null` (`{}` for `attributeMapping`, `[]` for `acsURLs`) to clear it.
+- Below CDI `5.8`, which the current SDKs use, the stored value is kept. Updating a client through the SDK keeps its
+  mapping.
+
 ## See also
 
 <CardGroup cols={3}>
