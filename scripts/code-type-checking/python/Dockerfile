@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
   git \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir pyright
+RUN pip3 install --no-cache-dir "pyright[nodejs]"
 RUN pip3 install --upgrade "setuptools<81" wheel
 
 COPY requirements.txt ./
