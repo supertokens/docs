@@ -1,0 +1,103 @@
+---
+title: Disable user ID mapping
+description: Turn user ID mapping off for an app so SuperTokens Core skips the mapping reads on every request.
+sidebar:
+  order: 4
+---
+
+## Overview
+
+User ID mapping lets you replace the SuperTokens user ID with your own external ID. To support that, the core
+looks up the mapping for a user on most requests that carry a user ID: sign-in, sessions, user lists, metadata,
+roles and so on. If an app never uses user ID mapping, those reads are wasted work.
+
+`disable_user_id_mapping` turns user ID mapping off for one app. The core then skips all of those reads, and
+refuses requests that would create new mappings.
+
+The settings require Core `12.5.0` or later and, with PostgreSQL, the PostgreSQL plugin `10.3.0` or later. They need no
+new CDI version: they're core configuration, and API responses only change while they're on.
+
+## Configuration
+
+Both settings are per app. They can be set in `config.yaml`, through environment variables, or with the core
+configuration of the app (multitenancy API). Every tenant of an app must use the same value.
+
+| Setting | Environment variable | Default | What it does |
+|---|---|---|---|
+| `disable_user_id_mapping` | `DISABLE_USER_ID_MAPPING` | `false` | Turns user ID mapping off for the app. |
+| `disable_user_id_mapping_force` | `DISABLE_USER_ID_MAPPING_FORCE` | `false` | Allows turning `disable_user_id_mapping` on even though the app still has mappings. They are then ignored. Has no effect while `disable_user_id_mapping` is `false`. |
+
+## What changes while it is on
+
+- **Mapping reads stop.** Neither the core nor the database plugin reads user ID mappings for the app. Users
+  are always identified by their SuperTokens user ID.
+- **Creating mappings is rejected** with a `400`: `user id mapping is disabled for this app`. This applies to:
+  - `POST /recipe/userid/map` (create a mapping)
+  - `PUT /recipe/userid/external-user-id-info` (update `externalUserIdInfo`)
+  - bulk import of users that have an `externalUserId`. The user is rejected with error `E035`:
+    `Cannot set externalUserId: user id mapping is disabled for this app`.
+- **Looking up a mapping finds nothing:** `GET /recipe/userid/map` returns `UNKNOWN_MAPPING_ERROR`. The
+  exception is the leftover mappings described [below](#leftover-mappings), which are still read.
+- **Removing mappings still works** (`POST /recipe/userid/map/remove`), so you can clean up mappings left over
+  from before the switch.
+
+## Turning it on
+
+The app must have **no user ID mappings** when you turn it on. Otherwise:
+
+- through the configuration API: the request fails with a `400`, `disable_user_id_mapping cannot be enabled because
+  the app has existing user id mappings: remove them first, or set disable_user_id_mapping_force to true to
+  ignore them`;
+- in `config.yaml` or an environment variable: the core does not start, and names the apps that still have
+  mappings.
+
+How the switch is enforced depends on where you set it:
+
+- **Configuration API (recommended).** Turning the setting on and creating a mapping exclude each other through a
+  database lock. Every mapping creation also re-checks the stored configuration. So once the switch has been made, no
+  core can create a mapping, not even one that hasn't refreshed its configuration yet.
+- **`config.yaml` / environment variable.** Each core uses its own value until it restarts. During a rolling
+  deployment, cores that haven't restarted yet can still create mappings. **Stop creating mappings before you
+  roll it out this way.**
+
+While the setting is on, the app can't move to, or add a tenant on, a database the core hasn't loaded yet. Turn
+it off, make the change, then turn it back on.
+
+## Forcing it on with existing mappings
+
+If you can't remove the existing mappings, set `disable_user_id_mapping_force: true` together with
+`disable_user_id_mapping: true`. The mappings are kept in the database but ignored. **This has consequences
+you need to plan for:**
+
+- **Data stored under the external IDs stops applying.** TOTP devices, user metadata and roles that were
+  stored under a user's external ID no longer belong to that user, because the core now only knows the
+  SuperTokens user ID. For example, a user with TOTP enrolled under their external ID loses that TOTP device.
+- **Old sessions stay valid.** Sessions created under an external ID before the switch keep working, and keep the
+  user ID they reported before (for a linked login method, its primary user's). Listing or
+  revoking a user's sessions by either their SuperTokens user ID or their external ID includes the sessions stored
+  under both, so "log out everywhere" and password reset flows still end them. If you created a mapping with
+  `force: true` on `POST /recipe/userid/map` whose external ID is another user's SuperTokens user ID, listing or
+  revoking either user's sessions includes the other user's sessions too.
+- **Force can't be turned off on its own while the app still has mappings.** Setting
+  `disable_user_id_mapping_force: false` while keeping `disable_user_id_mapping: true` is rejected with a `400`
+  (`disable_user_id_mapping_force cannot be turned off because the app has user id mappings: remove them first`),
+  because the core would otherwise start using the mappings again while user ID mapping is still marked as
+  disabled. Either remove the mappings first, or turn `disable_user_id_mapping` off as well. That turns user ID
+  mapping back on, and the existing mappings apply again.
+
+## Leftover mappings
+
+If a core finds mappings for an app that has `disable_user_id_mapping` on, for example after restoring a
+database backup, it doesn't ignore them. It keeps reading them for that app and logs an error until they are
+removed. The same applies to an app whose database was still starting up when the core finished starting: it
+is checked once its database is ready, and mappings are read until then.
+
+When you delete a user, or link or unlink accounts, the core also cleans up data stored under the external ID of a
+leftover mapping.
+
+## Should I turn it on?
+
+Turn it on if the app doesn't use user ID mapping and never will. You save a mapping lookup on most requests
+that carry a user ID.
+
+Leave it off if you use user ID mapping, or might in the future: with it on, nothing can create a mapping.
