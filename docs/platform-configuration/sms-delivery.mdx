@@ -21,7 +21,9 @@ If you provide no configuration for SMS delivery, the Passwordless recipe uses t
 `https://api.supertokens.com/0/services/sms`. This applies whether the Core is self-hosted or managed.
 
 :::info[Important]
-- Do not depend on the built-in service for production delivery. Its quota and availability are service policy, not an SDK contract.
+- Do not depend on the built-in service for production delivery. It uses a shared, low quota meant for development and
+  testing. Refer to [Rate limits](#rate-limits) for the values. Its quota and availability are service policy, not an
+  SDK contract.
 - When the service returns HTTP 429, released SDK fallback implementations treat that response as terminal and print the message input. This can include the phone number, OTP, magic link, and code lifetime.
 - You cannot customize the SMS content when using this method. If you want to customize the content, please see one of the other methods in this section.
 :::
@@ -157,7 +159,8 @@ To learn about how to customize the SMS templates, please see the next section.
 The backend SDKs also expose an API-key-based `SuperTokensSMSService`. It calls an external SMS endpoint directly and can
 be used whether your Core is self-hosted or managed. Availability, pricing, credits, quotas, sender identity, key issuance,
 and the Dashboard workflow are mutable service policy. Confirm them in your current Dashboard or contract before adopting
-this option; they are not guaranteed by the released SDK interface.
+this option; they are not guaranteed by the released SDK interface. Refer to [Rate limits](#rate-limits) for the default
+limits that apply to API keys.
 
 If you have been issued an SMS API key, set it in the backend SDK configuration:
 
@@ -381,7 +384,59 @@ error handler; non-API calls may log it. Do not include phone numbers, OTPs, mag
 provider responses in exceptions or logs.
 :::
 
-## SMS Customization
+## Rate limits
+
+The SuperTokens SMS API rate limits the messages that it sends. These limits apply to the
+[default method](#default-method) and to the [SuperTokens SMS service](#supertokens-sms-service) method. If you use
+[Twilio](#twilio) or a [custom method](#custom-method), SuperTokens doesn't apply these limits, but your provider and
+mobile carriers might.
+
+| Scope                                      | Limit                                                                |
+| ------------------------------------------ | -------------------------------------------------------------------- |
+| Same destination phone number              | 5 messages per 15 minutes                                            |
+| Default method, without an API key         | 10 requests per minute and 25 requests per day                       |
+| SuperTokens SMS service, with an API key   | 100 requests per 10 seconds and 5,000 requests per hour, per account |
+
+The default method quota is shared across all users of the service and is meant for development and testing. In
+production, use an SMS API key or your own provider. If your API key needs higher limits, contact
+[SuperTokens support](mailto:support@supertokens.com).
+
+When a request exceeds a limit, the API returns HTTP 429 (Too Many Requests) with a `Retry-After` header that contains
+the number of seconds to wait. The response body has the following format:
+
+```json
+{
+  "error": "Too many requests",
+  "message": "Rate limit exceeded. Try again in 30 seconds.",
+  "retryAfter": 30
+}
+```
+
+The response also includes the `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers. Refer to
+[Default method](#default-method) for how the backend SDKs handle a 429 response from the built-in service.
+
+### Carrier limits
+
+Mobile carriers and destination countries filter SMS traffic independently of SuperTokens. They can limit how many
+messages a sender can send, or a phone number can receive, per day, and they can block messages that they flag as spam.
+SuperTokens doesn't control these limits, so messages can arrive late or not at all even when you stay under the limits
+above.
+
+For high-volume production traffic, use your own provider with a registered sender. Depending on the country, this can
+be a registered sender ID, a 10-digit long code (10DLC) number, or a short code. Check your provider and carrier
+guidance for each destination country.
+
+### Reduce SMS volume
+
+To keep your app under these limits and to prevent SMS abuse:
+
+- Set a minimum delay before users can request a new code with
+  [`resendEmailOrSMSGapInSeconds`](/authentication/passwordless/configure-email-and-sms-behavior).
+- Add [CAPTCHA](/additional-verification/captcha) to the sign in flow.
+- Detect suspicious requests with the
+  [Attack Protection Suite](/additional-verification/attack-protection-suite/initial-setup).
+
+## SMS customization
 
 You can see the default SMS content:
 - Default [passwordless login with OTP template](https://github.com/supertokens/email-sms-templates#otp-login-1).
