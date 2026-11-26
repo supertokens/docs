@@ -37,32 +37,40 @@ jobs:
               - ".github/workflows/lint.yml"
           matrix: true
 
-      - name: Run Vale on changed content
-        uses: errata-ai/vale-action@v2.1.1
+      - name: Install Vale
+        run: |
+          curl -sSfL "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP" vale
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+        env:
+          VALE_VERSION: 3.20.0
+
+      - uses: reviewdog/action-setup@v1
+        with:
+          reviewdog_version: v0.21.3
+
+      # Only lines added by the PR are judged, so pre-existing alerts in a touched file don't block it.
+      # Warnings on those lines show up as annotations; only errors fail the check.
+      - name: Run Vale on changed lines
         if: >-
           github.event_name != 'workflow_dispatch' &&
           steps.changed-doc-files.outputs.content_any_changed == 'true' &&
           steps.changed-doc-files.outputs.config_any_modified != 'true'
-        with:
-          files: ${{ steps.changed-doc-files.outputs.content_all_changed_files }}
-          vale_flags: "--minAlertLevel=warning"
-          version: 3.20.0
-          reporter: local
-          filter_mode: nofilter
-          fail_on_error: true
+        env:
+          CHANGED_FILES: ${{ steps.changed-doc-files.outputs.content_all_changed_files }}
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t files < <(jq -r '.[]' <<< "$CHANGED_FILES")
+          # Vale exits 1 when it finds errors; reviewdog decides whether they fail the check.
+          vale --minAlertLevel=warning --output=.github/vale/rdjsonl.tmpl "${files[@]}" > "$RUNNER_TEMP/vale.jsonl" || [ $? -eq 1 ]
+          reviewdog -f=rdjsonl -name=vale -reporter=github-pr-annotations -filter-mode=added -fail-level=error \
+            < "$RUNNER_TEMP/vale.jsonl"
 
       - name: Run full Vale validation
-        uses: errata-ai/vale-action@v2.1.1
         if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.changed-doc-files.outputs.config_any_modified == 'true'
-        with:
-          files: '["docs", "components", "islands", "CONTRIBUTING.md"]'
-          version: 3.20.0
-          # PR reporters fetch GitHub's size-limited diff even with nofilter.
-          reporter: local
-          filter_mode: nofilter
-          fail_on_error: true
+        run: vale docs components islands CONTRIBUTING.md
 
   # format-code:
   #   runs-on: ubuntu-latest
